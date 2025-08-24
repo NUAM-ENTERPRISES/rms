@@ -10,6 +10,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model RefreshToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique // JWT ID (unique identifier for the token)
+  familyId  String   // Token family for rotation
+  userId    String
+  tokenHash String   // Argon2 hash of the refresh token value
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
@@ -17,14 +37,13 @@ model User {
   password      String
   dateOfBirth   DateTime?
   phone         String?
-  roleId        String
-  teamId        String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
-  role          Role     @relation(fields: [roleId], references: [id])
-  team          Team?    @relation(fields: [teamId], references: [id])
+  userRoles     UserRole[]
+  userTeams     UserTeam[]
+  refreshTokens RefreshToken[]
   createdProjects Project[] @relation("ProjectCreator")
   assignedCandidates Candidate[] @relation("CandidateRecruiter")
   notifications Notification[]
@@ -37,19 +56,56 @@ model Role {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
-  permissions Json     @default("[]")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  users       User[]
+  userRoles   UserRole[]
+  rolePermissions RolePermission[]
 
   @@map("roles")
 }
 
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g., 'read:projects', 'manage:users'
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  // Relations
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  // Relations
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
 model Team {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   leadId    String?
   headId    String?
   managerId String?
@@ -57,10 +113,23 @@ model Team {
   updatedAt DateTime @updatedAt
 
   // Relations
-  users     User[]
+  userTeams UserTeam[]
   projects  Project[]
+  candidates Candidate[]
 
   @@map("teams")
+}
+
+model UserTeam {
+  userId String
+  teamId String
+
+  // Relations
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team         Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([userId, teamId])
+  @@map("user_teams")
 }
 
 model Client {
@@ -133,11 +202,13 @@ model Candidate {
   currentEmployer String?
   expectedSalary Int?
   assignedTo    String?
+  teamId        String?  // Added for team scoping
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
   recruiter    User?    @relation("CandidateRecruiter", fields: [assignedTo], references: [id])
+  team         Team?    @relation(fields: [teamId], references: [id])
   projects     CandidateProjectMap[]
   documents    Document[]
   interviews   Interview[]

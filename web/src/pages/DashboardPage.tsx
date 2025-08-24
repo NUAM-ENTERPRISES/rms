@@ -1,133 +1,225 @@
-import { useSelector } from "react-redux";
-import { RootState } from "@/app/store";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useAppSelector } from "@/app/hooks";
+import UserMenu from "@/components/molecules/UserMenu";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Building2,
   Users,
   Briefcase,
-  TrendingUp,
-  UserPlus,
+  UserCheck,
+  Settings,
+  BarChart3,
+  FileText,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function DashboardPage() {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user } = useAppSelector((state) => state.auth);
+  const navigate = useNavigate();
 
-  const stats = [
+  if (!user) return null;
+
+  const hasPermission = (permission: string) => {
+    return (
+      user.permissions.includes(permission) || user.permissions.includes("*")
+    );
+  };
+
+  const hasRole = (role: string) => {
+    return user.roles.includes(role);
+  };
+
+  const dashboardItems = [
     {
-      title: "Active Projects",
-      value: 0,
+      title: "Candidates",
+      description: "Manage candidate profiles and applications",
+      icon: UserCheck,
+      href: "/candidates",
+      permission: "read:candidates",
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+    },
+    {
+      title: "Projects",
+      description: "View and manage recruitment projects",
       icon: Briefcase,
-      color: "text-primary-500",
-      bgColor: "bg-primary-50",
+      href: "/projects",
+      permission: "read:projects",
+      color: "text-green-600",
+      bgColor: "bg-green-50",
     },
     {
-      title: "Total Candidates",
-      value: 0,
+      title: "Users",
+      description: "Manage team members and permissions",
       icon: Users,
-      color: "text-accent-500",
-      bgColor: "bg-accent-50",
+      href: "/users",
+      permission: "read:users",
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+      roles: ["CEO", "Director", "Manager"],
     },
     {
-      title: "New Applications",
-      value: 0,
-      icon: UserPlus,
-      color: "text-success-500",
-      bgColor: "bg-success-50",
+      title: "Analytics",
+      description: "View recruitment metrics and insights",
+      icon: BarChart3,
+      href: "/analytics",
+      permission: "read:analytics",
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
     },
     {
-      title: "Shortlisted",
-      value: 0,
-      icon: TrendingUp,
-      color: "text-warning-500",
-      bgColor: "bg-warning-50",
+      title: "Documents",
+      description: "Manage candidate documents and verifications",
+      icon: FileText,
+      href: "/documents",
+      permission: "read:documents",
+      color: "text-red-600",
+      bgColor: "bg-red-50",
+    },
+    {
+      title: "Settings",
+      description: "Configure system settings and preferences",
+      icon: Settings,
+      href: "/settings",
+      permission: "manage:users",
+      color: "text-gray-600",
+      bgColor: "bg-gray-50",
     },
   ];
 
+  const visibleItems = dashboardItems.filter((item) => {
+    if (item.roles && !item.roles.some((role) => hasRole(role))) {
+      return false;
+    }
+    return hasPermission(item.permission);
+  });
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-muted-200 bg-white">
+      {/* Header */}
+      <header className="border-b bg-card">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">
-                  Affiniks RMS
-                </h1>
-                <p className="text-sm text-muted-600">
-                  Recruitment Management System
-                </p>
-              </div>
-            </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-600">
-                Welcome, {user?.name || "User"}
-              </span>
-              <Button variant="outline" size="sm">
-                Logout
-              </Button>
+              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+              <div className="flex space-x-2">
+                {user.roles.map((role) => (
+                  <Badge key={role} variant="secondary">
+                    {role}
+                  </Badge>
+                ))}
+              </div>
             </div>
+            <UserMenu />
           </div>
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
-        <div className="space-y-8">
-          <div>
-            <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-            <p className="text-muted-600 mt-2">
-              Overview of your recruitment activities
-            </p>
-          </div>
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-foreground mb-2">
+            Welcome back, {user.name}!
+          </h2>
+          <p className="text-muted-foreground">
+            Here's what you can do with your current permissions.
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <Card key={index} className="border-0 shadow-soft">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-600">
-                        {stat.title}
-                      </p>
-                      <p className="text-2xl font-bold text-foreground mt-1">
-                        {stat.value}
-                      </p>
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Card
+                key={item.title}
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate(item.href)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${item.bgColor}`}>
+                      <Icon className={`h-6 w-6 ${item.color}`} />
                     </div>
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgColor}`}
-                    >
-                      <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                    <CardTitle className="text-lg">{item.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {item.description}
+                  </p>
+                  <Button variant="outline" size="sm" className="w-full">
+                    Open {item.title}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Quick Stats */}
+        {hasPermission("read:analytics") && (
+          <div className="mt-12">
+            <h3 className="text-xl font-semibold text-foreground mb-6">
+              Quick Stats
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <UserCheck className="h-8 w-8 text-blue-600" />
+                    <div>
+                      <p className="text-2xl font-bold">24</p>
+                      <p className="text-sm text-muted-foreground">
+                        Active Candidates
+                      </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <Briefcase className="h-8 w-8 text-green-600" />
+                    <div>
+                      <p className="text-2xl font-bold">8</p>
+                      <p className="text-sm text-muted-foreground">
+                        Open Projects
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <Users className="h-8 w-8 text-purple-600" />
+                    <div>
+                      <p className="text-2xl font-bold">12</p>
+                      <p className="text-sm text-muted-foreground">
+                        Team Members
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <BarChart3 className="h-8 w-8 text-orange-600" />
+                    <div>
+                      <p className="text-2xl font-bold">85%</p>
+                      <p className="text-sm text-muted-foreground">
+                        Success Rate
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-
-          <Card className="border-0 shadow-soft">
-            <CardHeader>
-              <CardTitle>Welcome to Affiniks RMS</CardTitle>
-              <CardDescription>
-                Your recruitment management system is ready
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-600">
-                This is Phase 1 of the Affiniks Recruitment Management System.
-                The backend API is being set up and will be available soon.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        )}
       </main>
     </div>
   );

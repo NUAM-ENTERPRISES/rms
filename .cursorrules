@@ -1,0 +1,14 @@
+You are coding in the Affiniks RMS monorepo. Follow these sources strictly:
+
+- /docs/FE_GUIDELINES.md
+- /docs/BE_GUIDELINES.md
+- /docs/DOD.md
+
+Hard requirements:
+- Frontend: React+Vite+TS+Tailwind+ShadCN. Atomic UI + Feature-first. Tailwind design tokens only (no hex or inline styles). RTK Query for all server data. React Hook Form + Zod for forms. Accessibility required.
+- Backend: NestJS+Prisma+Postgres. DTO validation on all inputs. Business logic in services, not controllers. JWT+Refresh+RBAC guards. BullMQ for background jobs. Swagger docs required.
+- Testing: Vitest+RTL (FE), Jest (BE). Add meaningful tests with each feature.
+- Scope: Ask for confirmation if any request conflicts.
+- Definition of Done: Must satisfy /docs/DOD.md.
+
+If a request conflicts with these rules, ask for clarification and quote the conflicting line.

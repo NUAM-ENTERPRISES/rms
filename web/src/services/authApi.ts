@@ -1,66 +1,84 @@
-import { createApi } from '@reduxjs/toolkit/query/react'
-import { baseQuery } from './baseApi'
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { baseQueryWithReauth } from "./baseQuery.ts";
 
 interface LoginRequest {
-  email: string
-  password: string
+  email: string;
+  password: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+  permissions: string[];
 }
 
 interface LoginResponse {
-  user: {
-    id: string
-    name: string
-    email: string
-    role: string
-    teamId?: string
-  }
-  accessToken: string
-  refreshToken: string
-}
-
-interface RefreshTokenRequest {
-  refreshToken: string
+  success: boolean;
+  data: {
+    user: User;
+    accessToken: string;
+    refreshToken: string;
+  };
+  message: string;
 }
 
 interface RefreshTokenResponse {
-  accessToken: string
+  success: boolean;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    user: User;
+  };
+  message: string;
+}
+
+interface MeResponse {
+  success: boolean;
+  data: User;
+  message: string;
+}
+
+interface LogoutResponse {
+  success: boolean;
+  message: string;
 }
 
 export const authApi = createApi({
-  reducerPath: 'authApi',
-  baseQuery,
-  tagTypes: ['Auth'],
+  reducerPath: "authApi",
+  baseQuery: baseQueryWithReauth,
+  tagTypes: ["Auth"],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
-      query: (credentials) => ({
-        url: '/auth/login',
-        method: 'POST',
+      query: (credentials: LoginRequest) => ({
+        url: "/auth/login",
+        method: "POST",
         body: credentials,
       }),
     }),
-    refreshToken: builder.mutation<RefreshTokenResponse, RefreshTokenRequest>({
-      query: (refreshToken) => ({
-        url: '/auth/refresh',
-        method: 'POST',
-        body: refreshToken,
-      }),
-    }),
-    logout: builder.mutation<void, void>({
+    refresh: builder.mutation<RefreshTokenResponse, void>({
       query: () => ({
-        url: '/auth/logout',
-        method: 'POST',
+        url: "/auth/refresh",
+        method: "POST",
       }),
     }),
-    getProfile: builder.query<LoginResponse['user'], void>({
-      query: () => '/auth/profile',
-      providesTags: ['Auth'],
+    me: builder.query<MeResponse, void>({
+      query: () => "/auth/me",
+      providesTags: ["Auth"],
+    }),
+    logout: builder.mutation<LogoutResponse, void>({
+      query: () => ({
+        url: "/auth/logout",
+        method: "POST",
+      }),
     }),
   }),
-})
+});
 
 export const {
   useLoginMutation,
-  useRefreshTokenMutation,
+  useRefreshMutation,
+  useMeQuery,
   useLogoutMutation,
-  useGetProfileQuery,
-} = authApi
+} = authApi;
