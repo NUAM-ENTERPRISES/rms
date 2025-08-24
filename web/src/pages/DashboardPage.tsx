@@ -1,3 +1,4 @@
+import React from "react";
 import { useAppSelector } from "@/app/hooks";
 import UserMenu from "@/components/molecules/UserMenu";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user } = useAppSelector((state) => state.auth);
   const navigate = useNavigate();
 
@@ -223,4 +224,13 @@ export default function DashboardPage() {
       </main>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  React.useEffect(() => {
+    // Mark dashboard as ready for performance measurement
+    performance.mark("route:dashboard:ready");
+  }, []);
+
+  return <DashboardContent />;
 }

@@ -10,12 +10,13 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // CORS configuration
+  // CORS configuration with preflight optimization
   app.enableCors({
     origin: process.env.WEB_ORIGIN || 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    maxAge: 600, // Cache preflight for 10 minutes
   });
 
   // Cookie parser middleware

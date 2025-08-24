@@ -11,18 +11,15 @@ datasource db {
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
-  jti       String   @unique // JWT ID (unique identifier for the token)
-  familyId  String   // Token family for rotation
-  userId    String
-  tokenHash String   // Argon2 hash of the refresh token value
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid()) // public token id (rfi)
+  userId     String
+  familyId   String
+  hash       String               // Argon2 hash of the secret value (rft)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
 
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([familyId])
@@ -49,6 +46,8 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
 
+  @@index([email]) // Already unique, but explicit index for auth queries
+  @@index([createdAt]) // For user listing and analytics
   @@map("users")
 }
 
@@ -88,6 +87,8 @@ model RolePermission {
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+  @@index([roleId]) // Optimize role permission lookups
+  @@index([permissionId]) // Optimize permission-based queries
   @@map("role_permissions")
 }
 
@@ -100,6 +101,8 @@ model UserRole {
   role         Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
+  @@index([userId]) // Optimize user role lookups
+  @@index([roleId]) // Optimize role-based queries
   @@map("user_roles")
 }
 

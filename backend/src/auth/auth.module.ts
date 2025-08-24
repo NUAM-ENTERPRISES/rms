@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -12,6 +13,7 @@ import { RbacUtil } from './rbac/rbac.util';
 import { RolesGuard } from './rbac/roles.guard';
 import { PermissionsGuard } from './rbac/permissions.guard';
 import { TeamScopeGuard } from './rbac/team-scope.guard';
+import { ServerTimingInterceptor } from '../common/interceptors/server-timing.interceptor';
 
 @Module({
   imports: [
@@ -38,7 +40,17 @@ import { TeamScopeGuard } from './rbac/team-scope.guard';
     RolesGuard,
     PermissionsGuard,
     TeamScopeGuard,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ServerTimingInterceptor,
+    },
   ],
-  exports: [AuthService, RbacUtil, RolesGuard, PermissionsGuard, TeamScopeGuard],
+  exports: [
+    AuthService,
+    RbacUtil,
+    RolesGuard,
+    PermissionsGuard,
+    TeamScopeGuard,
+  ],
 })
 export class AuthModule {}

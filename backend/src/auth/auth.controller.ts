@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Get,
   Res,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,7 +17,7 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Response, Request as ExpressRequest } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -34,7 +35,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'User login',
     description:
-      'Authenticate user with email and password. Returns access token and sets refresh token as httpOnly cookie.',
+      'Authenticate user with email and password. Returns access token and sets refresh token cookies.',
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
@@ -80,28 +81,21 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.login(loginDto);
-
-    // Set refresh token as httpOnly cookie
-    if (result.success && result.data.refreshToken) {
-      res.cookie('rft', result.data.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/api/v1/auth',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-    }
-
-    return result;
+    const { accessToken, user, refresh } =
+      await this.authService.login(loginDto);
+    this.setRefreshCookies(res, refresh); // writes rfi & rft
+    return {
+      success: true,
+      data: { accessToken, user },
+      message: 'Login successful',
+    };
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Refresh access token',
-    description:
-      'Refresh access token using refresh token from httpOnly cookie. Returns new access token and rotates refresh token.',
+    description: 'Rotate refresh token and return new access token.',
   })
   @ApiResponse({
     status: 200,
@@ -141,33 +135,29 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  async refresh(@Request() req, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.refreshToken(req);
-
-    // Set new refresh token as httpOnly cookie
-    if (result.success && result.data.refreshToken) {
-      res.cookie('rft', result.data.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/api/v1/auth',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-    }
-
-    return result;
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async refresh(
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { rfi, rft } = req.cookies ?? {};
+    const { accessToken, user, next } = await this.authService.rotate(rfi, rft);
+    this.setRefreshCookies(res, next);
+    return {
+      success: true,
+      data: { accessToken, user },
+      message: 'Token refreshed successfully',
+    };
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'User logout',
-    description:
-      'Logout user and revoke all refresh tokens. Clears refresh token cookie.',
+    description: 'Revoke refresh token family and clear cookies.',
   })
+  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'Logout successful',
@@ -179,25 +169,24 @@ export class AuthController {
       },
     },
   })
-  async logout(@Request() req, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.logout(req.user.id);
-
-    // Clear refresh token cookie
-    res.clearCookie('rft', {
-      path: '/api/v1/auth',
-    });
-
-    return result;
+  async logout(
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { rfi } = req.cookies ?? {};
+    await this.authService.revokeFamilyByTokenId(rfi);
+    res.clearCookie('rfi', { path: '/api/v1/auth' });
+    res.clearCookie('rft', { path: '/api/v1/auth' });
+    return { success: true, message: 'Logged out' };
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get current user information',
-    description:
-      'Get current authenticated user details including roles and permissions.',
+    description: 'Retrieve current user details with roles and permissions.',
   })
+  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'User information retrieved successfully',
@@ -232,11 +221,25 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@Request() req) {
-    // User data is already attached by JWT strategy
+    const user = req.user;
     return {
       success: true,
-      data: req.user,
+      data: user,
       message: 'User information retrieved successfully',
     };
+  }
+
+  private setRefreshCookies(
+    res: Response,
+    t: { id: string; value: string; maxAgeMs: number },
+  ) {
+    const common = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/api/v1/auth',
+    };
+    res.cookie('rfi', t.id, { ...common, maxAge: t.maxAgeMs });
+    res.cookie('rft', t.value, { ...common, maxAge: t.maxAgeMs });
   }
 }

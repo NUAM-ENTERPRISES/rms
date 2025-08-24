@@ -6,10 +6,25 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response, Request } from 'express';
+import * as argon2 from 'argon2';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { randomBytes } from 'crypto';
+
+const REFRESH_DAYS = Number(process.env.JWT_REFRESH_DAYS ?? 7);
+const REFRESH_MS = REFRESH_DAYS * 24 * 60 * 60 * 1000;
+
+function newId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `id_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  );
+}
+
+function newSecret() {
+  return randomBytes(64).toString('hex');
+}
 
 @Injectable()
 export class AuthService {
@@ -20,7 +35,7 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await (this.prisma as any).user.findUnique({
       where: { email },
       include: {
         userRoles: {
@@ -39,9 +54,29 @@ export class AuthService {
       },
     });
 
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const { password: _, ...result } = user;
-      return result;
+    if (user) {
+      // Try Argon2 first, then bcrypt for backward compatibility
+      let isValid = false;
+
+      // Check if password looks like Argon2 hash (starts with $argon2)
+      if (user.password.startsWith('$argon2')) {
+        try {
+          isValid = await argon2.verify(user.password, password);
+        } catch (error) {
+          isValid = false;
+        }
+      } else {
+        try {
+          isValid = await bcrypt.compare(password, user.password);
+        } catch (bcryptError) {
+          isValid = false;
+        }
+      }
+
+      if (isValid) {
+        const { password: _, ...result } = user;
+        return result;
+      }
     }
     return null;
   }
@@ -52,68 +87,74 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Generate tokens
-    const accessToken = this.generateAccessToken(user);
-    const { refreshToken, jti, familyId } = await this.generateRefreshToken(
-      user.id,
-    );
+    const accessToken = this.issueAccess({ id: user.id, email: user.email });
+    const refresh = await this.issueRefresh(user.id); // { id, value, maxAgeMs }
 
-    // Return access token and user data
-    // Note: We'll handle cookies in the controller using interceptors
     return {
-      success: true,
-      data: {
-        accessToken,
-        refreshToken, // Include refresh token in response for now
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          roles: user.userRoles.map((ur) => ur.role.name),
-          permissions: user.userRoles.flatMap((ur) =>
-            ur.role.rolePermissions.map((rp) => rp.permission.key),
-          ),
-        },
-      },
-      message: 'Login successful',
+      accessToken,
+      user: this.toUserDTO(user),
+      refresh,
     };
   }
 
-  async refreshToken(req: Request) {
-    // Get refresh token from cookie
-    const refreshToken = req.cookies?.rft;
-    if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token not found');
-    }
+  async rotate(rfi: string | undefined, rft: string | undefined) {
+    if (!rfi || !rft) throw new UnauthorizedException('Missing refresh cookie');
 
-    try {
-      // Verify and rotate refresh token
-      const { newAccessToken, newRefreshToken, jti, familyId } =
-        await this.rotateRefreshToken(refreshToken);
-
-      // Get user data
-      const user = await this.getUserWithRolesAndPermissions(jti);
-
-      return {
-        success: true,
-        data: {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken, // Include in response for interceptor to set cookie
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            roles: user.userRoles.map((ur) => ur.role.name),
-            permissions: user.userRoles.flatMap((ur) =>
-              ur.role.rolePermissions.map((rp) => rp.permission.key),
-            ),
+    // Fetch by id
+    const row = await (this.prisma as any).refreshToken.findUnique({
+      where: { id: rfi },
+      include: {
+        user: {
+          include: {
+            userRoles: {
+              include: {
+                role: {
+                  include: {
+                    rolePermissions: {
+                      include: {
+                        permission: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
-        message: 'Token refreshed successfully',
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
+      },
+    });
+
+    if (!row || row.revokedAt || row.expiresAt <= new Date()) {
+      throw new UnauthorizedException('Refresh token invalid or expired');
     }
+
+    // Verify secret value
+    const ok = await argon2.verify(row.hash, rft);
+    if (!ok) {
+      await this.revokeFamily(row.familyId); // suspected replay/tamper
+      throw new UnauthorizedException('Refresh token mismatch');
+    }
+
+    // Rotate within a transaction
+    const next = await this.rotateInTx(row);
+
+    const accessToken = this.issueAccess({
+      id: row.userId,
+      email: row.user.email,
+    });
+    return {
+      accessToken,
+      user: this.toUserDTO(row.user),
+      next,
+    }; // next: { id, value, maxAgeMs }
+  }
+
+  async revokeFamilyByTokenId(rfi: string | undefined) {
+    if (!rfi) return;
+    const row = await (this.prisma as any).refreshToken.findUnique({
+      where: { id: rfi },
+    });
+    if (row) await this.revokeFamily(row.familyId);
   }
 
   async logout(userId: string) {
@@ -126,94 +167,69 @@ export class AuthService {
     };
   }
 
-  private generateAccessToken(user: { id: string; email: string }) {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-    };
-
-    return this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
-    });
+  private issueAccess(user: { id: string; email: string }) {
+    return this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
+      },
+    );
   }
 
-  private async generateRefreshToken(userId: string): Promise<{
-    refreshToken: string;
-    jti: string;
-    familyId: string;
-  }> {
-    const jti = this.generateJti();
-    const familyId = this.generateFamilyId();
-    const refreshToken = this.generateSecureToken();
-    const tokenHash = await bcrypt.hash(refreshToken, 10); // Use bcrypt for hash
+  private async issueRefresh(userId: string) {
+    const id = newId();
+    const familyId = newId();
+    const value = newSecret();
+    const hash = await argon2.hash(value);
 
-    // Store in database
-    await this.prisma.refreshToken.create({
+    await (this.prisma as any).refreshToken.create({
       data: {
-        jti,
-        familyId,
+        id,
         userId,
-        tokenHash,
-        expiresAt: new Date(Date.now() + this.getRefreshTokenExpiry()),
+        familyId,
+        hash,
+        expiresAt: new Date(Date.now() + REFRESH_MS),
       },
     });
 
-    return { refreshToken, jti, familyId };
+    return { id, value, maxAgeMs: REFRESH_MS };
   }
 
-  private async rotateRefreshToken(oldRefreshToken: string): Promise<{
-    newAccessToken: string;
-    newRefreshToken: string;
-    jti: string;
+  private async rotateInTx(current: {
+    id: string;
+    userId: string;
     familyId: string;
-  }> {
-    // Find the old token
-    const oldTokenRecord = await this.findRefreshTokenByValue(oldRefreshToken);
-    if (!oldTokenRecord) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+  }) {
+    const id = newId();
+    const value = newSecret();
+    const hash = await argon2.hash(value);
+    const expiresAt = new Date(Date.now() + REFRESH_MS);
 
-    // Check if token is expired or revoked
-    if (oldTokenRecord.expiresAt < new Date() || oldTokenRecord.revokedAt) {
-      throw new UnauthorizedException('Refresh token expired or revoked');
-    }
+    await (this.prisma as any).$transaction([
+      (this.prisma as any).refreshToken.update({
+        where: { id: current.id },
+        data: { revokedAt: new Date() },
+      }),
+      (this.prisma as any).refreshToken.create({
+        data: {
+          id,
+          userId: current.userId,
+          familyId: current.familyId,
+          hash,
+          expiresAt,
+        },
+      }),
+    ]);
 
-    // Revoke the old token family
-    await this.revokeRefreshTokenFamily(oldTokenRecord.familyId);
-
-    // Generate new tokens
-    const newAccessToken = this.generateAccessToken({
-      id: oldTokenRecord.userId,
-      email: oldTokenRecord.user.email,
-    });
-    const {
-      refreshToken: newRefreshToken,
-      jti,
-      familyId,
-    } = await this.generateRefreshToken(oldTokenRecord.userId);
-
-    return { newAccessToken, newRefreshToken, jti, familyId };
+    return { id, value, maxAgeMs: REFRESH_MS };
   }
 
-  private async findRefreshTokenByValue(refreshToken: string) {
-    // Find all tokens for the user and verify against each one
-    const tokens = await this.prisma.refreshToken.findMany({
-      where: {
-        expiresAt: { gt: new Date() },
-        revokedAt: null,
-      },
-      include: { user: true },
+  private async revokeFamily(familyId: string) {
+    await (this.prisma as any).refreshToken.updateMany({
+      where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() },
     });
-
-    for (const token of tokens) {
-      if (await bcrypt.compare(refreshToken, token.tokenHash)) {
-        // Use bcrypt for comparison
-        return token;
-      }
-    }
-
-    return null;
   }
 
   private async revokeRefreshTokenFamily(
@@ -224,85 +240,28 @@ export class AuthService {
 
     if (isFamilyId) {
       // Revoke by family ID
-      await this.prisma.refreshToken.updateMany({
+      await (this.prisma as any).refreshToken.updateMany({
         where: { familyId: familyIdOrUserId },
         data: { revokedAt: new Date() },
       });
     } else {
       // Revoke by user ID
-      await this.prisma.refreshToken.updateMany({
+      await (this.prisma as any).refreshToken.updateMany({
         where: { userId: familyIdOrUserId },
         data: { revokedAt: new Date() },
       });
     }
   }
 
-  private async getUserWithRolesAndPermissions(jti: string) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        refreshTokens: {
-          some: { jti },
-        },
-      },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    return user;
-  }
-
-  private setRefreshTokenCookie(res: Response, refreshToken: string): void {
-    const isProduction =
-      this.configService.get<string>('NODE_ENV') === 'production';
-
-    res.cookie('rft', refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      path: '/api/v1/auth',
-      maxAge: this.getRefreshTokenExpiry(),
-    });
-  }
-
-  private clearRefreshTokenCookie(res: Response): void {
-    res.clearCookie('rft', {
-      path: '/api/v1/auth',
-    });
-  }
-
-  private generateJti(): string {
-    return `jti_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  private generateFamilyId(): string {
-    return `fam_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  private generateSecureToken(): string {
-    return require('crypto').randomBytes(64).toString('hex');
-  }
-
-  private getRefreshTokenExpiry(): number {
-    const days = parseInt(
-      this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
-    );
-    return days * 24 * 60 * 60 * 1000;
+  private toUserDTO(user: any) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      roles: user.userRoles.map((ur: any) => ur.role.name),
+      permissions: user.userRoles.flatMap((ur: any) =>
+        ur.role.rolePermissions.map((rp: any) => rp.permission.key),
+      ),
+    };
   }
 }

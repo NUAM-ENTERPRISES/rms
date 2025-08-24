@@ -49,6 +49,7 @@ export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Auth"],
+  keepUnusedDataFor: 300, // Keep data for 5 minutes
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
       query: (credentials: LoginRequest) => ({
@@ -56,22 +57,26 @@ export const authApi = createApi({
         method: "POST",
         body: credentials,
       }),
+      invalidatesTags: ["Auth"],
     }),
     refresh: builder.mutation<RefreshTokenResponse, void>({
       query: () => ({
         url: "/auth/refresh",
         method: "POST",
       }),
+      invalidatesTags: ["Auth"],
     }),
     me: builder.query<MeResponse, void>({
       query: () => "/auth/me",
       providesTags: ["Auth"],
+      keepUnusedDataFor: 600, // Keep user data for 10 minutes
     }),
     logout: builder.mutation<LogoutResponse, void>({
       query: () => ({
         url: "/auth/logout",
         method: "POST",
       }),
+      invalidatesTags: ["Auth"],
     }),
   }),
 });
