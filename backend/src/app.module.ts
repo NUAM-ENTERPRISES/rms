@@ -9,6 +9,7 @@ import { PermissionsGuard } from './auth/rbac/permissions.guard';
 import { PrismaModule } from './database/prisma.module';
 import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
+import { ClientsModule } from './clients/clients.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     RolesModule,
     UsersModule,
+    ClientsModule,
   ],
   controllers: [AppController],
   providers: [

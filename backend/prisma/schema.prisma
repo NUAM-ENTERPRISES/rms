@@ -138,11 +138,41 @@ model UserTeam {
 model Client {
   id              String   @id @default(cuid())
   name            String
-  type            String
+  type            ClientType
   pointOfContact  String?
   email           String?
   phone           String?
   address         String?
+  
+  // Individual Referrer specific fields
+  profession      String?
+  organization    String?
+  relationship    IndividualRelationship?
+  
+  // Sub-Agency specific fields
+  agencyType      AgencyType?
+  specialties     Json     @default("[]")
+  
+  // Healthcare Organization specific fields
+  facilityType    FacilityType?
+  facilitySize    FacilitySize?
+  locations       Json     @default("[]")
+  
+  // External Source specific fields
+  sourceType      ExternalSourceType?
+  sourceName      String?
+  acquisitionMethod AcquisitionMethod?
+  sourceNotes     String?
+  
+  // Optional financial fields
+  relationshipType RelationshipType?
+  commissionRate   Float?
+  paymentTerms     String?
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+  billingAddress    String?
+  taxId             String?
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -150,6 +180,61 @@ model Client {
   projects        Project[]
 
   @@map("clients")
+}
+
+enum ClientType {
+  INDIVIDUAL
+  SUB_AGENCY
+  HEALTHCARE_ORGANIZATION
+  EXTERNAL_SOURCE
+}
+
+enum IndividualRelationship {
+  CURRENT_EMPLOYEE
+  FORMER_EMPLOYEE
+  NETWORK_CONTACT
+}
+
+enum AgencyType {
+  LOCAL
+  REGIONAL
+  SPECIALIZED
+}
+
+enum FacilityType {
+  HOSPITAL
+  CLINIC
+  NURSING_HOME
+  MEDICAL_CENTER
+}
+
+enum FacilitySize {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum ExternalSourceType {
+  JOB_BOARD
+  SOCIAL_MEDIA
+  REFERRAL_PLATFORM
+  INDUSTRY_EVENT
+  COLD_OUTREACH
+  OTHER
+}
+
+enum AcquisitionMethod {
+  ORGANIC
+  PAID
+  PARTNERSHIP
+  REFERRAL
+}
+
+enum RelationshipType {
+  REFERRAL
+  PARTNERSHIP
+  DIRECT_CLIENT
+  EXTERNAL_SOURCE
 }
 
 model Project {
