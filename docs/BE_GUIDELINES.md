@@ -71,6 +71,7 @@ Each feature module **MUST** include:
 - Follow SOLID.
 - Dependency Injection for cross-module access.
 - No circular dependencies.
+- Never apply guards locally unless explicitly exempt from globals (rare).
 
 ---
 
@@ -91,7 +92,41 @@ Each feature module **MUST** include:
 
 - Refresh tokens: **Argon2 hashed** before persisting (like passwords).
 
+- **Global Guards**:
+
+  - `JwtAuthGuard` → ensures request has valid token.
+  - `PermissionsGuard` → enforces fine-grained role/permission checks.
+  - Both registered in `AppModule` as `APP_GUARD`.
+
+- **Public decorator**:
+
+  - Endpoints that must bypass auth (`@Public()`) must be explicitly decorated.
+  - Example:
+    ```ts
+    @Public()
+    @Post('login')
+    login(@Body() dto: LoginDto) { ... }
+    ```
+
+- **JWT + Refresh**:
+
+  - Access: 15 mins
+  - Refresh: 7 days, rotated on reuse
+  - Stored as `httpOnly` secure cookies
+
+- **Roles & Permissions**:
+
+  - Stored in DB: (`roles`, `permissions`, `user_roles`)
+  - Checked via `RbacUtil`
+  - Permissions are string-based (`manage:users`, `read:projects`)
+
+- **Passwords & Refresh Tokens**: hashed with Argon2.
+
 - Account lockout after 5 failed logins.
+
+- **Security Extras**:
+  - Account lockout after 5 failed logins
+  - Audit log all auth events
 
 ---
 
@@ -145,10 +180,12 @@ Each feature module **MUST** include:
 }
 ```
 
+- Responses standardized
 - DTO validation **required** for every input.
 - Swagger decorators for all controllers.
 - Use pagination for list endpoints (limit/offset or cursor).
 - Use consistent naming (`createdAt`, `updatedAt`).
+- **Public endpoints explicitly decorated with `@Public()`**
 
 ---
 
@@ -238,7 +275,9 @@ Each feature module **MUST** include:
 - ✅ 80%+ coverage
 - ✅ No TODOs left
 - ✅ Swagger updated
-- ✅ RBAC enforced
+- ✅ **Global guards enforced**
+- ✅ Public endpoints decorated with `@Public()`
+- ✅ RBAC enforced at endpoint level
 - ✅ Docs updated if changes affect flows
 
 ---
@@ -251,6 +290,8 @@ Each feature module **MUST** include:
 - ❌ `any` or untyped inputs
 - ❌ Circular dependencies
 - ❌ Silent errors (must log/throw)
+- ❌ Forgetting `@Public()` on endpoints that must be open
+- ❌ Adding `@UseGuards` manually on feature controllers (unless architect-approved exception)
 
 ---
 

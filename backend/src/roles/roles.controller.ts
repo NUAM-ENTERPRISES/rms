@@ -17,19 +17,16 @@ import {
 } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { AssignRoleDto } from './dto/assign-role.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/rbac/roles.guard';
-import { Roles } from '../auth/rbac/roles.decorator';
+import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Roles')
 @ApiBearerAuth()
 @Controller('roles')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
-  @Roles('Manager', 'CEO', 'Director')
+  @Permissions('read:roles')
   @ApiOperation({ summary: 'Get all roles with their permissions' })
   @ApiResponse({
     status: 200,
@@ -68,7 +65,7 @@ export class RolesController {
   }
 
   @Post('assign')
-  @Roles('Manager', 'CEO', 'Director')
+  @Permissions('manage:users')
   @ApiOperation({ summary: 'Assign a role to a user' })
   @ApiResponse({
     status: 201,
@@ -100,7 +97,7 @@ export class RolesController {
   }
 
   @Delete(':userId/:roleId')
-  @Roles('Manager', 'CEO', 'Director')
+  @Permissions('manage:users')
   @ApiOperation({ summary: 'Remove a role from a user' })
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiParam({ name: 'roleId', description: 'Role ID' })
@@ -135,7 +132,7 @@ export class RolesController {
   }
 
   @Get('user/:userId')
-  @Roles('Manager', 'CEO', 'Director')
+  @Permissions('read:users')
   @ApiOperation({ summary: 'Get roles assigned to a specific user' })
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({

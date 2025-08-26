@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
-import { render } from "@/test/utils";
-import LoginPage from "../LoginPage";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { Provider } from "react-redux";
+import LoginPage from "@/pages/auth/LoginPage";
 
 // Mock the router
 const mockNavigate = vi.fn();

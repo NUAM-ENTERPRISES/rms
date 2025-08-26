@@ -4,6 +4,8 @@ import { PrismaService } from '../../database/prisma.service';
 interface UserRolesAndPermissions {
   roles: string[];
   permissions: string[];
+  teamIds: string[];
+  userVersion: number;
 }
 
 interface CacheEntry {
@@ -28,7 +30,7 @@ export class RbacUtil {
     }
 
     // Fetch from database
-    const userRoles = await this.prisma.userRole.findMany({
+    const userRoles = await (this.prisma as any).userRole.findMany({
       where: { userId },
       include: {
         role: {
@@ -43,8 +45,15 @@ export class RbacUtil {
       },
     });
 
+    // Get user's team assignments
+    const userTeams = await (this.prisma as any).userTeam.findMany({
+      where: { userId },
+      select: { teamId: true },
+    });
+
     const roles = userRoles.map((ur) => ur.role.name);
     const permissions = new Set<string>();
+    const teamIds = userTeams.map((ut) => ut.teamId);
 
     // Collect all permissions from user's roles
     for (const userRole of userRoles) {
@@ -53,9 +62,17 @@ export class RbacUtil {
       }
     }
 
+    // Get user's updatedAt for version tracking
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { updatedAt: true },
+    });
+
     const result: UserRolesAndPermissions = {
       roles,
       permissions: Array.from(permissions),
+      teamIds,
+      userVersion: user?.updatedAt.getTime() || Date.now(),
     };
 
     // Cache the result
@@ -65,6 +82,26 @@ export class RbacUtil {
     });
 
     return result;
+  }
+
+  async getEffectiveScope(
+    userId: string,
+  ): Promise<'all' | { teamIds: string[] }> {
+    const { roles, permissions, teamIds } =
+      await this.getUserRolesAndPermissions(userId);
+
+    // Global admins have access to all teams
+    if (
+      roles.includes('CEO') ||
+      roles.includes('Director') ||
+      permissions.includes('*') ||
+      permissions.includes('read:all')
+    ) {
+      return 'all';
+    }
+
+    // Return team-scoped access
+    return { teamIds };
   }
 
   async hasRole(userId: string, requiredRoles: string[]): Promise<boolean> {
@@ -85,7 +122,11 @@ export class RbacUtil {
     const { permissions } = await this.getUserRolesAndPermissions(userId);
 
     // Check for global permissions
-    if (permissions.includes('*') || permissions.includes('manage:all')) {
+    if (
+      permissions.includes('*') ||
+      permissions.includes('manage:all') ||
+      permissions.includes('read:all')
+    ) {
       return true;
     }
 
@@ -116,7 +157,7 @@ export class RbacUtil {
     }
 
     // Check if user is assigned to the specific team
-    const userTeam = await this.prisma.userTeam.findUnique({
+    const userTeam = await (this.prisma as any).userTeam.findUnique({
       where: {
         userId_teamId: {
           userId,

@@ -9,6 +9,7 @@ import { Response, Request } from 'express';
 import * as argon2 from 'argon2';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../database/prisma.service';
+import { AuditService } from '../common/audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { randomBytes } from 'crypto';
 
@@ -32,6 +33,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private auditService: AuditService,
   ) {}
 
   async validateUser(email: string, password: string) {
@@ -51,6 +53,7 @@ export class AuthService {
             },
           },
         },
+        userTeams: true, // Include team assignments for scope filtering
       },
     });
 
@@ -90,6 +93,13 @@ export class AuthService {
     const accessToken = this.issueAccess({ id: user.id, email: user.email });
     const refresh = await this.issueRefresh(user.id); // { id, value, maxAgeMs }
 
+    // Audit log the login
+    await this.auditService.logAuthAction('login', user.id, {
+      action: 'user_login',
+      email: loginDto.email,
+      timestamp: new Date(),
+    });
+
     return {
       accessToken,
       user: this.toUserDTO(user),
@@ -119,6 +129,7 @@ export class AuthService {
                 },
               },
             },
+            userTeams: true, // Include team assignments for scope filtering
           },
         },
       },
@@ -160,6 +171,12 @@ export class AuthService {
   async logout(userId: string) {
     // Revoke all refresh tokens for the user
     await this.revokeRefreshTokenFamily(userId);
+
+    // Audit log the logout
+    await this.auditService.logAuthAction('logout', userId, {
+      action: 'user_logout',
+      timestamp: new Date(),
+    });
 
     return {
       success: true,
@@ -254,6 +271,9 @@ export class AuthService {
   }
 
   private toUserDTO(user: any) {
+    // Get user's team IDs for scope filtering
+    const teamIds = user.userTeams?.map((ut: any) => ut.teamId) || [];
+
     return {
       id: user.id,
       email: user.email,
@@ -262,6 +282,8 @@ export class AuthService {
       permissions: user.userRoles.flatMap((ur: any) =>
         ur.role.rolePermissions.map((rp: any) => rp.permission.key),
       ),
+      teamIds,
+      userVersion: user.updatedAt.getTime(), // Use updatedAt as version for cache invalidation
     };
   }
 }

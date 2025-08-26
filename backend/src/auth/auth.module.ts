@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { PrismaModule } from '../database/prisma.module';
+import { AuditModule } from '../common/audit/audit.module';
 import { RbacUtil } from './rbac/rbac.util';
 import { RolesGuard } from './rbac/roles.guard';
 import { PermissionsGuard } from './rbac/permissions.guard';
@@ -19,6 +20,7 @@ import { ServerTimingInterceptor } from '../common/interceptors/server-timing.in
   imports: [
     PassportModule,
     PrismaModule,
+    AuditModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

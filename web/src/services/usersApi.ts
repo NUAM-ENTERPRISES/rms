@@ -1,5 +1,5 @@
 import { createApi } from '@reduxjs/toolkit/query/react'
-import { baseQuery } from './baseApi'
+import { baseQuery } from '@/services/baseApi'
 
 interface User {
   id: string

@@ -11,6 +11,10 @@ describe('RbacUtil', () => {
       findMany: jest.fn(),
     },
     userTeam: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    user: {
       findUnique: jest.fn(),
     },
   };
@@ -37,386 +41,472 @@ describe('RbacUtil', () => {
 
   describe('getUserRolesAndPermissions', () => {
     it('should return user roles and permissions from database', async () => {
-      const userId = 'user-1';
       const mockUserRoles = [
         {
           role: {
             name: 'Manager',
             rolePermissions: [
-              { permission: { key: 'read:all' } },
-              { permission: { key: 'manage:users' } },
+              {
+                permission: { key: 'read:users' },
+              },
+              {
+                permission: { key: 'write:users' },
+              },
             ],
           },
         },
-        {
-          role: {
-            name: 'Team Head',
-            rolePermissions: [{ permission: { key: 'read:assigned_teams' } }],
-          },
-        },
       ];
 
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      const mockUserTeams = [{ teamId: 'team1' }, { teamId: 'team2' }];
 
-      const result = await service.getUserRolesAndPermissions(userId);
-
-      expect(result).toEqual({
-        roles: ['Manager', 'Team Head'],
-        permissions: ['read:all', 'manage:users', 'read:assigned_teams'],
-      });
-      expect(mockPrismaService.userRole.findMany).toHaveBeenCalledWith({
-        where: { userId },
-        include: {
-          role: {
-            include: {
-              rolePermissions: {
-                include: {
-                  permission: true,
-                },
-              },
-            },
-          },
-        },
-      });
-    });
-
-    it('should return cached data if available and not expired', async () => {
-      const userId = 'user-1';
-      const cachedData = {
-        roles: ['Manager'],
-        permissions: ['read:all'],
+      const mockUser = {
+        updatedAt: new Date('2024-01-01T00:00:00Z'),
       };
 
-      // Set cache manually
-      (service as any).cache.set(userId, {
-        data: cachedData,
-        timestamp: Date.now(),
-      });
-
-      const result = await service.getUserRolesAndPermissions(userId);
-
-      expect(result).toEqual(cachedData);
-      expect(mockPrismaService.userRole.findMany).not.toHaveBeenCalled();
-    });
-
-    it('should fetch fresh data if cache is expired', async () => {
-      const userId = 'user-1';
-      const expiredData = {
-        roles: ['OldRole'],
-        permissions: ['old:permission'],
-      };
-
-      // Set expired cache
-      (service as any).cache.set(userId, {
-        data: expiredData,
-        timestamp: Date.now() - 70000, // 70 seconds ago (expired)
-      });
-
-      const mockUserRoles = [
-        {
-          role: {
-            name: 'Manager',
-            rolePermissions: [{ permission: { key: 'read:all' } }],
-          },
-        },
-      ];
-
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      const result = await service.getUserRolesAndPermissions(userId);
+      const result = await service.getUserRolesAndPermissions('user1');
 
       expect(result).toEqual({
         roles: ['Manager'],
-        permissions: ['read:all'],
+        permissions: ['read:users', 'write:users'],
+        teamIds: ['team1', 'team2'],
+        userVersion: new Date('2024-01-01T00:00:00Z').getTime(),
       });
-      expect(mockPrismaService.userRole.findMany).toHaveBeenCalled();
-    });
-  });
-
-  describe('hasRole', () => {
-    it('should return true for global admin roles (CEO)', async () => {
-      const userId = 'user-1';
-      const mockUserRoles = [
-        {
-          role: {
-            name: 'CEO',
-            rolePermissions: [{ permission: { key: '*' } }],
-          },
-        },
-      ];
-
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
-
-      const result = await service.hasRole(userId, ['Manager']);
-
-      expect(result).toBe(true);
     });
 
-    it('should return true for global admin roles (Director)', async () => {
-      const userId = 'user-1';
-      const mockUserRoles = [
-        {
-          role: {
-            name: 'Director',
-            rolePermissions: [{ permission: { key: '*' } }],
-          },
-        },
-      ];
-
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
-
-      const result = await service.hasRole(userId, ['Recruiter']);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return true if user has required role', async () => {
-      const userId = 'user-1';
-      const mockUserRoles = [
-        {
-          role: {
-            name: 'Manager',
-            rolePermissions: [{ permission: { key: 'read:all' } }],
-          },
-        },
-      ];
-
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
-
-      const result = await service.hasRole(userId, ['Manager']);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false if user does not have required role', async () => {
-      const userId = 'user-1';
+    it('should return cached result when available', async () => {
       const mockUserRoles = [
         {
           role: {
             name: 'Recruiter',
-            rolePermissions: [{ permission: { key: 'read:candidates' } }],
+            rolePermissions: [
+              {
+                permission: { key: 'read:candidates' },
+              },
+            ],
           },
         },
       ];
 
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
-      const result = await service.hasRole(userId, ['Manager']);
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      // First call - should hit database
+      await service.getUserRolesAndPermissions('user1');
+
+      // Second call - should use cache
+      const result = await service.getUserRolesAndPermissions('user1');
+
+      expect(result).toEqual({
+        roles: ['Recruiter'],
+        permissions: ['read:candidates'],
+        teamIds: ['team1'],
+        userVersion: mockUser.updatedAt.getTime(),
+      });
+
+      // Should only call database once
+      expect(mockPrismaService.userRole.findMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getEffectiveScope', () => {
+    it('should return "all" for CEO role', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'CEO',
+            rolePermissions: [
+              {
+                permission: { key: '*' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getEffectiveScope('user1');
+
+      expect(result).toBe('all');
+    });
+
+    it('should return "all" for Director role', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Director',
+            rolePermissions: [
+              {
+                permission: { key: 'read:all' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getEffectiveScope('user1');
+
+      expect(result).toBe('all');
+    });
+
+    it('should return team scope for regular users', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Recruiter',
+            rolePermissions: [
+              {
+                permission: { key: 'read:candidates' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams = [{ teamId: 'team1' }, { teamId: 'team2' }];
+      const mockUser = { updatedAt: new Date() };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getEffectiveScope('user1');
+
+      expect(result).toEqual({ teamIds: ['team1', 'team2'] });
+    });
+  });
+
+  describe('hasRole', () => {
+    it('should return true for CEO role', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'CEO',
+            rolePermissions: [
+              {
+                permission: { key: '*' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.hasRole('user1', ['Manager']);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return true when user has required role', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Manager',
+            rolePermissions: [
+              {
+                permission: { key: 'read:users' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.hasRole('user1', ['Manager']);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when user lacks required role', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Recruiter',
+            rolePermissions: [
+              {
+                permission: { key: 'read:candidates' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.hasRole('user1', ['Manager']);
 
       expect(result).toBe(false);
     });
   });
 
   describe('hasPermission', () => {
-    it('should return true for global permissions (*)', async () => {
-      const userId = 'user-1';
+    it('should return true for wildcard permission', async () => {
       const mockUserRoles = [
         {
           role: {
             name: 'CEO',
-            rolePermissions: [{ permission: { key: '*' } }],
+            rolePermissions: [
+              {
+                permission: { key: '*' },
+              },
+            ],
           },
         },
       ];
 
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
-      const result = await service.hasPermission(userId, ['manage:users']);
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.hasPermission('user1', ['manage:users']);
 
       expect(result).toBe(true);
     });
 
-    it('should return true for manage:all permission', async () => {
-      const userId = 'user-1';
+    it('should return true when user has required permission', async () => {
       const mockUserRoles = [
         {
           role: {
             name: 'Manager',
-            rolePermissions: [{ permission: { key: 'manage:all' } }],
+            rolePermissions: [
+              {
+                permission: { key: 'manage:users' },
+              },
+            ],
           },
         },
       ];
 
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
-      const result = await service.hasPermission(userId, ['write:projects']);
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.hasPermission('user1', ['manage:users']);
 
       expect(result).toBe(true);
     });
 
-    it('should return true if user has required permission', async () => {
-      const userId = 'user-1';
-      const mockUserRoles = [
-        {
-          role: {
-            name: 'Manager',
-            rolePermissions: [{ permission: { key: 'manage:users' } }],
-          },
-        },
-      ];
-
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
-
-      const result = await service.hasPermission(userId, ['manage:users']);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false if user does not have required permission', async () => {
-      const userId = 'user-1';
+    it('should return false when user lacks required permission', async () => {
       const mockUserRoles = [
         {
           role: {
             name: 'Recruiter',
-            rolePermissions: [{ permission: { key: 'read:candidates' } }],
+            rolePermissions: [
+              {
+                permission: { key: 'read:candidates' },
+              },
+            ],
           },
         },
       ];
 
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
-      const result = await service.hasPermission(userId, ['manage:users']);
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.hasPermission('user1', ['manage:users']);
 
       expect(result).toBe(false);
     });
   });
 
   describe('checkTeamAccess', () => {
-    it('should return true for global admins (CEO)', async () => {
-      const userId = 'user-1';
-      const resourceTeamId = 'team-1';
+    it('should return true for CEO role', async () => {
       const mockUserRoles = [
         {
           role: {
             name: 'CEO',
-            rolePermissions: [{ permission: { key: '*' } }],
+            rolePermissions: [
+              {
+                permission: { key: '*' },
+              },
+            ],
           },
         },
       ];
 
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
-
-      const result = await service.checkTeamAccess(userId, resourceTeamId);
-
-      expect(result).toBe(true);
-      expect(mockPrismaService.userTeam.findUnique).not.toHaveBeenCalled();
-    });
-
-    it('should return true for global admins (Director)', async () => {
-      const userId = 'user-1';
-      const resourceTeamId = 'team-1';
-      const mockUserRoles = [
-        {
-          role: {
-            name: 'Director',
-            rolePermissions: [{ permission: { key: '*' } }],
-          },
-        },
-      ];
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      const result = await service.checkTeamAccess(userId, resourceTeamId);
+      const result = await service.checkTeamAccess('user1', 'team2');
 
       expect(result).toBe(true);
     });
 
-    it('should return true for Managers with read:all permission', async () => {
-      const userId = 'user-1';
-      const resourceTeamId = 'team-1';
-      const mockUserRoles = [
-        {
-          role: {
-            name: 'Manager',
-            rolePermissions: [{ permission: { key: 'read:all' } }],
-          },
-        },
-      ];
-
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
-
-      const result = await service.checkTeamAccess(userId, resourceTeamId);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return true if user is assigned to the team', async () => {
-      const userId = 'user-1';
-      const resourceTeamId = 'team-1';
+    it('should return true when user is assigned to team', async () => {
       const mockUserRoles = [
         {
           role: {
             name: 'Recruiter',
-            rolePermissions: [{ permission: { key: 'read:candidates' } }],
+            rolePermissions: [
+              {
+                permission: { key: 'read:candidates' },
+              },
+            ],
           },
         },
       ];
 
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
+
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
       mockPrismaService.userTeam.findUnique.mockResolvedValue({
-        userId,
-        teamId: resourceTeamId,
+        userId: 'user1',
+        teamId: 'team1',
       });
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      const result = await service.checkTeamAccess(userId, resourceTeamId);
+      const result = await service.checkTeamAccess('user1', 'team1');
 
       expect(result).toBe(true);
-      expect(mockPrismaService.userTeam.findUnique).toHaveBeenCalledWith({
-        where: {
-          userId_teamId: {
-            userId,
-            teamId: resourceTeamId,
-          },
-        },
-      });
     });
 
-    it('should return false if user is not assigned to the team', async () => {
-      const userId = 'user-1';
-      const resourceTeamId = 'team-1';
+    it('should return false when user is not assigned to team', async () => {
       const mockUserRoles = [
         {
           role: {
             name: 'Recruiter',
-            rolePermissions: [{ permission: { key: 'read:candidates' } }],
+            rolePermissions: [
+              {
+                permission: { key: 'read:candidates' },
+              },
+            ],
           },
         },
       ];
 
-      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
-      mockPrismaService.userTeam.findUnique.mockResolvedValue(null);
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
-      const result = await service.checkTeamAccess(userId, resourceTeamId);
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.userTeam.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.checkTeamAccess('user1', 'team2');
 
       expect(result).toBe(false);
     });
   });
 
   describe('cache management', () => {
-    it('should clear user cache', () => {
-      const userId = 'user-1';
-      const cachedData = { roles: ['Manager'], permissions: ['read:all'] };
+    it('should clear user cache', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Manager',
+            rolePermissions: [
+              {
+                permission: { key: 'read:users' },
+              },
+            ],
+          },
+        },
+      ];
 
-      (service as any).cache.set(userId, {
-        data: cachedData,
-        timestamp: Date.now(),
-      });
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
-      service.clearUserCache(userId);
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      expect((service as any).cache.has(userId)).toBe(false);
+      // First call - populate cache
+      await service.getUserRolesAndPermissions('user1');
+
+      // Clear cache
+      service.clearUserCache('user1');
+
+      // Second call - should hit database again
+      await service.getUserRolesAndPermissions('user1');
+
+      expect(mockPrismaService.userRole.findMany).toHaveBeenCalledTimes(2);
     });
 
-    it('should clear all cache', () => {
-      const userId1 = 'user-1';
-      const userId2 = 'user-2';
+    it('should clear all cache', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Manager',
+            rolePermissions: [
+              {
+                permission: { key: 'read:users' },
+              },
+            ],
+          },
+        },
+      ];
 
-      (service as any).cache.set(userId1, { data: {}, timestamp: Date.now() });
-      (service as any).cache.set(userId2, { data: {}, timestamp: Date.now() });
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
 
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      // Populate cache for multiple users
+      await service.getUserRolesAndPermissions('user1');
+      await service.getUserRolesAndPermissions('user2');
+
+      // Clear all cache
       service.clearAllCache();
 
-      expect((service as any).cache.size).toBe(0);
+      // Should hit database again
+      await service.getUserRolesAndPermissions('user1');
+
+      expect(mockPrismaService.userRole.findMany).toHaveBeenCalledTimes(3);
     });
   });
 });

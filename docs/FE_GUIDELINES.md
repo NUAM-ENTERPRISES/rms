@@ -324,4 +324,79 @@ Examples: `feat(auth): add login form`, `fix(projects): correct deadline parsing
 - Tailwind with Vite: [https://tailwindcss.com/docs/installation/using-vite](https://tailwindcss.com/docs/installation/using-vite)
 - ShadCN with Vite: [https://ui.shadcn.com/docs/installation/vite](https://ui.shadcn.com/docs/installation/vite)
 
+18. Authorization & Permissions (RBAC in UI)
+
+Principle: Backend is the source of truth. The UI must reflect permissions for clarity, but every sensitive action is still re-checked by the API.
+
+18.1 Canonical APIs (must use)
+• useCan(required: string | string[]) => boolean
+Centralized permission check. Reads auth.user.permissions from Redux.
+• <Can allOf?: string[]; anyOf?: string[]; fallback?: ReactNode>
+Declarative wrapper for conditional rendering.
+• <ProtectedRoute roles?: string[]; permissions?: string[]>
+Route guard. Blocks while auth status is loading; redirects to /login?next=… if unauthenticated; denies with toast + redirect if insufficient authorization.
+
+❌ Prohibited: inline checks like if (user.role === 'Manager') ... or if (user.permissions.includes('...')) sprinkled in components.
+✅ Required: use useCan or <Can>.
+
+18.2 Where to apply
+• Routes: All protected pages MUST be wrapped in <ProtectedRoute>.
+• Navigation: Sidebar/top-nav items MUST declare required permissions in their config and be filtered via useCan.
+• Actions/Buttons: Wrap in <Can allOf={[\"perm:xyz\"]}>…</Can> or disable with a Clear UI cue.
+• Fields: Sensitive fields (e.g., salary, PII) must be masked in UI if the user lacks read:sensitive_fields. The API must also omit/deny those fields.
+
+18.3 Contract with Backend
+• The /auth/refresh response SHOULD include:
+
+{
+"success": true,
+"data": {
+"accessToken": "<...>",
+"user": {
+"id": "...",
+"email": "...",
+"roles": ["Manager"],
+"permissions": ["read:candidates", "write:candidates"],
+"teamIds": ["..."] // optional
+},
+"userVersion": "v123" // optional, bump on role/perm changes
+}
+}
+
+    •	The frontend stores accessToken in memory (Redux). No localStorage for tokens.
+    •	If user is missing in refresh, the app may call /me once to hydrate.
+
+18.4 Definition of Done (Authorization)
+• ✅ All protected routes use <ProtectedRoute> with roles/permissions as applicable
+• ✅ Menus filtered by useCan; inaccessible items not rendered
+• ✅ Actions/sections gated by <Can>; sensitive fields masked without permission
+• ✅ No inline role/permission checks; all via useCan/<Can>
+• ✅ Tests cover one guarded route (grant/deny) and at least one gated action
+
+19. Import Aliases & Module Resolution (@/...)
+
+Goal: eliminate brittle deep relative paths (../../../../components) and enforce consistent imports. All internal imports MUST use the @ alias.
+
+19.1 Required configuration
+
+tsconfig.json
+
+{
+...,
+"compilerOptions": {
+"baseUrl": ".",
+"paths": {
+"@/_": ["src/_"]
+}
+}
+}
+
+19.2 Definition of Done (Aliases)
+• ✅ All internal imports use @/…
+• ✅ No long relative import chains remain
+• ✅ ESLint passes with alias resolver
+• ✅ Vite dev/build works with alias
+
+After configuring, update all imports to @/…. Cursor MUST use @/… for every internal module (hooks, components, features, utils, services).
+
 > Cursor MUST cite this file in every task and refuse patterns that violate it. If a requirement conflicts with these rules, Cursor must ask for clarification with the conflicting section quoted.

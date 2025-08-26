@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/database/prisma.service';
+import cookieParser from 'cookie-parser';
 
 describe('Authentication (e2e)', () => {
   let app: INestApplication;
@@ -15,6 +16,22 @@ describe('Authentication (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
+
+    // Set global prefix
+    app.setGlobalPrefix('api/v1');
+
+    // Add cookie parser
+    app.use(cookieParser());
+
+    // Add validation pipe
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
     await app.init();
   });
 
@@ -36,11 +53,14 @@ describe('Authentication (e2e)', () => {
           expect(res.body.data.accessToken).toBeDefined();
           expect(res.body.data.user).toBeDefined();
           expect(res.body.data.user.roles).toContain('CEO');
-          
+
           // Check if refresh token cookie is set
           const cookies = res.headers['set-cookie'];
           expect(cookies).toBeDefined();
-          expect(Array.isArray(cookies) && cookies.some((cookie: string) => cookie.includes('rft='))).toBe(true);
+          expect(
+            Array.isArray(cookies) &&
+              cookies.some((cookie: string) => cookie.includes('rft=')),
+          ).toBe(true);
         });
     });
 
@@ -76,7 +96,7 @@ describe('Authentication (e2e)', () => {
           expect(res.body.success).toBe(true);
           expect(res.body.data.accessToken).toBeDefined();
           expect(res.body.data.user).toBeDefined();
-          
+
           // Should get new cookies
           const newCookies = res.headers['set-cookie'];
           expect(newCookies).toBeDefined();
@@ -114,9 +134,7 @@ describe('Authentication (e2e)', () => {
     });
 
     it('should reject request without token', () => {
-      return request(app.getHttpServer())
-        .get('/api/v1/auth/me')
-        .expect(401);
+      return request(app.getHttpServer()).get('/api/v1/auth/me').expect(401);
     });
   });
 
@@ -140,11 +158,14 @@ describe('Authentication (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body.success).toBe(true);
-          
+
           // Should clear cookies
           const clearCookies = res.headers['set-cookie'];
           expect(clearCookies).toBeDefined();
-          expect(Array.isArray(clearCookies) && clearCookies.some((cookie: string) => cookie.includes('rft=;'))).toBe(true);
+          expect(
+            Array.isArray(clearCookies) &&
+              clearCookies.some((cookie: string) => cookie.includes('rft=;')),
+          ).toBe(true);
         });
     });
   });

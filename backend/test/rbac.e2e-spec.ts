@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/database/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
 
 describe('RBAC System (e2e)', () => {
   let app: INestApplication;
@@ -28,6 +29,21 @@ describe('RBAC System (e2e)', () => {
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
     jwtService = moduleFixture.get<JwtService>(JwtService);
     configService = moduleFixture.get<ConfigService>(ConfigService);
+
+    // Set global prefix
+    app.setGlobalPrefix('api/v1');
+
+    // Add cookie parser
+    app.use(cookieParser());
+
+    // Add validation pipe
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
 
     await app.init();
 

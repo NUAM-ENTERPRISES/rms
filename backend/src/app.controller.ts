@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { PrismaService } from './database/prisma.service';
+import { Public } from './auth/decorators/public.decorator';
 
 @Controller()
 export class AppController {
@@ -10,11 +11,13 @@ export class AppController {
   ) {}
 
   @Get()
+  @Public()
   getHello(): string {
     return this.appService.getHello();
   }
 
   @Get('test-db')
+  @Public()
   async testDatabase() {
     try {
       const userCount = await this.prisma.user.count();

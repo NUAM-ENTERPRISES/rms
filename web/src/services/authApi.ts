@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauth } from "./baseQuery.ts";
+import { baseQueryWithReauth } from "@/services/baseQuery";
 
 interface LoginRequest {
   email: string;
@@ -12,6 +12,8 @@ interface User {
   email: string;
   roles: string[];
   permissions: string[];
+  teamIds?: string[];
+  userVersion?: number;
 }
 
 interface LoginResponse {

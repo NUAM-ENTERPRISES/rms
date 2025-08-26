@@ -7,7 +7,7 @@ import {
   setStatus,
 } from "@/features/auth/authSlice";
 import { authApi } from "@/services/authApi";
-import LoadingScreen from "../../components/atoms/LoadingScreen";
+import LoadingScreen from "@/components/atoms/LoadingScreen";
 
 interface AuthProviderProps {
   children: ReactNode;

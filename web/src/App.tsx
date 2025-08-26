@@ -1,14 +1,14 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
-import AuthProvider from "./app/providers/auth-provider";
-import ProtectedRoute from "./app/router/protected-route";
-import RouteErrorBoundary from "./components/atoms/RouteErrorBoundary";
-import LoadingScreen from "./components/atoms/LoadingScreen";
+import AuthProvider from "@/app/providers/auth-provider";
+import ProtectedRoute from "@/app/router/protected-route";
+import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
+import LoadingScreen from "@/components/atoms/LoadingScreen";
 
 // Lazy load pages
-const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
-const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 
 function App() {
   return (

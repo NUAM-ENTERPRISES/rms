@@ -22,7 +22,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Public } from './decorators/public.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -31,6 +31,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Public()
   @UseGuards(LocalAuthGuard)
   @ApiOperation({
     summary: 'User login',
@@ -93,6 +94,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @Public()
   @ApiOperation({
     summary: 'Refresh access token',
     description: 'Rotate refresh token and return new access token.',
@@ -151,7 +153,6 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'User logout',
@@ -181,7 +182,6 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Get current user information',
     description: 'Retrieve current user details with roles and permissions.',
