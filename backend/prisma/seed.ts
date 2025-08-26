@@ -34,6 +34,11 @@ const roles = [
     description: 'Team Lead - Task monitoring and assigned recruiters',
     permissions: [
       'read:assigned_teams',
+      'write:assigned_teams',
+      'read:projects',
+      'read:candidates',
+      'read:teams',
+      'read:interviews',
       'write:candidates',
       'manage:recruiters',
     ],

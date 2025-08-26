@@ -1,11 +1,17 @@
 import { Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { Toaster } from "sonner";
 import AuthProvider from "@/app/providers/auth-provider";
 import ProtectedRoute from "@/app/router/protected-route";
 import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import AppLayout from "@/layout/AppLayout";
+import { useAppSelector } from "@/app/hooks";
 
 // Lazy load pages
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
@@ -14,6 +20,30 @@ const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const CandidatesPage = lazy(() => import("@/pages/CandidatesPage"));
 const TeamsPage = lazy(() => import("@/pages/TeamsPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
+
+// Role-based redirect component
+function RoleBasedRedirect() {
+  const { user } = useAppSelector((state) => state.auth);
+
+  // Only Manager, Director, and CEO can access dashboard
+  // All other roles (Recruiter, Team Head, Team Lead, etc.) go to projects
+  if (
+    user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
+  ) {
+    return (
+      <AppLayout>
+        <DashboardPage />
+      </AppLayout>
+    );
+  }
+
+  // All other roles go to projects page
+  return (
+    <AppLayout>
+      <ProjectsPage />
+    </AppLayout>
+  );
+}
 
 function App() {
   return (
@@ -37,7 +67,7 @@ function App() {
                 path="/dashboard"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute>
+                    <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
                       <AppLayout>
                         <DashboardPage />
                       </AppLayout>
@@ -50,7 +80,7 @@ function App() {
                 path="/projects"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute permissions={["read:projects"]}>
+                    <ProtectedRoute>
                       <AppLayout>
                         <ProjectsPage />
                       </AppLayout>
@@ -63,7 +93,7 @@ function App() {
                 path="/candidates"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute permissions={["read:candidates"]}>
+                    <ProtectedRoute>
                       <AppLayout>
                         <CandidatesPage />
                       </AppLayout>
@@ -76,9 +106,63 @@ function App() {
                 path="/teams"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute permissions={["read:teams"]}>
+                    <ProtectedRoute>
                       <AppLayout>
                         <TeamsPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/interviews"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <div className="p-8">
+                          <h1 className="text-2xl font-bold">Interviews</h1>
+                          <p className="text-muted-foreground">
+                            Interview scheduling and management
+                          </p>
+                        </div>
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/notifications"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <div className="p-8">
+                          <h1 className="text-2xl font-bold">Notifications</h1>
+                          <p className="text-muted-foreground">
+                            Stay updated on important updates and assignments
+                          </p>
+                        </div>
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/profile"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <div className="p-8">
+                          <h1 className="text-2xl font-bold">Profile</h1>
+                          <p className="text-muted-foreground">
+                            Manage your personal information and preferences
+                          </p>
+                        </div>
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>
@@ -89,12 +173,12 @@ function App() {
                 path="/clients"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute permissions={["read:clients"]}>
+                    <ProtectedRoute>
                       <AppLayout>
                         <div className="p-8">
                           <h1 className="text-2xl font-bold">Clients</h1>
                           <p className="text-muted-foreground">
-                            Client management page
+                            Client management and information
                           </p>
                         </div>
                       </AppLayout>
@@ -107,7 +191,7 @@ function App() {
                 path="/documents"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute permissions={["read:documents"]}>
+                    <ProtectedRoute>
                       <AppLayout>
                         <div className="p-8">
                           <h1 className="text-2xl font-bold">Documents</h1>
@@ -162,7 +246,10 @@ function App() {
                 path="/admin/users"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute roles={["CEO", "Director", "Manager"]} permissions={["read:users"]}>
+                    <ProtectedRoute
+                      roles={["CEO", "Director", "Manager"]}
+                      permissions={["read:users"]}
+                    >
                       <AppLayout>
                         <UsersPage />
                       </AppLayout>
@@ -175,10 +262,15 @@ function App() {
                 path="/admin/roles"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute roles={["CEO", "Director", "Manager"]} permissions={["read:roles"]}>
+                    <ProtectedRoute
+                      roles={["CEO", "Director", "Manager"]}
+                      permissions={["read:roles"]}
+                    >
                       <AppLayout>
                         <div className="p-8">
-                          <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+                          <h1 className="text-2xl font-bold">
+                            Roles & Permissions
+                          </h1>
                           <p className="text-muted-foreground">
                             Role and permission management
                           </p>
@@ -193,10 +285,15 @@ function App() {
                 path="/admin/teams"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute roles={["CEO", "Director", "Manager"]} permissions={["read:teams"]}>
+                    <ProtectedRoute
+                      roles={["CEO", "Director", "Manager"]}
+                      permissions={["read:teams"]}
+                    >
                       <AppLayout>
                         <div className="p-8">
-                          <h1 className="text-2xl font-bold">Team Management</h1>
+                          <h1 className="text-2xl font-bold">
+                            Team Management
+                          </h1>
                           <p className="text-muted-foreground">
                             Advanced team management
                           </p>
@@ -213,9 +310,7 @@ function App() {
                 element={
                   <RouteErrorBoundary>
                     <ProtectedRoute>
-                      <AppLayout>
-                        <DashboardPage />
-                      </AppLayout>
+                      <RoleBasedRedirect />
                     </ProtectedRoute>
                   </RouteErrorBoundary>
                 }
@@ -226,14 +321,9 @@ function App() {
                 path="*"
                 element={
                   <RouteErrorBoundary>
-                    <AppLayout>
-                      <div className="min-h-screen flex items-center justify-center">
-                        <div className="text-center space-y-4">
-                          <h1 className="text-4xl font-bold">404</h1>
-                          <p className="text-muted-foreground">Page not found</p>
-                        </div>
-                      </div>
-                    </AppLayout>
+                    <ProtectedRoute>
+                      <RoleBasedRedirect />
+                    </ProtectedRoute>
                   </RouteErrorBoundary>
                 }
               />

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 export default function UserMenu() {
   const navigate = useNavigate();
@@ -109,6 +110,39 @@ export default function UserMenu() {
               {user.name}
             </p>
             <p className="text-xs text-gray-500 leading-none">{user.email}</p>
+            {/* Role badges */}
+            {user.roles.includes("CEO") && (
+              <Badge variant="destructive" className="text-xs w-fit mt-1">
+                CEO
+              </Badge>
+            )}
+            {user.roles.includes("Director") && (
+              <Badge variant="destructive" className="text-xs w-fit mt-1">
+                Director
+              </Badge>
+            )}
+            {user.roles.includes("Manager") &&
+              !user.roles.includes("CEO") &&
+              !user.roles.includes("Director") && (
+                <Badge variant="secondary" className="text-xs w-fit mt-1">
+                  Manager
+                </Badge>
+              )}
+            {user.roles.includes("Team Head") && (
+              <Badge variant="outline" className="text-xs w-fit mt-1">
+                Team Head
+              </Badge>
+            )}
+            {user.roles.includes("Team Lead") && (
+              <Badge variant="outline" className="text-xs w-fit mt-1">
+                Team Lead
+              </Badge>
+            )}
+            {user.roles.includes("Recruiter") && (
+              <Badge variant="outline" className="text-xs w-fit mt-1">
+                Recruiter
+              </Badge>
+            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-gray-200" />

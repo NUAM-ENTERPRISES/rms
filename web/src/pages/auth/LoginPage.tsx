@@ -197,7 +197,8 @@ export default function LoginPage() {
         if (nextUrl && nextUrl.startsWith("/")) {
           navigate(decodeURIComponent(nextUrl));
         } else {
-          navigate("/dashboard");
+          // Redirect to root path, which will use RoleBasedRedirect to determine appropriate destination
+          navigate("/");
         }
       } else {
         setError("root", { message: result.message || "Login failed" });

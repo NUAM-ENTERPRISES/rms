@@ -19,7 +19,8 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { status, user, userVersion } = useAppSelector((state) => state.auth);
+  const { status, user, userVersion, accessToken, refreshToken } =
+    useAppSelector((state) => state.auth);
 
   // Background revalidation when userVersion changes
   useEffect(() => {
@@ -32,8 +33,8 @@ export default function ProtectedRoute({
           dispatch(
             setCredentials({
               user: me.data,
-              accessToken: user.accessToken || "",
-              refreshToken: user.refreshToken || "",
+              accessToken: accessToken || "",
+              refreshToken: refreshToken || "",
             })
           );
         })
@@ -59,7 +60,13 @@ export default function ProtectedRoute({
     const hasRequiredRole = roles.some((role) => user.roles.includes(role));
     if (!hasRequiredRole) {
       toast.error("Insufficient permissions to access this page");
-      return <Navigate to="/dashboard" replace />;
+      // Redirect based on user role - only Manager+ go to dashboard, others to projects
+      if (
+        user.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
+      ) {
+        return <Navigate to="/dashboard" replace />;
+      }
+      return <Navigate to="/projects" replace />;
     }
   }
 
@@ -71,7 +78,13 @@ export default function ProtectedRoute({
     );
     if (!hasRequiredPermission) {
       toast.error("Insufficient permissions to access this page");
-      return <Navigate to="/dashboard" replace />;
+      // Redirect based on user role - only Manager+ go to dashboard, others to projects
+      if (
+        user.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
+      ) {
+        return <Navigate to="/dashboard" replace />;
+      }
+      return <Navigate to="/projects" replace />;
     }
   }
 

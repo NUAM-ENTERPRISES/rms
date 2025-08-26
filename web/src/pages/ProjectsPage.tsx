@@ -84,14 +84,20 @@ export default function ProjectsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Error Loading Projects
+              {canReadProjects
+                ? "Error Loading Projects"
+                : "Project Access Limited"}
             </h2>
             <p className="text-gray-600">
-              There was an error loading the projects. Please try again later.
+              {canReadProjects
+                ? "There was an error loading the projects. Please try again later."
+                : "You have limited access to project information. Contact your administrator for full access."}
             </p>
-            <Button onClick={() => window.location.reload()} className="mt-4">
-              Retry
-            </Button>
+            {canReadProjects && (
+              <Button onClick={() => window.location.reload()} className="mt-4">
+                Retry
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -116,49 +122,65 @@ export default function ProjectsPage() {
         </div>
 
         {/* Statistics Dashboard */}
-        {!statsLoading && statsData?.data && (
+        {!statsLoading && statsData?.data && canReadProjects && (
           <ProjectStats stats={statsData.data} />
         )}
 
         {/* Filters & Actions */}
-        <div className="bg-white rounded-xl border border-gray-200/50 shadow-sm">
-          <div className="p-4">
-            <ProjectFilters
-              filters={filters}
-              onFiltersChange={handleFiltersChange}
-              onExport={handleExportProjects}
-            />
-          </div>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="bg-white rounded-lg border">
-          <div className="p-6 border-b">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                All Projects
-              </h2>
-
-              {projectsData?.data && (
-                <div className="text-sm text-gray-500">
-                  {projectsData.data.pagination.total} projects total
-                </div>
-              )}
+        {canReadProjects && (
+          <div className="bg-white rounded-xl border border-gray-200/50 shadow-sm">
+            <div className="p-4">
+              <ProjectFilters
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                onExport={handleExportProjects}
+              />
             </div>
           </div>
+        )}
 
-          <div className="p-6">
-            <ProjectGrid
-              projects={projectsData?.data?.projects || []}
-              pagination={projectsData?.data?.pagination}
-              onPageChange={handlePageChange}
-              onView={canReadProjects ? handleViewProject : undefined}
-              onEdit={canManageProjects ? handleEditProject : undefined}
-              onDelete={canManageProjects ? handleDeleteProject : undefined}
-              loading={projectsLoading}
-            />
+        {/* Projects Grid */}
+        {canReadProjects ? (
+          <div className="bg-white rounded-lg border">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  All Projects
+                </h2>
+
+                {projectsData?.data && (
+                  <div className="text-sm text-gray-500">
+                    {projectsData.data.pagination.total} projects total
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6">
+              <ProjectGrid
+                projects={projectsData?.data?.projects || []}
+                pagination={projectsData?.data?.pagination}
+                onPageChange={handlePageChange}
+                onView={canReadProjects ? handleViewProject : undefined}
+                onEdit={canManageProjects ? handleEditProject : undefined}
+                onDelete={canManageProjects ? handleDeleteProject : undefined}
+                loading={projectsLoading}
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white rounded-lg border p-8">
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Project Access Limited
+              </h2>
+              <p className="text-gray-600">
+                You don't have permission to view project details. Contact your
+                administrator to request access.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

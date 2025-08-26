@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export default function Header({ onMobileMenuToggle }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-[#0D0E10] relative overflow-hidden">
+    <header className="sticky top-0 z-50 w-full border-b bg-[#0D0E10] overflow-hidden py-1">
       {/* Background Texture & Vignette */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"></div>
       <div
@@ -58,16 +58,15 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
         </Button>
 
         {/* Logo */}
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            className="h-8 w-auto p-0 hover:bg-white/10"
-            onClick={() => (window.location.href = "/dashboard")}
-          >
-            <div className="flex items-center space-x-2">
-              <img src="/logo.png" alt="Affiniks RMS" className="h-8 w-auto" />
-            </div>
-          </Button>
+        <div className="flex items-center gap-4">
+          {/* Professional Logo */}
+          <div className="flex items-center space-x-3">
+            <img
+              src="/logo.png"
+              alt="Affiniks RMS Logo"
+              className="w-40 h-24 object-contain"
+            />
+          </div>
         </div>
 
         {/* Spacer */}

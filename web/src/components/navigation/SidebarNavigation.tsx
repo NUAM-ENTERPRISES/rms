@@ -12,6 +12,8 @@ import {
   FileText,
   Calendar,
   Cog,
+  Bell,
+  User,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -28,48 +30,61 @@ const navigationItems: NavigationItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: Home,
-  },
-  {
-    label: "Users",
-    href: "/users",
-    icon: Users,
-    permissions: ["read:users", "manage:users"],
+    roles: ["CEO", "Director", "Manager"],
   },
   {
     label: "Projects",
     href: "/projects",
-    icon: Briefcase,
-    permissions: ["read:projects", "manage:projects"],
+    icon: Building2,
+    // Accessible to all roles - core business function
   },
   {
     label: "Candidates",
     href: "/candidates",
     icon: UserCheck,
-    permissions: ["read:candidates", "manage:candidates"],
+    permissions: ["read:candidates"],
   },
   {
     label: "Clients",
     href: "/clients",
-    icon: Building2,
-    permissions: ["read:clients", "manage:clients"],
-  },
-  {
-    label: "Documents",
-    href: "/documents",
-    icon: FileText,
-    permissions: ["read:documents", "manage:documents"],
+    icon: Briefcase,
+    // Accessible to all roles - essential context
   },
   {
     label: "Interviews",
     href: "/interviews",
     icon: Calendar,
-    permissions: ["read:interviews", "manage:interviews"],
+    permissions: ["read:interviews"],
+  },
+  {
+    label: "Documents",
+    href: "/documents",
+    icon: FileText,
+    permissions: ["read:documents"],
+  },
+  {
+    label: "Teams",
+    href: "/teams",
+    icon: Users,
+    permissions: ["read:teams"],
+  },
+  {
+    label: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+    // Accessible to all roles - important for staying updated
   },
   {
     label: "Analytics",
     href: "/analytics",
     icon: BarChart3,
     permissions: ["read:analytics"],
+  },
+  {
+    label: "Users",
+    href: "/users",
+    icon: Users,
+    permissions: ["read:users", "manage:users"],
   },
   {
     label: "Settings",
@@ -82,6 +97,12 @@ const navigationItems: NavigationItem[] = [
     href: "/system",
     icon: Cog,
     roles: ["CEO", "Director"],
+  },
+  {
+    label: "Profile",
+    href: "/profile",
+    icon: User,
+    // Accessible to all roles - users should manage their own profile
   },
 ];
 
