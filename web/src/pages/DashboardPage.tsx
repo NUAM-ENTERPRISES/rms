@@ -1,5 +1,4 @@
 import React from "react";
-import { Layout } from "@/components/layout/Layout";
 import { useHasRole } from "@/hooks/useCan";
 import {
   Card,
@@ -474,7 +473,7 @@ const DashboardPage: React.FC = () => {
   const isRecruiter = useHasRole(["Recruiter"]);
 
   return (
-    <Layout>
+    <>
       {/* Role-based dashboard rendering */}
       <Can roles={["CEO", "Director"]}>
         <AdminDashboard />
@@ -504,7 +503,7 @@ const DashboardPage: React.FC = () => {
           </Card>
         </div>
       )}
-    </Layout>
+    </>
   );
 };
 

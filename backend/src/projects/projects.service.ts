@@ -555,18 +555,36 @@ export class ProjectsService {
       cancelled: cancelledProjects,
     };
 
-    // Get projects by client
+    // Get projects by client with client names
     const projectsByClientData = await this.prisma.project.groupBy({
       by: ['clientId'],
       _count: { clientId: true },
     });
 
-    const projectsByClient = projectsByClientData.reduce(
-      (acc, item) => {
-        acc[item.clientId] = item._count.clientId;
+    // Get client details for the projects
+    const clientIds = projectsByClientData.map((item) => item.clientId);
+    const clients = await this.prisma.client.findMany({
+      where: { id: { in: clientIds } },
+      select: { id: true, name: true },
+    });
+
+    const clientMap = clients.reduce(
+      (acc, client) => {
+        acc[client.id] = client.name;
         return acc;
       },
-      {} as { [clientId: string]: number },
+      {} as { [clientId: string]: string },
+    );
+
+    const projectsByClient = projectsByClientData.reduce(
+      (acc, item) => {
+        acc[item.clientId] = {
+          count: item._count.clientId,
+          name: clientMap[item.clientId] || `Client ${item.clientId}`,
+        };
+        return acc;
+      },
+      {} as { [clientId: string]: { count: number; name: string } },
     );
 
     // Get upcoming deadlines (next 30 days)

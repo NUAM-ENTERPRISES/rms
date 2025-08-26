@@ -126,6 +126,11 @@ const allPermissions = [
   'write:analytics',
   'manage:analytics',
 
+  // Settings
+  'read:settings',
+  'write:settings',
+  'manage:settings',
+
   // Audit
   'read:audit',
   'write:audit',
@@ -258,6 +263,108 @@ async function main() {
     },
   });
 
+  // Create test users for each role
+  console.log('👥 Creating test users for each role...');
+
+  const testUsers = [
+    {
+      email: 'director@affiniks.com',
+      name: 'Sarah Director',
+      password: 'director123',
+      role: 'Director',
+    },
+    {
+      email: 'manager@affiniks.com',
+      name: 'Mike Manager',
+      password: 'manager123',
+      role: 'Manager',
+    },
+    {
+      email: 'teamhead@affiniks.com',
+      name: 'Lisa Team Head',
+      password: 'teamhead123',
+      role: 'Team Head',
+    },
+    {
+      email: 'teamlead@affiniks.com',
+      name: 'David Team Lead',
+      password: 'teamlead123',
+      role: 'Team Lead',
+    },
+    {
+      email: 'recruiter@affiniks.com',
+      name: 'Emma Recruiter',
+      password: 'recruiter123',
+      role: 'Recruiter',
+    },
+    {
+      email: 'docs@affiniks.com',
+      name: 'Alex Documentation',
+      password: 'docs123',
+      role: 'Documentation Executive',
+    },
+    {
+      email: 'processing@affiniks.com',
+      name: 'Jordan Processing',
+      password: 'processing123',
+      role: 'Processing Executive',
+    },
+  ];
+
+  for (const userData of testUsers) {
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    const user = await prisma.user.upsert({
+      where: { email: userData.email },
+      update: {
+        name: userData.name,
+        password: hashedPassword,
+      },
+      create: {
+        email: userData.email,
+        name: userData.name,
+        password: hashedPassword,
+      },
+    });
+
+    // Get the role
+    const role = await prisma.role.findUnique({
+      where: { name: userData.role },
+    });
+
+    if (role) {
+      // Assign role to user
+      await prisma.userRole.upsert({
+        where: {
+          userId_roleId: {
+            userId: user.id,
+            roleId: role.id,
+          },
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          roleId: role.id,
+        },
+      });
+    }
+
+    // Assign user to default team
+    await prisma.userTeam.upsert({
+      where: {
+        userId_teamId: {
+          userId: user.id,
+          teamId: defaultTeam.id,
+        },
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        teamId: defaultTeam.id,
+      },
+    });
+  }
+
   // Create sample clients for each type
   console.log('🏥 Creating sample clients...');
 
@@ -386,8 +493,16 @@ async function main() {
   });
 
   console.log('✅ Database seeding completed successfully!');
-  console.log(`🔑 Admin user: admin@affiniks.com / ${adminPassword}`);
-  console.log(`👑 Admin role: CEO (full system access)`);
+  console.log('\n🔑 Test Users Created:');
+  console.log(`👑 CEO: admin@affiniks.com / ${adminPassword}`);
+  console.log(`👔 Director: director@affiniks.com / director123`);
+  console.log(`📊 Manager: manager@affiniks.com / manager123`);
+  console.log(`👥 Team Head: teamhead@affiniks.com / teamhead123`);
+  console.log(`🎯 Team Lead: teamlead@affiniks.com / teamlead123`);
+  console.log(`🔍 Recruiter: recruiter@affiniks.com / recruiter123`);
+  console.log(`📄 Documentation: docs@affiniks.com / docs123`);
+  console.log(`⚙️ Processing: processing@affiniks.com / processing123`);
+  console.log('\n🎯 Each user has their respective role permissions!');
 }
 
 main()

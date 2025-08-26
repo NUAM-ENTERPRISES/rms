@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { useCan, useCanAny, useHasRole, useHasAllRoles } from "@/hooks/useCan";
+import { useCan, useCanAll, useHasRole } from "@/hooks/useCan";
 import authReducer from "@/features/auth/authSlice";
 
 // Factory to create a test store
@@ -16,9 +16,8 @@ const createMockStore = (initialAuthState: any) =>
 // Curried wrapper: the returned component only takes { children }
 const createWrapper =
   (store: any): React.FC<{ children: React.ReactNode }> =>
-  ({ children }) => (
-    <Provider store={store}>{children}</Provider>
-  );
+  ({ children }) =>
+    <Provider store={store}>{children}</Provider>;
 
 describe("useCan", () => {
   it("should return true when user has wildcard permission", () => {
@@ -108,7 +107,61 @@ describe("useCan", () => {
   });
 });
 
-describe("useCanAny", () => {
+describe("useCanAll", () => {
+  it("should return true when user has all required permissions", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Manager"],
+        permissions: ["read:users", "write:users"],
+      },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(
+      () => useCanAll(["read:users", "write:users"]),
+      {
+        wrapper: createWrapper(store),
+      }
+    );
+
+    expect(result.current).toBe(true);
+  });
+
+  it("should return false when user lacks some required permissions", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Recruiter"],
+        permissions: ["read:candidates"],
+      },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(
+      () => useCanAll(["manage:users", "manage:projects"]),
+      {
+        wrapper: createWrapper(store),
+      }
+    );
+
+    expect(result.current).toBe(false);
+  });
+});
+
+describe("useCan (any permissions)", () => {
   it("should return true when user has any of the required permissions", () => {
     const store = createMockStore({
       user: {
@@ -125,12 +178,9 @@ describe("useCanAny", () => {
       status: "authenticated",
     });
 
-    const { result } = renderHook(
-      () => useCanAny(["read:users", "write:users"]),
-      {
-        wrapper: createWrapper(store),
-      }
-    );
+    const { result } = renderHook(() => useCan(["read:users", "write:users"]), {
+      wrapper: createWrapper(store),
+    });
 
     expect(result.current).toBe(true);
   });
@@ -152,13 +202,61 @@ describe("useCanAny", () => {
     });
 
     const { result } = renderHook(
-      () => useCanAny(["manage:users", "manage:projects"]),
+      () => useCan(["manage:users", "manage:projects"]),
       {
         wrapper: createWrapper(store),
       }
     );
 
     expect(result.current).toBe(false);
+  });
+});
+
+describe("useHasRole (all roles)", () => {
+  it("should return true when user has all required roles", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Manager", "Team Lead"],
+        permissions: ["read:users"],
+      },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useHasRole(["Manager", "Team Lead"]), {
+      wrapper: createWrapper(store),
+    });
+
+    expect(result.current).toBe(true);
+  });
+
+  it("should return true when user has any of the required roles", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Manager"],
+        permissions: ["read:users"],
+      },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useHasRole(["Manager", "Director"]), {
+      wrapper: createWrapper(store),
+    });
+
+    expect(result.current).toBe(true);
   });
 });
 
@@ -205,60 +303,6 @@ describe("useHasRole", () => {
     const { result } = renderHook(() => useHasRole(["Manager", "Director"]), {
       wrapper: createWrapper(store),
     });
-
-    expect(result.current).toBe(false);
-  });
-});
-
-describe("useHasAllRoles", () => {
-  it("should return true when user has all required roles", () => {
-    const store = createMockStore({
-      user: {
-        id: "1",
-        name: "Test User",
-        email: "test@example.com",
-        roles: ["Manager", "Team Lead"],
-        permissions: ["read:users"],
-      },
-      accessToken: "token",
-      refreshToken: null,
-      isAuthenticated: true,
-      isLoading: false,
-      status: "authenticated",
-    });
-
-    const { result } = renderHook(
-      () => useHasAllRoles(["Manager", "Team Lead"]),
-      {
-        wrapper: createWrapper(store),
-      }
-    );
-
-    expect(result.current).toBe(true);
-  });
-
-  it("should return false when user lacks some required roles", () => {
-    const store = createMockStore({
-      user: {
-        id: "1",
-        name: "Test User",
-        email: "test@example.com",
-        roles: ["Manager"],
-        permissions: ["read:users"],
-      },
-      accessToken: "token",
-      refreshToken: null,
-      isAuthenticated: true,
-      isLoading: false,
-      status: "authenticated",
-    });
-
-    const { result } = renderHook(
-      () => useHasAllRoles(["Manager", "Director"]),
-      {
-        wrapper: createWrapper(store),
-      }
-    );
 
     expect(result.current).toBe(false);
   });

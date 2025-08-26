@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useCan, useCanAny, useHasRole, useHasAllRoles } from "@/hooks/useCan";
+import { useCan, useCanAll, useHasRole } from "@/hooks/useCan";
 
 interface CanProps {
   allOf?: string[];
@@ -18,22 +18,16 @@ export function Can({
   fallback = null,
   children,
 }: CanProps) {
-  // Always call hooks to maintain order
-  const canAll = useCan(allOf || []);
-  const canAny = useCanAny(anyOf || []);
-  const hasRole = useHasRole(roles || []);
-  const hasAllRoles = useHasAllRoles(allRoles || []);
-
   // Check permissions
-  const okAll = allOf ? canAll : true;
-  const okAny = anyOf ? canAny : true;
+  const canAll = allOf ? useCanAll(allOf) : true;
+  const canAny = anyOf ? useCan(anyOf) : true;
 
   // Check roles
-  const okRoles = roles ? hasRole : true;
-  const okAllRoles = allRoles ? hasAllRoles : true;
+  const hasRole = roles ? useHasRole(roles) : true;
+  const hasAllRoles = allRoles ? useHasRole(allRoles) : true;
 
   // All conditions must be met
-  const hasAccess = okAll && okAny && okRoles && okAllRoles;
+  const hasAccess = canAll && canAny && hasRole && hasAllRoles;
 
   return hasAccess ? <>{children}</> : <>{fallback}</>;
 }

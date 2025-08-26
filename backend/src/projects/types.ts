@@ -44,7 +44,10 @@ export interface ProjectStats {
     cancelled: number;
   };
   projectsByClient: {
-    [clientId: string]: number;
+    [clientId: string]: {
+      count: number;
+      name: string;
+    };
   };
   upcomingDeadlines: ProjectWithRelations[];
 }
