@@ -125,6 +125,11 @@ const allPermissions = [
   'read:analytics',
   'write:analytics',
   'manage:analytics',
+
+  // Audit
+  'read:audit',
+  'write:audit',
+  'manage:audit',
 ];
 
 async function main() {
@@ -255,7 +260,7 @@ async function main() {
 
   // Create sample clients for each type
   console.log('🏥 Creating sample clients...');
-  
+
   // Healthcare Organization
   const healthcareClient = await prisma.client.upsert({
     where: { id: 'healthcare-client-id' },

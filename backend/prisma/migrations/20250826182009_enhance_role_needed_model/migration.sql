@@ -1,0 +1,18 @@
+-- AlterTable
+ALTER TABLE "public"."roles_needed" ADD COLUMN     "additionalRequirements" TEXT,
+ADD COLUMN     "backgroundCheckRequired" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "benefits" TEXT,
+ADD COLUMN     "drugScreeningRequired" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "educationRequirements" JSONB,
+ADD COLUMN     "institutionRequirements" TEXT,
+ADD COLUMN     "languageRequirements" JSONB,
+ADD COLUMN     "licenseRequirements" JSONB,
+ADD COLUMN     "notes" TEXT,
+ADD COLUMN     "onCallRequired" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "physicalDemands" TEXT,
+ADD COLUMN     "relocationAssistance" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "requiredCertifications" JSONB,
+ADD COLUMN     "salaryRange" JSONB,
+ADD COLUMN     "shiftType" TEXT,
+ADD COLUMN     "specificExperience" JSONB,
+ADD COLUMN     "technicalSkills" JSONB;

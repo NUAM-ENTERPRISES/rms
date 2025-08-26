@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -10,6 +10,11 @@ import { PrismaModule } from './database/prisma.module';
 import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
+import { ProjectsModule } from './projects/projects.module';
+import { CandidatesModule } from './candidates/candidates.module';
+import { TeamsModule } from './teams/teams.module';
+import { AuditModule } from './common/audit/audit.module';
+import { AuditInterceptor } from './common/audit/audit.interceptor';
 
 @Module({
   imports: [
@@ -21,6 +26,10 @@ import { ClientsModule } from './clients/clients.module';
     RolesModule,
     UsersModule,
     ClientsModule,
+    ProjectsModule,
+    CandidatesModule,
+    TeamsModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [
@@ -32,6 +41,10 @@ import { ClientsModule } from './clients/clients.module';
     {
       provide: APP_GUARD,
       useClass: PermissionsGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
   ],
 })

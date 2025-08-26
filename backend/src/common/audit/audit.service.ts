@@ -10,7 +10,12 @@ export interface AuditLogData {
     | 'logout'
     | 'password_change'
     | 'role_assignment'
-    | 'role_removal';
+    | 'role_removal'
+    | 'project_assignment'
+    | 'candidate_assignment'
+    | 'document_verification'
+    | 'interview_scheduling'
+    | 'status_change';
   entityId: string;
   entityType: string;
   userId: string;

@@ -1,0 +1,563 @@
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
+import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateTeamDto } from './dto/update-team.dto';
+import { QueryTeamsDto } from './dto/query-teams.dto';
+import { AssignUserDto } from './dto/assign-user.dto';
+import { TeamWithRelations, PaginatedTeams, TeamStats } from './types';
+
+@Injectable()
+export class TeamsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(
+    createTeamDto: CreateTeamDto,
+    userId: string,
+  ): Promise<TeamWithRelations> {
+    // Check if team name already exists
+    const existingTeam = await this.prisma.team.findUnique({
+      where: { name: createTeamDto.name },
+    });
+
+    if (existingTeam) {
+      throw new ConflictException(
+        `Team with name "${createTeamDto.name}" already exists`,
+      );
+    }
+
+    // Validate leadership positions if provided
+    if (createTeamDto.leadId) {
+      const leadUser = await this.prisma.user.findUnique({
+        where: { id: createTeamDto.leadId },
+      });
+      if (!leadUser) {
+        throw new NotFoundException(
+          `User with ID ${createTeamDto.leadId} not found`,
+        );
+      }
+    }
+
+    if (createTeamDto.headId) {
+      const headUser = await this.prisma.user.findUnique({
+        where: { id: createTeamDto.headId },
+      });
+      if (!headUser) {
+        throw new NotFoundException(
+          `User with ID ${createTeamDto.headId} not found`,
+        );
+      }
+    }
+
+    if (createTeamDto.managerId) {
+      const managerUser = await this.prisma.user.findUnique({
+        where: { id: createTeamDto.managerId },
+      });
+      if (!managerUser) {
+        throw new NotFoundException(
+          `User with ID ${createTeamDto.managerId} not found`,
+        );
+      }
+    }
+
+    // Create team
+    const team = await this.prisma.team.create({
+      data: {
+        name: createTeamDto.name,
+        leadId: createTeamDto.leadId,
+        headId: createTeamDto.headId,
+        managerId: createTeamDto.managerId,
+      },
+      include: {
+        userTeams: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        projects: true,
+        candidates: true,
+      },
+    });
+
+    return team;
+  }
+
+  async findAll(queryDto: QueryTeamsDto): Promise<PaginatedTeams> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      leadId,
+      headId,
+      managerId,
+      userId,
+      sortBy = 'name',
+      sortOrder = 'asc',
+    } = queryDto;
+
+    // Build where clause
+    const where: any = {};
+
+    if (search) {
+      where.name = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    if (leadId) {
+      where.leadId = leadId;
+    }
+
+    if (headId) {
+      where.headId = headId;
+    }
+
+    if (managerId) {
+      where.managerId = managerId;
+    }
+
+    if (userId) {
+      where.members = {
+        some: {
+          userId: userId,
+        },
+      };
+    }
+
+    // Get total count
+    const total = await this.prisma.team.count({ where });
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+    const totalPages = Math.ceil(total / limit);
+
+    // Get teams with relations
+    const teams = await this.prisma.team.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      include: {
+        userTeams: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        projects: true,
+        candidates: true,
+      },
+    });
+
+    return {
+      teams,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  async findOne(id: string): Promise<TeamWithRelations> {
+    const team = await this.prisma.team.findUnique({
+      where: { id },
+      include: {
+        userTeams: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        projects: true,
+        candidates: true,
+      },
+    });
+
+    if (!team) {
+      throw new NotFoundException(`Team with ID ${id} not found`);
+    }
+
+    return team;
+  }
+
+  async update(
+    id: string,
+    updateTeamDto: UpdateTeamDto,
+    userId: string,
+  ): Promise<TeamWithRelations> {
+    // Check if team exists
+    const existingTeam = await this.prisma.team.findUnique({
+      where: { id },
+    });
+
+    if (!existingTeam) {
+      throw new NotFoundException(`Team with ID ${id} not found`);
+    }
+
+    // Check if name is being updated and if it already exists
+    if (updateTeamDto.name && updateTeamDto.name !== existingTeam.name) {
+      const teamWithName = await this.prisma.team.findUnique({
+        where: { name: updateTeamDto.name },
+      });
+
+      if (teamWithName) {
+        throw new ConflictException(
+          `Team with name "${updateTeamDto.name}" already exists`,
+        );
+      }
+    }
+
+    // Validate leadership positions if provided
+    if (updateTeamDto.leadId) {
+      const leadUser = await this.prisma.user.findUnique({
+        where: { id: updateTeamDto.leadId },
+      });
+      if (!leadUser) {
+        throw new NotFoundException(
+          `User with ID ${updateTeamDto.leadId} not found`,
+        );
+      }
+    }
+
+    if (updateTeamDto.headId) {
+      const headUser = await this.prisma.user.findUnique({
+        where: { id: updateTeamDto.headId },
+      });
+      if (!headUser) {
+        throw new NotFoundException(
+          `User with ID ${updateTeamDto.headId} not found`,
+        );
+      }
+    }
+
+    if (updateTeamDto.managerId) {
+      const managerUser = await this.prisma.user.findUnique({
+        where: { id: updateTeamDto.managerId },
+      });
+      if (!managerUser) {
+        throw new NotFoundException(
+          `User with ID ${updateTeamDto.managerId} not found`,
+        );
+      }
+    }
+
+    // Build update data
+    const updateData: any = {};
+    if (updateTeamDto.name) updateData.name = updateTeamDto.name;
+    if (updateTeamDto.leadId !== undefined)
+      updateData.leadId = updateTeamDto.leadId;
+    if (updateTeamDto.headId !== undefined)
+      updateData.headId = updateTeamDto.headId;
+    if (updateTeamDto.managerId !== undefined)
+      updateData.managerId = updateTeamDto.managerId;
+
+    // Update team
+    const team = await this.prisma.team.update({
+      where: { id },
+      data: updateData,
+      include: {
+        userTeams: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        projects: true,
+        candidates: true,
+      },
+    });
+
+    return team;
+  }
+
+  async remove(
+    id: string,
+    userId: string,
+  ): Promise<{ id: string; message: string }> {
+    // Check if team exists
+    const team = await this.prisma.team.findUnique({
+      where: { id },
+      include: {
+        projects: true,
+        candidates: true,
+        userTeams: true,
+      },
+    });
+
+    if (!team) {
+      throw new NotFoundException(`Team with ID ${id} not found`);
+    }
+
+    // Check if team has projects
+    if (team.projects.length > 0) {
+      throw new ConflictException(
+        `Cannot delete team with ID ${id} because it has ${team.projects.length} project(s) assigned. Please reassign or delete the projects first.`,
+      );
+    }
+
+    // Check if team has candidates
+    if (team.candidates.length > 0) {
+      throw new ConflictException(
+        `Cannot delete team with ID ${id} because it has ${team.candidates.length} candidate(s) assigned. Please reassign the candidates first.`,
+      );
+    }
+
+    // Delete team (members will be deleted automatically due to cascade)
+    await this.prisma.team.delete({
+      where: { id },
+    });
+
+    return {
+      id,
+      message: 'Team deleted successfully',
+    };
+  }
+
+  async assignUser(
+    teamId: string,
+    assignUserDto: AssignUserDto,
+    userId: string,
+  ): Promise<{ message: string }> {
+    // Check if team exists
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+    });
+
+    if (!team) {
+      throw new NotFoundException(`Team with ID ${teamId} not found`);
+    }
+
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: assignUserDto.userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `User with ID ${assignUserDto.userId} not found`,
+      );
+    }
+
+    // Check if user is already assigned to this team
+    const existingAssignment = await this.prisma.userTeam.findUnique({
+      where: {
+        userId_teamId: {
+          userId: assignUserDto.userId,
+          teamId: teamId,
+        },
+      },
+    });
+
+    if (existingAssignment) {
+      throw new ConflictException(
+        `User ${assignUserDto.userId} is already assigned to team ${teamId}`,
+      );
+    }
+
+    // Assign user to team
+    await this.prisma.userTeam.create({
+      data: {
+        userId: assignUserDto.userId,
+        teamId: teamId,
+      },
+    });
+
+    return {
+      message: 'User assigned to team successfully',
+    };
+  }
+
+  async removeUser(
+    teamId: string,
+    userId: string,
+    currentUserId: string,
+  ): Promise<{ message: string }> {
+    // Check if team exists
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+    });
+
+    if (!team) {
+      throw new NotFoundException(`Team with ID ${teamId} not found`);
+    }
+
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Check if user is assigned to this team
+    const assignment = await this.prisma.userTeam.findUnique({
+      where: {
+        userId_teamId: {
+          userId: userId,
+          teamId: teamId,
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        `User ${userId} is not assigned to team ${teamId}`,
+      );
+    }
+
+    // Remove user from team
+    await this.prisma.userTeam.delete({
+      where: {
+        userId_teamId: {
+          userId: userId,
+          teamId: teamId,
+        },
+      },
+    });
+
+    return {
+      message: 'User removed from team successfully',
+    };
+  }
+
+  async getTeamMembers(teamId: string): Promise<any[]> {
+    // Check if team exists
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+    });
+
+    if (!team) {
+      throw new NotFoundException(`Team with ID ${teamId} not found`);
+    }
+
+    // Get team members
+    const members = await this.prisma.userTeam.findMany({
+      where: { teamId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            dateOfBirth: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: {
+        user: {
+          name: 'asc',
+        },
+      },
+    });
+
+    return members;
+  }
+
+  async getTeamStats(): Promise<TeamStats> {
+    // Get total teams
+    const totalTeams = await this.prisma.team.count();
+
+    // Get teams with leadership positions
+    const [teamsWithLeads, teamsWithHeads, teamsWithManagers] =
+      await Promise.all([
+        this.prisma.team.count({ where: { leadId: { not: null } } }),
+        this.prisma.team.count({ where: { headId: { not: null } } }),
+        this.prisma.team.count({ where: { managerId: { not: null } } }),
+      ]);
+
+    // Get team member counts
+    const teamMemberCounts = await this.prisma.userTeam.groupBy({
+      by: ['teamId'],
+      _count: { userId: true },
+    });
+
+    const teamsByMemberCount = teamMemberCounts.reduce(
+      (acc, item) => {
+        const count = item._count.userId.toString();
+        acc[count] = (acc[count] || 0) + 1;
+        return acc;
+      },
+      {} as { [memberCount: string]: number },
+    );
+
+    const averageTeamSize =
+      teamMemberCounts.length > 0
+        ? teamMemberCounts.reduce((sum, item) => sum + item._count.userId, 0) /
+          teamMemberCounts.length
+        : 0;
+
+    // Get teams with projects and candidates
+    const [teamsWithProjects, teamsWithCandidates] = await Promise.all([
+      this.prisma.team.count({
+        where: {
+          projects: {
+            some: {},
+          },
+        },
+      }),
+      this.prisma.team.count({
+        where: {
+          candidates: {
+            some: {},
+          },
+        },
+      }),
+    ]);
+
+    // Get average projects and candidates per team
+    const [totalProjects, totalCandidates] = await Promise.all([
+      this.prisma.project.count(),
+      this.prisma.candidate.count(),
+    ]);
+
+    const averageProjectsPerTeam =
+      totalTeams > 0 ? totalProjects / totalTeams : 0;
+    const averageCandidatesPerTeam =
+      totalTeams > 0 ? totalCandidates / totalTeams : 0;
+
+    return {
+      totalTeams,
+      teamsWithLeads,
+      teamsWithHeads,
+      teamsWithManagers,
+      averageTeamSize,
+      teamsByMemberCount,
+      teamsWithProjects,
+      teamsWithCandidates,
+      averageProjectsPerTeam,
+      averageCandidatesPerTeam,
+    };
+  }
+}

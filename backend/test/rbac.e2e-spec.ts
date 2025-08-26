@@ -57,6 +57,9 @@ describe('RBAC System (e2e)', () => {
   });
 
   async function setupTestUsers() {
+    // Clean up any existing test users first
+    await cleanupTestUsers();
+
     // Create test users
     const adminUser = await prismaService.user.create({
       data: {
@@ -137,18 +140,43 @@ describe('RBAC System (e2e)', () => {
   }
 
   async function cleanupTestUsers() {
-    // Clean up test users
-    await prismaService.userRole.deleteMany({
+    // Clean up by email to ensure we remove existing test users
+    const testEmails = [
+      'admin-test@affiniks.com',
+      'manager-test@affiniks.com',
+      'recruiter-test@affiniks.com',
+    ];
+
+    // Find existing test users
+    const existingUsers = await prismaService.user.findMany({
       where: {
-        userId: { in: [adminUserId, managerUserId, recruiterUserId] },
+        email: { in: testEmails },
       },
     });
 
-    await prismaService.user.deleteMany({
-      where: {
-        id: { in: [adminUserId, managerUserId, recruiterUserId] },
-      },
-    });
+    if (existingUsers.length > 0) {
+      const userIds = existingUsers.map((user) => user.id);
+
+      // Clean up audit logs first (due to foreign key constraint)
+      await prismaService.auditLog.deleteMany({
+        where: {
+          userId: { in: userIds },
+        },
+      });
+
+      // Clean up test users
+      await prismaService.userRole.deleteMany({
+        where: {
+          userId: { in: userIds },
+        },
+      });
+
+      await prismaService.user.deleteMany({
+        where: {
+          id: { in: userIds },
+        },
+      });
+    }
   }
 
   describe('/api/v1/roles (GET)', () => {

@@ -262,12 +262,46 @@ model Project {
 model RoleNeeded {
   id          String   @id @default(cuid())
   projectId   String
+  
+  // Basic Info
   designation String
   quantity    Int
   priority    String   @default("medium") // low, medium, high, urgent
+  
+  // Experience Requirements
   minExperience Int?
   maxExperience Int?
+  specificExperience Json?  // ["ICU", "ER", "Leadership"]
+  
+  // Educational Requirements
+  educationRequirements Json?  // ["BSN", "MSN"]
+  requiredCertifications Json? // ["RN", "BLS", "ACLS"]
+  institutionRequirements String?
+  
+  // Skills & Competencies
   skills      Json     @default("[]")
+  technicalSkills Json? // ["EPIC", "Ventilator Management"]
+  languageRequirements Json? // ["English", "Spanish"]
+  
+  // Licensing & Compliance
+  licenseRequirements Json? // ["State RN License", "Compact License"]
+  backgroundCheckRequired Boolean @default(true)
+  drugScreeningRequired Boolean @default(true)
+  
+  // Work Conditions
+  shiftType   String?  // "day", "night", "rotating", "flexible"
+  onCallRequired Boolean @default(false)
+  physicalDemands String?
+  
+  // Compensation
+  salaryRange Json? // {"min": 60000, "max": 80000, "currency": "USD"}
+  benefits    String?
+  relocationAssistance Boolean @default(false)
+  
+  // Additional Requirements
+  additionalRequirements String?
+  notes       String?
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -432,6 +466,8 @@ model TalentPool {
 
   @@map("talent_pool")
 }
+
+
 
 model AuditLog {
   id         String   @id @default(cuid())
