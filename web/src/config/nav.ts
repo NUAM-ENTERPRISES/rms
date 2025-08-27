@@ -54,17 +54,6 @@ export const navigationConfig: NavItem[] = [
     // Accessible to all roles - core business function
   },
   {
-    id: "candidates",
-    label: "Candidates",
-    path: "/candidates",
-    icon: UserCheck,
-    permissions: ["read:candidates"],
-    badge: {
-      text: "HR",
-      variant: "outline",
-    },
-  },
-  {
     id: "clients",
     label: "Clients",
     path: "/clients",
@@ -74,6 +63,28 @@ export const navigationConfig: NavItem[] = [
       variant: "outline",
     },
     // Accessible to all roles - essential context
+  },
+  {
+    id: "teams",
+    label: "Teams",
+    path: "/teams",
+    icon: Users,
+    permissions: ["read:teams"],
+    badge: {
+      text: "Org",
+      variant: "outline",
+    },
+  },
+  {
+    id: "candidates",
+    label: "Candidates",
+    path: "/candidates",
+    icon: UserCheck,
+    permissions: ["read:candidates"],
+    badge: {
+      text: "HR",
+      variant: "outline",
+    },
   },
   {
     id: "interviews",
@@ -94,17 +105,6 @@ export const navigationConfig: NavItem[] = [
     permissions: ["read:documents"],
     badge: {
       text: "Files",
-      variant: "outline",
-    },
-  },
-  {
-    id: "teams",
-    label: "Teams",
-    path: "/teams",
-    icon: Users,
-    permissions: ["read:teams"],
-    badge: {
-      text: "Org",
       variant: "outline",
     },
   },
@@ -145,18 +145,21 @@ export const navigationConfig: NavItem[] = [
         label: "Users",
         path: "/admin/users",
         permissions: ["read:users"],
+        roles: ["CEO", "Director", "Manager"],
       },
       {
         id: "admin-roles",
         label: "Roles & Permissions",
         path: "/admin/roles",
         permissions: ["read:roles"],
+        roles: ["CEO", "Director", "Manager"],
       },
       {
         id: "admin-teams",
         label: "Team Management",
         path: "/admin/teams",
         permissions: ["read:teams"],
+        roles: ["CEO", "Director", "Manager"],
       },
     ],
   },
@@ -166,6 +169,7 @@ export const navigationConfig: NavItem[] = [
     path: "/settings",
     icon: Settings,
     permissions: ["read:settings"],
+    roles: ["CEO", "Director", "Manager"],
     badge: {
       text: "Config",
       variant: "outline",

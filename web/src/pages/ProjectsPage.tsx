@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Download, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { useCan } from "@/hooks/useCan";
 import { Project } from "@/services/projectsApi";
 
 export default function ProjectsPage() {
+  const navigate = useNavigate();
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
 
@@ -21,7 +23,7 @@ export default function ProjectsPage() {
   const [filters, setFilters] = useState<QueryProjectsRequest>({
     page: 1,
     limit: 12,
-    sortBy: "createdAt",
+    sortBy: undefined,
     sortOrder: "desc",
     status: undefined,
     clientId: undefined,
@@ -53,23 +55,11 @@ export default function ProjectsPage() {
 
   // Handle project actions
   const handleViewProject = (project: Project) => {
-    // TODO: Navigate to project detail page
-    console.log("View project:", project.id);
-  };
-
-  const handleEditProject = (project: Project) => {
-    // TODO: Open edit modal or navigate to edit page
-    console.log("Edit project:", project.id);
-  };
-
-  const handleDeleteProject = (project: Project) => {
-    // TODO: Show delete confirmation dialog
-    console.log("Delete project:", project.id);
+    navigate(`/projects/${project.id}`);
   };
 
   const handleCreateProject = () => {
-    // TODO: Open create project modal or navigate to create page
-    console.log("Create new project");
+    navigate("/projects/create");
   };
 
   const handleExportProjects = () => {
@@ -105,20 +95,11 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen">
+      <div className="w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div></div>
-
-          <div className="flex items-center gap-3">
-            {canManageProjects && (
-              <Button onClick={handleCreateProject} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Project
-              </Button>
-            )}
-          </div>
         </div>
 
         {/* Statistics Dashboard */}
@@ -134,6 +115,8 @@ export default function ProjectsPage() {
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
                 onExport={handleExportProjects}
+                onCreateProject={handleCreateProject}
+                canCreateProject={canManageProjects}
               />
             </div>
           </div>
@@ -162,8 +145,6 @@ export default function ProjectsPage() {
                 pagination={projectsData?.data?.pagination}
                 onPageChange={handlePageChange}
                 onView={canReadProjects ? handleViewProject : undefined}
-                onEdit={canManageProjects ? handleEditProject : undefined}
-                onDelete={canManageProjects ? handleDeleteProject : undefined}
                 loading={projectsLoading}
               />
             </div>

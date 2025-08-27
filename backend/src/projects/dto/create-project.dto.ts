@@ -242,6 +242,15 @@ export class CreateProjectDto {
   status?: string = 'active';
 
   @ApiPropertyOptional({
+    description: 'Project priority level',
+    enum: ['low', 'medium', 'high', 'urgent'],
+    default: 'medium',
+  })
+  @IsOptional()
+  @IsEnum(['low', 'medium', 'high', 'urgent'])
+  priority?: string = 'medium';
+
+  @ApiPropertyOptional({
     description: 'Team ID assigned to the project',
     example: 'team123',
   })

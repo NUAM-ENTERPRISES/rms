@@ -1,7 +1,7 @@
-import { useLocation, Link } from 'react-router-dom';
-import { ChevronRight, Home } from 'lucide-react';
-import { useFlattenedNav } from '@/hooks/useNav';
-import { cn } from '@/lib/utils';
+import { useLocation, Link } from "react-router-dom";
+import { ChevronRight, Home } from "lucide-react";
+import { useFlattenedNav } from "@/hooks/useNav";
+import { cn } from "@/lib/utils";
 
 interface BreadcrumbItem {
   label: string;
@@ -14,28 +14,28 @@ export default function Breadcrumbs() {
   const flattenedNav = useFlattenedNav();
 
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
-    const pathSegments = location.pathname.split('/').filter(Boolean);
+    const pathSegments = location.pathname.split("/").filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [];
 
     // Always add home
     breadcrumbs.push({
-      label: 'Dashboard',
-      path: '/dashboard',
-      isCurrent: location.pathname === '/dashboard',
+      label: "Dashboard",
+      path: "/dashboard",
+      isCurrent: location.pathname === "/dashboard",
     });
 
     if (pathSegments.length === 0) {
       return breadcrumbs;
     }
 
-    let currentPath = '';
+    let currentPath = "";
     for (let i = 0; i < pathSegments.length; i++) {
       const segment = pathSegments[i];
       currentPath += `/${segment}`;
 
       // Find matching nav item
-      const navItem = flattenedNav.find(item => item.path === currentPath);
-      
+      const navItem = flattenedNav.find((item) => item.path === currentPath);
+
       if (navItem) {
         breadcrumbs.push({
           label: navItem.label,
@@ -45,10 +45,10 @@ export default function Breadcrumbs() {
       } else {
         // Fallback for dynamic routes or unknown paths
         const label = segment
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-        
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+
         breadcrumbs.push({
           label,
           path: currentPath,
@@ -67,19 +67,16 @@ export default function Breadcrumbs() {
   }
 
   return (
-    <nav aria-label="Breadcrumb" className="px-4 py-2">
+    <nav aria-label="Breadcrumb" className="px-4 pt-6">
       <ol className="flex items-center space-x-1 text-sm text-muted-foreground">
         {breadcrumbs.map((breadcrumb, index) => (
           <li key={breadcrumb.path} className="flex items-center">
             {index > 0 && (
               <ChevronRight className="h-4 w-4 mx-1" aria-hidden="true" />
             )}
-            
+
             {breadcrumb.isCurrent ? (
-              <span 
-                className="font-medium text-foreground"
-                aria-current="page"
-              >
+              <span className="font-medium text-foreground" aria-current="page">
                 {breadcrumb.label}
               </span>
             ) : (

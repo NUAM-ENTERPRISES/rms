@@ -249,7 +249,7 @@ export default function Sidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col bg-white/80 backdrop-blur-xl border-r border-slate-200/60 transition-all duration-500 ease-out shadow-xl",
+        "flex flex-col bg-white/80 backdrop-blur-xl border-r border-slate-200/60 transition-all duration-500 ease-out shadow-2xl rounded-2xl",
         "supports-[backdrop-filter]:bg-white/60",
         isCollapsed ? "w-20" : "w-72"
       )}
@@ -320,7 +320,7 @@ export default function Sidebar({
             <div className="w-8 h-8 mx-auto mb-2 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-slate-600" />
             </div>
-            <p className="text-xs text-slate-500 font-medium">Premium RMS</p>
+            <p className="text-xs text-slate-500 font-medium">Affiniks RMS</p>
             <p className="text-xs text-slate-400">v2.0.0</p>
           </div>
         </div>

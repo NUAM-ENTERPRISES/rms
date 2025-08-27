@@ -65,7 +65,7 @@ export default function UserMenu() {
         <Button
           variant="ghost"
           className={cn(
-            "relative h-9 w-auto rounded-md px-2 gap-2 transition-all duration-200",
+            "relative h-10 w-auto rounded-md px-2 gap-2 transition-all duration-200",
             "text-white hover:text-white",
             "bg-white/10 hover:bg-white/15 focus:bg-white/15",
             "focus:outline-none focus:ring-2 focus:ring-white/20",

@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { QueryClientsDto } from './dto/query-clients.dto';
 
 @Injectable()
 export class ClientsService {
@@ -58,13 +59,9 @@ export class ClientsService {
     };
   }
 
-  async findAll(query?: {
-    type?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }) {
+  async findAll(query?: QueryClientsDto) {
     const { type, search, page = 1, limit = 10 } = query || {};
+
     const skip = (page - 1) * limit;
 
     const where: any = {};

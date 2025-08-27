@@ -50,6 +50,7 @@ This document is a **contract**. Every contributor and AI tool (Cursor) **MUST**
 - Pages **compose** organisms; **no business logic** inside pages/components.
 - Barrel export `index.ts` in each folder.
 - File names **kebab-case**, component names **PascalCase**.
+- Date format should be DD MMM YYYY
 
 ---
 

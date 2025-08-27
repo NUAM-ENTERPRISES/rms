@@ -14,15 +14,17 @@ import {
   Cog,
   Bell,
   User,
+  Shield,
 } from "lucide-react";
 
 interface NavigationItem {
   label: string;
-  href: string;
+  href?: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: string[];
   permissions?: string[];
   badge?: string;
+  children?: NavigationItem[];
 }
 
 const navigationItems: NavigationItem[] = [
@@ -39,16 +41,22 @@ const navigationItems: NavigationItem[] = [
     // Accessible to all roles - core business function
   },
   {
-    label: "Candidates",
-    href: "/candidates",
-    icon: UserCheck,
-    permissions: ["read:candidates"],
-  },
-  {
     label: "Clients",
     href: "/clients",
     icon: Briefcase,
     // Accessible to all roles - essential context
+  },
+  {
+    label: "Teams",
+    href: "/teams",
+    icon: Users,
+    permissions: ["read:teams"],
+  },
+  {
+    label: "Candidates",
+    href: "/candidates",
+    icon: UserCheck,
+    permissions: ["read:candidates"],
   },
   {
     label: "Interviews",
@@ -63,12 +71,6 @@ const navigationItems: NavigationItem[] = [
     permissions: ["read:documents"],
   },
   {
-    label: "Teams",
-    href: "/teams",
-    icon: Users,
-    permissions: ["read:teams"],
-  },
-  {
     label: "Notifications",
     href: "/notifications",
     icon: Bell,
@@ -81,16 +83,39 @@ const navigationItems: NavigationItem[] = [
     permissions: ["read:analytics"],
   },
   {
-    label: "Users",
-    href: "/users",
-    icon: Users,
-    permissions: ["read:users", "manage:users"],
+    label: "Administration",
+    icon: Shield,
+    roles: ["CEO", "Director", "Manager"],
+    children: [
+      {
+        label: "Users",
+        href: "/admin/users",
+        icon: Users,
+        permissions: ["read:users"],
+        roles: ["CEO", "Director", "Manager"],
+      },
+      {
+        label: "Roles & Permissions",
+        href: "/admin/roles",
+        icon: Shield,
+        permissions: ["read:roles"],
+        roles: ["CEO", "Director", "Manager"],
+      },
+      {
+        label: "Team Management",
+        href: "/admin/teams",
+        icon: Users,
+        permissions: ["read:teams"],
+        roles: ["CEO", "Director", "Manager"],
+      },
+    ],
   },
   {
     label: "Settings",
     href: "/settings",
     icon: Settings,
-    roles: ["Manager", "CEO", "Director"],
+    permissions: ["read:settings"],
+    roles: ["CEO", "Director", "Manager"],
   },
   {
     label: "System",
@@ -130,10 +155,53 @@ export const SidebarNavigation: React.FC = () => {
         const Icon = item.icon;
         const isActive = location.pathname === item.href;
 
+        // If item has children, render as parent
+        if (item.children) {
+          return (
+            <div key={item.label} className="space-y-1">
+              <div className="px-3 py-2 text-sm font-medium text-muted-foreground">
+                {item.label}
+              </div>
+              {item.children.map((child) => {
+                const ChildIcon = child.icon;
+                const isChildActive = location.pathname === child.href;
+
+                return (
+                  <Link
+                    key={child.href}
+                    to={child.href!}
+                    className={`
+                      group flex items-center px-6 py-2 text-sm font-medium rounded-lg transition-colors
+                      ${
+                        isChildActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }
+                    `}
+                  >
+                    <ChildIcon
+                      className={`
+                        mr-3 h-4 w-4 flex-shrink-0 transition-colors
+                        ${
+                          isChildActive
+                            ? "text-primary-foreground"
+                            : "text-muted-foreground group-hover:text-foreground"
+                        }
+                      `}
+                    />
+                    <span className="flex-1">{child.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // Regular navigation item
         return (
           <Link
             key={item.href}
-            to={item.href}
+            to={item.href!}
             className={`
               group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors
               ${

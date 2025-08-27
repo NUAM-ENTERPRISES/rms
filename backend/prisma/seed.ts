@@ -18,7 +18,15 @@ const roles = [
   {
     name: 'Manager',
     description: 'Manager - Access to multiple teams',
-    permissions: ['read:all', 'write:assigned_teams', 'manage:users'],
+    permissions: [
+      'read:all',
+      'write:assigned_teams',
+      'manage:users',
+      'read:users',
+      'read:teams',
+      'read:settings',
+      'manage:projects',
+    ],
   },
   {
     name: 'Team Head',
@@ -27,6 +35,10 @@ const roles = [
       'read:assigned_teams',
       'write:assigned_teams',
       'manage:candidates',
+      'read:projects',
+      'write:projects',
+      'read:clients',
+      'write:clients',
     ],
   },
   {

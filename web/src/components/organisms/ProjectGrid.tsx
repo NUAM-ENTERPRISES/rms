@@ -14,8 +14,6 @@ interface ProjectGridProps {
   };
   onPageChange?: (page: number) => void;
   onView?: (project: Project) => void;
-  onEdit?: (project: Project) => void;
-  onDelete?: (project: Project) => void;
   loading?: boolean;
   className?: string;
 }
@@ -25,14 +23,14 @@ export default function ProjectGrid({
   pagination,
   onPageChange,
   onView,
-  onEdit,
-  onDelete,
   loading = false,
   className,
 }: ProjectGridProps) {
   if (loading) {
     return (
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${className}`}>
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${className}`}
+      >
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
@@ -66,7 +64,8 @@ export default function ProjectGrid({
             No projects found
           </h3>
           <p className="text-gray-500 mb-4">
-            Try adjusting your search or filter criteria to find what you're looking for.
+            Try adjusting your search or filter criteria to find what you're
+            looking for.
           </p>
         </div>
       </div>
@@ -78,13 +77,7 @@ export default function ProjectGrid({
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {projects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onView={onView}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
+          <ProjectCard key={project.id} project={project} onView={onView} />
         ))}
       </div>
 
@@ -118,10 +111,12 @@ export default function ProjectGrid({
                 </span>{" "}
                 to{" "}
                 <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total
+                  )}
                 </span>{" "}
-                of{" "}
-                <span className="font-medium">{pagination.total}</span>{" "}
+                of <span className="font-medium">{pagination.total}</span>{" "}
                 results
               </p>
             </div>
@@ -153,8 +148,9 @@ export default function ProjectGrid({
                   })
                   .map((pageNum, index, array) => {
                     // Add ellipsis if there's a gap
-                    const showEllipsisBefore = index > 0 && pageNum - array[index - 1] > 1;
-                    
+                    const showEllipsisBefore =
+                      index > 0 && pageNum - array[index - 1] > 1;
+
                     return (
                       <React.Fragment key={pageNum}>
                         {showEllipsisBefore && (
@@ -163,7 +159,9 @@ export default function ProjectGrid({
                           </span>
                         )}
                         <Button
-                          variant={pageNum === pagination.page ? "default" : "outline"}
+                          variant={
+                            pageNum === pagination.page ? "default" : "outline"
+                          }
                           size="sm"
                           onClick={() => onPageChange?.(pageNum)}
                           className="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 focus:z-20 focus:outline-offset-0"

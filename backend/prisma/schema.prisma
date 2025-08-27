@@ -244,6 +244,7 @@ model Project {
   description String?
   deadline    DateTime?
   status      String   @default("active") // active, completed, cancelled
+  priority    String   @default("medium") // low, medium, high, urgent
   createdBy   String
   teamId      String?
   createdAt   DateTime @default(now())

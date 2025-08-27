@@ -21,7 +21,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
       <Header onMobileMenuToggle={handleMobileMenuToggle} />
 

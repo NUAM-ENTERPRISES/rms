@@ -24,105 +24,376 @@ import {
   Calendar,
   Cog,
   FileText,
+  Target,
+  DollarSign,
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Star,
+  Award,
+  Zap,
+  Globe,
+  Shield,
+  Heart,
+  PieChart,
+  BarChart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart as RechartsBarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
+// Mock data for charts
+const monthlyData = [
+  {
+    month: "Jan",
+    placements: 45,
+    revenue: 125000,
+    candidates: 89,
+    projects: 12,
+  },
+  {
+    month: "Feb",
+    placements: 52,
+    revenue: 138000,
+    candidates: 94,
+    projects: 15,
+  },
+  {
+    month: "Mar",
+    placements: 48,
+    revenue: 132000,
+    candidates: 87,
+    projects: 13,
+  },
+  {
+    month: "Apr",
+    placements: 61,
+    revenue: 156000,
+    candidates: 103,
+    projects: 18,
+  },
+  {
+    month: "May",
+    placements: 55,
+    revenue: 142000,
+    candidates: 96,
+    projects: 16,
+  },
+  {
+    month: "Jun",
+    placements: 67,
+    revenue: 168000,
+    candidates: 112,
+    projects: 20,
+  },
+  {
+    month: "Jul",
+    placements: 58,
+    revenue: 148000,
+    candidates: 98,
+    projects: 17,
+  },
+  {
+    month: "Aug",
+    placements: 72,
+    revenue: 184000,
+    candidates: 118,
+    projects: 22,
+  },
+];
+
+const teamPerformanceData = [
+  {
+    name: "Healthcare",
+    success: 96.8,
+    members: 8,
+    projects: 12,
+    revenue: 284000,
+  },
+  {
+    name: "IT & Tech",
+    success: 94.2,
+    members: 6,
+    projects: 8,
+    revenue: 198000,
+  },
+  { name: "Finance", success: 92.1, members: 5, projects: 6, revenue: 156000 },
+  {
+    name: "Manufacturing",
+    success: 89.5,
+    members: 7,
+    projects: 10,
+    revenue: 245000,
+  },
+];
+
+const revenueBreakdown = [
+  { name: "Healthcare", value: 35, color: "#3B82F6" },
+  { name: "IT & Technology", value: 25, color: "#10B981" },
+  { name: "Finance", value: 20, color: "#8B5CF6" },
+  { name: "Manufacturing", value: 15, color: "#F59E0B" },
+  { name: "Other", value: 5, color: "#EF4444" },
+];
+
+const candidateStatusData = [
+  { status: "Active", count: 2847, percentage: 45, color: "#10B981" },
+  { status: "Interviewing", count: 892, percentage: 28, color: "#3B82F6" },
+  { status: "Placed", count: 1563, percentage: 18, color: "#8B5CF6" },
+  { status: "Rejected", count: 234, percentage: 9, color: "#EF4444" },
+];
 
 // Admin Dashboard Component
 const AdminDashboard: React.FC = () => {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Complete system overview and management
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Can anyOf={["manage:users"]}>
-            <Button asChild>
-              <Link to="/users/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Add User
-              </Link>
-            </Button>
-          </Can>
-          <Can anyOf={["manage:all"]}>
-            <Button variant="outline" asChild>
-              <Link to="/system">
-                <Cog className="mr-2 h-4 w-4" />
-                System Settings
-              </Link>
-            </Button>
-          </Can>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+    <div className="space-y-8">
+      {/* Key Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              Total Revenue
+            </CardTitle>
+            <DollarSign className="h-5 w-5 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
+            <div className="text-3xl font-bold text-slate-800">$284,573</div>
+            <div className="flex items-center text-sm text-emerald-600 mt-1">
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+              +12.5% from last month
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
               Active Projects
             </CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+            <Briefcase className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
-            <p className="text-xs text-muted-foreground">+5% from last month</p>
+            <div className="text-3xl font-bold text-slate-800">28</div>
+            <div className="flex items-center text-sm text-blue-600 mt-1">
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+              +3 new this week
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
               Total Candidates
             </CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <UserCheck className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,567</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-slate-800">2,847</div>
+            <div className="flex items-center text-sm text-purple-600 mt-1">
+              <ArrowUpRight className="h-4 w-4 mr-1" />
               +23% from last month
-            </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Clients
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              Success Rate
             </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Target className="h-5 w-5 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
-            <p className="text-xs text-muted-foreground">+8% from last month</p>
+            <div className="text-3xl font-bold text-slate-800">94.2%</div>
+            <div className="flex items-center text-sm text-orange-600 mt-1">
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+              +2.1% from last month
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      {/* Revenue Trend Chart */}
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-slate-800">
+            Revenue Trend Analysis
+          </CardTitle>
+          <CardDescription>
+            Monthly revenue and placement trends
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="month" stroke="#64748B" />
+              <YAxis yAxisId="left" stroke="#64748B" />
+              <YAxis yAxisId="right" orientation="right" stroke="#64748B" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "white",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                }}
+              />
+              <Legend />
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="revenue"
+                stroke="#10B981"
+                strokeWidth={3}
+                dot={{ fill: "#10B981", strokeWidth: 2, r: 4 }}
+                name="Revenue ($)"
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="placements"
+                stroke="#3B82F6"
+                strokeWidth={3}
+                dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
+                name="Placements"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Performance Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="text-lg font-semibold text-slate-800">
+              Team Performance Rankings
+            </CardTitle>
+            <CardDescription>Success rates and revenue by team</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsBarChart data={teamPerformanceData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="name" stroke="#64748B" />
+                <YAxis stroke="#64748B" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="success" fill="#10B981" name="Success Rate (%)" />
+                <Bar dataKey="revenue" fill="#3B82F6" name="Revenue ($K)" />
+              </RechartsBarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-slate-800">
+              Revenue Breakdown
+            </CardTitle>
+            <CardDescription>Revenue distribution by sector</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPieChart>
+                <Pie
+                  data={revenueBreakdown}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percentage }) => `${name}: ${percentage}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {revenueBreakdown.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Candidate Analytics */}
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-slate-800">
+            Candidate Pipeline Analytics
+          </CardTitle>
+          <CardDescription>
+            Current candidate status distribution
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {candidateStatusData.map((item, index) => (
+              <div key={index} className="text-center">
+                <div
+                  className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center"
+                  style={{ backgroundColor: item.color + "20" }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  ></div>
+                </div>
+                <div className="text-2xl font-bold text-slate-800">
+                  {item.count}
+                </div>
+                <div className="text-sm font-medium text-slate-600">
+                  {item.status}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {item.percentage}% of total
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-slate-800">
+              Quick Actions
+            </CardTitle>
             <CardDescription>Common administrative tasks</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             <Button variant="outline" className="w-full justify-start" asChild>
               <Link to="/users">
                 <Users className="mr-2 h-4 w-4" />
@@ -130,70 +401,134 @@ const AdminDashboard: React.FC = () => {
               </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/roles">
-                <Cog className="mr-2 h-4 w-4" />
-                Manage Roles
+              <Link to="/projects">
+                <Briefcase className="mr-2 h-4 w-4" />
+                Create Project
               </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/analytics">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                View Analytics
+              <Link to="/teams">
+                <Building2 className="mr-2 h-4 w-4" />
+                Manage Teams
+              </Link>
+            </Button>
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link to="/clients">
+                <Heart className="mr-2 h-4 w-4" />
+                Add Client
               </Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>System Health</CardTitle>
-            <CardDescription>Current system status</CardDescription>
+            <CardTitle className="text-lg font-semibold text-slate-800">
+              Recent Activity
+            </CardTitle>
+            <CardDescription>Latest system updates and actions</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Database</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                <CheckCircle className="mr-1 h-3 w-3" />
-                Healthy
-              </Badge>
+          <CardContent>
+            <div className="space-y-4">
+              {[
+                {
+                  action: "New project created",
+                  detail: "Healthcare Staffing - City General",
+                  time: "2 hours ago",
+                  icon: Plus,
+                  color: "text-blue-600",
+                },
+                {
+                  action: "Candidate placed",
+                  detail: "Sarah Johnson → Metro Medical",
+                  time: "4 hours ago",
+                  icon: CheckCircle,
+                  color: "text-green-600",
+                },
+                {
+                  action: "Client onboarded",
+                  detail: "Regional Staffing Solutions",
+                  time: "6 hours ago",
+                  icon: Building2,
+                  color: "text-purple-600",
+                },
+                {
+                  action: "Team member added",
+                  detail: "Emma Davis to Healthcare Team",
+                  time: "8 hours ago",
+                  icon: Users,
+                  color: "text-orange-600",
+                },
+              ].map((item, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg bg-slate-100 ${item.color}`}>
+                    <item.icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-800">
+                      {item.action}
+                    </div>
+                    <div className="text-xs text-slate-600">{item.detail}</div>
+                    <div className="text-xs text-slate-500">{item.time}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">API Services</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                <CheckCircle className="mr-1 h-3 w-3" />
-                Online
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Background Jobs</span>
-              <Badge
-                variant="default"
-                className="bg-yellow-100 text-yellow-800"
-              >
-                <Clock className="mr-1 h-3 w-3" />
-                Running
-              </Badge>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* System Health & Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              System Health
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-2xl font-bold text-slate-800">Excellent</div>
+              <div className="text-sm text-slate-500">
+                All systems operational
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest system events</CardDescription>
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              Active Alerts
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm">
-              <div className="font-medium">New user registered</div>
-              <div className="text-muted-foreground">2 minutes ago</div>
+          <CardContent>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-3">
+                <AlertCircle className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-2xl font-bold text-slate-800">2</div>
+              <div className="text-sm text-slate-500">Requires attention</div>
             </div>
-            <div className="text-sm">
-              <div className="font-medium">Project status updated</div>
-              <div className="text-muted-foreground">15 minutes ago</div>
-            </div>
-            <div className="text-sm">
-              <div className="font-medium">Candidate interview scheduled</div>
-              <div className="text-muted-foreground">1 hour ago</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              Performance Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center mx-auto mb-3">
+                <Star className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-2xl font-bold text-slate-800">A+</div>
+              <div className="text-sm text-slate-500">Top tier performance</div>
             </div>
           </CardContent>
         </Card>
@@ -205,306 +540,139 @@ const AdminDashboard: React.FC = () => {
 // Manager Dashboard Component
 const ManagerDashboard: React.FC = () => {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Manager Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Team and project management overview
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button asChild>
-            <Link to="/projects/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Projects</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">
-              3 active, 9 completed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">All active</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Interviews
+    <div className="space-y-8">
+      {/* Key Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              Team Performance
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">This week</p>
+            <div className="text-3xl font-bold text-slate-800">94.2%</div>
+            <div className="flex items-center text-sm text-emerald-600 mt-1">
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+              +5.1% from last month
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              Active Projects
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">87%</div>
-            <p className="text-xs text-muted-foreground">+2% from last month</p>
+            <div className="text-3xl font-bold text-slate-800">8</div>
+            <div className="flex items-center text-sm text-blue-600 mt-1">
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+              +2 new this week
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">
+              Team Members
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-800">12</div>
+            <div className="flex items-center text-sm text-purple-600 mt-1">
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+              +1 new hire
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Team Performance Chart */}
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-slate-800">
+            Team Performance Trend
+          </CardTitle>
+          <CardDescription>Monthly performance metrics</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="month" stroke="#64748B" />
+              <YAxis stroke="#64748B" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "white",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="placements"
+                stroke="#3B82F6"
+                fill="#3B82F6"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Placements"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common management tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/projects">
-                <Briefcase className="mr-2 h-4 w-4" />
-                Manage Projects
-              </Link>
-            </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/candidates">
-                <UserCheck className="mr-2 h-4 w-4" />
-                Review Candidates
-              </Link>
-            </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/interviews">
-                <Calendar className="mr-2 h-4 w-4" />
-                Schedule Interviews
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest team activities</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm">
-              <div className="font-medium">New candidate applied</div>
-              <div className="text-muted-foreground">30 minutes ago</div>
-            </div>
-            <div className="text-sm">
-              <div className="font-medium">Interview completed</div>
-              <div className="text-muted-foreground">2 hours ago</div>
-            </div>
-            <div className="text-sm">
-              <div className="font-medium">Project deadline updated</div>
-              <div className="text-muted-foreground">1 day ago</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-slate-800">
+            Quick Actions
+          </CardTitle>
+          <CardDescription>Common team management tasks</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <Link to="/teams">
+              <Users className="mr-2 h-4 w-4" />
+              Manage Team
+            </Link>
+          </Button>
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <Link to="/projects">
+              <Briefcase className="mr-2 h-4 w-4" />
+              View Projects
+            </Link>
+          </Button>
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <Link to="/candidates">
+              <UserCheck className="mr-2 h-4 w-4" />
+              Review Candidates
+            </Link>
+          </Button>
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <Link to="/clients">
+              <Building2 className="mr-2 h-4 w-4" />
+              Client Overview
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-// Recruiter Dashboard Component
-const RecruiterDashboard: React.FC = () => {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Recruiter Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Candidate and interview management
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button asChild>
-            <Link to="/candidates/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Candidate
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Candidates</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">45</div>
-            <p className="text-xs text-muted-foreground">
-              12 active, 33 placed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Today's Interviews
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">
-              2 completed, 1 pending
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">73%</div>
-            <p className="text-xs text-muted-foreground">+5% from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">7</div>
-            <p className="text-xs text-muted-foreground">Require attention</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common recruitment tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/candidates">
-                <UserCheck className="mr-2 h-4 w-4" />
-                View Candidates
-              </Link>
-            </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/interviews">
-                <Calendar className="mr-2 h-4 w-4" />
-                Schedule Interview
-              </Link>
-            </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/documents">
-                <FileText className="mr-2 h-4 w-4" />
-                Review Documents
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Schedule</CardTitle>
-            <CardDescription>Your upcoming activities</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm">
-              <div className="font-medium">Interview with John Doe</div>
-              <div className="text-muted-foreground">
-                2:00 PM - Technical Round
-              </div>
-            </div>
-            <div className="text-sm">
-              <div className="font-medium">Candidate screening</div>
-              <div className="text-muted-foreground">
-                4:00 PM - 5 candidates
-              </div>
-            </div>
-            <div className="text-sm">
-              <div className="font-medium">Team meeting</div>
-              <div className="text-muted-foreground">
-                5:30 PM - Daily standup
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-// Main Dashboard Page Component
-const DashboardPage: React.FC = () => {
+// Main Dashboard Component
+export default function DashboardPage() {
   const isAdmin = useHasRole(["CEO", "Director"]);
-  const isManager = useHasRole(["CEO", "Director", "Manager"]);
-  const isRecruiter = useHasRole(["Recruiter"]);
 
   return (
-    <>
-      {/* Role-based dashboard rendering */}
-      <Can roles={["CEO", "Director"]}>
-        <AdminDashboard />
-      </Can>
-      <Can roles={["Manager"]}>
-        <ManagerDashboard />
-      </Can>
-      <Can roles={["Recruiter"]}>
-        <RecruiterDashboard />
-      </Can>
-
-      {/* Fallback for users without specific roles */}
-      {!isAdmin && !isManager && !isRecruiter && (
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">Welcome to Affiniks RMS</p>
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Welcome</CardTitle>
-              <CardDescription>
-                You don't have any specific role assigned yet. Please contact
-                your administrator.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      )}
-    </>
+    <div className="min-h-screen  ">
+      <div className="w-full mx-auto">
+        {isAdmin ? <AdminDashboard /> : <ManagerDashboard />}
+      </div>
+    </div>
   );
-};
-
-export default DashboardPage;
+}

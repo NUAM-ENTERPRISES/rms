@@ -20,6 +20,7 @@ import {
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { QueryClientsDto } from './dto/query-clients.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Clients')
@@ -32,7 +33,8 @@ export class ClientsController {
   @Permissions('manage:clients')
   @ApiOperation({
     summary: 'Create a new client',
-    description: 'Create a new client with type-specific information and optional financial tracking.',
+    description:
+      'Create a new client with type-specific information and optional financial tracking.',
   })
   @ApiResponse({
     status: 201,
@@ -55,7 +57,10 @@ export class ClientsController {
     },
   })
   @ApiResponse({ status: 400, description: 'Bad Request - Invalid data' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async create(@Body() createClientDto: CreateClientDto, @Request() req) {
     return this.clientsService.create(createClientDto, req.user.id);
   }
@@ -64,13 +69,19 @@ export class ClientsController {
   @Permissions('read:clients')
   @ApiOperation({
     summary: 'Get all clients with pagination and filtering',
-    description: 'Retrieve a paginated list of clients with optional search and type filtering.',
+    description:
+      'Retrieve a paginated list of clients with optional search and type filtering.',
   })
   @ApiQuery({
     name: 'type',
     required: false,
     description: 'Filter by client type',
-    enum: ['INDIVIDUAL', 'SUB_AGENCY', 'HEALTHCARE_ORGANIZATION', 'EXTERNAL_SOURCE'],
+    enum: [
+      'INDIVIDUAL',
+      'SUB_AGENCY',
+      'HEALTHCARE_ORGANIZATION',
+      'EXTERNAL_SOURCE',
+    ],
   })
   @ApiQuery({
     name: 'search',
@@ -126,8 +137,11 @@ export class ClientsController {
       },
     },
   })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
-  async findAll(@Query() query: any) {
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async findAll(@Query() query: QueryClientsDto) {
     return this.clientsService.findAll(query);
   }
 
@@ -135,7 +149,8 @@ export class ClientsController {
   @Permissions('read:clients')
   @ApiOperation({
     summary: 'Get client statistics',
-    description: 'Retrieve statistics about clients by type and active projects.',
+    description:
+      'Retrieve statistics about clients by type and active projects.',
   })
   @ApiResponse({
     status: 200,
@@ -160,11 +175,17 @@ export class ClientsController {
             },
           },
         },
-        message: { type: 'string', example: 'Client statistics retrieved successfully' },
+        message: {
+          type: 'string',
+          example: 'Client statistics retrieved successfully',
+        },
       },
     },
   })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async getStats() {
     return this.clientsService.getClientStats();
   }
@@ -173,7 +194,8 @@ export class ClientsController {
   @Permissions('read:clients')
   @ApiOperation({
     summary: 'Get client by ID',
-    description: 'Retrieve a specific client with all their projects and related data.',
+    description:
+      'Retrieve a specific client with all their projects and related data.',
   })
   @ApiParam({ name: 'id', description: 'Client ID', example: 'client123' })
   @ApiResponse({
@@ -208,7 +230,10 @@ export class ClientsController {
     },
   })
   @ApiResponse({ status: 404, description: 'Not Found - Client not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async findOne(@Param('id') id: string) {
     return this.clientsService.findOne(id);
   }
@@ -217,7 +242,8 @@ export class ClientsController {
   @Permissions('manage:clients')
   @ApiOperation({
     summary: 'Update client',
-    description: 'Update a client with new information. All fields are optional for partial updates.',
+    description:
+      'Update a client with new information. All fields are optional for partial updates.',
   })
   @ApiParam({ name: 'id', description: 'Client ID', example: 'client123' })
   @ApiResponse({
@@ -242,7 +268,10 @@ export class ClientsController {
   })
   @ApiResponse({ status: 400, description: 'Bad Request - Invalid data' })
   @ApiResponse({ status: 404, description: 'Not Found - Client not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async update(
     @Param('id') id: string,
     @Body() updateClientDto: UpdateClientDto,
@@ -275,9 +304,15 @@ export class ClientsController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad Request - Client has active projects' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Client has active projects',
+  })
   @ApiResponse({ status: 404, description: 'Not Found - Client not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async remove(@Param('id') id: string, @Request() req) {
     return this.clientsService.remove(id, req.user.id);
   }

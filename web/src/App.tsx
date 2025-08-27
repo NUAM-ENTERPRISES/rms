@@ -17,9 +17,12 @@ import { useAppSelector } from "@/app/hooks";
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
+const CreateProjectPage = lazy(() => import("@/pages/CreateProjectPage"));
+const ProjectDetailPage = lazy(() => import("@/pages/ProjectDetailPage"));
 const CandidatesPage = lazy(() => import("@/pages/CandidatesPage"));
 const TeamsPage = lazy(() => import("@/pages/TeamsPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
+const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -83,6 +86,32 @@ function App() {
                     <ProtectedRoute>
                       <AppLayout>
                         <ProjectsPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/projects/create"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:projects"]}>
+                      <AppLayout>
+                        <CreateProjectPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/projects/:projectId"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <ProjectDetailPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>
@@ -175,12 +204,7 @@ function App() {
                   <RouteErrorBoundary>
                     <ProtectedRoute>
                       <AppLayout>
-                        <div className="p-8">
-                          <h1 className="text-2xl font-bold">Clients</h1>
-                          <p className="text-muted-foreground">
-                            Client management and information
-                          </p>
-                        </div>
+                        <ClientsPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>

@@ -10,6 +10,7 @@ import {
   Target,
   Sparkles,
   Download,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,8 @@ interface ProjectFiltersProps {
   filters: QueryProjectsRequest;
   onFiltersChange: (filters: QueryProjectsRequest) => void;
   onExport?: () => void;
+  onCreateProject?: () => void;
+  canCreateProject?: boolean;
   className?: string;
 }
 
@@ -42,6 +45,8 @@ export default function ProjectFilters({
   filters,
   onFiltersChange,
   onExport,
+  onCreateProject,
+  canCreateProject,
   className,
 }: ProjectFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -435,10 +440,21 @@ export default function ProjectFilters({
           <Button
             variant="outline"
             onClick={onExport}
-            className="h-11 px-4 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md gap-2"
+            className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3 w-3" />
             Export
+          </Button>
+        )}
+
+        {/* Add Project Button - Positioned after Export button */}
+        {canCreateProject && (
+          <Button
+            onClick={onCreateProject}
+            className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
+          >
+            <Plus className="h-3 w-3" />
+            Add Project
           </Button>
         )}
       </div>
