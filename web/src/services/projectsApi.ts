@@ -188,7 +188,7 @@ export const projectsApi = createApi({
     // Get project by ID
     getProject: builder.query<ApiResponse<Project>, string>({
       query: (id) => `/projects/${id}`,
-      providesTags: (result, error, id) => [{ type: "Project", id }],
+      providesTags: (_, __, id) => [{ type: "Project", id }],
     }),
 
     // Get project statistics
@@ -219,7 +219,7 @@ export const projectsApi = createApi({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_, __, { id }) => [
         { type: "Project", id },
         { type: "Project", id: "LIST" },
         "ProjectStats",
@@ -245,7 +245,7 @@ export const projectsApi = createApi({
         method: "POST",
         body: { candidateId },
       }),
-      invalidatesTags: (result, error, { projectId }) => [
+      invalidatesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
         { type: "Project", id: "LIST" },
       ],

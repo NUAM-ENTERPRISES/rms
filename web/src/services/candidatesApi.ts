@@ -79,7 +79,7 @@ export const candidatesApi = createApi({
     }),
     getCandidateById: builder.query<Candidate, string>({
       query: (id) => `/candidates/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Candidate', id }],
+      providesTags: (_, __, id) => [{ type: 'Candidate', id }],
     }),
     createCandidate: builder.mutation<Candidate, CreateCandidateRequest>({
       query: (candidateData) => ({
@@ -95,7 +95,7 @@ export const candidatesApi = createApi({
         method: 'PATCH',
         body: candidateData,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Candidate', id }, 'Candidate'],
+      invalidatesTags: (_, __, { id }) => [{ type: 'Candidate', id }, 'Candidate'],
     }),
     deleteCandidate: builder.mutation<void, string>({
       query: (id) => ({

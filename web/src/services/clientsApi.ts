@@ -164,7 +164,7 @@ export const clientsApi = createApi({
     // Get single client by ID
     getClient: builder.query<ClientResponse, string>({
       query: (id) => `/clients/${id}`,
-      providesTags: (result, error, id) => [{ type: "Client", id }],
+      providesTags: (_, __, id) => [{ type: "Client", id }],
     }),
 
     // Create new client
@@ -184,7 +184,7 @@ export const clientsApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_, __, { id }) => [
         { type: "Client", id },
         "Client",
       ],

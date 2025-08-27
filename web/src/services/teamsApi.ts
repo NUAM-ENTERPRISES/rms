@@ -93,7 +93,7 @@ export const teamsApi = createApi({
         url: `/teams/${id}`,
         method: "GET",
       }),
-      providesTags: (result, error, id) => [{ type: "Team", id }],
+      providesTags: (_, __, id) => [{ type: "Team", id }],
     }),
 
     createTeam: builder.mutation<TeamResponse, CreateTeamRequest>({
@@ -114,7 +114,7 @@ export const teamsApi = createApi({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Team", id }],
+      invalidatesTags: (_, __, { id }) => [{ type: "Team", id }],
     }),
 
     deleteTeam: builder.mutation<{ success: boolean; message: string }, string>(

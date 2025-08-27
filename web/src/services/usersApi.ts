@@ -44,7 +44,7 @@ export const usersApi = createApi({
     }),
     getUserById: builder.query<User, string>({
       query: (id) => `/users/${id}`,
-      providesTags: (result, error, id) => [{ type: 'User', id }],
+      providesTags: (_, __, id) => [{ type: 'User', id }],
     }),
     createUser: builder.mutation<User, CreateUserRequest>({
       query: (userData) => ({
@@ -60,7 +60,7 @@ export const usersApi = createApi({
         method: 'PATCH',
         body: userData,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'User', id }, 'User'],
+      invalidatesTags: (_, __, { id }) => [{ type: 'User', id }, 'User'],
     }),
     deleteUser: builder.mutation<void, string>({
       query: (id) => ({
