@@ -1,0 +1,5 @@
+# railway.toml
+[build]
+root = "backend"
+buildCommand = "npm ci && npm run build"
+startCommand = "npm run start:prod"
