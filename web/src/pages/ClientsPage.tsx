@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -45,6 +46,7 @@ import { Client } from "@/services/clientsApi";
 import { cn } from "@/lib/utils";
 
 export default function ClientsPage() {
+  const navigate = useNavigate();
   const canManageClients = useCan("manage:clients");
   const canWriteClients = useCan("write:clients");
   const canReadClients = useCan("read:clients");
@@ -314,6 +316,7 @@ export default function ClientsPage() {
                   <Card
                     key={client.id}
                     className="group border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
+                    onClick={() => navigate(`/clients/${client.id}`)}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -415,41 +418,6 @@ export default function ClientsPage() {
                         <span>Added {formatDate(client.createdAt)}</span>
                       </div>
                     </CardContent>
-
-                    {/* Action Buttons */}
-                    {canWriteClients && (
-                      <div className="px-6 pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 border-slate-200 hover:border-slate-300"
-                          >
-                            <Eye className="mr-2 h-3 w-3" />
-                            View
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 border-slate-200 hover:border-slate-300"
-                          >
-                            <Edit className="mr-2 h-3 w-3" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-red-200 hover:border-red-300 hover:bg-red-50"
-                            onClick={() =>
-                              handleDeleteClient(client.id, client.name)
-                            }
-                          >
-                            <Trash2 className="mr-2 h-3 w-3" />
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </Card>
                 );
               })}

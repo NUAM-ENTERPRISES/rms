@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -15,9 +16,6 @@ import {
   Shield,
   Star,
   MoreHorizontal,
-  Edit,
-  Trash2,
-  Eye,
   Download,
   Filter,
 } from "lucide-react";
@@ -65,6 +63,7 @@ interface TeamMember {
 }
 
 export default function TeamsPage() {
+  const navigate = useNavigate();
   const canManageTeams = useCan("manage:teams");
   const canWriteTeams = useCan("write:teams");
   const canReadTeams = useCan("read:teams");
@@ -276,6 +275,7 @@ export default function TeamsPage() {
             <Card
               key={team.id}
               className="group border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
+              onClick={() => navigate(`/teams/${team.id}`)}
             >
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
@@ -373,38 +373,6 @@ export default function TeamsPage() {
                   <span>Created {formatDate(team.createdAt)}</span>
                 </div>
               </CardContent>
-
-              {/* Action Buttons */}
-              {canWriteTeams && (
-                <div className="px-6 pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-slate-200 hover:border-slate-300"
-                    >
-                      <Eye className="mr-2 h-3 w-3" />
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-slate-200 hover:border-slate-300"
-                    >
-                      <Edit className="mr-2 h-3 w-3" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-200 hover:border-red-300 hover:bg-red-50"
-                    >
-                      <Trash2 className="mr-2 h-3 w-3" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              )}
             </Card>
           ))}
         </div>

@@ -20,9 +20,13 @@ const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const CreateProjectPage = lazy(() => import("@/pages/CreateProjectPage"));
 const ProjectDetailPage = lazy(() => import("@/pages/ProjectDetailPage"));
 const CandidatesPage = lazy(() => import("@/pages/CandidatesPage"));
+const CandidateDetailPage = lazy(() => import("@/pages/CandidateDetailPage"));
 const TeamsPage = lazy(() => import("@/pages/TeamsPage"));
+const TeamDetailPage = lazy(() => import("@/pages/TeamDetailPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
+const ClientDetailPage = lazy(() => import("@/pages/ClientDetailPage"));
+const InterviewsPage = lazy(() => import("@/pages/InterviewsPage"));
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -132,6 +136,19 @@ function App() {
               />
 
               <Route
+                path="/candidates/:id"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <CandidateDetailPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
                 path="/teams"
                 element={
                   <RouteErrorBoundary>
@@ -145,17 +162,25 @@ function App() {
               />
 
               <Route
+                path="/teams/:teamId"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <TeamDetailPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
                 path="/interviews"
                 element={
                   <RouteErrorBoundary>
                     <ProtectedRoute>
                       <AppLayout>
-                        <div className="p-8">
-                          <h1 className="text-2xl font-bold">Interviews</h1>
-                          <p className="text-muted-foreground">
-                            Interview scheduling and management
-                          </p>
-                        </div>
+                        <InterviewsPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>
@@ -205,6 +230,19 @@ function App() {
                     <ProtectedRoute>
                       <AppLayout>
                         <ClientsPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/clients/:id"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <ClientDetailPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>

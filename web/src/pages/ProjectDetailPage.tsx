@@ -36,6 +36,15 @@ import {
   AlertTriangle,
   Info,
   X,
+  Plus,
+  Minus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Eye,
+  UserPlus,
+  UserMinus,
+  BarChart3,
 } from "lucide-react";
 import {
   useGetProjectQuery,
@@ -43,6 +52,31 @@ import {
 } from "@/services/projectsApi";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 // Helper function to format date - following FE guidelines: DD MMM YYYY
 const formatDate = (dateString?: string) => {
@@ -132,6 +166,117 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
+// Mock data for candidates
+const mockAssignedCandidates = [
+  {
+    id: "1",
+    name: "Sarah Johnson",
+    email: "sarah.johnson@email.com",
+    phone: "+1 (555) 123-4567",
+    currentRole: "ICU Nurse",
+    experience: 5,
+    skills: ["Nursing", "ICU", "Emergency Care"],
+    matchScore: 95,
+    assignedDate: "2024-11-20T10:00:00Z",
+    status: "active",
+    assignedRole: "ICU Specialist",
+  },
+  {
+    id: "2",
+    name: "Michael Chen",
+    email: "michael.chen@email.com",
+    phone: "+1 (555) 234-5678",
+    currentRole: "Pediatric Nurse",
+    experience: 3,
+    skills: ["Nursing", "Pediatrics", "Patient Care"],
+    matchScore: 88,
+    assignedDate: "2024-11-22T14:00:00Z",
+    status: "active",
+    assignedRole: "Pediatric Nurse",
+  },
+  {
+    id: "3",
+    name: "Emily Rodriguez",
+    email: "emily.rodriguez@email.com",
+    phone: "+1 (555) 345-6789",
+    currentRole: "Emergency Nurse",
+    experience: 4,
+    skills: ["Nursing", "Emergency Care", "Trauma"],
+    matchScore: 92,
+    assignedDate: "2024-11-25T09:00:00Z",
+    status: "active",
+    assignedRole: "Emergency Department Nurse",
+  },
+];
+
+const mockAvailableCandidates = [
+  {
+    id: "4",
+    name: "David Kim",
+    email: "david.kim@email.com",
+    phone: "+1 (555) 456-7890",
+    currentRole: "ICU Specialist",
+    experience: 6,
+    skills: ["Nursing", "ICU", "Critical Care"],
+    matchScore: 78,
+    availability: "immediate",
+    location: "San Francisco, CA",
+  },
+  {
+    id: "5",
+    name: "Lisa Thompson",
+    email: "lisa.thompson@email.com",
+    phone: "+1 (555) 567-8901",
+    currentRole: "Emergency Department Nurse",
+    experience: 4,
+    skills: ["Nursing", "Emergency Care", "Patient Assessment"],
+    matchScore: 72,
+    availability: "2_weeks",
+    location: "Oakland, CA",
+  },
+  {
+    id: "6",
+    name: "James Wilson",
+    email: "james.wilson@email.com",
+    phone: "+1 (555) 678-9012",
+    currentRole: "Pediatric Nurse",
+    experience: 2,
+    skills: ["Nursing", "Pediatrics", "Child Care"],
+    matchScore: 65,
+    availability: "1_month",
+    location: "San Jose, CA",
+  },
+  {
+    id: "7",
+    name: "Maria Garcia",
+    email: "maria.garcia@email.com",
+    phone: "+1 (555) 789-0123",
+    currentRole: "ICU Nurse",
+    experience: 7,
+    skills: ["Nursing", "ICU", "Ventilator Management"],
+    matchScore: 85,
+    availability: "immediate",
+    location: "San Francisco, CA",
+  },
+];
+
+// Match Score Badge Component
+const MatchScoreBadge = ({ score }: { score: number }) => {
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return "bg-green-100 text-green-800 border-green-200";
+    if (score >= 80) return "bg-blue-100 text-blue-800 border-blue-200";
+    if (score >= 70) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    return "bg-red-100 text-red-800 border-red-200";
+  };
+
+  return (
+    <Badge className={`${getScoreColor(score)} border gap-1 px-2 py-1`}>
+      <BarChart3 className="h-3 w-3" />
+      {score}%
+    </Badge>
+  );
+};
+
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -150,6 +295,9 @@ export default function ProjectDetailPage() {
 
   // Local state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState("assigned");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Handle project deletion
   const handleDeleteProject = async () => {
@@ -165,6 +313,34 @@ export default function ProjectDetailPage() {
       toast.error(error?.data?.message || "Failed to delete project");
     }
   };
+
+  // Handle candidate actions
+  const handleUnassignCandidate = (candidateId: string) => {
+    toast.success("Candidate unassigned successfully");
+    // TODO: Implement actual unassign logic
+  };
+
+  const handleAssignCandidate = (candidateId: string) => {
+    toast.success("Candidate assigned successfully");
+    // TODO: Implement actual assign logic
+  };
+
+  const handleViewCandidate = (candidateId: string) => {
+    navigate(`/candidates/${candidateId}`);
+  };
+
+  // Filter candidates
+  const filteredAssignedCandidates = mockAssignedCandidates.filter(
+    (candidate) =>
+      candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredAvailableCandidates = mockAvailableCandidates.filter(
+    (candidate) =>
+      candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Loading state
   if (isLoading) {
@@ -240,71 +416,434 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+              {project.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{project.status}</Badge>
+              <span className="text-sm text-slate-500">
+                Created {formatDate(project.createdAt)}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canManageProjects && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/projects/${project.id}/edit`)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Project Overview */}
+            {/* Compact Project Overview */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <Info className="h-5 w-5 text-blue-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <Info className="h-4 w-4 text-blue-600" />
                   Project Overview
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {project.description && (
-                  <div>
-                    <h4 className="font-medium text-slate-700 mb-2">
-                      Description
-                    </h4>
-                    <p className="text-slate-600 leading-relaxed">
-                      {project.description}
-                    </p>
-                  </div>
+                  <p className="text-slate-600 text-sm leading-relaxed capitalize">
+                    {project.description}
+                  </p>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-sm text-slate-500">Deadline</p>
-                      <p className="font-medium text-slate-700">
-                        {formatDateTime(project.deadline)}
-                      </p>
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">
+                      {project.rolesNeeded.reduce(
+                        (sum, role) => sum + role.quantity,
+                        0
+                      )}
                     </div>
+                    <div className="text-xs text-slate-600">Positions</div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-sm text-slate-500">Created</p>
-                      <p className="font-medium text-slate-700">
-                        {formatDate(project.createdAt)}
-                      </p>
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-lg font-bold text-green-600">
+                      {mockAssignedCandidates.length}
                     </div>
+                    <div className="text-xs text-slate-600">Assigned</div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-sm text-slate-500">Assigned Team</p>
-                      <p className="font-medium text-slate-700">
-                        {project.team?.name || "Not assigned"}
-                      </p>
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-lg font-bold text-purple-600">
+                      {project.rolesNeeded.length}
                     </div>
+                    <div className="text-xs text-slate-600">Roles</div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <UserCheck className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-sm text-slate-500">Total Positions</p>
-                      <p className="font-medium text-slate-700">
-                        {project.rolesNeeded.reduce(
-                          (sum, role) => sum + role.quantity,
-                          0
-                        )}
-                      </p>
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-lg font-bold text-orange-600">
+                      {Math.ceil(
+                        (new Date(project.deadline).getTime() -
+                          new Date().getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}
                     </div>
+                    <div className="text-xs text-slate-600">Days Left</div>
+                  </div>
+                </div>
+
+                {/* Project Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3 w-3 text-slate-400" />
+                    <span className="text-slate-600">Deadline:</span>
+                    <span className="font-medium text-slate-800">
+                      {formatDateTime(project.deadline)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3 text-slate-400" />
+                    <span className="text-slate-600">Created:</span>
+                    <span className="font-medium text-slate-800">
+                      {formatDate(project.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3 w-3 text-slate-400" />
+                    <span className="text-slate-600">Team:</span>
+                    <span className="font-medium text-slate-800">
+                      {project.team?.name || "Not assigned"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-3 w-3 text-slate-400" />
+                    <span className="text-slate-600">Status:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {project.status}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Candidate Management Tabs */}
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-emerald-600" />
+                  Candidate Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger
+                      value="assigned"
+                      className="flex items-center gap-2"
+                    >
+                      <UserCheck className="h-4 w-4" />
+                      Assigned Candidates
+                      <Badge variant="secondary" className="ml-1">
+                        {mockAssignedCandidates.length}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="available"
+                      className="flex items-center gap-2"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Available Candidates
+                      <Badge variant="secondary" className="ml-1">
+                        {mockAvailableCandidates.length}
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="assigned" className="mt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                              placeholder="Search candidates..."
+                              className="pl-10 w-64"
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                          </div>
+                          <Select
+                            value={statusFilter}
+                            onValueChange={setStatusFilter}
+                          >
+                            <SelectTrigger className="w-48">
+                              <SelectValue placeholder="Filter by status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Status</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="text-sm text-slate-600">
+                          {filteredAssignedCandidates.length} candidate
+                          {filteredAssignedCandidates.length !== 1
+                            ? "s"
+                            : ""}{" "}
+                          assigned
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Candidate</TableHead>
+                              <TableHead>Assigned Role</TableHead>
+                              <TableHead>Match Score</TableHead>
+                              <TableHead className="text-right">
+                                Actions
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredAssignedCandidates.map((candidate) => (
+                              <TableRow key={candidate.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                      {candidate.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-slate-900">
+                                        {candidate.name}
+                                      </div>
+                                      <div className="text-sm text-slate-500">
+                                        {candidate.email}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium text-slate-900">
+                                    {candidate.assignedRole}
+                                  </div>
+                                  <div className="text-sm text-slate-500">
+                                    {candidate.currentRole}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <MatchScoreBadge
+                                    score={candidate.matchScore}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleViewCandidate(candidate.id)
+                                        }
+                                      >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUnassignCandidate(candidate.id)
+                                        }
+                                        className="text-red-600"
+                                      >
+                                        <UserMinus className="mr-2 h-4 w-4" />
+                                        Unassign
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="available" className="mt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                              placeholder="Search candidates..."
+                              className="pl-10 w-64"
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-sm text-slate-600">
+                          {filteredAvailableCandidates.length} candidate
+                          {filteredAvailableCandidates.length !== 1
+                            ? "s"
+                            : ""}{" "}
+                          available
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Candidate</TableHead>
+                              <TableHead>Current Role</TableHead>
+                              <TableHead>Experience</TableHead>
+                              <TableHead>Match Score</TableHead>
+                              <TableHead>Availability</TableHead>
+                              <TableHead className="text-right">
+                                Actions
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredAvailableCandidates.map((candidate) => (
+                              <TableRow key={candidate.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                      {candidate.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-slate-900">
+                                        {candidate.name}
+                                      </div>
+                                      <div className="text-sm text-slate-500">
+                                        {candidate.email}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium text-slate-900">
+                                    {candidate.currentRole}
+                                  </div>
+                                  <div className="text-sm text-slate-500">
+                                    {candidate.location}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm text-slate-600">
+                                    {candidate.experience} years
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <MatchScoreBadge
+                                    score={candidate.matchScore}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs capitalize"
+                                  >
+                                    {candidate.availability.replace("_", " ")}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleViewCandidate(candidate.id)
+                                        }
+                                      >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleAssignCandidate(candidate.id)
+                                        }
+                                        className="text-green-600"
+                                      >
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        Assign to Project
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Client Information */}
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  Client Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <h4 className="font-medium text-slate-800 text-sm">
+                    {project.client.name}
+                  </h4>
+                  <Badge variant="outline" className="mt-1 text-xs">
+                    {project.client.type}
+                  </Badge>
+                </div>
+                <div className="text-xs text-slate-500">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MapPin className="h-3 w-3" />
+                    <span>San Francisco, CA</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Phone className="h-3 w-3" />
+                    <span>+1 (555) 123-4567</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3 w-3" />
+                    <span>contact@client.com</span>
                   </div>
                 </div>
               </CardContent>
@@ -312,297 +851,82 @@ export default function ProjectDetailPage() {
 
             {/* Roles Required */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <Target className="h-5 w-5 text-purple-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-purple-600" />
                   Roles Required
                 </CardTitle>
-                <CardDescription>
-                  {project.rolesNeeded.length} role
-                  {project.rolesNeeded.length !== 1 ? "s" : ""} defined
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {project.rolesNeeded.map((role, index) => (
+              <CardContent className="space-y-3">
+                {project.rolesNeeded.slice(0, 3).map((role) => (
                   <div
                     key={role.id}
-                    className="border border-slate-200 rounded-lg p-4 bg-slate-50/50"
+                    className="border border-slate-200 rounded-lg p-3 bg-slate-50/50"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h4 className="text-lg font-semibold text-slate-800">
-                          {role.designation}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="gap-1">
-                            <Users className="h-3 w-3" />
-                            {role.quantity} position
-                            {role.quantity !== 1 ? "s" : ""}
-                          </Badge>
-                          <PriorityBadge priority={role.priority} />
-                        </div>
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-slate-800">
+                        {role.designation}
+                      </h4>
+                      <Badge variant="outline" className="text-xs">
+                        {role.quantity} pos
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      {role.minExperience}-{role.maxExperience} years •{" "}
+                      {role.shiftType} shift
+                    </div>
+                    {role.skills && (
+                      <div className="text-xs text-slate-500 mt-1">
+                        Skills: {role.skills}
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {role.minExperience !== undefined &&
-                        role.maxExperience !== undefined && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-slate-400" />
-                            <span className="text-sm text-slate-600">
-                              {role.minExperience}-{role.maxExperience} years
-                              experience
-                            </span>
-                          </div>
-                        )}
-
-                      {role.shiftType && (
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-slate-400" />
-                          <span className="text-sm text-slate-600 capitalize">
-                            {role.shiftType} shift
-                          </span>
-                        </div>
-                      )}
-
-                      {role.skills && (
-                        <div className="flex items-center gap-2">
-                          <Target className="h-4 w-4 text-slate-400" />
-                          <span className="text-sm text-slate-600">
-                            Skills: {role.skills}
-                          </span>
-                        </div>
-                      )}
-
-                      {role.technicalSkills && (
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-slate-400" />
-                          <span className="text-sm text-slate-600">
-                            Technical: {role.technicalSkills}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Requirements */}
-                    <div className="mt-3 pt-3 border-t border-slate-200">
-                      <div className="flex flex-wrap gap-2">
-                        {role.backgroundCheckRequired && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <Shield className="h-3 w-3" />
-                            Background Check
-                          </Badge>
-                        )}
-                        {role.drugScreeningRequired && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <Shield className="h-3 w-3" />
-                            Drug Screening
-                          </Badge>
-                        )}
-                        {role.onCallRequired && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <Clock className="h-3 w-3" />
-                            On-Call
-                          </Badge>
-                        )}
-                      </div>
-
-                      {role.notes && (
-                        <p className="text-sm text-slate-600 mt-2 italic">
-                          "{role.notes}"
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
                 ))}
+                {project.rolesNeeded.length > 3 && (
+                  <div className="text-center">
+                    <Button variant="ghost" size="sm" className="text-xs">
+                      View {project.rolesNeeded.length - 3} more roles
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Candidates Assigned */}
-            {project.candidateProjects &&
-              project.candidateProjects.length > 0 && (
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                      <UserCheck className="h-5 w-5 text-emerald-600" />
-                      Assigned Candidates
-                    </CardTitle>
-                    <CardDescription>
-                      {project.candidateProjects.length} candidate
-                      {project.candidateProjects.length !== 1 ? "s" : ""}{" "}
-                      assigned
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {project.candidateProjects.map((candidateProject) => (
-                        <div
-                          key={candidateProject.id}
-                          className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                              {candidateProject.candidate.name
-                                .charAt(0)
-                                .toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-800">
-                                {candidateProject.candidate.name}
-                              </p>
-                              <p className="text-sm text-slate-600">
-                                {candidateProject.candidate.currentStatus}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {candidateProject.status}
-                            </Badge>
-                            <span className="text-xs text-slate-500">
-                              Assigned {formatDate(candidateProject.assignedAt)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Client Information */}
+            {/* Project Info */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                  Client Details
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <Info className="h-4 w-4 text-green-600" />
+                  Project Info
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-slate-800">
-                    {project.client.name}
-                  </h4>
-                  <Badge variant="outline" className="mt-1">
-                    {project.client.type}
-                  </Badge>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-600">Deadline</span>
+                  <span className="font-medium text-slate-800">
+                    {formatDate(project.deadline)}
+                  </span>
                 </div>
-
-                <div className="h-px bg-slate-200 my-4" />
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <MapPin className="h-4 w-4" />
-                    <span>Location information</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Phone className="h-4 w-4" />
-                    <span>Contact number</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Mail className="h-4 w-4" />
-                    <span>Email address</span>
-                  </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-600">Created By</span>
+                  <span className="font-medium text-slate-800">
+                    {project.creator.name}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Project Statistics */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  Project Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {project.rolesNeeded.length}
-                    </div>
-                    <div className="text-sm text-blue-600">Roles</div>
-                  </div>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {project.rolesNeeded.reduce(
-                        (sum, role) => sum + role.quantity,
-                        0
-                      )}
-                    </div>
-                    <div className="text-sm text-purple-600">Positions</div>
-                  </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-600">Team</span>
+                  <span className="font-medium text-slate-800">
+                    {project.team?.name || "Not assigned"}
+                  </span>
                 </div>
-
-                <div className="h-px bg-slate-200 my-4" />
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Days Remaining</span>
-                    <span className="font-medium text-slate-800">
-                      {Math.ceil(
-                        (new Date(project.deadline).getTime() -
-                          new Date().getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Created By</span>
-                    <span className="font-medium text-slate-800">
-                      {project.creator.name}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Last Updated</span>
-                    <span className="font-medium text-slate-800">
-                      {formatDate(project.updatedAt)}
-                    </span>
-                  </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-600">Last Updated</span>
+                  <span className="font-medium text-slate-800">
+                    {formatDate(project.updatedAt)}
+                  </span>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Quick Actions */}
-            {canManageProjects && (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-slate-800">
-                    Quick Actions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                    onClick={() => navigate(`/projects/${project.id}/edit`)}
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit Project
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                    onClick={() =>
-                      navigate(`/candidates?projectId=${project.id}`)
-                    }
-                  >
-                    <UserCheck className="h-4 w-4" />
-                    Assign Candidates
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Generate Report
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>

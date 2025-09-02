@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -77,6 +78,7 @@ interface Candidate {
 }
 
 export default function CandidatesPage() {
+  const navigate = useNavigate();
   const canReadCandidates = useCan("read:candidates");
   const canWriteCandidates = useCan("write:candidates");
   const canManageCandidates = useCan("manage:candidates");
@@ -603,7 +605,13 @@ export default function CandidatesPage() {
                               {candidate.name.charAt(0)}
                             </div>
                             <div>
-                              <div className="font-medium text-slate-900">
+                              <div
+                                className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/candidates/${candidate.id}`);
+                                }}
+                              >
                                 {candidate.name}
                               </div>
                               <div className="text-sm text-slate-500">
@@ -715,7 +723,11 @@ export default function CandidatesPage() {
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate(`/candidates/${candidate.id}`)
+                                }
+                              >
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
