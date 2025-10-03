@@ -1,0 +1,51 @@
+name: Deploy App
+
+on:
+  push:
+    branches:
+      - dev
+      - uat
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Copy SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.DROPLET_SSH_KEY }}
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
+            # Branch-specific deployment
+            if [ "${GITHUB_REF#refs/heads/}" = "dev" ]; then
+              cd /home/deployer/rms-dev
+            elif [ "${GITHUB_REF#refs/heads/}" = "uat" ]; then
+              cd /home/deployer/rms-uat
+            else
+              cd /home/deployer/rms-prod
+            fi
+
+            git fetch --all
+            git reset --hard origin/${GITHUB_REF#refs/heads/}
+            npm install
+            npm run build
+            pm2 restart all
+          EOF
