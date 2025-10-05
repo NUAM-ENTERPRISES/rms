@@ -468,12 +468,14 @@ export class ProjectsService {
       );
     }
 
-    // Create assignment
+    // Create assignment (nomination)
     const assignment = await this.prisma.candidateProjectMap.create({
       data: {
         candidateId: assignCandidateDto.candidateId,
         projectId,
+        nominatedBy: assignCandidateDto.notes || '', // TODO: Get from request user
         notes: assignCandidateDto.notes,
+        status: 'nominated', // Initial status
       },
       include: {
         candidate: {
@@ -528,7 +530,7 @@ export class ProjectsService {
           },
         },
       },
-      orderBy: { assignedDate: 'desc' },
+      orderBy: { nominatedDate: 'desc' },
     });
 
     return assignments;
@@ -631,5 +633,57 @@ export class ProjectsService {
       projectsByClient,
       upcomingDeadlines,
     };
+  }
+
+  /**
+   * Get eligible candidates for a project
+   * Returns candidates who match project requirements and are not yet nominated
+   */
+  async getEligibleCandidates(projectId: string): Promise<any[]> {
+    // Get project with requirements
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        rolesNeeded: true,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    // Get candidates not already nominated for this project
+    const candidates = await this.prisma.candidate.findMany({
+      where: {
+        projects: {
+          none: {
+            projectId,
+          },
+        },
+      },
+      include: {
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        team: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // TODO: Implement advanced matching logic based on:
+    // - rolesNeeded.skills
+    // - rolesNeeded.minExperience/maxExperience
+    // - rolesNeeded.educationRequirements
+    // - rolesNeeded.requiredCertifications
+    // For now, return all candidates not nominated yet
+    return candidates;
   }
 }

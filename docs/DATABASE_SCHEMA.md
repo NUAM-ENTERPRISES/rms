@@ -1,7 +1,7 @@
 # 🗄️ **Affiniks RMS - Database Schema Documentation**
 
-> **Last Updated**: December 26, 2024  
-> **Version**: 1.0.0  
+> **Last Updated**: September 30, 2025  
+> **Version**: 2.0.0  
 > **Database**: PostgreSQL  
 > **ORM**: Prisma
 
@@ -469,11 +469,13 @@ Table: candidates
 
 ---
 
-#### **5.2 CandidateProjectMap Model (Junction Table)**
+#### **5.2 CandidateProjectMap Model (Junction Table) - UPDATED v2.0**
 
 ```sql
 Table: candidate_project_map
 ```
+
+**Purpose:** Tracks the complete lifecycle of a candidate's journey through a specific project nomination, from initial nomination through document verification, interviews, selection, processing, and final hiring.
 
 **Fields:**
 | Field | Type | Constraints | Description |
@@ -481,122 +483,293 @@ Table: candidate_project_map
 | `id` | String | Primary Key, CUID | Unique mapping identifier |
 | `candidateId` | String | Foreign Key | Reference to Candidate |
 | `projectId` | String | Foreign Key | Reference to Project |
-| `assignedDate` | DateTime | Auto-generated | Assignment date |
-| `verified` | Boolean | Default: false | Verification status |
-| `shortlisted` | Boolean | Default: false | Shortlisting status |
-| `selected` | Boolean | Default: false | Selection status |
+| **`status`** | **String** | **Default: "nominated"** | **Workflow status (see statuses below)** |
+| **`nominatedDate`** | **DateTime** | **Auto-generated** | **Date candidate was nominated** |
+| **`nominatedBy`** | **String** | **Required** | **User ID who nominated candidate** |
+| **`documentsSubmittedDate`** | DateTime | Optional | Date all documents submitted |
+| **`documentsVerifiedDate`** | DateTime | Optional | Date all documents verified |
+| **`approvedBy`** | String | Optional | User ID who approved after verification |
+| **`approvedDate`** | DateTime | Optional | Date candidate was approved |
+| **`selectedDate`** | DateTime | Optional | Date candidate was selected by client |
+| **`hiredDate`** | DateTime | Optional | Date candidate was hired |
+| **`rejectedBy`** | String | Optional | User ID who rejected candidate |
+| **`rejectedDate`** | DateTime | Optional | Date candidate was rejected |
+| **`rejectionReason`** | String | Optional | Reason for rejection |
 | `notes` | String | Optional | Additional notes |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Workflow Statuses:**
+
+1. `nominated` - Initial state when candidate is nominated
+2. `pending_documents` - Waiting for document submission
+3. `documents_submitted` - All documents submitted
+4. `verification_in_progress` - Documents being verified
+5. `documents_verified` - All documents verified
+6. `approved` - Candidate approved for project
+7. `interview_scheduled` - Interview scheduled
+8. `interview_completed` - Interview completed
+9. `interview_passed` - Passed interview
+10. `selected` - Client selected candidate
+11. `processing` - In processing (QVP, Medical, Visa, Travel)
+12. `hired` - Successfully hired
+13. `rejected_documents` - Rejected due to documents
+14. `rejected_interview` - Rejected at interview stage
+15. `rejected_selection` - Not selected by client
+16. `withdrawn` - Nomination withdrawn
+17. `on_hold` - Temporarily on hold
 
 **Constraints:**
 
 - Unique Constraint: `[candidateId, projectId]`
 - Foreign Key: `candidateId` → `candidates.id` (CASCADE DELETE)
 - Foreign Key: `projectId` → `projects.id` (CASCADE DELETE)
+- Index: `status` (for filtering by workflow stage)
+- Index: `nominatedBy` (for tracking nominations by user)
 
 **Relationships:**
 
 - `candidate` → `Candidate` (Many-to-One)
 - `project` → `Project` (Many-to-One)
+- `interviews` → `Interview[]` (One-to-Many) - **NEW**
+- `processing` → `Processing` (One-to-One) - **NEW**
+- `documentVerifications` → `CandidateProjectDocumentVerification[]` (One-to-Many) - **NEW**
 
 ---
 
 ### **📄 6. Document Management Models**
 
-#### **6.1 Document Model**
+#### **6.1 Document Model - UPDATED v2.0**
 
 ```sql
 Table: documents
 ```
 
+**Purpose:** Stores candidate documents (candidate-centric, reusable across multiple project nominations). Documents belong to candidates and can be verified for different projects through the junction table.
+
 **Fields:**
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | String | Primary Key, CUID | Unique document identifier |
-| `candidateId` | String | Foreign Key | Reference to Candidate |
-| `docType` | String | Required | Document type |
+| `candidateId` | String | Foreign Key, Indexed | Reference to Candidate |
+| `docType` | String | Required, Indexed | Document type (from DOCUMENT_TYPE constants) |
 | `fileName` | String | Required | Original file name |
-| `fileUrl` | String | Required | File storage URL |
-| `uploadedBy` | String | Required | User who uploaded |
-| `verifiedBy` | String | Optional | User who verified |
-| `status` | String | Default: "pending" | Verification status |
+| `fileUrl` | String | Required | Digital Ocean Spaces URL |
+| **`fileSize`** | **Int** | **Optional** | **File size in bytes** |
+| **`mimeType`** | **String** | **Optional** | **File MIME type** |
+| `status` | String | Default: "pending", Indexed | Document status (pending, verified, rejected, expired, resubmission_required) |
+| `uploadedBy` | String | Required | User ID who uploaded |
+| `verifiedBy` | String | Optional | User ID who verified (general) |
+| **`verifiedAt`** | **DateTime** | **Optional** | **General verification timestamp** |
+| **`rejectedBy`** | **String** | **Optional** | **User ID who rejected** |
+| **`rejectedAt`** | **DateTime** | **Optional** | **Rejection timestamp** |
+| **`expiryDate`** | **DateTime** | **Optional** | **Document expiry (for passports, licenses)** |
+| **`documentNumber`** | **String** | **Optional** | **Document number (passport #, license #)** |
 | `notes` | String | Optional | Additional notes |
+| **`rejectionReason`** | **String** | **Optional** | **Reason for rejection** |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Document Types** (from constants):
+
+- **Identity**: passport, aadhaar, pan_card, driving_license, voter_id
+- **Professional**: professional_license, nursing_license, medical_license, registration_certificate
+- **Educational**: degree, diploma, certificate, transcript, marksheet
+- **Employment**: resume, cv, experience_letter, relieving_letter, salary_slip, appointment_letter
+- **Verification**: background_check, police_clearance, reference_letter
+- **Medical**: medical_certificate, medical_fitness, vaccination_certificate, covid_vaccination, medical_insurance
+- **Other**: photo, bank_details, offer_letter, joining_letter, other
+
+**Constraints:**
+
+- Foreign Key: `candidateId` → `candidates.id` (CASCADE DELETE)
+- Index: `candidateId` (for querying candidate documents)
+- Index: `docType` (for filtering by document type)
+- Index: `status` (for filtering by verification status)
+
+**Relationships:**
+
+- `candidate` → `Candidate` (Many-to-One)
+- **`verifications` → `CandidateProjectDocumentVerification[]` (One-to-Many) - NEW**
+
+---
+
+#### **6.2 DocumentRequirement Model - NEW v2.0**
+
+```sql
+Table: document_requirements
+```
+
+**Purpose:** Defines which documents are mandatory for a specific project. Set by recruiter/manager when creating or updating a project.
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique requirement identifier |
+| `projectId` | String | Foreign Key, Indexed | Reference to Project |
+| `docType` | String | Required | Document type required (from DOCUMENT_TYPE constants) |
+| `mandatory` | Boolean | Default: true | Whether document is mandatory |
+| `description` | String | Optional | Additional requirement details |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
 
 **Constraints:**
 
-- Foreign Key: `candidateId` → `candidates.id` (CASCADE DELETE)
+- Unique Constraint: `[projectId, docType]` (prevent duplicate requirements)
+- Foreign Key: `projectId` → `projects.id` (CASCADE DELETE)
+- Index: `projectId` (for querying project requirements)
 
 **Relationships:**
 
-- `candidate` → `Candidate` (Many-to-One)
+- `project` → `Project` (Many-to-One)
+
+---
+
+#### **6.3 CandidateProjectDocumentVerification Model - NEW v2.0**
+
+```sql
+Table: candidate_project_document_verifications
+```
+
+**Purpose:** Junction table linking Documents to specific Project nominations. Tracks verification status of each document for each project. Allows the same document (e.g., passport) to be verified for multiple projects without duplication.
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique verification identifier |
+| `candidateProjectMapId` | String | Foreign Key, Indexed | Reference to CandidateProjectMap |
+| `documentId` | String | Foreign Key, Indexed | Reference to Document |
+| `status` | String | Default: "pending", Indexed | Verification status (pending, verified, rejected) |
+| `verifiedBy` | String | Optional | Document Verification Team user ID |
+| `verifiedAt` | DateTime | Optional | Verification timestamp |
+| `rejectedBy` | String | Optional | User ID who rejected |
+| `rejectedAt` | DateTime | Optional | Rejection timestamp |
+| `notes` | String | Optional | Verification notes |
+| `rejectionReason` | String | Optional | Reason for rejection |
+| `resubmissionRequested` | Boolean | Default: false | Whether resubmission was requested |
+| `resubmissionRequestedAt` | DateTime | Optional | When resubmission was requested |
+| `resubmissionRequestedBy` | String | Optional | User who requested resubmission |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Constraints:**
+
+- Unique Constraint: `[candidateProjectMapId, documentId]` (one verification per document per project)
+- Foreign Key: `candidateProjectMapId` → `candidate_project_map.id` (CASCADE DELETE)
+- Foreign Key: `documentId` → `documents.id` (CASCADE DELETE)
+- Index: `candidateProjectMapId` (for querying verifications by nomination)
+- Index: `documentId` (for querying verifications by document)
+- Index: `status` (for filtering by verification status)
+
+**Relationships:**
+
+- `candidateProjectMap` → `CandidateProjectMap` (Many-to-One)
+- `document` → `Document` (Many-to-One)
+
+**Key Design Decision:**
+This model enables document reusability - a single passport can be verified for Project A and Project B without uploading twice. Each project maintains its own verification status.
 
 ---
 
 ### **🎯 7. Interview Management Models**
 
-#### **7.1 Interview Model**
+#### **7.1 Interview Model - UPDATED v2.0**
 
 ```sql
 Table: interviews
 ```
 
+**Purpose:** Tracks interviews for specific candidate-project nominations (project-specific, not candidate-generic).
+
 **Fields:**
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | String | Primary Key, CUID | Unique interview identifier |
-| `candidateId` | String | Foreign Key | Reference to Candidate |
-| `projectId` | String | Optional | Reference to Project |
-| `scheduledTime` | DateTime | Required | Interview schedule |
+| **`candidateProjectMapId`** | **String** | **Foreign Key, Indexed** | **Reference to CandidateProjectMap (CHANGED)** |
+| `scheduledTime` | DateTime | Required, Indexed | Interview schedule |
 | `duration` | Int | Default: 60 | Duration in minutes |
-| `type` | String | Default: "technical" | Interview type |
-| `outcome` | String | Optional | Interview outcome |
+| `type` | String | Default: "technical" | Interview type (technical, hr, final, panel) |
+| **`mode`** | **String** | **Default: "video"** | **Interview mode (video, phone, in_person)** |
+| `outcome` | String | Optional | Interview outcome (passed, failed, rescheduled, no_show, cancelled) |
 | `notes` | String | Optional | Interview notes |
-| `interviewer` | String | Optional | Interviewer name |
+| `interviewer` | String | Optional | User ID or external interviewer name |
+| **`interviewerEmail`** | **String** | **Optional** | **Interviewer email address** |
+| **`meetingLink`** | **String** | **Optional** | **Video meeting link** |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
 
 **Constraints:**
 
-- Foreign Key: `candidateId` → `candidates.id` (CASCADE DELETE)
+- Foreign Key: `candidateProjectMapId` → `candidate_project_map.id` (CASCADE DELETE)
+- Index: `candidateProjectMapId` (for querying interviews by nomination)
+- Index: `scheduledTime` (for calendar queries)
 
 **Relationships:**
 
-- `candidate` → `Candidate` (Many-to-One)
+- **`candidateProjectMap` → `CandidateProjectMap` (Many-to-One) - CHANGED from Candidate**
+
+**Key Change:** Interviews are now linked to specific project nominations (CandidateProjectMap) instead of just candidates. This allows tracking interview outcomes per project.
 
 ---
 
 ### **⚙️ 8. Processing Management Models**
 
-#### **8.1 Processing Model**
+#### **8.1 Processing Model - UPDATED v2.0**
 
 ```sql
 Table: processing
 ```
 
+**Purpose:** Tracks post-selection processing stages (QVP, Medical, Visa, Travel, Joining) for specific candidate-project nominations.
+
 **Fields:**
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | String | Primary Key, CUID | Unique processing identifier |
-| `candidateId` | String | Foreign Key, Unique | Reference to Candidate |
-| `qvpStatus` | String | Default: "pending" | QVP verification status |
-| `medicalStatus` | String | Default: "pending" | Medical check status |
-| `visaStatus` | String | Default: "pending" | Visa application status |
-| `travelStatus` | String | Default: "pending" | Travel arrangement status |
-| `notes` | String | Optional | Processing notes |
+| **`candidateProjectMapId`** | **String** | **Foreign Key, Unique, Indexed** | **Reference to CandidateProjectMap (CHANGED)** |
+| **QVP Stage** | | | |
+| `qvpStatus` | String | Default: "not_started" | QVP status (not_started, in_progress, completed, failed) |
+| **`qvpStartDate`** | **DateTime** | **Optional** | **QVP start date** |
+| **`qvpCompletionDate`** | **DateTime** | **Optional** | **QVP completion date** |
+| **Medical Stage** | | | |
+| `medicalStatus` | String | Default: "not_started" | Medical status (not_started, in_progress, completed, failed) |
+| **`medicalClearance`** | **String** | **Optional** | **Medical clearance result (fit, unfit, conditional)** |
+| **`medicalStartDate`** | **DateTime** | **Optional** | **Medical check start date** |
+| **`medicalCompletionDate`** | **DateTime** | **Optional** | **Medical check completion date** |
+| **`medicalNotes`** | **String** | **Optional** | **Medical stage notes** |
+| **Visa Stage** | | | |
+| `visaStatus` | String | Default: "not_started" | Visa status (not_started, in_progress, approved, rejected, on_hold) |
+| **`visaType`** | **String** | **Optional** | **Type of visa applied** |
+| **`visaApplicationDate`** | **DateTime** | **Optional** | **Visa application date** |
+| **`visaApprovalDate`** | **DateTime** | **Optional** | **Visa approval date** |
+| **`visaExpiryDate`** | **DateTime** | **Optional** | **Visa expiry date** |
+| **`visaNotes`** | **String** | **Optional** | **Visa stage notes** |
+| **Travel Stage** | | | |
+| `travelStatus` | String | Default: "not_started" | Travel status (not_started, booking_in_progress, booked, completed) |
+| **`flightBookedDate`** | **DateTime** | **Optional** | **Flight booking date** |
+| **`departureDate`** | **DateTime** | **Optional** | **Departure date** |
+| **`arrivalDate`** | **DateTime** | **Optional** | **Arrival date** |
+| **`travelNotes`** | **String** | **Optional** | **Travel stage notes** |
+| **Joining Stage** | | | |
+| **`joiningStatus`** | **String** | **Default: "pending"** | **Joining status (pending, joined, no_show, delayed)** |
+| **`expectedJoiningDate`** | **DateTime** | **Optional** | **Expected joining date** |
+| **`actualJoiningDate`** | **DateTime** | **Optional** | **Actual joining date** |
+| **`joiningNotes`** | **String** | **Optional** | **Joining stage notes** |
+| `notes` | String | Optional | General processing notes |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
 
 **Constraints:**
 
-- Foreign Key: `candidateId` → `candidates.id` (CASCADE DELETE)
-- Unique Constraint: `candidateId`
+- Foreign Key: `candidateProjectMapId` → `candidate_project_map.id` (CASCADE DELETE)
+- Unique Constraint: `candidateProjectMapId`
+- Index: `candidateProjectMapId`
 
 **Relationships:**
 
-- `candidate` → `Candidate` (One-to-One)
+- **`candidateProjectMap` → `CandidateProjectMap` (One-to-One) - CHANGED from Candidate**
+
+**Key Change:** Processing is now linked to specific project nominations (CandidateProjectMap) instead of just candidates, allowing candidates to be in processing for different projects simultaneously.
 
 ---
 
@@ -935,6 +1108,100 @@ This document is updated whenever changes are made to the database schema:
 3. **Relationship Changes**: Update relationship diagrams
 4. **Statistics Updates**: Update database statistics
 5. **Version Control**: Update version and last modified date
+
+---
+
+## 📜 **Migration History**
+
+### **Latest Migration: Document Verification Workflow (v2.0)**
+
+**Migration**: `20250930063011_document_verification_workflow`  
+**Date**: September 30, 2025  
+**Status**: ✅ Applied Successfully
+
+**Changes Made:**
+
+**1. CandidateProjectMap Enhancements:**
+
+- ✅ Added `status` field (replaces boolean flags: verified, shortlisted, selected)
+- ✅ Added lifecycle date tracking (nominatedDate, documentsSubmittedDate, documentsVerifiedDate, approvedDate, selectedDate, hiredDate, rejectedDate)
+- ✅ Added actor tracking (nominatedBy, approvedBy, rejectedBy)
+- ✅ Added rejectionReason field
+- ✅ Removed legacy fields (assignedDate, verified, shortlisted, selected)
+- ✅ Added indexes on `status` and `nominatedBy`
+- ✅ Added new relations: interviews, processing, documentVerifications
+
+**2. Document Model Enhancements:**
+
+- ✅ Added fileSize, mimeType fields
+- ✅ Added verifiedAt, rejectedBy, rejectedAt timestamps
+- ✅ Added expiryDate (for licenses, passports)
+- ✅ Added documentNumber (passport #, license #)
+- ✅ Added rejectionReason field
+- ✅ Added indexes on `candidateId`, `docType`, `status`
+- ✅ Added relation: verifications
+
+**3. Interview Model Changes:**
+
+- ✅ Changed from `candidateId` to `candidateProjectMapId` (project-specific interviews)
+- ✅ Added mode field (video, phone, in_person)
+- ✅ Added interviewerEmail and meetingLink fields
+- ✅ Added indexes on `candidateProjectMapId` and `scheduledTime`
+
+**4. Processing Model Changes:**
+
+- ✅ Changed from `candidateId` to `candidateProjectMapId` (project-specific processing)
+- ✅ Enhanced QVP stage tracking (start/completion dates)
+- ✅ Enhanced Medical stage (clearance status, dates, notes)
+- ✅ Enhanced Visa stage (type, application/approval/expiry dates, notes)
+- ✅ Enhanced Travel stage (booking/departure/arrival dates, notes)
+- ✅ Added Joining stage (status, expected/actual dates, notes)
+- ✅ Changed default statuses from "pending" to "not_started"
+
+**5. New Models Added:**
+
+- ✅ **DocumentRequirement**: Defines required documents per project
+- ✅ **CandidateProjectDocumentVerification**: Junction table for document-project verification tracking
+
+**Impact:**
+
+- ✅ Enables complete candidate lifecycle tracking per project
+- ✅ Supports document reusability across projects
+- ✅ Implements document verification workflow
+- ✅ Tracks all stages from nomination to hiring
+- ✅ No backward compatibility (development stage - clean slate)
+
+---
+
+### **Previous Migrations**
+
+**Migration**: `20250827002717_add_project_priority`
+
+- Added priority field to Project model
+
+**Migration**: `20250826182009_enhance_role_needed_model`
+
+- Enhanced RoleNeeded with detailed job requirements
+
+**Migration**: `20250826142031_enhance_client_model`
+
+- Enhanced Client model with type-specific fields
+
+**Migration**: `20250824200742_update_refresh_token_architecture`
+
+- Updated refresh token architecture
+
+**Migration**: `20250824195033_add_refresh_tokens_and_indexes`
+
+- Added refresh tokens and performance indexes
+
+**Migration**: `20250824171648_rbac_normalized_models`
+
+- Implemented RBAC with normalized models
+
+**Migration**: `20250817154040_init`
+
+- Initial database schema setup
 
 ---
 

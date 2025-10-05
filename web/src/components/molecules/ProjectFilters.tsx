@@ -30,7 +30,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { QueryProjectsRequest } from "@/services/projectsApi";
+import { QueryProjectsRequest } from "@/features/projects";
 
 interface ProjectFiltersProps {
   filters: QueryProjectsRequest;

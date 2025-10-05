@@ -6,13 +6,13 @@ import { toast } from "sonner";
 import {
   useGetProjectsQuery,
   useGetProjectStatsQuery,
-} from "@/services/projectsApi";
-import { QueryProjectsRequest } from "@/services/projectsApi";
+  QueryProjectsRequest,
+} from "@/features/projects";
 import ProjectStats from "@/components/organisms/ProjectStats";
 import ProjectFilters from "@/components/molecules/ProjectFilters";
 import ProjectGrid from "@/components/organisms/ProjectGrid";
 import { useCan } from "@/hooks/useCan";
-import { Project } from "@/services/projectsApi";
+import { Project } from "@/features/projects";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();

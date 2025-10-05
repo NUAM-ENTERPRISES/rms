@@ -16,17 +16,56 @@ import { useAppSelector } from "@/app/hooks";
 // Lazy load pages
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
-const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
-const CreateProjectPage = lazy(() => import("@/pages/CreateProjectPage"));
-const ProjectDetailPage = lazy(() => import("@/pages/ProjectDetailPage"));
-const CandidatesPage = lazy(() => import("@/pages/CandidatesPage"));
-const CandidateDetailPage = lazy(() => import("@/pages/CandidateDetailPage"));
-const TeamsPage = lazy(() => import("@/pages/TeamsPage"));
-const TeamDetailPage = lazy(() => import("@/pages/TeamDetailPage"));
-const UsersPage = lazy(() => import("@/pages/UsersPage"));
-const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
-const ClientDetailPage = lazy(() => import("@/pages/ClientDetailPage"));
-const InterviewsPage = lazy(() => import("@/pages/InterviewsPage"));
+
+// Feature-based views
+const ProjectsPage = lazy(
+  () => import("@/features/projects/views/ProjectsPage")
+);
+const CreateProjectPage = lazy(
+  () => import("@/features/projects/views/CreateProjectPage")
+);
+const ProjectDetailPage = lazy(
+  () => import("@/features/projects/views/ProjectDetailPage")
+);
+const ProjectEligibleCandidatesPage = lazy(
+  () => import("@/features/projects/views/ProjectEligibleCandidatesPage")
+);
+
+const CandidatesPage = lazy(
+  () => import("@/features/candidates/views/CandidatesPage")
+);
+const CreateCandidatePage = lazy(
+  () => import("@/features/candidates/views/CreateCandidatePage")
+);
+const CandidateDetailPage = lazy(
+  () => import("@/features/candidates/views/CandidateDetailPage")
+);
+const CandidateNominationPage = lazy(
+  () => import("@/features/candidates/views/CandidateNominationPage")
+);
+
+const TeamsPage = lazy(() => import("@/features/teams/views/TeamsPage"));
+const TeamDetailPage = lazy(
+  () => import("@/features/teams/views/TeamDetailPage")
+);
+
+const ClientsPage = lazy(() => import("@/features/clients/views/ClientsPage"));
+const ClientDetailPage = lazy(
+  () => import("@/features/clients/views/ClientDetailPage")
+);
+
+const InterviewsPage = lazy(
+  () => import("@/features/interviews/views/InterviewsPage")
+);
+
+const DocumentUploadPage = lazy(
+  () => import("@/features/documents/views/DocumentUploadPage")
+);
+const DocumentVerificationPage = lazy(
+  () => import("@/features/documents/views/DocumentVerificationPage")
+);
+
+const UsersPage = lazy(() => import("@/features/admin/views/UsersPage"));
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -129,6 +168,19 @@ function App() {
                     <ProtectedRoute>
                       <AppLayout>
                         <CandidatesPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/candidates/create"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:candidates"]}>
+                      <AppLayout>
+                        <CreateCandidatePage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>
@@ -250,17 +302,53 @@ function App() {
               />
 
               <Route
-                path="/documents"
+                path="/documents/upload"
                 element={
                   <RouteErrorBoundary>
-                    <ProtectedRoute>
+                    <ProtectedRoute permissions={["write:documents"]}>
                       <AppLayout>
-                        <div className="p-8">
-                          <h1 className="text-2xl font-bold">Documents</h1>
-                          <p className="text-muted-foreground">
-                            Document management page
-                          </p>
-                        </div>
+                        <DocumentUploadPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/documents/verification"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["read:documents"]}>
+                      <AppLayout>
+                        <DocumentVerificationPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/projects/:projectId/nominate"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["nominate:candidates"]}>
+                      <AppLayout>
+                        <CandidateNominationPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/projects/:projectId/candidates"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute
+                      permissions={["read:projects", "read:candidates"]}
+                    >
+                      <AppLayout>
+                        <ProjectEligibleCandidatesPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>

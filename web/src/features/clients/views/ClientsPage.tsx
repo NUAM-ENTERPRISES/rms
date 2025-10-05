@@ -40,9 +40,9 @@ import { toast } from "sonner";
 import {
   useGetClientsQuery,
   useDeleteClientMutation,
-} from "@/services/clientsApi";
+} from "@/features/clients";
 import { useCan } from "@/hooks/useCan";
-import { Client } from "@/services/clientsApi";
+import { Client } from "@/features/clients";
 import { cn } from "@/lib/utils";
 
 export default function ClientsPage() {

@@ -100,13 +100,34 @@ export const navigationConfig: NavItem[] = [
   {
     id: "documents",
     label: "Documents",
-    path: "/documents",
     icon: FileText,
     permissions: ["read:documents"],
     badge: {
-      text: "Files",
+      text: "Verification",
       variant: "outline",
     },
+    children: [
+      {
+        id: "documents-verification",
+        label: "Verification Dashboard",
+        path: "/documents/verification",
+        permissions: ["read:documents", "verify:documents"],
+        badge: {
+          text: "Review",
+          variant: "default",
+        },
+      },
+      {
+        id: "documents-upload",
+        label: "Upload Documents",
+        path: "/documents/upload",
+        permissions: ["write:documents"],
+        badge: {
+          text: "Upload",
+          variant: "secondary",
+        },
+      },
+    ],
   },
   {
     id: "notifications",

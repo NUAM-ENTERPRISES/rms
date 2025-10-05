@@ -13,6 +13,7 @@ import { ClientsModule } from './clients/clients.module';
 import { ProjectsModule } from './projects/projects.module';
 import { CandidatesModule } from './candidates/candidates.module';
 import { TeamsModule } from './teams/teams.module';
+import { DocumentsModule } from './documents/documents.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 
@@ -29,6 +30,7 @@ import { AuditInterceptor } from './common/audit/audit.interceptor';
     ProjectsModule,
     CandidatesModule,
     TeamsModule,
+    DocumentsModule,
     AuditModule,
   ],
   controllers: [AppController],

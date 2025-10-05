@@ -9,7 +9,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { Project } from "@/services/projectsApi";
+import { Project } from "@/features/projects";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";

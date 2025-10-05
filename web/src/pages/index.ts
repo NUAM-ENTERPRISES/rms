@@ -1,3 +1,2 @@
-export { default as ClientDetailPage } from "./ClientDetailPage";
-export { default as CandidateDetailPage } from "./CandidateDetailPage";
-export { default as InterviewsPage } from "./InterviewsPage";
+// Top-level pages only (dashboard, auth, etc.)
+export { default as DashboardPage } from "./DashboardPage";

@@ -522,7 +522,10 @@ export default function CandidatesPage() {
 
                 {/* Add New Candidate Button */}
                 {canWriteCandidates && (
-                  <Button className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm">
+                  <Button
+                    onClick={() => navigate("/candidates/create")}
+                    className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
+                  >
                     <Plus className="h-3 w-3" />
                     Add New Candidate
                   </Button>

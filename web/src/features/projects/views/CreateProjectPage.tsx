@@ -48,9 +48,9 @@ import {
   CheckCircle,
   Star,
 } from "lucide-react";
-import { useCreateProjectMutation } from "@/services/projectsApi";
-import { useGetClientsQuery } from "@/services/clientsApi";
-import { useGetTeamsQuery } from "@/services/teamsApi";
+import { useCreateProjectMutation } from "@/features/projects";
+import { useGetClientsQuery } from "@/features/clients";
+import { useGetTeamsQuery } from "@/features/teams";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
 

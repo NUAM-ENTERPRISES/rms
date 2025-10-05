@@ -256,6 +256,7 @@ model Project {
   team        Team?    @relation(fields: [teamId], references: [id])
   rolesNeeded RoleNeeded[]
   candidateProjects CandidateProjectMap[]
+  documentRequirements DocumentRequirement[]
 
   @@map("projects")
 }
@@ -334,11 +335,12 @@ model Candidate {
   team         Team?    @relation(fields: [teamId], references: [id])
   projects     CandidateProjectMap[]
   documents    Document[]
-  interviews   Interview[]
-  processing   Processing?
   certifications Certification[]
   talentPool   TalentPool?
 
+  @@index([assignedTo])
+  @@index([teamId])
+  @@index([currentStatus])
   @@map("candidates")
 }
 
@@ -346,74 +348,153 @@ model CandidateProjectMap {
   id          String   @id @default(cuid())
   candidateId String
   projectId   String
-  assignedDate DateTime @default(now())
-  verified    Boolean  @default(false)
-  shortlisted Boolean  @default(false)
-  selected    Boolean  @default(false)
-  notes       String?
+  
+  // Workflow Status (NEW - replaces old boolean flags)
+  status      String   @default("nominated") // nominated, pending_documents, documents_submitted, verification_in_progress, documents_verified, approved, interview_scheduled, interview_completed, interview_passed, selected, processing, hired, rejected_documents, rejected_interview, rejected_selection, withdrawn, on_hold
+  
+  // Dates (Track lifecycle)
+  nominatedDate DateTime @default(now())
+  documentsSubmittedDate DateTime?
+  documentsVerifiedDate  DateTime?
+  approvedDate           DateTime?
+  selectedDate           DateTime?
+  hiredDate              DateTime?
+  rejectedDate           DateTime?
+  
+  // Actors
+  nominatedBy  String // User ID who nominated candidate to project
+  approvedBy   String? // User ID who approved after document verification
+  rejectedBy   String?
+  
+  // Metadata
+  notes        String?
+  rejectionReason String?
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  interviews  Interview[]
+  processing  Processing?
+  documentVerifications CandidateProjectDocumentVerification[]
 
   @@unique([candidateId, projectId])
+  @@index([status])
+  @@index([nominatedBy])
   @@map("candidate_project_map")
 }
 
 model Document {
   id          String   @id @default(cuid())
   candidateId String
-  docType     String   // resume, aadhaar, passport, medical, etc.
+  docType     String   // passport, professional_license, degree, resume, etc. (from DOCUMENT_TYPE constants)
   fileName    String
-  fileUrl     String
-  uploadedBy  String
-  verifiedBy  String?
-  status      String   @default("pending") // pending, verified, rejected
+  fileUrl     String   // Digital Ocean Spaces URL
+  fileSize    Int?     // in bytes
+  mimeType    String?
+  
+  // Status tracking
+  status      String   @default("pending") // pending, verified, rejected, expired, resubmission_required (from DOCUMENT_STATUS constants)
+  
+  // Verification
+  uploadedBy  String   // User ID
+  verifiedBy  String?  // Document Verification Team user ID
+  verifiedAt  DateTime?
+  rejectedBy  String?
+  rejectedAt  DateTime?
+  
+  // Expiry (for documents that expire like passport, licenses)
+  expiryDate  DateTime?
+  
+  // Metadata
   notes       String?
+  rejectionReason String?
+  documentNumber String?  // e.g., Passport number, License number
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  verifications CandidateProjectDocumentVerification[]
 
+  @@index([candidateId])
+  @@index([docType])
+  @@index([status])
   @@map("documents")
 }
 
 model Interview {
-  id            String   @id @default(cuid())
-  candidateId   String
-  projectId     String?
-  scheduledTime DateTime
-  duration      Int      @default(60) // minutes
-  type          String   @default("technical") // technical, hr, final
-  outcome       String?  // passed, failed, rescheduled
-  notes         String?
-  interviewer   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  candidateProjectMapId   String   // CHANGED: Link to specific project nomination
+  scheduledTime           DateTime
+  duration                Int      @default(60) // minutes
+  type                    String   @default("technical") // technical, hr, final, panel
+  mode                    String?  @default("video") // video, phone, in_person
+  outcome                 String?  // passed, failed, rescheduled, no_show, cancelled (from INTERVIEW_OUTCOME constants)
+  notes                   String?
+  interviewer             String?  // User ID or external interviewer name
+  interviewerEmail        String?
+  meetingLink             String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   // Relations
-  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateProjectMap     CandidateProjectMap @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
 
+  @@index([candidateProjectMapId])
+  @@index([scheduledTime])
   @@map("interviews")
 }
 
 model Processing {
-  id            String   @id @default(cuid())
-  candidateId   String   @unique
-  qvpStatus     String   @default("pending") // pending, completed, failed
-  medicalStatus String   @default("pending") // pending, passed, failed
-  visaStatus    String   @default("pending") // pending, approved, rejected
-  travelStatus  String   @default("pending") // pending, booked, completed
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  candidateProjectMapId   String   @unique // CHANGED: Link to specific project nomination
+  
+  // QVP Stage
+  qvpStatus               String   @default("not_started") // not_started, in_progress, completed, failed
+  qvpStartDate            DateTime?
+  qvpCompletionDate       DateTime?
+  
+  // Medical Stage
+  medicalStatus           String   @default("not_started") // not_started, in_progress, completed, failed
+  medicalClearance        String?  // fit, unfit, conditional
+  medicalStartDate        DateTime?
+  medicalCompletionDate   DateTime?
+  medicalNotes            String?
+  
+  // Visa Stage
+  visaStatus              String   @default("not_started") // not_started, in_progress, approved, rejected, on_hold
+  visaType                String?
+  visaApplicationDate     DateTime?
+  visaApprovalDate        DateTime?
+  visaExpiryDate          DateTime?
+  visaNotes               String?
+  
+  // Travel Stage
+  travelStatus            String   @default("not_started") // not_started, booking_in_progress, booked, completed
+  flightBookedDate        DateTime?
+  departureDate           DateTime?
+  arrivalDate             DateTime?
+  travelNotes             String?
+  
+  // Joining
+  joiningStatus           String   @default("pending") // pending, joined, no_show, delayed
+  expectedJoiningDate     DateTime?
+  actualJoiningDate       DateTime?
+  joiningNotes            String?
+  
+  // General
+  notes                   String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   // Relations
-  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateProjectMap     CandidateProjectMap @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
 
+  @@index([candidateProjectMapId])
   @@map("processing")
 }
 
@@ -469,6 +550,71 @@ model TalentPool {
 }
 
 
+
+// ==================== NEW MODELS FOR DOCUMENT VERIFICATION WORKFLOW ====================
+
+/**
+ * DocumentRequirement
+ * Defines what documents are required for a specific project
+ * Set by recruiter/manager when creating/updating a project
+ */
+model DocumentRequirement {
+  id          String   @id @default(cuid())
+  projectId   String
+  docType     String   // From DOCUMENT_TYPE constants (passport, professional_license, etc.)
+  mandatory   Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, docType])
+  @@index([projectId])
+  @@map("document_requirements")
+}
+
+/**
+ * CandidateProjectDocumentVerification
+ * Junction table linking Documents to specific Project nominations
+ * Tracks verification status of each document for each project
+ * Multiple projects can reference the same document (e.g., same passport for multiple projects)
+ */
+model CandidateProjectDocumentVerification {
+  id                      String   @id @default(cuid())
+  candidateProjectMapId   String   // Which project nomination this verification is for
+  documentId              String   // Which document is being verified
+  
+  // Verification Status
+  status                  String   @default("pending") // pending, verified, rejected (from DOCUMENT_STATUS constants)
+  verifiedBy              String?  // Document Verification Team user ID
+  verifiedAt              DateTime?
+  rejectedBy              String?
+  rejectedAt              DateTime?
+  
+  // Metadata
+  notes                   String?
+  rejectionReason         String?
+  resubmissionRequested   Boolean  @default(false)
+  resubmissionRequestedAt DateTime?
+  resubmissionRequestedBy String?
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  // Relations
+  candidateProjectMap     CandidateProjectMap @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  document                Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateProjectMapId, documentId])
+  @@index([candidateProjectMapId])
+  @@index([documentId])
+  @@index([status])
+  @@map("candidate_project_document_verifications")
+}
+
+// ==================== AUDIT LOG ====================
 
 model AuditLog {
   id         String   @id @default(cuid())

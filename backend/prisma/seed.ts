@@ -35,10 +35,17 @@ const roles = [
       'read:assigned_teams',
       'write:assigned_teams',
       'manage:candidates',
+      'nominate:candidates',
+      'approve:candidates',
+      'reject:candidates',
       'read:projects',
       'write:projects',
       'read:clients',
       'write:clients',
+      'read:documents',
+      'schedule:interviews',
+      'read:interviews',
+      'write:interviews',
     ],
   },
   {
@@ -49,10 +56,13 @@ const roles = [
       'write:assigned_teams',
       'read:projects',
       'read:candidates',
+      'write:candidates',
+      'nominate:candidates',
       'read:teams',
       'read:interviews',
-      'write:candidates',
+      'schedule:interviews',
       'manage:recruiters',
+      'read:documents',
     ],
   },
   {
@@ -61,13 +71,25 @@ const roles = [
     permissions: [
       'read:assigned_candidates',
       'write:candidates',
+      'nominate:candidates',
       'read:projects',
+      'read:documents',
+      'write:documents',
     ],
   },
   {
     name: 'Documentation Executive',
     description: 'Documentation Team - Document verification',
-    permissions: ['read:documents', 'write:documents', 'verify:documents'],
+    permissions: [
+      'read:documents',
+      'write:documents',
+      'verify:documents',
+      'request:resubmission',
+      'approve:candidates',
+      'reject:candidates',
+      'read:candidates',
+      'read:projects',
+    ],
   },
   {
     name: 'Processing Executive',
@@ -108,12 +130,16 @@ const allPermissions = [
   'manage:candidates',
   'read:assigned_candidates',
   'write:assigned_candidates',
+  'nominate:candidates',
+  'approve:candidates',
+  'reject:candidates',
 
   // Document management
   'read:documents',
   'write:documents',
   'verify:documents',
   'manage:documents',
+  'request:resubmission',
 
   // Processing management
   'read:processing',
@@ -137,6 +163,7 @@ const allPermissions = [
   'read:interviews',
   'write:interviews',
   'manage:interviews',
+  'schedule:interviews',
 
   // Analytics
   'read:analytics',

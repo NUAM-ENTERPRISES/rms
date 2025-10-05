@@ -49,7 +49,7 @@ import {
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
-} from "@/services/projectsApi";
+} from "@/features/projects";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
