@@ -382,14 +382,22 @@ export default function UserDetailPage() {
                 </div>
               </CardContent>
             </Card>
-
+            {/* <div>{JSON.stringify(user)}</div> */}
             {/* User Avatar Card */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl mb-4">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
+                  {user.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt={user.name}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow-lg mb-4"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl mb-4">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <h3 className="font-semibold text-slate-800 text-lg">
                     {user.name}
                   </h3>

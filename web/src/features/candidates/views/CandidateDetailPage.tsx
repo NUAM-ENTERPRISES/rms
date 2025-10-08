@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Card,
@@ -64,6 +64,7 @@ import {
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
+import { useGetCandidateByIdQuery } from "@/features/candidates";
 
 // Helper function to format date - following FE guidelines: DD MMM YYYY
 const formatDate = (dateString?: string) => {
@@ -254,241 +255,63 @@ const MobilePipelineStage = ({
   );
 };
 
-// Mock data for demonstration
-const mockCandidate = {
-  id: "1",
-  name: "Sarah Johnson",
-  email: "sarah.johnson@email.com",
-  phone: "+1 (555) 123-4567",
-  location: "San Francisco, CA",
-  experience: 5,
-  skills: ["Nursing", "ICU", "Emergency Care", "Patient Assessment", "CPR"],
-  status: "interviewing",
-  currentRole: "ICU Nurse",
-  targetRole: "Senior ICU Nurse",
-  expectedSalary: 85000,
-  availability: "immediate",
-  lastContact: "2024-12-01T10:00:00Z",
-  assignedRecruiter: "John Smith",
-  dateOfBirth: "1990-05-15",
-  currentEmployer: "City General Hospital",
-  createdAt: "2024-11-15T09:00:00Z",
-  updatedAt: "2024-12-01T14:30:00Z",
-  pipeline: {
-    currentStage: "medical_clearance",
-    stages: [
-      {
-        stage: "applied",
-        title: "Applied",
-        description: "Candidate submitted application",
-        date: "2024-11-15T09:00:00Z",
-        isCompleted: true,
-        isCurrent: false,
-        icon: FileText,
-      },
-      {
-        stage: "screening",
-        title: "Screening",
-        description: "Initial phone screening completed",
-        date: "2024-11-20T14:00:00Z",
-        isCompleted: true,
-        isCurrent: false,
-        icon: Phone,
-      },
-      {
-        stage: "interviewing",
-        title: "Interviewing",
-        description: "Technical and HR interviews",
-        date: "2024-12-01T10:00:00Z",
-        isCompleted: true,
-        isCurrent: false,
-        icon: UserCheck,
-      },
-      {
-        stage: "offer",
-        title: "Offer",
-        description: "Offer extended and accepted",
-        date: "2024-12-05T16:00:00Z",
-        isCompleted: true,
-        isCurrent: false,
-        icon: Award,
-      },
-      {
-        stage: "documentation",
-        title: "Documentation",
-        description: "Document verification and collection",
-        date: "2024-12-08T11:00:00Z",
-        isCompleted: true,
-        isCurrent: false,
-        icon: FileText,
-      },
-      {
-        stage: "qvp_clearance",
-        title: "QVP Clearance",
-        description: "Quality verification process",
-        date: "2024-12-10T14:00:00Z",
-        isCompleted: true,
-        isCurrent: false,
-        icon: Shield,
-      },
-      {
-        stage: "medical_clearance",
-        title: "Medical Clearance",
-        description: "Medical examination and clearance",
-        date: "2024-12-12T09:00:00Z",
-        isCompleted: false,
-        isCurrent: true,
-        icon: Activity,
-      },
-      {
-        stage: "visa_processing",
-        title: "Visa Processing",
-        description: "Visa application and approval",
-        date: undefined,
-        isCompleted: false,
-        isCurrent: false,
-        icon: FileText,
-      },
-      {
-        stage: "travel_arrangements",
-        title: "Travel Arrangements",
-        description: "Flight booking and travel prep",
-        date: undefined,
-        isCompleted: false,
-        isCurrent: false,
-        icon: ExternalLink,
-      },
-      {
-        stage: "onboarding",
-        title: "Onboarding",
-        description: "Client onboarding and placement",
-        date: undefined,
-        isCompleted: false,
-        isCurrent: false,
-        icon: CheckCircle2,
-      },
-    ],
-  },
-  projects: [
-    {
-      id: "1",
-      title: "Emergency Department Nurses",
-      client: "St. Mary's Medical Center",
-      status: "active",
-      deadline: "2024-12-31",
-      matchScore: 95,
-      isAssigned: true,
-    },
-    {
-      id: "2",
-      title: "ICU Specialists",
-      client: "St. Mary's Medical Center",
-      status: "active",
-      deadline: "2025-02-28",
-      matchScore: 88,
-      isAssigned: false,
-    },
-    {
-      id: "3",
-      title: "Pediatric Nurses",
-      client: "Children's Hospital",
-      status: "active",
-      deadline: "2025-01-15",
-      matchScore: 72,
-      isAssigned: false,
-    },
-  ],
-  history: [
-    {
-      id: "1",
-      action: "Application Submitted",
-      description: "Sarah submitted her application for ICU positions",
-      date: "2024-11-15T09:00:00Z",
-      user: "System",
-    },
-    {
-      id: "2",
-      action: "Phone Screening",
-      description: "Initial phone screening completed successfully",
-      date: "2024-11-20T14:00:00Z",
-      user: "John Smith",
-    },
-    {
-      id: "3",
-      action: "Technical Interview",
-      description:
-        "Technical interview completed with St. Mary's Medical Center",
-      date: "2024-12-01T10:00:00Z",
-      user: "Jane Doe",
-    },
-    {
-      id: "4",
-      action: "Offer Extended",
-      description: "Offer extended and accepted by candidate",
-      date: "2024-12-05T16:00:00Z",
-      user: "John Smith",
-    },
-    {
-      id: "5",
-      action: "Documentation Started",
-      description: "Document collection and verification process initiated",
-      date: "2024-12-08T11:00:00Z",
-      user: "System",
-    },
-    {
-      id: "6",
-      action: "QVP Clearance",
-      description: "Quality verification process completed successfully",
-      date: "2024-12-10T14:00:00Z",
-      user: "Quality Team",
-    },
-    {
-      id: "7",
-      action: "Medical Examination",
-      description: "Medical examination scheduled for December 12th",
-      date: "2024-12-12T09:00:00Z",
-      user: "Medical Team",
-    },
-  ],
-  metrics: {
-    totalApplications: 3,
-    interviewsScheduled: 2,
-    interviewsCompleted: 2,
-    offersReceived: 1,
-    placements: 0,
-    averageResponseTime: 2.5,
-    pipelineProgress: 60, // 6 out of 10 stages completed
-  },
-};
-
 export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
 
   const canReadCandidates = useCan("read:candidates");
   const canWriteCandidates = useCan("write:candidates");
   const canManageCandidates = useCan("manage:candidates");
 
-  // Mock data - in real app, this would come from RTK Query
-  const candidate = mockCandidate;
+  // Fetch candidate data from API
+  const {
+    data: candidate,
+    isLoading,
+    error,
+  } = useGetCandidateByIdQuery(id!, {
+    skip: !id,
+  });
 
   const handleEdit = () => {
-    toast.info("Edit functionality coming soon");
+    navigate(`/candidates/${id}/edit`);
   };
 
   const handleDelete = () => {
     toast.error("Delete functionality coming soon");
   };
 
-  if (!candidate) {
+  if (isLoading) {
+    return (
+      <div className="p-8">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            Loading Candidate...
+          </h3>
+          <p className="text-muted-foreground">
+            Please wait while we fetch the candidate details.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !candidate) {
     return (
       <div className="p-8">
         <div className="text-center py-12">
           <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Candidate Not Found</h2>
-          <p className="text-muted-foreground">
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            Candidate Not Found
+          </h3>
+          <p className="text-muted-foreground mb-6">
             The candidate you're looking for doesn't exist or has been removed.
           </p>
+          <Button onClick={() => navigate("/candidates")} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Candidates
+          </Button>
         </div>
       </div>
     );
@@ -500,10 +323,10 @@ export default function CandidateDetailPage() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="space-y-2">
           <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-            {candidate.name}
+            {candidate.firstName} {candidate.lastName}
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={candidate.status} />
+            <StatusBadge status={candidate.currentStatus} />
             <span className="text-sm text-slate-500">
               {candidate.currentRole} • {candidate.location}
             </span>
@@ -670,7 +493,7 @@ export default function CandidateDetailPage() {
                     </label>
                     <p className="text-sm flex items-center gap-2">
                       <Phone className="h-4 w-4" />
-                      {candidate.phone}
+                      {candidate.contact}
                     </p>
                   </div>
                   <div>
@@ -688,7 +511,10 @@ export default function CandidateDetailPage() {
                     </label>
                     <p className="text-sm flex items-center gap-2">
                       <Clock className="h-4 w-4" />
-                      {candidate.experience} years
+                      {candidate.totalExperience ||
+                        candidate.experience ||
+                        0}{" "}
+                      years
                     </p>
                   </div>
                   <div>

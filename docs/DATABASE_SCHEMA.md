@@ -1,7 +1,7 @@
 # 🗄️ **Affiniks RMS - Database Schema Documentation**
 
-> **Last Updated**: October 5, 2025  
-> **Version**: 2.0.1  
+> **Last Updated**: October 8, 2025  
+> **Version**: 2.1.0  
 > **Database**: PostgreSQL  
 > **ORM**: Prisma
 
@@ -51,7 +51,9 @@ Table: users
 | `name` | String | Required | Full name of user |
 | `password` | String | Required | Hashed password |
 | `dateOfBirth` | DateTime | Optional | User's date of birth |
-| `phone` | String | Required, Unique, Indexed | Contact phone number (authentication identifier) |
+| `countryCode` | String | Required | Country calling code (e.g., "+91", "+1") |
+| `phone` | String | Required, Unique | Phone number without country code (e.g., "9876543210") |
+| `profileImage` | String | Optional | Profile image URL stored in Digital Ocean Spaces |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
 
@@ -68,14 +70,14 @@ Table: users
 **Indexes:**
 
 - `email` (Unique, for lookups)
-- `phone` (Unique, for authentication queries)
+- `countryCode, phone` (Unique composite, for authentication queries)
 - `createdAt` (For user listing and analytics)
 
 **Authentication:**
 
-- Users authenticate using `phone` (not email)
-- Phone numbers must be unique and include country code (E.164 format)
-- Example: `+919876543210`
+- Users authenticate using `countryCode + phone` combination (not email)
+- Phone numbers are stored separately from country code for better normalization
+- Example: `countryCode: "+91"`, `phone: "9876543210"`
 
 ---
 
@@ -318,6 +320,34 @@ Table: clients
 
 ---
 
+### **🌍 3.1 Country Model**
+
+```sql
+Table: countries
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `code` | String | Primary Key | ISO-2 country code (e.g., "US", "IN", "GB") |
+| `name` | String | Required | Country name (e.g., "United States", "India") |
+| `region` | String | Required | Region (e.g., "North America", "Asia") |
+| `callingCode` | String | Required | International calling code (e.g., "+1", "+91") |
+| `currency` | String | Required | Currency code (e.g., "USD", "INR") |
+| `timezone` | String | Required | Primary timezone (e.g., "America/New_York") |
+| `isActive` | Boolean | Default: true | Whether country is active for selection |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Relationships:**
+
+- `projects` → `Project[]` (One-to-Many)
+- `qualificationCountryProfiles` → `QualificationCountryProfile[]` (One-to-Many)
+- `qualificationEquivalencies` → `QualificationEquivalency[]` (One-to-Many)
+- `roleRecommendedQualifications` → `RoleRecommendedQualification[]` (One-to-Many)
+
+---
+
 ### **📊 4. Project Management Models**
 
 #### **4.1 Project Model**
@@ -330,13 +360,15 @@ Table: projects
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | String | Primary Key, CUID | Unique project identifier |
-| `clientId` | String | Foreign Key | Reference to Client |
+| `clientId` | String | Foreign Key, Optional | Reference to Client |
 | `title` | String | Required | Project title |
 | `description` | String | Optional | Project description |
 | `deadline` | DateTime | Optional | Project deadline |
 | `status` | String | Default: "active" | Project status |
+| `priority` | String | Default: "medium" | Project priority (low, medium, high, urgent) |
 | `createdBy` | String | Foreign Key | Reference to User (creator) |
 | `teamId` | String | Foreign Key, Optional | Reference to Team |
+| `countryCode` | String | Optional | ISO-2 country code (e.g., "US", "IN", "GB") |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
 
@@ -351,8 +383,10 @@ Table: projects
 - `client` → `Client` (Many-to-One)
 - `creator` → `User` (Many-to-One)
 - `team` → `Team` (Many-to-One)
+- `country` → `Country` (Many-to-One)
 - `rolesNeeded` → `RoleNeeded[]` (One-to-Many)
 - `candidateProjects` → `CandidateProjectMap[]` (One-to-Many)
+- `documentRequirements` → `DocumentRequirement[]` (One-to-Many)
 
 ---
 
@@ -428,6 +462,7 @@ Table: roles_needed
 **Relationships:**
 
 - `project` → `Project` (Many-to-One)
+- `educationRequirementsList` → `RoleNeededEducationRequirement[]` (One-to-Many)
 
 ---
 
@@ -443,16 +478,28 @@ Table: candidates
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | String | Primary Key, CUID | Unique candidate identifier |
-| `name` | String | Required | Candidate name |
+| `firstName` | String | Required | Candidate first name |
+| `lastName` | String | Required | Candidate last name |
 | `contact` | String | Unique | Contact number |
 | `email` | String | Optional | Email address |
-| `source` | String | Default: "manual" | Source of candidate |
-| `dateOfBirth` | DateTime | Optional | Date of birth |
-| `currentStatus` | String | Default: "new" | Current status |
-| `experience` | Int | Optional | Years of experience |
-| `skills` | Json | Default: "[]" | Skills array |
-| `currentEmployer` | String | Optional | Current employer |
+| `profileImage` | String | Optional | Profile image URL stored in Digital Ocean Spaces |
+| `source` | String | Default: "manual" | Source of candidate (manual, meta, referral) |
+| `dateOfBirth` | DateTime | Required | Date of birth |
+| `currentStatus` | String | Default: "new" | Current status (new, shortlisted, selected, rejected, hired) |
+| **Educational Qualifications** | | | |
+| `highestEducation` | String | Optional | Highest education level (BSc, MSc, PhD, Diploma, etc.) |
+| `university` | String | Optional | University name |
+| `graduationYear` | Int | Optional | Year of graduation |
+| `gpa` | Float | Optional | Grade Point Average |
+| **Professional Experience** | | | |
+| `totalExperience` | Int | Optional | Total years of experience |
+| `currentSalary` | Int | Optional | Current salary |
 | `expectedSalary` | Int | Optional | Expected salary |
+| `currentEmployer` | String | Optional | Current employer |
+| `currentRole` | String | Optional | Current job title/role |
+| **Legacy Fields** | | | |
+| `experience` | Int | Optional | Deprecated - use totalExperience |
+| `skills` | Json | Default: "[]" | Skills array |
 | `assignedTo` | String | Foreign Key, Optional | Reference to User (recruiter) |
 | `teamId` | String | Foreign Key, Optional | Reference to Team |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
@@ -469,14 +516,53 @@ Table: candidates
 - `team` → `Team` (Many-to-One)
 - `projects` → `CandidateProjectMap[]` (One-to-Many)
 - `documents` → `Document[]` (One-to-Many)
-- `interviews` → `Interview[]` (One-to-Many)
-- `processing` → `Processing` (One-to-One)
 - `certifications` → `Certification[]` (One-to-Many)
 - `talentPool` → `TalentPool` (One-to-One)
+- `workExperiences` → `WorkExperience[]` (One-to-Many)
 
 ---
 
-#### **5.2 CandidateProjectMap Model (Junction Table) - UPDATED v2.0**
+#### **5.2 WorkExperience Model**
+
+```sql
+Table: work_experiences
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique work experience identifier |
+| `candidateId` | String | Foreign Key, Indexed | Reference to Candidate |
+| `companyName` | String | Required, Indexed | Company name |
+| `jobTitle` | String | Required, Indexed | Job title/position |
+| `startDate` | DateTime | Required | Employment start date |
+| `endDate` | DateTime | Optional | Employment end date |
+| `isCurrent` | Boolean | Default: false | Whether this is current employment |
+| `description` | String | Optional | Job description |
+| `salary` | Int | Optional | Salary at this position |
+| `location` | String | Optional | Work location |
+| `skills` | Json | Default: "[]" | Skills gained/used in this role |
+| `achievements` | String | Optional | Key achievements |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Constraints:**
+
+- Foreign Key: `candidateId` → `candidates.id` (CASCADE DELETE)
+
+**Indexes:**
+
+- `candidateId` (For querying candidate work experiences)
+- `companyName` (For company-based queries)
+- `jobTitle` (For role-based queries)
+
+**Relationships:**
+
+- `candidate` → `Candidate` (Many-to-One)
+
+---
+
+#### **5.3 CandidateProjectMap Model (Junction Table) - UPDATED v2.0**
 
 ```sql
 Table: candidate_project_map
@@ -903,6 +989,256 @@ Table: audit_logs
 
 ---
 
+### **🏥 13. Healthcare Roles Catalog Models**
+
+#### **13.1 RoleCatalog Model**
+
+```sql
+Table: role_catalog
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique role catalog identifier |
+| `name` | String | Unique | Role name (e.g., "Registered Nurse (RN)", "Cardiologist") |
+| `slug` | String | Unique | URL-friendly slug (e.g., "registered-nurse-rn", "cardiologist") |
+| `category` | String | Required, Indexed | Category (e.g., "Clinical", "Non-Clinical") |
+| `subCategory` | String | Optional | Sub-category (e.g., "Physicians & Surgeons", "Nursing", "Allied Health") |
+| `isClinical` | Boolean | Default: true, Indexed | Whether role is clinical |
+| `description` | String | Optional | Role description |
+| `isActive` | Boolean | Default: true, Indexed | Whether role is active |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Indexes:**
+
+- `category` (For filtering by category)
+- `isClinical` (For clinical/non-clinical filtering)
+- `isActive` (For active role filtering)
+
+**Relationships:**
+
+- `recommendedQualifications` → `RoleRecommendedQualification[]` (One-to-Many)
+
+---
+
+#### **13.2 Qualification Model**
+
+```sql
+Table: qualifications
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique qualification identifier |
+| `name` | String | Unique | Qualification name (e.g., "Bachelor of Science in Nursing (BSN)") |
+| `shortName` | String | Optional | Short name (e.g., "BSN") |
+| `level` | QualificationLevel | Required, Indexed | Qualification level enum |
+| `field` | String | Required, Indexed | Field (e.g., "Nursing", "Medicine", "Allied Health") |
+| `program` | String | Optional | Program type (e.g., "Bachelor of Science", "Master of Medicine") |
+| `description` | String | Optional | Qualification description |
+| `isActive` | Boolean | Default: true, Indexed | Whether qualification is active |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Indexes:**
+
+- `level` (For filtering by qualification level)
+- `field` (For filtering by field)
+- `isActive` (For active qualification filtering)
+
+**Relationships:**
+
+- `aliases` → `QualificationAlias[]` (One-to-Many)
+- `countryProfiles` → `QualificationCountryProfile[]` (One-to-Many)
+- `equivalencies` → `QualificationEquivalency[]` (One-to-Many, FromQualification)
+- `reverseEquivalencies` → `QualificationEquivalency[]` (One-to-Many, ToQualification)
+- `roleRecommendations` → `RoleRecommendedQualification[]` (One-to-Many)
+- `roleNeededRequirements` → `RoleNeededEducationRequirement[]` (One-to-Many)
+
+---
+
+#### **13.3 QualificationAlias Model**
+
+```sql
+Table: qualification_aliases
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique alias identifier |
+| `qualificationId` | String | Foreign Key, Indexed | Reference to Qualification |
+| `alias` | String | Required, Indexed | Alternative name (e.g., "RN" for "Registered Nurse") |
+| `isCommon` | Boolean | Default: false | Mark commonly used aliases |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+
+**Constraints:**
+
+- Unique Constraint: `[qualificationId, alias]`
+- Foreign Key: `qualificationId` → `qualifications.id` (CASCADE DELETE)
+
+**Indexes:**
+
+- `qualificationId` (For qualification alias lookups)
+- `alias` (For alias-based searches)
+
+**Relationships:**
+
+- `qualification` → `Qualification` (Many-to-One)
+
+---
+
+#### **13.4 QualificationCountryProfile Model**
+
+```sql
+Table: qualification_country_profiles
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique profile identifier |
+| `qualificationId` | String | Foreign Key | Reference to Qualification |
+| `countryCode` | String | Foreign Key, Indexed | ISO-2 country code |
+| `regulatedTitle` | String | Optional | Official title in that country |
+| `issuingBody` | String | Optional | Issuing body (e.g., "Nursing Council of India") |
+| `accreditationStatus` | String | Optional | Status (e.g., "Recognized", "Pending", "Not Recognized") |
+| `notes` | String | Optional | Additional notes |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Constraints:**
+
+- Unique Constraint: `[qualificationId, countryCode]`
+- Foreign Key: `qualificationId` → `qualifications.id` (CASCADE DELETE)
+- Foreign Key: `countryCode` → `countries.code`
+
+**Indexes:**
+
+- `countryCode` (For country-specific queries)
+
+**Relationships:**
+
+- `qualification` → `Qualification` (Many-to-One)
+- `country` → `Country` (Many-to-One)
+
+---
+
+#### **13.5 QualificationEquivalency Model**
+
+```sql
+Table: qualification_equivalencies
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique equivalency identifier |
+| `fromQualificationId` | String | Foreign Key, Indexed | Source qualification |
+| `toQualificationId` | String | Foreign Key, Indexed | Target qualification |
+| `countryCode` | String | Foreign Key, Optional | Country-specific equivalence |
+| `isEquivalent` | Boolean | Default: true | Whether qualifications are equivalent |
+| `notes` | String | Optional | Equivalency notes |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Constraints:**
+
+- Unique Constraint: `[fromQualificationId, toQualificationId, countryCode]`
+- Foreign Key: `fromQualificationId` → `qualifications.id` (CASCADE DELETE)
+- Foreign Key: `toQualificationId` → `qualifications.id` (CASCADE DELETE)
+- Foreign Key: `countryCode` → `countries.code`
+
+**Indexes:**
+
+- `fromQualificationId` (For source qualification lookups)
+- `toQualificationId` (For target qualification lookups)
+
+**Relationships:**
+
+- `fromQualification` → `Qualification` (Many-to-One, FromQualification)
+- `toQualification` → `Qualification` (Many-to-One, ToQualification)
+- `country` → `Country` (Many-to-One)
+
+---
+
+#### **13.6 RoleRecommendedQualification Model**
+
+```sql
+Table: role_recommended_qualifications
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique recommendation identifier |
+| `roleId` | String | Foreign Key, Indexed | Reference to RoleCatalog |
+| `qualificationId` | String | Foreign Key, Indexed | Reference to Qualification |
+| `weight` | Int | Default: 1, Indexed | Importance weight (higher = more important) |
+| `countryCode` | String | Foreign Key, Optional | Country-specific recommendation |
+| `isPreferred` | Boolean | Default: false | Mark as preferred qualification |
+| `notes` | String | Optional | Recommendation notes |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Constraints:**
+
+- Unique Constraint: `[roleId, qualificationId, countryCode]`
+- Foreign Key: `roleId` → `role_catalog.id` (CASCADE DELETE)
+- Foreign Key: `qualificationId` → `qualifications.id` (CASCADE DELETE)
+- Foreign Key: `countryCode` → `countries.code`
+
+**Indexes:**
+
+- `roleId` (For role-based recommendations)
+- `qualificationId` (For qualification-based queries)
+- `weight` (For sorting by importance)
+
+**Relationships:**
+
+- `role` → `RoleCatalog` (Many-to-One)
+- `qualification` → `Qualification` (Many-to-One)
+- `country` → `Country` (Many-to-One)
+
+---
+
+#### **13.7 RoleNeededEducationRequirement Model**
+
+```sql
+Table: role_needed_education_requirements
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique requirement identifier |
+| `roleNeededId` | String | Foreign Key, Indexed | Reference to RoleNeeded |
+| `qualificationId` | String | Foreign Key, Indexed | Reference to Qualification |
+| `mandatory` | Boolean | Default: true | Whether qualification is mandatory |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Constraints:**
+
+- Unique Constraint: `[roleNeededId, qualificationId]`
+- Foreign Key: `roleNeededId` → `roles_needed.id` (CASCADE DELETE)
+- Foreign Key: `qualificationId` → `qualifications.id` (CASCADE DELETE)
+
+**Indexes:**
+
+- `roleNeededId` (For role requirement queries)
+- `qualificationId` (For qualification-based queries)
+
+**Relationships:**
+
+- `roleNeeded` → `RoleNeeded` (Many-to-One)
+- `qualification` → `Qualification` (Many-to-One)
+
+---
+
 ## 🔤 **Enums**
 
 ### **ClientType Enum**
@@ -992,6 +1328,18 @@ enum RelationshipType {
 }
 ```
 
+### **QualificationLevel Enum**
+
+```typescript
+enum QualificationLevel {
+  CERTIFICATE  // Certificate level
+  DIPLOMA      // Diploma level
+  BACHELOR     // Bachelor's degree
+  MASTER       // Master's degree
+  DOCTORATE    // Doctoral degree
+}
+```
+
 ---
 
 ## 🔗 **Entity Relationships**
@@ -1058,16 +1406,18 @@ erDiagram
 | **Authentication**           | 6          | ~100        | ~50KB     |
 | **Organizational**           | 2          | ~50         | ~25KB     |
 | **Client Management**        | 1          | ~500        | ~250KB    |
+| **Country Management**       | 1          | ~200        | ~100KB    |
 | **Project Management**       | 2          | ~200        | ~100KB    |
-| **Candidate Management**     | 1          | ~2000       | ~1MB      |
+| **Candidate Management**     | 2          | ~2000       | ~1MB      |
 | **Document Management**      | 3          | ~5000       | ~5MB      |
 | **Interview Management**     | 1          | ~1000       | ~500KB    |
 | **Processing Management**    | 1          | ~500        | ~250KB    |
 | **Notification Management**  | 1          | ~1000       | ~500KB    |
 | **Certification Management** | 1          | ~500        | ~250KB    |
 | **Talent Pool Management**   | 1          | ~200        | ~100KB    |
+| **Healthcare Roles Catalog** | 7          | ~1000       | ~500KB    |
 | **Audit Management**         | 1          | ~10000      | ~5MB      |
-| **TOTAL**                    | **22**     | **~20,000** | **~13MB** |
+| **TOTAL**                    | **31**     | **~25,000** | **~15MB** |
 
 ---
 
@@ -1096,16 +1446,24 @@ erDiagram
 
 ## 📝 **Migration History**
 
-| **Migration**                                      | **Date**     | **Description**                     |
-| -------------------------------------------------- | ------------ | ----------------------------------- |
-| `20250817154040_init`                              | Aug 17, 2024 | Initial schema creation             |
-| `20250824171648_rbac_normalized_models`            | Aug 24, 2024 | RBAC normalization                  |
-| `20250824195033_add_refresh_tokens_and_indexes`    | Aug 24, 2024 | Refresh tokens and indexes          |
-| `20250824200742_update_refresh_token_architecture` | Aug 24, 2024 | Refresh token architecture update   |
-| `20250826142031_enhance_client_model`              | Aug 26, 2024 | Enhanced client model with types    |
-| `20250826182009_enhance_role_needed_model`         | Aug 26, 2024 | Enhanced role needed model          |
-| `20250827002717_add_project_priority`              | Aug 27, 2024 | Added project priority field        |
-| `20250930063011_document_verification_workflow`    | Sep 30, 2024 | Document verification workflow v2.0 |
+| **Migration**                                                               | **Date**     | **Description**                                             |
+| --------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------- |
+| `20250817154040_init`                                                       | Aug 17, 2024 | Initial schema creation                                     |
+| `20250824171648_rbac_normalized_models`                                     | Aug 24, 2024 | RBAC normalization                                          |
+| `20250824195033_add_refresh_tokens_and_indexes`                             | Aug 24, 2024 | Refresh tokens and indexes                                  |
+| `20250824200742_update_refresh_token_architecture`                          | Aug 24, 2024 | Refresh token architecture update                           |
+| `20250826142031_enhance_client_model`                                       | Aug 26, 2024 | Enhanced client model with types                            |
+| `20250826182009_enhance_role_needed_model`                                  | Aug 26, 2024 | Enhanced role needed model                                  |
+| `20250827002717_add_project_priority`                                       | Aug 27, 2024 | Added project priority field                                |
+| `20250930063011_document_verification_workflow`                             | Sep 30, 2024 | Document verification workflow v2.0                         |
+| `20251005075437_add_country_model_and_project_country_code`                 | Oct 5, 2024  | Added Country model and project country code                |
+| `20251005092318_healthcare_roles_catalog`                                   | Oct 5, 2024  | Healthcare roles catalog system                             |
+| `20251005092809_add_qualification_name_unique`                              | Oct 5, 2024  | Added unique constraint to qualification names              |
+| `20251005123026_make_client_optional`                                       | Oct 5, 2024  | Made client optional in projects                            |
+| `20251008070826_change_phone_to_required_and_unique`                        | Oct 8, 2024  | Made phone required and unique                              |
+| `20251008071747_separate_country_code_from_phone`                           | Oct 8, 2024  | Separated country code from phone                           |
+| `20251008132317_add_profile_images`                                         | Oct 8, 2024  | Added profile image support                                 |
+| `20251008143620_enhance_candidate_model_with_education_and_work_experience` | Oct 8, 2024  | Enhanced candidate model with education and work experience |
 
 ---
 

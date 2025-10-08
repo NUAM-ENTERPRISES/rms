@@ -268,9 +268,17 @@ export default function UsersPage() {
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
+                          {user.profileImage ? (
+                            <img
+                              src={user.profileImage}
+                              alt={user.name}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-blue-100"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                              {user.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <div>
                             <div className="font-medium text-slate-800">
                               {user.name}

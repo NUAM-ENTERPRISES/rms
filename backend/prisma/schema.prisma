@@ -35,6 +35,7 @@ model User {
   dateOfBirth   DateTime?
   countryCode   String   // Country calling code (e.g., "+91", "+1")
   phone         String   // Phone number without country code (e.g., "9876543210")
+  profileImage  String?  // Profile image URL stored in Digital Ocean Spaces
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -341,16 +342,31 @@ model RoleNeeded {
 
 model Candidate {
   id            String   @id @default(cuid())
-  name          String
+  firstName     String
+  lastName      String
   contact       String   @unique
   email         String?
+  profileImage  String?  // Profile image URL stored in Digital Ocean Spaces
   source        String   @default("manual") // manual, meta, referral
-  dateOfBirth   DateTime?
+  dateOfBirth   DateTime // Made mandatory
   currentStatus String   @default("new") // new, shortlisted, selected, rejected, hired
-  experience    Int?
+  
+  // Educational Qualifications
+  highestEducation String? // BSc, MSc, PhD, Diploma, etc.
+  university       String?
+  graduationYear   Int?
+  gpa              Float?
+  
+  // Professional Experience
+  totalExperience  Int? // Total years of experience
+  currentSalary    Int? // Current salary
+  expectedSalary   Int?
+  currentEmployer  String?
+  currentRole      String? // Current job title/role
+  
+  // Legacy fields for backward compatibility
+  experience    Int? // Deprecated - use totalExperience
   skills        Json     @default("[]")
-  currentEmployer String?
-  expectedSalary Int?
   assignedTo    String?
   teamId        String?  // Added for team scoping
   createdAt     DateTime @default(now())
@@ -363,11 +379,37 @@ model Candidate {
   documents    Document[]
   certifications Certification[]
   talentPool   TalentPool?
+  workExperiences WorkExperience[]
 
   @@index([assignedTo])
   @@index([teamId])
   @@index([currentStatus])
   @@map("candidates")
+}
+
+model WorkExperience {
+  id            String   @id @default(cuid())
+  candidateId   String
+  companyName   String
+  jobTitle      String
+  startDate     DateTime
+  endDate       DateTime?
+  isCurrent     Boolean  @default(false)
+  description   String?
+  salary        Int?     // Salary at this position
+  location      String?
+  skills        Json     @default("[]") // Skills gained/used in this role
+  achievements  String?  // Key achievements
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([companyName])
+  @@index([jobTitle])
+  @@map("work_experiences")
 }
 
 model CandidateProjectMap {

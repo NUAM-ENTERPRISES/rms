@@ -1,7 +1,7 @@
 // Feature-specific hooks for admin
 export {
   useGetUsersQuery,
-  useGetUserByIdQuery,
+  useGetUserQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,

@@ -14,6 +14,7 @@ export interface UserWithRoles {
   countryCode: string;
   phone: string;
   dateOfBirth?: string;
+  profileImage?: string;
   createdAt: string;
   updatedAt: string;
   userRoles: Array<{

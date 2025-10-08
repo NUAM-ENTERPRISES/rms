@@ -13,12 +13,14 @@ import { QueryUsersDto } from './dto/query-users.dto';
 import * as argon2 from 'argon2';
 import * as bcrypt from 'bcrypt';
 import { UserWithRoles, PaginatedUsers } from './types';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async create(
@@ -63,6 +65,7 @@ export class UsersService {
           dateOfBirth: createUserDto.dateOfBirth
             ? new Date(createUserDto.dateOfBirth)
             : null,
+          profileImage: createUserDto.profileImage,
         },
       });
 
@@ -168,7 +171,9 @@ export class UsersService {
       },
     });
 
-    const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+    const usersWithoutPasswords = users.map(({ password, ...user }) =>
+      this.transformUserData(user),
+    );
 
     return {
       users: usersWithoutPasswords as UserWithRoles[],
@@ -202,7 +207,7 @@ export class UsersService {
     }
 
     const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword as UserWithRoles;
+    return this.transformUserData(userWithoutPassword) as UserWithRoles;
   }
 
   async update(
@@ -428,5 +433,23 @@ export class UsersService {
     }
 
     return Array.from(permissions);
+  }
+
+  /**
+   * Convert relative profile image path to full URL
+   */
+  private getProfileImageUrl(relativePath?: string): string | null {
+    if (!relativePath) return null;
+    return this.uploadService.getFileUrl(relativePath);
+  }
+
+  /**
+   * Transform user data to include full profile image URL
+   */
+  private transformUserData(user: any): any {
+    if (user.profileImage) {
+      user.profileImage = this.getProfileImageUrl(user.profileImage);
+    }
+    return user;
   }
 }

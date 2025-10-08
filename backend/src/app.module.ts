@@ -20,6 +20,7 @@ import { QualificationsModule } from './qualifications/qualifications.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 import { SystemModule } from './system/system.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SystemModule } from './system/system.module';
     QualificationsModule,
     AuditModule,
     SystemModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [

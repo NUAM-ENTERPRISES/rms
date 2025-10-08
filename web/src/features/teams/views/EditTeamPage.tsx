@@ -33,7 +33,12 @@ export default function EditTeamPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const canUpdateTeams = useCan("manage:teams");
-  const { users, getLeadershipUsers } = useUsersLookup();
+  const {
+    users,
+    getLeadershipUsers,
+    isLoading: isLoadingUsers,
+    error: usersError,
+  } = useUsersLookup();
 
   const [updateTeam, { isLoading }] = useUpdateTeamMutation();
 
@@ -257,16 +262,28 @@ export default function EditTeamPage() {
                           <SelectValue placeholder="Select team lead" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLeadershipUsers().map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.name}</span>
-                                <span className="text-sm text-slate-500">
-                                  {user.role}
-                                </span>
-                              </div>
+                          {isLoadingUsers ? (
+                            <SelectItem value="loading" disabled>
+                              Loading users...
                             </SelectItem>
-                          ))}
+                          ) : usersError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading users
+                            </SelectItem>
+                          ) : (
+                            getLeadershipUsers().map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.name}
+                                  </span>
+                                  <span className="text-sm text-slate-500">
+                                    {user.role}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     )}
@@ -300,16 +317,28 @@ export default function EditTeamPage() {
                           <SelectValue placeholder="Select team head" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLeadershipUsers().map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.name}</span>
-                                <span className="text-sm text-slate-500">
-                                  {user.role}
-                                </span>
-                              </div>
+                          {isLoadingUsers ? (
+                            <SelectItem value="loading" disabled>
+                              Loading users...
                             </SelectItem>
-                          ))}
+                          ) : usersError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading users
+                            </SelectItem>
+                          ) : (
+                            getLeadershipUsers().map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.name}
+                                  </span>
+                                  <span className="text-sm text-slate-500">
+                                    {user.role}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     )}
@@ -343,16 +372,28 @@ export default function EditTeamPage() {
                           <SelectValue placeholder="Select team manager" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLeadershipUsers().map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.name}</span>
-                                <span className="text-sm text-slate-500">
-                                  {user.role}
-                                </span>
-                              </div>
+                          {isLoadingUsers ? (
+                            <SelectItem value="loading" disabled>
+                              Loading users...
                             </SelectItem>
-                          ))}
+                          ) : usersError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading users
+                            </SelectItem>
+                          ) : (
+                            getLeadershipUsers().map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.name}
+                                  </span>
+                                  <span className="text-sm text-slate-500">
+                                    {user.role}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     )}

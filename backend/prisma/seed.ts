@@ -643,7 +643,7 @@ async function main() {
       role: 'Team Lead',
     },
     {
-      email: 'recruiter@affiniks.com',
+      email: 'recruiter1@affiniks.com',
       name: 'Emma Recruiter',
       password: 'recruiter123',
       countryCode: '+91',
@@ -651,11 +651,43 @@ async function main() {
       role: 'Recruiter',
     },
     {
+      email: 'recruiter2@affiniks.com',
+      name: 'John Recruiter',
+      password: 'recruiter123',
+      countryCode: '+91',
+      phone: '9876543216',
+      role: 'Recruiter',
+    },
+    {
+      email: 'recruiter3@affiniks.com',
+      name: 'Sarah Recruiter',
+      password: 'recruiter123',
+      countryCode: '+91',
+      phone: '9876543217',
+      role: 'Recruiter',
+    },
+    {
+      email: 'recruiter4@affiniks.com',
+      name: 'Mike Recruiter',
+      password: 'recruiter123',
+      countryCode: '+91',
+      phone: '9876543218',
+      role: 'Recruiter',
+    },
+    {
+      email: 'recruiter5@affiniks.com',
+      name: 'Lisa Recruiter',
+      password: 'recruiter123',
+      countryCode: '+91',
+      phone: '9876543219',
+      role: 'Recruiter',
+    },
+    {
       email: 'docs@affiniks.com',
       name: 'Alex Documentation',
       password: 'docs123',
       countryCode: '+91',
-      phone: '9876543216',
+      phone: '9876543220',
       role: 'Documentation Executive',
     },
     {
@@ -663,7 +695,7 @@ async function main() {
       name: 'Jordan Processing',
       password: 'processing123',
       countryCode: '+91',
-      phone: '9876543217',
+      phone: '9876543221',
       role: 'Processing Executive',
     },
     {
@@ -671,7 +703,7 @@ async function main() {
       name: 'Alex System Admin',
       password: 'sysadmin123',
       countryCode: '+91',
-      phone: '9876543218',
+      phone: '9876543222',
       role: 'System Admin',
     },
   ];
@@ -875,16 +907,29 @@ async function main() {
     `🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)`,
   );
   console.log(
-    `🔍 Recruiter: +919876543215 / recruiter123 (recruiter@affiniks.com)`,
-  );
-  console.log(`📄 Documentation: +919876543216 / docs123 (docs@affiniks.com)`);
-  console.log(
-    `⚙️ Processing: +919876543217 / processing123 (processing@affiniks.com)`,
+    `🔍 Recruiter 1: +919876543215 / recruiter123 (recruiter1@affiniks.com)`,
   );
   console.log(
-    `🔧 System Admin: +919876543218 / sysadmin123 (sysadmin@affiniks.com)`,
+    `🔍 Recruiter 2: +919876543216 / recruiter123 (recruiter2@affiniks.com)`,
+  );
+  console.log(
+    `🔍 Recruiter 3: +919876543217 / recruiter123 (recruiter3@affiniks.com)`,
+  );
+  console.log(
+    `🔍 Recruiter 4: +919876543218 / recruiter123 (recruiter4@affiniks.com)`,
+  );
+  console.log(
+    `🔍 Recruiter 5: +919876543219 / recruiter123 (recruiter5@affiniks.com)`,
+  );
+  console.log(`📄 Documentation: +919876543220 / docs123 (docs@affiniks.com)`);
+  console.log(
+    `⚙️ Processing: +919876543221 / processing123 (processing@affiniks.com)`,
+  );
+  console.log(
+    `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@affiniks.com)`,
   );
   console.log('\n🎯 Each user has their respective role permissions!');
+  console.log('👥 All 5 recruiters are assigned to the Default Team!');
 }
 
 main()

@@ -208,7 +208,8 @@ export class ProjectsService {
             candidate: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 contact: true,
                 email: true,
                 currentStatus: true,
@@ -297,7 +298,8 @@ export class ProjectsService {
             candidate: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 contact: true,
                 email: true,
                 currentStatus: true,
@@ -348,7 +350,8 @@ export class ProjectsService {
             candidate: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 contact: true,
                 email: true,
                 currentStatus: true,
@@ -531,7 +534,8 @@ export class ProjectsService {
             candidate: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 contact: true,
                 email: true,
                 currentStatus: true,
@@ -633,7 +637,8 @@ export class ProjectsService {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
             currentStatus: true,
@@ -671,7 +676,8 @@ export class ProjectsService {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
             currentStatus: true,
@@ -767,7 +773,8 @@ export class ProjectsService {
             candidate: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 contact: true,
                 email: true,
                 currentStatus: true,

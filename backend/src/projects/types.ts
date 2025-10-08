@@ -15,7 +15,8 @@ export interface ProjectWithRelations extends Project {
   candidateProjects: (CandidateProjectMap & {
     candidate: {
       id: string;
-      name: string;
+      firstName: string;
+      lastName: string;
       contact: string;
       email: string | null;
       currentStatus: string;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,8 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Save, Mail, User, Phone, Calendar } from "lucide-react";
-import { CountryCodeSelect, RoleSelect } from "@/components/molecules";
+import {
+  CountryCodeSelect,
+  RoleSelect,
+  ProfileImageUpload,
+} from "@/components/molecules";
 import { useGetUserQuery, useUpdateUserMutation } from "@/features/admin/api";
+import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
 import { useCan } from "@/hooks/useCan";
 import {
   updateUserSchema,
@@ -29,6 +34,9 @@ export default function EditUserPage() {
 
   const { data: userData, isLoading: isLoadingUser } = useGetUserQuery(id!);
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
+  const [uploadProfileImage, { isLoading: uploadingImage }] =
+    useUploadUserProfileImageMutation();
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const user = userData?.data;
 
@@ -85,7 +93,22 @@ export default function EditUserPage() {
       }).unwrap();
 
       if (result.success) {
-        toast.success("User updated successfully");
+        // If profile image selected, upload it
+        if (selectedImage) {
+          try {
+            await uploadProfileImage({
+              userId: id!,
+              file: selectedImage,
+            }).unwrap();
+            toast.success("User and profile image updated successfully");
+          } catch (uploadError: any) {
+            console.error("Profile image upload failed:", uploadError);
+            toast.warning("User updated but profile image upload failed");
+          }
+        } else {
+          toast.success("User updated successfully");
+        }
+
         navigate(`/admin/users/${id}`);
       }
     } catch (error: any) {
@@ -173,7 +196,7 @@ export default function EditUserPage() {
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* User Information */}
+          {/* User Information with Profile Image */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
@@ -185,132 +208,147 @@ export default function EditUserPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Full Name */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="name"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <User className="h-4 w-4 text-slate-500" />
-                    Full Name
-                  </Label>
-                  <Controller
-                    name="name"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="name"
-                        placeholder="e.g., John Doe"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
+              <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
+                {/* Profile Image - Left Side */}
+                <div className="flex flex-col items-center">
+                  <ProfileImageUpload
+                    currentImageUrl={user?.profileImage}
+                    onImageSelected={setSelectedImage}
+                    onImageRemove={() => setSelectedImage(null)}
+                    uploading={uploadingImage}
+                    disabled={isUpdating || uploadingImage}
+                    size="md"
                   />
-                  {form.formState.errors.name && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.name.message}
-                    </p>
-                  )}
                 </div>
 
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="email"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Mail className="h-4 w-4 text-slate-500" />
-                    Email Address
-                  </Label>
-                  <Controller
-                    name="email"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="email"
-                        type="email"
-                        placeholder="e.g., john.doe@affiniks.com"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.email && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="phone"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Phone className="h-4 w-4 text-slate-500" />
-                    Phone Number
-                  </Label>
-                  <div className="grid grid-cols-[140px_1fr] gap-2">
+                {/* Form Fields - Right Side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Full Name */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="name"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <User className="h-4 w-4 text-slate-500" />
+                      Full Name
+                    </Label>
                     <Controller
-                      name="countryCode"
-                      control={form.control}
-                      render={({ field }) => (
-                        <CountryCodeSelect
-                          {...field}
-                          placeholder="Code"
-                          error={form.formState.errors.countryCode?.message}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="phone"
+                      name="name"
                       control={form.control}
                       render={({ field }) => (
                         <Input
                           {...field}
-                          id="phone"
-                          type="tel"
-                          placeholder="9876543210"
+                          id="name"
+                          placeholder="e.g., John Doe"
                           className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                         />
                       )}
                     />
-                  </div>
-                  {form.formState.errors.phone && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.phone.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Date of Birth */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="dateOfBirth"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4 text-slate-500" />
-                    Date of Birth
-                  </Label>
-                  <Controller
-                    name="dateOfBirth"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="dateOfBirth"
-                        type="date"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
+                    {form.formState.errors.name && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.name.message}
+                      </p>
                     )}
-                  />
-                  {form.formState.errors.dateOfBirth && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.dateOfBirth.message}
-                    </p>
-                  )}
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Mail className="h-4 w-4 text-slate-500" />
+                      Email Address
+                    </Label>
+                    <Controller
+                      name="email"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="email"
+                          type="email"
+                          placeholder="e.g., john.doe@affiniks.com"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.email && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="phone"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Phone className="h-4 w-4 text-slate-500" />
+                      Phone Number
+                    </Label>
+                    <div className="grid grid-cols-[140px_1fr] gap-2">
+                      <Controller
+                        name="countryCode"
+                        control={form.control}
+                        render={({ field }) => (
+                          <CountryCodeSelect
+                            {...field}
+                            placeholder="Code"
+                            error={form.formState.errors.countryCode?.message}
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="phone"
+                        control={form.control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            id="phone"
+                            type="tel"
+                            placeholder="9876543210"
+                            className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          />
+                        )}
+                      />
+                    </div>
+                    {form.formState.errors.phone && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.phone.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Date of Birth */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="dateOfBirth"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4 text-slate-500" />
+                      Date of Birth *
+                    </Label>
+                    <Controller
+                      name="dateOfBirth"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="dateOfBirth"
+                          type="date"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.dateOfBirth && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.dateOfBirth.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -336,7 +374,7 @@ export default function EditUserPage() {
                       value={field.value}
                       onValueChange={field.onChange}
                       name="roleId"
-                      label="User Role"
+                      label="User Role *"
                       placeholder="Select a role for this user..."
                       required={false}
                       disabled={isUpdating}
@@ -363,13 +401,15 @@ export default function EditUserPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isUpdating || !form.formState.isDirty}
+                  disabled={
+                    isUpdating || uploadingImage || !form.formState.isDirty
+                  }
                   className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  {isUpdating ? (
+                  {isUpdating || uploadingImage ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      Updating...
+                      {uploadingImage ? "Uploading..." : "Updating..."}
                     </>
                   ) : (
                     <>

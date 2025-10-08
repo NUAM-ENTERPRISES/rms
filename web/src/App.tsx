@@ -35,6 +35,9 @@ const CandidatesPage = lazy(
 const CreateCandidatePage = lazy(
   () => import("@/features/candidates/views/CreateCandidatePage")
 );
+const EditCandidatePage = lazy(
+  () => import("@/features/candidates/views/EditCandidatePage")
+);
 const CandidateDetailPage = lazy(
   () => import("@/features/candidates/views/CandidateDetailPage")
 );
@@ -209,6 +212,19 @@ function App() {
                     <ProtectedRoute permissions={["manage:candidates"]}>
                       <AppLayout>
                         <CreateCandidatePage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/candidates/:id/edit"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:candidates"]}>
+                      <AppLayout>
+                        <EditCandidatePage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>

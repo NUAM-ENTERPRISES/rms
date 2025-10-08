@@ -1,3 +1,4 @@
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,8 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Save, Mail, User, Lock, Phone, Calendar } from "lucide-react";
-import { CountryCodeSelect, RoleSelect } from "@/components/molecules";
+import {
+  CountryCodeSelect,
+  RoleSelect,
+  ProfileImageUpload,
+} from "@/components/molecules";
 import { useCreateUserMutation } from "@/features/admin/api";
+import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
 import { useCan } from "@/hooks/useCan";
 import {
   createUserSchema,
@@ -26,6 +32,9 @@ export default function CreateUserPage() {
   const canManageUsers = useCan("manage:users");
 
   const [createUser, { isLoading }] = useCreateUserMutation();
+  const [uploadProfileImage, { isLoading: uploadingImage }] =
+    useUploadUserProfileImageMutation();
+  const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
 
   const form = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
@@ -68,7 +77,23 @@ export default function CreateUserPage() {
       const result = await createUser(formData).unwrap();
 
       if (result.success) {
-        toast.success("User created successfully");
+        // If profile image selected, upload it
+        if (selectedImage) {
+          try {
+            const uploadResult = await uploadProfileImage({
+              userId: result.data.id,
+              file: selectedImage,
+            }).unwrap();
+            console.log("Profile image uploaded:", uploadResult);
+            toast.success("User and profile image created successfully");
+          } catch (uploadError: any) {
+            console.error("Profile image upload failed:", uploadError);
+            toast.warning("User created but profile image upload failed");
+          }
+        } else {
+          toast.success("User created successfully");
+        }
+
         navigate(`/admin/users/${result.data.id}`);
       }
     } catch (error: any) {
@@ -117,7 +142,7 @@ export default function CreateUserPage() {
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Basic User Information */}
+          {/* User Information with Profile Image */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
@@ -129,165 +154,179 @@ export default function CreateUserPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Full Name */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="name"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <User className="h-4 w-4 text-slate-500" />
-                    Full Name *
-                  </Label>
-                  <Controller
-                    name="name"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="name"
-                        placeholder="e.g., John Doe"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
+              <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
+                {/* Profile Image - Left Side */}
+                <div className="flex flex-col items-center">
+                  <ProfileImageUpload
+                    onImageSelected={setSelectedImage}
+                    onImageRemove={() => setSelectedImage(null)}
+                    uploading={uploadingImage}
+                    disabled={isLoading || uploadingImage}
+                    size="md"
                   />
-                  {form.formState.errors.name && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.name.message}
-                    </p>
-                  )}
                 </div>
 
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="email"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Mail className="h-4 w-4 text-slate-500" />
-                    Email Address *
-                  </Label>
-                  <Controller
-                    name="email"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="email"
-                        type="email"
-                        placeholder="e.g., john.doe@affiniks.com"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.email && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="password"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Lock className="h-4 w-4 text-slate-500" />
-                    Password *
-                  </Label>
-                  <Controller
-                    name="password"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="password"
-                        type="password"
-                        placeholder="Minimum 8 characters with special chars"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.password && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.password.message}
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-500">
-                    Must contain uppercase, lowercase, number, and special
-                    character
-                  </p>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="phone"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Phone className="h-4 w-4 text-slate-500" />
-                    Phone Number
-                  </Label>
-                  <div className="grid grid-cols-[140px_1fr] gap-2">
+                {/* Form Fields - Right Side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Full Name */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="name"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <User className="h-4 w-4 text-slate-500" />
+                      Full Name *
+                    </Label>
                     <Controller
-                      name="countryCode"
-                      control={form.control}
-                      render={({ field }) => (
-                        <CountryCodeSelect
-                          {...field}
-                          placeholder="Code"
-                          error={form.formState.errors.countryCode?.message}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="phone"
+                      name="name"
                       control={form.control}
                       render={({ field }) => (
                         <Input
                           {...field}
-                          id="phone"
-                          type="tel"
-                          placeholder="9876543210"
+                          id="name"
+                          placeholder="e.g., John Doe"
                           className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                         />
                       )}
                     />
-                  </div>
-                  {form.formState.errors.phone && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.phone.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Date of Birth */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="dateOfBirth"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4 text-slate-500" />
-                    Date of Birth
-                  </Label>
-                  <Controller
-                    name="dateOfBirth"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="dateOfBirth"
-                        type="date"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
+                    {form.formState.errors.name && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.name.message}
+                      </p>
                     )}
-                  />
-                  {form.formState.errors.dateOfBirth && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.dateOfBirth.message}
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Mail className="h-4 w-4 text-slate-500" />
+                      Email Address *
+                    </Label>
+                    <Controller
+                      name="email"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="email"
+                          type="email"
+                          placeholder="e.g., john.doe@affiniks.com"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.email && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="password"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Lock className="h-4 w-4 text-slate-500" />
+                      Password *
+                    </Label>
+                    <Controller
+                      name="password"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="password"
+                          type="password"
+                          placeholder="Minimum 8 characters with special chars"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.password && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.password.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      Must contain uppercase, lowercase, number, and special
+                      character
                     </p>
-                  )}
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="phone"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Phone className="h-4 w-4 text-slate-500" />
+                      Phone Number
+                    </Label>
+                    <div className="grid grid-cols-[140px_1fr] gap-2">
+                      <Controller
+                        name="countryCode"
+                        control={form.control}
+                        render={({ field }) => (
+                          <CountryCodeSelect
+                            {...field}
+                            placeholder="Code"
+                            error={form.formState.errors.countryCode?.message}
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="phone"
+                        control={form.control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            id="phone"
+                            type="tel"
+                            placeholder="9876543210"
+                            className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          />
+                        )}
+                      />
+                    </div>
+                    {form.formState.errors.phone && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.phone.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Date of Birth */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="dateOfBirth"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4 text-slate-500" />
+                      Date of Birth *
+                    </Label>
+                    <Controller
+                      name="dateOfBirth"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="dateOfBirth"
+                          type="date"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.dateOfBirth && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.dateOfBirth.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -313,7 +352,7 @@ export default function CreateUserPage() {
                       value={field.value}
                       onValueChange={field.onChange}
                       name="roleId"
-                      label="User Role"
+                      label="User Role *"
                       placeholder="Select a role for this user..."
                       required={false}
                       disabled={isLoading}
@@ -340,13 +379,15 @@ export default function CreateUserPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isLoading || !form.formState.isValid}
+                  disabled={
+                    isLoading || uploadingImage || !form.formState.isValid
+                  }
                   className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  {isLoading ? (
+                  {isLoading || uploadingImage ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      Creating...
+                      {uploadingImage ? "Uploading..." : "Creating..."}
                     </>
                   ) : (
                     <>

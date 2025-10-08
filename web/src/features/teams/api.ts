@@ -29,6 +29,60 @@ export interface TeamMember {
   };
 }
 
+export interface TeamProject {
+  id: string;
+  title: string;
+  description: string;
+  status: "active" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high" | "urgent";
+  deadline: string;
+  client: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  candidatesAssigned: number;
+  rolesNeeded: number;
+  progress: number;
+}
+
+export interface TeamCandidate {
+  id: string;
+  name: string;
+  contact: string;
+  email: string;
+  currentStatus: string;
+  experience: number;
+  skills: string[];
+  assignedProject: {
+    id: string;
+    title: string;
+    client: {
+      id: string;
+      name: string;
+    };
+  };
+  assignedBy: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  lastActivity: string;
+  nextInterview?: string;
+}
+
+export interface TeamStats {
+  totalMembers: number;
+  activeProjects: number;
+  totalCandidates: number;
+  averageSuccessRate: number;
+  totalRevenue: number;
+  monthlyGrowth: number;
+  completionRate: number;
+  totalProjects: number;
+  completedProjects: number;
+}
+
 export interface CreateTeamRequest {
   name: string;
   leadId?: string;
@@ -154,6 +208,84 @@ export const teamsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Team"],
     }),
+
+    // Get team members
+    getTeamMembers: builder.query<TeamMember[], string>({
+      query: (teamId) => `/teams/${teamId}/members`,
+      transformResponse: (response: {
+        success: boolean;
+        data: TeamMember[];
+        message: string;
+      }) => {
+        return response.data;
+      },
+      providesTags: (_, __, teamId) => [{ type: "Team", id: teamId }],
+    }),
+
+    // Get team projects
+    getTeamProjects: builder.query<TeamProject[], string>({
+      query: (teamId) => `/teams/${teamId}/projects`,
+      transformResponse: (response: {
+        success: boolean;
+        data: TeamProject[];
+        message: string;
+      }) => {
+        return response.data;
+      },
+      providesTags: (_, __, teamId) => [{ type: "Project", id: teamId }],
+    }),
+
+    // Get team candidates (candidates assigned to projects worked on by team members)
+    getTeamCandidates: builder.query<TeamCandidate[], string>({
+      query: (teamId) => `/teams/${teamId}/candidates`,
+      transformResponse: (response: {
+        success: boolean;
+        data: TeamCandidate[];
+        message: string;
+      }) => {
+        return response.data;
+      },
+      providesTags: (_, __, teamId) => [{ type: "Candidate", id: teamId }],
+    }),
+
+    // Get team statistics
+    getTeamStats: builder.query<TeamStats, string>({
+      query: (teamId) => `/teams/${teamId}/stats`,
+      transformResponse: (response: {
+        success: boolean;
+        data: TeamStats;
+        message: string;
+      }) => {
+        return response.data;
+      },
+      providesTags: (_, __, teamId) => [{ type: "Team", id: teamId }],
+    }),
+
+    // Get team performance analytics
+    getTeamPerformanceAnalytics: builder.query<any, string>({
+      query: (teamId) => `/teams/${teamId}/analytics/performance`,
+      transformResponse: (response: {
+        success: boolean;
+        data: any;
+        message: string;
+      }) => {
+        return response.data;
+      },
+      providesTags: (_, __, teamId) => [{ type: "Team", id: teamId }],
+    }),
+
+    // Get team success rate distribution
+    getTeamSuccessRateDistribution: builder.query<any, string>({
+      query: (teamId) => `/teams/${teamId}/analytics/success-rate`,
+      transformResponse: (response: {
+        success: boolean;
+        data: any;
+        message: string;
+      }) => {
+        return response.data;
+      },
+      providesTags: (_, __, teamId) => [{ type: "Team", id: teamId }],
+    }),
   }),
 });
 
@@ -165,4 +297,10 @@ export const {
   useDeleteTeamMutation,
   useAssignUserToTeamMutation,
   useRemoveUserFromTeamMutation,
+  useGetTeamMembersQuery,
+  useGetTeamProjectsQuery,
+  useGetTeamCandidatesQuery,
+  useGetTeamStatsQuery,
+  useGetTeamPerformanceAnalyticsQuery,
+  useGetTeamSuccessRateDistributionQuery,
 } = teamsApi;

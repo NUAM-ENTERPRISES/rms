@@ -82,6 +82,7 @@ export {
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 export { Switch } from "./switch";
+export { Checkbox } from "./checkbox";
 export { ScrollArea, ScrollBar } from "./scroll-area";
 export {
   Collapsible,

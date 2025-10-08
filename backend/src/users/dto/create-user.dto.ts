@@ -73,6 +73,15 @@ export class CreateUserDto {
   dateOfBirth?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Profile image URL (uploaded via /api/v1/upload/profile-image)',
+    example: 'https://cdn.example.com/users/profiles/user123/image.jpg',
+  })
+  @IsOptional()
+  @IsString({ message: 'Profile image must be a string URL' })
+  profileImage?: string;
+
+  @ApiPropertyOptional({
     description: 'Array of role IDs to assign to the user',
     example: ['role123', 'role456'],
     type: [String],

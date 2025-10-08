@@ -90,7 +90,8 @@ export class DocumentsService {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
           },
@@ -163,7 +164,8 @@ export class DocumentsService {
           candidate: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               contact: true,
               email: true,
             },
@@ -208,7 +210,8 @@ export class DocumentsService {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
           },
@@ -270,7 +273,8 @@ export class DocumentsService {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
           },
@@ -544,7 +548,7 @@ export class DocumentsService {
     return {
       candidateProjectMapId,
       candidateId: candidateProjectMap.candidateId,
-      candidateName: candidateProjectMap.candidate.name,
+      candidateName: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName}`,
       projectId: candidateProjectMap.projectId,
       projectTitle: candidateProjectMap.project.title,
       totalRequired,

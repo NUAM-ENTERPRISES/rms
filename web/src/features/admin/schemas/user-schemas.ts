@@ -31,10 +31,16 @@ export const createUserSchema = z.object({
     .min(1, "Phone number is required")
     .regex(/^\d{6,15}$/, "Please provide a valid phone number (6-15 digits)"),
 
-  dateOfBirth: z.string().optional().or(z.literal("")),
+  dateOfBirth: z
+    .string()
+    .min(1, "Date of birth is required")
+    .refine((val) => val && val.trim() !== "", "Date of birth is required"),
 
   // Role assignment
-  roleId: z.string().optional(),
+  roleId: z
+    .string()
+    .min(1, "Role is required")
+    .refine((val) => val && val !== "no-role", "Please select a role"),
 });
 
 // User form schema for updating (matching backend UpdateUserDto)
@@ -63,10 +69,16 @@ export const updateUserSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  dateOfBirth: z.string().optional().or(z.literal("")),
+  dateOfBirth: z
+    .string()
+    .min(1, "Date of birth is required")
+    .refine((val) => val && val.trim() !== "", "Date of birth is required"),
 
   // Role assignment
-  roleId: z.string().optional(),
+  roleId: z
+    .string()
+    .min(1, "Role is required")
+    .refine((val) => val && val !== "no-role", "Please select a role"),
 });
 
 // Type inference

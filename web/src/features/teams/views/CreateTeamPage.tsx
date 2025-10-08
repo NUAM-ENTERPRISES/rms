@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +31,11 @@ import {
 export default function CreateTeamPage() {
   const navigate = useNavigate();
   const canCreateTeams = useCan("manage:teams");
-  const { users, getLeadershipUsers } = useUsersLookup();
+  const {
+    getLeadershipUsers,
+    isLoading: isLoadingUsers,
+    error: usersError,
+  } = useUsersLookup();
 
   const [createTeam, { isLoading }] = useCreateTeamMutation();
 
@@ -194,16 +197,28 @@ export default function CreateTeamPage() {
                           <SelectValue placeholder="Select team lead" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLeadershipUsers().map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.name}</span>
-                                <span className="text-sm text-slate-500">
-                                  {user.role}
-                                </span>
-                              </div>
+                          {isLoadingUsers ? (
+                            <SelectItem value="loading" disabled>
+                              Loading users...
                             </SelectItem>
-                          ))}
+                          ) : usersError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading users
+                            </SelectItem>
+                          ) : (
+                            getLeadershipUsers().map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.name}
+                                  </span>
+                                  <span className="text-sm text-slate-500">
+                                    {user.role}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     )}
@@ -237,16 +252,28 @@ export default function CreateTeamPage() {
                           <SelectValue placeholder="Select team head" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLeadershipUsers().map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.name}</span>
-                                <span className="text-sm text-slate-500">
-                                  {user.role}
-                                </span>
-                              </div>
+                          {isLoadingUsers ? (
+                            <SelectItem value="loading" disabled>
+                              Loading users...
                             </SelectItem>
-                          ))}
+                          ) : usersError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading users
+                            </SelectItem>
+                          ) : (
+                            getLeadershipUsers().map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.name}
+                                  </span>
+                                  <span className="text-sm text-slate-500">
+                                    {user.role}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     )}
@@ -280,16 +307,28 @@ export default function CreateTeamPage() {
                           <SelectValue placeholder="Select team manager" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLeadershipUsers().map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.name}</span>
-                                <span className="text-sm text-slate-500">
-                                  {user.role}
-                                </span>
-                              </div>
+                          {isLoadingUsers ? (
+                            <SelectItem value="loading" disabled>
+                              Loading users...
                             </SelectItem>
-                          ))}
+                          ) : usersError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading users
+                            </SelectItem>
+                          ) : (
+                            getLeadershipUsers().map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.name}
+                                  </span>
+                                  <span className="text-sm text-slate-500">
+                                    {user.role}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     )}

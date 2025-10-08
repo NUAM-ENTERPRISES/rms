@@ -62,20 +62,28 @@ export class CandidatesService {
     // Create candidate
     const candidate = await this.prisma.candidate.create({
       data: {
-        name: createCandidateDto.name,
+        firstName: createCandidateDto.firstName,
+        lastName: createCandidateDto.lastName,
         contact: createCandidateDto.contact,
         email: createCandidateDto.email,
+        profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
-        dateOfBirth: createCandidateDto.dateOfBirth
-          ? new Date(createCandidateDto.dateOfBirth)
-          : null,
+        dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
         currentStatus: createCandidateDto.currentStatus || 'new',
-        experience: createCandidateDto.experience,
+        totalExperience: createCandidateDto.totalExperience,
+        currentSalary: createCandidateDto.currentSalary,
+        currentEmployer: createCandidateDto.currentEmployer,
+        currentRole: createCandidateDto.currentRole,
+        expectedSalary: createCandidateDto.expectedSalary,
+        highestEducation: createCandidateDto.highestEducation,
+        university: createCandidateDto.university,
+        graduationYear: createCandidateDto.graduationYear,
+        gpa: createCandidateDto.gpa,
+        // Legacy fields for backward compatibility
+        experience: createCandidateDto.totalExperience,
         skills: createCandidateDto.skills
           ? JSON.parse(createCandidateDto.skills)
           : [],
-        currentEmployer: createCandidateDto.currentEmployer,
-        expectedSalary: createCandidateDto.expectedSalary,
         assignedTo: userId, // Assign to the creating user
         teamId: createCandidateDto.teamId,
       },
@@ -302,25 +310,42 @@ export class CandidatesService {
 
     // Prepare update data
     const updateData: any = {};
-    if (updateCandidateDto.name) updateData.name = updateCandidateDto.name;
+    if (updateCandidateDto.firstName)
+      updateData.firstName = updateCandidateDto.firstName;
+    if (updateCandidateDto.lastName)
+      updateData.lastName = updateCandidateDto.lastName;
     if (updateCandidateDto.contact)
       updateData.contact = updateCandidateDto.contact;
     if (updateCandidateDto.email !== undefined)
       updateData.email = updateCandidateDto.email;
+    if (updateCandidateDto.profileImage !== undefined)
+      updateData.profileImage = updateCandidateDto.profileImage;
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.dateOfBirth)
       updateData.dateOfBirth = new Date(updateCandidateDto.dateOfBirth);
     if (updateCandidateDto.currentStatus)
       updateData.currentStatus = updateCandidateDto.currentStatus;
-    if (updateCandidateDto.experience !== undefined)
-      updateData.experience = updateCandidateDto.experience;
-    if (updateCandidateDto.skills)
-      updateData.skills = JSON.parse(updateCandidateDto.skills);
-    if (updateCandidateDto.currentEmployer !== undefined)
+    if (updateCandidateDto.totalExperience !== undefined)
+      updateData.totalExperience = updateCandidateDto.totalExperience;
+    if (updateCandidateDto.currentSalary !== undefined)
+      updateData.currentSalary = updateCandidateDto.currentSalary;
+    if (updateCandidateDto.currentEmployer)
       updateData.currentEmployer = updateCandidateDto.currentEmployer;
+    if (updateCandidateDto.currentRole)
+      updateData.currentRole = updateCandidateDto.currentRole;
     if (updateCandidateDto.expectedSalary !== undefined)
       updateData.expectedSalary = updateCandidateDto.expectedSalary;
+    if (updateCandidateDto.highestEducation)
+      updateData.highestEducation = updateCandidateDto.highestEducation;
+    if (updateCandidateDto.university)
+      updateData.university = updateCandidateDto.university;
+    if (updateCandidateDto.graduationYear !== undefined)
+      updateData.graduationYear = updateCandidateDto.graduationYear;
+    if (updateCandidateDto.gpa !== undefined)
+      updateData.gpa = updateCandidateDto.gpa;
+    if (updateCandidateDto.skills)
+      updateData.skills = JSON.parse(updateCandidateDto.skills);
     if (updateCandidateDto.teamId !== undefined)
       updateData.teamId = updateCandidateDto.teamId;
 
@@ -440,7 +465,8 @@ export class CandidatesService {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
             currentStatus: true,
@@ -646,7 +672,8 @@ export class CandidatesService {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
           },

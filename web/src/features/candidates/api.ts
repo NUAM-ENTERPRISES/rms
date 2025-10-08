@@ -3,16 +3,29 @@ import { baseApi } from "@/app/api/baseApi";
 // Types
 export interface Candidate {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   contact: string;
   email?: string;
+  profileImage?: string;
   source: string;
-  dateOfBirth?: string;
+  dateOfBirth: string; // Now mandatory
   currentStatus: string;
+  totalExperience?: number;
+  currentSalary?: number;
+  currentEmployer?: string;
+  currentRole?: string;
+  expectedSalary?: number;
+
+  // Educational Qualifications
+  highestEducation?: string;
+  university?: string;
+  graduationYear?: number;
+  gpa?: number;
+
+  // Legacy fields for backward compatibility
   experience?: number;
   skills: string[];
-  currentEmployer?: string;
-  expectedSalary?: number;
   assignedTo?: string;
   matchScore?: number;
   createdAt: string;
@@ -23,6 +36,52 @@ export interface Candidate {
     email: string;
   };
   projects: CandidateProjectMap[];
+  workExperiences?: WorkExperience[];
+}
+
+export interface WorkExperience {
+  id: string;
+  candidateId: string;
+  companyName: string;
+  jobTitle: string;
+  startDate: string;
+  endDate?: string;
+  isCurrent: boolean;
+  description?: string;
+  salary?: number;
+  location?: string;
+  skills: string[];
+  achievements?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWorkExperienceRequest {
+  candidateId: string;
+  companyName: string;
+  jobTitle: string;
+  startDate: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  description?: string;
+  salary?: number;
+  location?: string;
+  skills?: string;
+  achievements?: string;
+}
+
+export interface UpdateWorkExperienceRequest {
+  id: string;
+  companyName?: string;
+  jobTitle?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  description?: string;
+  salary?: number;
+  location?: string;
+  skills?: string;
+  achievements?: string;
 }
 
 export interface CandidateProjectMap {
@@ -82,6 +141,13 @@ export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCandidates: builder.query<Candidate[], void>({
       query: () => "/candidates",
+      transformResponse: (response: {
+        success: boolean;
+        data: { candidates: Candidate[]; pagination: any };
+        message: string;
+      }) => {
+        return response.data.candidates;
+      },
       providesTags: ["Candidate"],
     }),
     getCandidateById: builder.query<Candidate, string>({
@@ -162,6 +228,44 @@ export const candidatesApi = baseApi.injectEndpoints({
       query: (projectId) => `/projects/${projectId}/eligible-candidates`,
       providesTags: ["Candidate"],
     }),
+
+    // Work Experience endpoints
+    getWorkExperiences: builder.query<WorkExperience[], string | void>({
+      query: (candidateId) =>
+        candidateId
+          ? `/work-experience/candidate/${candidateId}`
+          : "/work-experience",
+      providesTags: ["WorkExperience"],
+    }),
+    createWorkExperience: builder.mutation<
+      WorkExperience,
+      CreateWorkExperienceRequest
+    >({
+      query: (workExperienceData) => ({
+        url: "/work-experience",
+        method: "POST",
+        body: workExperienceData,
+      }),
+      invalidatesTags: ["WorkExperience", "Candidate"],
+    }),
+    updateWorkExperience: builder.mutation<
+      WorkExperience,
+      UpdateWorkExperienceRequest
+    >({
+      query: ({ id, ...workExperienceData }) => ({
+        url: `/work-experience/${id}`,
+        method: "PATCH",
+        body: workExperienceData,
+      }),
+      invalidatesTags: ["WorkExperience", "Candidate"],
+    }),
+    deleteWorkExperience: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/work-experience/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["WorkExperience", "Candidate"],
+    }),
   }),
 });
 
@@ -175,4 +279,8 @@ export const {
   useNominateCandidateMutation,
   useApproveOrRejectCandidateMutation,
   useGetEligibleCandidatesQuery,
+  useGetWorkExperiencesQuery,
+  useCreateWorkExperienceMutation,
+  useUpdateWorkExperienceMutation,
+  useDeleteWorkExperienceMutation,
 } = candidatesApi;

@@ -12,7 +12,8 @@ import {
 export interface DocumentWithRelations extends Document {
   candidate: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     contact: string;
     email: string | null;
   };

@@ -25,6 +25,7 @@ export const baseApi = createApi({
     "RoleCatalog",
     "Qualification",
     "SystemConfig",
+    "WorkExperience",
   ],
   endpoints: () => ({}),
 });
