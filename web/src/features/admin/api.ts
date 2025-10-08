@@ -11,7 +11,8 @@ export interface UserWithRoles {
   id: string;
   email: string;
   name: string;
-  phone?: string;
+  countryCode: string;
+  phone: string;
   dateOfBirth?: string;
   createdAt: string;
   updatedAt: string;
@@ -32,15 +33,19 @@ export interface CreateUserRequest {
   name: string;
   email: string;
   password: string;
-  phone?: string;
+  countryCode: string;
+  phone: string;
   dateOfBirth?: string;
+  roleIds?: string[]; // Array of role IDs as expected by backend
 }
 
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
+  countryCode?: string;
   phone?: string;
   dateOfBirth?: string;
+  roleIds?: string[]; // Array of role IDs as expected by backend
 }
 
 export interface QueryUsersRequest {
@@ -148,9 +153,21 @@ export const usersApi = baseApi.injectEndpoints({
       }),
       providesTags: (_, __, id) => [{ type: "User", id }],
     }),
+
+    // Update user password
+    updateUserPassword: builder.mutation<
+      { success: boolean; data: { message: string }; message: string },
+      { id: string; currentPassword: string; newPassword: string }
+    >({
+      query: ({ id, currentPassword, newPassword }) => ({
+        url: `/users/${id}/change-password`,
+        method: "POST",
+        body: { currentPassword, newPassword },
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }],
+    }),
   }),
 });
-
 // Export hooks
 export const {
   useGetUsersQuery,
@@ -160,4 +177,8 @@ export const {
   useDeleteUserMutation,
   useGetUserRolesQuery,
   useGetUserPermissionsQuery,
+  useUpdateUserPasswordMutation,
 } = usersApi;
+
+// Export roles API
+export * from "./api/roles";

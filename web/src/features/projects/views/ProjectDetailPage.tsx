@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationDialog } from "@/components/ui";
 
 import {
   Edit,
@@ -23,7 +24,6 @@ import {
   Mail,
   MapPin,
   UserCheck,
-  AlertTriangle,
   Info,
   Search,
   MoreHorizontal,
@@ -198,7 +198,11 @@ export default function ProjectDetailPage() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Handle project deletion
-  const handleDeleteProject = async () => {
+  const handleDeleteProjectClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteProjectConfirm = async () => {
     if (!projectId) return;
 
     try {
@@ -210,6 +214,10 @@ export default function ProjectDetailPage() {
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to delete project");
     }
+  };
+
+  const handleDeleteProjectCancel = () => {
+    setShowDeleteConfirm(false);
   };
 
   // Handle candidate actions
@@ -1015,42 +1023,15 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-96 border-0 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                Confirm Deletion
-              </CardTitle>
-              <CardDescription>
-                Are you sure you want to delete this project? This action cannot
-                be undone.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteProject}
-                  disabled={isDeleting}
-                  className="flex-1"
-                >
-                  {isDeleting ? "Deleting..." : "Delete Project"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={handleDeleteProjectCancel}
+        onConfirm={handleDeleteProjectConfirm}
+        title={projectData?.data?.title || ""}
+        itemType="project"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

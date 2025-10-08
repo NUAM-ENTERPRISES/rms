@@ -72,12 +72,20 @@ export const rolesApi = baseApi.injectEndpoints({
       ApiResponse<PaginatedRoles>,
       RolesQueryParams | void
     >({
-      query: (params = {}) => ({
-        url: "/roles",
-        params,
-      }),
+      query: (params) => {
+        if (!params) return "/roles";
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            searchParams.append(key, value.toString());
+          }
+        });
+        return {
+          url: `/roles?${searchParams.toString()}`,
+        };
+      },
       providesTags: (result) =>
-        result
+        result?.data?.roles
           ? [
               ...result.data.roles.map(({ id }) => ({
                 type: "RoleCatalog" as const,

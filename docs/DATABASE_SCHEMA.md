@@ -51,7 +51,7 @@ Table: users
 | `name` | String | Required | Full name of user |
 | `password` | String | Required | Hashed password |
 | `dateOfBirth` | DateTime | Optional | User's date of birth |
-| `phone` | String | Optional | Contact phone number |
+| `phone` | String | Required, Unique, Indexed | Contact phone number (authentication identifier) |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
 
@@ -67,8 +67,15 @@ Table: users
 
 **Indexes:**
 
-- `email` (Unique, for authentication queries)
+- `email` (Unique, for lookups)
+- `phone` (Unique, for authentication queries)
 - `createdAt` (For user listing and analytics)
+
+**Authentication:**
+
+- Users authenticate using `phone` (not email)
+- Phone numbers must be unique and include country code (E.164 format)
+- Example: `+919876543210`
 
 ---
 

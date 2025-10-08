@@ -12,16 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  UserPlus,
-  X,
-  Save,
-  Mail,
-  User,
-  Lock,
-  Phone,
-  Calendar,
-} from "lucide-react";
+import { X, Save, Mail, User, Lock, Phone, Calendar } from "lucide-react";
+import { CountryCodeSelect, RoleSelect } from "@/components/molecules";
 import { useCreateUserMutation } from "@/features/admin/api";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -43,8 +35,10 @@ export default function CreateUserPage() {
       name: "",
       email: "",
       password: "",
+      countryCode: "+91",
       phone: "",
       dateOfBirth: "",
+      roleId: "no-role",
     },
   });
 
@@ -55,12 +49,21 @@ export default function CreateUserPage() {
         name: data.name,
         email: data.email,
         password: data.password,
-        phone: data.phone && data.phone.trim() !== "" ? data.phone : undefined,
+        countryCode: data.countryCode,
+        phone: data.phone,
         dateOfBirth:
           data.dateOfBirth && data.dateOfBirth.trim() !== ""
             ? data.dateOfBirth
             : undefined,
+        roleIds:
+          data.roleId && data.roleId.trim() !== "" && data.roleId !== "no-role"
+            ? [data.roleId]
+            : undefined,
       };
+
+      console.log("Create User - Form Data:", formData);
+      console.log("Create User - Role ID:", data.roleId);
+      console.log("Create User - Role IDs:", formData.roleIds);
 
       const result = await createUser(formData).unwrap();
 
@@ -226,19 +229,32 @@ export default function CreateUserPage() {
                     <Phone className="h-4 w-4 text-slate-500" />
                     Phone Number
                   </Label>
-                  <Controller
-                    name="phone"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="phone"
-                        type="tel"
-                        placeholder="e.g., +1234567890"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
+                  <div className="grid grid-cols-[140px_1fr] gap-2">
+                    <Controller
+                      name="countryCode"
+                      control={form.control}
+                      render={({ field }) => (
+                        <CountryCodeSelect
+                          {...field}
+                          placeholder="Code"
+                          error={form.formState.errors.countryCode?.message}
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="phone"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="phone"
+                          type="tel"
+                          placeholder="9876543210"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                  </div>
                   {form.formState.errors.phone && (
                     <p className="text-sm text-red-600">
                       {form.formState.errors.phone.message}
@@ -273,6 +289,38 @@ export default function CreateUserPage() {
                     </p>
                   )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Role Assignment */}
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-slate-800">
+                Role Assignment
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                Assign a role to define user permissions and access levels
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Controller
+                  name="roleId"
+                  control={form.control}
+                  render={({ field }) => (
+                    <RoleSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      name="roleId"
+                      label="User Role"
+                      placeholder="Select a role for this user..."
+                      required={false}
+                      disabled={isLoading}
+                      error={form.formState.errors.roleId?.message}
+                    />
+                  )}
+                />
               </div>
             </CardContent>
           </Card>

@@ -39,8 +39,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DeleteConfirmationDialog } from "@/components/ui";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
+import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
 import { useGetUsersQuery, useDeleteUserMutation } from "@/features/admin/api";
 
 export default function UsersPage() {
@@ -57,6 +59,17 @@ export default function UsersPage() {
     sortOrder: "desc" as "asc" | "desc",
   });
 
+  // State for delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+  }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+  });
+
   // API calls
   const { data: usersData, isLoading } = useGetUsersQuery({
     page: filters.page,
@@ -66,7 +79,8 @@ export default function UsersPage() {
     sortOrder: filters.sortOrder,
   });
 
-  const [deleteUser] = useDeleteUserMutation();
+  const { data: systemConfig } = useSystemConfig();
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
 
   const users = usersData?.data?.users || [];
   const pagination = usersData?.data;
@@ -76,22 +90,29 @@ export default function UsersPage() {
     setFilters((prev) => ({ ...prev, search: value, page: 1 }));
   };
 
-  // Handle delete user
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete user "${userName}"? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
+  // Handle delete user confirmation
+  const handleDeleteUserClick = (userId: string, userName: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      userId,
+      userName,
+    });
+  };
 
+  // Handle delete user confirmation
+  const handleDeleteUserConfirm = async () => {
     try {
-      await deleteUser(userId).unwrap();
+      await deleteUser(deleteConfirm.userId).unwrap();
       toast.success("User deleted successfully");
+      setDeleteConfirm({ isOpen: false, userId: "", userName: "" });
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to delete user");
     }
+  };
+
+  // Handle delete user cancel
+  const handleDeleteUserCancel = () => {
+    setDeleteConfirm({ isOpen: false, userId: "", userName: "" });
   };
 
   // Format date - following FE guidelines: DD MMM YYYY
@@ -105,24 +126,9 @@ export default function UsersPage() {
     });
   };
 
-  // Get role badge variant
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role.toLowerCase()) {
-      case "ceo":
-        return "default";
-      case "director":
-        return "default";
-      case "manager":
-        return "secondary";
-      case "team head":
-        return "secondary";
-      case "team lead":
-        return "outline";
-      case "recruiter":
-        return "outline";
-      default:
-        return "outline";
-    }
+  // Get role badge variant from system config
+  const getRoleBadgeVariantLocal = (roleName: string) => {
+    return getRoleBadgeVariant(roleName, systemConfig?.data);
   };
 
   if (!canReadUsers) {
@@ -295,16 +301,24 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {user.userRoles.map((userRole, index) => (
-                            <Badge
-                              key={index}
-                              variant={getRoleBadgeVariant(userRole.role.name)}
-                              className="text-xs"
-                            >
-                              <Shield className="h-3 w-3 mr-1" />
-                              {userRole.role.name}
-                            </Badge>
-                          ))}
+                          {user.userRoles
+                            .filter(
+                              (userRole) =>
+                                userRole?.role?.name &&
+                                typeof userRole.role.name === "string"
+                            )
+                            .map((userRole, index) => (
+                              <Badge
+                                key={index}
+                                variant={getRoleBadgeVariantLocal(
+                                  userRole.role.name
+                                )}
+                                className="text-xs"
+                              >
+                                <Shield className="h-3 w-3 mr-1" />
+                                {userRole.role.name}
+                              </Badge>
+                            ))}
                           {user.userRoles.length === 0 && (
                             <Badge variant="outline" className="text-xs">
                               No roles
@@ -354,7 +368,7 @@ export default function UsersPage() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    handleDeleteUser(user.id, user.name)
+                                    handleDeleteUserClick(user.id, user.name)
                                   }
                                   className="text-red-600"
                                 >
@@ -439,6 +453,16 @@ export default function UsersPage() {
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={handleDeleteUserCancel}
+        onConfirm={handleDeleteUserConfirm}
+        title={deleteConfirm.userName}
+        itemType="user"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

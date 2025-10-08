@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -19,13 +20,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DeleteConfirmationDialog } from "@/components/ui";
+import { UpdatePasswordDialog } from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
+import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
 import {
   useGetUserQuery,
-  useGetUserRolesQuery,
   useGetUserPermissionsQuery,
   useDeleteUserMutation,
+  useUpdateUserPasswordMutation,
 } from "@/features/admin/api";
 
 export default function UserDetailPage() {
@@ -34,14 +38,26 @@ export default function UserDetailPage() {
   const canManageUsers = useCan("manage:users");
   const canReadUsers = useCan("read:users");
 
+  // Check if current user can update passwords (Manager, CEO, Director, System Admin)
+  // For now, we'll use the manage:users permission as a proxy
+  const canUpdatePassword = useCan("manage:users");
+
   const { data: userData, isLoading, error } = useGetUserQuery(id!);
-  const { data: rolesData } = useGetUserRolesQuery(id!);
   const { data: permissionsData } = useGetUserPermissionsQuery(id!);
+  const { data: systemConfig } = useSystemConfig();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [updatePassword, { isLoading: isUpdatingPassword }] =
+    useUpdateUserPasswordMutation();
 
   const user = userData?.data;
-  const roles = rolesData?.data || [];
+  const roles = user?.userRoles?.map((userRole) => userRole.role.name) || [];
   const permissions = permissionsData?.data || [];
+
+  // State for delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // State for update password dialog
+  const [showUpdatePassword, setShowUpdatePassword] = useState(false);
 
   // Format date - following FE guidelines: DD MMM YYYY
   const formatDate = (dateString?: string) => {
@@ -54,16 +70,12 @@ export default function UserDetailPage() {
     });
   };
 
-  const handleDeleteUser = async () => {
-    if (!user) return;
+  const handleDeleteUserClick = () => {
+    setShowDeleteConfirm(true);
+  };
 
-    if (
-      !confirm(
-        `Are you sure you want to delete user "${user.name}"? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
+  const handleDeleteUserConfirm = async () => {
+    if (!user) return;
 
     try {
       await deleteUser(id!).unwrap();
@@ -74,24 +86,38 @@ export default function UserDetailPage() {
     }
   };
 
-  // Get role badge variant
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role.toLowerCase()) {
-      case "ceo":
-        return "default";
-      case "director":
-        return "default";
-      case "manager":
-        return "secondary";
-      case "team head":
-        return "secondary";
-      case "team lead":
-        return "outline";
-      case "recruiter":
-        return "outline";
-      default:
-        return "outline";
+  const handleDeleteUserCancel = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const handleUpdatePasswordClick = () => {
+    setShowUpdatePassword(true);
+  };
+
+  const handleUpdatePasswordClose = () => {
+    setShowUpdatePassword(false);
+  };
+
+  const handleUpdatePassword = async (data: {
+    currentPassword: string;
+    newPassword: string;
+  }) => {
+    try {
+      await updatePassword({
+        id: id!,
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      }).unwrap();
+      toast.success("Password updated successfully");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to update password");
+      throw error; // Re-throw to prevent dialog from closing
     }
+  };
+
+  // Get role badge variant from system config
+  const getRoleBadgeVariantLocal = (roleName: string) => {
+    return getRoleBadgeVariant(roleName, systemConfig?.data);
   };
 
   if (!canReadUsers) {
@@ -173,9 +199,19 @@ export default function UserDetailPage() {
                   <Edit className="h-4 w-4 mr-2" />
                   Edit User
                 </Button>
+                {canUpdatePassword && (
+                  <Button
+                    onClick={handleUpdatePasswordClick}
+                    variant="outline"
+                    className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    Update Password
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
-                  onClick={handleDeleteUser}
+                  onClick={handleDeleteUserClick}
                   disabled={isDeleting}
                   className="h-11 px-6"
                 >
@@ -360,15 +396,19 @@ export default function UserDetailPage() {
                   <p className="text-sm text-slate-500 mt-1">{user.email}</p>
                   {roles.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1 justify-center">
-                      {roles.map((role, index) => (
-                        <Badge
-                          key={index}
-                          variant={getRoleBadgeVariant(role)}
-                          className="text-xs"
-                        >
-                          {role}
-                        </Badge>
-                      ))}
+                      {roles
+                        .filter(
+                          (roleName) => roleName && typeof roleName === "string"
+                        )
+                        .map((roleName, index) => (
+                          <Badge
+                            key={index}
+                            variant={getRoleBadgeVariantLocal(roleName)}
+                            className="text-xs"
+                          >
+                            {roleName}
+                          </Badge>
+                        ))}
                     </div>
                   )}
                 </div>
@@ -377,6 +417,24 @@ export default function UserDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={handleDeleteUserCancel}
+        onConfirm={handleDeleteUserConfirm}
+        title={user?.name || ""}
+        itemType="user"
+        isLoading={isDeleting}
+      />
+
+      {/* Update Password Dialog */}
+      <UpdatePasswordDialog
+        isOpen={showUpdatePassword}
+        onClose={handleUpdatePasswordClose}
+        onUpdatePassword={handleUpdatePassword}
+        isLoading={isUpdatingPassword}
+      />
     </div>
   );
 }

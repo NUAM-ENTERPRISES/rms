@@ -33,7 +33,8 @@ model User {
   name          String
   password      String
   dateOfBirth   DateTime?
-  phone         String?
+  countryCode   String   // Country calling code (e.g., "+91", "+1")
+  phone         String   // Phone number without country code (e.g., "9876543210")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -46,7 +47,9 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
 
-  @@index([email]) // Already unique, but explicit index for auth queries
+  @@unique([countryCode, phone]) // Unique constraint on combination
+  @@index([email]) // Keep email indexed for lookups
+  @@index([countryCode, phone]) // Composite index for authentication queries
   @@index([createdAt]) // For user listing and analytics
   @@map("users")
 }

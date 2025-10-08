@@ -11,6 +11,7 @@ This document is a **contract**. Every contributor and AI tool (Cursor) **MUST**
 - **Atomic + Feature-first**: UI is atomic; domain logic lives in features.
 - **Theme tokens only**: **Do not hardcode colors** or sizes. Use Tailwind tokens (from `tailwind.config.ts`) or CSS variables.
 - **RTK Query only** for server data. **No fetch/axios in components**.
+- **Single API Source**: **MANDATORY** - All API calls MUST use `baseApi.injectEndpoints()`. No exceptions.
 - **Strict TypeScript**. **No `any`**. Prefer discriminated unions/generics.
 - **Accessibility** (WCAG AA): semantic HTML, labels, keyboard support.
 - **Tests & Lint pass** = merge. Husky blocks non-compliant commits.
@@ -109,7 +110,7 @@ This document is a **contract**. Every contributor and AI tool (Cursor) **MUST**
 
 - **Domain Separation**: Business logic in `/entities`, I/O in `/features/*/data`, UI in `/features/*/views`
 - **No Cross-Feature Imports**: Features import from `/entities` and `/shared` only, never from other features
-- **Single API Source**: All RTK Query endpoints use `baseApi.injectEndpoints()`
+- **Single API Source**: **MANDATORY** - All RTK Query endpoints MUST use `baseApi.injectEndpoints()`. No direct fetch/axios calls anywhere.
 - **Pure Functions**: Services contain no I/O operations, only pure business logic
 - **Composition Only**: Views compose components and hooks, contain no business logic
 - **Decision Matrix**:
@@ -206,9 +207,10 @@ export default {
 - **Single baseApi** with **endpoint injection** pattern:
 
   - One `baseApi` in `/app/api/baseApi.ts` with **auto-refresh** on 401.
-  - Features inject endpoints using `baseApi.injectEndpoints()`.
+  - **MANDATORY**: All features MUST inject endpoints using `baseApi.injectEndpoints()`.
   - Use **tags** for cache invalidation.
-  - **No** direct `fetch`/`axios` in any component or slice.
+  - **ABSOLUTELY NO** direct `fetch`/`axios` in any component, hook, or slice.
+  - **ABSOLUTELY NO** `@tanstack/react-query` or other query libraries.
 
 **Example: Base API setup**
 
@@ -249,7 +251,7 @@ export const baseApi = createApi({
 });
 ```
 
-**Example: Feature endpoint injection**
+**Example: Feature endpoint injection (MANDATORY PATTERN)**
 
 ```ts
 // /features/candidates/data/candidates.endpoints.ts
@@ -257,6 +259,7 @@ import { baseApi } from "@/app/api/baseApi";
 import { CandidateDto, CreateCandidateDto } from "./dto";
 import { CandidateTransforms } from "./transforms";
 
+// ✅ CORRECT: Using baseApi.injectEndpoints()
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCandidates: builder.query<Candidate[], void>({
@@ -280,6 +283,23 @@ export const candidatesApi = baseApi.injectEndpoints({
 
 export const { useGetCandidatesQuery, useCreateCandidateMutation } =
   candidatesApi;
+```
+
+**❌ PROHIBITED PATTERNS:**
+
+```ts
+// ❌ WRONG: Direct fetch calls
+const fetchData = async () => {
+  const response = await fetch("/api/candidates");
+  return response.json();
+};
+
+// ❌ WRONG: Using other query libraries
+import { useQuery } from "@tanstack/react-query";
+
+// ❌ WRONG: Axios calls
+import axios from "axios";
+const data = await axios.get("/api/candidates");
 ```
 
 ---
@@ -403,7 +423,8 @@ Examples: `feat(auth): add login form`, `fix(projects): correct deadline parsing
 
 - ✅ **Architecture compliance**: Follows domain separation (entities/features/processes/shared)
 - ✅ **No cross-dependencies**: Features only import from entities/shared, never other features
-- ✅ **Single API source**: All endpoints use `baseApi.injectEndpoints()`
+- ✅ **Single API source**: **MANDATORY** - All endpoints use `baseApi.injectEndpoints()`
+- ✅ **No direct API calls**: **ZERO** fetch/axios calls in components, hooks, or slices
 - ✅ **Pure business logic**: Entity services contain no I/O operations
 - ✅ **Composition-only views**: No business logic in view components
 - ✅ Compiles, lint passes, tests pass (CI green)
@@ -422,15 +443,92 @@ Examples: `feat(auth): add login form`, `fix(projects): correct deadline parsing
 - ❌ **I/O in entity services**: Entity services must be pure functions only
 - ❌ **Multiple APIs**: Only one `baseApi`, all endpoints must use injection
 - ❌ **Direct API calls in components**: Use feature hooks that wrap endpoints
+- ❌ **Direct fetch/axios calls**: **ABSOLUTELY FORBIDDEN** - Use `baseApi.injectEndpoints()` only
+- ❌ **Other query libraries**: No `@tanstack/react-query`, `swr`, or similar
+- ❌ **Manual API calls**: No `fetch()`, `axios.get()`, or similar in any component/hook
 - ❌ `any` or untyped props
 - ❌ Inline styles, raw hex colors, custom CSS files
-- ❌ Direct fetch/axios calls in UI
 - ❌ Massive god-components (>150–200 lines) without extraction
 - ❌ Global state for local concerns (use local/component state)
 
 ---
 
-## 17) References
+## 17) API Pattern Enforcement (CRITICAL)
+
+### 17.1 MANDATORY API Pattern
+
+**EVERY** API call in the application MUST follow this exact pattern:
+
+```ts
+// ✅ CORRECT: Feature API using baseApi.injectEndpoints()
+import { baseApi } from "@/app/api/baseApi";
+
+export const featureApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    getFeatureData: builder.query<ResponseType, RequestType>({
+      query: () => "/feature-endpoint",
+      providesTags: ["FeatureTag"],
+    }),
+    createFeature: builder.mutation<ResponseType, RequestType>({
+      query: (body) => ({
+        url: "/feature-endpoint",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["FeatureTag"],
+    }),
+  }),
+});
+
+export const { useGetFeatureDataQuery, useCreateFeatureMutation } = featureApi;
+```
+
+### 17.2 ABSOLUTELY FORBIDDEN
+
+```ts
+// ❌ NEVER DO THIS - Direct fetch calls
+const fetchData = async () => {
+  const response = await fetch("/api/data");
+  return response.json();
+};
+
+// ❌ NEVER DO THIS - Other query libraries
+import { useQuery } from "@tanstack/react-query";
+
+// ❌ NEVER DO THIS - Axios calls
+import axios from "axios";
+const data = await axios.get("/api/data");
+
+// ❌ NEVER DO THIS - Manual API calls in components
+function MyComponent() {
+  const [data, setData] = useState();
+  useEffect(() => {
+    fetch("/api/data")
+      .then((res) => res.json())
+      .then(setData);
+  }, []);
+}
+```
+
+### 17.3 Enforcement Rules
+
+- **Code Review**: Reject any PR with direct fetch/axios calls
+- **Linting**: ESLint rules should catch and block these patterns
+- **Testing**: All API calls must go through RTK Query endpoints
+- **Documentation**: Every new feature must document its API endpoints
+
+### 17.4 Benefits of This Pattern
+
+- ✅ **Consistent caching** across the entire application
+- ✅ **Automatic token refresh** and error handling
+- ✅ **Type safety** with TypeScript integration
+- ✅ **Optimistic updates** and background refetching
+- ✅ **Cache invalidation** with tags
+- ✅ **Loading states** and error handling built-in
+
+---
+
+## 18) References
 
 - Tailwind with Vite: [https://tailwindcss.com/docs/installation/using-vite](https://tailwindcss.com/docs/installation/using-vite)
 - ShadCN with Vite: [https://ui.shadcn.com/docs/installation/vite](https://ui.shadcn.com/docs/installation/vite)

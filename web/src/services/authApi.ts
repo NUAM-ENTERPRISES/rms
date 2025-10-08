@@ -1,7 +1,8 @@
 import { baseApi } from "@/app/api/baseApi";
 
 interface LoginRequest {
-  email: string;
+  countryCode: string; // Country calling code (e.g., "+91")
+  phone: string; // Phone number without country code
   password: string;
 }
 

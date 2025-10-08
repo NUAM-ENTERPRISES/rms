@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Save, Mail, User, Phone, Calendar } from "lucide-react";
+import { CountryCodeSelect, RoleSelect } from "@/components/molecules";
 import { useGetUserQuery, useUpdateUserMutation } from "@/features/admin/api";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -43,10 +44,12 @@ export default function EditUserPage() {
       form.reset({
         name: user.name || "",
         email: user.email || "",
+        countryCode: user.countryCode || "",
         phone: user.phone || "",
         dateOfBirth: user.dateOfBirth
           ? new Date(user.dateOfBirth).toISOString().split("T")[0]
           : "",
+        roleId: user.userRoles?.[0]?.role.id || "no-role",
       });
     }
   }, [user, form]);
@@ -57,12 +60,24 @@ export default function EditUserPage() {
       const formData = {
         name: data.name && data.name.trim() !== "" ? data.name : undefined,
         email: data.email && data.email.trim() !== "" ? data.email : undefined,
+        countryCode:
+          data.countryCode && data.countryCode.trim() !== ""
+            ? data.countryCode
+            : undefined,
         phone: data.phone && data.phone.trim() !== "" ? data.phone : undefined,
         dateOfBirth:
           data.dateOfBirth && data.dateOfBirth.trim() !== ""
             ? data.dateOfBirth
             : undefined,
+        roleIds:
+          data.roleId && data.roleId.trim() !== "" && data.roleId !== "no-role"
+            ? [data.roleId]
+            : undefined,
       };
+
+      console.log("Edit User - Form Data:", formData);
+      console.log("Edit User - Role ID:", data.roleId);
+      console.log("Edit User - Role IDs:", formData.roleIds);
 
       const result = await updateUser({
         id: id!,
@@ -237,19 +252,32 @@ export default function EditUserPage() {
                     <Phone className="h-4 w-4 text-slate-500" />
                     Phone Number
                   </Label>
-                  <Controller
-                    name="phone"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="phone"
-                        type="tel"
-                        placeholder="e.g., +1234567890"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
+                  <div className="grid grid-cols-[140px_1fr] gap-2">
+                    <Controller
+                      name="countryCode"
+                      control={form.control}
+                      render={({ field }) => (
+                        <CountryCodeSelect
+                          {...field}
+                          placeholder="Code"
+                          error={form.formState.errors.countryCode?.message}
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="phone"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="phone"
+                          type="tel"
+                          placeholder="9876543210"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                  </div>
                   {form.formState.errors.phone && (
                     <p className="text-sm text-red-600">
                       {form.formState.errors.phone.message}
@@ -284,6 +312,38 @@ export default function EditUserPage() {
                     </p>
                   )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Role Assignment */}
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-slate-800">
+                Role Assignment
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                Assign a role to define user permissions and access levels
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Controller
+                  name="roleId"
+                  control={form.control}
+                  render={({ field }) => (
+                    <RoleSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      name="roleId"
+                      label="User Role"
+                      placeholder="Select a role for this user..."
+                      required={false}
+                      disabled={isUpdating}
+                      error={form.formState.errors.roleId?.message}
+                    />
+                  )}
+                />
               </div>
             </CardContent>
           </Card>

@@ -19,6 +19,7 @@ import { RoleCatalogModule } from './role-catalog/role-catalog.module';
 import { QualificationsModule } from './qualifications/qualifications.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
+import { SystemModule } from './system/system.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AuditInterceptor } from './common/audit/audit.interceptor';
     RoleCatalogModule,
     QualificationsModule,
     AuditModule,
+    SystemModule,
   ],
   controllers: [AppController],
   providers: [

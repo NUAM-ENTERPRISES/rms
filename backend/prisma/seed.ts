@@ -98,6 +98,12 @@ const roles = [
     description: 'Processing department - Post-selection workflows',
     permissions: ['read:processing', 'write:processing', 'manage:processing'],
   },
+  {
+    name: 'System Admin',
+    description:
+      'System Administrator - Full system access and user management',
+    permissions: ['*'],
+  },
 ];
 
 // All possible permissions (expand '*' to all known permissions)
@@ -552,11 +558,15 @@ async function main() {
     update: {
       name: 'System Administrator',
       password: hashedPassword,
+      countryCode: '+91',
+      phone: '9876543210',
     },
     create: {
       email: 'admin@affiniks.com',
       name: 'System Administrator',
       password: hashedPassword,
+      countryCode: '+91',
+      phone: '9876543210',
     },
   });
 
@@ -604,43 +614,65 @@ async function main() {
       email: 'director@affiniks.com',
       name: 'Sarah Director',
       password: 'director123',
+      countryCode: '+91',
+      phone: '9876543211',
       role: 'Director',
     },
     {
       email: 'manager@affiniks.com',
       name: 'Mike Manager',
       password: 'manager123',
+      countryCode: '+91',
+      phone: '9876543212',
       role: 'Manager',
     },
     {
       email: 'teamhead@affiniks.com',
       name: 'Lisa Team Head',
       password: 'teamhead123',
+      countryCode: '+91',
+      phone: '9876543213',
       role: 'Team Head',
     },
     {
       email: 'teamlead@affiniks.com',
       name: 'David Team Lead',
       password: 'teamlead123',
+      countryCode: '+91',
+      phone: '9876543214',
       role: 'Team Lead',
     },
     {
       email: 'recruiter@affiniks.com',
       name: 'Emma Recruiter',
       password: 'recruiter123',
+      countryCode: '+91',
+      phone: '9876543215',
       role: 'Recruiter',
     },
     {
       email: 'docs@affiniks.com',
       name: 'Alex Documentation',
       password: 'docs123',
+      countryCode: '+91',
+      phone: '9876543216',
       role: 'Documentation Executive',
     },
     {
       email: 'processing@affiniks.com',
       name: 'Jordan Processing',
       password: 'processing123',
+      countryCode: '+91',
+      phone: '9876543217',
       role: 'Processing Executive',
+    },
+    {
+      email: 'sysadmin@affiniks.com',
+      name: 'Alex System Admin',
+      password: 'sysadmin123',
+      countryCode: '+91',
+      phone: '9876543218',
+      role: 'System Admin',
     },
   ];
 
@@ -652,11 +684,15 @@ async function main() {
       update: {
         name: userData.name,
         password: hashedPassword,
+        countryCode: userData.countryCode,
+        phone: userData.phone,
       },
       create: {
         email: userData.email,
         name: userData.name,
         password: hashedPassword,
+        countryCode: userData.countryCode,
+        phone: userData.phone,
       },
     });
 
@@ -826,15 +862,28 @@ async function main() {
   });
 
   console.log('✅ Database seeding completed successfully!');
-  console.log('\n🔑 Test Users Created:');
-  console.log(`👑 CEO: admin@affiniks.com / ${adminPassword}`);
-  console.log(`👔 Director: director@affiniks.com / director123`);
-  console.log(`📊 Manager: manager@affiniks.com / manager123`);
-  console.log(`👥 Team Head: teamhead@affiniks.com / teamhead123`);
-  console.log(`🎯 Team Lead: teamlead@affiniks.com / teamlead123`);
-  console.log(`🔍 Recruiter: recruiter@affiniks.com / recruiter123`);
-  console.log(`📄 Documentation: docs@affiniks.com / docs123`);
-  console.log(`⚙️ Processing: processing@affiniks.com / processing123`);
+  console.log('\n🔑 Test Users Created (Login with Phone + Password):');
+  console.log(`👑 CEO: +919876543210 / ${adminPassword} (admin@affiniks.com)`);
+  console.log(
+    `👔 Director: +919876543211 / director123 (director@affiniks.com)`,
+  );
+  console.log(`📊 Manager: +919876543212 / manager123 (manager@affiniks.com)`);
+  console.log(
+    `👥 Team Head: +919876543213 / teamhead123 (teamhead@affiniks.com)`,
+  );
+  console.log(
+    `🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)`,
+  );
+  console.log(
+    `🔍 Recruiter: +919876543215 / recruiter123 (recruiter@affiniks.com)`,
+  );
+  console.log(`📄 Documentation: +919876543216 / docs123 (docs@affiniks.com)`);
+  console.log(
+    `⚙️ Processing: +919876543217 / processing123 (processing@affiniks.com)`,
+  );
+  console.log(
+    `🔧 System Admin: +919876543218 / sysadmin123 (sysadmin@affiniks.com)`,
+  );
   console.log('\n🎯 Each user has their respective role permissions!');
 }
 

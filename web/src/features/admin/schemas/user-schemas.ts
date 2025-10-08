@@ -21,14 +21,20 @@ export const createUserSchema = z.object({
       "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
     ),
 
-  // Optional fields
+  countryCode: z
+    .string()
+    .min(1, "Country code is required")
+    .regex(/^\+[1-9]\d{0,3}$/, "Please select a valid country code"),
+
   phone: z
     .string()
-    .regex(/^\+?[\d\s\-\(\)]+$/, "Please provide a valid phone number")
-    .optional()
-    .or(z.literal("")),
+    .min(1, "Phone number is required")
+    .regex(/^\d{6,15}$/, "Please provide a valid phone number (6-15 digits)"),
 
   dateOfBirth: z.string().optional().or(z.literal("")),
+
+  // Role assignment
+  roleId: z.string().optional(),
 });
 
 // User form schema for updating (matching backend UpdateUserDto)
@@ -45,13 +51,22 @@ export const updateUserSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  countryCode: z
+    .string()
+    .regex(/^\+[1-9]\d{0,3}$/, "Please select a valid country code")
+    .optional()
+    .or(z.literal("")),
+
   phone: z
     .string()
-    .regex(/^\+?[\d\s\-\(\)]+$/, "Please provide a valid phone number")
+    .regex(/^\d{6,15}$/, "Please provide a valid phone number (6-15 digits)")
     .optional()
     .or(z.literal("")),
 
   dateOfBirth: z.string().optional().or(z.literal("")),
+
+  // Role assignment
+  roleId: z.string().optional(),
 });
 
 // Type inference
@@ -63,14 +78,18 @@ export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   name: "",
   email: "",
   password: "",
+  countryCode: "+91",
   phone: "",
   dateOfBirth: "",
+  roleId: "",
 };
 
 // Default values for update user form
 export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   name: "",
   email: "",
+  countryCode: "",
   phone: "",
   dateOfBirth: "",
+  roleId: "",
 };

@@ -25,6 +25,21 @@ export class UsersService {
     createUserDto: CreateUserDto,
     createdByUserId?: string,
   ): Promise<UserWithRoles> {
+    // Check for existing phone number + country code combination
+    const existingPhone = await this.prisma.user.findUnique({
+      where: {
+        countryCode_phone: {
+          countryCode: createUserDto.countryCode,
+          phone: createUserDto.phone,
+        },
+      },
+    });
+
+    if (existingPhone) {
+      throw new ConflictException('User with this phone number already exists');
+    }
+
+    // Check for existing email
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createUserDto.email },
     });
@@ -35,29 +50,59 @@ export class UsersService {
 
     const hashedPassword = await argon2.hash(createUserDto.password);
 
-    const user = await (this.prisma as any).user.create({
-      data: {
-        email: createUserDto.email,
-        name: createUserDto.name,
-        password: hashedPassword,
-        phone: createUserDto.phone,
-        dateOfBirth: createUserDto.dateOfBirth
-          ? new Date(createUserDto.dateOfBirth)
-          : null,
-      },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
+    // Create user with role assignments in a transaction
+    const user = await this.prisma.$transaction(async (tx) => {
+      // Create the user
+      const newUser = await (tx as any).user.create({
+        data: {
+          email: createUserDto.email,
+          name: createUserDto.name,
+          password: hashedPassword,
+          countryCode: createUserDto.countryCode,
+          phone: createUserDto.phone,
+          dateOfBirth: createUserDto.dateOfBirth
+            ? new Date(createUserDto.dateOfBirth)
+            : null,
+        },
+      });
+
+      // Assign roles if provided
+      if (createUserDto.roleIds && createUserDto.roleIds.length > 0) {
+        // Verify all roles exist
+        const existingRoles = await tx.role.findMany({
+          where: { id: { in: createUserDto.roleIds } },
+        });
+
+        if (existingRoles.length !== createUserDto.roleIds.length) {
+          throw new ConflictException('One or more roles not found');
+        }
+
+        // Create user role assignments
+        await tx.userRole.createMany({
+          data: createUserDto.roleIds.map((roleId) => ({
+            userId: newUser.id,
+            roleId,
+          })),
+        });
+      }
+
+      // Return user with roles
+      return await (tx as any).user.findUnique({
+        where: { id: newUser.id },
+        include: {
+          userRoles: {
+            include: {
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                },
               },
             },
           },
         },
-      },
+      });
     });
 
     const { password, ...userWithoutPassword } = user;
@@ -73,6 +118,7 @@ export class UsersService {
           name: createUserDto.name,
           phone: createUserDto.phone,
           dateOfBirth: createUserDto.dateOfBirth,
+          roleIds: createUserDto.roleIds,
         },
         { action: 'user_created' },
       );
@@ -187,22 +233,62 @@ export class UsersService {
       updateData.dateOfBirth = new Date(updateUserDto.dateOfBirth);
     }
 
-    const user = await (this.prisma as any).user.update({
-      where: { id },
-      data: updateData,
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
+    // Handle role assignment if provided
+    const { roleIds, ...userUpdateData } = updateData;
+
+    // Update user with role assignments in a transaction
+    const user = await this.prisma.$transaction(async (tx) => {
+      // Update user data (excluding roleIds)
+      const updatedUser = await (tx as any).user.update({
+        where: { id },
+        data: userUpdateData,
+      });
+
+      // Handle role assignment if roleIds is provided
+      if (roleIds !== undefined) {
+        // Remove all existing role assignments
+        await tx.userRole.deleteMany({
+          where: { userId: id },
+        });
+
+        // Assign new roles if provided
+        if (roleIds && roleIds.length > 0) {
+          // Verify all roles exist
+          const existingRoles = await tx.role.findMany({
+            where: { id: { in: roleIds } },
+          });
+
+          if (existingRoles.length !== roleIds.length) {
+            throw new ConflictException('One or more roles not found');
+          }
+
+          // Create new user role assignments
+          await tx.userRole.createMany({
+            data: roleIds.map((roleId) => ({
+              userId: id,
+              roleId,
+            })),
+          });
+        }
+      }
+
+      // Return user with roles
+      return await (tx as any).user.findUnique({
+        where: { id },
+        include: {
+          userRoles: {
+            include: {
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                },
               },
             },
           },
         },
-      },
+      });
     });
 
     const { password, ...userWithoutPassword } = user;
@@ -213,7 +299,7 @@ export class UsersService {
         'update',
         updatedByUserId,
         user.id,
-        updateData,
+        { ...userUpdateData, roleIds },
         { action: 'user_updated' },
       );
     }

@@ -95,3 +95,4 @@ export { Toaster } from "./sonner";
 
 // Custom Components
 export { LoadingSpinner } from "./LoadingSpinner";
+export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
