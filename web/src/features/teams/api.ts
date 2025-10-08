@@ -1,14 +1,19 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauth } from "@/services/baseQuery";
+import { baseApi } from "@/app/api/baseApi";
 
 export interface Team {
   id: string;
   name: string;
-  description?: string;
-  type: string;
+  leadId?: string;
+  headId?: string;
+  managerId?: string;
   createdAt: string;
   updatedAt: string;
-  members: TeamMember[];
+  userTeams: TeamMember[];
+  projects: any[];
+  candidates: any[];
+  // Additional properties for display
+  description?: string;
+  type?: string;
 }
 
 export interface TeamMember {
@@ -26,14 +31,16 @@ export interface TeamMember {
 
 export interface CreateTeamRequest {
   name: string;
-  description?: string;
-  type: string;
+  leadId?: string;
+  headId?: string;
+  managerId?: string;
 }
 
 export interface UpdateTeamRequest {
   name?: string;
-  description?: string;
-  type?: string;
+  leadId?: string;
+  headId?: string;
+  managerId?: string;
 }
 
 export interface QueryTeamsRequest {
@@ -65,10 +72,7 @@ export interface TeamResponse {
   message: string;
 }
 
-export const teamsApi = createApi({
-  reducerPath: "teamsApi",
-  baseQuery: baseQueryWithReauth,
-  tagTypes: ["Team"],
+export const teamsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getTeams: builder.query<TeamsResponse, QueryTeamsRequest | void>({
       query: (params) => {

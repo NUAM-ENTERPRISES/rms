@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import { Candidate } from "@/features/candidates";
 
 // Types
 export interface Project {
@@ -13,6 +14,7 @@ export interface Project {
   clientId: string;
   creatorId: string;
   teamId: string | null;
+  countryCode: string | null;
   client: {
     id: string;
     name: string;
@@ -40,6 +42,7 @@ export interface RoleNeeded {
   maxExperience?: number;
   specificExperience?: string;
   educationRequirements?: string;
+  educationRequirementsList?: EducationRequirementWithDetails[];
   requiredCertifications?: string;
   institutionRequirements?: string;
   skills?: string;
@@ -56,6 +59,24 @@ export interface RoleNeeded {
   relocationAssistance: boolean;
   additionalRequirements?: string;
   notes?: string;
+}
+
+export interface EducationRequirement {
+  qualificationId: string;
+  mandatory: boolean;
+}
+
+export interface EducationRequirementWithDetails {
+  id: string;
+  qualificationId: string;
+  mandatory: boolean;
+  qualification: {
+    id: string;
+    name: string;
+    shortName: string;
+    level: string;
+    field: string;
+  };
 }
 
 export interface CandidateProject {
@@ -80,6 +101,7 @@ export interface CreateProjectRequest {
   deadline: string;
   clientId: string;
   teamId?: string;
+  countryCode?: string;
   rolesNeeded: CreateRoleNeededRequest[];
 }
 
@@ -192,6 +214,12 @@ export const projectsApi = baseApi.injectEndpoints({
       providesTags: ["ProjectStats"],
     }),
 
+    // Get eligible candidates for a project
+    getEligibleCandidates: builder.query<ApiResponse<Candidate[]>, string>({
+      query: (projectId) => `/projects/${projectId}/eligible-candidates`,
+      providesTags: ["Candidate"],
+    }),
+
     // Create new project
     createProject: builder.mutation<ApiResponse<Project>, CreateProjectRequest>(
       {
@@ -252,6 +280,7 @@ export const {
   useGetProjectsQuery,
   useGetProjectQuery,
   useGetProjectStatsQuery,
+  useGetEligibleCandidatesQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
   useDeleteProjectMutation,

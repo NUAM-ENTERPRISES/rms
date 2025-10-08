@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   Users,
   Building2,
   UserPlus,
@@ -48,6 +47,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCan } from "@/hooks/useCan";
+import { useGetTeamQuery } from "@/features/teams";
 
 interface TeamMember {
   id: string;
@@ -94,14 +94,16 @@ interface TeamCandidate {
 export default function TeamDetailPage() {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
-  const canManageTeams = useCan("manage:teams");
   const canWriteTeams = useCan("write:teams");
   const canReadTeams = useCan("read:teams");
 
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Mock data for demonstration (since backend data is not available yet)
-  const team = {
+  // API calls
+  const { data: teamData, isLoading, error } = useGetTeamQuery(teamId!);
+
+  // Use real data if available, otherwise fallback to mock data
+  const team = teamData?.data || {
     id: teamId!,
     name: "Healthcare Recruitment",
     description:
@@ -114,6 +116,51 @@ export default function TeamDetailPage() {
     headId: "2",
     managerId: "3",
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-7xl mx-auto">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-slate-800">
+                Loading Team...
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                Please wait while we load the team details.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-7xl mx-auto">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-slate-800">
+                Team Not Found
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                The team you're looking for doesn't exist or has been removed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center pb-6">
+              <Button onClick={() => navigate("/teams")}>
+                Go to Teams List
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const teamMembers: TeamMember[] = [
     {
@@ -453,7 +500,11 @@ export default function TeamDetailPage() {
               <div className="flex items-center gap-3">
                 {canWriteTeams && (
                   <>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/teams/${teamId}/edit`)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Team
                     </Button>
@@ -883,7 +934,9 @@ export default function TeamDetailPage() {
                             <div className="flex items-center gap-6 text-sm text-slate-500">
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4" />
-                                <span>{project.client.name}</span>
+                                <span>
+                                  {project.client?.name || "No client assigned"}
+                                </span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />

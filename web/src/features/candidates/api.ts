@@ -14,6 +14,7 @@ export interface Candidate {
   currentEmployer?: string;
   expectedSalary?: number;
   assignedTo?: string;
+  matchScore?: number;
   createdAt: string;
   updatedAt: string;
   recruiter?: {

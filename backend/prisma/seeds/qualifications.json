@@ -1,0 +1,434 @@
+[
+  {
+    "name": "Bachelor of Medicine, Bachelor of Surgery (MBBS)",
+    "shortName": "MBBS",
+    "level": "BACHELOR",
+    "field": "Medicine",
+    "program": "Bachelor of Medicine, Bachelor of Surgery",
+    "description": "Primary medical degree for practicing medicine"
+  },
+  {
+    "name": "Doctor of Medicine (MD)",
+    "shortName": "MD",
+    "level": "MASTER",
+    "field": "Medicine",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in various medical specialties"
+  },
+  {
+    "name": "Master of Surgery (MS)",
+    "shortName": "MS",
+    "level": "MASTER",
+    "field": "Surgery",
+    "program": "Master of Surgery",
+    "description": "Postgraduate surgical degree in various surgical specialties"
+  },
+  {
+    "name": "Doctor of Medicine - Cardiology (DM Cardiology)",
+    "shortName": "DM Cardiology",
+    "level": "DOCTORATE",
+    "field": "Cardiology",
+    "program": "Doctor of Medicine - Super Specialty",
+    "description": "Super-specialty doctorate in cardiology"
+  },
+  {
+    "name": "Doctor of Medicine - Neurology (DM Neurology)",
+    "shortName": "DM Neurology",
+    "level": "DOCTORATE",
+    "field": "Neurology",
+    "program": "Doctor of Medicine - Super Specialty",
+    "description": "Super-specialty doctorate in neurology"
+  },
+  {
+    "name": "Master of Chirurgiae - Neurosurgery (MCh Neurosurgery)",
+    "shortName": "MCh Neurosurgery",
+    "level": "DOCTORATE",
+    "field": "Neurosurgery",
+    "program": "Master of Chirurgiae - Super Specialty",
+    "description": "Super-specialty surgical degree in neurosurgery"
+  },
+  {
+    "name": "General Nursing and Midwifery (GNM)",
+    "shortName": "GNM",
+    "level": "DIPLOMA",
+    "field": "Nursing",
+    "program": "General Nursing and Midwifery",
+    "description": "Diploma in general nursing and midwifery"
+  },
+  {
+    "name": "Bachelor of Science in Nursing (BSc Nursing)",
+    "shortName": "BSc Nursing",
+    "level": "BACHELOR",
+    "field": "Nursing",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in nursing science"
+  },
+  {
+    "name": "Post Basic Bachelor of Science in Nursing (Post Basic BSc Nursing)",
+    "shortName": "Post Basic BSc Nursing",
+    "level": "BACHELOR",
+    "field": "Nursing",
+    "program": "Post Basic Bachelor of Science",
+    "description": "Bachelor's degree for diploma nurses"
+  },
+  {
+    "name": "Master of Science in Nursing (MSc Nursing)",
+    "shortName": "MSc Nursing",
+    "level": "MASTER",
+    "field": "Nursing",
+    "program": "Master of Science",
+    "description": "Master's degree in nursing with specialization"
+  },
+  {
+    "name": "Diploma in Critical Care Nursing",
+    "shortName": "Diploma Critical Care",
+    "level": "DIPLOMA",
+    "field": "Critical Care Nursing",
+    "program": "Diploma",
+    "description": "Specialized diploma in critical care nursing"
+  },
+  {
+    "name": "Diploma in Operating Room Nursing",
+    "shortName": "Diploma OR Nursing",
+    "level": "DIPLOMA",
+    "field": "Operating Room Nursing",
+    "program": "Diploma",
+    "description": "Specialized diploma in operating room nursing"
+  },
+  {
+    "name": "Diploma in Dialysis Nursing",
+    "shortName": "Diploma Dialysis",
+    "level": "DIPLOMA",
+    "field": "Dialysis Nursing",
+    "program": "Diploma",
+    "description": "Specialized diploma in dialysis nursing"
+  },
+  {
+    "name": "Diploma in Oncology Nursing",
+    "shortName": "Diploma Oncology",
+    "level": "DIPLOMA",
+    "field": "Oncology Nursing",
+    "program": "Diploma",
+    "description": "Specialized diploma in oncology nursing"
+  },
+  {
+    "name": "Diploma in NICU Nursing",
+    "shortName": "Diploma NICU",
+    "level": "DIPLOMA",
+    "field": "NICU Nursing",
+    "program": "Diploma",
+    "description": "Specialized diploma in neonatal intensive care nursing"
+  },
+  {
+    "name": "Diploma in PICU Nursing",
+    "shortName": "Diploma PICU",
+    "level": "DIPLOMA",
+    "field": "PICU Nursing",
+    "program": "Diploma",
+    "description": "Specialized diploma in pediatric intensive care nursing"
+  },
+  {
+    "name": "Bachelor of Pharmacy (B.Pharm)",
+    "shortName": "B.Pharm",
+    "level": "BACHELOR",
+    "field": "Pharmacy",
+    "program": "Bachelor of Pharmacy",
+    "description": "Bachelor's degree in pharmaceutical sciences"
+  },
+  {
+    "name": "Master of Pharmacy (M.Pharm)",
+    "shortName": "M.Pharm",
+    "level": "MASTER",
+    "field": "Pharmacy",
+    "program": "Master of Pharmacy",
+    "description": "Master's degree in pharmaceutical sciences"
+  },
+  {
+    "name": "Doctor of Pharmacy (Pharm.D)",
+    "shortName": "Pharm.D",
+    "level": "DOCTORATE",
+    "field": "Pharmacy",
+    "program": "Doctor of Pharmacy",
+    "description": "Professional doctorate in pharmacy practice"
+  },
+  {
+    "name": "Bachelor of Physiotherapy (BPT)",
+    "shortName": "BPT",
+    "level": "BACHELOR",
+    "field": "Physiotherapy",
+    "program": "Bachelor of Physiotherapy",
+    "description": "Bachelor's degree in physiotherapy"
+  },
+  {
+    "name": "Master of Physiotherapy (MPT)",
+    "shortName": "MPT",
+    "level": "MASTER",
+    "field": "Physiotherapy",
+    "program": "Master of Physiotherapy",
+    "description": "Master's degree in physiotherapy with specialization"
+  },
+  {
+    "name": "Bachelor of Science in Medical Laboratory Technology (BSc MLT)",
+    "shortName": "BSc MLT",
+    "level": "BACHELOR",
+    "field": "Medical Laboratory Technology",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in medical laboratory technology"
+  },
+  {
+    "name": "Diploma in Medical Laboratory Technology (DMLT)",
+    "shortName": "DMLT",
+    "level": "DIPLOMA",
+    "field": "Medical Laboratory Technology",
+    "program": "Diploma",
+    "description": "Diploma in medical laboratory technology"
+  },
+  {
+    "name": "Bachelor of Science in Radiography (BSc Radiography)",
+    "shortName": "BSc Radiography",
+    "level": "BACHELOR",
+    "field": "Radiography",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in radiography and medical imaging"
+  },
+  {
+    "name": "Diploma in Radiology Technology",
+    "shortName": "Diploma Radiology",
+    "level": "DIPLOMA",
+    "field": "Radiology Technology",
+    "program": "Diploma",
+    "description": "Diploma in radiology and imaging technology"
+  },
+  {
+    "name": "Bachelor of Science in Respiratory Therapy (BSc RT)",
+    "shortName": "BSc RT",
+    "level": "BACHELOR",
+    "field": "Respiratory Therapy",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in respiratory therapy"
+  },
+  {
+    "name": "Diploma in Respiratory Therapy",
+    "shortName": "Diploma RT",
+    "level": "DIPLOMA",
+    "field": "Respiratory Therapy",
+    "program": "Diploma",
+    "description": "Diploma in respiratory therapy"
+  },
+  {
+    "name": "Bachelor of Science in Dietetics and Nutrition (BSc Dietetics)",
+    "shortName": "BSc Dietetics",
+    "level": "BACHELOR",
+    "field": "Dietetics and Nutrition",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in dietetics and nutrition"
+  },
+  {
+    "name": "Master of Science in Dietetics and Nutrition (MSc Dietetics)",
+    "shortName": "MSc Dietetics",
+    "level": "MASTER",
+    "field": "Dietetics and Nutrition",
+    "program": "Master of Science",
+    "description": "Master's degree in dietetics and nutrition"
+  },
+  {
+    "name": "Bachelor of Optometry (B.Optom)",
+    "shortName": "B.Optom",
+    "level": "BACHELOR",
+    "field": "Optometry",
+    "program": "Bachelor of Optometry",
+    "description": "Bachelor's degree in optometry"
+  },
+  {
+    "name": "Master of Optometry (M.Optom)",
+    "shortName": "M.Optom",
+    "level": "MASTER",
+    "field": "Optometry",
+    "program": "Master of Optometry",
+    "description": "Master's degree in optometry"
+  },
+  {
+    "name": "Bachelor of Dental Surgery (BDS)",
+    "shortName": "BDS",
+    "level": "BACHELOR",
+    "field": "Dentistry",
+    "program": "Bachelor of Dental Surgery",
+    "description": "Bachelor's degree in dental surgery"
+  },
+  {
+    "name": "Master of Dental Surgery (MDS)",
+    "shortName": "MDS",
+    "level": "MASTER",
+    "field": "Dentistry",
+    "program": "Master of Dental Surgery",
+    "description": "Master's degree in dental surgery with specialization"
+  },
+  {
+    "name": "Certificate in Dental Assisting",
+    "shortName": "Dental Assistant Cert",
+    "level": "CERTIFICATE",
+    "field": "Dental Assisting",
+    "program": "Certificate",
+    "description": "Certificate program in dental assisting"
+  },
+  {
+    "name": "Diploma in Dental Hygiene",
+    "shortName": "Diploma Dental Hygiene",
+    "level": "DIPLOMA",
+    "field": "Dental Hygiene",
+    "program": "Diploma",
+    "description": "Diploma in dental hygiene"
+  },
+  {
+    "name": "Bachelor of Business Administration (BBA)",
+    "shortName": "BBA",
+    "level": "BACHELOR",
+    "field": "Business Administration",
+    "program": "Bachelor of Business Administration",
+    "description": "Bachelor's degree in business administration"
+  },
+  {
+    "name": "Master of Business Administration (MBA)",
+    "shortName": "MBA",
+    "level": "MASTER",
+    "field": "Business Administration",
+    "program": "Master of Business Administration",
+    "description": "Master's degree in business administration"
+  },
+  {
+    "name": "Master of Business Administration - Healthcare Management (MBA Healthcare)",
+    "shortName": "MBA Healthcare",
+    "level": "MASTER",
+    "field": "Healthcare Management",
+    "program": "Master of Business Administration",
+    "description": "MBA with specialization in healthcare management"
+  },
+  {
+    "name": "Master of Business Administration - Human Resources (MBA HR)",
+    "shortName": "MBA HR",
+    "level": "MASTER",
+    "field": "Human Resources",
+    "program": "Master of Business Administration",
+    "description": "MBA with specialization in human resources"
+  },
+  {
+    "name": "Bachelor of Commerce (B.Com)",
+    "shortName": "B.Com",
+    "level": "BACHELOR",
+    "field": "Commerce",
+    "program": "Bachelor of Commerce",
+    "description": "Bachelor's degree in commerce"
+  },
+  {
+    "name": "Master of Commerce (M.Com)",
+    "shortName": "M.Com",
+    "level": "MASTER",
+    "field": "Commerce",
+    "program": "Master of Commerce",
+    "description": "Master's degree in commerce"
+  },
+  {
+    "name": "Chartered Accountant (CA)",
+    "shortName": "CA",
+    "level": "BACHELOR",
+    "field": "Accounting",
+    "program": "Professional Qualification",
+    "description": "Professional qualification in accounting and auditing"
+  },
+  {
+    "name": "Certified Public Accountant (CPA)",
+    "shortName": "CPA",
+    "level": "BACHELOR",
+    "field": "Accounting",
+    "program": "Professional Qualification",
+    "description": "Professional qualification in public accounting"
+  },
+  {
+    "name": "Bachelor of Technology - Computer Science (B.Tech CSE)",
+    "shortName": "B.Tech CSE",
+    "level": "BACHELOR",
+    "field": "Computer Science",
+    "program": "Bachelor of Technology",
+    "description": "Bachelor's degree in computer science and engineering"
+  },
+  {
+    "name": "Bachelor of Technology - Information Technology (B.Tech IT)",
+    "shortName": "B.Tech IT",
+    "level": "BACHELOR",
+    "field": "Information Technology",
+    "program": "Bachelor of Technology",
+    "description": "Bachelor's degree in information technology"
+  },
+  {
+    "name": "Master of Technology - Computer Science (M.Tech CSE)",
+    "shortName": "M.Tech CSE",
+    "level": "MASTER",
+    "field": "Computer Science",
+    "program": "Master of Technology",
+    "description": "Master's degree in computer science and engineering"
+  },
+  {
+    "name": "Master of Computer Applications (MCA)",
+    "shortName": "MCA",
+    "level": "MASTER",
+    "field": "Computer Applications",
+    "program": "Master of Computer Applications",
+    "description": "Master's degree in computer applications"
+  },
+  {
+    "name": "Certificate in Medical Billing and Coding",
+    "shortName": "Medical Billing Cert",
+    "level": "CERTIFICATE",
+    "field": "Medical Billing",
+    "program": "Certificate",
+    "description": "Certificate program in medical billing and coding"
+  },
+  {
+    "name": "Certificate in Health Information Management",
+    "shortName": "HIM Certificate",
+    "level": "CERTIFICATE",
+    "field": "Health Information Management",
+    "program": "Certificate",
+    "description": "Certificate program in health information management"
+  },
+  {
+    "name": "Certificate in Healthcare Administration",
+    "shortName": "Healthcare Admin Cert",
+    "level": "CERTIFICATE",
+    "field": "Healthcare Administration",
+    "program": "Certificate",
+    "description": "Certificate program in healthcare administration"
+  },
+  {
+    "name": "Diploma in Hospital Administration",
+    "shortName": "Diploma Hospital Admin",
+    "level": "DIPLOMA",
+    "field": "Hospital Administration",
+    "program": "Diploma",
+    "description": "Diploma in hospital administration and management"
+  },
+  {
+    "name": "Bachelor of Science in Health Information Management (BSc HIM)",
+    "shortName": "BSc HIM",
+    "level": "BACHELOR",
+    "field": "Health Information Management",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in health information management"
+  },
+  {
+    "name": "Master of Health Administration (MHA)",
+    "shortName": "MHA",
+    "level": "MASTER",
+    "field": "Health Administration",
+    "program": "Master of Health Administration",
+    "description": "Master's degree in health administration"
+  },
+  {
+    "name": "Master of Public Health (MPH)",
+    "shortName": "MPH",
+    "level": "MASTER",
+    "field": "Public Health",
+    "program": "Master of Public Health",
+    "description": "Master's degree in public health"
+  }
+]

@@ -236,7 +236,9 @@ export default function CandidateNominationPage() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{project.client.name}</span>
+                  <span className="text-sm">
+                    {project.client?.name || "No client assigned"}
+                  </span>
                 </div>
               </div>
               <div className="space-y-2">

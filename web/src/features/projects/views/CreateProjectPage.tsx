@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { toast } from "sonner";
 import {
   Card,
@@ -23,80 +22,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { CountrySelect, DatePicker } from "@/components/molecules";
+import { FlagWithName } from "@/shared";
+import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
+import { Plus, X, Building2, Target, CheckCircle } from "lucide-react";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  ArrowLeft,
-  Plus,
-  X,
-  Calendar,
-  Building2,
-  Users,
-  Target,
-  Clock,
-  DollarSign,
-  GraduationCap,
-  Shield,
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  Star,
-} from "lucide-react";
-import { useCreateProjectMutation } from "@/features/projects";
+  useCreateProjectMutation,
+  ProjectQualificationSelect,
+  type EducationRequirement,
+} from "@/features/projects";
 import { useGetClientsQuery } from "@/features/clients";
-import { useGetTeamsQuery } from "@/features/teams";
+import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { useCan } from "@/hooks/useCan";
-import { cn } from "@/lib/utils";
-
-// Zod schema for form validation
-const createProjectSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  description: z.string().optional(),
-  clientId: z.string().min(1, "Client is required"),
-  teamId: z.string().optional(),
-  deadline: z.string().min(1, "Deadline is required"),
-  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-  rolesNeeded: z
-    .array(
-      z.object({
-        designation: z.string().min(1, "Designation is required"),
-        quantity: z.number().min(1, "Quantity must be at least 1"),
-        priority: z
-          .enum(["low", "medium", "high", "urgent"])
-          .optional()
-          .default("medium"),
-        minExperience: z.number().min(0).optional(),
-        maxExperience: z.number().min(0).optional(),
-        specificExperience: z.string().optional(),
-        educationRequirements: z.string().optional(),
-        requiredCertifications: z.string().optional(),
-        institutionRequirements: z.string().optional(),
-        skills: z.string().optional(),
-        technicalSkills: z.string().optional(),
-        languageRequirements: z.string().optional(),
-        licenseRequirements: z.string().optional(),
-        salaryRange: z.string().optional(),
-        benefits: z.string().optional(),
-        backgroundCheckRequired: z.boolean().default(true),
-        drugScreeningRequired: z.boolean().default(true),
-        shiftType: z.enum(["day", "night", "rotating", "flexible"]).optional(),
-        onCallRequired: z.boolean().default(false),
-        physicalDemands: z.string().optional(),
-        relocationAssistance: z.boolean().default(false),
-        additionalRequirements: z.string().optional(),
-        notes: z.string().optional(),
-      })
-    )
-    .min(1, "At least one role is required"),
-});
-
-type CreateProjectFormData = z.infer<typeof createProjectSchema>;
+import {
+  projectFormSchema,
+  defaultProjectValues,
+  type ProjectFormData,
+} from "../schemas/project-schemas";
 
 export default function CreateProjectPage() {
   const navigate = useNavigate();
@@ -104,8 +46,17 @@ export default function CreateProjectPage() {
 
   // RTK Query hooks
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
-  const { data: clientsData, isLoading: clientsLoading } = useGetClientsQuery();
-  const { data: teamsData, isLoading: teamsLoading } = useGetTeamsQuery();
+  const { data: clientsData } = useGetClientsQuery();
+  const { data: qualificationsData } = useGetQualificationsQuery({});
+  const { getCountryName } = useCountryValidation();
+
+  // Helper function to get qualification name by ID
+  const getQualificationName = (qualificationId: string) => {
+    const qualification = qualificationsData?.data?.qualifications?.find(
+      (q: any) => q.id === qualificationId
+    );
+    return qualification?.name || `Qualification ${qualificationId}`;
+  };
 
   // Form setup
   const {
@@ -114,32 +65,16 @@ export default function CreateProjectPage() {
     formState: { errors, isValid },
     watch,
     setValue,
-    reset,
-  } = useForm<CreateProjectFormData>({
-    resolver: zodResolver(createProjectSchema),
-    defaultValues: {
-      priority: "medium",
-      rolesNeeded: [
-        {
-          designation: "",
-          quantity: 1,
-          priority: "medium",
-          backgroundCheckRequired: true,
-          drugScreeningRequired: true,
-          onCallRequired: false,
-          relocationAssistance: false,
-        },
-      ],
-    },
+  } = useForm<ProjectFormData>({
+    resolver: zodResolver(projectFormSchema),
+    defaultValues: defaultProjectValues,
   });
 
   const watchedRoles = watch("rolesNeeded");
 
   // State for preview modal
   const [showPreview, setShowPreview] = useState(false);
-  const [previewData, setPreviewData] = useState<CreateProjectFormData | null>(
-    null
-  );
+  const [previewData, setPreviewData] = useState<any>(null);
 
   // Handle preview submission
   const handlePreviewSubmit = async () => {
@@ -149,40 +84,45 @@ export default function CreateProjectPage() {
       // Transform the data for backend
       const transformedData = {
         ...previewData,
-        rolesNeeded: previewData.rolesNeeded.map((role) => ({
+        deadline:
+          previewData.deadline instanceof Date
+            ? previewData.deadline.toISOString()
+            : previewData.deadline,
+        rolesNeeded: previewData.rolesNeeded.map((role: any) => ({
           ...role,
           // Convert string arrays to JSON strings if needed
           specificExperience: role.specificExperience
             ? JSON.stringify(
-                role.specificExperience.split(",").map((s) => s.trim())
-              )
-            : undefined,
-          educationRequirements: role.educationRequirements
-            ? JSON.stringify(
-                role.educationRequirements.split(",").map((s) => s.trim())
+                role.specificExperience.split(",").map((s: string) => s.trim())
               )
             : undefined,
           requiredCertifications: role.requiredCertifications
             ? JSON.stringify(
-                role.requiredCertifications.split(",").map((s) => s.trim())
+                role.requiredCertifications
+                  .split(",")
+                  .map((s: string) => s.trim())
               )
             : undefined,
           skills: role.skills
-            ? JSON.stringify(role.skills.split(",").map((s) => s.trim()))
+            ? JSON.stringify(
+                role.skills.split(",").map((s: string) => s.trim())
+              )
             : undefined,
           technicalSkills: role.technicalSkills
             ? JSON.stringify(
-                role.technicalSkills.split(",").map((s) => s.trim())
+                role.technicalSkills.split(",").map((s: string) => s.trim())
               )
             : undefined,
           languageRequirements: role.languageRequirements
             ? JSON.stringify(
-                role.languageRequirements.split(",").map((s) => s.trim())
+                role.languageRequirements
+                  .split(",")
+                  .map((s: string) => s.trim())
               )
             : undefined,
           licenseRequirements: role.licenseRequirements
             ? JSON.stringify(
-                role.licenseRequirements.split(",").map((s) => s.trim())
+                role.licenseRequirements.split(",").map((s: string) => s.trim())
               )
             : undefined,
           institutionRequirements: role.institutionRequirements
@@ -204,7 +144,13 @@ export default function CreateProjectPage() {
   };
 
   // Handle form submission - show preview instead of direct submission
-  const onSubmit = (data: CreateProjectFormData) => {
+  const onSubmit = (data: any) => {
+    // Validate deadline is in the future for new projects
+    if (data.deadline && data.deadline <= new Date()) {
+      toast.error("Deadline must be in the future for new projects");
+      return;
+    }
+
     setPreviewData(data);
     setShowPreview(true);
   };
@@ -307,83 +253,7 @@ export default function CreateProjectPage() {
                   )}
                 </div>
 
-                {/* Client Selection */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="clientId"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Client *
-                  </Label>
-                  <Controller
-                    name="clientId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select a client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clientsData?.data?.clients?.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-slate-400" />
-                                {client.name}
-                                <Badge variant="outline" className="text-xs">
-                                  {client.type}
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.clientId && (
-                    <p className="text-sm text-red-600">
-                      {errors.clientId.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Team Assignment */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="teamId"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Assigned Team
-                  </Label>
-                  <Controller
-                    name="teamId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select a team (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teamsData?.data?.teams?.map((team) => (
-                            <SelectItem key={team.id} value={team.id}>
-                              <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-slate-400" />
-                                {team.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-
-                {/* Deadline */}
+                {/* Project Deadline */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="deadline"
@@ -395,10 +265,10 @@ export default function CreateProjectPage() {
                     name="deadline"
                     control={control}
                     render={({ field }) => (
-                      <Input
-                        {...field}
-                        type="datetime-local"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                      <DatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select project deadline"
                       />
                     )}
                   />
@@ -409,7 +279,7 @@ export default function CreateProjectPage() {
                   )}
                 </div>
 
-                {/* Priority */}
+                {/* Project Priority */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="priority"
@@ -455,6 +325,67 @@ export default function CreateProjectPage() {
                           </SelectItem>
                         </SelectContent>
                       </Select>
+                    )}
+                  />
+                </div>
+
+                {/* Client Selection */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="clientId"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Client
+                  </Label>
+                  <Controller
+                    name="clientId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                          <SelectValue placeholder="Select a client (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clientsData?.data?.clients?.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-slate-400" />
+                                {client.name}
+                                <Badge variant="outline" className="text-xs">
+                                  {client.type}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.clientId && (
+                    <p className="text-sm text-red-600">
+                      {errors.clientId.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Country */}
+                <div className="space-y-2">
+                  <Controller
+                    name="countryCode"
+                    control={control}
+                    render={({ field }) => (
+                      <CountrySelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        label="Project Country"
+                        placeholder="Select project country (optional)"
+                        allowEmpty={true}
+                        groupByRegion={true}
+                        error={errors.countryCode?.message}
+                      />
                     )}
                   />
                 </div>
@@ -674,17 +605,16 @@ export default function CreateProjectPage() {
                       <Label className="text-sm font-medium text-slate-700">
                         Education Requirements
                       </Label>
-                      <Input
-                        value={role.educationRequirements || ""}
-                        onChange={(e) =>
+                      <ProjectQualificationSelect
+                        countryCode={watch("countryCode") || undefined}
+                        value={role.educationRequirementsList || []}
+                        onChange={(requirements: EducationRequirement[]) =>
                           updateRole(
                             index,
-                            "educationRequirements",
-                            e.target.value
+                            "educationRequirementsList",
+                            requirements
                           )
                         }
-                        placeholder="e.g., BSN, MSN"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
 
@@ -702,24 +632,6 @@ export default function CreateProjectPage() {
                           )
                         }
                         placeholder="e.g., RN, BLS, ACLS"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
-                        Language Requirements
-                      </Label>
-                      <Input
-                        value={role.languageRequirements || ""}
-                        onChange={(e) =>
-                          updateRole(
-                            index,
-                            "languageRequirements",
-                            e.target.value
-                          )
-                        }
-                        placeholder="e.g., English, Spanish, French"
                         className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
@@ -957,25 +869,37 @@ export default function CreateProjectPage() {
                   <div>
                     <p className="text-sm text-slate-600">Deadline</p>
                     <p className="font-medium text-slate-800">
-                      {new Date(previewData.deadline).toLocaleDateString(
-                        "en-GB",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        }
-                      )}
+                      {previewData.deadline instanceof Date
+                        ? previewData.deadline.toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : new Date(previewData.deadline).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600">Team</p>
-                    <p className="font-medium text-slate-800">
-                      {previewData.teamId
-                        ? teamsData?.data?.teams?.find(
-                            (t: any) => t.id === previewData.teamId
-                          )?.name || "N/A"
-                        : "Not assigned"}
-                    </p>
+                    <p className="text-sm text-slate-600">Country</p>
+                    <div className="font-medium text-slate-800">
+                      {previewData.countryCode ? (
+                        <FlagWithName
+                          countryCode={previewData.countryCode}
+                          countryName={
+                            getCountryName(previewData.countryCode) || ""
+                          }
+                          size="sm"
+                        />
+                      ) : (
+                        "Not specified"
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="text-sm text-slate-600">Priority</p>
@@ -999,7 +923,7 @@ export default function CreateProjectPage() {
                   Roles Required ({previewData.rolesNeeded.length})
                 </h3>
                 <div className="space-y-3">
-                  {previewData.rolesNeeded.map((role, index) => (
+                  {previewData.rolesNeeded.map((role: any, index: number) => (
                     <div
                       key={index}
                       className="bg-white rounded-lg p-3 border border-slate-200"
@@ -1031,6 +955,22 @@ export default function CreateProjectPage() {
                           <span>✓ Drug Screening</span>
                         )}
                       </div>
+                      {/* Education Requirements */}
+                      {role.educationRequirementsList &&
+                        role.educationRequirementsList.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-slate-100">
+                            <p className="text-xs font-medium text-slate-600 mb-1">
+                              Education Requirements:
+                            </p>
+                            <div className="text-xs text-slate-500">
+                              {role.educationRequirementsList
+                                .map((req: any) =>
+                                  getQualificationName(req.qualificationId)
+                                )
+                                .join(", ")}
+                            </div>
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>

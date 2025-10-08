@@ -14,6 +14,9 @@ import { ProjectsModule } from './projects/projects.module';
 import { CandidatesModule } from './candidates/candidates.module';
 import { TeamsModule } from './teams/teams.module';
 import { DocumentsModule } from './documents/documents.module';
+import { CountriesModule } from './countries/countries.module';
+import { RoleCatalogModule } from './role-catalog/role-catalog.module';
+import { QualificationsModule } from './qualifications/qualifications.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 
@@ -31,6 +34,9 @@ import { AuditInterceptor } from './common/audit/audit.interceptor';
     CandidatesModule,
     TeamsModule,
     DocumentsModule,
+    CountriesModule,
+    RoleCatalogModule,
+    QualificationsModule,
     AuditModule,
   ],
   controllers: [AppController],

@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
-  Filter,
   Building2,
   Users,
   TrendingUp,
@@ -12,11 +11,7 @@ import {
   Phone,
   Mail,
   Briefcase,
-  Star,
   MoreHorizontal,
-  Edit,
-  Trash2,
-  Eye,
   Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,12 +37,10 @@ import {
   useDeleteClientMutation,
 } from "@/features/clients";
 import { useCan } from "@/hooks/useCan";
-import { Client } from "@/features/clients";
 import { cn } from "@/lib/utils";
 
 export default function ClientsPage() {
   const navigate = useNavigate();
-  const canManageClients = useCan("manage:clients");
   const canWriteClients = useCan("write:clients");
   const canReadClients = useCan("read:clients");
 
@@ -58,11 +51,6 @@ export default function ClientsPage() {
     page: 1,
     limit: 12,
   });
-
-  // Handle type filter
-  const handleTypeFilter = (value: string) => {
-    setFilters((prev) => ({ ...prev, type: value, page: 1 }));
-  };
 
   // Handle pagination
   const handlePageChange = (page: number) => {
@@ -118,17 +106,6 @@ export default function ClientsPage() {
       color: "bg-orange-100 text-orange-800",
     },
   ];
-
-  // Handle client deletion
-  const handleDeleteClient = async (clientId: string, clientName: string) => {
-    try {
-      await deleteClient(clientId).unwrap();
-      toast.success(`Client "${clientName}" deleted successfully`);
-      refetch();
-    } catch (error) {
-      toast.error("Failed to delete client");
-    }
-  };
 
   // Get client type display info
   const getClientTypeInfo = (type: string) => {
@@ -255,7 +232,10 @@ export default function ClientsPage() {
 
                 {/* Add New Client Button */}
                 {canWriteClients && (
-                  <Button className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm">
+                  <Button
+                    onClick={() => navigate("/clients/create")}
+                    className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
+                  >
                     <Plus className="h-3 w-3" />
                     Add New Client
                   </Button>
@@ -439,7 +419,10 @@ export default function ClientsPage() {
                   {!filters.search &&
                     filters.type === "all" &&
                     canWriteClients && (
-                      <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+                      <Button
+                        onClick={() => navigate("/clients/create")}
+                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                      >
                         <Plus className="mr-2 h-4 w-4" />
                         Add Your First Client
                       </Button>

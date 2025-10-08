@@ -11,6 +11,7 @@ import {
   IsJSON,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { EducationRequirementDto } from './education-requirement.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoleNeededDto {
@@ -68,12 +69,12 @@ export class CreateRoleNeededDto {
   specificExperience?: string;
 
   @ApiPropertyOptional({
-    description: 'Educational requirements',
-    example: '["BSN", "MSN"]',
+    description: 'Normalized education requirements with qualification IDs',
+    type: [EducationRequirementDto],
   })
   @IsOptional()
-  @IsJSON()
-  educationRequirements?: string;
+  @Type(() => EducationRequirementDto)
+  educationRequirementsList?: EducationRequirementDto[];
 
   @ApiPropertyOptional({
     description: 'Required certifications',
@@ -201,12 +202,13 @@ export class CreateRoleNeededDto {
 }
 
 export class CreateProjectDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Client ID for the project',
     example: 'client123',
   })
+  @IsOptional()
   @IsString()
-  clientId: string;
+  clientId?: string;
 
   @ApiProperty({
     description: 'Project title',
@@ -257,6 +259,16 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   teamId?: string;
+
+  @ApiPropertyOptional({
+    description: 'ISO-2 country code for the project location',
+    example: 'US',
+    minLength: 2,
+    maxLength: 2,
+  })
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
 
   @ApiPropertyOptional({
     description: 'Roles needed for this project',

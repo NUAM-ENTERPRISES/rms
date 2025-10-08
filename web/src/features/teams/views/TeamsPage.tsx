@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
+import { useGetTeamsQuery, useDeleteTeamMutation } from "@/features/teams";
 
 interface Team {
   id: string;
@@ -75,8 +76,24 @@ export default function TeamsPage() {
     limit: 12,
   });
 
-  // Mock data for demonstration
-  const teams: Team[] = [
+  // API calls
+  const {
+    data: teamsData,
+    isLoading,
+    error,
+  } = useGetTeamsQuery({
+    page: filters.page,
+    limit: filters.limit,
+    search: filters.search || undefined,
+  });
+
+  const [deleteTeam, { isLoading: isDeleting }] = useDeleteTeamMutation();
+
+  // Use real data if available, otherwise fallback to mock data
+  const teams = teamsData?.data?.teams || [];
+
+  // Mock data for demonstration (fallback)
+  const mockTeams: Team[] = [
     {
       id: "1",
       name: "Healthcare Recruitment",
@@ -159,15 +176,30 @@ export default function TeamsPage() {
     setFilters((prev) => ({ ...prev, search: value, page: 1 }));
   };
 
-  // Filter teams based on search
+  // Handle delete team
+  const handleDeleteTeam = async (teamId: string) => {
+    try {
+      await deleteTeam(teamId).unwrap();
+      toast.success("Team deleted successfully");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to delete team");
+    }
+  };
+
+  // Filter teams based on search (only for mock data, real API handles filtering)
   const filteredTeams = useMemo(() => {
+    if (teamsData?.data?.teams) {
+      // Real API data is already filtered by backend
+      return teams;
+    }
+
     if (!filters.search) return teams;
     return teams.filter(
       (team) =>
         team.name.toLowerCase().includes(filters.search.toLowerCase()) ||
         team.description?.toLowerCase().includes(filters.search.toLowerCase())
     );
-  }, [teams, filters.search]);
+  }, [teams, filters.search, teamsData]);
 
   // Format date - following FE guidelines: DD MMM YYYY
   const formatDate = (dateString?: string) => {
@@ -250,7 +282,10 @@ export default function TeamsPage() {
               <div className="flex flex-col lg:flex-row gap-4">
                 {/* Add New Team Button */}
                 {canWriteTeams && (
-                  <Button className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm">
+                  <Button
+                    onClick={() => navigate("/teams/create")}
+                    className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
+                  >
                     <Plus className="h-3 w-3" />
                     Create New Team
                   </Button>

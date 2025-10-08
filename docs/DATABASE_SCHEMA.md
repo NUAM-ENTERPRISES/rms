@@ -1,7 +1,7 @@
 # 🗄️ **Affiniks RMS - Database Schema Documentation**
 
-> **Last Updated**: September 30, 2025  
-> **Version**: 2.0.0  
+> **Last Updated**: October 5, 2025  
+> **Version**: 2.0.1  
 > **Database**: PostgreSQL  
 > **ORM**: Prisma
 
@@ -1053,14 +1053,14 @@ erDiagram
 | **Client Management**        | 1          | ~500        | ~250KB    |
 | **Project Management**       | 2          | ~200        | ~100KB    |
 | **Candidate Management**     | 1          | ~2000       | ~1MB      |
-| **Document Management**      | 1          | ~5000       | ~5MB      |
+| **Document Management**      | 3          | ~5000       | ~5MB      |
 | **Interview Management**     | 1          | ~1000       | ~500KB    |
 | **Processing Management**    | 1          | ~500        | ~250KB    |
 | **Notification Management**  | 1          | ~1000       | ~500KB    |
 | **Certification Management** | 1          | ~500        | ~250KB    |
 | **Talent Pool Management**   | 1          | ~200        | ~100KB    |
 | **Audit Management**         | 1          | ~10000      | ~5MB      |
-| **TOTAL**                    | **18**     | **~20,000** | **~13MB** |
+| **TOTAL**                    | **22**     | **~20,000** | **~13MB** |
 
 ---
 
@@ -1089,13 +1089,16 @@ erDiagram
 
 ## 📝 **Migration History**
 
-| **Migration**                                      | **Date**     | **Description**                   |
-| -------------------------------------------------- | ------------ | --------------------------------- |
-| `20250817154040_init`                              | Aug 17, 2024 | Initial schema creation           |
-| `20250824171648_rbac_normalized_models`            | Aug 24, 2024 | RBAC normalization                |
-| `20250824195033_add_refresh_tokens_and_indexes`    | Aug 24, 2024 | Refresh tokens and indexes        |
-| `20250824200742_update_refresh_token_architecture` | Aug 24, 2024 | Refresh token architecture update |
-| `20250826142031_enhance_client_model`              | Aug 26, 2024 | Enhanced client model with types  |
+| **Migration**                                      | **Date**     | **Description**                     |
+| -------------------------------------------------- | ------------ | ----------------------------------- |
+| `20250817154040_init`                              | Aug 17, 2024 | Initial schema creation             |
+| `20250824171648_rbac_normalized_models`            | Aug 24, 2024 | RBAC normalization                  |
+| `20250824195033_add_refresh_tokens_and_indexes`    | Aug 24, 2024 | Refresh tokens and indexes          |
+| `20250824200742_update_refresh_token_architecture` | Aug 24, 2024 | Refresh token architecture update   |
+| `20250826142031_enhance_client_model`              | Aug 26, 2024 | Enhanced client model with types    |
+| `20250826182009_enhance_role_needed_model`         | Aug 26, 2024 | Enhanced role needed model          |
+| `20250827002717_add_project_priority`              | Aug 27, 2024 | Added project priority field        |
+| `20250930063011_document_verification_workflow`    | Sep 30, 2024 | Document verification workflow v2.0 |
 
 ---
 

@@ -13,9 +13,6 @@ export class ClientsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createClientDto: CreateClientDto, createdBy: string) {
-    // Validate type-specific required fields
-    this.validateClientData(createClientDto);
-
     const createData: any = { ...createClientDto };
 
     // Handle JSON fields
@@ -158,11 +155,6 @@ export class ClientsService {
       throw new NotFoundException('Client not found');
     }
 
-    // Validate type-specific required fields if type is being updated
-    if (updateClientDto.type) {
-      this.validateClientData(updateClientDto);
-    }
-
     const updateData: any = { ...updateClientDto };
 
     // Handle date fields
@@ -262,43 +254,5 @@ export class ClientsService {
       },
       message: 'Client statistics retrieved successfully',
     };
-  }
-
-  private validateClientData(clientData: CreateClientDto | UpdateClientDto) {
-    const { type, ...rest } = clientData;
-
-    switch (type) {
-      case 'INDIVIDUAL':
-        if (!rest.profession || !rest.organization) {
-          throw new BadRequestException(
-            'Individual referrers must have profession and organization',
-          );
-        }
-        break;
-
-      case 'SUB_AGENCY':
-        if (!rest.agencyType) {
-          throw new BadRequestException(
-            'Sub-agencies must have an agency type',
-          );
-        }
-        break;
-
-      case 'HEALTHCARE_ORGANIZATION':
-        if (!rest.facilityType || !rest.facilitySize) {
-          throw new BadRequestException(
-            'Healthcare organizations must have facility type and size',
-          );
-        }
-        break;
-
-      case 'EXTERNAL_SOURCE':
-        if (!rest.sourceType || !rest.sourceName) {
-          throw new BadRequestException(
-            'External sources must have source type and name',
-          );
-        }
-        break;
-    }
   }
 }

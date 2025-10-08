@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import {
-  ArrowLeft,
   Edit,
   Trash2,
   Calendar,
@@ -20,26 +19,13 @@ import {
   Users,
   Target,
   Clock,
-  DollarSign,
-  GraduationCap,
-  Shield,
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  Star,
   Phone,
   Mail,
   MapPin,
-  ExternalLink,
   UserCheck,
-  TrendingUp,
   AlertTriangle,
   Info,
-  X,
-  Plus,
-  Minus,
   Search,
-  Filter,
   MoreHorizontal,
   Eye,
   UserPlus,
@@ -49,9 +35,10 @@ import {
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
+  useGetEligibleCandidatesQuery,
 } from "@/features/projects";
 import { useCan } from "@/hooks/useCan";
-import { cn } from "@/lib/utils";
+import { ProjectCountryCell } from "@/components/molecules/domain";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -65,7 +52,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -103,162 +89,71 @@ const formatDateTime = (dateString?: string) => {
 };
 
 // Priority badge component
-const PriorityBadge = ({ priority }: { priority: string }) => {
-  const priorityConfig = {
-    low: {
-      color: "bg-green-100 text-green-800 border-green-200",
-      icon: CheckCircle,
-    },
-    medium: {
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      icon: AlertTriangle,
-    },
-    high: {
-      color: "bg-orange-100 text-orange-800 border-orange-200",
-      icon: AlertCircle,
-    },
-    urgent: {
-      color: "bg-red-100 text-red-800 border-red-200",
-      icon: AlertTriangle,
-    },
-  };
-
-  const config =
-    priorityConfig[priority as keyof typeof priorityConfig] ||
-    priorityConfig.medium;
-  const Icon = config.icon;
-
-  return (
-    <Badge className={`${config.color} border gap-1 px-2 py-1`}>
-      <Icon className="h-3 w-3" />
-      {priority.charAt(0).toUpperCase() + priority.slice(1)}
-    </Badge>
-  );
-};
+// Unused component - keeping for future use
+// const PriorityBadge = ({ priority }: { priority: string }) => {
+// Commented out unused component
+//   const priorityConfig = {
+//     low: {
+//       color: "bg-green-100 text-green-800 border-green-200",
+//       icon: CheckCircle,
+//     },
+//     medium: {
+//       color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+//       icon: AlertTriangle,
+//     },
+//     high: {
+//       color: "bg-orange-100 text-orange-800 border-orange-200",
+//       icon: AlertCircle,
+//     },
+//     urgent: {
+//       color: "bg-red-100 text-red-800 border-red-200",
+//       icon: AlertTriangle,
+//     },
+//   };
+//   const config =
+//     priorityConfig[priority as keyof typeof priorityConfig] ||
+//     priorityConfig.medium;
+//   const Icon = config.icon;
+//   return (
+//     <Badge className={`${config.color} border gap-1 px-2 py-1`}>
+//       <Icon className="h-3 w-3" />
+//       {priority.charAt(0).toUpperCase() + priority.slice(1)}
+//     </Badge>
+//   );
+// };
 
 // Status badge component
-const StatusBadge = ({ status }: { status: string }) => {
-  const statusConfig = {
-    active: {
-      color: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      icon: CheckCircle,
-    },
-    completed: {
-      color: "bg-blue-100 text-blue-800 border-blue-200",
-      icon: CheckCircle,
-    },
-    cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: X },
-    pending: {
-      color: "bg-amber-100 text-amber-800 border-amber-200",
-      icon: Clock,
-    },
-  };
+// Unused component - keeping for future use
+// const StatusBadge = ({ status }: { status: string }) => {
+// Commented out unused component
+//   const statusConfig = {
+//     active: {
+//       color: "bg-emerald-100 text-emerald-800 border-emerald-200",
+//       icon: CheckCircle,
+//     },
+//     completed: {
+//       color: "bg-blue-100 text-blue-800 border-blue-200",
+//       icon: CheckCircle,
+//     },
+//     cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: X },
+//     pending: {
+//       color: "bg-amber-100 text-amber-800 border-amber-200",
+//       icon: Clock,
+//     },
+//   };
+//   const config =
+//     statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
+//   const Icon = config.icon;
+//   return (
+//     <Badge className={`${config.color} border gap-1 px-2 py-1`}>
+//       <Icon className="h-3 w-3" />
+//       {status.charAt(0).toUpperCase() + status.slice(1)}
+//     </Badge>
+//   );
+// };
 
-  const config =
-    statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
-  const Icon = config.icon;
-
-  return (
-    <Badge className={`${config.color} border gap-1 px-2 py-1`}>
-      <Icon className="h-3 w-3" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </Badge>
-  );
-};
-
-// Mock data for candidates
-const mockAssignedCandidates = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    currentRole: "ICU Nurse",
-    experience: 5,
-    skills: ["Nursing", "ICU", "Emergency Care"],
-    matchScore: 95,
-    assignedDate: "2024-11-20T10:00:00Z",
-    status: "active",
-    assignedRole: "ICU Specialist",
-  },
-  {
-    id: "2",
-    name: "Michael Chen",
-    email: "michael.chen@email.com",
-    phone: "+1 (555) 234-5678",
-    currentRole: "Pediatric Nurse",
-    experience: 3,
-    skills: ["Nursing", "Pediatrics", "Patient Care"],
-    matchScore: 88,
-    assignedDate: "2024-11-22T14:00:00Z",
-    status: "active",
-    assignedRole: "Pediatric Nurse",
-  },
-  {
-    id: "3",
-    name: "Emily Rodriguez",
-    email: "emily.rodriguez@email.com",
-    phone: "+1 (555) 345-6789",
-    currentRole: "Emergency Nurse",
-    experience: 4,
-    skills: ["Nursing", "Emergency Care", "Trauma"],
-    matchScore: 92,
-    assignedDate: "2024-11-25T09:00:00Z",
-    status: "active",
-    assignedRole: "Emergency Department Nurse",
-  },
-];
-
-const mockAvailableCandidates = [
-  {
-    id: "4",
-    name: "David Kim",
-    email: "david.kim@email.com",
-    phone: "+1 (555) 456-7890",
-    currentRole: "ICU Specialist",
-    experience: 6,
-    skills: ["Nursing", "ICU", "Critical Care"],
-    matchScore: 78,
-    availability: "immediate",
-    location: "San Francisco, CA",
-  },
-  {
-    id: "5",
-    name: "Lisa Thompson",
-    email: "lisa.thompson@email.com",
-    phone: "+1 (555) 567-8901",
-    currentRole: "Emergency Department Nurse",
-    experience: 4,
-    skills: ["Nursing", "Emergency Care", "Patient Assessment"],
-    matchScore: 72,
-    availability: "2_weeks",
-    location: "Oakland, CA",
-  },
-  {
-    id: "6",
-    name: "James Wilson",
-    email: "james.wilson@email.com",
-    phone: "+1 (555) 678-9012",
-    currentRole: "Pediatric Nurse",
-    experience: 2,
-    skills: ["Nursing", "Pediatrics", "Child Care"],
-    matchScore: 65,
-    availability: "1_month",
-    location: "San Jose, CA",
-  },
-  {
-    id: "7",
-    name: "Maria Garcia",
-    email: "maria.garcia@email.com",
-    phone: "+1 (555) 789-0123",
-    currentRole: "ICU Nurse",
-    experience: 7,
-    skills: ["Nursing", "ICU", "Ventilator Management"],
-    matchScore: 85,
-    availability: "immediate",
-    location: "San Francisco, CA",
-  },
-];
+// Real candidate data is now fetched from project.candidateProjects
+// Removed mock data - using real API data
 
 // Match Score Badge Component
 const MatchScoreBadge = ({ score }: { score: number }) => {
@@ -291,11 +186,14 @@ export default function ProjectDetailPage() {
     isLoading,
     error,
   } = useGetProjectQuery(projectId!);
+  const { data: eligibleCandidatesData } = useGetEligibleCandidatesQuery(
+    projectId!
+  );
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
   // Local state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [activeTab, setActiveTab] = useState("assigned");
+  const [activeTab, setActiveTab] = useState("eligible");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -315,12 +213,12 @@ export default function ProjectDetailPage() {
   };
 
   // Handle candidate actions
-  const handleUnassignCandidate = (candidateId: string) => {
+  const handleUnassignCandidate = (_candidateId: string) => {
     toast.success("Candidate unassigned successfully");
     // TODO: Implement actual unassign logic
   };
 
-  const handleAssignCandidate = (candidateId: string) => {
+  const handleAssignCandidate = (_candidateId: string) => {
     toast.success("Candidate assigned successfully");
     // TODO: Implement actual assign logic
   };
@@ -329,18 +227,7 @@ export default function ProjectDetailPage() {
     navigate(`/candidates/${candidateId}`);
   };
 
-  // Filter candidates
-  const filteredAssignedCandidates = mockAssignedCandidates.filter(
-    (candidate) =>
-      candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredAvailableCandidates = mockAvailableCandidates.filter(
-    (candidate) =>
-      candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Candidate data will be processed after project is loaded
 
   // Loading state
   if (isLoading) {
@@ -392,6 +279,28 @@ export default function ProjectDetailPage() {
   }
 
   const project = projectData.data;
+
+  // Get real candidate data from project
+  const nominatedCandidates = project?.candidateProjects || [];
+  const eligibleCandidates = eligibleCandidatesData?.data || [];
+
+  // Filter nominated candidates
+  const filteredNominatedCandidates = nominatedCandidates.filter(
+    (candidateProject) =>
+      candidateProject.candidate?.name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      candidateProject.candidate?.email
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase())
+  );
+
+  // Filter eligible candidates
+  const filteredEligibleCandidates = eligibleCandidates.filter(
+    (candidate) =>
+      candidate.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Access control
   if (!canReadProjects) {
@@ -463,12 +372,6 @@ export default function ProjectDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {project.description && (
-                  <p className="text-slate-600 text-sm leading-relaxed capitalize">
-                    {project.description}
-                  </p>
-                )}
-
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="text-center p-2 bg-slate-50 rounded-lg">
@@ -482,9 +385,9 @@ export default function ProjectDetailPage() {
                   </div>
                   <div className="text-center p-2 bg-slate-50 rounded-lg">
                     <div className="text-lg font-bold text-green-600">
-                      {mockAssignedCandidates.length}
+                      {nominatedCandidates.length}
                     </div>
-                    <div className="text-xs text-slate-600">Assigned</div>
+                    <div className="text-xs text-slate-600">Nominated</div>
                   </div>
                   <div className="text-center p-2 bg-slate-50 rounded-lg">
                     <div className="text-lg font-bold text-purple-600">
@@ -528,6 +431,17 @@ export default function ProjectDetailPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <MapPin className="h-3 w-3 text-slate-400" />
+                    <span className="text-slate-600">Country:</span>
+                    <div className="font-medium text-slate-800">
+                      <ProjectCountryCell
+                        countryCode={project.countryCode}
+                        size="sm"
+                        fallbackText="Not specified"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <UserCheck className="h-3 w-3 text-slate-400" />
                     <span className="text-slate-600">Status:</span>
                     <Badge variant="outline" className="text-xs">
@@ -535,6 +449,13 @@ export default function ProjectDetailPage() {
                     </Badge>
                   </div>
                 </div>
+
+                {/* Description at the bottom */}
+                {project.description && (
+                  <p className="text-slate-600 text-sm leading-relaxed capitalize mt-4 pt-4 border-t border-slate-200">
+                    {project.description}
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -554,28 +475,28 @@ export default function ProjectDetailPage() {
                 >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger
-                      value="assigned"
-                      className="flex items-center gap-2"
-                    >
-                      <UserCheck className="h-4 w-4" />
-                      Assigned Candidates
-                      <Badge variant="secondary" className="ml-1">
-                        {mockAssignedCandidates.length}
-                      </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="available"
+                      value="eligible"
                       className="flex items-center gap-2"
                     >
                       <UserPlus className="h-4 w-4" />
-                      Available Candidates
+                      Eligible Candidates
                       <Badge variant="secondary" className="ml-1">
-                        {mockAvailableCandidates.length}
+                        {eligibleCandidates.length}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="nominated"
+                      className="flex items-center gap-2"
+                    >
+                      <UserCheck className="h-4 w-4" />
+                      Nominated Candidates
+                      <Badge variant="secondary" className="ml-1">
+                        {nominatedCandidates.length}
                       </Badge>
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="assigned" className="mt-6">
+                  <TabsContent value="eligible" className="mt-6">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -603,11 +524,11 @@ export default function ProjectDetailPage() {
                           </Select>
                         </div>
                         <div className="text-sm text-slate-600">
-                          {filteredAssignedCandidates.length} candidate
-                          {filteredAssignedCandidates.length !== 1
+                          {filteredEligibleCandidates.length} candidate
+                          {filteredEligibleCandidates.length !== 1
                             ? "s"
                             : ""}{" "}
-                          assigned
+                          eligible
                         </div>
                       </div>
 
@@ -616,152 +537,46 @@ export default function ProjectDetailPage() {
                           <TableHeader>
                             <TableRow>
                               <TableHead>Candidate</TableHead>
-                              <TableHead>Assigned Role</TableHead>
-                              <TableHead>Match Score</TableHead>
-                              <TableHead className="text-right">
-                                Actions
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredAssignedCandidates.map((candidate) => (
-                              <TableRow key={candidate.id}>
-                                <TableCell>
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                      {candidate.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                      <div className="font-medium text-slate-900">
-                                        {candidate.name}
-                                      </div>
-                                      <div className="text-sm text-slate-500">
-                                        {candidate.email}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="font-medium text-slate-900">
-                                    {candidate.assignedRole}
-                                  </div>
-                                  <div className="text-sm text-slate-500">
-                                    {candidate.currentRole}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <MatchScoreBadge
-                                    score={candidate.matchScore}
-                                  />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleViewCandidate(candidate.id)
-                                        }
-                                      >
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        View Details
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleUnassignCandidate(candidate.id)
-                                        }
-                                        className="text-red-600"
-                                      >
-                                        <UserMinus className="mr-2 h-4 w-4" />
-                                        Unassign
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="available" className="mt-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                              placeholder="Search candidates..."
-                              className="pl-10 w-64"
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          {filteredAvailableCandidates.length} candidate
-                          {filteredAvailableCandidates.length !== 1
-                            ? "s"
-                            : ""}{" "}
-                          available
-                        </div>
-                      </div>
-
-                      <div className="border rounded-lg">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Candidate</TableHead>
-                              <TableHead>Current Role</TableHead>
                               <TableHead>Experience</TableHead>
                               <TableHead>Match Score</TableHead>
-                              <TableHead>Availability</TableHead>
+                              <TableHead>Status</TableHead>
                               <TableHead className="text-right">
                                 Actions
                               </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {filteredAvailableCandidates.map((candidate) => (
+                            {filteredEligibleCandidates.map((candidate) => (
                               <TableRow key={candidate.id}>
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                      {candidate.name.charAt(0).toUpperCase()}
+                                      {candidate.name
+                                        ?.charAt(0)
+                                        .toUpperCase() || "?"}
                                     </div>
                                     <div>
                                       <div className="font-medium text-slate-900">
-                                        {candidate.name}
+                                        {candidate.name || "Unknown"}
                                       </div>
                                       <div className="text-sm text-slate-500">
-                                        {candidate.email}
+                                        {candidate.email ||
+                                          candidate.contact ||
+                                          "No contact"}
                                       </div>
                                     </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="font-medium text-slate-900">
-                                    {candidate.currentRole}
-                                  </div>
-                                  <div className="text-sm text-slate-500">
-                                    {candidate.location}
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-sm text-slate-600">
-                                    {candidate.experience} years
+                                    {candidate.experience
+                                      ? `${candidate.experience} years`
+                                      : "Not specified"}
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <MatchScoreBadge
-                                    score={candidate.matchScore}
+                                    score={candidate.matchScore || 0}
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -769,7 +584,7 @@ export default function ProjectDetailPage() {
                                     variant="outline"
                                     className="text-xs capitalize"
                                   >
-                                    {candidate.availability.replace("_", " ")}
+                                    {candidate.currentStatus}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -796,13 +611,175 @@ export default function ProjectDetailPage() {
                                         className="text-green-600"
                                       >
                                         <UserPlus className="mr-2 h-4 w-4" />
-                                        Assign to Project
+                                        Nominate for Project
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </TableCell>
                               </TableRow>
                             ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="nominated" className="mt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                              placeholder="Search candidates..."
+                              className="pl-10 w-64"
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-sm text-slate-600">
+                          {filteredNominatedCandidates.length} candidate
+                          {filteredNominatedCandidates.length !== 1
+                            ? "s"
+                            : ""}{" "}
+                          nominated
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Candidate</TableHead>
+                              <TableHead>Nominated Date</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Current Stage</TableHead>
+                              <TableHead className="text-right">
+                                Actions
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredNominatedCandidates.map(
+                              (candidateProject) => (
+                                <TableRow key={candidateProject.id}>
+                                  <TableCell>
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                        {candidateProject.candidate?.name
+                                          ?.charAt(0)
+                                          .toUpperCase() || "?"}
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-slate-900">
+                                          {candidateProject.candidate?.name ||
+                                            "Unknown"}
+                                        </div>
+                                        <div className="text-sm text-slate-500">
+                                          {candidateProject.candidate?.email ||
+                                            candidateProject.candidate
+                                              ?.contact ||
+                                            "No contact"}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm text-slate-600">
+                                      {formatDate(candidateProject.assignedAt)}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {candidateProject.status.replace(
+                                        "_",
+                                        " "
+                                      )}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm text-slate-600">
+                                      {candidateProject.status ===
+                                        "nominated" && "Pending Documents"}
+                                      {candidateProject.status ===
+                                        "pending_documents" &&
+                                        "Awaiting Submission"}
+                                      {candidateProject.status ===
+                                        "documents_submitted" &&
+                                        "Verification In Progress"}
+                                      {candidateProject.status ===
+                                        "documents_verified" && "Approved"}
+                                      {candidateProject.status === "approved" &&
+                                        "Ready for Interview"}
+                                      {candidateProject.status ===
+                                        "interview_scheduled" &&
+                                        "Interview Scheduled"}
+                                      {candidateProject.status ===
+                                        "interview_completed" &&
+                                        "Interview Completed"}
+                                      {candidateProject.status ===
+                                        "interview_passed" && "Selected"}
+                                      {candidateProject.status === "selected" &&
+                                        "Processing"}
+                                      {candidateProject.status ===
+                                        "processing" && "Final Processing"}
+                                      {candidateProject.status === "hired" &&
+                                        "Hired"}
+                                      {candidateProject.status ===
+                                        "rejected_documents" &&
+                                        "Documents Rejected"}
+                                      {candidateProject.status ===
+                                        "rejected_interview" &&
+                                        "Interview Failed"}
+                                      {candidateProject.status ===
+                                        "rejected_selection" &&
+                                        "Selection Rejected"}
+                                      {candidateProject.status ===
+                                        "withdrawn" && "Withdrawn"}
+                                      {candidateProject.status === "on_hold" &&
+                                        "On Hold"}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm">
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            handleViewCandidate(
+                                              candidateProject.candidateId
+                                            )
+                                          }
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            handleUnassignCandidate(
+                                              candidateProject.candidateId
+                                            )
+                                          }
+                                          className="text-red-600"
+                                        >
+                                          <UserMinus className="mr-2 h-4 w-4" />
+                                          Remove from Project
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            )}
                           </TableBody>
                         </Table>
                       </div>
@@ -826,11 +803,13 @@ export default function ProjectDetailPage() {
               <CardContent className="space-y-3">
                 <div>
                   <h4 className="font-medium text-slate-800 text-sm">
-                    {project.client.name}
+                    {project.client?.name || "No client assigned"}
                   </h4>
-                  <Badge variant="outline" className="mt-1 text-xs">
-                    {project.client.type}
-                  </Badge>
+                  {project.client && (
+                    <Badge variant="outline" className="mt-1 text-xs">
+                      {project.client.type}
+                    </Badge>
+                  )}
                 </div>
                 <div className="text-xs text-slate-500">
                   <div className="flex items-center gap-2 mb-1">
@@ -854,11 +833,11 @@ export default function ProjectDetailPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
                   <Target className="h-4 w-4 text-purple-600" />
-                  Roles Required
+                  Roles Required ({project.rolesNeeded.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {project.rolesNeeded.slice(0, 3).map((role) => (
+                {project.rolesNeeded.map((role) => (
                   <div
                     key={role.id}
                     className="border border-slate-200 rounded-lg p-3 bg-slate-50/50"
@@ -871,24 +850,129 @@ export default function ProjectDetailPage() {
                         {role.quantity} pos
                       </Badge>
                     </div>
-                    <div className="text-xs text-slate-600">
-                      {role.minExperience}-{role.maxExperience} years •{" "}
-                      {role.shiftType} shift
+
+                    {/* Experience and Shift */}
+                    <div className="text-xs text-slate-600 mb-2">
+                      {role.minExperience && role.maxExperience ? (
+                        <>
+                          {role.minExperience}-{role.maxExperience} years
+                        </>
+                      ) : role.minExperience ? (
+                        <>{role.minExperience}+ years</>
+                      ) : role.maxExperience ? (
+                        <>Up to {role.maxExperience} years</>
+                      ) : (
+                        "Experience not specified"
+                      )}
+                      {role.shiftType && <> • {role.shiftType} shift</>}
                     </div>
+
+                    {/* Skills */}
                     {role.skills && (
-                      <div className="text-xs text-slate-500 mt-1">
-                        Skills: {role.skills}
+                      <div className="text-xs text-slate-500 mb-2">
+                        <span className="font-medium">Skills:</span>{" "}
+                        {role.skills}
+                      </div>
+                    )}
+
+                    {/* Technical Skills */}
+                    {role.technicalSkills && (
+                      <div className="text-xs text-slate-500 mb-2">
+                        <span className="font-medium">Technical Skills:</span>{" "}
+                        {role.technicalSkills}
+                      </div>
+                    )}
+
+                    {/* Education Requirements */}
+                    {role.educationRequirementsList &&
+                      role.educationRequirementsList.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-slate-200">
+                          <div className="text-xs font-medium text-slate-600 mb-1">
+                            Education Requirements:
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {role.educationRequirementsList
+                              .map((req) => req.qualification.name)
+                              .join(", ")}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Required Certifications */}
+                    {role.requiredCertifications && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <div className="text-xs font-medium text-slate-600 mb-1">
+                          Required Certifications:
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {role.requiredCertifications}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Language Requirements */}
+                    {role.languageRequirements && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <div className="text-xs font-medium text-slate-600 mb-1">
+                          Language Requirements:
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {role.languageRequirements}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Requirements */}
+                    <div className="mt-2 pt-2 border-t border-slate-200">
+                      <div className="flex flex-wrap gap-2">
+                        {role.backgroundCheckRequired && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-blue-50 text-blue-700"
+                          >
+                            Background Check
+                          </Badge>
+                        )}
+                        {role.drugScreeningRequired && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-green-50 text-green-700"
+                          >
+                            Drug Screening
+                          </Badge>
+                        )}
+                        {role.onCallRequired && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-orange-50 text-orange-700"
+                          >
+                            On-Call Required
+                          </Badge>
+                        )}
+                        {role.relocationAssistance && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-purple-50 text-purple-700"
+                          >
+                            Relocation Assistance
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    {role.notes && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <div className="text-xs font-medium text-slate-600 mb-1">
+                          Additional Notes:
+                        </div>
+                        <div className="text-xs text-slate-500 italic">
+                          {role.notes}
+                        </div>
                       </div>
                     )}
                   </div>
                 ))}
-                {project.rolesNeeded.length > 3 && (
-                  <div className="text-center">
-                    <Button variant="ghost" size="sm" className="text-xs">
-                      View {project.rolesNeeded.length - 3} more roles
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
 

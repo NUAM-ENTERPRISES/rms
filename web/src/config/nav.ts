@@ -54,6 +54,17 @@ export const navigationConfig: NavItem[] = [
     // Accessible to all roles - core business function
   },
   {
+    id: "candidates",
+    label: "Candidates",
+    path: "/candidates",
+    icon: UserCheck,
+    permissions: ["read:candidates"],
+    badge: {
+      text: "HR",
+      variant: "outline",
+    },
+  },
+  {
     id: "clients",
     label: "Clients",
     path: "/clients",
@@ -72,17 +83,6 @@ export const navigationConfig: NavItem[] = [
     permissions: ["read:teams"],
     badge: {
       text: "Org",
-      variant: "outline",
-    },
-  },
-  {
-    id: "candidates",
-    label: "Candidates",
-    path: "/candidates",
-    icon: UserCheck,
-    permissions: ["read:candidates"],
-    badge: {
-      text: "HR",
       variant: "outline",
     },
   },

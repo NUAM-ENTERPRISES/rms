@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Card,
@@ -8,8 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -23,7 +23,6 @@ import {
   ArrowLeft,
   Edit,
   Trash2,
-  Calendar,
   Building2,
   Users,
   Phone,
@@ -31,28 +30,21 @@ import {
   MapPin,
   ExternalLink,
   TrendingUp,
-  AlertTriangle,
-  Info,
-  Star,
   DollarSign,
   FileText,
   Clock,
   CheckCircle,
   XCircle,
   Briefcase,
-  Target,
   Shield,
-  UserCheck,
   Activity,
   BarChart3,
   History,
   Settings,
-  Download,
-  Share2,
   Eye,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { cn } from "@/lib/utils";
+import { useGetClientQuery } from "@/features/clients";
 
 // Helper function to format date - following FE guidelines: DD MMM YYYY
 const formatDate = (dateString?: string) => {
@@ -140,116 +132,122 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-// Mock data for demonstration
-const mockClient = {
-  id: "1",
-  name: "St. Mary's Medical Center",
-  type: "HEALTHCARE_ORGANIZATION" as const,
-  pointOfContact: "Dr. Sarah Williams",
-  email: "sarah.williams@stmarys.com",
-  phone: "+1 (555) 123-4567",
-  address: "123 Medical Center Dr, San Francisco, CA 94102",
-  facilityType: "HOSPITAL",
-  facilitySize: "LARGE",
-  locations: ["San Francisco, CA", "Oakland, CA", "San Jose, CA"],
-  relationshipType: "DIRECT_CLIENT",
-  commissionRate: 15,
-  paymentTerms: "Net 30",
-  contractStartDate: "2024-01-15",
-  contractEndDate: "2025-01-15",
-  billingAddress: "456 Finance Ave, San Francisco, CA 94102",
-  taxId: "12-3456789",
-  status: "active",
-  createdAt: "2024-01-15T10:00:00Z",
-  updatedAt: "2024-12-01T14:30:00Z",
-  projects: [
-    {
-      id: "1",
-      title: "Emergency Department Nurses",
-      status: "active",
-      deadline: "2024-12-31",
-      candidates: 8,
-      filled: 5,
-    },
-    {
-      id: "2",
-      title: "ICU Specialists",
-      status: "active",
-      deadline: "2025-02-28",
-      candidates: 12,
-      filled: 3,
-    },
-    {
-      id: "3",
-      title: "Pediatric Nurses",
-      status: "completed",
-      deadline: "2024-10-15",
-      candidates: 6,
-      filled: 6,
-    },
-  ],
-  history: [
-    {
-      id: "1",
-      action: "Project Created",
-      description: "Emergency Department Nurses project created",
-      date: "2024-11-15T09:00:00Z",
-      user: "John Smith",
-    },
-    {
-      id: "2",
-      action: "Contract Renewed",
-      description: "Annual contract renewed for 2025",
-      date: "2024-12-01T14:30:00Z",
-      user: "Jane Doe",
-    },
-    {
-      id: "3",
-      action: "Payment Received",
-      description: "Payment received for Q4 services",
-      date: "2024-11-30T16:45:00Z",
-      user: "System",
-    },
-  ],
-  metrics: {
-    totalProjects: 15,
-    activeProjects: 2,
-    completedProjects: 13,
-    totalRevenue: 1250000,
-    averageProjectValue: 83333,
-    successRate: 87,
-    averageTimeToFill: 45,
-  },
+// Mock metrics and history data (to be replaced with real API calls)
+const mockMetrics = {
+  totalProjects: 0,
+  activeProjects: 0,
+  completedProjects: 0,
+  totalRevenue: 0,
+  averageProjectValue: 0,
+  successRate: 0,
+  averageTimeToFill: 0,
 };
+
+const mockHistory = [
+  {
+    id: "1",
+    action: "Client Created",
+    description: "Client was added to the system",
+    date: new Date().toISOString(),
+    user: "System",
+  },
+];
 
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
 
   const canReadClients = useCan("read:clients");
   const canWriteClients = useCan("write:clients");
   const canManageClients = useCan("manage:clients");
 
-  // Mock data - in real app, this would come from RTK Query
-  const client = mockClient;
+  // Fetch client data from API
+  const { data: clientData, isLoading, error } = useGetClientQuery(id!);
+
+  const client = clientData?.data;
 
   const handleEdit = () => {
-    toast.info("Edit functionality coming soon");
+    navigate(`/clients/${id}/edit`);
   };
 
   const handleDelete = () => {
     toast.error("Delete functionality coming soon");
   };
 
-  if (!client) {
+  if (!canReadClients) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Client Not Found</h2>
-          <p className="text-muted-foreground">
-            The client you're looking for doesn't exist or has been removed.
-          </p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-slate-800">
+                Access Denied
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                You don't have permission to view clients.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/clients")}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Clients
+            </Button>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                Loading Client...
+              </h1>
+              <p className="text-slate-600">
+                Please wait while we fetch client data
+              </p>
+            </div>
+          </div>
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !client) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-slate-800">
+                Client Not Found
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                The client you're looking for doesn't exist or has been removed.
+              </CardDescription>
+              <Button onClick={() => navigate("/clients")} className="mt-4">
+                Back to Clients
+              </Button>
+            </CardHeader>
+          </Card>
         </div>
       </div>
     );
@@ -265,7 +263,7 @@ export default function ClientDetailPage() {
           </h1>
           <div className="flex flex-wrap items-center gap-2">
             <ClientTypeBadge type={client.type} />
-            <StatusBadge status={client.status} />
+            <StatusBadge status="active" />
             <span className="text-sm text-slate-500">
               Created {formatDate(client.createdAt)}
             </span>
@@ -385,7 +383,7 @@ export default function ClientDetailPage() {
                     Total Projects
                   </span>
                   <span className="font-semibold">
-                    {client.metrics.totalProjects}
+                    {client.projects?.length || 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -393,7 +391,8 @@ export default function ClientDetailPage() {
                     Active Projects
                   </span>
                   <span className="font-semibold text-green-600">
-                    {client.metrics.activeProjects}
+                    {client.projects?.filter((p) => p.status === "active")
+                      .length || 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -401,7 +400,7 @@ export default function ClientDetailPage() {
                     Success Rate
                   </span>
                   <span className="font-semibold">
-                    {client.metrics.successRate}%
+                    {mockMetrics.successRate}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -409,7 +408,7 @@ export default function ClientDetailPage() {
                     Total Revenue
                   </span>
                   <span className="font-semibold">
-                    {formatCurrency(client.metrics.totalRevenue)}
+                    {formatCurrency(mockMetrics.totalRevenue)}
                   </span>
                 </div>
               </CardContent>
@@ -508,45 +507,51 @@ export default function ClientDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {client.projects.map((project) => (
-                    <TableRow key={project.id}>
-                      <TableCell className="font-medium">
-                        {project.title}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={project.status} />
-                      </TableCell>
-                      <TableCell>{formatDate(project.deadline)}</TableCell>
-                      <TableCell>
-                        {project.filled}/{project.candidates}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-green-600 h-2 rounded-full"
-                              style={{
-                                width: `${
-                                  (project.filled / project.candidates) * 100
-                                }%`,
-                              }}
-                            />
-                          </div>
+                  {client.projects && client.projects.length > 0 ? (
+                    client.projects.map((project) => (
+                      <TableRow key={project.id}>
+                        <TableCell className="font-medium">
+                          {project.title}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={project.status} />
+                        </TableCell>
+                        <TableCell>{formatDate(project.deadline)}</TableCell>
+                        <TableCell>
                           <span className="text-sm text-muted-foreground">
-                            {Math.round(
-                              (project.filled / project.candidates) * 100
-                            )}
-                            %
+                            Project details
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 bg-gray-200 rounded-full h-2">
+                              <div className="bg-blue-600 h-2 rounded-full w-1/3" />
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              In Progress
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/projects/${project.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="text-slate-500">
+                          No projects found for this client
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -567,7 +572,7 @@ export default function ClientDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {client.history.map((item) => (
+                {mockHistory.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-start gap-4 p-4 border rounded-lg"
@@ -606,10 +611,10 @@ export default function ClientDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(client.metrics.totalRevenue)}
+                  {formatCurrency(mockMetrics.totalRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +20.1% from last month
+                  No data available
                 </p>
               </CardContent>
             </Card>
@@ -623,10 +628,10 @@ export default function ClientDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {client.metrics.successRate}%
+                  {mockMetrics.successRate}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +2.5% from last month
+                  No data available
                 </p>
               </CardContent>
             </Card>
@@ -640,10 +645,10 @@ export default function ClientDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {client.metrics.averageTimeToFill} days
+                  {mockMetrics.averageTimeToFill} days
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  -5 days from last month
+                  No data available
                 </p>
               </CardContent>
             </Card>
@@ -657,10 +662,13 @@ export default function ClientDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {client.metrics.activeProjects}
+                  {client.projects?.filter((p) => p.status === "active")
+                    .length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {client.metrics.completedProjects} completed
+                  {client.projects?.filter((p) => p.status === "completed")
+                    .length || 0}{" "}
+                  completed
                 </p>
               </CardContent>
             </Card>

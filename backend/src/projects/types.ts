@@ -8,7 +8,7 @@ import {
 } from '@prisma/client';
 
 export interface ProjectWithRelations extends Project {
-  client: Client;
+  client: Client | null;
   creator: User;
   team: Team | null;
   rolesNeeded: RoleNeeded[];

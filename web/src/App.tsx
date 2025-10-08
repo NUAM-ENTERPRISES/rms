@@ -1,10 +1,5 @@
 import { Suspense, lazy } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import AuthProvider from "@/app/providers/auth-provider";
 import ProtectedRoute from "@/app/router/protected-route";
@@ -23,6 +18,9 @@ const ProjectsPage = lazy(
 );
 const CreateProjectPage = lazy(
   () => import("@/features/projects/views/CreateProjectPage")
+);
+const EditProjectPage = lazy(
+  () => import("@/features/projects/views/EditProjectPage")
 );
 const ProjectDetailPage = lazy(
   () => import("@/features/projects/views/ProjectDetailPage")
@@ -45,6 +43,10 @@ const CandidateNominationPage = lazy(
 );
 
 const TeamsPage = lazy(() => import("@/features/teams/views/TeamsPage"));
+const CreateTeamPage = lazy(
+  () => import("@/features/teams/views/CreateTeamPage")
+);
+const EditTeamPage = lazy(() => import("@/features/teams/views/EditTeamPage"));
 const TeamDetailPage = lazy(
   () => import("@/features/teams/views/TeamDetailPage")
 );
@@ -52,6 +54,12 @@ const TeamDetailPage = lazy(
 const ClientsPage = lazy(() => import("@/features/clients/views/ClientsPage"));
 const ClientDetailPage = lazy(
   () => import("@/features/clients/views/ClientDetailPage")
+);
+const CreateClientPage = lazy(
+  () => import("@/features/clients/views/CreateClientPage")
+);
+const EditClientPage = lazy(
+  () => import("@/features/clients/views/EditClientPage")
 );
 
 const InterviewsPage = lazy(
@@ -66,6 +74,13 @@ const DocumentVerificationPage = lazy(
 );
 
 const UsersPage = lazy(() => import("@/features/admin/views/UsersPage"));
+const UserDetailPage = lazy(
+  () => import("@/features/admin/views/UserDetailPage")
+);
+const CreateUserPage = lazy(
+  () => import("@/features/admin/views/CreateUserPage")
+);
+const EditUserPage = lazy(() => import("@/features/admin/views/EditUserPage"));
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -149,6 +164,19 @@ function App() {
               />
 
               <Route
+                path="/projects/:projectId/edit"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:projects"]}>
+                      <AppLayout>
+                        <EditProjectPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
                 path="/projects/:projectId"
                 element={
                   <RouteErrorBoundary>
@@ -214,12 +242,38 @@ function App() {
               />
 
               <Route
+                path="/teams/create"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:teams"]}>
+                      <AppLayout>
+                        <CreateTeamPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
                 path="/teams/:teamId"
                 element={
                   <RouteErrorBoundary>
                     <ProtectedRoute>
                       <AppLayout>
                         <TeamDetailPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/teams/:teamId/edit"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:teams"]}>
+                      <AppLayout>
+                        <EditTeamPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>
@@ -282,6 +336,32 @@ function App() {
                     <ProtectedRoute>
                       <AppLayout>
                         <ClientsPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/clients/create"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:clients"]}>
+                      <AppLayout>
+                        <CreateClientPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/clients/:id/edit"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute permissions={["manage:clients"]}>
+                      <AppLayout>
+                        <EditClientPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>
@@ -402,6 +482,54 @@ function App() {
                     >
                       <AppLayout>
                         <UsersPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/admin/users/create"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute
+                      roles={["CEO", "Director", "Manager"]}
+                      permissions={["manage:users"]}
+                    >
+                      <AppLayout>
+                        <CreateUserPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/admin/users/:id"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute
+                      roles={["CEO", "Director", "Manager"]}
+                      permissions={["read:users"]}
+                    >
+                      <AppLayout>
+                        <UserDetailPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  </RouteErrorBoundary>
+                }
+              />
+
+              <Route
+                path="/admin/users/:id/edit"
+                element={
+                  <RouteErrorBoundary>
+                    <ProtectedRoute
+                      roles={["CEO", "Director", "Manager"]}
+                      permissions={["manage:users"]}
+                    >
+                      <AppLayout>
+                        <EditUserPage />
                       </AppLayout>
                     </ProtectedRoute>
                   </RouteErrorBoundary>

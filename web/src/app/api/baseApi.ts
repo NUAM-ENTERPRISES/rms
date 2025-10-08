@@ -13,6 +13,7 @@ export const baseApi = createApi({
     "User",
     "Candidate",
     "Project",
+    "ProjectStats",
     "Client",
     "Team",
     "Document",
@@ -20,6 +21,9 @@ export const baseApi = createApi({
     "DocumentSummary",
     "Interview",
     "Role",
+    "Country",
+    "RoleCatalog",
+    "Qualification",
   ],
   endpoints: () => ({}),
 });

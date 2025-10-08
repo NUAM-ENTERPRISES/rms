@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -181,8 +183,295 @@ const allPermissions = [
   'manage:audit',
 ];
 
+// Load countries data
+interface CountryData {
+  code: string;
+  name: string;
+  region: string;
+  callingCode: string | null;
+  currency?: string;
+  timezone: string | null;
+}
+
+async function seedCountries() {
+  console.log('🌍 Seeding countries...');
+
+  try {
+    const countriesPath = path.join(__dirname, '..', 'countries.json');
+    const countriesData: CountryData[] = JSON.parse(
+      fs.readFileSync(countriesPath, 'utf8'),
+    );
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const country of countriesData) {
+      const result = await prisma.country.upsert({
+        where: { code: country.code },
+        update: {
+          name: country.name,
+          region: country.region,
+          callingCode: country.callingCode || '',
+          currency: country.currency || 'N/A',
+          timezone: country.timezone || 'UTC',
+          isActive: true,
+        },
+        create: {
+          code: country.code,
+          name: country.name,
+          region: country.region,
+          callingCode: country.callingCode || '',
+          currency: country.currency || 'N/A',
+          timezone: country.timezone || 'UTC',
+          isActive: true,
+        },
+      });
+
+      if (result.createdAt === result.updatedAt) {
+        createdCount++;
+      } else {
+        updatedCount++;
+      }
+    }
+
+    console.log(
+      `✅ Countries seeded: ${createdCount} created, ${updatedCount} updated`,
+    );
+  } catch (error) {
+    console.error('❌ Error seeding countries:', error);
+    throw error;
+  }
+}
+
+// Healthcare roles catalog seeding functions
+async function seedRoleCatalog() {
+  console.log('🏥 Seeding healthcare roles catalog...');
+
+  try {
+    const rolesPath = path.join(__dirname, 'seeds', 'role-catalog.json');
+    const rolesData = JSON.parse(fs.readFileSync(rolesPath, 'utf8'));
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const role of rolesData) {
+      const result = await prisma.roleCatalog.upsert({
+        where: { slug: role.slug },
+        update: {
+          name: role.name,
+          category: role.category,
+          subCategory: role.subCategory,
+          isClinical: role.isClinical,
+          description: role.description,
+          isActive: true,
+        },
+        create: {
+          name: role.name,
+          slug: role.slug,
+          category: role.category,
+          subCategory: role.subCategory,
+          isClinical: role.isClinical,
+          description: role.description,
+          isActive: true,
+        },
+      });
+
+      if (result.createdAt === result.updatedAt) {
+        createdCount++;
+      } else {
+        updatedCount++;
+      }
+    }
+
+    console.log(
+      `✅ Role catalog seeded: ${createdCount} created, ${updatedCount} updated`,
+    );
+  } catch (error) {
+    console.error('❌ Error seeding role catalog:', error);
+    throw error;
+  }
+}
+
+async function seedQualifications() {
+  console.log('🎓 Seeding qualifications catalog...');
+
+  try {
+    const qualificationsPath = path.join(
+      __dirname,
+      'seeds',
+      'qualifications.json',
+    );
+    const qualificationsData = JSON.parse(
+      fs.readFileSync(qualificationsPath, 'utf8'),
+    );
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const qualification of qualificationsData) {
+      const result = await prisma.qualification.upsert({
+        where: { name: qualification.name },
+        update: {
+          shortName: qualification.shortName,
+          level: qualification.level,
+          field: qualification.field,
+          program: qualification.program,
+          description: qualification.description,
+          isActive: true,
+        },
+        create: {
+          name: qualification.name,
+          shortName: qualification.shortName,
+          level: qualification.level,
+          field: qualification.field,
+          program: qualification.program,
+          description: qualification.description,
+          isActive: true,
+        },
+      });
+
+      if (result.createdAt === result.updatedAt) {
+        createdCount++;
+      } else {
+        updatedCount++;
+      }
+    }
+
+    console.log(
+      `✅ Qualifications seeded: ${createdCount} created, ${updatedCount} updated`,
+    );
+  } catch (error) {
+    console.error('❌ Error seeding qualifications:', error);
+    throw error;
+  }
+}
+
+async function seedQualificationAliases() {
+  console.log('🔗 Seeding qualification aliases...');
+
+  try {
+    const aliasesPath = path.join(
+      __dirname,
+      'seeds',
+      'qualification-aliases.json',
+    );
+    const aliasesData = JSON.parse(fs.readFileSync(aliasesPath, 'utf8'));
+
+    let createdCount = 0;
+
+    for (const aliasData of aliasesData) {
+      // Find qualification by shortName
+      const qualification = await prisma.qualification.findFirst({
+        where: { shortName: aliasData.qualificationShortName },
+      });
+
+      if (qualification) {
+        try {
+          await prisma.qualificationAlias.create({
+            data: {
+              qualificationId: qualification.id,
+              alias: aliasData.alias,
+              isCommon: aliasData.isCommon,
+            },
+          });
+          createdCount++;
+        } catch (error) {
+          // Skip if alias already exists (unique constraint)
+          if (!error.message.includes('Unique constraint')) {
+            console.warn(
+              `Warning: Could not create alias "${aliasData.alias}":`,
+              error.message,
+            );
+          }
+        }
+      } else {
+        console.warn(
+          `Warning: Qualification not found for shortName: ${aliasData.qualificationShortName}`,
+        );
+      }
+    }
+
+    console.log(`✅ Qualification aliases seeded: ${createdCount} created`);
+  } catch (error) {
+    console.error('❌ Error seeding qualification aliases:', error);
+    throw error;
+  }
+}
+
+async function seedRoleRecommendedQualifications() {
+  console.log('🎯 Seeding role recommended qualifications...');
+
+  try {
+    const recommendationsPath = path.join(
+      __dirname,
+      'seeds',
+      'role-recommended-qualifications.json',
+    );
+    const recommendationsData = JSON.parse(
+      fs.readFileSync(recommendationsPath, 'utf8'),
+    );
+
+    let createdCount = 0;
+
+    for (const recommendation of recommendationsData) {
+      // Find role by slug
+      const role = await prisma.roleCatalog.findFirst({
+        where: { slug: recommendation.roleSlug },
+      });
+
+      // Find qualification by shortName
+      const qualification = await prisma.qualification.findFirst({
+        where: { shortName: recommendation.qualificationShortName },
+      });
+
+      if (role && qualification) {
+        try {
+          await prisma.roleRecommendedQualification.create({
+            data: {
+              roleId: role.id,
+              qualificationId: qualification.id,
+              weight: recommendation.weight,
+              isPreferred: recommendation.isPreferred,
+              notes: recommendation.notes,
+            },
+          });
+          createdCount++;
+        } catch (error) {
+          // Skip if recommendation already exists (unique constraint)
+          if (!error.message.includes('Unique constraint')) {
+            console.warn(
+              `Warning: Could not create recommendation:`,
+              error.message,
+            );
+          }
+        }
+      } else {
+        console.warn(
+          `Warning: Role or qualification not found for: ${recommendation.roleSlug} -> ${recommendation.qualificationShortName}`,
+        );
+      }
+    }
+
+    console.log(
+      `✅ Role recommended qualifications seeded: ${createdCount} created`,
+    );
+  } catch (error) {
+    console.error('❌ Error seeding role recommended qualifications:', error);
+    throw error;
+  }
+}
+
 async function main() {
   console.log('🌱 Starting database seeding...');
+
+  // Seed countries first
+  await seedCountries();
+
+  // Seed healthcare roles catalog
+  await seedRoleCatalog();
+  await seedQualifications();
+  await seedQualificationAliases();
+  await seedRoleRecommendedQualifications();
 
   // Create permissions
   console.log('📝 Creating permissions...');
@@ -247,7 +536,7 @@ async function main() {
   if (!defaultTeam) {
     defaultTeam = await prisma.team.create({
       data: {
-        id: 'default-team-id',
+        id: 'mhvfuykewhjnhgsevcj',
         name: 'Default Team',
       },
     });

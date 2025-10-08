@@ -1,5 +1,4 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauth } from "@/services/baseQuery";
+import { baseApi } from "@/app/api/baseApi";
 
 // Client Types
 export interface Client {
@@ -139,10 +138,7 @@ export interface ClientStatsResponse {
 }
 
 // Clients API
-export const clientsApi = createApi({
-  reducerPath: "clientsApi",
-  baseQuery: baseQueryWithReauth,
-  tagTypes: ["Client"],
+export const clientsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get all clients with pagination and filters
     getClients: builder.query<ClientsResponse, QueryClientsRequest | void>({
@@ -181,7 +177,7 @@ export const clientsApi = createApi({
     updateClient: builder.mutation<ClientResponse, UpdateClientRequest>({
       query: ({ id, ...body }) => ({
         url: `/clients/${id}`,
-        method: "PUT",
+        method: "PATCH",
         body,
       }),
       invalidatesTags: (_, __, { id }) => [{ type: "Client", id }, "Client"],
