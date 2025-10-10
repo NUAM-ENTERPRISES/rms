@@ -1,14 +1,12 @@
-# File: .github/workflows/deploy.yml
 name: Deploy RMS Backend
 
 on:
   push:
     branches:
-      - main  # Trigger when code is pushed to main branch
+      - main
 
 jobs:
   deploy:
-    name: Deploy to VM
     runs-on: ubuntu-latest
 
     steps:
@@ -22,4 +20,4 @@ jobs:
 
       - name: Deploy to VM
         run: |
-          ssh -o StrictHostKeyChecking=no abhijith@<YOUR_VM_IP> "cd /var/www/rms/backend && ./deploy.sh"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "cd /var/www/rms/backend && ./deploy.sh"
