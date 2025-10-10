@@ -6,7 +6,7 @@ export class LoginDto {
     description: 'User email address',
     example: 'admin@affiniks.com',
   })
-  @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsEmail({}, { message: 'Please provide a valid email address testing' })
   email: string;
 
   @ApiProperty({
