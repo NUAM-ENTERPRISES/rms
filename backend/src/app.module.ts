@@ -21,6 +21,8 @@ import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 import { SystemModule } from './system/system.module';
 import { UploadModule } from './upload/upload.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CandidateAllocationModule } from './candidate-allocation/candidate-allocation.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { UploadModule } from './upload/upload.module';
     AuditModule,
     SystemModule,
     UploadModule,
+    NotificationsModule,
+    CandidateAllocationModule,
   ],
   controllers: [AppController],
   providers: [

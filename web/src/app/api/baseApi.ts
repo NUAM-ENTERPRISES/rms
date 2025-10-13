@@ -26,6 +26,8 @@ export const baseApi = createApi({
     "Qualification",
     "SystemConfig",
     "WorkExperience",
+    "Notification",
+    "NotificationBadge",
   ],
   endpoints: () => ({}),
 });

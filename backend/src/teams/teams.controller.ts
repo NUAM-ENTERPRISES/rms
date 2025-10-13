@@ -25,6 +25,13 @@ import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { QueryTeamsDto } from './dto/query-teams.dto';
 import { AssignUserDto } from './dto/assign-user.dto';
+import { CreateTransferRequestDto } from './dto/create-transfer-request.dto';
+import { ProcessTransferRequestDto } from './dto/process-transfer-request.dto';
+import { QueryTransferRequestsDto } from './dto/query-transfer-requests.dto';
+import {
+  TransferRequestResponseDto,
+  PaginatedTransferRequestsResponseDto,
+} from './dto/transfer-request-response.dto';
 import { TeamWithRelations, PaginatedTeams, TeamStats } from './types';
 
 @ApiTags('Teams')
@@ -728,6 +735,160 @@ export class TeamsController {
       success: true,
       data: distribution,
       message: 'Team success rate distribution retrieved successfully',
+    };
+  }
+
+  // Transfer Request Endpoints
+  @Post(':id/transfers/request')
+  @Permissions('manage:teams')
+  @ApiOperation({
+    summary: 'Create team transfer request',
+    description:
+      'Request to transfer a user from current team to another team.',
+  })
+  @ApiParam({ name: 'id', description: 'Source team ID', example: 'team123' })
+  @ApiResponse({
+    status: 201,
+    description: 'Transfer request created successfully',
+    type: TransferRequestResponseDto,
+  })
+  async createTransferRequest(
+    @Param('id') teamId: string,
+    @Body() createTransferRequestDto: CreateTransferRequestDto,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: TransferRequestResponseDto;
+    message: string;
+  }> {
+    const requestedBy = req.user.id;
+    const data = await this.teamsService.createTransferRequest(
+      teamId,
+      createTransferRequestDto,
+      requestedBy,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Transfer request created successfully',
+    };
+  }
+
+  @Get(':id/transfers/requests')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get team transfer requests',
+    description: 'Retrieve transfer requests for a team with RBAC filtering.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transfer requests retrieved successfully',
+    type: PaginatedTransferRequestsResponseDto,
+  })
+  async getTransferRequests(
+    @Param('id') teamId: string,
+    @Query() query: QueryTransferRequestsDto,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: PaginatedTransferRequestsResponseDto;
+    message: string;
+  }> {
+    const userId = req.user.id;
+    const data = await this.teamsService.getTransferRequests(
+      teamId,
+      query,
+      userId,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Transfer requests retrieved successfully',
+    };
+  }
+
+  @Patch(':id/transfers/requests/:requestId/:action')
+  @Permissions('manage:teams')
+  @ApiOperation({
+    summary: 'Process transfer request',
+    description: 'Approve or reject a transfer request.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiParam({
+    name: 'requestId',
+    description: 'Transfer request ID',
+    example: 'req123',
+  })
+  @ApiParam({
+    name: 'action',
+    description: 'Action to take',
+    enum: ['approve', 'reject'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Transfer request processed successfully',
+    type: TransferRequestResponseDto,
+  })
+  async processTransferRequest(
+    @Param('id') teamId: string,
+    @Param('requestId') requestId: string,
+    @Param('action') action: 'approve' | 'reject',
+    @Body() processTransferRequestDto: ProcessTransferRequestDto,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: TransferRequestResponseDto;
+    message: string;
+  }> {
+    const approverId = req.user.id;
+    const data = await this.teamsService.processTransferRequest(
+      teamId,
+      requestId,
+      action,
+      processTransferRequestDto,
+      approverId,
+    );
+
+    return {
+      success: true,
+      data,
+      message: `Transfer request ${action}d successfully`,
+    };
+  }
+
+  @Get('transfers/history/:userId')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get user transfer history',
+    description: 'Retrieve transfer history for a specific user.',
+  })
+  @ApiParam({ name: 'userId', description: 'User ID', example: 'user123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transfer history retrieved successfully',
+    type: [TransferRequestResponseDto],
+  })
+  async getUserTransferHistory(
+    @Param('userId') userId: string,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: TransferRequestResponseDto[];
+    message: string;
+  }> {
+    const currentUserId = req.user.id;
+    const data = await this.teamsService.getUserTransferHistory(
+      userId,
+      currentUserId,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Transfer history retrieved successfully',
     };
   }
 }

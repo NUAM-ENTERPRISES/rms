@@ -26,6 +26,7 @@ import { QueryCandidatesDto } from './dto/query-candidates.dto';
 import { AssignProjectDto } from './dto/assign-project.dto';
 import { NominateCandidateDto } from './dto/nominate-candidate.dto';
 import { ApproveCandidateDto } from './dto/approve-candidate.dto';
+import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import {
   CandidateWithRelations,
@@ -708,6 +709,47 @@ export class CandidatesController {
       success: true,
       data: result,
       message: `Candidate ${approveDto.action === 'approve' ? 'approved' : 'rejected'} successfully`,
+    };
+  }
+
+  @Post('send-for-verification')
+  @Permissions('manage:candidates')
+  @ApiOperation({
+    summary: 'Send candidate for document verification',
+    description:
+      'Send a nominated candidate for document verification. Assigns to document executive with least tasks.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate sent for verification successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            assignedTo: { type: 'string' },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.CREATED)
+  async sendForVerification(
+    @Body() sendForVerificationDto: SendForVerificationDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.sendForVerification(
+      sendForVerificationDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate sent for verification successfully',
     };
   }
 }

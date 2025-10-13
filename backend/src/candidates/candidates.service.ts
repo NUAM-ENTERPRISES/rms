@@ -11,6 +11,7 @@ import { QueryCandidatesDto } from './dto/query-candidates.dto';
 import { AssignProjectDto } from './dto/assign-project.dto';
 import { NominateCandidateDto } from './dto/nominate-candidate.dto';
 import { ApproveCandidateDto } from './dto/approve-candidate.dto';
+import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
@@ -20,10 +21,14 @@ import {
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
 } from '../common/constants';
+import { OutboxService } from '../notifications/outbox.service';
 
 @Injectable()
 export class CandidatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outboxService: OutboxService,
+  ) {}
 
   async create(
     createCandidateDto: CreateCandidateDto,
@@ -435,16 +440,12 @@ export class CandidatesService {
     }
 
     // Check if assignment already exists
-    const existingAssignment = await this.prisma.candidateProjectMap.findUnique(
-      {
-        where: {
-          candidateId_projectId: {
-            candidateId,
-            projectId: assignProjectDto.projectId,
-          },
-        },
+    const existingAssignment = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        candidateId,
+        projectId: assignProjectDto.projectId,
       },
-    );
+    });
 
     if (existingAssignment) {
       throw new ConflictException(
@@ -643,16 +644,12 @@ export class CandidatesService {
     }
 
     // Check if already nominated
-    const existingNomination = await this.prisma.candidateProjectMap.findUnique(
-      {
-        where: {
-          candidateId_projectId: {
-            candidateId,
-            projectId: nominateDto.projectId,
-          },
-        },
+    const existingNomination = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        candidateId,
+        projectId: nominateDto.projectId,
       },
-    );
+    });
     if (existingNomination) {
       throw new ConflictException(
         `Candidate ${candidateId} is already nominated for project ${nominateDto.projectId}`,
@@ -846,5 +843,109 @@ export class CandidatesService {
     // TODO: Implement matching logic based on rolesNeeded requirements
     // For now, return all candidates not nominated yet
     return candidates;
+  }
+
+  /**
+   * Send candidate for document verification
+   * Assigns to document executive with least tasks and triggers notification
+   */
+  async sendForVerification(
+    sendForVerificationDto: SendForVerificationDto,
+    userId: string,
+  ): Promise<{ message: string; assignedTo: string }> {
+    // Check if candidate project mapping exists
+    const candidateProjectMap =
+      await this.prisma.candidateProjectMap.findUnique({
+        where: { id: sendForVerificationDto.candidateProjectMapId },
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+    if (!candidateProjectMap) {
+      throw new NotFoundException(
+        `Candidate project mapping with ID ${sendForVerificationDto.candidateProjectMapId} not found`,
+      );
+    }
+
+    // Check if candidate is in correct status for verification
+    if (candidateProjectMap.status !== CANDIDATE_PROJECT_STATUS.NOMINATED) {
+      throw new BadRequestException(
+        `Candidate must be in 'nominated' status to send for verification. Current status: ${candidateProjectMap.status}`,
+      );
+    }
+
+    // Find document executive with least tasks
+    const documentExecutives = await this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: {
+                in: ['Documentation Executive', 'Processing Executive'],
+              },
+            },
+          },
+        },
+      },
+      include: {
+        _count: {
+          select: {
+            // Count pending document verifications
+            // This is a simplified approach - in production you'd want more sophisticated task counting
+            assignedCandidates: {
+              where: {
+                currentStatus: {
+                  in: ['new', 'shortlisted', 'active'],
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (documentExecutives.length === 0) {
+      throw new BadRequestException('No document executives available');
+    }
+
+    // Find executive with least tasks
+    const assignedExecutive = documentExecutives.reduce((prev, current) => {
+      const prevTaskCount = prev._count.assignedCandidates;
+      const currentTaskCount = current._count.assignedCandidates;
+      return currentTaskCount < prevTaskCount ? current : prev;
+    });
+
+    // Update candidate project status to pending documents
+    await this.prisma.candidateProjectMap.update({
+      where: { id: sendForVerificationDto.candidateProjectMapId },
+      data: {
+        status: CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
+        notes: sendForVerificationDto.notes,
+      },
+    });
+
+    // Publish event to notify document executive
+    await this.outboxService.publishCandidateSentForVerification(
+      sendForVerificationDto.candidateProjectMapId,
+      assignedExecutive.id,
+    );
+
+    return {
+      message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} sent for verification`,
+      assignedTo: assignedExecutive.name,
+    };
   }
 }

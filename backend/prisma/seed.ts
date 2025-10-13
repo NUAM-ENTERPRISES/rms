@@ -750,20 +750,30 @@ async function main() {
       });
     }
 
-    // Assign user to default team
-    await prisma.userTeam.upsert({
-      where: {
-        userId_teamId: {
+    // Only assign eligible roles to default team (Team Lead and below)
+    const eligibleRolesForTeamMembership = [
+      'Team Lead',
+      'Recruiter',
+      'Documentation Executive',
+      'Processing Executive',
+    ];
+
+    if (eligibleRolesForTeamMembership.includes(userData.role)) {
+      // Assign user to default team
+      await prisma.userTeam.upsert({
+        where: {
+          userId_teamId: {
+            userId: user.id,
+            teamId: defaultTeam.id,
+          },
+        },
+        update: {},
+        create: {
           userId: user.id,
           teamId: defaultTeam.id,
         },
-      },
-      update: {},
-      create: {
-        userId: user.id,
-        teamId: defaultTeam.id,
-      },
-    });
+      });
+    }
   }
 
   // Create sample clients for each type
@@ -929,7 +939,12 @@ async function main() {
     `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@affiniks.com)`,
   );
   console.log('\n🎯 Each user has their respective role permissions!');
-  console.log('👥 All 5 recruiters are assigned to the Default Team!');
+  console.log(
+    '👥 Only eligible roles (Team Lead, Recruiter, Documentation Executive, Processing Executive) are assigned to the Default Team!',
+  );
+  console.log(
+    '🔒 Higher roles (CEO, Director, Manager, Team Head, System Admin) are not team members and can manage teams!',
+  );
 }
 
 main()

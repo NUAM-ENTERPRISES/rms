@@ -607,16 +607,12 @@ export class ProjectsService {
     }
 
     // Check if assignment already exists
-    const existingAssignment = await this.prisma.candidateProjectMap.findUnique(
-      {
-        where: {
-          candidateId_projectId: {
-            candidateId: assignCandidateDto.candidateId,
-            projectId,
-          },
-        },
+    const existingAssignment = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        candidateId: assignCandidateDto.candidateId,
+        projectId,
       },
-    );
+    });
 
     if (existingAssignment) {
       throw new ConflictException(

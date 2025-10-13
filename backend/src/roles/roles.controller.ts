@@ -54,7 +54,10 @@ export class RolesController {
       },
     },
   })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async findAll() {
     const roles = await this.rolesService.findAll();
     return {
@@ -89,9 +92,15 @@ export class RolesController {
     },
   })
   @ApiResponse({ status: 400, description: 'Bad Request - Invalid data' })
-  @ApiResponse({ status: 404, description: 'Not Found - User or role not found' })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - User or role not found',
+  })
   @ApiResponse({ status: 409, description: 'Conflict - Role already assigned' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async assignRole(@Body() assignRoleDto: AssignRoleDto) {
     return this.rolesService.assignRoleToUser(assignRoleDto);
   }
@@ -122,8 +131,14 @@ export class RolesController {
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Not Found - User role assignment not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - User role assignment not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async removeRole(
     @Param('userId') userId: string,
     @Param('roleId') roleId: string,
@@ -161,7 +176,10 @@ export class RolesController {
       },
     },
   })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async getUserRoles(@Param('userId') userId: string) {
     const roles = await this.rolesService.getUserRoles(userId);
     return {

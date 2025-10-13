@@ -22,10 +22,14 @@ import {
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
 } from '../common/constants';
+import { OutboxService } from '../notifications/outbox.service';
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outboxService: OutboxService,
+  ) {}
 
   /**
    * Upload a new document for a candidate
@@ -419,6 +423,21 @@ export class DocumentsService {
 
     // Update CandidateProjectMap status based on verification
     await this.updateCandidateProjectStatus(verifyDto.candidateProjectMapId);
+
+    // Check if all documents are now verified and publish event
+    if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
+      const summary = await this.getDocumentSummary(
+        verifyDto.candidateProjectMapId,
+      );
+
+      if (summary.allDocumentsVerified) {
+        // Publish event to notify recruiter that all documents are verified
+        await this.outboxService.publishCandidateDocumentsVerified(
+          verifyDto.candidateProjectMapId,
+          verifierId,
+        );
+      }
+    }
 
     return verification;
   }
