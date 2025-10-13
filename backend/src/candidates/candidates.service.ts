@@ -9,15 +9,26 @@ import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
 import { AssignProjectDto } from './dto/assign-project.dto';
+import { NominateCandidateDto } from './dto/nominate-candidate.dto';
+import { ApproveCandidateDto } from './dto/approve-candidate.dto';
+import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
   CandidateStats,
 } from './types';
+import {
+  CANDIDATE_PROJECT_STATUS,
+  canTransitionStatus,
+} from '../common/constants';
+import { OutboxService } from '../notifications/outbox.service';
 
 @Injectable()
 export class CandidatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outboxService: OutboxService,
+  ) {}
 
   async create(
     createCandidateDto: CreateCandidateDto,
@@ -56,20 +67,28 @@ export class CandidatesService {
     // Create candidate
     const candidate = await this.prisma.candidate.create({
       data: {
-        name: createCandidateDto.name,
+        firstName: createCandidateDto.firstName,
+        lastName: createCandidateDto.lastName,
         contact: createCandidateDto.contact,
         email: createCandidateDto.email,
+        profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
-        dateOfBirth: createCandidateDto.dateOfBirth
-          ? new Date(createCandidateDto.dateOfBirth)
-          : null,
+        dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
         currentStatus: createCandidateDto.currentStatus || 'new',
-        experience: createCandidateDto.experience,
+        totalExperience: createCandidateDto.totalExperience,
+        currentSalary: createCandidateDto.currentSalary,
+        currentEmployer: createCandidateDto.currentEmployer,
+        currentRole: createCandidateDto.currentRole,
+        expectedSalary: createCandidateDto.expectedSalary,
+        highestEducation: createCandidateDto.highestEducation,
+        university: createCandidateDto.university,
+        graduationYear: createCandidateDto.graduationYear,
+        gpa: createCandidateDto.gpa,
+        // Legacy fields for backward compatibility
+        experience: createCandidateDto.totalExperience,
         skills: createCandidateDto.skills
           ? JSON.parse(createCandidateDto.skills)
           : [],
-        currentEmployer: createCandidateDto.currentEmployer,
-        expectedSalary: createCandidateDto.expectedSalary,
         assignedTo: userId, // Assign to the creating user
         teamId: createCandidateDto.teamId,
       },
@@ -296,25 +315,42 @@ export class CandidatesService {
 
     // Prepare update data
     const updateData: any = {};
-    if (updateCandidateDto.name) updateData.name = updateCandidateDto.name;
+    if (updateCandidateDto.firstName)
+      updateData.firstName = updateCandidateDto.firstName;
+    if (updateCandidateDto.lastName)
+      updateData.lastName = updateCandidateDto.lastName;
     if (updateCandidateDto.contact)
       updateData.contact = updateCandidateDto.contact;
     if (updateCandidateDto.email !== undefined)
       updateData.email = updateCandidateDto.email;
+    if (updateCandidateDto.profileImage !== undefined)
+      updateData.profileImage = updateCandidateDto.profileImage;
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.dateOfBirth)
       updateData.dateOfBirth = new Date(updateCandidateDto.dateOfBirth);
     if (updateCandidateDto.currentStatus)
       updateData.currentStatus = updateCandidateDto.currentStatus;
-    if (updateCandidateDto.experience !== undefined)
-      updateData.experience = updateCandidateDto.experience;
-    if (updateCandidateDto.skills)
-      updateData.skills = JSON.parse(updateCandidateDto.skills);
-    if (updateCandidateDto.currentEmployer !== undefined)
+    if (updateCandidateDto.totalExperience !== undefined)
+      updateData.totalExperience = updateCandidateDto.totalExperience;
+    if (updateCandidateDto.currentSalary !== undefined)
+      updateData.currentSalary = updateCandidateDto.currentSalary;
+    if (updateCandidateDto.currentEmployer)
       updateData.currentEmployer = updateCandidateDto.currentEmployer;
+    if (updateCandidateDto.currentRole)
+      updateData.currentRole = updateCandidateDto.currentRole;
     if (updateCandidateDto.expectedSalary !== undefined)
       updateData.expectedSalary = updateCandidateDto.expectedSalary;
+    if (updateCandidateDto.highestEducation)
+      updateData.highestEducation = updateCandidateDto.highestEducation;
+    if (updateCandidateDto.university)
+      updateData.university = updateCandidateDto.university;
+    if (updateCandidateDto.graduationYear !== undefined)
+      updateData.graduationYear = updateCandidateDto.graduationYear;
+    if (updateCandidateDto.gpa !== undefined)
+      updateData.gpa = updateCandidateDto.gpa;
+    if (updateCandidateDto.skills)
+      updateData.skills = JSON.parse(updateCandidateDto.skills);
     if (updateCandidateDto.teamId !== undefined)
       updateData.teamId = updateCandidateDto.teamId;
 
@@ -404,16 +440,12 @@ export class CandidatesService {
     }
 
     // Check if assignment already exists
-    const existingAssignment = await this.prisma.candidateProjectMap.findUnique(
-      {
-        where: {
-          candidateId_projectId: {
-            candidateId,
-            projectId: assignProjectDto.projectId,
-          },
-        },
+    const existingAssignment = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        candidateId,
+        projectId: assignProjectDto.projectId,
       },
-    );
+    });
 
     if (existingAssignment) {
       throw new ConflictException(
@@ -421,18 +453,21 @@ export class CandidatesService {
       );
     }
 
-    // Create assignment
+    // Create assignment (nomination)
     const assignment = await this.prisma.candidateProjectMap.create({
       data: {
         candidateId,
         projectId: assignProjectDto.projectId,
+        nominatedBy: assignProjectDto.notes || '', // TODO: Get from request user
         notes: assignProjectDto.notes,
+        status: 'nominated', // Initial status
       },
       include: {
         candidate: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             contact: true,
             email: true,
             currentStatus: true,
@@ -485,7 +520,7 @@ export class CandidatesService {
           },
         },
       },
-      orderBy: { assignedDate: 'desc' },
+      orderBy: { nominatedDate: 'desc' },
     });
 
     return assignments;
@@ -575,6 +610,342 @@ export class CandidatesService {
       candidatesByTeam,
       averageExperience: experienceStats._avg.experience || 0,
       averageExpectedSalary: experienceStats._avg.expectedSalary || 0,
+    };
+  }
+
+  /**
+   * Nominate a candidate for a project
+   * This is the NEW workflow entry point
+   */
+  async nominateCandidate(
+    candidateId: string,
+    nominateDto: NominateCandidateDto,
+    nominatorId: string,
+  ): Promise<any> {
+    // Validate candidate exists
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+    });
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // Validate project exists
+    const project = await this.prisma.project.findUnique({
+      where: { id: nominateDto.projectId },
+      include: {
+        documentRequirements: true,
+      },
+    });
+    if (!project) {
+      throw new NotFoundException(
+        `Project with ID ${nominateDto.projectId} not found`,
+      );
+    }
+
+    // Check if already nominated
+    const existingNomination = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        candidateId,
+        projectId: nominateDto.projectId,
+      },
+    });
+    if (existingNomination) {
+      throw new ConflictException(
+        `Candidate ${candidateId} is already nominated for project ${nominateDto.projectId}`,
+      );
+    }
+
+    // Create nomination
+    const nomination = await this.prisma.candidateProjectMap.create({
+      data: {
+        candidateId,
+        projectId: nominateDto.projectId,
+        nominatedBy: nominatorId,
+        status: CANDIDATE_PROJECT_STATUS.NOMINATED,
+        notes: nominateDto.notes,
+      },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            contact: true,
+            email: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            client: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Auto-transition to pending_documents if project has document requirements
+    if (project.documentRequirements.length > 0) {
+      await this.prisma.candidateProjectMap.update({
+        where: { id: nomination.id },
+        data: {
+          status: CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
+        },
+      });
+    }
+
+    return nomination;
+  }
+
+  /**
+   * Approve or reject a candidate after document verification
+   * Only callable by Document Verification Team
+   */
+  async approveOrRejectCandidate(
+    candidateProjectMapId: string,
+    approveDto: ApproveCandidateDto,
+    approverId: string,
+  ): Promise<any> {
+    // Get candidateProjectMap
+    const candidateProjectMap =
+      await this.prisma.candidateProjectMap.findUnique({
+        where: { id: candidateProjectMapId },
+        include: {
+          candidate: true,
+          project: {
+            include: {
+              documentRequirements: true,
+            },
+          },
+          documentVerifications: true,
+        },
+      });
+
+    if (!candidateProjectMap) {
+      throw new NotFoundException(
+        `Candidate project mapping with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    // Validate current status allows approval/rejection
+    if (
+      candidateProjectMap.status !==
+        CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED &&
+      approveDto.action === 'approve'
+    ) {
+      throw new BadRequestException(
+        `Cannot approve candidate. Current status is ${candidateProjectMap.status}. Documents must be verified first.`,
+      );
+    }
+
+    // If approving, verify all documents are verified
+    if (approveDto.action === 'approve') {
+      const totalRequired =
+        candidateProjectMap.project.documentRequirements.length;
+      const totalVerified = candidateProjectMap.documentVerifications.filter(
+        (v) => v.status === 'verified',
+      ).length;
+
+      if (totalVerified < totalRequired) {
+        throw new BadRequestException(
+          `Cannot approve candidate. Only ${totalVerified} of ${totalRequired} required documents are verified.`,
+        );
+      }
+    }
+
+    // Update status
+    const newStatus =
+      approveDto.action === 'approve'
+        ? CANDIDATE_PROJECT_STATUS.APPROVED
+        : CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS;
+
+    // Validate status transition
+    if (
+      !canTransitionStatus(candidateProjectMap.status as any, newStatus as any)
+    ) {
+      throw new BadRequestException(
+        `Cannot transition from ${candidateProjectMap.status} to ${newStatus}`,
+      );
+    }
+
+    // Update candidateProjectMap
+    const updated = await this.prisma.candidateProjectMap.update({
+      where: { id: candidateProjectMapId },
+      data: {
+        status: newStatus,
+        approvedBy: approveDto.action === 'approve' ? approverId : undefined,
+        approvedDate: approveDto.action === 'approve' ? new Date() : undefined,
+        rejectedBy: approveDto.action === 'reject' ? approverId : undefined,
+        rejectedDate: approveDto.action === 'reject' ? new Date() : undefined,
+        rejectionReason: approveDto.rejectionReason,
+        notes: approveDto.notes
+          ? `${candidateProjectMap.notes || ''}\n${approveDto.notes}`.trim()
+          : candidateProjectMap.notes,
+      },
+      include: {
+        candidate: true,
+        project: true,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Get eligible candidates for a project
+   * Based on project requirements and candidate skills/experience
+   */
+  async getEligibleCandidates(projectId: string): Promise<any[]> {
+    // Get project with requirements
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        rolesNeeded: true,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    // Get candidates not already nominated for this project
+    const candidates = await this.prisma.candidate.findMany({
+      where: {
+        projects: {
+          none: {
+            projectId,
+          },
+        },
+      },
+      include: {
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        team: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // TODO: Implement matching logic based on rolesNeeded requirements
+    // For now, return all candidates not nominated yet
+    return candidates;
+  }
+
+  /**
+   * Send candidate for document verification
+   * Assigns to document executive with least tasks and triggers notification
+   */
+  async sendForVerification(
+    sendForVerificationDto: SendForVerificationDto,
+    userId: string,
+  ): Promise<{ message: string; assignedTo: string }> {
+    // Check if candidate project mapping exists
+    const candidateProjectMap =
+      await this.prisma.candidateProjectMap.findUnique({
+        where: { id: sendForVerificationDto.candidateProjectMapId },
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+    if (!candidateProjectMap) {
+      throw new NotFoundException(
+        `Candidate project mapping with ID ${sendForVerificationDto.candidateProjectMapId} not found`,
+      );
+    }
+
+    // Check if candidate is in correct status for verification
+    if (candidateProjectMap.status !== CANDIDATE_PROJECT_STATUS.NOMINATED) {
+      throw new BadRequestException(
+        `Candidate must be in 'nominated' status to send for verification. Current status: ${candidateProjectMap.status}`,
+      );
+    }
+
+    // Find document executive with least tasks
+    const documentExecutives = await this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: {
+                in: ['Documentation Executive', 'Processing Executive'],
+              },
+            },
+          },
+        },
+      },
+      include: {
+        _count: {
+          select: {
+            // Count pending document verifications
+            // This is a simplified approach - in production you'd want more sophisticated task counting
+            assignedCandidates: {
+              where: {
+                currentStatus: {
+                  in: ['new', 'shortlisted', 'active'],
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (documentExecutives.length === 0) {
+      throw new BadRequestException('No document executives available');
+    }
+
+    // Find executive with least tasks
+    const assignedExecutive = documentExecutives.reduce((prev, current) => {
+      const prevTaskCount = prev._count.assignedCandidates;
+      const currentTaskCount = current._count.assignedCandidates;
+      return currentTaskCount < prevTaskCount ? current : prev;
+    });
+
+    // Update candidate project status to pending documents
+    await this.prisma.candidateProjectMap.update({
+      where: { id: sendForVerificationDto.candidateProjectMapId },
+      data: {
+        status: CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
+        notes: sendForVerificationDto.notes,
+      },
+    });
+
+    // Publish event to notify document executive
+    await this.outboxService.publishCandidateSentForVerification(
+      sendForVerificationDto.candidateProjectMapId,
+      assignedExecutive.id,
+    );
+
+    return {
+      message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} sent for verification`,
+      assignedTo: assignedExecutive.name,
     };
   }
 }

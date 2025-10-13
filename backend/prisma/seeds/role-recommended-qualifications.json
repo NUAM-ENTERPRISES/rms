@@ -1,0 +1,408 @@
+[
+  {
+    "roleSlug": "doctor-general-practitioner",
+    "qualificationShortName": "MBBS",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Primary qualification for general practice"
+  },
+  {
+    "roleSlug": "doctor-general-practitioner",
+    "qualificationShortName": "MD",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Postgraduate qualification enhances expertise"
+  },
+  {
+    "roleSlug": "consultant-physician",
+    "qualificationShortName": "MBBS",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Basic medical qualification required"
+  },
+  {
+    "roleSlug": "consultant-physician",
+    "qualificationShortName": "MD",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Specialist qualification preferred"
+  },
+  {
+    "roleSlug": "surgeon-general",
+    "qualificationShortName": "MBBS",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Basic medical qualification required"
+  },
+  {
+    "roleSlug": "surgeon-general",
+    "qualificationShortName": "MS",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Surgical specialty qualification"
+  },
+  {
+    "roleSlug": "cardiothoracic-surgeon",
+    "qualificationShortName": "MBBS",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Basic medical qualification required"
+  },
+  {
+    "roleSlug": "cardiothoracic-surgeon",
+    "qualificationShortName": "MS",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Surgical qualification required"
+  },
+  {
+    "roleSlug": "neurosurgeon",
+    "qualificationShortName": "MBBS",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Basic medical qualification required"
+  },
+  {
+    "roleSlug": "neurosurgeon",
+    "qualificationShortName": "MCh Neurosurgery",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Super-specialty qualification in neurosurgery"
+  },
+  {
+    "roleSlug": "registered-nurse-rn",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in nursing preferred"
+  },
+  {
+    "roleSlug": "registered-nurse-rn",
+    "qualificationShortName": "GNM",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Diploma in nursing acceptable"
+  },
+  {
+    "roleSlug": "staff-nurse",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Bachelor's degree preferred for staff nurse positions"
+  },
+  {
+    "roleSlug": "staff-nurse",
+    "qualificationShortName": "GNM",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Diploma acceptable for entry-level positions"
+  },
+  {
+    "roleSlug": "nursing-manager",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree required for management roles"
+  },
+  {
+    "roleSlug": "nursing-manager",
+    "qualificationShortName": "MSc Nursing",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Master's degree preferred for senior management"
+  },
+  {
+    "roleSlug": "icu-nurse",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree required for ICU nursing"
+  },
+  {
+    "roleSlug": "icu-nurse",
+    "qualificationShortName": "Diploma Critical Care",
+    "weight": 8,
+    "isPreferred": true,
+    "notes": "Specialized critical care training preferred"
+  },
+  {
+    "roleSlug": "or-ot-nurse-scrub-circulating",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree required for OR nursing"
+  },
+  {
+    "roleSlug": "or-ot-nurse-scrub-circulating",
+    "qualificationShortName": "Diploma OR Nursing",
+    "weight": 8,
+    "isPreferred": true,
+    "notes": "Specialized OR training preferred"
+  },
+  {
+    "roleSlug": "dialysis-nurse",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree required"
+  },
+  {
+    "roleSlug": "dialysis-nurse",
+    "qualificationShortName": "Diploma Dialysis",
+    "weight": 8,
+    "isPreferred": true,
+    "notes": "Specialized dialysis training required"
+  },
+  {
+    "roleSlug": "oncology-nurse",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree required"
+  },
+  {
+    "roleSlug": "oncology-nurse",
+    "qualificationShortName": "Diploma Oncology",
+    "weight": 8,
+    "isPreferred": true,
+    "notes": "Specialized oncology training preferred"
+  },
+  {
+    "roleSlug": "nicu-nurse",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree required for NICU"
+  },
+  {
+    "roleSlug": "nicu-nurse",
+    "qualificationShortName": "Diploma NICU",
+    "weight": 8,
+    "isPreferred": true,
+    "notes": "Specialized NICU training required"
+  },
+  {
+    "roleSlug": "picu-nurse",
+    "qualificationShortName": "BSc Nursing",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree required for PICU"
+  },
+  {
+    "roleSlug": "picu-nurse",
+    "qualificationShortName": "Diploma PICU",
+    "weight": 8,
+    "isPreferred": true,
+    "notes": "Specialized PICU training required"
+  },
+  {
+    "roleSlug": "pharmacist",
+    "qualificationShortName": "B.Pharm",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in pharmacy required"
+  },
+  {
+    "roleSlug": "pharmacist",
+    "qualificationShortName": "M.Pharm",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Master's degree preferred for clinical roles"
+  },
+  {
+    "roleSlug": "pharmacist",
+    "qualificationShortName": "Pharm.D",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Doctor of Pharmacy preferred for clinical practice"
+  },
+  {
+    "roleSlug": "physiotherapist",
+    "qualificationShortName": "BPT",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in physiotherapy required"
+  },
+  {
+    "roleSlug": "physiotherapist",
+    "qualificationShortName": "MPT",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Master's degree preferred for specialized roles"
+  },
+  {
+    "roleSlug": "lab-technologist-medical-laboratory-scientist",
+    "qualificationShortName": "BSc MLT",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in medical lab technology required"
+  },
+  {
+    "roleSlug": "lab-technologist-medical-laboratory-scientist",
+    "qualificationShortName": "DMLT",
+    "weight": 7,
+    "isPreferred": false,
+    "notes": "Diploma acceptable for entry-level positions"
+  },
+  {
+    "roleSlug": "radiographer-imaging-technologist",
+    "qualificationShortName": "BSc Radiography",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in radiography preferred"
+  },
+  {
+    "roleSlug": "radiographer-imaging-technologist",
+    "qualificationShortName": "Diploma Radiology",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Diploma acceptable for basic imaging"
+  },
+  {
+    "roleSlug": "respiratory-therapist",
+    "qualificationShortName": "BSc RT",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in respiratory therapy preferred"
+  },
+  {
+    "roleSlug": "respiratory-therapist",
+    "qualificationShortName": "Diploma RT",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Diploma acceptable for entry-level positions"
+  },
+  {
+    "roleSlug": "dietitian-nutritionist",
+    "qualificationShortName": "BSc Dietetics",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in dietetics required"
+  },
+  {
+    "roleSlug": "dietitian-nutritionist",
+    "qualificationShortName": "MSc Dietetics",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Master's degree preferred for clinical roles"
+  },
+  {
+    "roleSlug": "dental-surgeon-dentist",
+    "qualificationShortName": "BDS",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Bachelor's degree in dental surgery required"
+  },
+  {
+    "roleSlug": "dental-surgeon-dentist",
+    "qualificationShortName": "MDS",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Master's degree preferred for specialized practice"
+  },
+  {
+    "roleSlug": "hospital-administrator",
+    "qualificationShortName": "MBA Healthcare",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "MBA in healthcare management preferred"
+  },
+  {
+    "roleSlug": "hospital-administrator",
+    "qualificationShortName": "MHA",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Master's in health administration preferred"
+  },
+  {
+    "roleSlug": "hospital-administrator",
+    "qualificationShortName": "MBA",
+    "weight": 7,
+    "isPreferred": false,
+    "notes": "General MBA acceptable"
+  },
+  {
+    "roleSlug": "hr-manager",
+    "qualificationShortName": "MBA HR",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "MBA in HR preferred for management roles"
+  },
+  {
+    "roleSlug": "hr-manager",
+    "qualificationShortName": "MBA",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "General MBA acceptable"
+  },
+  {
+    "roleSlug": "accounts-manager",
+    "qualificationShortName": "CA",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Chartered Accountant qualification preferred"
+  },
+  {
+    "roleSlug": "accounts-manager",
+    "qualificationShortName": "CPA",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "CPA qualification acceptable"
+  },
+  {
+    "roleSlug": "accounts-manager",
+    "qualificationShortName": "M.Com",
+    "weight": 7,
+    "isPreferred": false,
+    "notes": "Master's in commerce acceptable"
+  },
+  {
+    "roleSlug": "it-support-engineer",
+    "qualificationShortName": "B.Tech CSE",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Computer science engineering degree preferred"
+  },
+  {
+    "roleSlug": "it-support-engineer",
+    "qualificationShortName": "B.Tech IT",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Information technology degree preferred"
+  },
+  {
+    "roleSlug": "it-support-engineer",
+    "qualificationShortName": "MCA",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Master's in computer applications acceptable"
+  },
+  {
+    "roleSlug": "medical-records-officer-his-mr",
+    "qualificationShortName": "BSc HIM",
+    "weight": 10,
+    "isPreferred": true,
+    "notes": "Health information management degree preferred"
+  },
+  {
+    "roleSlug": "medical-records-officer-his-mr",
+    "qualificationShortName": "HIM Certificate",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "HIM certificate acceptable"
+  },
+  {
+    "roleSlug": "billing-manager",
+    "qualificationShortName": "Medical Billing Cert",
+    "weight": 9,
+    "isPreferred": true,
+    "notes": "Medical billing certification preferred"
+  },
+  {
+    "roleSlug": "billing-manager",
+    "qualificationShortName": "B.Com",
+    "weight": 8,
+    "isPreferred": false,
+    "notes": "Commerce degree acceptable"
+  }
+]

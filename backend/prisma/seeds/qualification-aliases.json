@@ -1,0 +1,277 @@
+[
+  {
+    "qualificationShortName": "MBBS",
+    "alias": "Bachelor of Medicine",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MBBS",
+    "alias": "Medical Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD",
+    "alias": "Doctor of Medicine",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD",
+    "alias": "Medical Doctor",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MS",
+    "alias": "Master of Surgery",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MS",
+    "alias": "Surgical Degree",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "BSc Nursing",
+    "alias": "Bachelor of Nursing",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Nursing",
+    "alias": "BN",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "BSc Nursing",
+    "alias": "BSN",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MSc Nursing",
+    "alias": "Master of Nursing",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MSc Nursing",
+    "alias": "MSN",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "GNM",
+    "alias": "General Nursing",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "GNM",
+    "alias": "Nursing Diploma",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Pharm",
+    "alias": "Bachelor of Pharmacy",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Pharm",
+    "alias": "BPharm",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "M.Pharm",
+    "alias": "Master of Pharmacy",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "M.Pharm",
+    "alias": "MPharm",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Pharm.D",
+    "alias": "Doctor of Pharmacy",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Pharm.D",
+    "alias": "PharmD",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BPT",
+    "alias": "Bachelor of Physiotherapy",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BPT",
+    "alias": "Physiotherapy Degree",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "MPT",
+    "alias": "Master of Physiotherapy",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc MLT",
+    "alias": "Medical Lab Technology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc MLT",
+    "alias": "Lab Technology Degree",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "DMLT",
+    "alias": "Medical Lab Diploma",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DMLT",
+    "alias": "Lab Technician Diploma",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "BSc Radiography",
+    "alias": "Radiography Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Radiography",
+    "alias": "Medical Imaging Degree",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "BDS",
+    "alias": "Bachelor of Dental Surgery",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BDS",
+    "alias": "Dental Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MDS",
+    "alias": "Master of Dental Surgery",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MDS",
+    "alias": "Dental Specialist Degree",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "MBA",
+    "alias": "Master of Business Administration",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MBA",
+    "alias": "Business Management Degree",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "MBA Healthcare",
+    "alias": "Healthcare MBA",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MBA Healthcare",
+    "alias": "Hospital Management MBA",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "MBA HR",
+    "alias": "Human Resources MBA",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MBA HR",
+    "alias": "HR Management Degree",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "B.Com",
+    "alias": "Bachelor of Commerce",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Com",
+    "alias": "BCom",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "M.Com",
+    "alias": "Master of Commerce",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "M.Com",
+    "alias": "MCom",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "CA",
+    "alias": "Chartered Accountant",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "CA",
+    "alias": "Chartered Accountancy",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "CPA",
+    "alias": "Certified Public Accountant",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Tech CSE",
+    "alias": "Computer Science Engineering",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Tech CSE",
+    "alias": "BTech Computer Science",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Tech IT",
+    "alias": "Information Technology Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Tech IT",
+    "alias": "BTech IT",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MCA",
+    "alias": "Master of Computer Applications",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MCA",
+    "alias": "Computer Applications Master",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "MHA",
+    "alias": "Master of Health Administration",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MHA",
+    "alias": "Health Administration Master",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "MPH",
+    "alias": "Master of Public Health",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MPH",
+    "alias": "Public Health Master",
+    "isCommon": false
+  }
+]

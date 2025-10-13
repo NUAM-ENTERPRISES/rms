@@ -81,7 +81,19 @@ export {
 } from "./table";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+export { Switch } from "./switch";
+export { Checkbox } from "./checkbox";
+export { ScrollArea, ScrollBar } from "./scroll-area";
+export {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./collapsible";
+export { Separator } from "./separator";
+export { Calendar } from "./calendar";
+export { Popover, PopoverContent, PopoverTrigger } from "./popover";
 export { Toaster } from "./sonner";
 
 // Custom Components
 export { LoadingSpinner } from "./LoadingSpinner";
+export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";

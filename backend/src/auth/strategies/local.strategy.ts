@@ -7,13 +7,26 @@ import * as bcrypt from 'bcrypt';
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private prisma: PrismaService) {
-    super({ usernameField: 'email' });
+    // Note: passport-local only supports usernameField, so we pass countryCode+phone as one field
+    // and parse it in the validate method
+    super({ usernameField: 'phone', passReqToCallback: true });
   }
 
-  async validate(email: string, password: string): Promise<any> {
+  async validate(req: any, phone: string, password: string): Promise<any> {
     try {
+      const countryCode = req.body.countryCode;
+
+      if (!countryCode) {
+        throw new UnauthorizedException('Country code is required');
+      }
+
       const user = await (this.prisma as any).user.findUnique({
-        where: { email },
+        where: {
+          countryCode_phone: {
+            countryCode,
+            phone,
+          },
+        },
         include: {
           userRoles: {
             include: {

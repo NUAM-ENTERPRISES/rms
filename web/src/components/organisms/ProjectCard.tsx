@@ -1,5 +1,4 @@
-import React from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import {
   Calendar,
   Users,
@@ -9,11 +8,12 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { Project } from "@/services/projectsApi";
+import { Project } from "@/features/projects";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/hooks/useCan";
+import { FlagIcon, useCountryValidation } from "@/shared";
 
 interface ProjectCardProps {
   project: Project;
@@ -27,6 +27,7 @@ export default function ProjectCard({
   className,
 }: ProjectCardProps) {
   const canReadProjects = useCan("read:projects");
+  const { getCountryName } = useCountryValidation();
 
   // Calculate deadline status
   const deadline = new Date(project.deadline);
@@ -111,6 +112,17 @@ export default function ProjectCard({
                 <h3 className="text-lg font-semibold text-gray-900 truncate">
                   {project.title}
                 </h3>
+              </div>
+
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-600 truncate">
+                  {project?.client?.name || ""}
+                </span>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-2 mb-2">
                 <Badge
                   variant="outline"
                   className={cn("text-xs font-medium", statusConfig.color)}
@@ -119,28 +131,23 @@ export default function ProjectCard({
                   {project.status}
                 </Badge>
               </div>
-
-              <div className="flex items-center gap-2 mb-2">
-                <Building2 className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600 truncate">
-                  {project.client.name}
-                </span>
-                {project.team && (
-                  <>
-                    <span className="text-gray-300">•</span>
-                    <span className="text-sm text-gray-600 truncate">
-                      {project.team.name}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {project.description && (
-                <p className="text-sm text-gray-600 line-clamp-2">
-                  {project.description}
-                </p>
-              )}
             </div>
+
+            {/* Country Flag - Top Right */}
+            {project.countryCode && (
+              <div className="flex flex-col items-center ml-4">
+                <FlagIcon
+                  countryCode={project.countryCode}
+                  size="3xl"
+                  className="!border-0 !bg-transparent"
+                  aria-label={`Flag of ${project.countryCode}`}
+                />
+                <span className="text-xs text-gray-600 mt-1 text-center">
+                  {getCountryName(project.countryCode) ||
+                    project.countryCode.toUpperCase()}
+                </span>
+              </div>
+            )}
           </div>
         </CardHeader>
 
@@ -155,7 +162,7 @@ export default function ProjectCard({
                   getPriorityColor(project.priority)
                 )}
               >
-                {project.priority} Priority
+                Priority: {project.priority}
               </Badge>
 
               <div className="flex items-center gap-1">
@@ -194,11 +201,6 @@ export default function ProjectCard({
                   <span className="text-sm text-gray-600">
                     {filledPositions}/{totalPositions} filled
                   </span>
-                  {openPositions > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {openPositions} open
-                    </Badge>
-                  )}
                 </div>
               </div>
 
@@ -235,10 +237,6 @@ export default function ProjectCard({
                     addSuffix: true,
                   })}
                 </span>
-              </div>
-
-              <div className="text-xs text-gray-500">
-                by {project.creator.name}
               </div>
             </div>
           </div>

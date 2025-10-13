@@ -1,5 +1,5 @@
 import React from "react";
-import { Project } from "@/services/projectsApi";
+import { Project } from "@/features/projects";
 import ProjectCard from "./ProjectCard";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";

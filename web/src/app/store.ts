@@ -1,26 +1,15 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
-import { authApi } from "@/services/authApi";
-import { projectsApi } from "@/services/projectsApi";
-import { clientsApi } from "@/services/clientsApi";
-import { teamsApi } from "@/services/teamsApi";
+import { baseApi } from "@/app/api/baseApi";
 import authReducer from "@/features/auth/authSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    [authApi.reducerPath]: authApi.reducer,
-    [projectsApi.reducerPath]: projectsApi.reducer,
-    [clientsApi.reducerPath]: clientsApi.reducer,
-    [teamsApi.reducerPath]: teamsApi.reducer,
+    [baseApi.reducerPath]: baseApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(
-      authApi.middleware,
-      projectsApi.middleware,
-      clientsApi.middleware,
-      teamsApi.middleware
-    ),
+    getDefaultMiddleware().concat(baseApi.middleware),
 });
 
 setupListeners(store.dispatch);

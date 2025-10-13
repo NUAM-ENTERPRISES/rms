@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  IsUUID,
-  MinLength,
-  MaxLength,
-} from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTeamDto {
@@ -24,7 +18,7 @@ export class CreateTeamDto {
     example: 'user123',
   })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   leadId?: string;
 
   @ApiPropertyOptional({
@@ -32,7 +26,7 @@ export class CreateTeamDto {
     example: 'user456',
   })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   headId?: string;
 
   @ApiPropertyOptional({
@@ -40,6 +34,6 @@ export class CreateTeamDto {
     example: 'user789',
   })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   managerId?: string;
 }

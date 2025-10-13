@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,15 +8,14 @@ datasource db {
 }
 
 model RefreshToken {
-  id         String   @id @default(cuid()) // public token id (rfi)
-  userId     String
-  familyId   String
-  hash       String               // Argon2 hash of the secret value (rft)
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime @default(now())
-
-  user       User     @relation(fields: [userId], references: [id])
+  id        String    @id @default(cuid())
+  familyId  String
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  hash      String
+  user      User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([familyId])
@@ -28,51 +24,52 @@ model RefreshToken {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  password      String
-  dateOfBirth   DateTime?
-  phone         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                        String                @id @default(cuid())
+  email                     String                @unique
+  name                      String
+  password                  String
+  dateOfBirth               DateTime?
+  phone                     String
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  countryCode               String
+  profileImage              String?
+  auditLogs                 AuditLog[]
+  assignedCandidates        Candidate[]           @relation("CandidateRecruiter")
+  notifications             Notification[]
+  createdProjects           Project[]             @relation("ProjectCreator")
+  refreshTokens             RefreshToken[]
+  transferRequestsApproved  TeamTransferRequest[] @relation("TransferApprover")
+  transferRequestsRequested TeamTransferRequest[] @relation("TransferRequester")
+  transferRequestsReceived  TeamTransferRequest[] @relation("TransferUser")
+  userRoles                 UserRole[]
+  userTeams                 UserTeam[]
 
-  // Relations
-  userRoles     UserRole[]
-  userTeams     UserTeam[]
-  refreshTokens RefreshToken[]
-  createdProjects Project[] @relation("ProjectCreator")
-  assignedCandidates Candidate[] @relation("CandidateRecruiter")
-  notifications Notification[]
-  auditLogs     AuditLog[]
-
-  @@index([email]) // Already unique, but explicit index for auth queries
-  @@index([createdAt]) // For user listing and analytics
+  @@unique([countryCode, phone])
+  @@index([email])
+  @@index([countryCode, phone])
+  @@index([createdAt])
   @@map("users")
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  userRoles   UserRole[]
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   rolePermissions RolePermission[]
+  userRoles       UserRole[]
 
   @@map("roles")
 }
 
 model Permission {
-  id          String   @id @default(cuid())
-  key         String   @unique // e.g., 'read:projects', 'manage:users'
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
+  id              String           @id @default(cuid())
+  key             String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   rolePermissions RolePermission[]
 
   @@map("permissions")
@@ -81,44 +78,40 @@ model Permission {
 model RolePermission {
   roleId       String
   permissionId String
-
-  // Relations
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
-  @@index([roleId]) // Optimize role permission lookups
-  @@index([permissionId]) // Optimize permission-based queries
+  @@index([roleId])
+  @@index([permissionId])
   @@map("role_permissions")
 }
 
 model UserRole {
   userId String
   roleId String
-
-  // Relations
-  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role         Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
-  @@index([userId]) // Optimize user role lookups
-  @@index([roleId]) // Optimize role-based queries
+  @@index([userId])
+  @@index([roleId])
   @@map("user_roles")
 }
 
 model Team {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  leadId    String?
-  headId    String?
-  managerId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  userTeams UserTeam[]
-  projects  Project[]
-  candidates Candidate[]
+  id                   String                @id @default(cuid())
+  name                 String                @unique
+  leadId               String?
+  headId               String?
+  managerId            String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  candidates           Candidate[]
+  projects             Project[]
+  transferRequestsFrom TeamTransferRequest[] @relation("FromTeamTransfers")
+  transferRequestsTo   TeamTransferRequest[] @relation("ToTeamTransfers")
+  userTeams            UserTeam[]
 
   @@map("teams")
 }
@@ -126,60 +119,621 @@ model Team {
 model UserTeam {
   userId String
   teamId String
-
-  // Relations
-  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team         Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, teamId])
   @@map("user_teams")
 }
 
 model Client {
-  id              String   @id @default(cuid())
-  name            String
-  type            ClientType
-  pointOfContact  String?
-  email           String?
-  phone           String?
-  address         String?
-  
-  // Individual Referrer specific fields
-  profession      String?
-  organization    String?
-  relationship    IndividualRelationship?
-  
-  // Sub-Agency specific fields
-  agencyType      AgencyType?
-  specialties     Json     @default("[]")
-  
-  // Healthcare Organization specific fields
-  facilityType    FacilityType?
-  facilitySize    FacilitySize?
-  locations       Json     @default("[]")
-  
-  // External Source specific fields
-  sourceType      ExternalSourceType?
-  sourceName      String?
+  id                String                  @id @default(cuid())
+  name              String
+  pointOfContact    String?
+  email             String?
+  phone             String?
+  address           String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
   acquisitionMethod AcquisitionMethod?
-  sourceNotes     String?
-  
-  // Optional financial fields
-  relationshipType RelationshipType?
-  commissionRate   Float?
-  paymentTerms     String?
-  contractStartDate DateTime?
-  contractEndDate   DateTime?
+  agencyType        AgencyType?
   billingAddress    String?
+  commissionRate    Float?
+  contractEndDate   DateTime?
+  contractStartDate DateTime?
+  facilitySize      FacilitySize?
+  facilityType      FacilityType?
+  locations         Json                    @default("[]")
+  organization      String?
+  paymentTerms      String?
+  profession        String?
+  relationship      IndividualRelationship?
+  relationshipType  RelationshipType?
+  sourceName        String?
+  sourceNotes       String?
+  sourceType        ExternalSourceType?
+  specialties       Json                    @default("[]")
   taxId             String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  // Relations
-  projects        Project[]
+  type              ClientType
+  projects          Project[]
 
   @@map("clients")
+}
+
+model Country {
+  code                          String                         @id
+  name                          String
+  region                        String
+  callingCode                   String
+  currency                      String
+  timezone                      String
+  isActive                      Boolean                        @default(true)
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime                       @updatedAt
+  projects                      Project[]
+  qualificationCountryProfiles  QualificationCountryProfile[]
+  qualificationEquivalencies    QualificationEquivalency[]
+  roleRecommendedQualifications RoleRecommendedQualification[]
+
+  @@map("countries")
+}
+
+model Project {
+  id                   String                @id @default(cuid())
+  clientId             String?
+  title                String
+  description          String?
+  deadline             DateTime?
+  status               String                @default("active")
+  createdBy            String
+  teamId               String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  priority             String                @default("medium")
+  countryCode          String?
+  candidateProjects    CandidateProjectMap[]
+  documentRequirements DocumentRequirement[]
+  client               Client?               @relation(fields: [clientId], references: [id])
+  country              Country?              @relation(fields: [countryCode], references: [code])
+  creator              User                  @relation("ProjectCreator", fields: [createdBy], references: [id])
+  team                 Team?                 @relation(fields: [teamId], references: [id])
+  rolesNeeded          RoleNeeded[]
+
+  @@map("projects")
+}
+
+model RoleNeeded {
+  id                        String                           @id @default(cuid())
+  projectId                 String
+  designation               String
+  quantity                  Int
+  priority                  String                           @default("medium")
+  minExperience             Int?
+  maxExperience             Int?
+  skills                    Json                             @default("[]")
+  createdAt                 DateTime                         @default(now())
+  updatedAt                 DateTime                         @updatedAt
+  additionalRequirements    String?
+  backgroundCheckRequired   Boolean                          @default(true)
+  benefits                  String?
+  drugScreeningRequired     Boolean                          @default(true)
+  educationRequirements     Json?
+  institutionRequirements   String?
+  languageRequirements      Json?
+  licenseRequirements       Json?
+  notes                     String?
+  onCallRequired            Boolean                          @default(false)
+  physicalDemands           String?
+  relocationAssistance      Boolean                          @default(false)
+  requiredCertifications    Json?
+  salaryRange               Json?
+  shiftType                 String?
+  specificExperience        Json?
+  technicalSkills           Json?
+  educationRequirementsList RoleNeededEducationRequirement[]
+  candidateAllocations      CandidateProjectMap[]            // NEW: candidate allocations for this role
+  project                   Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("roles_needed")
+}
+
+model Candidate {
+  id               String                @id @default(cuid())
+  contact          String                @unique
+  email            String?
+  source           String                @default("manual")
+  dateOfBirth      DateTime
+  currentStatus    String                @default("new")
+  experience       Int?
+  skills           Json                  @default("[]")
+  currentEmployer  String?
+  expectedSalary   Int?
+  assignedTo       String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  teamId           String?
+  profileImage     String?
+  currentRole      String?
+  currentSalary    Int?
+  firstName        String
+  gpa              Float?
+  graduationYear   Int?
+  highestEducation String?
+  lastName         String
+  totalExperience  Int?
+  university       String?
+  projects         CandidateProjectMap[]
+  recruiter        User?                 @relation("CandidateRecruiter", fields: [assignedTo], references: [id])
+  team             Team?                 @relation(fields: [teamId], references: [id])
+  certifications   Certification[]
+  documents        Document[]
+  talentPool       TalentPool?
+  workExperiences  WorkExperience[]
+
+  @@index([assignedTo])
+  @@index([teamId])
+  @@index([currentStatus])
+  @@map("candidates")
+}
+
+model WorkExperience {
+  id           String    @id @default(cuid())
+  candidateId  String
+  companyName  String
+  jobTitle     String
+  startDate    DateTime
+  endDate      DateTime?
+  isCurrent    Boolean   @default(false)
+  description  String?
+  salary       Int?
+  location     String?
+  skills       Json      @default("[]")
+  achievements String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([companyName])
+  @@index([jobTitle])
+  @@map("work_experiences")
+}
+
+model CandidateProjectMap {
+  id                     String                                 @id @default(cuid())
+  candidateId            String
+  projectId              String
+  roleNeededId           String?                                // NEW: which role this nomination targets
+  notes                  String?
+  createdAt              DateTime                               @default(now())
+  updatedAt              DateTime                               @updatedAt
+  approvedBy             String?
+  approvedDate           DateTime?
+  documentsSubmittedDate DateTime?
+  documentsVerifiedDate  DateTime?
+  hiredDate              DateTime?
+  nominatedBy            String
+  nominatedDate          DateTime                               @default(now())
+  rejectedBy             String?
+  rejectedDate           DateTime?
+  rejectionReason        String?
+  selectedDate           DateTime?
+  status                 String                                 @default("nominated")
+  documentVerifications  CandidateProjectDocumentVerification[]
+  candidate              Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  project                Project                                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  roleNeeded             RoleNeeded?                            @relation(fields: [roleNeededId], references: [id], onDelete: SetNull)
+  interviews             Interview[]
+  processing             Processing?
+
+  @@unique([candidateId, projectId, roleNeededId])
+  @@index([status])
+  @@index([nominatedBy])
+  @@index([projectId, roleNeededId])
+  @@map("candidate_project_map")
+}
+
+model Document {
+  id              String                                 @id @default(cuid())
+  candidateId     String
+  docType         String
+  fileName        String
+  fileUrl         String
+  uploadedBy      String
+  verifiedBy      String?
+  status          String                                 @default("pending")
+  notes           String?
+  createdAt       DateTime                               @default(now())
+  updatedAt       DateTime                               @updatedAt
+  documentNumber  String?
+  expiryDate      DateTime?
+  fileSize        Int?
+  mimeType        String?
+  rejectedAt      DateTime?
+  rejectedBy      String?
+  rejectionReason String?
+  verifiedAt      DateTime?
+  verifications   CandidateProjectDocumentVerification[]
+  candidate       Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([docType])
+  @@index([status])
+  @@map("documents")
+}
+
+model Interview {
+  id                    String              @id @default(cuid())
+  scheduledTime         DateTime
+  duration              Int                 @default(60)
+  type                  String              @default("technical")
+  outcome               String?
+  notes                 String?
+  interviewer           String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  candidateProjectMapId String
+  interviewerEmail      String?
+  meetingLink           String?
+  mode                  String?             @default("video")
+  candidateProjectMap   CandidateProjectMap @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+
+  @@index([candidateProjectMapId])
+  @@index([scheduledTime])
+  @@map("interviews")
+}
+
+model Processing {
+  id                    String              @id @default(cuid())
+  qvpStatus             String              @default("not_started")
+  medicalStatus         String              @default("not_started")
+  visaStatus            String              @default("not_started")
+  travelStatus          String              @default("not_started")
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  actualJoiningDate     DateTime?
+  arrivalDate           DateTime?
+  candidateProjectMapId String              @unique
+  departureDate         DateTime?
+  expectedJoiningDate   DateTime?
+  flightBookedDate      DateTime?
+  joiningNotes          String?
+  joiningStatus         String              @default("pending")
+  medicalClearance      String?
+  medicalCompletionDate DateTime?
+  medicalNotes          String?
+  medicalStartDate      DateTime?
+  qvpCompletionDate     DateTime?
+  qvpStartDate          DateTime?
+  travelNotes           String?
+  visaApplicationDate   DateTime?
+  visaApprovalDate      DateTime?
+  visaExpiryDate        DateTime?
+  visaNotes             String?
+  visaType              String?
+  candidateProjectMap   CandidateProjectMap @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+
+  @@index([candidateProjectMapId])
+  @@map("processing")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  seen      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  idemKey   String    @unique
+  link      String?
+  meta      Json?
+  readAt    DateTime?
+  status    String    @default("unread")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([status])
+  @@map("notifications")
+}
+
+model OutboxEvent {
+  id        String   @id @default(cuid())
+  type      String
+  payload   Json
+  processed Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([processed])
+  @@map("outbox_events")
+}
+
+model TeamTransferRequest {
+  id          String    @id @default(cuid())
+  userId      String
+  fromTeamId  String
+  toTeamId    String
+  requestedBy String
+  status      String    @default("pending")
+  reason      String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  approver    User?     @relation("TransferApprover", fields: [approvedBy], references: [id])
+  fromTeam    Team      @relation("FromTeamTransfers", fields: [fromTeamId], references: [id], onDelete: Cascade)
+  requester   User      @relation("TransferRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+  toTeam      Team      @relation("ToTeamTransfers", fields: [toTeamId], references: [id], onDelete: Cascade)
+  user        User      @relation("TransferUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fromTeamId])
+  @@index([toTeamId])
+  @@index([status])
+  @@map("team_transfer_requests")
+}
+
+model Certification {
+  id                 String    @id @default(cuid())
+  candidateId        String
+  certName           String
+  status             String    @default("pending")
+  examDate           DateTime?
+  validUntil         DateTime?
+  exportedToLearning Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  candidate          Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("certifications")
+}
+
+model TalentPool {
+  id              String    @id @default(cuid())
+  candidateId     String    @unique
+  role            String
+  yearsExperience Int
+  currentEmployer String?
+  isAvailable     Boolean   @default(true)
+  rating          Int?
+  notes           String?
+  sourceProjectId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("talent_pool")
+}
+
+/// *
+///  * DocumentRequirement
+///  * Defines what documents are required for a specific project
+///  * Set by recruiter/manager when creating/updating a project
+model DocumentRequirement {
+  id          String   @id @default(cuid())
+  projectId   String
+  docType     String
+  mandatory   Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, docType])
+  @@index([projectId])
+  @@map("document_requirements")
+}
+
+/// *
+///  * CandidateProjectDocumentVerification
+///  * Junction table linking Documents to specific Project nominations
+///  * Tracks verification status of each document for each project
+///  * Multiple projects can reference the same document (e.g., same passport for multiple projects)
+model CandidateProjectDocumentVerification {
+  id                      String              @id @default(cuid())
+  candidateProjectMapId   String
+  documentId              String
+  status                  String              @default("pending")
+  verifiedBy              String?
+  verifiedAt              DateTime?
+  rejectedBy              String?
+  rejectedAt              DateTime?
+  notes                   String?
+  rejectionReason         String?
+  resubmissionRequested   Boolean             @default(false)
+  resubmissionRequestedAt DateTime?
+  resubmissionRequestedBy String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  candidateProjectMap     CandidateProjectMap @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  document                Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateProjectMapId, documentId])
+  @@index([candidateProjectMapId])
+  @@index([documentId])
+  @@index([status])
+  @@map("candidate_project_document_verifications")
+}
+
+/// *
+///  * RoleCatalog
+///  * Normalized catalog of healthcare and general staff roles
+///  * Separate from system RBAC roles (Role model)
+model RoleCatalog {
+  id                        String                         @id @default(cuid())
+  name                      String                         @unique
+  slug                      String                         @unique
+  category                  String
+  subCategory               String?
+  isClinical                Boolean                        @default(true)
+  description               String?
+  isActive                  Boolean                        @default(true)
+  createdAt                 DateTime                       @default(now())
+  updatedAt                 DateTime                       @updatedAt
+  recommendedQualifications RoleRecommendedQualification[]
+
+  @@index([category])
+  @@index([isClinical])
+  @@index([isActive])
+  @@map("role_catalog")
+}
+
+/// *
+///  * Qualification
+///  * Normalized catalog of educational qualifications, degrees, and certifications
+model Qualification {
+  id                     String                           @id @default(cuid())
+  name                   String                           @unique
+  shortName              String?
+  level                  QualificationLevel
+  field                  String
+  program                String?
+  description            String?
+  isActive               Boolean                          @default(true)
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  aliases                QualificationAlias[]
+  countryProfiles        QualificationCountryProfile[]
+  equivalencies          QualificationEquivalency[]       @relation("FromQualification")
+  reverseEquivalencies   QualificationEquivalency[]       @relation("ToQualification")
+  roleNeededRequirements RoleNeededEducationRequirement[]
+  roleRecommendations    RoleRecommendedQualification[]
+
+  @@index([level])
+  @@index([field])
+  @@index([isActive])
+  @@map("qualifications")
+}
+
+/// *
+///  * QualificationAlias
+///  * Alternative names for qualifications (e.g., "RN" for "Registered Nurse")
+model QualificationAlias {
+  id              String        @id @default(cuid())
+  qualificationId String
+  alias           String
+  isCommon        Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  qualification   Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+
+  @@unique([qualificationId, alias])
+  @@index([alias])
+  @@map("qualification_aliases")
+}
+
+/// *
+///  * QualificationCountryProfile
+///  * Country-specific information for qualifications
+model QualificationCountryProfile {
+  id                  String        @id @default(cuid())
+  qualificationId     String
+  countryCode         String
+  regulatedTitle      String?
+  issuingBody         String?
+  accreditationStatus String?
+  notes               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  country             Country       @relation(fields: [countryCode], references: [code])
+  qualification       Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+
+  @@unique([qualificationId, countryCode])
+  @@index([countryCode])
+  @@map("qualification_country_profiles")
+}
+
+/// *
+///  * QualificationEquivalency
+///  * Cross-qualification equivalence mapping
+model QualificationEquivalency {
+  id                  String        @id @default(cuid())
+  fromQualificationId String
+  toQualificationId   String
+  countryCode         String?
+  isEquivalent        Boolean       @default(true)
+  notes               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  country             Country?      @relation(fields: [countryCode], references: [code])
+  fromQualification   Qualification @relation("FromQualification", fields: [fromQualificationId], references: [id], onDelete: Cascade)
+  toQualification     Qualification @relation("ToQualification", fields: [toQualificationId], references: [id], onDelete: Cascade)
+
+  @@unique([fromQualificationId, toQualificationId, countryCode])
+  @@index([fromQualificationId])
+  @@index([toQualificationId])
+  @@map("qualification_equivalencies")
+}
+
+/// *
+///  * RoleRecommendedQualification
+///  * Mapping of recommended qualifications for specific roles
+model RoleRecommendedQualification {
+  id              String        @id @default(cuid())
+  roleId          String
+  qualificationId String
+  weight          Int           @default(1)
+  countryCode     String?
+  isPreferred     Boolean       @default(false)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  country         Country?      @relation(fields: [countryCode], references: [code])
+  qualification   Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+  role            RoleCatalog   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, qualificationId, countryCode])
+  @@index([roleId])
+  @@index([qualificationId])
+  @@index([weight])
+  @@map("role_recommended_qualifications")
+}
+
+/// *
+///  * RoleNeededEducationRequirement
+///  * Junction table linking RoleNeeded to specific Qualifications
+///  * Replaces free-text educationRequirements with normalized IDs
+model RoleNeededEducationRequirement {
+  id              String        @id @default(cuid())
+  roleNeededId    String
+  qualificationId String
+  mandatory       Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  qualification   Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+  roleNeeded      RoleNeeded    @relation(fields: [roleNeededId], references: [id], onDelete: Cascade)
+
+  @@unique([roleNeededId, qualificationId])
+  @@index([roleNeededId])
+  @@index([qualificationId])
+  @@map("role_needed_education_requirements")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actionType String
+  entityId   String
+  entityType String
+  userId     String
+  changes    Json     @default("{}")
+  timestamp  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model AllocationCursor {
+  id           String   @id @default(cuid())
+  projectId    String
+  roleNeededId String
+  lastIndex    Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([projectId, roleNeededId])
+  @@map("allocation_cursors")
 }
 
 enum ClientType {
@@ -237,250 +791,10 @@ enum RelationshipType {
   EXTERNAL_SOURCE
 }
 
-model Project {
-  id          String   @id @default(cuid())
-  clientId    String
-  title       String
-  description String?
-  deadline    DateTime?
-  status      String   @default("active") // active, completed, cancelled
-  priority    String   @default("medium") // low, medium, high, urgent
-  createdBy   String
-  teamId      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  client      Client   @relation(fields: [clientId], references: [id])
-  creator     User     @relation("ProjectCreator", fields: [createdBy], references: [id])
-  team        Team?    @relation(fields: [teamId], references: [id])
-  rolesNeeded RoleNeeded[]
-  candidateProjects CandidateProjectMap[]
-
-  @@map("projects")
-}
-
-model RoleNeeded {
-  id          String   @id @default(cuid())
-  projectId   String
-  
-  // Basic Info
-  designation String
-  quantity    Int
-  priority    String   @default("medium") // low, medium, high, urgent
-  
-  // Experience Requirements
-  minExperience Int?
-  maxExperience Int?
-  specificExperience Json?  // ["ICU", "ER", "Leadership"]
-  
-  // Educational Requirements
-  educationRequirements Json?  // ["BSN", "MSN"]
-  requiredCertifications Json? // ["RN", "BLS", "ACLS"]
-  institutionRequirements String?
-  
-  // Skills & Competencies
-  skills      Json     @default("[]")
-  technicalSkills Json? // ["EPIC", "Ventilator Management"]
-  languageRequirements Json? // ["English", "Spanish"]
-  
-  // Licensing & Compliance
-  licenseRequirements Json? // ["State RN License", "Compact License"]
-  backgroundCheckRequired Boolean @default(true)
-  drugScreeningRequired Boolean @default(true)
-  
-  // Work Conditions
-  shiftType   String?  // "day", "night", "rotating", "flexible"
-  onCallRequired Boolean @default(false)
-  physicalDemands String?
-  
-  // Compensation
-  salaryRange Json? // {"min": 60000, "max": 80000, "currency": "USD"}
-  benefits    String?
-  relocationAssistance Boolean @default(false)
-  
-  // Additional Requirements
-  additionalRequirements String?
-  notes       String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("roles_needed")
-}
-
-model Candidate {
-  id            String   @id @default(cuid())
-  name          String
-  contact       String   @unique
-  email         String?
-  source        String   @default("manual") // manual, meta, referral
-  dateOfBirth   DateTime?
-  currentStatus String   @default("new") // new, shortlisted, selected, rejected, hired
-  experience    Int?
-  skills        Json     @default("[]")
-  currentEmployer String?
-  expectedSalary Int?
-  assignedTo    String?
-  teamId        String?  // Added for team scoping
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  recruiter    User?    @relation("CandidateRecruiter", fields: [assignedTo], references: [id])
-  team         Team?    @relation(fields: [teamId], references: [id])
-  projects     CandidateProjectMap[]
-  documents    Document[]
-  interviews   Interview[]
-  processing   Processing?
-  certifications Certification[]
-  talentPool   TalentPool?
-
-  @@map("candidates")
-}
-
-model CandidateProjectMap {
-  id          String   @id @default(cuid())
-  candidateId String
-  projectId   String
-  assignedDate DateTime @default(now())
-  verified    Boolean  @default(false)
-  shortlisted Boolean  @default(false)
-  selected    Boolean  @default(false)
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([candidateId, projectId])
-  @@map("candidate_project_map")
-}
-
-model Document {
-  id          String   @id @default(cuid())
-  candidateId String
-  docType     String   // resume, aadhaar, passport, medical, etc.
-  fileName    String
-  fileUrl     String
-  uploadedBy  String
-  verifiedBy  String?
-  status      String   @default("pending") // pending, verified, rejected
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@map("documents")
-}
-
-model Interview {
-  id            String   @id @default(cuid())
-  candidateId   String
-  projectId     String?
-  scheduledTime DateTime
-  duration      Int      @default(60) // minutes
-  type          String   @default("technical") // technical, hr, final
-  outcome       String?  // passed, failed, rescheduled
-  notes         String?
-  interviewer   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@map("interviews")
-}
-
-model Processing {
-  id            String   @id @default(cuid())
-  candidateId   String   @unique
-  qvpStatus     String   @default("pending") // pending, completed, failed
-  medicalStatus String   @default("pending") // pending, passed, failed
-  visaStatus    String   @default("pending") // pending, approved, rejected
-  travelStatus  String   @default("pending") // pending, booked, completed
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@map("processing")
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String   // document_verification, interview_reminder, etc.
-  title     String
-  message   String
-  seen      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
-}
-
-model Certification {
-  id              String   @id @default(cuid())
-  candidateId     String
-  certName        String
-  status          String   @default("pending") // pending, passed, failed
-  examDate        DateTime?
-  validUntil      DateTime?
-  exportedToLearning Boolean @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  // Relations
-  candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@map("certifications")
-}
-
-model TalentPool {
-  id              String   @id @default(cuid())
-  candidateId     String   @unique
-  role            String
-  yearsExperience Int
-  currentEmployer String?
-  isAvailable     Boolean  @default(true)
-  rating          Int?     // 1-5 rating
-  notes           String?
-  sourceProjectId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  // Relations
-  candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@map("talent_pool")
-}
-
-
-
-model AuditLog {
-  id         String   @id @default(cuid())
-  actionType String   // create, update, delete
-  entityId   String
-  entityType String   // user, candidate, project, etc.
-  userId     String
-  changes    Json     @default("{}")
-  timestamp  DateTime @default(now())
-
-  // Relations
-  user       User     @relation(fields: [userId], references: [id])
-
-  @@map("audit_logs")
+enum QualificationLevel {
+  CERTIFICATE
+  DIPLOMA
+  BACHELOR
+  MASTER
+  DOCTORATE
 }

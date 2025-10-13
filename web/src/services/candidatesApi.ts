@@ -1,119 +1,171 @@
-import { createApi } from '@reduxjs/toolkit/query/react'
-import { baseQuery } from '@/services/baseApi'
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { baseQuery } from "@/services/baseApi";
 
 interface Candidate {
-  id: string
-  name: string
-  contact: string
-  email?: string
-  source: string
-  dateOfBirth?: string
-  currentStatus: string
-  experience?: number
-  skills: string[]
-  currentEmployer?: string
-  expectedSalary?: number
-  assignedTo?: string
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  contact: string;
+  email?: string;
+  source: string;
+  dateOfBirth?: string;
+  currentStatus: string;
+  experience?: number;
+  skills: string[];
+  currentEmployer?: string;
+  expectedSalary?: number;
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
   recruiter?: {
-    id: string
-    name: string
-    email: string
-  }
-  projects: CandidateProjectMap[]
+    id: string;
+    name: string;
+    email: string;
+  };
+  projects: CandidateProjectMap[];
 }
 
 interface CandidateProjectMap {
-  id: string
-  projectId: string
-  assignedDate: string
-  verified: boolean
-  shortlisted: boolean
-  selected: boolean
-  notes?: string
+  id: string;
+  projectId: string;
+  candidateId: string;
+  status: string;
+  nominatedDate: string;
+  nominatedBy: string;
+  approvedBy?: string;
+  approvedDate?: string;
+  rejectedBy?: string;
+  rejectedDate?: string;
+  documentsSubmittedDate?: string;
+  documentsVerifiedDate?: string;
+  selectedDate?: string;
+  hiredDate?: string;
+  notes?: string;
+  rejectionReason?: string;
   project: {
-    id: string
-    title: string
+    id: string;
+    title: string;
     client: {
-      id: string
-      name: string
-    }
-  }
+      id: string;
+      name: string;
+    };
+  };
 }
 
 interface CreateCandidateRequest {
-  name: string
-  contact: string
-  email?: string
-  source?: string
-  dateOfBirth?: string
-  experience?: number
-  skills?: string[]
-  currentEmployer?: string
-  expectedSalary?: number
-  assignedTo?: string
+  name: string;
+  contact: string;
+  email?: string;
+  source?: string;
+  dateOfBirth?: string;
+  experience?: number;
+  skills?: string[];
+  currentEmployer?: string;
+  expectedSalary?: number;
+  assignedTo?: string;
 }
 
 interface UpdateCandidateRequest {
-  id: string
-  name?: string
-  contact?: string
-  email?: string
-  currentStatus?: string
-  experience?: number
-  skills?: string[]
-  currentEmployer?: string
-  expectedSalary?: number
-  assignedTo?: string
+  id: string;
+  name?: string;
+  contact?: string;
+  email?: string;
+  currentStatus?: string;
+  experience?: number;
+  skills?: string[];
+  currentEmployer?: string;
+  expectedSalary?: number;
+  assignedTo?: string;
 }
 
 export const candidatesApi = createApi({
-  reducerPath: 'candidatesApi',
+  reducerPath: "candidatesApi",
   baseQuery,
-  tagTypes: ['Candidate'],
+  tagTypes: ["Candidate"],
   endpoints: (builder) => ({
     getCandidates: builder.query<Candidate[], void>({
-      query: () => '/candidates',
-      providesTags: ['Candidate'],
+      query: () => "/candidates",
+      providesTags: ["Candidate"],
     }),
     getCandidateById: builder.query<Candidate, string>({
       query: (id) => `/candidates/${id}`,
-      providesTags: (_, __, id) => [{ type: 'Candidate', id }],
+      providesTags: (_, __, id) => [{ type: "Candidate", id }],
     }),
     createCandidate: builder.mutation<Candidate, CreateCandidateRequest>({
       query: (candidateData) => ({
-        url: '/candidates',
-        method: 'POST',
+        url: "/candidates",
+        method: "POST",
         body: candidateData,
       }),
-      invalidatesTags: ['Candidate'],
+      invalidatesTags: ["Candidate"],
     }),
     updateCandidate: builder.mutation<Candidate, UpdateCandidateRequest>({
       query: ({ id, ...candidateData }) => ({
         url: `/candidates/${id}`,
-        method: 'PATCH',
+        method: "PATCH",
         body: candidateData,
       }),
-      invalidatesTags: (_, __, { id }) => [{ type: 'Candidate', id }, 'Candidate'],
+      invalidatesTags: (_, __, { id }) => [
+        { type: "Candidate", id },
+        "Candidate",
+      ],
     }),
     deleteCandidate: builder.mutation<void, string>({
       query: (id) => ({
         url: `/candidates/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['Candidate'],
+      invalidatesTags: ["Candidate"],
     }),
-    assignToProject: builder.mutation<void, { candidateId: string; projectId: string }>({
+    assignToProject: builder.mutation<
+      void,
+      { candidateId: string; projectId: string }
+    >({
       query: ({ candidateId, projectId }) => ({
         url: `/candidates/${candidateId}/projects`,
-        method: 'POST',
+        method: "POST",
         body: { projectId },
       }),
-      invalidatesTags: ['Candidate'],
+      invalidatesTags: ["Candidate"],
+    }),
+
+    nominateCandidate: builder.mutation<
+      { success: boolean; data: CandidateProjectMap; message: string },
+      { candidateId: string; projectId: string; notes?: string }
+    >({
+      query: ({ candidateId, ...nominationData }) => ({
+        url: `/candidates/${candidateId}/nominate`,
+        method: "POST",
+        body: nominationData,
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+
+    approveOrRejectCandidate: builder.mutation<
+      { success: boolean; data: CandidateProjectMap; message: string },
+      {
+        candidateProjectMapId: string;
+        action: "approve" | "reject";
+        notes?: string;
+        rejectionReason?: string;
+      }
+    >({
+      query: ({ candidateProjectMapId, ...approvalData }) => ({
+        url: `/candidates/project-mapping/${candidateProjectMapId}/approve`,
+        method: "POST",
+        body: approvalData,
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+
+    getEligibleCandidates: builder.query<
+      { success: boolean; data: Candidate[] },
+      string
+    >({
+      query: (projectId) => `/projects/${projectId}/eligible-candidates`,
+      providesTags: ["Candidate"],
     }),
   }),
-})
+});
 
 export const {
   useGetCandidatesQuery,
@@ -122,4 +174,7 @@ export const {
   useUpdateCandidateMutation,
   useDeleteCandidateMutation,
   useAssignToProjectMutation,
-} = candidatesApi
+  useNominateCandidateMutation,
+  useApproveOrRejectCandidateMutation,
+  useGetEligibleCandidatesQuery,
+} = candidatesApi;

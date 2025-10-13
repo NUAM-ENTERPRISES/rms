@@ -1,8 +1,8 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauth } from "@/services/baseQuery";
+import { baseApi } from "@/app/api/baseApi";
 
 interface LoginRequest {
-  email: string;
+  countryCode: string; // Country calling code (e.g., "+91")
+  phone: string; // Phone number without country code
   password: string;
 }
 
@@ -47,11 +47,7 @@ interface LogoutResponse {
   message: string;
 }
 
-export const authApi = createApi({
-  reducerPath: "authApi",
-  baseQuery: baseQueryWithReauth,
-  tagTypes: ["Auth"],
-  keepUnusedDataFor: 300, // Keep data for 5 minutes
+export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
       query: (credentials: LoginRequest) => ({

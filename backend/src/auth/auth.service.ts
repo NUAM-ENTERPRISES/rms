@@ -36,9 +36,14 @@ export class AuthService {
     private auditService: AuditService,
   ) {}
 
-  async validateUser(email: string, password: string) {
+  async validateUser(countryCode: string, phone: string, password: string) {
     const user = await (this.prisma as any).user.findUnique({
-      where: { email },
+      where: {
+        countryCode_phone: {
+          countryCode,
+          phone,
+        },
+      },
       include: {
         userRoles: {
           include: {
@@ -85,7 +90,11 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
+    const user = await this.validateUser(
+      loginDto.countryCode,
+      loginDto.phone,
+      loginDto.password,
+    );
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -96,7 +105,8 @@ export class AuthService {
     // Audit log the login
     await this.auditService.logAuthAction('login', user.id, {
       action: 'user_login',
-      email: loginDto.email,
+      countryCode: loginDto.countryCode,
+      phone: loginDto.phone,
       timestamp: new Date(),
     });
 
