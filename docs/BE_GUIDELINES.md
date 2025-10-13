@@ -77,6 +77,12 @@ Each feature module **MUST** include:
 
 ## 🔐 3. Authentication & RBAC
 
+- **Authentication Method**:
+
+  - Primary: Phone number + Password
+  - Phone number must be unique and include country code (E.164 format)
+  - Example: `+919876543210`
+
 - **JWT + Refresh**:
 
   - Access: 15 mins

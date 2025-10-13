@@ -11,45 +11,114 @@ This document is a **contract**. Every contributor and AI tool (Cursor) **MUST**
 - **Atomic + Feature-first**: UI is atomic; domain logic lives in features.
 - **Theme tokens only**: **Do not hardcode colors** or sizes. Use Tailwind tokens (from `tailwind.config.ts`) or CSS variables.
 - **RTK Query only** for server data. **No fetch/axios in components**.
+- **Single API Source**: **MANDATORY** - All API calls MUST use `baseApi.injectEndpoints()`. No exceptions.
 - **Strict TypeScript**. **No `any`**. Prefer discriminated unions/generics.
 - **Accessibility** (WCAG AA): semantic HTML, labels, keyboard support.
 - **Tests & Lint pass** = merge. Husky blocks non-compliant commits.
 
 ---
 
-## 1) Architecture & Folder Structure (Hybrid: Atomic + Feature-first)
+## 1) Architecture & Folder Structure (Domain-Driven Design + Clean Architecture)
 
 ```
 /src
-  /app               # App root: store, providers, router, theme
-  /features          # Domain modules (auth, projects, candidates, etc.)
-    /auth
-      slice.ts
-      api.ts         # RTK Query endpoints for this domain
-      index.ts
-      views/         # domain-specific screens (optional)
-    /projects
+  /app                       # App configuration & infrastructure
+    /api
+      baseApi.ts            # RTK Query core (single source of truth)
+      types/                # API plumbing types (ApiResponse, Pagination)
+    store.ts                # Redux store configuration
+    router/                 # Route configuration
+    providers/              # Context providers
+
+  /entities                 # Shared domain models & business rules (no I/O)
+    /candidate
+      model.ts              # Canonical domain types & interfaces
+      service.ts            # Pure business rules used across features
+      constants.ts          # Domain-specific constants
+    /project
+      model.ts
+      service.ts
+      constants.ts
+    /team
+    /client
+    /document
+
+  /features                 # Self-contained feature modules
     /candidates
-  /components        # Pure reusable UI
-    /ui              # ShadCN base components (wrapped if needed)
-    /atoms           # Button, Input, Label, Icon...
-    /molecules       # FormRow, SearchBar, Toolbar...
-    /organisms       # CandidateForm, ProjectTable...
+      /data
+        candidates.endpoints.ts  # baseApi.injectEndpoints(...)
+        dto.ts                   # Wire types from server
+        transforms.ts            # DTO <-> domain mapping
+      /services                  # Feature-only pure logic (no fetch)
+        candidates.service.ts
+      /hooks                     # Feature-specific UI logic
+        useCandidateForm.ts
+        useCandidateFilters.ts
+      /components                # Feature UI components
+        CandidateCard.tsx
+        CandidateForm.tsx
+      /views                     # Page components (composition only)
+        CandidatesPage.tsx
+        CreateCandidatePage.tsx
+      /types                     # Feature-specific types
+      /constants                 # Feature constants
+      index.ts                   # Exports UI + hooks only (not data/services)
+    /projects                    # Same structure
+    /teams                       # Same structure
+    /auth
+      auth.slice.ts
+      /data
+        auth.endpoints.ts
+      /hooks
+      index.ts
+
+  /processes                # Cross-domain orchestration (compose endpoints)
+    /assignCandidateToProject
+      useAssignCandidate.ts
+    /documentVerification
+      useDocumentWorkflow.ts
+
+  /shared                   # Truly generic, no domain meaning
+    /hooks                  # Cross-domain hooks
+      usePermissions.ts
+      useTeamsLookup.ts     # Minimal team data for dropdowns
+      useClientsLookup.ts   # Minimal client data for dropdowns
+    /utils                  # Pure utility functions
+      date.ts
+      format.ts
+      validation.ts
+    /types                  # Shared primitives (ID, Maybe, etc.)
+      common.ts
+    /components             # Truly reusable components
+      DataTable.tsx
+      SearchFilter.tsx
+
+  /components               # Design system & layout (global)
+    /ui                     # ShadCN base components
+    /atoms                  # Basic UI elements
+    /molecules              # Composite components
+    /organisms              # Complex components
+    /layout                 # Layout components
     index.ts
-  /pages             # Top-level routed views (compose organisms)
-  /services          # Cross-domain RTK Query APIs (if shared)
-  /hooks             # Reusable hooks (usePagination, useDisclosure)
-  /utils             # Pure helpers; no React imports
-  /constants         # Enums, roles, route paths, z-indexes
-  /types             # Global TS models
-  /assets            # Logos, icons, images
+
+  /constants                # Global constants
+  /lib                      # External lib configurations
+  /assets                   # Static assets
 ```
 
 **Rules**
 
-- Pages **compose** organisms; **no business logic** inside pages/components.
-- Barrel export `index.ts` in each folder.
-- File names **kebab-case**, component names **PascalCase**.
+- **Domain Separation**: Business logic in `/entities`, I/O in `/features/*/data`, UI in `/features/*/views`
+- **No Cross-Feature Imports**: Features import from `/entities` and `/shared` only, never from other features
+- **Single API Source**: **MANDATORY** - All RTK Query endpoints MUST use `baseApi.injectEndpoints()`. No direct fetch/axios calls anywhere.
+- **Pure Functions**: Services contain no I/O operations, only pure business logic
+- **Composition Only**: Views compose components and hooks, contain no business logic
+- **Decision Matrix**:
+  - One screen, read-only → View
+  - Reusable flow, multiple endpoints → `/processes` facade hook
+  - Atomic consistency/permissions → Backend single endpoint
+- Barrel export `index.ts` in each folder
+- File names **kebab-case**, component names **PascalCase**
 - Date format should be DD MMM YYYY
 
 ---
@@ -125,62 +194,112 @@ export default {
 
 **Hooks**
 
-- UI hooks: `useDisclosure`, `usePagination`, `useDebounce`.
-- Domain hooks wrap RTK Query: `useProjects()`, `useCreateProject()`.
+- **Feature hooks**: UI logic specific to a feature (`useCandidateForm`, `useProjectFilters`).
+- **Shared hooks**: Cross-domain UI logic (`usePermissions`, `useTeamsLookup`).
+- **Process hooks**: Multi-endpoint orchestration (`useAssignCandidate`, `useDocumentWorkflow`).
+- **Entity services**: Pure business logic, no I/O (`CandidateService.canNominate()`).
 
 ---
 
-## 4) State & Data (Redux Toolkit + RTK Query)
+## 4) State & Data (Redux Toolkit + RTK Query with Injection Pattern)
 
 - **Redux Toolkit** for app state (auth user, theme, feature flags).
-- **RTK Query** is **mandatory** for all server data:
+- **Single baseApi** with **endpoint injection** pattern:
 
-  - Use a **shared `baseQuery`** with **auto-refresh** on 401.
+  - One `baseApi` in `/app/api/baseApi.ts` with **auto-refresh** on 401.
+  - **MANDATORY**: All features MUST inject endpoints using `baseApi.injectEndpoints()`.
   - Use **tags** for cache invalidation.
-  - **No** direct `fetch`/`axios` in any component or slice.
+  - **ABSOLUTELY NO** direct `fetch`/`axios` in any component, hook, or slice.
+  - **ABSOLUTELY NO** `@tanstack/react-query` or other query libraries.
 
-**Example: RTK baseQuery with re-auth (outline)**
+**Example: Base API setup**
 
 ```ts
+// /app/api/baseApi.ts
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+
 const baseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_API_URL,
-  prepareHeaders,
+  prepareHeaders: (headers, { getState }) => {
+    const token = (getState() as RootState).auth.accessToken;
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
+    return headers;
+  },
 });
-export const baseQueryWithReauth: BaseQueryFn = async (args, api, extra) => {
-  let result: any = await baseQuery(args, api, extra);
+
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  let result = await baseQuery(args, api, extraOptions);
   if (result?.error?.status === 401) {
-    const refresh = await baseQuery(
-      { url: "/auth/refresh", method: "POST" },
-      api,
-      extra
-    );
-    if (refresh?.data) {
-      // update token in store, retry original request
-      result = await baseQuery(args, api, extra);
+    const refreshResult = await baseQuery("/auth/refresh", api, extraOptions);
+    if (refreshResult?.data) {
+      api.dispatch(setAccessToken(refreshResult.data.accessToken));
+      result = await baseQuery(args, api, extraOptions);
+    } else {
+      api.dispatch(clearCredentials());
     }
   }
   return result;
 };
+
+export const baseApi = createApi({
+  reducerPath: "api",
+  baseQuery: baseQueryWithReauth,
+  tagTypes: ["Candidate", "Project", "Team", "Client", "Document", "User"],
+  endpoints: () => ({}),
+});
 ```
 
-**Example: RTK Query endpoints**
+**Example: Feature endpoint injection (MANDATORY PATTERN)**
 
 ```ts
-export const projectsApi = createApi({
-  reducerPath: "projectsApi",
-  baseQuery: baseQueryWithReauth,
-  tagTypes: ["Project"],
-  endpoints: (b) => ({
-    list: b.query<Project[], void>({
-      query: () => "/projects",
-      providesTags: ["Project"],
+// /features/candidates/data/candidates.endpoints.ts
+import { baseApi } from "@/app/api/baseApi";
+import { CandidateDto, CreateCandidateDto } from "./dto";
+import { CandidateTransforms } from "./transforms";
+
+// ✅ CORRECT: Using baseApi.injectEndpoints()
+export const candidatesApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    getCandidates: builder.query<Candidate[], void>({
+      query: () => "/candidates",
+      transformResponse: (response: CandidateDto[]) =>
+        response.map(CandidateTransforms.toDomain),
+      providesTags: ["Candidate"],
     }),
-    create: b.mutation<Project, CreateProjectDto>({
-      query: (body) => ({ url: "/projects", method: "POST", body }),
-      invalidatesTags: ["Project"],
+    createCandidate: builder.mutation<Candidate, CreateCandidateDto>({
+      query: (body) => ({
+        url: "/candidates",
+        method: "POST",
+        body: CandidateTransforms.toDto(body),
+      }),
+      transformResponse: (response: CandidateDto) =>
+        CandidateTransforms.toDomain(response),
+      invalidatesTags: ["Candidate"],
     }),
   }),
 });
+
+export const { useGetCandidatesQuery, useCreateCandidateMutation } =
+  candidatesApi;
+```
+
+**❌ PROHIBITED PATTERNS:**
+
+```ts
+// ❌ WRONG: Direct fetch calls
+const fetchData = async () => {
+  const response = await fetch("/api/candidates");
+  return response.json();
+};
+
+// ❌ WRONG: Using other query libraries
+import { useQuery } from "@tanstack/react-query";
+
+// ❌ WRONG: Axios calls
+import axios from "axios";
+const data = await axios.get("/api/candidates");
 ```
 
 ---
@@ -287,9 +406,12 @@ Examples: `feat(auth): add login form`, `fix(projects): correct deadline parsing
 
 **PR Template Checklist**
 
-- [ ] Follows **FE_GUIDELINES.md**
+- [ ] Follows **FE_GUIDELINES.md** architecture (entities/features/processes/shared)
+- [ ] No cross-feature imports (features only import from entities/shared)
+- [ ] Uses `baseApi.injectEndpoints()` for all API calls
+- [ ] Business logic in entity services, not in views
+- [ ] Views are composition-only (no business logic)
 - [ ] Uses Tailwind **tokens** (no hex/inline styles)
-- [ ] Uses RTK Query for API calls
 - [ ] Zod validation for forms
 - [ ] Accessibility verified (labels, keyboard)
 - [ ] Tests added/updated (Vitest/RTL)
@@ -299,9 +421,14 @@ Examples: `feat(auth): add login form`, `fix(projects): correct deadline parsing
 
 ## 15) Definition of Done (DoD)
 
+- ✅ **Architecture compliance**: Follows domain separation (entities/features/processes/shared)
+- ✅ **No cross-dependencies**: Features only import from entities/shared, never other features
+- ✅ **Single API source**: **MANDATORY** - All endpoints use `baseApi.injectEndpoints()`
+- ✅ **No direct API calls**: **ZERO** fetch/axios calls in components, hooks, or slices
+- ✅ **Pure business logic**: Entity services contain no I/O operations
+- ✅ **Composition-only views**: No business logic in view components
 - ✅ Compiles, lint passes, tests pass (CI green)
 - ✅ No hardcoded colors; tokens only
-- ✅ No fetch/axios in components (RTK Query used)
 - ✅ Forms validated with Zod and accessible
 - ✅ A11y: labels, keyboard, focus, contrast
 - ✅ Performance: code-split, no excessive re-renders
@@ -311,16 +438,97 @@ Examples: `feat(auth): add login form`, `fix(projects): correct deadline parsing
 
 ## 16) Prohibited Patterns
 
-- ❌ Business logic inside React components/pages
+- ❌ **Cross-feature imports**: Features importing from other features directly
+- ❌ **Business logic in views**: Views should only compose components and hooks
+- ❌ **I/O in entity services**: Entity services must be pure functions only
+- ❌ **Multiple APIs**: Only one `baseApi`, all endpoints must use injection
+- ❌ **Direct API calls in components**: Use feature hooks that wrap endpoints
+- ❌ **Direct fetch/axios calls**: **ABSOLUTELY FORBIDDEN** - Use `baseApi.injectEndpoints()` only
+- ❌ **Other query libraries**: No `@tanstack/react-query`, `swr`, or similar
+- ❌ **Manual API calls**: No `fetch()`, `axios.get()`, or similar in any component/hook
 - ❌ `any` or untyped props
 - ❌ Inline styles, raw hex colors, custom CSS files
-- ❌ Direct fetch/axios calls in UI
 - ❌ Massive god-components (>150–200 lines) without extraction
 - ❌ Global state for local concerns (use local/component state)
 
 ---
 
-## 17) References
+## 17) API Pattern Enforcement (CRITICAL)
+
+### 17.1 MANDATORY API Pattern
+
+**EVERY** API call in the application MUST follow this exact pattern:
+
+```ts
+// ✅ CORRECT: Feature API using baseApi.injectEndpoints()
+import { baseApi } from "@/app/api/baseApi";
+
+export const featureApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    getFeatureData: builder.query<ResponseType, RequestType>({
+      query: () => "/feature-endpoint",
+      providesTags: ["FeatureTag"],
+    }),
+    createFeature: builder.mutation<ResponseType, RequestType>({
+      query: (body) => ({
+        url: "/feature-endpoint",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["FeatureTag"],
+    }),
+  }),
+});
+
+export const { useGetFeatureDataQuery, useCreateFeatureMutation } = featureApi;
+```
+
+### 17.2 ABSOLUTELY FORBIDDEN
+
+```ts
+// ❌ NEVER DO THIS - Direct fetch calls
+const fetchData = async () => {
+  const response = await fetch("/api/data");
+  return response.json();
+};
+
+// ❌ NEVER DO THIS - Other query libraries
+import { useQuery } from "@tanstack/react-query";
+
+// ❌ NEVER DO THIS - Axios calls
+import axios from "axios";
+const data = await axios.get("/api/data");
+
+// ❌ NEVER DO THIS - Manual API calls in components
+function MyComponent() {
+  const [data, setData] = useState();
+  useEffect(() => {
+    fetch("/api/data")
+      .then((res) => res.json())
+      .then(setData);
+  }, []);
+}
+```
+
+### 17.3 Enforcement Rules
+
+- **Code Review**: Reject any PR with direct fetch/axios calls
+- **Linting**: ESLint rules should catch and block these patterns
+- **Testing**: All API calls must go through RTK Query endpoints
+- **Documentation**: Every new feature must document its API endpoints
+
+### 17.4 Benefits of This Pattern
+
+- ✅ **Consistent caching** across the entire application
+- ✅ **Automatic token refresh** and error handling
+- ✅ **Type safety** with TypeScript integration
+- ✅ **Optimistic updates** and background refetching
+- ✅ **Cache invalidation** with tags
+- ✅ **Loading states** and error handling built-in
+
+---
+
+## 18) References
 
 - Tailwind with Vite: [https://tailwindcss.com/docs/installation/using-vite](https://tailwindcss.com/docs/installation/using-vite)
 - ShadCN with Vite: [https://ui.shadcn.com/docs/installation/vite](https://ui.shadcn.com/docs/installation/vite)

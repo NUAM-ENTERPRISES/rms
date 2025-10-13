@@ -25,6 +25,13 @@ import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { QueryTeamsDto } from './dto/query-teams.dto';
 import { AssignUserDto } from './dto/assign-user.dto';
+import { CreateTransferRequestDto } from './dto/create-transfer-request.dto';
+import { ProcessTransferRequestDto } from './dto/process-transfer-request.dto';
+import { QueryTransferRequestsDto } from './dto/query-transfer-requests.dto';
+import {
+  TransferRequestResponseDto,
+  PaginatedTransferRequestsResponseDto,
+} from './dto/transfer-request-response.dto';
 import { TeamWithRelations, PaginatedTeams, TeamStats } from './types';
 
 @ApiTags('Teams')
@@ -487,6 +494,401 @@ export class TeamsController {
       success: true,
       data: result,
       message: 'User removed from team successfully',
+    };
+  }
+
+  @Get(':id/projects')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get team projects',
+    description: 'Retrieve all projects assigned to team members.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Team projects retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              status: {
+                type: 'string',
+                enum: ['active', 'completed', 'cancelled'],
+              },
+              priority: {
+                type: 'string',
+                enum: ['low', 'medium', 'high', 'urgent'],
+              },
+              deadline: { type: 'string' },
+              client: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  type: { type: 'string' },
+                },
+              },
+              candidatesAssigned: { type: 'number' },
+              rolesNeeded: { type: 'number' },
+              progress: { type: 'number' },
+            },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'Team projects retrieved successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Not Found - Team not found' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async getTeamProjects(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; data: any[]; message: string }> {
+    const projects = await this.teamsService.getTeamProjects(id);
+    return {
+      success: true,
+      data: projects,
+      message: 'Team projects retrieved successfully',
+    };
+  }
+
+  @Get(':id/candidates')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get team candidates',
+    description:
+      'Retrieve candidates assigned to projects worked on by team members.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Team candidates retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              contact: { type: 'string' },
+              email: { type: 'string' },
+              currentStatus: { type: 'string' },
+              experience: { type: 'number' },
+              skills: { type: 'array', items: { type: 'string' } },
+              assignedProject: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  title: { type: 'string' },
+                  client: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                    },
+                  },
+                },
+              },
+              assignedBy: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  role: { type: 'string' },
+                },
+              },
+              lastActivity: { type: 'string' },
+              nextInterview: { type: 'string' },
+            },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'Team candidates retrieved successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Not Found - Team not found' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async getTeamCandidates(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; data: any[]; message: string }> {
+    const candidates = await this.teamsService.getTeamCandidates(id);
+    return {
+      success: true,
+      data: candidates,
+      message: 'Team candidates retrieved successfully',
+    };
+  }
+
+  @Get(':id/stats')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get team statistics',
+    description: 'Retrieve comprehensive statistics for a specific team.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Team statistics retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            totalMembers: { type: 'number' },
+            activeProjects: { type: 'number' },
+            totalCandidates: { type: 'number' },
+            averageSuccessRate: { type: 'number' },
+            totalRevenue: { type: 'number' },
+            monthlyGrowth: { type: 'number' },
+            completionRate: { type: 'number' },
+            totalProjects: { type: 'number' },
+            completedProjects: { type: 'number' },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'Team statistics retrieved successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Not Found - Team not found' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async getTeamStats(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; data: any; message: string }> {
+    const stats = await this.teamsService.getTeamStatsById(id);
+    return {
+      success: true,
+      data: stats,
+      message: 'Team statistics retrieved successfully',
+    };
+  }
+
+  @Get(':id/analytics/performance')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get team performance analytics',
+    description: 'Retrieve monthly performance data for charts and analytics.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Team performance analytics retrieved successfully',
+  })
+  async getTeamPerformanceAnalytics(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; data: any; message: string }> {
+    const analytics = await this.teamsService.getTeamPerformanceAnalytics(id);
+    return {
+      success: true,
+      data: analytics,
+      message: 'Team performance analytics retrieved successfully',
+    };
+  }
+
+  @Get(':id/analytics/success-rate')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get team success rate distribution',
+    description: 'Retrieve success rate distribution data for pie charts.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Team success rate distribution retrieved successfully',
+  })
+  async getTeamSuccessRateDistribution(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; data: any; message: string }> {
+    const distribution =
+      await this.teamsService.getTeamSuccessRateDistribution(id);
+    return {
+      success: true,
+      data: distribution,
+      message: 'Team success rate distribution retrieved successfully',
+    };
+  }
+
+  // Transfer Request Endpoints
+  @Post(':id/transfers/request')
+  @Permissions('manage:teams')
+  @ApiOperation({
+    summary: 'Create team transfer request',
+    description:
+      'Request to transfer a user from current team to another team.',
+  })
+  @ApiParam({ name: 'id', description: 'Source team ID', example: 'team123' })
+  @ApiResponse({
+    status: 201,
+    description: 'Transfer request created successfully',
+    type: TransferRequestResponseDto,
+  })
+  async createTransferRequest(
+    @Param('id') teamId: string,
+    @Body() createTransferRequestDto: CreateTransferRequestDto,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: TransferRequestResponseDto;
+    message: string;
+  }> {
+    const requestedBy = req.user.id;
+    const data = await this.teamsService.createTransferRequest(
+      teamId,
+      createTransferRequestDto,
+      requestedBy,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Transfer request created successfully',
+    };
+  }
+
+  @Get(':id/transfers/requests')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get team transfer requests',
+    description: 'Retrieve transfer requests for a team with RBAC filtering.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transfer requests retrieved successfully',
+    type: PaginatedTransferRequestsResponseDto,
+  })
+  async getTransferRequests(
+    @Param('id') teamId: string,
+    @Query() query: QueryTransferRequestsDto,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: PaginatedTransferRequestsResponseDto;
+    message: string;
+  }> {
+    const userId = req.user.id;
+    const data = await this.teamsService.getTransferRequests(
+      teamId,
+      query,
+      userId,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Transfer requests retrieved successfully',
+    };
+  }
+
+  @Patch(':id/transfers/requests/:requestId/:action')
+  @Permissions('manage:teams')
+  @ApiOperation({
+    summary: 'Process transfer request',
+    description: 'Approve or reject a transfer request.',
+  })
+  @ApiParam({ name: 'id', description: 'Team ID', example: 'team123' })
+  @ApiParam({
+    name: 'requestId',
+    description: 'Transfer request ID',
+    example: 'req123',
+  })
+  @ApiParam({
+    name: 'action',
+    description: 'Action to take',
+    enum: ['approve', 'reject'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Transfer request processed successfully',
+    type: TransferRequestResponseDto,
+  })
+  async processTransferRequest(
+    @Param('id') teamId: string,
+    @Param('requestId') requestId: string,
+    @Param('action') action: 'approve' | 'reject',
+    @Body() processTransferRequestDto: ProcessTransferRequestDto,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: TransferRequestResponseDto;
+    message: string;
+  }> {
+    const approverId = req.user.id;
+    const data = await this.teamsService.processTransferRequest(
+      teamId,
+      requestId,
+      action,
+      processTransferRequestDto,
+      approverId,
+    );
+
+    return {
+      success: true,
+      data,
+      message: `Transfer request ${action}d successfully`,
+    };
+  }
+
+  @Get('transfers/history/:userId')
+  @Permissions('read:teams')
+  @ApiOperation({
+    summary: 'Get user transfer history',
+    description: 'Retrieve transfer history for a specific user.',
+  })
+  @ApiParam({ name: 'userId', description: 'User ID', example: 'user123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transfer history retrieved successfully',
+    type: [TransferRequestResponseDto],
+  })
+  async getUserTransferHistory(
+    @Param('userId') userId: string,
+    @Request() req: any,
+  ): Promise<{
+    success: boolean;
+    data: TransferRequestResponseDto[];
+    message: string;
+  }> {
+    const currentUserId = req.user.id;
+    const data = await this.teamsService.getUserTransferHistory(
+      userId,
+      currentUserId,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Transfer history retrieved successfully',
     };
   }
 }

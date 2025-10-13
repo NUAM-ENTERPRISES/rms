@@ -24,6 +24,9 @@ import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
 import { AssignProjectDto } from './dto/assign-project.dto';
+import { NominateCandidateDto } from './dto/nominate-candidate.dto';
+import { ApproveCandidateDto } from './dto/approve-candidate.dto';
+import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import {
   CandidateWithRelations,
@@ -624,6 +627,129 @@ export class CandidatesController {
       success: true,
       data: result,
       message: 'Candidate assigned to project successfully',
+    };
+  }
+
+  @Post(':id/nominate')
+  @Permissions('nominate:candidates')
+  @ApiOperation({
+    summary: 'Nominate candidate for a project',
+    description:
+      'Nominate a candidate for a specific project. This starts the document verification workflow.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Candidate ID',
+    example: 'cand_123abc',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate nominated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or Project not found',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Candidate already nominated for this project',
+  })
+  async nominateCandidate(
+    @Param('id') id: string,
+    @Body() nominateDto: NominateCandidateDto,
+    @Request() req,
+  ) {
+    const nomination = await this.candidatesService.nominateCandidate(
+      id,
+      nominateDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: nomination,
+      message: 'Candidate nominated for project successfully',
+    };
+  }
+
+  @Post('project-mapping/:id/approve')
+  @Permissions('approve:candidates')
+  @ApiOperation({
+    summary: 'Approve or reject candidate after document verification',
+    description:
+      'Approve or reject a candidate for a project after all documents are verified.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Candidate Project Map ID',
+    example: 'cpm_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate approved/rejected successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Documents not verified or invalid status',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate project mapping not found',
+  })
+  async approveOrRejectCandidate(
+    @Param('id') id: string,
+    @Body() approveDto: ApproveCandidateDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.approveOrRejectCandidate(
+      id,
+      approveDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: `Candidate ${approveDto.action === 'approve' ? 'approved' : 'rejected'} successfully`,
+    };
+  }
+
+  @Post('send-for-verification')
+  @Permissions('manage:candidates')
+  @ApiOperation({
+    summary: 'Send candidate for document verification',
+    description:
+      'Send a nominated candidate for document verification. Assigns to document executive with least tasks.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate sent for verification successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            assignedTo: { type: 'string' },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.CREATED)
+  async sendForVerification(
+    @Body() sendForVerificationDto: SendForVerificationDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.sendForVerification(
+      sendForVerificationDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate sent for verification successfully',
     };
   }
 }

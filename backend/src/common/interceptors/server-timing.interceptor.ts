@@ -38,7 +38,7 @@ export class ServerTimingInterceptor implements NestInterceptor {
           try {
             // Add timing header
             response.setHeader('Server-Timing', timingParts.join(', '));
-            
+
             // Log performance metrics
             console.log(
               `[${traceId}] Request completed in ${totalTime}ms - ${request.method} ${request.url}`,
@@ -53,8 +53,11 @@ export class ServerTimingInterceptor implements NestInterceptor {
         error: (error) => {
           const endTime = Date.now();
           const totalTime = endTime - startTime;
-          console.error(`[${traceId}] Request failed in ${totalTime}ms:`, error);
-        }
+          console.error(
+            `[${traceId}] Request failed in ${totalTime}ms:`,
+            error,
+          );
+        },
       }),
     );
   }

@@ -1,21 +1,29 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff, Lock, Mail, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Lock, Phone, ArrowRight } from "lucide-react";
+import { CountryCodeSelect } from "@/components/molecules";
 import { useLoginMutation } from "@/services/authApi";
 import { useAppDispatch } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/authSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  countryCode: z
+    .string()
+    .min(1, "Country code is required")
+    .regex(/^\+[1-9]\d{0,3}$/, "Please select a valid country code"),
+  phone: z
+    .string()
+    .min(1, "Phone number is required")
+    .regex(/^\d{6,15}$/, "Please enter a valid phone number (6-15 digits)"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -171,10 +179,16 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setError,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      countryCode: "+91",
+      phone: "",
+      password: "",
+    },
   });
 
   const onSubmit = async (data: LoginFormData) => {
@@ -204,7 +218,8 @@ export default function LoginPage() {
         setError("root", { message: result.message || "Login failed" });
       }
     } catch (error: any) {
-      const errorMessage = error?.data?.message || "Invalid email or password";
+      const errorMessage =
+        error?.data?.message || "Invalid phone number or password";
       setError("root", { message: errorMessage });
       toast.error(errorMessage);
     }
@@ -248,24 +263,45 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="space-y-2">
                   <Label
-                    htmlFor="email"
+                    htmlFor="phone"
                     className="text-sm font-medium text-slate-700"
                   >
-                    Email address
+                    Phone Number
                   </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      className="pl-10 h-12 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
-                      {...register("email")}
-                    />
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <div>
+                      <Controller
+                        name="countryCode"
+                        control={control}
+                        render={({ field }) => (
+                          <CountryCodeSelect
+                            {...field}
+                            placeholder="Code"
+                            error={errors.countryCode?.message}
+                            className=""
+                          />
+                        )}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="9876543210"
+                        className="pl-10 h-12 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                        {...register("phone")}
+                      />
+                    </div>
                   </div>
-                  {errors.email && (
+                  {errors.countryCode && (
                     <p className="text-sm text-red-600 mt-1">
-                      {errors.email.message}
+                      {errors.countryCode.message}
+                    </p>
+                  )}
+                  {errors.phone && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.phone.message}
                     </p>
                   )}
                 </div>

@@ -18,7 +18,7 @@ export interface CandidateWithRelations extends Candidate {
         id: string;
         name: string;
         type: string;
-      };
+      } | null;
     };
   })[];
 }

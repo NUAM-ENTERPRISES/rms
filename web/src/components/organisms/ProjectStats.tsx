@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   Calendar,
 } from "lucide-react";
-import { ProjectStats as ProjectStatsType } from "@/services/projectsApi";
+import { ProjectStats as ProjectStatsType } from "@/features/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";

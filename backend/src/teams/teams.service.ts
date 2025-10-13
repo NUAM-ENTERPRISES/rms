@@ -8,6 +8,13 @@ import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { QueryTeamsDto } from './dto/query-teams.dto';
 import { AssignUserDto } from './dto/assign-user.dto';
+import { CreateTransferRequestDto } from './dto/create-transfer-request.dto';
+import { ProcessTransferRequestDto } from './dto/process-transfer-request.dto';
+import { QueryTransferRequestsDto } from './dto/query-transfer-requests.dto';
+import {
+  TransferRequestResponseDto,
+  PaginatedTransferRequestsResponseDto,
+} from './dto/transfer-request-response.dto';
 import { TeamWithRelations, PaginatedTeams, TeamStats } from './types';
 
 @Injectable()
@@ -558,6 +565,719 @@ export class TeamsService {
       teamsWithCandidates,
       averageProjectsPerTeam,
       averageCandidatesPerTeam,
+    };
+  }
+
+  async getTeamProjects(teamId: string): Promise<any[]> {
+    // Get projects where team members are assigned
+    const teamProjects = await this.prisma.project.findMany({
+      where: {
+        teamId: teamId,
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
+        candidateProjects: {
+          select: {
+            id: true,
+          },
+        },
+        rolesNeeded: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    return teamProjects.map((project) => ({
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      status: project.status,
+      priority: project.priority,
+      deadline: project.deadline,
+      client: project.client,
+      candidatesAssigned: project.candidateProjects.length,
+      rolesNeeded: project.rolesNeeded.length,
+      progress: 0, // TODO: Calculate actual progress
+    }));
+  }
+
+  async getTeamCandidates(teamId: string): Promise<any[]> {
+    // Get candidates assigned to projects where team members are working
+    const teamCandidates = await this.prisma.candidate.findMany({
+      where: {
+        projects: {
+          some: {
+            project: {
+              teamId: teamId,
+            },
+          },
+        },
+      },
+      include: {
+        projects: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+                client: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            userRoles: {
+              include: {
+                role: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return teamCandidates.map((candidate) => ({
+      id: candidate.id,
+      name: `${candidate.firstName} ${candidate.lastName}`,
+      contact: candidate.contact,
+      email: candidate.email,
+      currentStatus: candidate.currentStatus,
+      experience: candidate.totalExperience || 0,
+      skills: candidate.skills || [],
+      assignedProject: {
+        id: candidate.projects[0]?.project.id,
+        title: candidate.projects[0]?.project.title,
+        client: candidate.projects[0]?.project.client,
+      },
+      assignedBy: {
+        id: candidate.recruiter?.id || 'unknown',
+        name: candidate.recruiter?.name || 'Unknown',
+        role: candidate.recruiter?.userRoles?.[0]?.role?.name || 'Unknown',
+      },
+      lastActivity: candidate.updatedAt.toISOString(),
+      nextInterview: null, // TODO: Add nextInterview field to schema if needed
+    }));
+  }
+
+  async getTeamStatsById(teamId: string): Promise<any> {
+    // Get team members count
+    const teamMembers = await this.prisma.userTeam.count({
+      where: { teamId },
+    });
+
+    // Get projects count
+    const projects = await this.prisma.project.findMany({
+      where: {
+        teamId: teamId,
+      },
+    });
+
+    const activeProjects = projects.filter((p) => p.status === 'active').length;
+    const completedProjects = projects.filter(
+      (p) => p.status === 'completed',
+    ).length;
+
+    // Get candidates count
+    const candidates = await this.prisma.candidate.count({
+      where: {
+        projects: {
+          some: {
+            project: {
+              teamId: teamId,
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      totalMembers: teamMembers,
+      activeProjects,
+      totalCandidates: candidates,
+      averageSuccessRate: 0, // TODO: Calculate from actual data
+      totalRevenue: 0, // TODO: Calculate from actual data
+      monthlyGrowth: 0, // TODO: Calculate from actual data
+      completionRate:
+        projects.length > 0 ? (completedProjects / projects.length) * 100 : 0,
+      totalProjects: projects.length,
+      completedProjects,
+    };
+  }
+
+  async getTeamPerformanceAnalytics(teamId: string): Promise<any> {
+    // Get performance data for the last 12 months
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+    // Get projects created in the last 12 months for this team
+    const projects = await this.prisma.project.findMany({
+      where: {
+        teamId: teamId,
+        createdAt: {
+          gte: twelveMonthsAgo,
+        },
+      },
+      include: {
+        candidateProjects: {
+          include: {
+            candidate: true,
+          },
+        },
+      },
+    });
+
+    // Define the type for monthly data
+    interface MonthlyData {
+      month: string;
+      placements: number;
+      revenue: number;
+      projects: number;
+      candidates: number;
+    }
+
+    // Group by month and calculate metrics
+    const monthlyData: MonthlyData[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const month = new Date();
+      month.setMonth(month.getMonth() - i);
+      const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+      const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+
+      const monthProjects = projects.filter(
+        (p) => p.createdAt >= monthStart && p.createdAt <= monthEnd,
+      );
+
+      const placements = monthProjects.reduce(
+        (acc, project) =>
+          acc +
+          project.candidateProjects.filter((cp) => cp.status === 'hired')
+            .length,
+        0,
+      );
+
+      const revenue = monthProjects.reduce((acc, project) => {
+        // Calculate revenue based on hired candidates
+        const hiredCandidates = project.candidateProjects.filter(
+          (cp) => cp.status === 'hired',
+        );
+        return acc + hiredCandidates.length * 50000; // Assume $50k per placement
+      }, 0);
+
+      monthlyData.push({
+        month: month.toISOString().substring(0, 7), // YYYY-MM format
+        placements,
+        revenue,
+        projects: monthProjects.length,
+        candidates: monthProjects.reduce(
+          (acc, project) => acc + project.candidateProjects.length,
+          0,
+        ),
+      });
+    }
+
+    return {
+      monthlyData,
+      totalPlacements: monthlyData.reduce(
+        (acc, month) => acc + month.placements,
+        0,
+      ),
+      totalRevenue: monthlyData.reduce((acc, month) => acc + month.revenue, 0),
+      averageMonthlyPlacements:
+        monthlyData.reduce((acc, month) => acc + month.placements, 0) / 12,
+    };
+  }
+
+  async getTeamSuccessRateDistribution(teamId: string): Promise<any> {
+    // Get all candidates for this team's projects
+    const candidates = await this.prisma.candidate.findMany({
+      where: {
+        projects: {
+          some: {
+            project: {
+              teamId: teamId,
+            },
+          },
+        },
+      },
+      include: {
+        projects: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Calculate success rate distribution
+    const totalCandidates = candidates.length;
+    const hiredCandidates = candidates.filter((c) =>
+      c.projects.some((cp) => cp.status === 'hired'),
+    ).length;
+    const inProgressCandidates = candidates.filter((c) =>
+      c.projects.some((cp) =>
+        ['nominated', 'documents_submitted', 'interview_scheduled'].includes(
+          cp.status,
+        ),
+      ),
+    ).length;
+    const rejectedCandidates = candidates.filter((c) =>
+      c.projects.some((cp) =>
+        [
+          'rejected_documents',
+          'rejected_interview',
+          'rejected_selection',
+        ].includes(cp.status),
+      ),
+    ).length;
+
+    return {
+      totalCandidates,
+      hired: hiredCandidates,
+      inProgress: inProgressCandidates,
+      rejected: rejectedCandidates,
+      successRate:
+        totalCandidates > 0 ? (hiredCandidates / totalCandidates) * 100 : 0,
+      distribution: {
+        hired:
+          totalCandidates > 0 ? (hiredCandidates / totalCandidates) * 100 : 0,
+        inProgress:
+          totalCandidates > 0
+            ? (inProgressCandidates / totalCandidates) * 100
+            : 0,
+        rejected:
+          totalCandidates > 0
+            ? (rejectedCandidates / totalCandidates) * 100
+            : 0,
+      },
+    };
+  }
+
+  // Transfer Request Methods
+  async createTransferRequest(
+    fromTeamId: string,
+    createTransferRequestDto: CreateTransferRequestDto,
+    requestedBy: string,
+  ): Promise<TransferRequestResponseDto> {
+    const { userId, toTeamId, reason } = createTransferRequestDto;
+
+    // Validate that user is in the source team
+    const userTeam = await this.prisma.userTeam.findUnique({
+      where: {
+        userId_teamId: {
+          userId,
+          teamId: fromTeamId,
+        },
+      },
+    });
+
+    if (!userTeam) {
+      throw new NotFoundException('User is not a member of the source team');
+    }
+
+    // Validate target team exists
+    const targetTeam = await this.prisma.team.findUnique({
+      where: { id: toTeamId },
+    });
+
+    if (!targetTeam) {
+      throw new NotFoundException('Target team not found');
+    }
+
+    // Check if user is already in target team
+    const existingMembership = await this.prisma.userTeam.findUnique({
+      where: {
+        userId_teamId: {
+          userId,
+          teamId: toTeamId,
+        },
+      },
+    });
+
+    if (existingMembership) {
+      throw new ConflictException(
+        'User is already a member of the target team',
+      );
+    }
+
+    // Check for existing pending transfer request
+    const existingRequest = await this.prisma.teamTransferRequest.findFirst({
+      where: {
+        userId,
+        status: 'pending',
+      },
+    });
+
+    if (existingRequest) {
+      throw new ConflictException(
+        'User already has a pending transfer request',
+      );
+    }
+
+    // Create transfer request
+    const transferRequest = await this.prisma.teamTransferRequest.create({
+      data: {
+        userId,
+        fromTeamId,
+        toTeamId,
+        requestedBy,
+        reason,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        fromTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        toTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        approver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Create outbox event for notification
+    await this.prisma.outboxEvent.create({
+      data: {
+        type: 'MemberTransferRequested',
+        payload: {
+          transferId: transferRequest.id,
+          userId,
+          fromTeamId,
+          toTeamId,
+          requestedBy,
+        },
+      },
+    });
+
+    return this.mapTransferRequestToResponse(transferRequest);
+  }
+
+  async getTransferRequests(
+    teamId: string,
+    query: QueryTransferRequestsDto,
+    userId: string,
+  ): Promise<PaginatedTransferRequestsResponseDto> {
+    const { status, limit = 20, offset = 0 } = query;
+
+    // Check if user has access to this team's transfer requests
+    const userTeam = await this.prisma.userTeam.findUnique({
+      where: {
+        userId_teamId: {
+          userId,
+          teamId,
+        },
+      },
+    });
+
+    if (!userTeam) {
+      throw new NotFoundException(
+        'Access denied: User is not a member of this team',
+      );
+    }
+
+    const where: any = {
+      OR: [{ fromTeamId: teamId }, { toTeamId: teamId }],
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    const [transferRequests, total] = await Promise.all([
+      this.prisma.teamTransferRequest.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          fromTeam: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          toTeam: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          requester: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          approver: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.teamTransferRequest.count({ where }),
+    ]);
+
+    return {
+      transferRequests: transferRequests.map(this.mapTransferRequestToResponse),
+      total,
+      count: transferRequests.length,
+      offset,
+    };
+  }
+
+  async processTransferRequest(
+    teamId: string,
+    requestId: string,
+    action: 'approve' | 'reject',
+    processTransferRequestDto: ProcessTransferRequestDto,
+    approverId: string,
+  ): Promise<TransferRequestResponseDto> {
+    const { reason } = processTransferRequestDto;
+
+    // Find the transfer request
+    const transferRequest = await this.prisma.teamTransferRequest.findFirst({
+      where: {
+        id: requestId,
+        OR: [{ fromTeamId: teamId }, { toTeamId: teamId }],
+        status: 'pending',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        fromTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        toTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!transferRequest) {
+      throw new NotFoundException(
+        'Transfer request not found or already processed',
+      );
+    }
+
+    // Update transfer request
+    const updatedRequest = await this.prisma.teamTransferRequest.update({
+      where: { id: requestId },
+      data: {
+        status: action === 'approve' ? 'approved' : 'rejected',
+        approvedBy: approverId,
+        approvedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        fromTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        toTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        approver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // If approved, transfer the user
+    if (action === 'approve') {
+      await this.prisma.$transaction(async (tx) => {
+        // Remove user from source team
+        await tx.userTeam.delete({
+          where: {
+            userId_teamId: {
+              userId: transferRequest.userId,
+              teamId: transferRequest.fromTeamId,
+            },
+          },
+        });
+
+        // Add user to target team
+        await tx.userTeam.create({
+          data: {
+            userId: transferRequest.userId,
+            teamId: transferRequest.toTeamId,
+          },
+        });
+      });
+    }
+
+    return this.mapTransferRequestToResponse(updatedRequest);
+  }
+
+  async getUserTransferHistory(
+    userId: string,
+    currentUserId: string,
+  ): Promise<TransferRequestResponseDto[]> {
+    // Check if current user has access to view this user's transfer history
+    // This could be enhanced with more specific RBAC rules
+    const transferRequests = await this.prisma.teamTransferRequest.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        fromTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        toTeam: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        approver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return transferRequests.map(this.mapTransferRequestToResponse);
+  }
+
+  private mapTransferRequestToResponse(
+    transferRequest: any,
+  ): TransferRequestResponseDto {
+    return {
+      id: transferRequest.id,
+      user: transferRequest.user,
+      fromTeam: transferRequest.fromTeam,
+      toTeam: transferRequest.toTeam,
+      requester: transferRequest.requester,
+      status: transferRequest.status,
+      reason: transferRequest.reason,
+      approver: transferRequest.approver,
+      approvedAt: transferRequest.approvedAt,
+      createdAt: transferRequest.createdAt,
+      updatedAt: transferRequest.updatedAt,
     };
   }
 }
