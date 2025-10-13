@@ -13,8 +13,16 @@ import { ClientsModule } from './clients/clients.module';
 import { ProjectsModule } from './projects/projects.module';
 import { CandidatesModule } from './candidates/candidates.module';
 import { TeamsModule } from './teams/teams.module';
+import { DocumentsModule } from './documents/documents.module';
+import { CountriesModule } from './countries/countries.module';
+import { RoleCatalogModule } from './role-catalog/role-catalog.module';
+import { QualificationsModule } from './qualifications/qualifications.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
+import { SystemModule } from './system/system.module';
+import { UploadModule } from './upload/upload.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CandidateAllocationModule } from './candidate-allocation/candidate-allocation.module';
 
 @Module({
   imports: [
@@ -29,7 +37,15 @@ import { AuditInterceptor } from './common/audit/audit.interceptor';
     ProjectsModule,
     CandidatesModule,
     TeamsModule,
+    DocumentsModule,
+    CountriesModule,
+    RoleCatalogModule,
+    QualificationsModule,
     AuditModule,
+    SystemModule,
+    UploadModule,
+    NotificationsModule,
+    CandidateAllocationModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,7 +1,7 @@
 # 🚀 **Affiniks RMS - Development Status Document**
 
-> **Last Updated**: December 26, 2024  
-> **Version**: 1.0.0  
+> **Last Updated**: January 8, 2025  
+> **Version**: 2.1.0  
 > **Project**: Affiniks Recruitment Management System
 
 ---
@@ -19,6 +19,44 @@ This document tracks all **development items** completed in the Affiniks RMS pro
 - **Backend**: NestJS + Prisma + PostgreSQL
 - **Frontend**: React + Vite + TypeScript + Tailwind + ShadCN
 - **Architecture**: Modular monolith with global authentication and audit
+
+---
+
+## ✅ **COMPLETED DEVELOPMENT ITEMS**
+
+### **🔄 1. Recent Updates (January 8, 2025)**
+
+#### **1.1 Enhanced Team Management**
+
+- **Status**: ✅ **COMPLETED**
+- **Date**: January 8, 2025
+- **Priority**: 🔴 **HIGH**
+- **Files**:
+  - `backend/prisma/seed.ts`
+  - `web/src/features/teams/components/AddMemberDialog.tsx`
+  - `web/src/features/teams/components/TeamMembersTable.tsx`
+  - `web/src/features/teams/components/ChangeRoleDialog.tsx`
+- **Features**:
+  - Updated seed data to include 5 recruiters in default team
+  - Removed role requirement when adding team members
+  - Added role change functionality with dropdown menu
+  - Role change restricted to Manager and above roles
+  - Enhanced team member management interface
+
+#### **1.2 Enhanced Candidate Creation**
+
+- **Status**: ✅ **COMPLETED**
+- **Date**: January 8, 2025
+- **Priority**: 🔴 **HIGH**
+- **Files**:
+  - `web/src/features/candidates/views/CreateCandidatePage.tsx`
+  - `web/src/features/candidates/components/CandidatePreview.tsx`
+- **Features**:
+  - Updated contact number to use country code + number format
+  - Enhanced work experience to support multiple entries inline
+  - Removed popup for work experience addition
+  - Added comprehensive candidate preview before creation
+  - Improved form validation and user experience
 
 ---
 
@@ -502,13 +540,33 @@ This document tracks all **development items** completed in the Affiniks RMS pro
 
 #### **10.3 Documents Module**
 
-- **Status**: ❌ **NOT STARTED**
-- **Priority**: 🟡 **MEDIUM**
-- **Required Features**:
-  - Document upload/management
-  - Verification workflow
-  - Version control
-  - Security controls
+- **Status**: ✅ **COMPLETED**
+- **Date**: September 30, 2025
+- **Priority**: 🔴 **HIGH**
+- **Files**:
+  - `backend/src/documents/documents.controller.ts`
+  - `backend/src/documents/documents.service.ts`
+  - `backend/src/documents/documents.module.ts`
+  - `backend/src/documents/types.ts`
+  - `backend/src/documents/dto/create-document.dto.ts`
+  - `backend/src/documents/dto/update-document.dto.ts`
+  - `backend/src/documents/dto/query-documents.dto.ts`
+  - `backend/src/documents/dto/verify-document.dto.ts`
+  - `backend/src/documents/dto/request-resubmission.dto.ts`
+  - `web/src/services/documentsApi.ts`
+- **Features**:
+  - Complete document CRUD operations
+  - Document upload with validation (file size, type, expiry)
+  - Document verification workflow (per-project verification)
+  - Document resubmission requests
+  - Document statistics and analytics
+  - Document summary per candidate-project
+  - Auto-status update of CandidateProjectMap based on verification
+  - Full RBAC protection (`verify:documents`, `request:resubmission`, `manage:documents`)
+  - Complete Swagger documentation
+  - RTK Query integration (frontend)
+  - Digital Ocean Spaces integration
+  - Global audit logging (automatic via interceptor)
 
 ### **🔔 11. Support Modules**
 
@@ -556,9 +614,9 @@ This document tracks all **development items** completed in the Affiniks RMS pro
 | **Database**          | 3               | 3             | 0           | 100% ✅             |
 | **Documentation**     | 2               | 2             | 0           | 100% ✅             |
 | **Core Business**     | 4               | 4             | 0           | 100% ✅             |
-| **Operational**       | 3               | 0             | 3           | 0% ❌               |
+| **Operational**       | 3               | 1             | 2           | 33% 🟡              |
 | **Support**           | 3               | 0             | 3           | 0% ❌               |
-| **TOTAL**             | **30**          | **22**        | **8**       | **73%**             |
+| **TOTAL**             | **30**          | **25**        | **5**       | **83%**             |
 
 ---
 
@@ -586,14 +644,18 @@ This document tracks all **development items** completed in the Affiniks RMS pro
 
 ## 📝 **Update Log**
 
-| **Date**       | **Update**                        | **Description**                                                                                                                                   |
-| -------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **2024-12-26** | **Frontend Projects UI**          | Implemented enterprise-grade Projects UI with card-based layout, statistics dashboard, advanced filtering, and RTK Query integration              |
-| **2024-12-26** | **Enhanced RoleNeeded Model**     | Enhanced RoleNeeded model with detailed job requirements including education, certifications, licensing, work conditions, and compensation fields |
-| **2024-12-26** | **Teams Module**                  | Implemented complete Teams module with CRUD operations, user assignment, statistics, and full RBAC protection                                     |
-| **2024-12-26** | **Candidates Module**             | Implemented complete Candidates module with CRUD operations, project assignment, statistics, and full RBAC protection                             |
-| **2024-12-26** | **Projects Module**               | Implemented complete Projects module with CRUD operations, candidate assignment, statistics, and full RBAC protection                             |
-| **2024-12-26** | **Database Schema Documentation** | Created comprehensive database schema documentation with all models, relationships, and migration history                                         |
+| **Date**       | **Update**                              | **Description**                                                                                                                                                               |
+| -------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2025-09-30** | **Document Verification Workflow v2.0** | Complete workflow implementation: nomination → document verification → approval → interview → selection → processing → hiring. Added 2 new models, enhanced 4 existing models |
+| **2025-09-30** | **Documents Module Complete**           | Full CRUD + verification workflow, resubmission requests, per-project verification, document reusability, auto-status updates, 35+ document types with validation             |
+| **2025-09-30** | **Workflow Constants & State Machine**  | Created comprehensive constants (statuses, document-types, permissions) with 17-state workflow state machine, validation helpers, and UI metadata for frontend                |
+| **2025-09-30** | **Enhanced Candidates & Projects APIs** | Added nomination, approval/rejection, and eligible candidates endpoints. Updated services with new workflow logic and state transition validation                             |
+| **2024-12-26** | **Frontend Projects UI**                | Implemented enterprise-grade Projects UI with card-based layout, statistics dashboard, advanced filtering, and RTK Query integration                                          |
+| **2024-12-26** | **Enhanced RoleNeeded Model**           | Enhanced RoleNeeded model with detailed job requirements including education, certifications, licensing, work conditions, and compensation fields                             |
+| **2024-12-26** | **Teams Module**                        | Implemented complete Teams module with CRUD operations, user assignment, statistics, and full RBAC protection                                                                 |
+| **2024-12-26** | **Candidates Module**                   | Implemented complete Candidates module with CRUD operations, project assignment, statistics, and full RBAC protection                                                         |
+| **2024-12-26** | **Projects Module**                     | Implemented complete Projects module with CRUD operations, candidate assignment, statistics, and full RBAC protection                                                         |
+| **2024-12-26** | **Database Schema Documentation**       | Created comprehensive database schema documentation with all models, relationships, and migration history                                                                     |
 
 ---
 

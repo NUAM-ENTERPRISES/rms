@@ -6,6 +6,7 @@ import {
   MaxLength,
   Matches,
   IsDateString,
+  IsArray,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -42,16 +43,26 @@ export class CreateUserDto {
   })
   password: string;
 
-  @ApiPropertyOptional({
-    description: 'User phone number',
-    example: '+1234567890',
+  @ApiProperty({
+    description: 'Country calling code',
+    example: '+91',
   })
-  @IsOptional()
+  @IsString({ message: 'Country code must be a string' })
+  @Matches(/^\+[1-9]\d{0,3}$/, {
+    message: 'Please provide a valid country code (e.g., +91, +1, +44)',
+  })
+  countryCode: string;
+
+  @ApiProperty({
+    description:
+      'Phone number without country code (must be unique with country code)',
+    example: '9876543210',
+  })
   @IsString({ message: 'Phone must be a string' })
-  @Matches(/^\+?[\d\s\-\(\)]+$/, {
-    message: 'Please provide a valid phone number',
+  @Matches(/^\d{6,15}$/, {
+    message: 'Please provide a valid phone number (6-15 digits)',
   })
-  phone?: string;
+  phone: string;
 
   @ApiPropertyOptional({
     description: 'User date of birth (ISO date string)',
@@ -60,4 +71,23 @@ export class CreateUserDto {
   @IsOptional()
   @IsDateString({}, { message: 'Date of birth must be a valid date' })
   dateOfBirth?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Profile image URL (uploaded via /api/v1/upload/profile-image)',
+    example: 'https://cdn.example.com/users/profiles/user123/image.jpg',
+  })
+  @IsOptional()
+  @IsString({ message: 'Profile image must be a string URL' })
+  profileImage?: string;
+
+  @ApiPropertyOptional({
+    description: 'Array of role IDs to assign to the user',
+    example: ['role123', 'role456'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray({ message: 'Role IDs must be an array' })
+  @IsString({ each: true, message: 'Each role ID must be a valid string' })
+  roleIds?: string[];
 }

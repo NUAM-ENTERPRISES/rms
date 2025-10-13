@@ -591,4 +591,32 @@ export class ProjectsController {
       message: 'Candidate assigned successfully',
     };
   }
+
+  @Get(':id/eligible-candidates')
+  @Permissions('read:projects', 'read:candidates')
+  @ApiOperation({
+    summary: 'Get eligible candidates for a project',
+    description:
+      'Retrieve candidates who match project requirements and are not yet nominated.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Project ID',
+    example: 'proj_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Eligible candidates retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async getEligibleCandidates(@Param('id') id: string) {
+    const candidates = await this.projectsService.getEligibleCandidates(id);
+    return {
+      success: true,
+      data: candidates,
+    };
+  }
 }

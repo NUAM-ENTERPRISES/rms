@@ -8,14 +8,15 @@ import {
 } from '@prisma/client';
 
 export interface ProjectWithRelations extends Project {
-  client: Client;
+  client: Client | null;
   creator: User;
   team: Team | null;
   rolesNeeded: RoleNeeded[];
   candidateProjects: (CandidateProjectMap & {
     candidate: {
       id: string;
-      name: string;
+      firstName: string;
+      lastName: string;
       contact: string;
       email: string | null;
       currentStatus: string;

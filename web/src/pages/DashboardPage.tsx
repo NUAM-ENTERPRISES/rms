@@ -143,18 +143,38 @@ const teamPerformanceData = [
 ];
 
 const revenueBreakdown = [
-  { name: "Healthcare", value: 35, color: "#3B82F6" },
-  { name: "IT & Technology", value: 25, color: "#10B981" },
-  { name: "Finance", value: 20, color: "#8B5CF6" },
-  { name: "Manufacturing", value: 15, color: "#F59E0B" },
-  { name: "Other", value: 5, color: "#EF4444" },
+  { name: "Healthcare", value: 35, color: "hsl(var(--chart-1))" },
+  { name: "IT & Technology", value: 25, color: "hsl(var(--chart-2))" },
+  { name: "Finance", value: 20, color: "hsl(var(--chart-3))" },
+  { name: "Manufacturing", value: 15, color: "hsl(var(--chart-4))" },
+  { name: "Other", value: 5, color: "hsl(var(--chart-5))" },
 ];
 
 const candidateStatusData = [
-  { status: "Active", count: 2847, percentage: 45, color: "#10B981" },
-  { status: "Interviewing", count: 892, percentage: 28, color: "#3B82F6" },
-  { status: "Placed", count: 1563, percentage: 18, color: "#8B5CF6" },
-  { status: "Rejected", count: 234, percentage: 9, color: "#EF4444" },
+  {
+    status: "Active",
+    count: 2847,
+    percentage: 45,
+    color: "hsl(var(--chart-2))",
+  },
+  {
+    status: "Interviewing",
+    count: 892,
+    percentage: 28,
+    color: "hsl(var(--chart-1))",
+  },
+  {
+    status: "Placed",
+    count: 1563,
+    percentage: 18,
+    color: "hsl(var(--chart-3))",
+  },
+  {
+    status: "Rejected",
+    count: 234,
+    percentage: 9,
+    color: "hsl(var(--destructive))",
+  },
 ];
 
 // Admin Dashboard Component
@@ -241,14 +261,21 @@ const AdminDashboard: React.FC = () => {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="month" stroke="#64748B" />
-              <YAxis yAxisId="left" stroke="#64748B" />
-              <YAxis yAxisId="right" orientation="right" stroke="#64748B" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="hsl(var(--border))"
+              />
+              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+              <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                stroke="hsl(var(--muted-foreground))"
+              />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #E2E8F0",
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
                   boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                 }}
@@ -258,18 +285,18 @@ const AdminDashboard: React.FC = () => {
                 yAxisId="left"
                 type="monotone"
                 dataKey="revenue"
-                stroke="#10B981"
+                stroke="hsl(var(--chart-2))"
                 strokeWidth={3}
-                dot={{ fill: "#10B981", strokeWidth: 2, r: 4 }}
+                dot={{ fill: "hsl(var(--chart-2))", strokeWidth: 2, r: 4 }}
                 name="Revenue ($)"
               />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="placements"
-                stroke="#3B82F6"
+                stroke="hsl(var(--chart-1))"
                 strokeWidth={3}
-                dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
+                dot={{ fill: "hsl(var(--chart-1))", strokeWidth: 2, r: 4 }}
                 name="Placements"
               />
             </LineChart>
@@ -289,20 +316,31 @@ const AdminDashboard: React.FC = () => {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <RechartsBarChart data={teamPerformanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis dataKey="name" stroke="#64748B" />
-                <YAxis stroke="#64748B" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #E2E8F0",
+                    backgroundColor: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                   }}
                 />
                 <Legend />
-                <Bar dataKey="success" fill="#10B981" name="Success Rate (%)" />
-                <Bar dataKey="revenue" fill="#3B82F6" name="Revenue ($K)" />
+                <Bar
+                  dataKey="success"
+                  fill="hsl(var(--chart-2))"
+                  name="Success Rate (%)"
+                />
+                <Bar
+                  dataKey="revenue"
+                  fill="hsl(var(--chart-1))"
+                  name="Revenue ($K)"
+                />
               </RechartsBarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -325,7 +363,7 @@ const AdminDashboard: React.FC = () => {
                   labelLine={false}
                   label={({ name, percentage }) => `${name}: ${percentage}%`}
                   outerRadius={80}
-                  fill="#8884d8"
+                  fill="hsl(var(--chart-3))"
                   dataKey="value"
                 >
                   {revenueBreakdown.map((entry, index) => (
@@ -334,8 +372,8 @@ const AdminDashboard: React.FC = () => {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #E2E8F0",
+                    backgroundColor: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                   }}
@@ -605,8 +643,8 @@ const ManagerDashboard: React.FC = () => {
               <YAxis stroke="#64748B" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #E2E8F0",
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
                   boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                 }}
@@ -614,8 +652,8 @@ const ManagerDashboard: React.FC = () => {
               <Area
                 type="monotone"
                 dataKey="placements"
-                stroke="#3B82F6"
-                fill="#3B82F6"
+                stroke="hsl(var(--chart-1))"
+                fill="hsl(var(--chart-1))"
                 fillOpacity={0.3}
                 strokeWidth={2}
                 name="Placements"

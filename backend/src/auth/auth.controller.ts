@@ -36,7 +36,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'User login',
     description:
-      'Authenticate user with email and password. Returns access token and sets refresh token cookies.',
+      'Authenticate user with country code, phone number and password. Returns access token and sets refresh token cookies.',
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
@@ -58,6 +58,8 @@ export class AuthController {
               properties: {
                 id: { type: 'string', example: 'user123' },
                 email: { type: 'string', example: 'user@example.com' },
+                countryCode: { type: 'string', example: '+91' },
+                phone: { type: 'string', example: '9876543210' },
                 name: { type: 'string', example: 'John Doe' },
                 roles: {
                   type: 'array',
