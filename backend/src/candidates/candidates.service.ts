@@ -34,13 +34,18 @@ export class CandidatesService {
     createCandidateDto: CreateCandidateDto,
     userId: string,
   ): Promise<CandidateWithRelations> {
-    // Check if contact already exists (unique constraint)
+    // Check if countryCode and mobileNumber combination already exists (unique constraint)
     const existingCandidate = await this.prisma.candidate.findUnique({
-      where: { contact: createCandidateDto.contact },
+      where: {
+        countryCode_mobileNumber: {
+          countryCode: createCandidateDto.countryCode,
+          mobileNumber: createCandidateDto.mobileNumber,
+        },
+      },
     });
     if (existingCandidate) {
       throw new ConflictException(
-        `Candidate with contact ${createCandidateDto.contact} already exists`,
+        `Candidate with contact ${createCandidateDto.countryCode}${createCandidateDto.mobileNumber} already exists`,
       );
     }
 
@@ -69,7 +74,8 @@ export class CandidatesService {
       data: {
         firstName: createCandidateDto.firstName,
         lastName: createCandidateDto.lastName,
-        contact: createCandidateDto.contact,
+        countryCode: createCandidateDto.countryCode,
+        mobileNumber: createCandidateDto.mobileNumber,
         email: createCandidateDto.email,
         profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
@@ -278,17 +284,28 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    // Check if contact is being updated and if it already exists
+    // Check if countryCode and mobileNumber combination is being updated and if it already exists
     if (
-      updateCandidateDto.contact &&
-      updateCandidateDto.contact !== existingCandidate.contact
+      (updateCandidateDto.countryCode || updateCandidateDto.mobileNumber) &&
+      (updateCandidateDto.countryCode !== existingCandidate.countryCode ||
+        updateCandidateDto.mobileNumber !== existingCandidate.mobileNumber)
     ) {
+      const countryCode =
+        updateCandidateDto.countryCode || existingCandidate.countryCode;
+      const mobileNumber =
+        updateCandidateDto.mobileNumber || existingCandidate.mobileNumber;
+
       const candidateWithContact = await this.prisma.candidate.findUnique({
-        where: { contact: updateCandidateDto.contact },
+        where: {
+          countryCode_mobileNumber: {
+            countryCode,
+            mobileNumber,
+          },
+        },
       });
-      if (candidateWithContact) {
+      if (candidateWithContact && candidateWithContact.id !== id) {
         throw new ConflictException(
-          `Candidate with contact ${updateCandidateDto.contact} already exists`,
+          `Candidate with contact ${countryCode}${mobileNumber} already exists`,
         );
       }
     }
@@ -319,8 +336,10 @@ export class CandidatesService {
       updateData.firstName = updateCandidateDto.firstName;
     if (updateCandidateDto.lastName)
       updateData.lastName = updateCandidateDto.lastName;
-    if (updateCandidateDto.contact)
-      updateData.contact = updateCandidateDto.contact;
+    if (updateCandidateDto.countryCode)
+      updateData.countryCode = updateCandidateDto.countryCode;
+    if (updateCandidateDto.mobileNumber)
+      updateData.mobileNumber = updateCandidateDto.mobileNumber;
     if (updateCandidateDto.email !== undefined)
       updateData.email = updateCandidateDto.email;
     if (updateCandidateDto.profileImage !== undefined)
@@ -468,7 +487,8 @@ export class CandidatesService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
             currentStatus: true,
           },
@@ -671,7 +691,8 @@ export class CandidatesService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },

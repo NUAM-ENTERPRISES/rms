@@ -96,7 +96,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -117,7 +118,7 @@ export class DocumentsService {
       },
     });
 
-    return document as DocumentWithRelations;
+    return document;
   }
 
   /**
@@ -170,7 +171,8 @@ export class DocumentsService {
               id: true,
               firstName: true,
               lastName: true,
-              contact: true,
+              countryCode: true,
+              mobileNumber: true,
               email: true,
             },
           },
@@ -216,7 +218,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -241,7 +244,7 @@ export class DocumentsService {
       throw new NotFoundException(`Document with ID ${id} not found`);
     }
 
-    return document as DocumentWithRelations;
+    return document;
   }
 
   /**
@@ -279,7 +282,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -300,7 +304,7 @@ export class DocumentsService {
       },
     });
 
-    return document as DocumentWithRelations;
+    return document;
   }
 
   /**

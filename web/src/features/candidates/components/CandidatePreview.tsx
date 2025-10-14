@@ -1,11 +1,4 @@
-import React from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,10 +7,7 @@ import {
   Mail,
   Calendar,
   Briefcase,
-  DollarSign,
-  Building2,
   GraduationCap,
-  Star,
   MapPin,
   CheckCircle,
   X,
@@ -27,21 +17,14 @@ interface CandidatePreviewProps {
   candidateData: {
     firstName: string;
     lastName: string;
-    countryCode: string;
-    phone: string;
+    contact: string;
     email?: string;
     source: string;
     dateOfBirth: string;
-    totalExperience?: number;
-    currentSalary?: number;
-    currentEmployer?: string;
-    currentRole?: string;
-    expectedSalary?: number;
     highestEducation?: string;
     university?: string;
     graduationYear?: number;
     gpa?: number;
-    skills: string[];
     workExperiences: any[];
   };
   onConfirm: () => void;
@@ -63,14 +46,6 @@ export default function CandidatePreview({
       month: "short",
       year: "numeric",
     });
-  };
-
-  const formatSalary = (salary?: number) => {
-    if (!salary) return "N/A";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(salary);
   };
 
   return (
@@ -111,8 +86,7 @@ export default function CandidatePreview({
                 </label>
                 <p className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  {candidateData.countryCode}
-                  {candidateData.phone}
+                  {candidateData.contact}
                 </p>
               </div>
               <div>
@@ -140,65 +114,6 @@ export default function CandidatePreview({
                 <Badge variant="outline" className="mt-1">
                   {candidateData.source}
                 </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Professional Details */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-              <Briefcase className="h-5 w-5 text-blue-600" />
-              Professional Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="text-sm font-medium text-slate-600">
-                  Total Experience
-                </label>
-                <p className="text-lg font-semibold text-slate-800">
-                  {candidateData.totalExperience
-                    ? `${candidateData.totalExperience} years`
-                    : "Not specified"}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-600">
-                  Current Role
-                </label>
-                <p className="text-lg font-semibold text-slate-800">
-                  {candidateData.currentRole || "Not specified"}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-600">
-                  Current Employer
-                </label>
-                <p className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {candidateData.currentEmployer || "Not specified"}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-600">
-                  Current Salary
-                </label>
-                <p className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  {formatSalary(candidateData.currentSalary)}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-600">
-                  Expected Salary
-                </label>
-                <p className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  {formatSalary(candidateData.expectedSalary)}
-                </p>
               </div>
             </div>
           </CardContent>
@@ -263,27 +178,6 @@ export default function CandidatePreview({
           </Card>
         )}
 
-        {/* Skills */}
-        {candidateData.skills.length > 0 && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-                <Star className="h-5 w-5 text-blue-600" />
-                Skills & Expertise
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {candidateData.skills.map((skill, index) => (
-                  <Badge key={index} variant="secondary" className="px-3 py-1">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Work Experience */}
         {candidateData.workExperiences.length > 0 && (
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -317,12 +211,6 @@ export default function CandidatePreview({
                         <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3" />
                           {experience.location}
-                        </p>
-                      )}
-                      {experience.salary && (
-                        <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
-                          <DollarSign className="h-3 w-3" />
-                          {formatSalary(experience.salary)}
                         </p>
                       )}
                       {experience.description && (

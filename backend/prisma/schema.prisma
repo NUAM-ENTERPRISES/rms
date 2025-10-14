@@ -29,7 +29,7 @@ model User {
   name                      String
   password                  String
   dateOfBirth               DateTime?
-  phone                     String
+  mobileNumber              String
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt
   countryCode               String
@@ -45,9 +45,9 @@ model User {
   userRoles                 UserRole[]
   userTeams                 UserTeam[]
 
-  @@unique([countryCode, phone])
+  @@unique([countryCode, mobileNumber])
   @@index([email])
-  @@index([countryCode, phone])
+  @@index([countryCode, mobileNumber])
   @@index([createdAt])
   @@map("users")
 }
@@ -239,7 +239,8 @@ model RoleNeeded {
 
 model Candidate {
   id               String                @id @default(cuid())
-  contact          String                @unique
+  countryCode      String
+  mobileNumber     String
   email            String?
   source           String                @default("manual")
   dateOfBirth      DateTime
@@ -270,9 +271,11 @@ model Candidate {
   talentPool       TalentPool?
   workExperiences  WorkExperience[]
 
+  @@unique([countryCode, mobileNumber])
   @@index([assignedTo])
   @@index([teamId])
   @@index([currentStatus])
+  @@index([countryCode, mobileNumber])
   @@map("candidates")
 }
 

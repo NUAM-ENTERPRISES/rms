@@ -559,14 +559,14 @@ async function main() {
       name: 'System Administrator',
       password: hashedPassword,
       countryCode: '+91',
-      phone: '9876543210',
+      mobileNumber: '9876543210',
     },
     create: {
       email: 'admin@affiniks.com',
       name: 'System Administrator',
       password: hashedPassword,
       countryCode: '+91',
-      phone: '9876543210',
+      mobileNumber: '9876543210',
     },
   });
 
@@ -717,14 +717,14 @@ async function main() {
         name: userData.name,
         password: hashedPassword,
         countryCode: userData.countryCode,
-        phone: userData.phone,
+        mobileNumber: userData.phone,
       },
       create: {
         email: userData.email,
         name: userData.name,
         password: hashedPassword,
         countryCode: userData.countryCode,
-        phone: userData.phone,
+        mobileNumber: userData.phone,
       },
     });
 

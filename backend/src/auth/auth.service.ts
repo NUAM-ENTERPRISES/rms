@@ -36,12 +36,16 @@ export class AuthService {
     private auditService: AuditService,
   ) {}
 
-  async validateUser(countryCode: string, phone: string, password: string) {
+  async validateUser(
+    countryCode: string,
+    mobileNumber: string,
+    password: string,
+  ) {
     const user = await (this.prisma as any).user.findUnique({
       where: {
-        countryCode_phone: {
+        countryCode_mobileNumber: {
           countryCode,
-          phone,
+          mobileNumber,
         },
       },
       include: {
@@ -92,7 +96,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.validateUser(
       loginDto.countryCode,
-      loginDto.phone,
+      loginDto.mobileNumber,
       loginDto.password,
     );
     if (!user) {
@@ -106,7 +110,7 @@ export class AuthService {
     await this.auditService.logAuthAction('login', user.id, {
       action: 'user_login',
       countryCode: loginDto.countryCode,
-      phone: loginDto.phone,
+      mobileNumber: loginDto.mobileNumber,
       timestamp: new Date(),
     });
 

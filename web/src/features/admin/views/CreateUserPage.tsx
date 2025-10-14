@@ -44,8 +44,9 @@ export default function CreateUserPage() {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
       countryCode: "+91",
-      phone: "",
+      mobileNumber: "",
       dateOfBirth: "",
       roleId: "no-role",
     },
@@ -59,7 +60,7 @@ export default function CreateUserPage() {
         email: data.email,
         password: data.password,
         countryCode: data.countryCode,
-        phone: data.phone,
+        mobileNumber: data.mobileNumber,
         dateOfBirth:
           data.dateOfBirth && data.dateOfBirth.trim() !== ""
             ? data.dateOfBirth
@@ -258,44 +259,79 @@ export default function CreateUserPage() {
                     </p>
                   </div>
 
+                  {/* Confirm Password */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="confirmPassword"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Lock className="h-4 w-4 text-slate-500" />
+                      Confirm Password *
+                    </Label>
+                    <Controller
+                      name="confirmPassword"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="Confirm your password"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.confirmPassword && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.confirmPassword.message}
+                      </p>
+                    )}
+                  </div>
+
                   {/* Phone */}
                   <div className="space-y-2">
                     <Label
-                      htmlFor="phone"
+                      htmlFor="mobileNumber"
                       className="text-sm font-medium text-slate-700 flex items-center gap-2"
                     >
                       <Phone className="h-4 w-4 text-slate-500" />
                       Phone Number
                     </Label>
-                    <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <Controller
-                        name="countryCode"
-                        control={form.control}
-                        render={({ field }) => (
-                          <CountryCodeSelect
-                            {...field}
-                            placeholder="Code"
-                            error={form.formState.errors.countryCode?.message}
-                          />
-                        )}
-                      />
-                      <Controller
-                        name="phone"
-                        control={form.control}
-                        render={({ field }) => (
-                          <Input
-                            {...field}
-                            id="phone"
-                            type="tel"
-                            placeholder="9876543210"
-                            className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                          />
-                        )}
-                      />
+                    <div className="flex gap-2">
+                      <div className="w-32 flex-shrink-0">
+                        <Controller
+                          name="countryCode"
+                          control={form.control}
+                          render={({ field }) => (
+                            <CountryCodeSelect
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              name={field.name}
+                              placeholder="Code"
+                              error={form.formState.errors.countryCode?.message}
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Controller
+                          name="mobileNumber"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="mobileNumber"
+                              type="tel"
+                              placeholder="9876543210"
+                              className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                            />
+                          )}
+                        />
+                      </div>
                     </div>
-                    {form.formState.errors.phone && (
+                    {form.formState.errors.mobileNumber && (
                       <p className="text-sm text-red-600">
-                        {form.formState.errors.phone.message}
+                        {form.formState.errors.mobileNumber.message}
                       </p>
                     )}
                   </div>

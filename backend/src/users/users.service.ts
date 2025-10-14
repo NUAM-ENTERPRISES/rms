@@ -30,9 +30,9 @@ export class UsersService {
     // Check for existing phone number + country code combination
     const existingPhone = await this.prisma.user.findUnique({
       where: {
-        countryCode_phone: {
+        countryCode_mobileNumber: {
           countryCode: createUserDto.countryCode,
-          phone: createUserDto.phone,
+          mobileNumber: createUserDto.mobileNumber,
         },
       },
     });
@@ -61,7 +61,7 @@ export class UsersService {
           name: createUserDto.name,
           password: hashedPassword,
           countryCode: createUserDto.countryCode,
-          phone: createUserDto.phone,
+          mobileNumber: createUserDto.mobileNumber,
           dateOfBirth: createUserDto.dateOfBirth
             ? new Date(createUserDto.dateOfBirth)
             : null,
@@ -119,7 +119,7 @@ export class UsersService {
         {
           email: createUserDto.email,
           name: createUserDto.name,
-          phone: createUserDto.phone,
+          mobileNumber: createUserDto.mobileNumber,
           dateOfBirth: createUserDto.dateOfBirth,
           roleIds: createUserDto.roleIds,
         },

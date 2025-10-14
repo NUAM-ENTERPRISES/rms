@@ -1,76 +1,76 @@
-import { createApi } from '@reduxjs/toolkit/query/react'
-import { baseQuery } from '@/services/baseApi'
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { baseQuery } from "@/services/baseApi";
 
 interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-  teamId?: string
-  dateOfBirth?: string
-  phone?: string
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  teamId?: string;
+  dateOfBirth?: string;
+  mobileNumber?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface CreateUserRequest {
-  name: string
-  email: string
-  password: string
-  roleId: string
-  teamId?: string
-  dateOfBirth?: string
-  phone?: string
+  name: string;
+  email: string;
+  password: string;
+  roleId: string;
+  teamId?: string;
+  dateOfBirth?: string;
+  mobileNumber?: string;
 }
 
 interface UpdateUserRequest {
-  id: string
-  name?: string
-  email?: string
-  roleId?: string
-  teamId?: string
-  dateOfBirth?: string
-  phone?: string
+  id: string;
+  name?: string;
+  email?: string;
+  roleId?: string;
+  teamId?: string;
+  dateOfBirth?: string;
+  mobileNumber?: string;
 }
 
 export const usersApi = createApi({
-  reducerPath: 'usersApi',
+  reducerPath: "usersApi",
   baseQuery,
-  tagTypes: ['User'],
+  tagTypes: ["User"],
   endpoints: (builder) => ({
     getUsers: builder.query<User[], void>({
-      query: () => '/users',
-      providesTags: ['User'],
+      query: () => "/users",
+      providesTags: ["User"],
     }),
     getUserById: builder.query<User, string>({
       query: (id) => `/users/${id}`,
-      providesTags: (_, __, id) => [{ type: 'User', id }],
+      providesTags: (_, __, id) => [{ type: "User", id }],
     }),
     createUser: builder.mutation<User, CreateUserRequest>({
       query: (userData) => ({
-        url: '/users',
-        method: 'POST',
+        url: "/users",
+        method: "POST",
         body: userData,
       }),
-      invalidatesTags: ['User'],
+      invalidatesTags: ["User"],
     }),
     updateUser: builder.mutation<User, UpdateUserRequest>({
       query: ({ id, ...userData }) => ({
         url: `/users/${id}`,
-        method: 'PATCH',
+        method: "PATCH",
         body: userData,
       }),
-      invalidatesTags: (_, __, { id }) => [{ type: 'User', id }, 'User'],
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
     }),
     deleteUser: builder.mutation<void, string>({
       query: (id) => ({
         url: `/users/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['User'],
+      invalidatesTags: ["User"],
     }),
   }),
-})
+});
 
 export const {
   useGetUsersQuery,
@@ -78,4 +78,4 @@ export const {
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
-} = usersApi
+} = usersApi;

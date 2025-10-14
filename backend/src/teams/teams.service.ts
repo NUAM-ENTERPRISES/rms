@@ -476,7 +476,7 @@ export class TeamsService {
             id: true,
             name: true,
             email: true,
-            phone: true,
+            mobileNumber: true,
             dateOfBirth: true,
             createdAt: true,
           },
@@ -659,7 +659,7 @@ export class TeamsService {
     return teamCandidates.map((candidate) => ({
       id: candidate.id,
       name: `${candidate.firstName} ${candidate.lastName}`,
-      contact: candidate.contact,
+      contact: `${candidate.countryCode}${candidate.mobileNumber}`,
       email: candidate.email,
       currentStatus: candidate.currentStatus,
       experience: candidate.totalExperience || 0,

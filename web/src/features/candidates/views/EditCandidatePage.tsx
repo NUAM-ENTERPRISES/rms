@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -37,6 +37,7 @@ import {
   Users,
   ArrowLeft,
 } from "lucide-react";
+import { CountryCodeSelect } from "@/components/molecules";
 import {
   useGetCandidateByIdQuery,
   useUpdateCandidateMutation,
@@ -57,10 +58,11 @@ import { useCan } from "@/hooks/useCan";
 
 const updateCandidateSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
-  contact: z
+  countryCode: z.string().min(1, "Country code is required"),
+  mobileNumber: z
     .string()
-    .min(10, "Contact must be at least 10 characters")
-    .max(15, "Contact must not exceed 15 characters"),
+    .min(10, "Mobile number must be at least 10 characters")
+    .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "referral"]).default("manual"),
   dateOfBirth: z.string().optional(),
@@ -109,14 +111,39 @@ export default function EditCandidatePage() {
   // Form
   const form = useForm<UpdateCandidateFormData>({
     resolver: zodResolver(updateCandidateSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
+
+  // Helper function to parse contact into countryCode and mobileNumber (for backward compatibility)
+  const parseContact = (contact: string) => {
+    if (!contact) return { countryCode: "+91", mobileNumber: "" };
+
+    // Try to extract country code (assume it starts with + and is 1-4 digits)
+    const match = contact.match(/^(\+\d{1,4})(.*)$/);
+    if (match) {
+      return { countryCode: match[1], mobileNumber: match[2] };
+    }
+
+    // If no country code found, treat entire string as mobileNumber with default country code
+    return { countryCode: "+91", mobileNumber: contact };
+  };
 
   // Load candidate data into form
   useEffect(() => {
     if (candidate) {
+      // Use new separate fields if available, otherwise parse from contact for backward compatibility
+      const countryCode =
+        candidate.countryCode ||
+        parseContact(candidate.contact || "").countryCode;
+      const mobileNumber =
+        candidate.mobileNumber ||
+        parseContact(candidate.contact || "").mobileNumber;
+
       form.reset({
         name: candidate.name || "",
-        contact: candidate.contact || "",
+        countryCode,
+        mobileNumber,
         email: candidate.email || "",
         source: candidate.source || "manual",
         dateOfBirth: candidate.dateOfBirth
@@ -214,7 +241,8 @@ export default function EditCandidatePage() {
     try {
       const payload: any = {
         name: data.name,
-        contact: data.contact,
+        countryCode: data.countryCode,
+        mobileNumber: data.mobileNumber,
         source: data.source || "manual",
       };
 
@@ -345,24 +373,45 @@ export default function EditCandidatePage() {
 
                   {/* Contact */}
                   <div className="space-y-2">
-                    <FormLabel
-                      htmlFor="contact"
-                      className="text-slate-700 font-medium"
-                    >
+                    <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-slate-500" />
                       Contact Number *
                     </FormLabel>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="contact"
-                        {...form.register("contact")}
-                        placeholder="+1234567890"
-                        className="h-11 pl-10 bg-white border-slate-200"
-                      />
+                    <div className="flex gap-2">
+                      <div className="w-32 flex-shrink-0">
+                        <Controller
+                          name="countryCode"
+                          control={form.control}
+                          render={({ field }) => (
+                            <CountryCodeSelect
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              name={field.name}
+                              placeholder="Code"
+                              error={form.formState.errors.countryCode?.message}
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Controller
+                          name="mobileNumber"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="mobileNumber"
+                              type="tel"
+                              placeholder="9876543210"
+                              className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                            />
+                          )}
+                        />
+                      </div>
                     </div>
-                    {form.formState.errors.contact && (
+                    {form.formState.errors.mobileNumber && (
                       <p className="text-sm text-red-600">
-                        {form.formState.errors.contact.message}
+                        {form.formState.errors.mobileNumber.message}
                       </p>
                     )}
                   </div>

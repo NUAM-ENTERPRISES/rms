@@ -55,14 +55,14 @@ export class CreateUserDto {
 
   @ApiProperty({
     description:
-      'Phone number without country code (must be unique with country code)',
+      'Mobile number without country code (must be unique with country code)',
     example: '9876543210',
   })
-  @IsString({ message: 'Phone must be a string' })
+  @IsString({ message: 'Mobile number must be a string' })
   @Matches(/^\d{6,15}$/, {
-    message: 'Please provide a valid phone number (6-15 digits)',
+    message: 'Please provide a valid mobile number (6-15 digits)',
   })
-  phone: string;
+  mobileNumber: string;
 
   @ApiPropertyOptional({
     description: 'User date of birth (ISO date string)',

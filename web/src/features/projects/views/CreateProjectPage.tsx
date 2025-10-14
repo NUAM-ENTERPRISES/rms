@@ -164,8 +164,8 @@ export default function CreateProjectPage() {
         designation: "",
         quantity: 1,
         priority: "medium",
-        backgroundCheckRequired: true,
-        drugScreeningRequired: true,
+        backgroundCheckRequired: false,
+        drugScreeningRequired: false,
         onCallRequired: false,
         relocationAssistance: false,
       },
@@ -380,7 +380,7 @@ export default function CreateProjectPage() {
                       <CountrySelect
                         value={field.value}
                         onValueChange={field.onChange}
-                        label="Project Country"
+                        label="Project Country*"
                         placeholder="Select project country (optional)"
                         allowEmpty={true}
                         groupByRegion={true}
@@ -397,7 +397,7 @@ export default function CreateProjectPage() {
                   htmlFor="description"
                   className="text-sm font-medium text-slate-700"
                 >
-                  Project Description
+                  Project Description*
                 </Label>
                 <Controller
                   name="description"
@@ -636,7 +636,7 @@ export default function CreateProjectPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                       <Label className="text-sm font-medium text-slate-700">
                         License Requirements
                       </Label>
@@ -670,7 +670,7 @@ export default function CreateProjectPage() {
                         placeholder="e.g., Accredited nursing program"
                         className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                       />
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Requirements Checkboxes */}

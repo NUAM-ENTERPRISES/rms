@@ -8,6 +8,7 @@ import {
   Max,
   IsEnum,
   IsJSON,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -29,11 +30,25 @@ export class CreateCandidateDto {
   lastName: string;
 
   @ApiProperty({
-    description: 'Contact number (unique)',
-    example: '+1234567890',
+    description: 'Country calling code',
+    example: '+91',
   })
   @IsString()
-  contact: string;
+  @Matches(/^\+[1-9]\d{0,3}$/, {
+    message: 'Please provide a valid country code (e.g., +91, +1, +44)',
+  })
+  countryCode: string;
+
+  @ApiProperty({
+    description:
+      'Mobile number without country code (must be unique with country code)',
+    example: '9876543210',
+  })
+  @IsString()
+  @Matches(/^\d{6,15}$/, {
+    message: 'Please provide a valid mobile number (6-15 digits)',
+  })
+  mobileNumber: string;
 
   @ApiPropertyOptional({
     description: 'Email address',

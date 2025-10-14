@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -28,8 +28,6 @@ import {
   Mail,
   Calendar,
   Briefcase,
-  DollarSign,
-  Building2,
   Star,
   Plus,
   X,
@@ -48,6 +46,7 @@ import {
 import {
   ProfileImageUpload,
   DocumentUpload,
+  CountryCodeSelect,
   type UploadedDocument,
 } from "@/components/molecules";
 import CandidatePreview from "../components/CandidatePreview";
@@ -65,18 +64,13 @@ const createCandidateSchema = z.object({
     .min(2, "Last name must be at least 2 characters")
     .max(50),
   countryCode: z.string().min(1, "Country code is required"),
-  phone: z
+  mobileNumber: z
     .string()
-    .min(10, "Phone number must be at least 10 characters")
-    .max(15, "Phone number must not exceed 15 characters"),
+    .min(10, "Mobile number must be at least 10 characters")
+    .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "referral"]),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
-  totalExperience: z.number().min(0).max(50).optional(),
-  currentSalary: z.number().min(0).optional(),
-  currentEmployer: z.string().max(200).optional(),
-  currentRole: z.string().max(100).optional(),
-  expectedSalary: z.number().min(0).optional(),
 
   // Educational Qualifications
   highestEducation: z.string().max(100).optional(),
@@ -100,10 +94,6 @@ export default function CreateCandidatePage() {
     useUploadCandidateProfileImageMutation();
   const [uploadResume, { isLoading: uploadingResume }] =
     useUploadResumeMutation();
-
-  // Local state for skills
-  const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState("");
 
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -130,19 +120,16 @@ export default function CreateCandidatePage() {
   // Form
   const form = useForm<CreateCandidateFormData>({
     resolver: zodResolver(createCandidateSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       firstName: "",
       lastName: "",
       countryCode: "+91",
-      phone: "",
+      mobileNumber: "",
       email: "",
       source: "manual" as const,
       dateOfBirth: "",
-      totalExperience: undefined,
-      currentSalary: undefined,
-      currentEmployer: "",
-      currentRole: "",
-      expectedSalary: undefined,
       highestEducation: "",
       university: "",
       graduationYear: undefined,
@@ -171,19 +158,6 @@ export default function CreateCandidatePage() {
       </div>
     );
   }
-
-  // Skills handlers
-  const addSkill = () => {
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      const newSkills = [...skills, skillInput.trim()];
-      setSkills(newSkills);
-      setSkillInput("");
-    }
-  };
-
-  const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill !== skillToRemove));
-  };
 
   // Work experience management
   const addWorkExperience = () => {
@@ -253,7 +227,8 @@ export default function CreateCandidatePage() {
       const payload: any = {
         firstName: data.firstName,
         lastName: data.lastName,
-        contact: `${data.countryCode}${data.phone}`,
+        countryCode: data.countryCode,
+        mobileNumber: data.mobileNumber,
         source: data.source || "manual",
         dateOfBirth: data.dateOfBirth, // Now mandatory
       };
@@ -261,21 +236,6 @@ export default function CreateCandidatePage() {
       // Add optional fields only if they have values
       if (data.email && data.email.trim()) {
         payload.email = data.email;
-      }
-      if (data.totalExperience !== undefined && data.totalExperience > 0) {
-        payload.totalExperience = data.totalExperience;
-      }
-      if (data.currentSalary !== undefined && data.currentSalary > 0) {
-        payload.currentSalary = data.currentSalary;
-      }
-      if (data.currentEmployer && data.currentEmployer.trim()) {
-        payload.currentEmployer = data.currentEmployer;
-      }
-      if (data.currentRole && data.currentRole.trim()) {
-        payload.currentRole = data.currentRole;
-      }
-      if (data.expectedSalary !== undefined && data.expectedSalary > 0) {
-        payload.expectedSalary = data.expectedSalary;
       }
 
       // Educational qualifications
@@ -290,10 +250,6 @@ export default function CreateCandidatePage() {
       }
       if (data.gpa && data.gpa > 0) {
         payload.gpa = data.gpa;
-      }
-
-      if (skills.length > 0) {
-        payload.skills = JSON.stringify(skills);
       }
 
       const result = await createCandidate(payload).unwrap();
@@ -456,50 +412,47 @@ export default function CreateCandidatePage() {
                     )}
                   </div>
 
-                  {/* Country Code */}
+                  {/* Contact Number */}
                   <div className="space-y-2">
-                    <FormLabel
-                      htmlFor="countryCode"
-                      className="text-slate-700 font-medium"
-                    >
-                      Country Code *
+                    <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-slate-500" />
+                      Contact Number *
                     </FormLabel>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="countryCode"
-                        {...form.register("countryCode")}
-                        placeholder="+91"
-                        className="h-11 pl-10 bg-white border-slate-200"
-                      />
+                    <div className="flex gap-2">
+                      <div className="w-32 flex-shrink-0">
+                        <Controller
+                          name="countryCode"
+                          control={form.control}
+                          render={({ field }) => (
+                            <CountryCodeSelect
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              name={field.name}
+                              placeholder="Code"
+                              error={form.formState.errors.countryCode?.message}
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Controller
+                          name="mobileNumber"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="mobileNumber"
+                              type="tel"
+                              placeholder="9876543210"
+                              className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                            />
+                          )}
+                        />
+                      </div>
                     </div>
-                    {form.formState.errors.countryCode && (
+                    {form.formState.errors.mobileNumber && (
                       <p className="text-sm text-red-600">
-                        {form.formState.errors.countryCode.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Phone Number */}
-                  <div className="space-y-2">
-                    <FormLabel
-                      htmlFor="phone"
-                      className="text-slate-700 font-medium"
-                    >
-                      Phone Number *
-                    </FormLabel>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="phone"
-                        {...form.register("phone")}
-                        placeholder="9876543210"
-                        className="h-11 pl-10 bg-white border-slate-200"
-                      />
-                    </div>
-                    {form.formState.errors.phone && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.phone.message}
+                        {form.formState.errors.mobileNumber.message}
                       </p>
                     )}
                   </div>
@@ -570,191 +523,6 @@ export default function CreateCandidatePage() {
                     </Select>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Professional Details Card */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-                <Briefcase className="h-5 w-5 text-blue-600" />
-                Professional Details
-              </CardTitle>
-              <CardDescription>
-                Work experience and compensation expectations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Total Experience */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="totalExperience"
-                    className="text-slate-700 font-medium"
-                  >
-                    Total Years of Experience
-                  </FormLabel>
-                  <Input
-                    id="totalExperience"
-                    type="number"
-                    {...form.register("totalExperience", {
-                      valueAsNumber: true,
-                    })}
-                    placeholder="5"
-                    min="0"
-                    max="50"
-                    className="h-11 bg-white border-slate-200"
-                  />
-                  {form.formState.errors.totalExperience && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.totalExperience.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Current Role */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="currentRole"
-                    className="text-slate-700 font-medium"
-                  >
-                    Current Role/Job Title
-                  </FormLabel>
-                  <Input
-                    id="currentRole"
-                    {...form.register("currentRole")}
-                    placeholder="Senior Nurse"
-                    className="h-11 bg-white border-slate-200"
-                  />
-                </div>
-
-                {/* Current Salary */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="currentSalary"
-                    className="text-slate-700 font-medium"
-                  >
-                    Current Salary
-                  </FormLabel>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="currentSalary"
-                      type="number"
-                      {...form.register("currentSalary", {
-                        valueAsNumber: true,
-                      })}
-                      placeholder="45000"
-                      min="0"
-                      className="h-11 pl-10 bg-white border-slate-200"
-                    />
-                  </div>
-                </div>
-
-                {/* Current Employer */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="currentEmployer"
-                    className="text-slate-700 font-medium"
-                  >
-                    Current Employer
-                  </FormLabel>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="currentEmployer"
-                      {...form.register("currentEmployer")}
-                      placeholder="ABC Hospital"
-                      className="h-11 pl-10 bg-white border-slate-200"
-                    />
-                  </div>
-                </div>
-
-                {/* Expected Salary */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="expectedSalary"
-                    className="text-slate-700 font-medium"
-                  >
-                    Expected Salary
-                  </FormLabel>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="expectedSalary"
-                      type="number"
-                      {...form.register("expectedSalary", {
-                        valueAsNumber: true,
-                      })}
-                      placeholder="50000"
-                      min="0"
-                      className="h-11 pl-10 bg-white border-slate-200"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Skills Section */}
-              <div className="space-y-3">
-                <FormLabel className="text-slate-700 font-medium">
-                  Skills & Expertise
-                </FormLabel>
-
-                {/* Add Skill Input */}
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Star className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      value={skillInput}
-                      onChange={(e) => setSkillInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addSkill();
-                        }
-                      }}
-                      placeholder="Type a skill and press Enter"
-                      className="h-11 pl-10 bg-white border-slate-200"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={addSkill}
-                    variant="outline"
-                    className="h-11 px-4"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Skills List */}
-                {skills.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {skills.map((skill, index) => (
-                      <div
-                        key={index}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-200 text-sm"
-                      >
-                        <Star className="h-3 w-3" />
-                        {skill}
-                        <button
-                          type="button"
-                          onClick={() => removeSkill(skill)}
-                          className="ml-1 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {skills.length === 0 && (
-                  <p className="text-sm text-slate-500 italic">
-                    No skills added yet. Add at least one skill.
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -1192,12 +960,7 @@ export default function CreateCandidatePage() {
             </Button>
             <Button
               type="submit"
-              disabled={
-                isLoading ||
-                uploadingImage ||
-                uploadingResume ||
-                skills.length === 0
-              }
+              disabled={isLoading || uploadingImage || uploadingResume}
               className="min-w-[120px] bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -1212,21 +975,16 @@ export default function CreateCandidatePage() {
             candidateData={{
               firstName: form.getValues("firstName"),
               lastName: form.getValues("lastName"),
-              countryCode: form.getValues("countryCode"),
-              phone: form.getValues("phone"),
+              contact: `${form.getValues("countryCode")}${form.getValues(
+                "mobileNumber"
+              )}`,
               email: form.getValues("email"),
               source: form.getValues("source"),
               dateOfBirth: form.getValues("dateOfBirth"),
-              totalExperience: form.getValues("totalExperience"),
-              currentSalary: form.getValues("currentSalary"),
-              currentEmployer: form.getValues("currentEmployer"),
-              currentRole: form.getValues("currentRole"),
-              expectedSalary: form.getValues("expectedSalary"),
               highestEducation: form.getValues("highestEducation"),
               university: form.getValues("university"),
               graduationYear: form.getValues("graduationYear"),
               gpa: form.getValues("gpa"),
-              skills,
               workExperiences,
             }}
             onConfirm={handlePreviewConfirm}

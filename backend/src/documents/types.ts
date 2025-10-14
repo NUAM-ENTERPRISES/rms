@@ -14,7 +14,8 @@ export interface DocumentWithRelations extends Document {
     id: string;
     firstName: string;
     lastName: string;
-    contact: string;
+    countryCode: string;
+    mobileNumber: string;
     email: string | null;
   };
   verifications: (CandidateProjectDocumentVerification & {
