@@ -36,16 +36,11 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useCreateCandidateMutation } from "@/features/candidates";
-import {
-  useUploadCandidateProfileImageMutation,
-  useUploadResumeMutation,
-} from "@/services/uploadApi";
+import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import {
   ProfileImageUpload,
-  DocumentUpload,
   CountryCodeSelect,
   CandidateQualificationSelect,
-  type UploadedDocument,
 } from "@/components/molecules";
 import CandidatePreview from "../components/CandidatePreview";
 import { useCan } from "@/hooks/useCan";
@@ -105,15 +100,8 @@ export default function CreateCandidatePage() {
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
-  const [uploadResume, { isLoading: uploadingResume }] =
-    useUploadResumeMutation();
-
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [selectedResume, setSelectedResume] = useState<File | null>(null);
-  const [uploadedResumes, setUploadedResumes] = useState<UploadedDocument[]>(
-    []
-  );
   const [workExperiences, setWorkExperiences] = useState<any[]>([]);
   const [newWorkExperience, setNewWorkExperience] = useState({
     companyName: "",
@@ -321,19 +309,6 @@ export default function CreateCandidatePage() {
           }
         }
 
-        // Upload resume if selected
-        if (selectedResume) {
-          try {
-            await uploadResume({
-              candidateId,
-              file: selectedResume,
-            }).unwrap();
-          } catch (uploadError: any) {
-            console.error("Resume upload failed:", uploadError);
-            toast.warning("Candidate created but resume upload failed");
-          }
-        }
-
         toast.success("Candidate created successfully!");
         navigate("/candidates");
       }
@@ -391,7 +366,7 @@ export default function CreateCandidatePage() {
                       onImageSelected={setSelectedImage}
                       onImageRemove={() => setSelectedImage(null)}
                       uploading={uploadingImage}
-                      disabled={isLoading || uploadingImage || uploadingResume}
+                      disabled={isLoading || uploadingImage}
                       size="md"
                     />
                   </div>
@@ -896,24 +871,6 @@ export default function CreateCandidatePage() {
               </CardContent>
             </Card>
 
-            {/* Resume Upload */}
-            <DocumentUpload
-              title="Resume Upload"
-              description="Upload candidate's resume (PDF only)"
-              accept="application/pdf"
-              maxSizeMB={10}
-              allowedTypes={["application/pdf"]}
-              multiple={false}
-              documents={uploadedResumes}
-              onFileSelected={(file) => setSelectedResume(file)}
-              onDocumentRemove={() => {
-                setSelectedResume(null);
-                setUploadedResumes([]);
-              }}
-              uploading={uploadingResume}
-              disabled={isLoading || uploadingImage || uploadingResume}
-            />
-
             {/* Form Actions */}
             <div className="flex items-center justify-end gap-3">
               <Button
@@ -927,7 +884,7 @@ export default function CreateCandidatePage() {
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading || uploadingImage || uploadingResume}
+                disabled={isLoading || uploadingImage}
                 className="min-w-[120px] bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Save className="h-4 w-4 mr-2" />
@@ -959,7 +916,7 @@ export default function CreateCandidatePage() {
           }}
           onConfirm={handlePreviewConfirm}
           onCancel={handlePreviewCancel}
-          isLoading={isLoading || uploadingImage || uploadingResume}
+          isLoading={isLoading || uploadingImage}
         />
       )}
     </>

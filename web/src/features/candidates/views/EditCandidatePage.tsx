@@ -21,39 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  User,
-  Phone,
-  Mail,
-  Calendar,
-  Briefcase,
-  DollarSign,
-  Building2,
-  Star,
-  Plus,
-  X,
-  Save,
-  Users,
-  ArrowLeft,
-  GraduationCap,
-} from "lucide-react";
+import { User, Phone, Mail, Calendar, Save, ArrowLeft } from "lucide-react";
 import { CountryCodeSelect } from "@/components/molecules";
 import {
   useGetCandidateByIdQuery,
   useUpdateCandidateMutation,
 } from "@/features/candidates";
-import { useGetTeamsQuery } from "@/features/teams";
-import {
-  useUploadCandidateProfileImageMutation,
-  useUploadResumeMutation,
-} from "@/services/uploadApi";
-import {
-  ProfileImageUpload,
-  DocumentUpload,
-  CandidateQualificationSelect,
-  type UploadedDocument,
-} from "@/components/molecules";
-import type { CandidateQualification } from "@/components/molecules/CandidateQualificationSelect";
+import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
+import { ProfileImageUpload } from "@/components/molecules";
 import { useCan } from "@/hooks/useCan";
 
 // ==================== VALIDATION SCHEMA ====================
@@ -68,31 +43,6 @@ const updateCandidateSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "referral"]),
   dateOfBirth: z.string().optional(),
-  experience: z.number().min(0).max(50).optional(),
-  currentEmployer: z.string().max(200).optional(),
-  expectedSalary: z.number().min(0).optional(),
-
-  // Educational Qualifications (legacy fields for backward compatibility)
-  highestEducation: z.string().max(100).optional(),
-  university: z.string().max(200).optional(),
-  graduationYear: z.number().min(1950).max(2030).optional(),
-  gpa: z.number().min(0).max(4).optional(),
-
-  // Multiple qualifications
-  qualifications: z
-    .array(
-      z.object({
-        id: z.string(),
-        qualificationId: z.string(),
-        qualificationName: z.string().optional(),
-        university: z.string().optional(),
-        graduationYear: z.number().min(1950).max(2030).optional(),
-        gpa: z.number().min(0).max(4).optional(),
-        isCompleted: z.boolean(),
-        notes: z.string().optional(),
-      })
-    )
-    .optional(),
 
   teamId: z
     .union([z.string().uuid("Invalid team ID"), z.literal("none")])
@@ -113,34 +63,28 @@ export default function EditCandidatePage() {
     useGetCandidateByIdQuery(id!);
   const [updateCandidate, { isLoading: isUpdating }] =
     useUpdateCandidateMutation();
-  const { data: teamsData, isLoading: teamsLoading } = useGetTeamsQuery({});
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
-  const [uploadResume, { isLoading: uploadingResume }] =
-    useUploadResumeMutation();
-
-  // Local state for skills
-  const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState("");
-  const [qualifications, setQualifications] = useState<
-    CandidateQualification[]
-  >([]);
 
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [selectedResume, setSelectedResume] = useState<File | null>(null);
-  const [uploadedResumes, setUploadedResumes] = useState<UploadedDocument[]>(
-    []
-  );
 
   const candidate = candidateData;
-  const teams = teamsData?.data?.teams || [];
 
   // Form
   const form = useForm<UpdateCandidateFormData>({
     resolver: zodResolver(updateCandidateSchema),
     mode: "onChange",
     reValidateMode: "onChange",
+    defaultValues: {
+      name: "",
+      countryCode: "+91", // Default to India
+      mobileNumber: "",
+      email: "",
+      source: "manual",
+      dateOfBirth: "",
+      teamId: "none",
+    },
   });
 
   // Helper function to parse contact into countryCode and mobileNumber (for backward compatibility)
@@ -178,26 +122,8 @@ export default function EditCandidatePage() {
         dateOfBirth: candidate.dateOfBirth
           ? new Date(candidate.dateOfBirth).toISOString().split("T")[0]
           : "",
-        experience: candidate.experience || 0,
-        currentEmployer: candidate.currentEmployer || "",
-        expectedSalary: candidate.expectedSalary || 0,
-        highestEducation: candidate.highestEducation || "",
-        university: candidate.university || "",
-        graduationYear: candidate.graduationYear || undefined,
-        gpa: candidate.gpa || undefined,
-        qualifications: candidate.qualifications || [],
         teamId: candidate.assignedTo || "none",
       });
-
-      // Load skills
-      if (candidate.skills && Array.isArray(candidate.skills)) {
-        setSkills(candidate.skills);
-      }
-
-      // Load qualifications
-      if (candidate.qualifications && Array.isArray(candidate.qualifications)) {
-        setQualifications(candidate.qualifications);
-      }
     }
   }, [candidate, form]);
 
@@ -263,17 +189,6 @@ export default function EditCandidatePage() {
   }
 
   // Skills handlers
-  const addSkill = () => {
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      const newSkills = [...skills, skillInput.trim()];
-      setSkills(newSkills);
-      setSkillInput("");
-    }
-  };
-
-  const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill !== skillToRemove));
-  };
 
   // Form submission
   const onSubmit = async (data: UpdateCandidateFormData) => {
@@ -292,46 +207,8 @@ export default function EditCandidatePage() {
       if (data.dateOfBirth && data.dateOfBirth.trim()) {
         payload.dateOfBirth = data.dateOfBirth;
       }
-      if (data.experience !== undefined && data.experience > 0) {
-        payload.experience = data.experience;
-      }
-      if (data.currentEmployer && data.currentEmployer.trim()) {
-        payload.currentEmployer = data.currentEmployer;
-      }
-      if (data.expectedSalary !== undefined && data.expectedSalary > 0) {
-        payload.expectedSalary = data.expectedSalary;
-      }
       if (data.teamId && data.teamId !== "none" && data.teamId.trim()) {
         payload.assignedTo = data.teamId;
-      }
-      if (skills.length > 0) {
-        payload.skills = JSON.stringify(skills);
-      }
-
-      // Educational qualifications (legacy fields)
-      if (data.highestEducation && data.highestEducation.trim()) {
-        payload.highestEducation = data.highestEducation;
-      }
-      if (data.university && data.university.trim()) {
-        payload.university = data.university;
-      }
-      if (data.graduationYear && data.graduationYear > 1950) {
-        payload.graduationYear = data.graduationYear;
-      }
-      if (data.gpa && data.gpa > 0) {
-        payload.gpa = data.gpa;
-      }
-
-      // Multiple qualifications
-      if (qualifications && qualifications.length > 0) {
-        payload.qualifications = qualifications.map((qual) => ({
-          qualificationId: qual.qualificationId,
-          university: qual.university,
-          graduationYear: qual.graduationYear,
-          gpa: qual.gpa,
-          isCompleted: qual.isCompleted,
-          notes: qual.notes,
-        }));
       }
 
       const result = await updateCandidate({
@@ -350,19 +227,6 @@ export default function EditCandidatePage() {
           } catch (uploadError: any) {
             console.error("Profile image upload failed:", uploadError);
             toast.warning("Candidate updated but profile image upload failed");
-          }
-        }
-
-        // Upload resume if selected
-        if (selectedResume) {
-          try {
-            await uploadResume({
-              candidateId: id!,
-              file: selectedResume,
-            }).unwrap();
-          } catch (uploadError: any) {
-            console.error("Resume upload failed:", uploadError);
-            toast.warning("Candidate updated but resume upload failed");
           }
         }
 
@@ -408,7 +272,7 @@ export default function EditCandidatePage() {
                     onImageSelected={setSelectedImage}
                     onImageRemove={() => setSelectedImage(null)}
                     uploading={uploadingImage}
-                    disabled={isUpdating || uploadingImage || uploadingResume}
+                    disabled={isUpdating || uploadingImage}
                     size="md"
                   />
                 </div>
@@ -551,224 +415,6 @@ export default function EditCandidatePage() {
             </CardContent>
           </Card>
 
-          {/* Professional Details Card */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-                <Briefcase className="h-5 w-5 text-blue-600" />
-                Professional Details
-              </CardTitle>
-              <CardDescription>
-                Work experience and compensation expectations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Experience */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="experience"
-                    className="text-slate-700 font-medium"
-                  >
-                    Years of Experience
-                  </FormLabel>
-                  <Input
-                    id="experience"
-                    type="number"
-                    {...form.register("experience", { valueAsNumber: true })}
-                    placeholder="5"
-                    min="0"
-                    max="50"
-                    className="h-11 bg-white border-slate-200"
-                  />
-                  {form.formState.errors.experience && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.experience.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Current Employer */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="currentEmployer"
-                    className="text-slate-700 font-medium"
-                  >
-                    Current Employer
-                  </FormLabel>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="currentEmployer"
-                      {...form.register("currentEmployer")}
-                      placeholder="ABC Hospital"
-                      className="h-11 pl-10 bg-white border-slate-200"
-                    />
-                  </div>
-                </div>
-
-                {/* Expected Salary */}
-                <div className="space-y-2">
-                  <FormLabel
-                    htmlFor="expectedSalary"
-                    className="text-slate-700 font-medium"
-                  >
-                    Expected Salary
-                  </FormLabel>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      id="expectedSalary"
-                      type="number"
-                      {...form.register("expectedSalary", {
-                        valueAsNumber: true,
-                      })}
-                      placeholder="50000"
-                      min="0"
-                      className="h-11 pl-10 bg-white border-slate-200"
-                    />
-                  </div>
-                </div>
-
-                {/* Team Assignment */}
-                <div className="space-y-2">
-                  <FormLabel className="text-slate-700 font-medium">
-                    Assign to Team
-                  </FormLabel>
-                  {teamsLoading ? (
-                    <div className="h-11 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-md">
-                      <span className="text-sm text-slate-500">
-                        Loading teams...
-                      </span>
-                    </div>
-                  ) : (
-                    <Select
-                      value={form.watch("teamId") || "none"}
-                      onValueChange={(value) => form.setValue("teamId", value)}
-                    >
-                      <SelectTrigger className="h-11 bg-white border-slate-200">
-                        <SelectValue placeholder="Select team (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Team Assignment</SelectItem>
-                        {teams.map((team: any) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              {team.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </div>
-
-              {/* Skills Section */}
-              <div className="space-y-3">
-                <FormLabel className="text-slate-700 font-medium">
-                  Skills & Expertise
-                </FormLabel>
-
-                {/* Add Skill Input */}
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Star className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      value={skillInput}
-                      onChange={(e) => setSkillInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addSkill();
-                        }
-                      }}
-                      placeholder="Type a skill and press Enter"
-                      className="h-11 pl-10 bg-white border-slate-200"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={addSkill}
-                    variant="outline"
-                    className="h-11 px-4"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Skills List */}
-                {skills.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {skills.map((skill, index) => (
-                      <div
-                        key={index}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-200 text-sm"
-                      >
-                        <Star className="h-3 w-3" />
-                        {skill}
-                        <button
-                          type="button"
-                          onClick={() => removeSkill(skill)}
-                          className="ml-1 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {skills.length === 0 && (
-                  <p className="text-sm text-slate-500 italic">
-                    No skills added yet. Add at least one skill.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Educational Qualifications */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-                <GraduationCap className="h-5 w-5 text-blue-600" />
-                Educational Qualifications
-              </CardTitle>
-              <CardDescription>
-                Select and manage multiple educational qualifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <CandidateQualificationSelect
-                value={qualifications}
-                onChange={(newQualifications: CandidateQualification[]) => {
-                  setQualifications(newQualifications);
-                  form.setValue("qualifications", newQualifications);
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Resume Upload */}
-          <DocumentUpload
-            title="Resume Upload"
-            description="Upload candidate's resume (PDF only)"
-            accept="application/pdf"
-            maxSizeMB={10}
-            allowedTypes={["application/pdf"]}
-            multiple={false}
-            documents={uploadedResumes}
-            onFileSelected={(file) => setSelectedResume(file)}
-            onDocumentRemove={() => {
-              setSelectedResume(null);
-              setUploadedResumes([]);
-            }}
-            uploading={uploadingResume}
-            disabled={isUpdating || uploadingImage || uploadingResume}
-          />
-
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-3">
             <Button
@@ -782,22 +428,13 @@ export default function EditCandidatePage() {
             </Button>
             <Button
               type="submit"
-              disabled={
-                isUpdating ||
-                uploadingImage ||
-                uploadingResume ||
-                skills.length === 0
-              }
+              disabled={isUpdating || uploadingImage}
               className="min-w-[120px] bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
             >
-              {isUpdating || uploadingImage || uploadingResume ? (
+              {isUpdating || uploadingImage ? (
                 <>
                   <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  {uploadingImage
-                    ? "Uploading Image..."
-                    : uploadingResume
-                    ? "Uploading Resume..."
-                    : "Updating..."}
+                  {uploadingImage ? "Uploading Image..." : "Updating..."}
                 </>
               ) : (
                 <>

@@ -51,6 +51,7 @@ import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
+import { CandidateResumeList } from "@/components/molecules";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -706,6 +707,11 @@ export default function CandidateDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Resume List */}
+          <div className="mb-8">
+            <CandidateResumeList candidateId={id!} />
           </div>
 
           {/* Educational Qualifications and Work Experience - Side by Side */}
