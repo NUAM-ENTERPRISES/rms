@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label as FormLabel } from "@/components/ui/label";
 import {
   Select,
@@ -36,6 +35,7 @@ import {
   Save,
   Users,
   ArrowLeft,
+  GraduationCap,
 } from "lucide-react";
 import { CountryCodeSelect } from "@/components/molecules";
 import {
@@ -50,8 +50,10 @@ import {
 import {
   ProfileImageUpload,
   DocumentUpload,
+  CandidateQualificationSelect,
   type UploadedDocument,
 } from "@/components/molecules";
+import type { CandidateQualification } from "@/components/molecules/CandidateQualificationSelect";
 import { useCan } from "@/hooks/useCan";
 
 // ==================== VALIDATION SCHEMA ====================
@@ -64,11 +66,34 @@ const updateCandidateSchema = z.object({
     .min(10, "Mobile number must be at least 10 characters")
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(["manual", "meta", "referral"]).default("manual"),
+  source: z.enum(["manual", "meta", "referral"]),
   dateOfBirth: z.string().optional(),
   experience: z.number().min(0).max(50).optional(),
   currentEmployer: z.string().max(200).optional(),
   expectedSalary: z.number().min(0).optional(),
+
+  // Educational Qualifications (legacy fields for backward compatibility)
+  highestEducation: z.string().max(100).optional(),
+  university: z.string().max(200).optional(),
+  graduationYear: z.number().min(1950).max(2030).optional(),
+  gpa: z.number().min(0).max(4).optional(),
+
+  // Multiple qualifications
+  qualifications: z
+    .array(
+      z.object({
+        id: z.string(),
+        qualificationId: z.string(),
+        qualificationName: z.string().optional(),
+        university: z.string().optional(),
+        graduationYear: z.number().min(1950).max(2030).optional(),
+        gpa: z.number().min(0).max(4).optional(),
+        isCompleted: z.boolean(),
+        notes: z.string().optional(),
+      })
+    )
+    .optional(),
+
   teamId: z
     .union([z.string().uuid("Invalid team ID"), z.literal("none")])
     .optional(),
@@ -97,6 +122,9 @@ export default function EditCandidatePage() {
   // Local state for skills
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
+  const [qualifications, setQualifications] = useState<
+    CandidateQualification[]
+  >([]);
 
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -141,23 +169,34 @@ export default function EditCandidatePage() {
         parseContact(candidate.contact || "").mobileNumber;
 
       form.reset({
-        name: candidate.name || "",
+        name: candidate.name || `${candidate.firstName} ${candidate.lastName}`,
         countryCode,
         mobileNumber,
         email: candidate.email || "",
-        source: candidate.source || "manual",
+        source:
+          (candidate.source as "manual" | "meta" | "referral") || "manual",
         dateOfBirth: candidate.dateOfBirth
           ? new Date(candidate.dateOfBirth).toISOString().split("T")[0]
           : "",
         experience: candidate.experience || 0,
         currentEmployer: candidate.currentEmployer || "",
         expectedSalary: candidate.expectedSalary || 0,
+        highestEducation: candidate.highestEducation || "",
+        university: candidate.university || "",
+        graduationYear: candidate.graduationYear || undefined,
+        gpa: candidate.gpa || undefined,
+        qualifications: candidate.qualifications || [],
         teamId: candidate.assignedTo || "none",
       });
 
       // Load skills
       if (candidate.skills && Array.isArray(candidate.skills)) {
         setSkills(candidate.skills);
+      }
+
+      // Load qualifications
+      if (candidate.qualifications && Array.isArray(candidate.qualifications)) {
+        setQualifications(candidate.qualifications);
       }
     }
   }, [candidate, form]);
@@ -269,12 +308,38 @@ export default function EditCandidatePage() {
         payload.skills = JSON.stringify(skills);
       }
 
+      // Educational qualifications (legacy fields)
+      if (data.highestEducation && data.highestEducation.trim()) {
+        payload.highestEducation = data.highestEducation;
+      }
+      if (data.university && data.university.trim()) {
+        payload.university = data.university;
+      }
+      if (data.graduationYear && data.graduationYear > 1950) {
+        payload.graduationYear = data.graduationYear;
+      }
+      if (data.gpa && data.gpa > 0) {
+        payload.gpa = data.gpa;
+      }
+
+      // Multiple qualifications
+      if (qualifications && qualifications.length > 0) {
+        payload.qualifications = qualifications.map((qual) => ({
+          qualificationId: qual.qualificationId,
+          university: qual.university,
+          graduationYear: qual.graduationYear,
+          gpa: qual.gpa,
+          isCompleted: qual.isCompleted,
+          notes: qual.notes,
+        }));
+      }
+
       const result = await updateCandidate({
         id: id!,
         ...payload,
       }).unwrap();
 
-      if (result.success) {
+      if (result) {
         // Upload profile image if selected
         if (selectedImage) {
           try {
@@ -661,6 +726,28 @@ export default function EditCandidatePage() {
                   </p>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Educational Qualifications */}
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+                <GraduationCap className="h-5 w-5 text-blue-600" />
+                Educational Qualifications
+              </CardTitle>
+              <CardDescription>
+                Select and manage multiple educational qualifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <CandidateQualificationSelect
+                value={qualifications}
+                onChange={(newQualifications: CandidateQualification[]) => {
+                  setQualifications(newQualifications);
+                  form.setValue("qualifications", newQualifications);
+                }}
+              />
             </CardContent>
           </Card>
 

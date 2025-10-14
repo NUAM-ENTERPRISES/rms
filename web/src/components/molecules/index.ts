@@ -10,4 +10,7 @@ export { UpdatePasswordDialog } from "./UpdatePasswordDialog";
 export { ProfileImageUpload } from "./ProfileImageUpload";
 export { DocumentUpload } from "./DocumentUpload";
 export { WorkExperienceForm } from "./WorkExperienceForm";
+export { default as CandidateQualificationSelect } from "./CandidateQualificationSelect";
+export { default as QualificationWorkExperienceModal } from "./QualificationWorkExperienceModal";
 export type { UploadedDocument } from "./DocumentUpload";
+export type { CandidateQualification } from "./CandidateQualificationSelect";

@@ -69,7 +69,7 @@ export class CandidatesService {
       }
     }
 
-    // Create candidate
+    // Create candidate with qualifications
     const candidate = await this.prisma.candidate.create({
       data: {
         firstName: createCandidateDto.firstName,
@@ -97,10 +97,46 @@ export class CandidatesService {
           : [],
         assignedTo: userId, // Assign to the creating user
         teamId: createCandidateDto.teamId,
+        // Handle multiple qualifications
+        qualifications: createCandidateDto.qualifications
+          ? {
+              create: createCandidateDto.qualifications.map((qual) => ({
+                qualificationId: qual.qualificationId,
+                university: qual.university,
+                graduationYear: qual.graduationYear,
+                gpa: qual.gpa,
+                isCompleted: qual.isCompleted ?? true,
+                notes: qual.notes,
+              })),
+            }
+          : undefined,
+        // Handle work experiences
+        workExperiences: createCandidateDto.workExperiences
+          ? {
+              create: createCandidateDto.workExperiences.map((exp) => ({
+                companyName: exp.companyName,
+                jobTitle: exp.jobTitle,
+                startDate: new Date(exp.startDate),
+                endDate: exp.endDate ? new Date(exp.endDate) : null,
+                isCurrent: exp.isCurrent ?? false,
+                description: exp.description,
+                salary: exp.salary,
+                location: exp.location,
+                skills: exp.skills ? JSON.parse(exp.skills) : [],
+                achievements: exp.achievements,
+              })),
+            }
+          : undefined,
       },
       include: {
         recruiter: true,
         team: true,
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
         projects: {
           include: {
             project: {
@@ -211,6 +247,12 @@ export class CandidatesService {
       include: {
         recruiter: true,
         team: true,
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
         projects: {
           include: {
             project: {
@@ -259,6 +301,12 @@ export class CandidatesService {
                 },
               },
             },
+          },
+        },
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
           },
         },
       },
@@ -380,6 +428,12 @@ export class CandidatesService {
       include: {
         recruiter: true,
         team: true,
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
         projects: {
           include: {
             project: {

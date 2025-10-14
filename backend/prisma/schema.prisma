@@ -270,6 +270,7 @@ model Candidate {
   documents        Document[]
   talentPool       TalentPool?
   workExperiences  WorkExperience[]
+  qualifications  CandidateQualification[]
 
   @@unique([countryCode, mobileNumber])
   @@index([assignedTo])
@@ -300,6 +301,25 @@ model WorkExperience {
   @@index([companyName])
   @@index([jobTitle])
   @@map("work_experiences")
+}
+
+model CandidateQualification {
+  id               String       @id @default(cuid())
+  candidateId      String
+  qualificationId  String
+  university       String?
+  graduationYear  Int?
+  gpa              Float?
+  isCompleted      Boolean      @default(true)
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  candidate        Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  qualification    Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([qualificationId])
+  @@map("candidate_qualifications")
 }
 
 model CandidateProjectMap {
@@ -605,6 +625,7 @@ model Qualification {
   reverseEquivalencies   QualificationEquivalency[]       @relation("ToQualification")
   roleNeededRequirements RoleNeededEducationRequirement[]
   roleRecommendations    RoleRecommendedQualification[]
+  candidateQualifications CandidateQualification[]
 
   @@index([level])
   @@index([field])

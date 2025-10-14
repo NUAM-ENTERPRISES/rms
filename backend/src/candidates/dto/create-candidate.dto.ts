@@ -4,13 +4,19 @@ import {
   IsEmail,
   IsDateString,
   IsInt,
+  IsNumber,
   Min,
   Max,
   IsEnum,
   IsJSON,
   Matches,
+  IsArray,
+  ValidateNested,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { CreateWorkExperienceDto } from './create-work-experience.dto';
 
 export class CreateCandidateDto {
   @ApiProperty({
@@ -185,10 +191,35 @@ export class CreateCandidateDto {
     maximum: 4,
   })
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   @Min(0)
   @Max(4)
   gpa?: number;
+
+  // Multiple Educational Qualifications
+  @ApiPropertyOptional({
+    description: 'Educational qualifications array',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        qualificationId: { type: 'string', example: 'qual123' },
+        university: {
+          type: 'string',
+          example: 'University of Health Sciences',
+        },
+        graduationYear: { type: 'number', example: 2018 },
+        gpa: { type: 'number', example: 3.8 },
+        isCompleted: { type: 'boolean', example: true },
+        notes: { type: 'string', example: 'Graduated with honors' },
+      },
+    },
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CandidateQualificationDto)
+  qualifications?: CandidateQualificationDto[];
 
   @ApiPropertyOptional({
     description: 'Team ID for team scoping',
@@ -197,4 +228,176 @@ export class CreateCandidateDto {
   @IsOptional()
   @IsString()
   teamId?: string;
+
+  // Work Experiences (for candidate creation)
+  @ApiPropertyOptional({
+    description: 'Work experiences to create with the candidate',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        companyName: { type: 'string', example: 'City General Hospital' },
+        jobTitle: { type: 'string', example: 'Senior Nurse' },
+        startDate: { type: 'string', example: '2020-01-15T00:00:00.000Z' },
+        endDate: { type: 'string', example: '2023-12-31T00:00:00.000Z' },
+        isCurrent: { type: 'boolean', example: false },
+        description: { type: 'string', example: 'Provided patient care' },
+        salary: { type: 'number', example: 45000 },
+        location: { type: 'string', example: 'New York, NY' },
+        skills: {
+          type: 'string',
+          example: '["Patient Care", "Medical Records"]',
+        },
+        achievements: { type: 'string', example: 'Led team of 5 nurses' },
+      },
+    },
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CandidateWorkExperienceDto)
+  workExperiences?: CandidateWorkExperienceDto[];
+}
+
+export class CandidateQualificationDto {
+  @ApiProperty({
+    description: 'Qualification ID from the qualifications catalog',
+    example: 'qual123',
+  })
+  @IsString()
+  qualificationId: string;
+
+  @ApiPropertyOptional({
+    description: 'University/Institution name',
+    example: 'University of Health Sciences',
+  })
+  @IsOptional()
+  @IsString()
+  university?: string;
+
+  @ApiPropertyOptional({
+    description: 'Graduation year',
+    example: 2018,
+    minimum: 1950,
+    maximum: 2030,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1950)
+  @Max(2030)
+  graduationYear?: number;
+
+  @ApiPropertyOptional({
+    description: 'GPA/Percentage',
+    example: 3.8,
+    minimum: 0,
+    maximum: 4,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(4)
+  gpa?: number;
+
+  @ApiPropertyOptional({
+    description: 'Whether the qualification is completed',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isCompleted?: boolean = true;
+
+  @ApiPropertyOptional({
+    description: 'Additional notes about the qualification',
+    example: 'Graduated with honors',
+  })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+// DTO for work experiences during candidate creation (no candidateId needed)
+export class CandidateWorkExperienceDto {
+  @ApiProperty({
+    description: 'Company name',
+    example: 'City General Hospital',
+    minLength: 2,
+  })
+  @IsString()
+  companyName: string;
+
+  @ApiProperty({
+    description: 'Job title/position',
+    example: 'Senior Nurse',
+    minLength: 2,
+  })
+  @IsString()
+  jobTitle: string;
+
+  @ApiProperty({
+    description: 'Start date of employment',
+    example: '2020-01-15T00:00:00.000Z',
+  })
+  @IsDateString()
+  startDate: string;
+
+  @ApiPropertyOptional({
+    description: 'End date of employment (leave empty if current)',
+    example: '2023-12-31T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Is this the current job',
+    example: true,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isCurrent?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Job description',
+    example: 'Provided patient care and managed medical records',
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Salary at this position',
+    example: 45000,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  salary?: number;
+
+  @ApiPropertyOptional({
+    description: 'Work location',
+    example: 'New York, NY',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional({
+    description: 'Skills gained/used in this role as JSON array',
+    example: '["Patient Care", "Medical Records", "Team Leadership"]',
+  })
+  @IsOptional()
+  @IsJSON()
+  skills?: string;
+
+  @ApiPropertyOptional({
+    description: 'Key achievements in this role',
+    example: 'Led team of 5 nurses, improved patient satisfaction by 20%',
+  })
+  @IsOptional()
+  @IsString()
+  achievements?: string;
 }
