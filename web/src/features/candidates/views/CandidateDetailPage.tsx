@@ -141,7 +141,7 @@ export default function CandidateDetailPage() {
 
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
-  const canManageCandidates = useCan("manage:candidates");
+  const canManageCandidates = useCan("write:candidates");
 
   // Fetch candidate data from API
   const {

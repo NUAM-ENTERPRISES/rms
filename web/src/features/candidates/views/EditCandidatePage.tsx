@@ -56,7 +56,7 @@ type UpdateCandidateFormData = z.infer<typeof updateCandidateSchema>;
 export default function EditCandidatePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const canManageCandidates = useCan("manage:candidates");
+  const canWriteCandidates = useCan("write:candidates");
 
   // API
   const { data: candidateData, isLoading: isLoadingCandidate } =
@@ -128,7 +128,7 @@ export default function EditCandidatePage() {
   }, [candidate, form]);
 
   // Permission check
-  if (!canManageCandidates) {
+  if (!canWriteCandidates) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md">

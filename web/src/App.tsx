@@ -216,7 +216,7 @@ function App() {
                   path="/candidates/create"
                   element={
                     <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:candidates"]}>
+                      <ProtectedRoute permissions={["write:candidates"]}>
                         <AppLayout>
                           <CreateCandidatePage />
                         </AppLayout>
@@ -229,7 +229,7 @@ function App() {
                   path="/candidates/:id/edit"
                   element={
                     <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:candidates"]}>
+                      <ProtectedRoute permissions={["write:candidates"]}>
                         <AppLayout>
                           <EditCandidatePage />
                         </AppLayout>
