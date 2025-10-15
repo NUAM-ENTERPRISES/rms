@@ -3,12 +3,14 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { RoundRobinService } from '../round-robin/round-robin.service';
 import { CandidateAllocationService } from '../candidate-allocation/candidate-allocation.service';
 import { CandidateMatchingService } from '../candidate-matching/candidate-matching.service';
 import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
 import { PrismaService } from '../database/prisma.service';
 import { PipelineService } from './pipeline.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
@@ -30,10 +32,13 @@ import {
 
 @Injectable()
 export class CandidatesService {
+  private readonly logger = new Logger(CandidatesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly pipelineService: PipelineService,
+    private readonly eligibilityService: UnifiedEligibilityService,
   ) {}
 
   async create(
@@ -705,7 +710,10 @@ export class CandidatesService {
     });
 
     // Create service instances
-    const candidateMatchingService = new CandidateMatchingService(this.prisma);
+    const candidateMatchingService = new CandidateMatchingService(
+      this.prisma,
+      this.eligibilityService,
+    );
     const recruiterPoolService = new RecruiterPoolService(this.prisma);
     const roundRobinService = new RoundRobinService(this.prisma);
     const outboxService = new OutboxService(this.prisma);
@@ -722,7 +730,6 @@ export class CandidatesService {
     const recruiters = await this.getAllRecruiters();
 
     if (recruiters.length === 0) {
-      console.log('No recruiters found for auto-allocation');
       return;
     }
 
@@ -776,12 +783,35 @@ export class CandidatesService {
   }
 
   /**
-   * Check if a candidate is eligible for a specific role
+   * Check if a candidate is eligible for a specific role using unified eligibility engine
    */
   private async checkCandidateEligibility(
     candidate: any,
     role: any,
   ): Promise<boolean> {
+    try {
+      const eligibilityResult = await this.eligibilityService.checkEligibility({
+        candidateId: candidate.id,
+        roleNeededId: role.id,
+        projectId: role.projectId,
+      });
+
+      return eligibilityResult.isEligible;
+    } catch (error) {
+      this.logger.error(
+        `Error checking eligibility for candidate ${candidate.id} and role ${role.id}:`,
+        error.stack,
+      );
+
+      // Fallback to basic check if eligibility service fails
+      return this.basicEligibilityCheck(candidate, role);
+    }
+  }
+
+  /**
+   * Basic eligibility check as fallback
+   */
+  private basicEligibilityCheck(candidate: any, role: any): boolean {
     // Check experience requirements
     if (role.minExperience && candidate.totalExperience < role.minExperience) {
       return false;

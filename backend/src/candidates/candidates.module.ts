@@ -9,6 +9,7 @@ import { PipelineService } from './pipeline.service';
 import { PrismaModule } from '../database/prisma.module';
 import { WorkExperienceModule } from './work-experience.module';
 import { OutboxService } from '../notifications/outbox.service';
+import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
 
 @Module({
   imports: [PrismaModule, WorkExperienceModule],
@@ -23,6 +24,7 @@ import { OutboxService } from '../notifications/outbox.service';
     CandidateAssignmentValidatorService,
     PipelineService,
     OutboxService,
+    UnifiedEligibilityService,
   ],
   exports: [CandidatesService, CandidateQualificationService],
 })

@@ -9,6 +9,7 @@ import { CandidateAllocationService } from '../candidate-allocation/candidate-al
 import { CandidateMatchingService } from '../candidate-matching/candidate-matching.service';
 import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
 import { PrismaService } from '../database/prisma.service';
 import { CountriesService } from '../countries/countries.service';
 import { QualificationsService } from '../qualifications/qualifications.service';
@@ -1241,12 +1242,15 @@ export class ProjectsService {
     const recruiters = await this.getAllRecruiters();
 
     if (recruiters.length === 0) {
-      console.log('No recruiters found for auto-allocation');
       return;
     }
 
     // Create service instances
-    const candidateMatchingService = new CandidateMatchingService(this.prisma);
+    const eligibilityService = new UnifiedEligibilityService(this.prisma);
+    const candidateMatchingService = new CandidateMatchingService(
+      this.prisma,
+      eligibilityService,
+    );
     const recruiterPoolService = new RecruiterPoolService(this.prisma);
     const roundRobinService = new RoundRobinService(this.prisma);
     const outboxService = new OutboxService(this.prisma);

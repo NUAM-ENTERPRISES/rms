@@ -31,17 +31,17 @@ export interface NavItem {
 }
 
 export const navigationConfig: NavItem[] = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: Home,
-    roles: ["CEO", "Director", "Manager"],
-    badge: {
-      text: "Analytics",
-      variant: "default",
-    },
-  },
+  // {
+  //   id: "dashboard",
+  //   label: "Dashboard",
+  //   path: "/dashboard",
+  //   icon: Home,
+  //   roles: ["CEO", "Director", "Manager"],
+  //   badge: {
+  //     text: "Analytics",
+  //     variant: "default",
+  //   },
+  // },
   {
     id: "projects",
     label: "Projects",
@@ -131,39 +131,39 @@ export const navigationConfig: NavItem[] = [
   //     variant: "default",
   //   },
   // },
-  // {
-  //   id: "admin",
-  //   label: "Administration",
-  //   icon: Shield,
-  //   roles: ["CEO", "Director", "Manager"],
-  //   badge: {
-  //     text: "Admin",
-  //     variant: "destructive",
-  //   },
-  //   children: [
-  //     {
-  //       id: "admin-users",
-  //       label: "Users",
-  //       path: "/admin/users",
-  //       permissions: ["read:users"],
-  //       roles: ["CEO", "Director", "Manager"],
-  //     },
-  //     {
-  //       id: "admin-roles",
-  //       label: "Roles & Permissions",
-  //       path: "/admin/roles",
-  //       permissions: ["read:roles"],
-  //       roles: ["CEO", "Director", "Manager"],
-  //     },
-  //     {
-  //       id: "admin-teams",
-  //       label: "Team Management",
-  //       path: "/admin/teams",
-  //       permissions: ["read:teams"],
-  //       roles: ["CEO", "Director", "Manager"],
-  //     },
-  //   ],
-  // },
+  {
+    id: "admin",
+    label: "Administration",
+    icon: Shield,
+    roles: ["CEO", "Director", "Manager", "System Admin"],
+    badge: {
+      text: "Admin",
+      variant: "destructive",
+    },
+    children: [
+      {
+        id: "admin-users",
+        label: "Users",
+        path: "/admin/users",
+        permissions: ["read:users"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
+      },
+      {
+        id: "admin-roles",
+        label: "Roles & Permissions",
+        path: "/admin/roles",
+        permissions: ["read:roles"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
+      },
+      {
+        id: "admin-teams",
+        label: "Team Management",
+        path: "/admin/teams",
+        permissions: ["read:teams"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
+      },
+    ],
+  },
   // {
   //   id: "settings",
   //   label: "Settings",
