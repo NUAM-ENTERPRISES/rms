@@ -87,15 +87,23 @@ export interface Candidate {
 
   // Pipeline data
   pipeline?: {
-    stages: Array<{
-      stage: string;
-      isCurrent: boolean;
-      isCompleted: boolean;
-      title: string;
-      description: string;
-      date?: string;
-      icon?: string;
+    projects: Array<{
+      projectId: string;
+      projectTitle: string;
+      stages: Array<{
+        stage: string;
+        isCurrent: boolean;
+        isCompleted: boolean;
+        title: string;
+        description: string;
+        date?: string;
+        icon?: string;
+        color?: string;
+      }>;
+      currentStage: string;
+      overallProgress: number;
     }>;
+    overallProgress: number;
   };
 
   // Metrics data

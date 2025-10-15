@@ -5,6 +5,7 @@ import { CandidateQualificationController } from './candidate-qualification.cont
 import { CandidateQualificationService } from './candidate-qualification.service';
 import { CandidateAssignmentController } from './controllers/candidate-assignment.controller';
 import { CandidateAssignmentValidatorService } from './services/candidate-assignment-validator.service';
+import { PipelineService } from './pipeline.service';
 import { PrismaModule } from '../database/prisma.module';
 import { WorkExperienceModule } from './work-experience.module';
 import { OutboxService } from '../notifications/outbox.service';
@@ -20,6 +21,7 @@ import { OutboxService } from '../notifications/outbox.service';
     CandidatesService,
     CandidateQualificationService,
     CandidateAssignmentValidatorService,
+    PipelineService,
     OutboxService,
   ],
   exports: [CandidatesService, CandidateQualificationService],

@@ -10,6 +10,7 @@ import { CandidateMatchingService } from '../candidate-matching/candidate-matchi
 import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { PrismaService } from '../database/prisma.service';
+import { PipelineService } from './pipeline.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
@@ -32,6 +33,7 @@ export class CandidatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
+    private readonly pipelineService: PipelineService,
   ) {}
 
   async create(
@@ -354,7 +356,37 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    return candidate;
+    // Generate pipeline data for each project
+    const pipelineData = this.pipelineService.generatePipelinesForCandidate(
+      candidate.projects,
+    );
+
+    // Add pipeline data to the candidate object
+    return {
+      ...candidate,
+      pipeline: {
+        projects: pipelineData,
+        overallProgress: this.calculateOverallProgress(pipelineData),
+      },
+    } as CandidateWithRelations & {
+      pipeline: {
+        projects: any[];
+        overallProgress: number;
+      };
+    };
+  }
+
+  /**
+   * Calculate overall progress across all projects
+   */
+  private calculateOverallProgress(pipelineData: any[]): number {
+    if (pipelineData.length === 0) return 0;
+
+    const totalProgress = pipelineData.reduce(
+      (sum, project) => sum + project.overallProgress,
+      0,
+    );
+    return Math.round(totalProgress / pipelineData.length);
   }
 
   async update(

@@ -92,6 +92,7 @@ export {
 export { Separator } from "./separator";
 export { Calendar } from "./calendar";
 export { Popover, PopoverContent, PopoverTrigger } from "./popover";
+export { Progress } from "./progress";
 export { Toaster } from "./sonner";
 
 // Custom Components

@@ -48,11 +48,11 @@ import {
   Plus,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { cn } from "@/lib/utils";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { CandidateResumeList } from "@/components/molecules";
 import { DocumentUploadSection } from "../components/DocumentUploadSection";
+import { CandidatePipeline } from "../components/CandidatePipeline";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -122,124 +122,6 @@ const StatusBadge = ({ status }: { status?: string }) => {
       <Icon className="h-3 w-3" />
       {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
     </Badge>
-  );
-};
-
-// Pipeline Stage Component
-const PipelineStage = ({
-  isCompleted,
-  isCurrent,
-  title,
-  date,
-  icon: Icon,
-  isLast = false,
-}: {
-  isCompleted: boolean;
-  isCurrent: boolean;
-  title: string;
-  date?: string;
-  icon: any;
-  isLast?: boolean;
-}) => {
-  return (
-    <div className="flex flex-col items-center">
-      {/* Stage Circle */}
-      <div className="relative">
-        <div
-          className={cn(
-            "w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm",
-            isCompleted &&
-              "bg-green-500 border-green-500 text-white shadow-green-200",
-            isCurrent &&
-              "bg-blue-500 border-blue-500 text-white shadow-blue-200",
-            !isCompleted &&
-              !isCurrent &&
-              "bg-gray-100 border-gray-300 text-gray-500"
-          )}
-        >
-          {isCompleted ? (
-            <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6" />
-          ) : (
-            <Icon className="h-5 w-5 md:h-6 md:w-6" />
-          )}
-        </div>
-
-        {/* Current stage indicator */}
-        {isCurrent && (
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 rounded-full border-2 border-white animate-pulse" />
-        )}
-      </div>
-
-      {/* Stage Title */}
-      <div className="text-center mt-2 max-w-20 md:max-w-24">
-        <div className="text-xs md:text-sm font-medium text-slate-900">
-          {title}
-        </div>
-        {date && (
-          <div className="text-xs text-slate-500 mt-1">{formatDate(date)}</div>
-        )}
-      </div>
-
-      {/* Connecting Line */}
-      {!isLast && (
-        <div className="hidden md:block w-full mt-4">
-          <div
-            className={cn(
-              "h-0.5 transition-all duration-300",
-              isCompleted ? "bg-green-500" : "bg-gray-200"
-            )}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Mobile Pipeline Stage Component
-const MobilePipelineStage = ({
-  isCompleted,
-  isCurrent,
-  title,
-  description,
-  date,
-  icon: Icon,
-}: {
-  isCompleted: boolean;
-  isCurrent: boolean;
-  title: string;
-  description: string;
-  date?: string;
-  icon: any;
-}) => {
-  return (
-    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-white/50">
-      <div
-        className={cn(
-          "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 flex-shrink-0",
-          isCompleted && "bg-green-500 border-green-500 text-white",
-          isCurrent && "bg-blue-500 border-blue-500 text-white",
-          !isCompleted &&
-            !isCurrent &&
-            "bg-gray-100 border-gray-300 text-gray-500"
-        )}
-      >
-        {isCompleted ? (
-          <CheckCircle2 className="h-4 w-4" />
-        ) : (
-          <Icon className="h-4 w-4" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-slate-900">{title}</div>
-        <div className="text-xs text-slate-500">{description}</div>
-        {date && (
-          <div className="text-xs text-slate-400 mt-1">{formatDate(date)}</div>
-        )}
-      </div>
-      {isCurrent && (
-        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-      )}
-    </div>
   );
 };
 
@@ -412,108 +294,10 @@ export default function CandidateDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          {candidate.pipeline?.stages ? (
-            <>
-              {/* Desktop Pipeline View */}
-              <div className="hidden lg:block">
-                <div className="grid grid-cols-10 gap-4 items-start">
-                  {candidate.pipeline.stages.map((stage, index) => (
-                    <div
-                      key={stage.stage}
-                      className="flex flex-col items-center"
-                    >
-                      <PipelineStage
-                        isCompleted={stage.isCompleted}
-                        isCurrent={stage.isCurrent}
-                        title={stage.title}
-                        date={stage.date}
-                        icon={stage.icon}
-                        isLast={
-                          index ===
-                          (candidate.pipeline?.stages?.length ?? 0) - 1
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tablet Pipeline View */}
-              <div className="hidden md:block lg:hidden">
-                <div className="grid grid-cols-5 gap-6 items-start">
-                  {candidate.pipeline.stages.map((stage, index) => (
-                    <div
-                      key={stage.stage}
-                      className="flex flex-col items-center"
-                    >
-                      <PipelineStage
-                        isCompleted={stage.isCompleted}
-                        isCurrent={stage.isCurrent}
-                        title={stage.title}
-                        date={stage.date}
-                        icon={stage.icon}
-                        isLast={
-                          index ===
-                          (candidate.pipeline?.stages?.length ?? 0) - 1
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mobile Pipeline View */}
-              <div className="md:hidden">
-                <div className="space-y-3">
-                  {candidate.pipeline.stages.map((stage) => (
-                    <MobilePipelineStage
-                      key={stage.stage}
-                      isCompleted={stage.isCompleted}
-                      isCurrent={stage.isCurrent}
-                      title={stage.title}
-                      description={stage.description}
-                      date={stage.date}
-                      icon={stage.icon}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Progress Summary */}
-              <div className="mt-8 p-4 bg-slate-50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-slate-700">
-                    Overall Progress
-                  </span>
-                  <span className="text-sm text-slate-600">
-                    {
-                      candidate.pipeline.stages.filter((s) => s.isCompleted)
-                        .length
-                    }{" "}
-                    of {candidate.pipeline?.stages?.length ?? 0} stages
-                    completed
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${
-                        (candidate.pipeline.stages.filter((s) => s.isCompleted)
-                          .length /
-                          (candidate.pipeline?.stages?.length ?? 0)) *
-                        100
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-slate-500">No pipeline data available</p>
-            </div>
-          )}
+          <CandidatePipeline
+            projects={candidate.pipeline?.projects || []}
+            overallProgress={candidate.pipeline?.overallProgress || 0}
+          />
         </CardContent>
       </Card>
 
@@ -523,9 +307,10 @@ export default function CandidateDetailPage() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
@@ -1091,6 +876,14 @@ export default function CandidateDetailPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Pipeline Tab */}
+        <TabsContent value="pipeline" className="space-y-6">
+          <CandidatePipeline
+            projects={candidate.pipeline?.projects || []}
+            overallProgress={candidate.pipeline?.overallProgress || 0}
+          />
         </TabsContent>
 
         {/* Documents Tab */}
