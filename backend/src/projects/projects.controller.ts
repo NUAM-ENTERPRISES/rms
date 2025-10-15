@@ -619,4 +619,104 @@ export class ProjectsController {
       data: candidates,
     };
   }
+
+  @Get(':id/candidates/role/:role')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get project candidates by role',
+    description: 'Retrieve candidates filtered by user role and permissions.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiParam({ name: 'role', description: 'User role', example: 'Recruiter' })
+  @ApiResponse({
+    status: 200,
+    description: 'Project candidates retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async getProjectCandidatesByRole(
+    @Param('id') projectId: string,
+    @Param('role') role: string,
+    @Request() req,
+  ) {
+    const candidates = await this.projectsService.getProjectCandidatesByRole(
+      projectId,
+      role,
+      req.user.id,
+    );
+    return {
+      success: true,
+      data: candidates,
+      message: 'Project candidates retrieved successfully',
+    };
+  }
+
+  @Get(':id/candidates/verification')
+  @Permissions('verify:documents')
+  @ApiOperation({
+    summary: 'Get candidates for document verification',
+    description:
+      'Retrieve candidates in verification stages with document status.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification candidates retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async getDocumentVerificationCandidates(@Param('id') projectId: string) {
+    const candidates =
+      await this.projectsService.getDocumentVerificationCandidates(projectId);
+    return {
+      success: true,
+      data: candidates,
+      message: 'Verification candidates retrieved successfully',
+    };
+  }
+
+  @Post(':id/candidates/:candidateId/send-for-verification')
+  @Permissions('nominate:candidates')
+  @ApiOperation({
+    summary: 'Send candidate for verification',
+    description: 'Update candidate status to verification_in_progress.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiParam({
+    name: 'candidateId',
+    description: 'Candidate ID',
+    example: 'cand_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate sent for verification successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or project not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Candidate must be nominated before sending for verification',
+  })
+  async sendForVerification(
+    @Param('id') projectId: string,
+    @Param('candidateId') candidateId: string,
+    @Request() req,
+  ) {
+    const result = await this.projectsService.sendForVerification(
+      projectId,
+      candidateId,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate sent for verification successfully',
+    };
+  }
 }

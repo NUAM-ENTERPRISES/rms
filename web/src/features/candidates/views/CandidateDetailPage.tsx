@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { CandidateResumeList } from "@/components/molecules";
+import { DocumentUploadSection } from "../components/DocumentUploadSection";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -256,6 +257,7 @@ export default function CandidateDetailPage() {
     CandidateQualification | WorkExperience | undefined
   >();
 
+  // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
   const canManageCandidates = useCan("manage:candidates");
 
@@ -521,9 +523,10 @@ export default function CandidateDetailPage() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
         </TabsList>
@@ -1010,10 +1013,10 @@ export default function CandidateDetailPage() {
             <CardHeader className="border-b border-slate-200">
               <CardTitle className="flex items-center gap-2 text-slate-900">
                 <Briefcase className="h-5 w-5 text-blue-600" />
-                Available Projects
+                Assigned Projects
               </CardTitle>
               <CardDescription className="text-slate-600">
-                Projects where this candidate can be allocated
+                Projects where this candidate is currently assigned
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1021,65 +1024,63 @@ export default function CandidateDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Project</TableHead>
-                    <TableHead>Client</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Deadline</TableHead>
-                    <TableHead>Match Score</TableHead>
-                    <TableHead>Assignment</TableHead>
+                    <TableHead>Recruiter</TableHead>
+                    <TableHead>Assigned Date</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(candidate.projects || []).map((project) => (
-                    <TableRow key={project.id}>
+                  {(candidate.projects || []).map((projectMap) => (
+                    <TableRow key={projectMap.id}>
                       <TableCell className="font-medium">
-                        {project.title}
+                        {projectMap.project?.title || "Unknown Project"}
                       </TableCell>
-                      <TableCell>{project.client}</TableCell>
                       <TableCell>
-                        <StatusBadge status={project.status} />
+                        <StatusBadge status={projectMap.status} />
                       </TableCell>
-                      <TableCell>{formatDate(project.deadline)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div
-                              className={cn(
-                                "h-2 rounded-full",
-                                project.matchScore ?? 0 >= 90
-                                  ? "bg-green-600"
-                                  : project.matchScore ?? 0 >= 80
-                                  ? "bg-blue-600"
-                                  : project.matchScore ?? 0 >= 70
-                                  ? "bg-yellow-600"
-                                  : "bg-red-600"
-                              )}
-                              style={{ width: `${project.matchScore ?? 0}%` }}
-                            />
+                        {projectMap.recruiter ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">
+                                {projectMap.recruiter.name}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {projectMap.recruiter.email}
+                              </p>
+                            </div>
                           </div>
-                          <span className="text-sm font-medium">
-                            {project.matchScore ?? 0}%
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {project.isAssigned ? (
-                          <Badge className="bg-green-100 text-green-800 border-green-200">
-                            Assigned
-                          </Badge>
                         ) : (
-                          <Badge variant="outline">Available</Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-orange-600 border-orange-200"
+                          >
+                            Unassigned
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>
+                        {formatDate(projectMap.nominatedDate)}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              navigate(`/projects/${projectMap.projectId}`)
+                            }
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!project.isAssigned && (
+                          {projectMap.status === "nominated" && (
                             <Button variant="outline" size="sm">
                               <UserCheck className="h-4 w-4 mr-1" />
-                              Assign
+                              Review
                             </Button>
                           )}
                         </div>
@@ -1090,6 +1091,11 @@ export default function CandidateDetailPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
+          <DocumentUploadSection candidateId={id!} />
         </TabsContent>
 
         {/* History Tab */}

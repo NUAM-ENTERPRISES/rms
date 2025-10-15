@@ -89,6 +89,7 @@ const EditUserPage = lazy(() => import("@/features/admin/views/EditUserPage"));
 const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
 );
+const ProfilePage = lazy(() => import("@/features/profile/views/ProfilePage"));
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -341,12 +342,7 @@ function App() {
                     <RouteErrorBoundary>
                       <ProtectedRoute>
                         <AppLayout>
-                          <div className="p-8">
-                            <h1 className="text-2xl font-bold">Profile</h1>
-                            <p className="text-muted-foreground">
-                              Manage your personal information and preferences
-                            </p>
-                          </div>
+                          <ProfilePage />
                         </AppLayout>
                       </ProtectedRoute>
                     </RouteErrorBoundary>
@@ -448,9 +444,7 @@ function App() {
                   path="/projects/:projectId/candidates"
                   element={
                     <RouteErrorBoundary>
-                      <ProtectedRoute
-                        permissions={["read:projects", "read:candidates"]}
-                      >
+                      <ProtectedRoute>
                         <AppLayout>
                           <ProjectEligibleCandidatesPage />
                         </AppLayout>

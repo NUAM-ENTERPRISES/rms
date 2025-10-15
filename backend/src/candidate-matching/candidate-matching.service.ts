@@ -12,6 +12,7 @@ export interface MatchingCriteria {
   roleNeededId: string;
   projectId: string;
   excludeStatuses?: string[];
+  candidateId?: string;
 }
 
 @Injectable()
@@ -59,6 +60,8 @@ export class CandidateMatchingService {
     const candidates = await this.prisma.candidate.findMany({
       where: {
         AND: [
+          // If specific candidate ID is provided, only get that candidate
+          ...(criteria.candidateId ? [{ id: criteria.candidateId }] : []),
           // Not already nominated for this project+role
           {
             projects: {

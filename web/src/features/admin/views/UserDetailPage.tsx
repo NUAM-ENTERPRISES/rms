@@ -184,10 +184,10 @@ export default function UserDetailPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+            <h1 className="text-xl lg:text-2xl font-bold text-slate-900">
               {user.name}
             </h1>
-            <p className="text-slate-600 mt-1">{user.email}</p>
+            <p className="text-sm text-slate-600 mt-1">{user.email}</p>
           </div>
           <div className="flex items-center gap-3">
             {canManageUsers && (
@@ -228,43 +228,46 @@ export default function UserDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information Card */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <User className="h-5 w-5 text-blue-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <User className="h-4 w-4 text-blue-600" />
                   Basic Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Full Name */}
                   <div>
-                    <div className="text-sm font-medium text-slate-500 mb-1 flex items-center gap-2">
-                      <User className="h-4 w-4" />
+                    <div className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-2">
+                      <User className="h-3 w-3" />
                       Full Name
                     </div>
-                    <div className="text-base font-medium text-slate-800">
+                    <div className="text-sm font-medium text-slate-800">
                       {user.name}
                     </div>
                   </div>
 
                   {/* Email */}
                   <div>
-                    <div className="text-sm font-medium text-slate-500 mb-1 flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
+                    <div className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-2">
+                      <Mail className="h-3 w-3" />
                       Email
                     </div>
-                    <div className="text-base text-slate-800">{user.email}</div>
+                    <div className="text-sm text-slate-800">{user.email}</div>
                   </div>
 
-                  {/* Phone */}
-                  {user.phone && (
+                  {/* Mobile Number */}
+                  {user.mobileNumber && (
                     <div>
-                      <div className="text-sm font-medium text-slate-500 mb-1 flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        Phone
+                      <div className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-2">
+                        <Phone className="h-3 w-3" />
+                        Mobile Number
                       </div>
-                      <div className="text-base text-slate-800">
-                        {user.phone}
+                      <div className="text-sm text-slate-800">
+                        {user.countryCode && user.countryCode !== "N/A"
+                          ? `${user.countryCode} `
+                          : ""}
+                        {user.mobileNumber}
                       </div>
                     </div>
                   )}
@@ -272,37 +275,37 @@ export default function UserDetailPage() {
                   {/* Date of Birth */}
                   {user.dateOfBirth && (
                     <div>
-                      <div className="text-sm font-medium text-slate-500 mb-1 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
+                      <div className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-2">
+                        <Calendar className="h-3 w-3" />
                         Date of Birth
                       </div>
-                      <div className="text-base text-slate-800">
+                      <div className="text-sm text-slate-800">
                         {formatDate(user.dateOfBirth)}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="border-t border-slate-200 pt-4 mt-4">
+                <div className="border-t border-slate-200 pt-3 mt-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Created At */}
                     <div>
-                      <div className="text-sm font-medium text-slate-500 mb-1 flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
+                      <div className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
                         Created
                       </div>
-                      <div className="text-base text-slate-800">
+                      <div className="text-sm text-slate-800">
                         {formatDate(user.createdAt)}
                       </div>
                     </div>
 
                     {/* Updated At */}
                     <div>
-                      <div className="text-sm font-medium text-slate-500 mb-1 flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
+                      <div className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
                         Last Updated
                       </div>
-                      <div className="text-base text-slate-800">
+                      <div className="text-sm text-slate-800">
                         {formatDate(user.updatedAt)}
                       </div>
                     </div>
@@ -313,12 +316,12 @@ export default function UserDetailPage() {
 
             {/* Permissions Card */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <Key className="h-5 w-5 text-blue-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <Key className="h-4 w-4 text-blue-600" />
                   Permissions
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm">
                   Permissions granted through assigned roles
                 </CardDescription>
               </CardHeader>
@@ -348,36 +351,38 @@ export default function UserDetailPage() {
           <div className="space-y-6">
             {/* Roles Card */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-blue-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-blue-600" />
                   Roles
                 </CardTitle>
-                <CardDescription>Assigned system roles</CardDescription>
+                <CardDescription className="text-sm">
+                  Assigned system roles
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {user.userRoles && user.userRoles.length > 0 ? (
                     user.userRoles.map((userRole, index) => (
                       <div
                         key={index}
-                        className="p-3 rounded-lg bg-slate-50 border border-slate-200"
+                        className="p-2 rounded-lg bg-slate-50 border border-slate-200"
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <Shield className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium text-slate-800">
+                          <Shield className="h-3 w-3 text-blue-600" />
+                          <span className="text-sm font-medium text-slate-800">
                             {userRole.role.name}
                           </span>
                         </div>
                         {userRole.role.description && (
-                          <p className="text-xs text-slate-500 ml-6">
+                          <p className="text-xs text-slate-500 ml-5">
                             {userRole.role.description}
                           </p>
                         )}
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-500">No roles assigned</p>
+                    <p className="text-xs text-slate-500">No roles assigned</p>
                   )}
                 </div>
               </CardContent>
@@ -385,25 +390,25 @@ export default function UserDetailPage() {
             {/* <div>{JSON.stringify(user)}</div> */}
             {/* User Avatar Card */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardContent className="pt-6">
+              <CardContent className="pt-4">
                 <div className="flex flex-col items-center text-center">
                   {user.profileImage ? (
                     <img
                       src={user.profileImage}
                       alt={user.name}
-                      className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow-lg mb-4"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-blue-100 shadow-lg mb-3"
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl mb-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl mb-3">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <h3 className="font-semibold text-slate-800 text-lg">
+                  <h3 className="font-semibold text-slate-800 text-sm">
                     {user.name}
                   </h3>
-                  <p className="text-sm text-slate-500 mt-1">{user.email}</p>
+                  <p className="text-xs text-slate-500 mt-1">{user.email}</p>
                   {roles.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1 justify-center">
+                    <div className="mt-2 flex flex-wrap gap-1 justify-center">
                       {roles
                         .filter(
                           (roleName) => roleName && typeof roleName === "string"

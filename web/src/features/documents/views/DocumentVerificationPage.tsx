@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -38,100 +31,47 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label as FormLabel } from "@/components/ui/label";
 import {
   Search,
-  Filter,
   Eye,
   CheckCircle,
   XCircle,
   Clock,
   AlertCircle,
-  FileText,
-  User,
-  Building2,
-  Calendar,
   RefreshCw,
 } from "lucide-react";
-import { useGetDocumentsQuery } from "@/features/documents";
+import { useGetVerificationCandidatesQuery } from "@/features/documents";
 import { useCan } from "@/hooks/useCan";
 import { Can } from "@/components/auth/Can";
-import { DocumentStatusBadge, DocumentTypeBadge } from "@/components/molecules";
-import { format } from "date-fns";
 import { toast } from "sonner";
-
-// Mock data for demonstration
-const mockDocuments = [
-  {
-    id: "1",
-    candidateId: "candidate-1",
-    docType: "passport",
-    fileName: "passport_john_doe.pdf",
-    fileUrl: "https://example.com/passport.pdf",
-    status: "pending",
-    uploadedBy: "user-1",
-    uploadedAt: "2024-01-15T10:30:00Z",
-    candidate: {
-      id: "candidate-1",
-      name: "John Doe",
-      contact: "+1234567890",
-      email: "john@example.com",
-    },
-    verifications: [],
-  },
-  {
-    id: "2",
-    candidateId: "candidate-2",
-    docType: "professional_license",
-    fileName: "nursing_license_jane_smith.pdf",
-    fileUrl: "https://example.com/license.pdf",
-    status: "verified",
-    uploadedBy: "user-2",
-    uploadedAt: "2024-01-14T14:20:00Z",
-    verifiedBy: "user-3",
-    verifiedAt: "2024-01-15T09:15:00Z",
-    candidate: {
-      id: "candidate-2",
-      name: "Jane Smith",
-      contact: "+1987654321",
-      email: "jane@example.com",
-    },
-    verifications: [],
-  },
-  {
-    id: "3",
-    candidateId: "candidate-3",
-    docType: "degree",
-    fileName: "bachelor_degree_mike_wilson.pdf",
-    fileUrl: "https://example.com/degree.pdf",
-    status: "rejected",
-    uploadedBy: "user-1",
-    uploadedAt: "2024-01-13T16:45:00Z",
-    rejectedBy: "user-3",
-    rejectedAt: "2024-01-14T11:30:00Z",
-    rejectionReason: "Document is not clear, please resubmit",
-    candidate: {
-      id: "candidate-3",
-      name: "Mike Wilson",
-      contact: "+1122334455",
-      email: "mike@example.com",
-    },
-    verifications: [],
-  },
-];
 
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
-  const canVerifyDocuments = useCan("verify:documents");
   const canReadDocuments = useCan("read:documents");
 
   // State
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [docTypeFilter, setDocTypeFilter] = useState("all");
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [verificationDialog, setVerificationDialog] = useState(false);
   const [verificationAction, setVerificationAction] = useState<
     "verify" | "reject"
   >("verify");
   const [verificationNotes, setVerificationNotes] = useState("");
+
+  // API calls
+  const {
+    data: verificationData,
+    isLoading,
+    error,
+    refetch,
+  } = useGetVerificationCandidatesQuery({
+    status: statusFilter === "all" ? undefined : statusFilter,
+    search: searchTerm || undefined,
+    page: 1,
+    limit: 50,
+  });
+
+  const candidateProjects = verificationData?.data?.candidateProjects || [];
+  const totalCandidates = verificationData?.data?.pagination?.total || 0;
 
   // Permission check
   if (!canReadDocuments) {
@@ -156,52 +96,54 @@ export default function DocumentVerificationPage() {
     );
   }
 
-  // Filter documents
-  const filteredDocuments = mockDocuments.filter((doc) => {
-    const matchesSearch =
-      doc.candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.fileName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
-    const matchesDocType =
-      docTypeFilter === "all" || doc.docType === docTypeFilter;
-
-    return matchesSearch && matchesStatus && matchesDocType;
-  });
-
-  const handleVerifyDocument = (document: any) => {
-    setSelectedDocument(document);
+  const handleVerifyCandidate = (candidateProject: any) => {
+    setSelectedCandidate(candidateProject);
     setVerificationAction("verify");
     setVerificationDialog(true);
   };
 
-  const handleRejectDocument = (document: any) => {
-    setSelectedDocument(document);
+  const handleRejectCandidate = (candidateProject: any) => {
+    setSelectedCandidate(candidateProject);
     setVerificationAction("reject");
     setVerificationDialog(true);
   };
 
-  const handleSubmitVerification = () => {
-    // In real implementation, this would call the API
-    toast.success(
-      `Document ${
-        verificationAction === "verify" ? "verified" : "rejected"
-      } successfully`
-    );
-    setVerificationDialog(false);
-    setVerificationNotes("");
-    setSelectedDocument(null);
+  const handleSubmitVerification = async () => {
+    if (!selectedCandidate) return;
+
+    try {
+      if (verificationAction === "verify") {
+        // Update candidate-project status to documents_verified
+        // This would require a new API endpoint to update candidate-project status
+        toast.success("Candidate documents verified successfully");
+      } else {
+        // Update candidate-project status to rejected_documents
+        // This would require a new API endpoint to update candidate-project status
+        toast.success("Candidate documents rejected successfully");
+      }
+
+      setVerificationDialog(false);
+      setVerificationNotes("");
+      setSelectedCandidate(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to update document status");
+    }
   };
 
+  // Calculate status counts from API data
   const getStatusCounts = () => {
     const counts = {
-      pending: 0,
-      verified: 0,
-      rejected: 0,
-      expired: 0,
+      pending_documents: 0,
+      documents_submitted: 0,
+      verification_in_progress: 0,
+      documents_verified: 0,
+      rejected_documents: 0,
     };
 
-    mockDocuments.forEach((doc) => {
-      counts[doc.status as keyof typeof counts]++;
+    candidateProjects.forEach((candidateProject: any) => {
+      if (candidateProject.status in counts) {
+        counts[candidateProject.status as keyof typeof counts]++;
+      }
     });
 
     return counts;
@@ -210,285 +152,362 @@ export default function DocumentVerificationPage() {
   const statusCounts = getStatusCounts();
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* Compact Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold text-slate-900">
               Document Verification
             </h1>
-            <p className="text-muted-foreground">
-              Review and verify candidate documents
+            <p className="text-sm text-slate-600">
+              {totalCandidates} candidates • Review and verify candidate
+              documents
             </p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
             <Button
-              variant="outline"
-              onClick={() => window.location.reload()}
-              className="flex items-center space-x-2"
+              variant="ghost"
+              size="sm"
+              onClick={() => refetch()}
+              className="text-slate-600 hover:text-slate-900"
             >
               <RefreshCw className="h-4 w-4" />
-              <span>Refresh</span>
             </Button>
             <Can anyOf={["write:documents"]}>
-              <Button onClick={() => navigate("/documents/upload")}>
-                Upload Document
+              <Button size="sm" onClick={() => navigate("/documents/upload")}>
+                Upload
               </Button>
             </Can>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-amber-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Pending
-                  </p>
-                  <p className="text-2xl font-bold">{statusCounts.pending}</p>
-                </div>
+        {/* Compact Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Pending
+                </p>
+                <p className="text-xl font-bold text-amber-600">
+                  {statusCounts.pending_documents}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Verified
-                  </p>
-                  <p className="text-2xl font-bold">{statusCounts.verified}</p>
-                </div>
+              <Clock className="h-5 w-5 text-amber-500" />
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Submitted
+                </p>
+                <p className="text-xl font-bold text-blue-600">
+                  {statusCounts.documents_submitted}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <XCircle className="h-5 w-5 text-red-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Rejected
-                  </p>
-                  <p className="text-2xl font-bold">{statusCounts.rejected}</p>
-                </div>
+              <Clock className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  In Progress
+                </p>
+                <p className="text-xl font-bold text-purple-600">
+                  {statusCounts.verification_in_progress}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Expired
-                  </p>
-                  <p className="text-2xl font-bold">{statusCounts.expired}</p>
-                </div>
+              <Clock className="h-5 w-5 text-purple-500" />
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Verified
+                </p>
+                <p className="text-xl font-bold text-green-600">
+                  {statusCounts.documents_verified}
+                </p>
               </div>
-            </CardContent>
-          </Card>
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Rejected
+                </p>
+                <p className="text-xl font-bold text-red-600">
+                  {statusCounts.rejected_documents}
+                </p>
+              </div>
+              <XCircle className="h-5 w-5 text-red-500" />
+            </div>
+          </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by candidate name or file name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+        {/* Compact Filters */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search candidates or files..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-9 text-sm"
+                />
+              </div>
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 h-9 text-sm">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending_documents">
+                  Pending Documents
+                </SelectItem>
+                <SelectItem value="documents_submitted">
+                  Documents Submitted
+                </SelectItem>
+                <SelectItem value="verification_in_progress">
+                  Verification in Progress
+                </SelectItem>
+                <SelectItem value="documents_verified">
+                  Documents Verified
+                </SelectItem>
+                <SelectItem value="rejected_documents">
+                  Rejected Documents
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Compact Documents Table */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900">
+                Candidates for Verification
+              </h3>
+              <span className="text-sm text-slate-500">
+                {candidateProjects.length} candidates
+              </span>
+            </div>
+          </div>
+          <div className="p-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Loading candidates...</span>
                 </div>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={docTypeFilter} onValueChange={setDocTypeFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="passport">Passport</SelectItem>
-                  <SelectItem value="professional_license">
-                    Professional License
-                  </SelectItem>
-                  <SelectItem value="degree">Degree</SelectItem>
-                  <SelectItem value="resume">Resume</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Documents Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Documents ({filteredDocuments.length})</CardTitle>
-            <CardDescription>
-              Review and verify candidate documents
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Candidate</TableHead>
-                  <TableHead>Document Type</TableHead>
-                  <TableHead>File Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Uploaded</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDocuments.map((document) => (
-                  <TableRow key={document.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-4 w-4 text-primary" />
+            ) : error ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+                  <p className="text-destructive">Failed to load candidates</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => refetch()}
+                    className="mt-2"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50">
+                    <TableHead className="font-medium text-slate-700">
+                      Candidate
+                    </TableHead>
+                    <TableHead className="font-medium text-slate-700">
+                      Project
+                    </TableHead>
+                    <TableHead className="font-medium text-slate-700">
+                      Status
+                    </TableHead>
+                    <TableHead className="font-medium text-slate-700">
+                      Documents
+                    </TableHead>
+                    <TableHead className="font-medium text-slate-700">
+                      Recruiter
+                    </TableHead>
+                    <TableHead className="font-medium text-slate-700 text-right">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {candidateProjects.map((candidateProject: any) => (
+                    <TableRow
+                      key={candidateProject.id}
+                      className="hover:bg-slate-50/50"
+                    >
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+                            {candidateProject.candidate.firstName.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {candidateProject.candidate.firstName}{" "}
+                              {candidateProject.candidate.lastName}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {candidateProject.candidate.email}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">
-                            {document.candidate.name}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-medium text-slate-900">
+                            {candidateProject.project.title}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {document.candidate.contact}
+                          <p className="text-xs text-slate-500">
+                            {candidateProject.project.client?.name}
                           </p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DocumentTypeBadge docType={document.docType} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-mono text-sm">
-                          {document.fileName}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DocumentStatusBadge status={document.status} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {format(
-                            new Date(document.uploadedAt),
-                            "MMM dd, yyyy"
-                          )}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            window.open(document.fileUrl, "_blank")
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            candidateProject.status === "documents_verified"
+                              ? "default"
+                              : candidateProject.status === "rejected_documents"
+                              ? "destructive"
+                              : candidateProject.status ===
+                                "verification_in_progress"
+                              ? "secondary"
+                              : "outline"
                           }
                         >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Can anyOf={["verify:documents"]}>
-                          {document.status === "pending" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleVerifyDocument(document)}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRejectDocument(document)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </Can>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                          {candidateProject.status
+                            .replace("_", " ")
+                            .toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-slate-600">
+                          {candidateProject.documentVerifications?.length || 0}{" "}
+                          documents
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-slate-600">
+                          {candidateProject.recruiter?.name || "Unassigned"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              navigate(
+                                `/candidates/${candidateProject.candidate.id}`
+                              )
+                            }
+                            className="h-8 w-8 p-0 text-slate-600 hover:text-slate-900"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Can anyOf={["verify:documents"]}>
+                            {candidateProject.status ===
+                              "documents_submitted" && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleVerifyCandidate(candidateProject)
+                                  }
+                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRejectCandidate(candidateProject)
+                                  }
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </Can>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </div>
 
-        {/* Verification Dialog */}
+        {/* Compact Verification Dialog */}
         <Dialog open={verificationDialog} onOpenChange={setVerificationDialog}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg">
                 {verificationAction === "verify"
                   ? "Verify Document"
                   : "Reject Document"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm">
                 {verificationAction === "verify"
-                  ? "Confirm that this document is valid and verified."
+                  ? "Confirm this document is valid and verified."
                   : "Provide a reason for rejecting this document."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              {selectedDocument && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="font-medium">
-                    {selectedDocument.candidate.name}
+              {selectedCandidate && (
+                <div className="p-3 bg-slate-50 rounded-lg border">
+                  <p className="font-medium text-slate-900">
+                    {selectedCandidate.candidate.firstName}{" "}
+                    {selectedCandidate.candidate.lastName}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedDocument.fileName}
+                  <p className="text-sm text-slate-500">
+                    {selectedCandidate.project.title}
                   </p>
                 </div>
               )}
               <div className="space-y-2">
-                <FormLabel>Notes</FormLabel>
+                <FormLabel className="text-sm font-medium">Notes</FormLabel>
                 <Textarea
                   placeholder={
                     verificationAction === "verify"
-                      ? "Add any verification notes..."
-                      : "Explain why this document is being rejected..."
+                      ? "Add verification notes..."
+                      : "Explain rejection reason..."
                   }
                   value={verificationNotes}
                   onChange={(e) => setVerificationNotes(e.target.value)}
                   rows={3}
+                  className="text-sm"
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button
                 variant="outline"
                 onClick={() => setVerificationDialog(false)}
+                size="sm"
               >
                 Cancel
               </Button>
@@ -497,6 +516,7 @@ export default function DocumentVerificationPage() {
                 variant={
                   verificationAction === "verify" ? "default" : "destructive"
                 }
+                size="sm"
               >
                 {verificationAction === "verify" ? "Verify" : "Reject"}
               </Button>

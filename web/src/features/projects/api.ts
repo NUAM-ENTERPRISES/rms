@@ -15,6 +15,7 @@ export interface Project {
   creatorId: string;
   teamId: string | null;
   countryCode: string | null;
+  projectType: "private" | "ministry";
   client: {
     id: string;
     name: string;
@@ -47,6 +48,9 @@ export interface RoleNeeded {
   institutionRequirements?: string;
   skills?: string;
   technicalSkills?: string;
+  employmentType: "contract" | "permanent";
+  contractDurationYears?: number;
+  genderRequirement: "female" | "male" | "all";
   languageRequirements?: string;
   licenseRequirements?: string;
   backgroundCheckRequired: boolean;
@@ -59,6 +63,9 @@ export interface RoleNeeded {
   relocationAssistance: boolean;
   additionalRequirements?: string;
   notes?: string;
+  employmentType: "contract" | "permanent";
+  contractDurationYears?: number;
+  genderRequirement: "female" | "male" | "all";
 }
 
 export interface EducationRequirement {
@@ -102,6 +109,7 @@ export interface CreateProjectRequest {
   clientId: string;
   teamId?: string;
   countryCode?: string;
+  projectType: "private" | "ministry";
   rolesNeeded: CreateRoleNeededRequest[];
 }
 
@@ -129,6 +137,9 @@ export interface CreateRoleNeededRequest {
   relocationAssistance?: boolean;
   additionalRequirements?: string;
   notes?: string;
+  employmentType?: "contract" | "permanent";
+  contractDurationYears?: number;
+  genderRequirement?: "female" | "male" | "all";
 }
 
 export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
@@ -273,6 +284,47 @@ export const projectsApi = baseApi.injectEndpoints({
         { type: "Project", id: "LIST" },
       ],
     }),
+
+    // Get project candidates by role
+    getProjectCandidatesByRole: builder.query<
+      ApiResponse<any[]>,
+      { projectId: string; role: string }
+    >({
+      query: ({ projectId, role }) =>
+        `/projects/${projectId}/candidates/role/${role}`,
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+      ],
+    }),
+
+    // Get candidates for document verification
+    getDocumentVerificationCandidates: builder.query<
+      ApiResponse<any[]>,
+      string
+    >({
+      query: (projectId) => `/projects/${projectId}/candidates/verification`,
+      providesTags: (_, __, projectId) => [
+        { type: "Project", id: projectId },
+        "DocumentVerification",
+      ],
+    }),
+
+    // Send candidate for verification
+    sendForVerification: builder.mutation<
+      ApiResponse<any>,
+      { projectId: string; candidateId: string }
+    >({
+      query: ({ projectId, candidateId }) => ({
+        url: `/projects/${projectId}/candidates/${candidateId}/send-for-verification`,
+        method: "POST",
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+        "DocumentVerification",
+      ],
+    }),
   }),
 });
 
@@ -285,4 +337,7 @@ export const {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
   useAssignCandidateMutation,
+  useGetProjectCandidatesByRoleQuery,
+  useGetDocumentVerificationCandidatesQuery,
+  useSendForVerificationMutation,
 } = projectsApi;

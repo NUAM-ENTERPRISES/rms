@@ -63,18 +63,22 @@ export class CandidateAllocationController {
 
     let data: AllocationResultDto | Record<string, AllocationResultDto>;
 
+    // Get recruiters for this project
+    const recruiters =
+      await this.candidateAllocationService.getProjectRecruiters(projectId);
+
     if (roleNeededId) {
       // Allocate for specific role
       data = await this.candidateAllocationService.allocateForRole(
         projectId,
         roleNeededId,
-        batchSize,
+        recruiters,
       );
     } else {
       // Allocate for entire project
       data = await this.candidateAllocationService.allocateForProject(
         projectId,
-        batchSize,
+        recruiters,
       );
     }
 

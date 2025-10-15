@@ -23,6 +23,7 @@ import { SystemModule } from './system/system.module';
 import { UploadModule } from './upload/upload.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CandidateAllocationModule } from './candidate-allocation/candidate-allocation.module';
+import { InterviewsModule } from './interviews/interviews.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { CandidateAllocationModule } from './candidate-allocation/candidate-allo
     UploadModule,
     NotificationsModule,
     CandidateAllocationModule,
+    InterviewsModule,
   ],
   controllers: [AppController],
   providers: [

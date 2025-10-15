@@ -47,24 +47,36 @@ export class CandidateAllocationService {
   async allocateForRole(
     projectId: string,
     roleNeededId: string,
-    batchSize: number = 100,
+    recruiters: RecruiterInfo[],
+    specificCandidateId?: string,
   ): Promise<AllocationResult> {
     this.logger.log(
-      `Starting allocation for project ${projectId}, role ${roleNeededId}, batch size ${batchSize}`,
+      `Starting allocation for project ${projectId}, role ${roleNeededId}${specificCandidateId ? `, specific candidate ${specificCandidateId}` : ''}`,
     );
 
-    // Get recruiter pool
-    const recruiters = await this.recruiterPoolService.getRecruiters();
     if (recruiters.length === 0) {
       throw new BadRequestException('No recruiters available for allocation');
     }
 
     // Get eligible candidates
-    const matchedCandidates =
-      await this.candidateMatchingService.findEligibleCandidates({
-        roleNeededId,
-        projectId,
-      });
+    let matchedCandidates;
+    if (specificCandidateId) {
+      // Check if specific candidate is eligible
+      const candidate =
+        await this.candidateMatchingService.findEligibleCandidates({
+          roleNeededId,
+          projectId,
+          candidateId: specificCandidateId,
+        });
+      matchedCandidates = candidate;
+    } else {
+      // Get all eligible candidates
+      matchedCandidates =
+        await this.candidateMatchingService.findEligibleCandidates({
+          roleNeededId,
+          projectId,
+        });
+    }
 
     if (matchedCandidates.length === 0) {
       this.logger.warn(`No eligible candidates found for role ${roleNeededId}`);
@@ -76,8 +88,8 @@ export class CandidateAllocationService {
       };
     }
 
-    // Limit to batch size
-    const candidatesToProcess = matchedCandidates.slice(0, batchSize);
+    // Process all candidates (no batch limit for specific candidate allocation)
+    const candidatesToProcess = matchedCandidates;
     this.logger.log(`Processing ${candidatesToProcess.length} candidates`);
 
     const result: AllocationResult = {
@@ -107,16 +119,13 @@ export class CandidateAllocationService {
               status: 'nominated',
               nominatedBy: recruiter.id,
               nominatedDate: new Date(),
+              recruiterId: recruiter.id,
+              assignedAt: new Date(),
             },
           });
 
-          // Update candidate assignment
-          await tx.candidate.update({
-            where: { id: matchedCandidate.candidateId },
-            data: {
-              assignedTo: recruiter.id,
-            },
-          });
+          // Note: No need to update candidate.assignedTo as it's been removed
+          // All recruiter assignments are tracked via CandidateProjectMap.recruiterId
         });
 
         // Publish notification event
@@ -163,7 +172,7 @@ export class CandidateAllocationService {
    */
   async allocateForProject(
     projectId: string,
-    batchSize: number = 100,
+    recruiters: RecruiterInfo[],
   ): Promise<Record<string, AllocationResult>> {
     this.logger.log(`Starting allocation for entire project ${projectId}`);
 
@@ -184,10 +193,13 @@ export class CandidateAllocationService {
     // Allocate for each role
     for (const roleNeeded of project.rolesNeeded) {
       try {
+        // Get recruiters for this project
+        const recruiters = await this.getProjectRecruiters(projectId);
+
         results[roleNeeded.id] = await this.allocateForRole(
           projectId,
           roleNeeded.id,
-          batchSize,
+          recruiters,
         );
       } catch (error) {
         this.logger.error(
@@ -312,5 +324,70 @@ export class CandidateAllocationService {
       statusCounts,
       recentAllocations: allocations.slice(0, 10), // Last 10 allocations
     };
+  }
+
+  /**
+   * Get recruiters assigned to a project
+   */
+  async getProjectRecruiters(projectId: string): Promise<RecruiterInfo[]> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        team: {
+          include: {
+            userTeams: {
+              include: {
+                user: {
+                  include: {
+                    userRoles: {
+                      include: {
+                        role: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!project?.team) {
+      return [];
+    }
+
+    // Filter users with Recruiter role and calculate workload
+    const recruiters = await Promise.all(
+      project.team.userTeams
+        .map((ut) => ut.user)
+        .filter((user) =>
+          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+        )
+        .map(async (user) => {
+          // Calculate current workload (active candidates)
+          const workload = await this.prisma.candidateProjectMap.count({
+            where: {
+              recruiterId: user.id,
+              status: {
+                in: [
+                  'nominated',
+                  'verification_in_progress',
+                  'pending_documents',
+                ],
+              },
+            },
+          });
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            workload,
+          };
+        }),
+    );
+
+    return recruiters;
   }
 }

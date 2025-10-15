@@ -29,10 +29,14 @@ export class AllocationProcessor extends WorkerHost {
           throw new Error('Role needed ID is required for role allocation job');
         }
 
+        // Get recruiters for this project
+        const recruiters =
+          await this.candidateAllocationService.getProjectRecruiters(projectId);
+
         const result = await this.candidateAllocationService.allocateForRole(
           projectId,
           roleNeededId,
-          batchSize || 100,
+          recruiters,
         );
 
         this.logger.log(
@@ -41,11 +45,15 @@ export class AllocationProcessor extends WorkerHost {
 
         return result;
       } else {
+        // Get recruiters for this project
+        const recruiters =
+          await this.candidateAllocationService.getProjectRecruiters(projectId);
+
         // Process entire project allocation
         const results =
           await this.candidateAllocationService.allocateForProject(
             projectId,
-            batchSize || 100,
+            recruiters,
           );
 
         const totalAssigned = Object.values(results).reduce(

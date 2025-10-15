@@ -31,12 +31,14 @@ import {
   UserPlus,
   UserMinus,
   BarChart3,
+  User,
 } from "lucide-react";
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
   useGetEligibleCandidatesQuery,
 } from "@/features/projects";
+import ProjectDetailTabs from "@/features/projects/components/ProjectDetailTabs";
 import { useCan } from "@/hooks/useCan";
 import { ProjectCountryCell } from "@/components/molecules/domain";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -368,9 +370,9 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="xl:col-span-2 space-y-6">
             {/* Compact Project Overview */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
@@ -456,6 +458,22 @@ export default function ProjectDetailPage() {
                       {project.status}
                     </Badge>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-3 w-3 text-slate-400" />
+                    <span className="text-slate-600">Created By:</span>
+                    <span className="font-medium text-slate-800">
+                      {project.creator.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-3 w-3 text-slate-400" />
+                    <span className="text-slate-600">Project Type:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {project.projectType === "ministry"
+                        ? "Ministry/Government"
+                        : "Private Sector"}
+                    </Badge>
+                  </div>
                 </div>
 
                 {/* Description at the bottom */}
@@ -467,7 +485,7 @@ export default function ProjectDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Candidate Management Tabs */}
+            {/* Candidate Management Tabs - Full Width */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
@@ -476,324 +494,7 @@ export default function ProjectDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Tabs
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger
-                      value="eligible"
-                      className="flex items-center gap-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Eligible Candidates
-                      <Badge variant="secondary" className="ml-1">
-                        {eligibleCandidates.length}
-                      </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="nominated"
-                      className="flex items-center gap-2"
-                    >
-                      <UserCheck className="h-4 w-4" />
-                      Nominated Candidates
-                      <Badge variant="secondary" className="ml-1">
-                        {nominatedCandidates.length}
-                      </Badge>
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="eligible" className="mt-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                              placeholder="Search candidates..."
-                              className="pl-10 w-64"
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                          </div>
-                          <Select
-                            value={statusFilter}
-                            onValueChange={setStatusFilter}
-                          >
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          {filteredEligibleCandidates.length} candidate
-                          {filteredEligibleCandidates.length !== 1
-                            ? "s"
-                            : ""}{" "}
-                          eligible
-                        </div>
-                      </div>
-
-                      <div className="border rounded-lg">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Candidate</TableHead>
-                              <TableHead>Experience</TableHead>
-                              <TableHead>Match Score</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead className="text-right">
-                                Actions
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredEligibleCandidates.map((candidate) => (
-                              <TableRow key={candidate.id}>
-                                <TableCell>
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                      {candidate.name
-                                        ?.charAt(0)
-                                        .toUpperCase() || "?"}
-                                    </div>
-                                    <div>
-                                      <div className="font-medium text-slate-900">
-                                        {candidate.name || "Unknown"}
-                                      </div>
-                                      <div className="text-sm text-slate-500">
-                                        {candidate.email ||
-                                          candidate.contact ||
-                                          "No contact"}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="text-sm text-slate-600">
-                                    {candidate.experience
-                                      ? `${candidate.experience} years`
-                                      : "Not specified"}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <MatchScoreBadge
-                                    score={candidate.matchScore || 0}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs capitalize"
-                                  >
-                                    {candidate.currentStatus}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleViewCandidate(candidate.id)
-                                        }
-                                      >
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        View Details
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleAssignCandidate(candidate.id)
-                                        }
-                                        className="text-green-600"
-                                      >
-                                        <UserPlus className="mr-2 h-4 w-4" />
-                                        Nominate for Project
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="nominated" className="mt-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                              placeholder="Search candidates..."
-                              className="pl-10 w-64"
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          {filteredNominatedCandidates.length} candidate
-                          {filteredNominatedCandidates.length !== 1
-                            ? "s"
-                            : ""}{" "}
-                          nominated
-                        </div>
-                      </div>
-
-                      <div className="border rounded-lg">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Candidate</TableHead>
-                              <TableHead>Nominated Date</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Current Stage</TableHead>
-                              <TableHead className="text-right">
-                                Actions
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredNominatedCandidates.map(
-                              (candidateProject) => (
-                                <TableRow key={candidateProject.id}>
-                                  <TableCell>
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                        {candidateProject.candidate?.name
-                                          ?.charAt(0)
-                                          .toUpperCase() || "?"}
-                                      </div>
-                                      <div>
-                                        <div className="font-medium text-slate-900">
-                                          {candidateProject.candidate?.name ||
-                                            "Unknown"}
-                                        </div>
-                                        <div className="text-sm text-slate-500">
-                                          {candidateProject.candidate?.email ||
-                                            candidateProject.candidate
-                                              ?.contact ||
-                                            "No contact"}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="text-sm text-slate-600">
-                                      {formatDate(candidateProject.assignedAt)}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {candidateProject.status.replace(
-                                        "_",
-                                        " "
-                                      )}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="text-sm text-slate-600">
-                                      {candidateProject.status ===
-                                        "nominated" && "Pending Documents"}
-                                      {candidateProject.status ===
-                                        "pending_documents" &&
-                                        "Awaiting Submission"}
-                                      {candidateProject.status ===
-                                        "documents_submitted" &&
-                                        "Verification In Progress"}
-                                      {candidateProject.status ===
-                                        "documents_verified" && "Approved"}
-                                      {candidateProject.status === "approved" &&
-                                        "Ready for Interview"}
-                                      {candidateProject.status ===
-                                        "interview_scheduled" &&
-                                        "Interview Scheduled"}
-                                      {candidateProject.status ===
-                                        "interview_completed" &&
-                                        "Interview Completed"}
-                                      {candidateProject.status ===
-                                        "interview_passed" && "Selected"}
-                                      {candidateProject.status === "selected" &&
-                                        "Processing"}
-                                      {candidateProject.status ===
-                                        "processing" && "Final Processing"}
-                                      {candidateProject.status === "hired" &&
-                                        "Hired"}
-                                      {candidateProject.status ===
-                                        "rejected_documents" &&
-                                        "Documents Rejected"}
-                                      {candidateProject.status ===
-                                        "rejected_interview" &&
-                                        "Interview Failed"}
-                                      {candidateProject.status ===
-                                        "rejected_selection" &&
-                                        "Selection Rejected"}
-                                      {candidateProject.status ===
-                                        "withdrawn" && "Withdrawn"}
-                                      {candidateProject.status === "on_hold" &&
-                                        "On Hold"}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm">
-                                          <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                          onClick={() =>
-                                            handleViewCandidate(
-                                              candidateProject.candidateId
-                                            )
-                                          }
-                                        >
-                                          <Eye className="mr-2 h-4 w-4" />
-                                          View Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                          onClick={() =>
-                                            handleUnassignCandidate(
-                                              candidateProject.candidateId
-                                            )
-                                          }
-                                          className="text-red-600"
-                                        >
-                                          <UserMinus className="mr-2 h-4 w-4" />
-                                          Remove from Project
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </TableCell>
-                                </TableRow>
-                              )
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                <ProjectDetailTabs projectId={projectId!} />
               </CardContent>
             </Card>
           </div>
@@ -823,14 +524,6 @@ export default function ProjectDetailPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <MapPin className="h-3 w-3" />
                     <span>San Francisco, CA</span>
-                  </div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Phone className="h-3 w-3" />
-                    <span>+1 (555) 123-4567</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-3 w-3" />
-                    <span>contact@client.com</span>
                   </div>
                 </div>
               </CardContent>
@@ -872,22 +565,53 @@ export default function ProjectDetailPage() {
                       ) : (
                         "Experience not specified"
                       )}
-                      {role.shiftType && <> • {role.shiftType} shift</>}
+                      {role.shiftType && (
+                        <span className="ml-2 text-slate-500">
+                          • {role.shiftType}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Employment Type and Gender Requirement */}
+                    <div className="flex items-center gap-4 text-xs text-slate-600 mb-2">
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-slate-600">
+                          Employment:
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {role.employmentType === "contract"
+                            ? "Contract"
+                            : "Permanent"}
+                          {role.employmentType === "contract" &&
+                            role.contractDurationYears &&
+                            ` (${role.contractDurationYears} years)`}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-slate-600">
+                          Gender:
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {role.genderRequirement === "all"
+                            ? "All"
+                            : role.genderRequirement === "female"
+                            ? "Female Only"
+                            : "Male Only"}
+                        </Badge>
+                      </div>
                     </div>
 
                     {/* Skills */}
                     {role.skills && (
                       <div className="text-xs text-slate-500 mb-2">
-                        <span className="font-medium">Skills:</span>{" "}
-                        {role.skills}
-                      </div>
-                    )}
-
-                    {/* Technical Skills */}
-                    {role.technicalSkills && (
-                      <div className="text-xs text-slate-500 mb-2">
-                        <span className="font-medium">Technical Skills:</span>{" "}
-                        {role.technicalSkills}
+                        <span className="font-medium text-slate-600">
+                          Skills:
+                        </span>{" "}
+                        {typeof role.skills === "string"
+                          ? role.skills
+                          : Array.isArray(role.skills)
+                          ? (role.skills as string[]).join(", ")
+                          : "Not specified"}
                       </div>
                     )}
 
@@ -913,110 +637,42 @@ export default function ProjectDetailPage() {
                           Required Certifications:
                         </div>
                         <div className="text-xs text-slate-500">
-                          {role.requiredCertifications}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Language Requirements */}
-                    {role.languageRequirements && (
-                      <div className="mt-2 pt-2 border-t border-slate-200">
-                        <div className="text-xs font-medium text-slate-600 mb-1">
-                          Language Requirements:
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {role.languageRequirements}
+                          {typeof role.requiredCertifications === "string"
+                            ? role.requiredCertifications
+                            : Array.isArray(role.requiredCertifications)
+                            ? (role.requiredCertifications as string[]).join(
+                                ", "
+                              )
+                            : "Not specified"}
                         </div>
                       </div>
                     )}
 
                     {/* Additional Requirements */}
-                    <div className="mt-2 pt-2 border-t border-slate-200">
-                      <div className="flex flex-wrap gap-2">
-                        {role.backgroundCheckRequired && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-blue-50 text-blue-700"
-                          >
-                            Background Check
-                          </Badge>
-                        )}
-                        {role.drugScreeningRequired && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-green-50 text-green-700"
-                          >
-                            Drug Screening
-                          </Badge>
-                        )}
-                        {role.onCallRequired && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-orange-50 text-orange-700"
-                          >
-                            On-Call Required
-                          </Badge>
-                        )}
-                        {role.relocationAssistance && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-purple-50 text-purple-700"
-                          >
-                            Relocation Assistance
-                          </Badge>
-                        )}
+                    {role.additionalRequirements && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <div className="text-xs font-medium text-slate-600 mb-1">
+                          Additional Requirements:
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {role.additionalRequirements}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Notes */}
                     {role.notes && (
                       <div className="mt-2 pt-2 border-t border-slate-200">
                         <div className="text-xs font-medium text-slate-600 mb-1">
-                          Additional Notes:
+                          Notes:
                         </div>
-                        <div className="text-xs text-slate-500 italic">
+                        <div className="text-xs text-slate-500">
                           {role.notes}
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-
-            {/* Project Info */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                  <Info className="h-4 w-4 text-green-600" />
-                  Project Info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-600">Deadline</span>
-                  <span className="font-medium text-slate-800">
-                    {formatDate(project.deadline)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-600">Created By</span>
-                  <span className="font-medium text-slate-800">
-                    {project.creator.name}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-600">Team</span>
-                  <span className="font-medium text-slate-800">
-                    {project.team?.name || "Not assigned"}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-600">Last Updated</span>
-                  <span className="font-medium text-slate-800">
-                    {formatDate(project.updatedAt)}
-                  </span>
-                </div>
               </CardContent>
             </Card>
           </div>

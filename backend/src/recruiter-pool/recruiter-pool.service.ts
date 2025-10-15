@@ -33,10 +33,14 @@ export class RecruiterPoolService {
       include: {
         _count: {
           select: {
-            assignedCandidates: {
+            candidateProjectMaps: {
               where: {
-                currentStatus: {
-                  in: ['new', 'shortlisted', 'active'],
+                status: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
                 },
               },
             },
@@ -52,7 +56,7 @@ export class RecruiterPoolService {
       id: recruiter.id,
       name: recruiter.name,
       email: recruiter.email,
-      workload: recruiter._count.assignedCandidates,
+      workload: recruiter._count.candidateProjectMaps,
     }));
 
     this.logger.log(`Found ${recruiterInfos.length} recruiters in pool`);
@@ -104,10 +108,14 @@ export class RecruiterPoolService {
       include: {
         _count: {
           select: {
-            assignedCandidates: {
+            candidateProjectMaps: {
               where: {
-                currentStatus: {
-                  in: ['new', 'shortlisted', 'active'],
+                status: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
                 },
               },
             },
@@ -124,7 +132,7 @@ export class RecruiterPoolService {
       id: recruiter.id,
       name: recruiter.name,
       email: recruiter.email,
-      workload: recruiter._count.assignedCandidates,
+      workload: recruiter._count.candidateProjectMaps,
     };
   }
 }

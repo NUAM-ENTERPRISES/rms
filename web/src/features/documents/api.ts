@@ -262,6 +262,17 @@ export const documentsApi = baseApi.injectEndpoints({
         `/documents/summary/${candidateProjectMapId}`,
       providesTags: (_, __, id) => [{ type: "DocumentSummary", id }],
     }),
+
+    getVerificationCandidates: builder.query<
+      { success: boolean; data: any },
+      { page?: number; limit?: number; status?: string; search?: string }
+    >({
+      query: (params = {}) => ({
+        url: "/documents/verification-candidates",
+        params,
+      }),
+      providesTags: ["VerificationCandidates"],
+    }),
   }),
 });
 
@@ -275,4 +286,5 @@ export const {
   useRequestResubmissionMutation,
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,
+  useGetVerificationCandidatesQuery,
 } = documentsApi;

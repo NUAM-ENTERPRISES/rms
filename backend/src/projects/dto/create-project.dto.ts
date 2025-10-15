@@ -199,6 +199,37 @@ export class CreateRoleNeededDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Employment type for this role',
+    enum: ['contract', 'permanent'],
+    default: 'permanent',
+  })
+  @IsOptional()
+  @IsEnum(['contract', 'permanent'])
+  employmentType?: string = 'permanent';
+
+  @ApiPropertyOptional({
+    description:
+      'Contract duration in years (only applicable for contract roles)',
+    example: 2,
+    minimum: 1,
+    maximum: 10,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  contractDurationYears?: number;
+
+  @ApiPropertyOptional({
+    description: 'Gender requirement for this role',
+    enum: ['female', 'male', 'all'],
+    default: 'all',
+  })
+  @IsOptional()
+  @IsEnum(['female', 'male', 'all'])
+  genderRequirement?: string = 'all';
 }
 
 export class CreateProjectDto {
@@ -269,6 +300,15 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   countryCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Project type',
+    enum: ['private', 'ministry'],
+    default: 'private',
+  })
+  @IsOptional()
+  @IsEnum(['private', 'ministry'])
+  projectType?: string = 'private';
 
   @ApiPropertyOptional({
     description: 'Roles needed for this project',

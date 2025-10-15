@@ -28,6 +28,7 @@ import { NominateCandidateDto } from './dto/nominate-candidate.dto';
 import { ApproveCandidateDto } from './dto/approve-candidate.dto';
 import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import {
   CandidateWithRelations,
   PaginatedCandidates,

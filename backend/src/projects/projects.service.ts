@@ -4,6 +4,11 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { RoundRobinService } from '../round-robin/round-robin.service';
+import { CandidateAllocationService } from '../candidate-allocation/candidate-allocation.service';
+import { CandidateMatchingService } from '../candidate-matching/candidate-matching.service';
+import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
+import { OutboxService } from '../notifications/outbox.service';
 import { PrismaService } from '../database/prisma.service';
 import { CountriesService } from '../countries/countries.service';
 import { QualificationsService } from '../qualifications/qualifications.service';
@@ -223,6 +228,18 @@ export class ProjectsService {
 
     if (!completeProject) {
       throw new Error('Failed to create project');
+    }
+
+    // Auto-allocate existing eligible candidates to the new project
+    try {
+      await this.autoAllocateCandidatesToProject(completeProject.id);
+    } catch (error) {
+      // Log error but don't fail project creation
+      console.error(
+        'Auto-allocation failed for project:',
+        completeProject.id,
+        error,
+      );
     }
 
     return completeProject;
@@ -624,14 +641,30 @@ export class ProjectsService {
       );
     }
 
-    // Create assignment (nomination)
+    // Get all global recruiters for round-robin allocation
+    const recruiters = await this.getAllRecruiters();
+    if (recruiters.length === 0) {
+      throw new BadRequestException('No recruiters available in the system');
+    }
+
+    // Use round-robin to get next recruiter
+    const roundRobinService = new RoundRobinService(this.prisma);
+    const recruiter = await roundRobinService.getNextRecruiter(
+      projectId,
+      '', // No specific role needed for manual assignment
+      recruiters,
+    );
+
+    // Create assignment (nomination) with recruiter assignment
     const assignment = await this.prisma.candidateProjectMap.create({
       data: {
         candidateId: assignCandidateDto.candidateId,
         projectId,
-        nominatedBy: assignCandidateDto.notes || '', // TODO: Get from request user
+        nominatedBy: userId, // Use the requesting user
         notes: assignCandidateDto.notes,
         status: 'nominated', // Initial status
+        recruiterId: recruiter.id,
+        assignedAt: new Date(),
       },
       include: {
         candidate: {
@@ -686,7 +719,7 @@ export class ProjectsService {
             experience: true,
             skills: true,
             expectedSalary: true,
-            assignedTo: true,
+            // assignedTo field removed - recruiter info now in CandidateProjectMap
           },
         },
       },
@@ -828,13 +861,7 @@ export class ProjectsService {
         },
       },
       include: {
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        // recruiter relation removed - now accessed via CandidateProjectMap
         team: {
           select: {
             id: true,
@@ -954,5 +981,412 @@ export class ProjectsService {
     });
 
     return Math.round((totalScore / maxScore) * 100);
+  }
+
+  /**
+   * Get project candidates by role (for role-based access)
+   * Returns candidates filtered by user role and permissions
+   */
+  async getProjectCandidatesByRole(
+    projectId: string,
+    userRole: string,
+    userId: string,
+  ): Promise<any[]> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        candidateProjects: {
+          include: {
+            candidate: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                countryCode: true,
+                mobileNumber: true,
+                email: true,
+                currentStatus: true,
+                experience: true,
+                skills: true,
+                expectedSalary: true,
+              },
+            },
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        rolesNeeded: true,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    // Filter candidates based on user role
+    switch (userRole) {
+      case 'Recruiter':
+        // Recruiters see only candidates assigned to them
+        return project.candidateProjects
+          .filter((cp) => cp.recruiterId === userId)
+          .map((cp) => ({
+            ...cp,
+            matchScore: this.calculateMatchScore(
+              cp.candidate,
+              project.rolesNeeded,
+            ),
+          }));
+
+      case 'Documentation Executive':
+        // Documentation executives see candidates in verification stages
+        return project.candidateProjects
+          .filter((cp) =>
+            [
+              'verification_in_progress',
+              'pending_documents',
+              'documents_verified',
+            ].includes(cp.status),
+          )
+          .map((cp) => ({
+            ...cp,
+            matchScore: this.calculateMatchScore(
+              cp.candidate,
+              project.rolesNeeded,
+            ),
+          }));
+
+      case 'Processing Executive':
+        // Processing executives see verified candidates
+        return project.candidateProjects
+          .filter((cp) =>
+            ['documents_verified', 'approved', 'processing'].includes(
+              cp.status,
+            ),
+          )
+          .map((cp) => ({
+            ...cp,
+            matchScore: this.calculateMatchScore(
+              cp.candidate,
+              project.rolesNeeded,
+            ),
+          }));
+
+      default:
+        // Managers, Team Heads, Team Leads see all candidates
+        return project.candidateProjects.map((cp) => ({
+          ...cp,
+          matchScore: this.calculateMatchScore(
+            cp.candidate,
+            project.rolesNeeded,
+          ),
+        }));
+    }
+  }
+
+  /**
+   * Get candidates for document verification dashboard
+   * Returns candidates in verification stages with document status
+   */
+  async getDocumentVerificationCandidates(projectId: string): Promise<any[]> {
+    const candidates = await this.prisma.candidateProjectMap.findMany({
+      where: {
+        projectId,
+        status: {
+          in: [
+            'verification_in_progress',
+            'pending_documents',
+            'documents_verified',
+          ],
+        },
+      },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            countryCode: true,
+            mobileNumber: true,
+            email: true,
+            currentStatus: true,
+            experience: true,
+            skills: true,
+            expectedSalary: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    return candidates.map((candidate) => ({
+      ...candidate,
+      documentStatus: 'pending_verification', // Simplified for now
+      totalDocuments: 0, // Will be calculated from actual documents
+      verifiedDocuments: 0,
+      pendingDocuments: 0,
+    }));
+  }
+
+  /**
+   * Send candidate for verification
+   * Updates candidate status to verification_in_progress
+   */
+  async sendForVerification(
+    projectId: string,
+    candidateId: string,
+    userId: string,
+  ): Promise<any> {
+    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        projectId,
+        candidateId,
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException('Candidate not found in project');
+    }
+
+    if (candidateProject.status !== 'nominated') {
+      throw new BadRequestException(
+        'Candidate must be nominated before sending for verification',
+      );
+    }
+
+    const updated = await this.prisma.candidateProjectMap.update({
+      where: { id: candidateProject.id },
+      data: {
+        status: 'verification_in_progress',
+        // Note: sentForVerificationBy and sentForVerificationDate fields need to be added to schema
+        // For now, we'll use existing fields
+        updatedAt: new Date(),
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Calculate document verification status for a candidate
+   */
+  private calculateDocumentStatus(documents: any[]): string {
+    if (documents.length === 0) return 'no_documents';
+
+    const verifiedCount = documents.filter(
+      (doc) => doc.verifications[0]?.status === 'verified',
+    ).length;
+
+    const rejectedCount = documents.filter(
+      (doc) => doc.verifications[0]?.status === 'rejected',
+    ).length;
+
+    const pendingCount = documents.filter(
+      (doc) =>
+        !doc.verifications[0] || doc.verifications[0].status === 'pending',
+    ).length;
+
+    if (verifiedCount === documents.length) return 'all_verified';
+    if (rejectedCount > 0) return 'has_rejected';
+    if (pendingCount > 0) return 'pending_verification';
+
+    return 'unknown';
+  }
+
+  /**
+   * Auto-allocate existing eligible candidates to a new project
+   */
+  private async autoAllocateCandidatesToProject(
+    projectId: string,
+  ): Promise<void> {
+    // Get project with roles needed
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        rolesNeeded: true,
+        team: {
+          include: {
+            userTeams: {
+              include: {
+                user: {
+                  include: {
+                    userRoles: {
+                      include: {
+                        role: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!project || !project.rolesNeeded || project.rolesNeeded.length === 0) {
+      return; // No roles to allocate for
+    }
+
+    // Get all global recruiters (not project-specific)
+    const recruiters = await this.getAllRecruiters();
+
+    if (recruiters.length === 0) {
+      console.log('No recruiters found for auto-allocation');
+      return;
+    }
+
+    // Create service instances
+    const candidateMatchingService = new CandidateMatchingService(this.prisma);
+    const recruiterPoolService = new RecruiterPoolService(this.prisma);
+    const roundRobinService = new RoundRobinService(this.prisma);
+    const outboxService = new OutboxService(this.prisma);
+
+    const allocationService = new CandidateAllocationService(
+      this.prisma,
+      candidateMatchingService,
+      recruiterPoolService,
+      roundRobinService,
+      outboxService,
+    );
+
+    // Allocate candidates for each role
+    for (const role of project.rolesNeeded) {
+      try {
+        await allocationService.allocateForRole(projectId, role.id, recruiters);
+      } catch (error) {
+        console.error(
+          `Failed to allocate candidates for role ${role.id}:`,
+          error,
+        );
+      }
+    }
+  }
+
+  /**
+   * Get recruiters assigned to a project
+   */
+  /**
+   * Get all global recruiters with workload calculation
+   */
+  private async getAllRecruiters(): Promise<any[]> {
+    const recruiters = await this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: 'Recruiter',
+            },
+          },
+        },
+      },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+        _count: {
+          select: {
+            candidateProjectMaps: {
+              where: {
+                status: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        id: 'asc', // Deterministic order for round-robin
+      },
+    });
+
+    return recruiters.map((recruiter) => ({
+      id: recruiter.id,
+      name: recruiter.name,
+      email: recruiter.email,
+      workload: recruiter._count.candidateProjectMaps,
+      roles: recruiter.userRoles.map((ur) => ur.role.name),
+    }));
+  }
+
+  /**
+   * Get recruiters assigned to a project (DEPRECATED - use getAllRecruiters for global allocation)
+   */
+  private async getProjectRecruiters(projectId: string): Promise<any[]> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        team: {
+          include: {
+            userTeams: {
+              include: {
+                user: {
+                  include: {
+                    userRoles: {
+                      include: {
+                        role: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!project?.team) {
+      return [];
+    }
+
+    // Filter users with Recruiter role and calculate workload
+    const recruiters = await Promise.all(
+      project.team.userTeams
+        .map((ut) => ut.user)
+        .filter((user) =>
+          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+        )
+        .map(async (user) => {
+          // Calculate current workload (active candidates)
+          const workload = await this.prisma.candidateProjectMap.count({
+            where: {
+              recruiterId: user.id,
+              status: {
+                in: [
+                  'nominated',
+                  'verification_in_progress',
+                  'pending_documents',
+                ],
+              },
+            },
+          });
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            workload,
+          };
+        }),
+    );
+
+    return recruiters;
   }
 }

@@ -1,5 +1,29 @@
 import { baseApi } from "@/app/api/baseApi";
 
+// Document types
+export interface Document {
+  id: string;
+  candidateId: string;
+  docType: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  mimeType?: string;
+  expiryDate?: string;
+  documentNumber?: string;
+  notes?: string;
+  status: string;
+  uploadedBy: string;
+  verifiedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UploadDocumentRequest {
+  candidateId: string;
+  formData: FormData;
+}
+
 // Types
 export interface Candidate {
   id: string;
@@ -201,6 +225,11 @@ export interface CandidateProjectMap {
       id: string;
       name: string;
     };
+  };
+  recruiter?: {
+    id: string;
+    name: string;
+    email: string;
   };
 }
 
@@ -435,6 +464,26 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["CandidateQualification", "Candidate"],
     }),
+
+    // Document endpoints
+    getDocuments: builder.query<
+      { documents: Document[]; pagination: any },
+      { candidateId: string; page?: number; limit?: number }
+    >({
+      query: ({ candidateId, page = 1, limit = 20 }) => ({
+        url: "/documents",
+        params: { candidateId, page, limit },
+      }),
+      providesTags: ["Document"],
+    }),
+    uploadDocument: builder.mutation<Document, UploadDocumentRequest>({
+      query: ({ candidateId, formData }) => ({
+        url: `/upload/document/${candidateId}`,
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Document", "Candidate"],
+    }),
   }),
 });
 
@@ -456,4 +505,6 @@ export const {
   useCreateCandidateQualificationMutation,
   useUpdateCandidateQualificationMutation,
   useDeleteCandidateQualificationMutation,
+  useGetDocumentsQuery,
+  useUploadDocumentMutation,
 } = candidatesApi;
