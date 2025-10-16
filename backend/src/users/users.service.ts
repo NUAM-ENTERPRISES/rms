@@ -30,9 +30,9 @@ export class UsersService {
     // Check for existing phone number + country code combination
     const existingPhone = await this.prisma.user.findUnique({
       where: {
-        countryCode_phone: {
+        countryCode_mobileNumber: {
           countryCode: createUserDto.countryCode,
-          phone: createUserDto.phone,
+          mobileNumber: createUserDto.mobileNumber,
         },
       },
     });
@@ -61,7 +61,7 @@ export class UsersService {
           name: createUserDto.name,
           password: hashedPassword,
           countryCode: createUserDto.countryCode,
-          phone: createUserDto.phone,
+          mobileNumber: createUserDto.mobileNumber,
           dateOfBirth: createUserDto.dateOfBirth
             ? new Date(createUserDto.dateOfBirth)
             : null,
@@ -119,7 +119,7 @@ export class UsersService {
         {
           email: createUserDto.email,
           name: createUserDto.name,
-          phone: createUserDto.phone,
+          mobileNumber: createUserDto.mobileNumber,
           dateOfBirth: createUserDto.dateOfBirth,
           roleIds: createUserDto.roleIds,
         },
@@ -451,5 +451,100 @@ export class UsersService {
       user.profileImage = this.getProfileImageUrl(user.profileImage);
     }
     return user;
+  }
+
+  async getUserProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Get user analytics/stats
+    const stats = await this.getUserStats(userId);
+
+    // Extract roles and permissions
+    const roles = user.userRoles.map((ur) => ur.role.name);
+    const permissions = user.userRoles.flatMap((ur) =>
+      ur.role.rolePermissions.map((rp) => rp.permission.key),
+    );
+
+    // Format profile data
+    const profile = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      mobileNumber: user.mobileNumber,
+      countryCode: user.countryCode,
+      dateOfBirth: user.dateOfBirth,
+      profileImage: user.profileImage
+        ? this.getProfileImageUrl(user.profileImage)
+        : null,
+      location: null, // Field doesn't exist in schema
+      timezone: null, // Field doesn't exist in schema
+      roles,
+      permissions,
+      createdAt: user.createdAt,
+      lastLogin: null, // Field doesn't exist in schema
+      preferences: {
+        notifications: {
+          email: true,
+          push: true,
+          sms: true,
+        },
+        theme: 'light',
+        language: 'en',
+      },
+      stats,
+    };
+
+    return profile;
+  }
+
+  private async getUserStats(userId: string) {
+    // Get candidates assigned to this user (if they're a recruiter)
+    const candidatesManaged = await this.prisma.candidateProjectMap.count({
+      where: {
+        recruiterId: userId,
+      },
+    });
+
+    // Get projects created by this user
+    const projectsCreated = await this.prisma.project.count({
+      where: {
+        createdBy: userId,
+      },
+    });
+
+    // Get documents verified by this user (if they're documentation team)
+    const documentsVerified = await this.prisma.document.count({
+      where: {
+        verifiedBy: userId,
+        status: 'VERIFIED',
+      },
+    });
+
+    return {
+      candidatesManaged,
+      projectsCreated,
+      documentsVerified,
+    };
   }
 }

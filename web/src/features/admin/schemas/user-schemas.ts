@@ -1,47 +1,59 @@
 import { z } from "zod";
 
 // User form schema for creation (matching backend CreateUserDto)
-export const createUserSchema = z.object({
-  // Required fields
-  name: z
-    .string()
-    .min(2, "Name must be at least 2 characters long")
-    .max(100, "Name cannot exceed 100 characters"),
+export const createUserSchema = z
+  .object({
+    // Required fields
+    name: z
+      .string()
+      .min(2, "Name must be at least 2 characters long")
+      .max(100, "Name cannot exceed 100 characters"),
 
-  email: z
-    .string()
-    .email("Please provide a valid email address")
-    .min(1, "Email is required"),
+    email: z
+      .string()
+      .email("Please provide a valid email address")
+      .min(1, "Email is required"),
 
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters long")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
-    ),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      ),
 
-  countryCode: z
-    .string()
-    .min(1, "Country code is required")
-    .regex(/^\+[1-9]\d{0,3}$/, "Please select a valid country code"),
+    confirmPassword: z
+      .string()
+      .min(8, "Confirm password must be at least 8 characters long"),
 
-  phone: z
-    .string()
-    .min(1, "Phone number is required")
-    .regex(/^\d{6,15}$/, "Please provide a valid phone number (6-15 digits)"),
+    countryCode: z
+      .string()
+      .min(1, "Country code is required")
+      .regex(/^\+[1-9]\d{0,3}$/, "Please select a valid country code"),
 
-  dateOfBirth: z
-    .string()
-    .min(1, "Date of birth is required")
-    .refine((val) => val && val.trim() !== "", "Date of birth is required"),
+    mobileNumber: z
+      .string()
+      .min(1, "Mobile number is required")
+      .regex(
+        /^\d{6,15}$/,
+        "Please provide a valid mobile number (6-15 digits)"
+      ),
 
-  // Role assignment
-  roleId: z
-    .string()
-    .min(1, "Role is required")
-    .refine((val) => val && val !== "no-role", "Please select a role"),
-});
+    dateOfBirth: z
+      .string()
+      .min(1, "Date of birth is required")
+      .refine((val) => val && val.trim() !== "", "Date of birth is required"),
+
+    // Role assignment
+    roleId: z
+      .string()
+      .min(1, "Role is required")
+      .refine((val) => val && val !== "no-role", "Please select a role"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 // User form schema for updating (matching backend UpdateUserDto)
 export const updateUserSchema = z.object({
@@ -63,22 +75,16 @@ export const updateUserSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  phone: z
+  mobileNumber: z
     .string()
-    .regex(/^\d{6,15}$/, "Please provide a valid phone number (6-15 digits)")
+    .regex(/^\d{6,15}$/, "Please provide a valid mobile number (6-15 digits)")
     .optional()
     .or(z.literal("")),
 
-  dateOfBirth: z
-    .string()
-    .min(1, "Date of birth is required")
-    .refine((val) => val && val.trim() !== "", "Date of birth is required"),
+  dateOfBirth: z.string().optional().or(z.literal("")),
 
   // Role assignment
-  roleId: z
-    .string()
-    .min(1, "Role is required")
-    .refine((val) => val && val !== "no-role", "Please select a role"),
+  roleId: z.string().optional().or(z.literal("no-role")),
 });
 
 // Type inference
@@ -90,8 +96,9 @@ export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   name: "",
   email: "",
   password: "",
+  confirmPassword: "",
   countryCode: "+91",
-  phone: "",
+  mobileNumber: "",
   dateOfBirth: "",
   roleId: "",
 };
@@ -101,7 +108,7 @@ export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   name: "",
   email: "",
   countryCode: "",
-  phone: "",
+  mobileNumber: "",
   dateOfBirth: "",
   roleId: "",
 };

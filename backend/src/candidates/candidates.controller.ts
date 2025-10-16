@@ -28,6 +28,7 @@ import { NominateCandidateDto } from './dto/nominate-candidate.dto';
 import { ApproveCandidateDto } from './dto/approve-candidate.dto';
 import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
@@ -41,7 +42,7 @@ export class CandidatesController {
   constructor(private readonly candidatesService: CandidatesService) {}
 
   @Post()
-  @Permissions('manage:candidates')
+  @Permissions('write:candidates')
   @ApiOperation({
     summary: 'Create a new candidate',
     description:
@@ -360,7 +361,7 @@ export class CandidatesController {
   }
 
   @Patch(':id')
-  @Permissions('manage:candidates')
+  @Permissions('write:candidates')
   @ApiOperation({
     summary: 'Update candidate',
     description:
@@ -553,7 +554,7 @@ export class CandidatesController {
 
   @Post(':id/assign-project')
   @HttpCode(HttpStatus.OK)
-  @Permissions('manage:candidates')
+  @Permissions('write:candidates')
   @ApiOperation({
     summary: 'Assign candidate to project',
     description:
@@ -713,7 +714,7 @@ export class CandidatesController {
   }
 
   @Post('send-for-verification')
-  @Permissions('manage:candidates')
+  @Permissions('write:candidates')
   @ApiOperation({
     summary: 'Send candidate for document verification',
     description:

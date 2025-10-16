@@ -73,6 +73,26 @@ export class DocumentsController {
     };
   }
 
+  @Get('verification-candidates')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get candidates for document verification',
+    description:
+      'Retrieve candidates who need document verification (pending documents, submitted, verification in progress, rejected)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification candidates retrieved successfully',
+  })
+  async getVerificationCandidates(@Query() query: any) {
+    const result = await this.documentsService.getVerificationCandidates(query);
+    return {
+      success: true,
+      data: result,
+      message: 'Verification candidates retrieved successfully',
+    };
+  }
+
   @Get('stats')
   @Permissions('read:documents')
   @ApiOperation({

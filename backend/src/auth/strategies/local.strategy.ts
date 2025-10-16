@@ -9,10 +9,14 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private prisma: PrismaService) {
     // Note: passport-local only supports usernameField, so we pass countryCode+phone as one field
     // and parse it in the validate method
-    super({ usernameField: 'phone', passReqToCallback: true });
+    super({ usernameField: 'mobileNumber', passReqToCallback: true });
   }
 
-  async validate(req: any, phone: string, password: string): Promise<any> {
+  async validate(
+    req: any,
+    mobileNumber: string,
+    password: string,
+  ): Promise<any> {
     try {
       const countryCode = req.body.countryCode;
 
@@ -22,9 +26,9 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 
       const user = await (this.prisma as any).user.findUnique({
         where: {
-          countryCode_phone: {
+          countryCode_mobileNumber: {
             countryCode,
-            phone,
+            mobileNumber,
           },
         },
         include: {

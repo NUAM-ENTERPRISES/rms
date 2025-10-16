@@ -476,7 +476,7 @@ export class TeamsService {
             id: true,
             name: true,
             email: true,
-            phone: true,
+            mobileNumber: true,
             dateOfBirth: true,
             createdAt: true,
           },
@@ -638,41 +638,27 @@ export class TeamsService {
             },
           },
         },
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            userRoles: {
-              include: {
-                role: {
-                  select: {
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
+        // recruiter relation removed - now accessed via CandidateProjectMap
       },
     });
 
     return teamCandidates.map((candidate) => ({
       id: candidate.id,
       name: `${candidate.firstName} ${candidate.lastName}`,
-      contact: candidate.contact,
+      contact: `${candidate.countryCode}${candidate.mobileNumber}`,
       email: candidate.email,
       currentStatus: candidate.currentStatus,
       experience: candidate.totalExperience || 0,
       skills: candidate.skills || [],
       assignedProject: {
-        id: candidate.projects[0]?.project.id,
-        title: candidate.projects[0]?.project.title,
-        client: candidate.projects[0]?.project.client,
+        id: 'N/A', // Projects now accessed via separate query
+        title: 'N/A',
+        client: null,
       },
       assignedBy: {
-        id: candidate.recruiter?.id || 'unknown',
-        name: candidate.recruiter?.name || 'Unknown',
-        role: candidate.recruiter?.userRoles?.[0]?.role?.name || 'Unknown',
+        id: 'N/A', // Recruiter info now accessed via CandidateProjectMap
+        name: 'N/A',
+        role: 'N/A',
       },
       lastActivity: candidate.updatedAt.toISOString(),
       nextInterview: null, // TODO: Add nextInterview field to schema if needed

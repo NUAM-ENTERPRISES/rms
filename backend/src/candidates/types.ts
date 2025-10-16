@@ -4,10 +4,12 @@ import {
   User,
   Team,
   Project,
+  WorkExperience,
+  CandidateQualification,
+  Qualification,
 } from '@prisma/client';
 
 export interface CandidateWithRelations extends Candidate {
-  recruiter: User | null;
   team: Team | null;
   projects: (CandidateProjectMap & {
     project: {
@@ -20,6 +22,15 @@ export interface CandidateWithRelations extends Candidate {
         type: string;
       } | null;
     };
+    recruiter?: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+  })[];
+  workExperiences: WorkExperience[];
+  qualifications: (CandidateQualification & {
+    qualification: Qualification;
   })[];
 }
 

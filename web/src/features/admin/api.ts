@@ -12,7 +12,7 @@ export interface UserWithRoles {
   email: string;
   name: string;
   countryCode: string;
-  phone: string;
+  mobileNumber: string;
   dateOfBirth?: string;
   profileImage?: string;
   createdAt: string;
@@ -35,7 +35,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   countryCode: string;
-  phone: string;
+  mobileNumber: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
 }
@@ -44,7 +44,7 @@ export interface UpdateUserRequest {
   name?: string;
   email?: string;
   countryCode?: string;
-  phone?: string;
+  mobileNumber?: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
 }

@@ -1,5 +1,29 @@
 import { baseApi } from "@/app/api/baseApi";
 
+// Document types
+export interface Document {
+  id: string;
+  candidateId: string;
+  docType: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  mimeType?: string;
+  expiryDate?: string;
+  documentNumber?: string;
+  notes?: string;
+  status: string;
+  uploadedBy: string;
+  verifiedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UploadDocumentRequest {
+  candidateId: string;
+  formData: FormData;
+}
+
 // Types
 export interface Candidate {
   id: string;
@@ -17,7 +41,12 @@ export interface Candidate {
   currentRole?: string;
   expectedSalary?: number;
 
-  // Educational Qualifications
+  // New fields for better contact management
+  countryCode?: string;
+  mobileNumber?: string;
+  name?: string; // Computed field: firstName + lastName
+
+  // Educational Qualifications (legacy fields)
   highestEducation?: string;
   university?: string;
   graduationYear?: number;
@@ -25,7 +54,7 @@ export interface Candidate {
 
   // Legacy fields for backward compatibility
   experience?: number;
-  skills: string[];
+  skills?: string[];
   assignedTo?: string;
   matchScore?: number;
   createdAt: string;
@@ -35,8 +64,79 @@ export interface Candidate {
     name: string;
     email: string;
   };
-  projects: CandidateProjectMap[];
+  projects?: CandidateProjectMap[];
   workExperiences?: WorkExperience[];
+  qualifications?: (CandidateQualification & {
+    qualification: {
+      id: string;
+      name: string;
+      shortName?: string;
+      level: string;
+      field: string;
+      program?: string;
+      description?: string;
+    };
+  })[];
+
+  // Additional properties for detailed view
+  assignedRecruiter?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+
+  // Pipeline data
+  pipeline?: {
+    projects: Array<{
+      projectId: string;
+      projectTitle: string;
+      stages: Array<{
+        stage: string;
+        isCurrent: boolean;
+        isCompleted: boolean;
+        title: string;
+        description: string;
+        date?: string;
+        icon?: string;
+        color?: string;
+      }>;
+      currentStage: string;
+      overallProgress: number;
+    }>;
+    overallProgress: number;
+  };
+
+  // Metrics data
+  metrics?: {
+    applications: number;
+    totalApplications: number;
+    interviews: number;
+    interviewsScheduled: number;
+    interviewsCompleted: number;
+    offersReceived: number;
+    placements: number;
+    averageResponseTime: number;
+  };
+
+  // History data
+  history?: Array<{
+    id: string;
+    action: string;
+    description: string;
+    date: string;
+    user: string;
+  }>;
+}
+
+export interface CandidateQualification {
+  id: string;
+  qualificationId: string;
+  qualificationName?: string;
+  university?: string;
+  graduationYear?: number;
+  gpa?: number;
+  isCompleted: boolean;
+  notes?: string;
 }
 
 export interface WorkExperience {
@@ -70,6 +170,26 @@ export interface CreateWorkExperienceRequest {
   achievements?: string;
 }
 
+export interface CreateCandidateQualificationRequest {
+  candidateId: string;
+  qualificationId: string;
+  university?: string;
+  graduationYear?: number;
+  gpa?: number;
+  isCompleted?: boolean;
+  notes?: string;
+}
+
+export interface UpdateCandidateQualificationRequest {
+  id: string;
+  qualificationId?: string;
+  university?: string;
+  graduationYear?: number;
+  gpa?: number;
+  isCompleted?: boolean;
+  notes?: string;
+}
+
 export interface UpdateWorkExperienceRequest {
   id: string;
   companyName?: string;
@@ -101,6 +221,11 @@ export interface CandidateProjectMap {
   hiredDate?: string;
   notes?: string;
   rejectionReason?: string;
+  title?: string;
+  client?: string;
+  deadline?: string;
+  matchScore?: number;
+  isAssigned?: boolean;
   project: {
     id: string;
     title: string;
@@ -109,19 +234,52 @@ export interface CandidateProjectMap {
       name: string;
     };
   };
+  recruiter?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 export interface CreateCandidateRequest {
-  name: string;
-  contact: string;
+  firstName: string;
+  lastName: string;
+  countryCode: string;
+  mobileNumber: string;
   email?: string;
   source?: string;
-  dateOfBirth?: string;
-  experience?: number;
-  skills?: string[];
+  dateOfBirth: string;
+  totalExperience?: number;
+  currentSalary?: number;
   currentEmployer?: string;
+  currentRole?: string;
   expectedSalary?: number;
-  assignedTo?: string;
+  highestEducation?: string;
+  university?: string;
+  graduationYear?: number;
+  gpa?: number;
+  qualifications?: Array<{
+    qualificationId: string;
+    university?: string;
+    graduationYear?: number;
+    gpa?: number;
+    isCompleted: boolean;
+    notes?: string;
+  }>;
+  workExperiences?: Array<{
+    companyName: string;
+    jobTitle: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    description?: string;
+    salary?: number;
+    location?: string;
+    skills?: string;
+    achievements?: string;
+  }>;
+  skills?: string;
+  teamId?: string;
 }
 
 export interface UpdateCandidateRequest {
@@ -152,6 +310,13 @@ export const candidatesApi = baseApi.injectEndpoints({
     }),
     getCandidateById: builder.query<Candidate, string>({
       query: (id) => `/candidates/${id}`,
+      transformResponse: (response: {
+        success: boolean;
+        data: Candidate;
+        message: string;
+      }) => {
+        return response.data;
+      },
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
     }),
     createCandidate: builder.mutation<Candidate, CreateCandidateRequest>({
@@ -266,6 +431,67 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["WorkExperience", "Candidate"],
     }),
+
+    // Candidate Qualifications endpoints
+    getCandidateQualifications: builder.query<
+      CandidateQualification[],
+      string | void
+    >({
+      query: (candidateId) =>
+        candidateId
+          ? `/candidate-qualifications/candidate/${candidateId}`
+          : "/candidate-qualifications",
+      providesTags: ["CandidateQualification"],
+    }),
+    createCandidateQualification: builder.mutation<
+      CandidateQualification,
+      CreateCandidateQualificationRequest
+    >({
+      query: (qualificationData) => ({
+        url: "/candidate-qualifications",
+        method: "POST",
+        body: qualificationData,
+      }),
+      invalidatesTags: ["CandidateQualification", "Candidate"],
+    }),
+    updateCandidateQualification: builder.mutation<
+      CandidateQualification,
+      UpdateCandidateQualificationRequest
+    >({
+      query: ({ id, ...qualificationData }) => ({
+        url: `/candidate-qualifications/${id}`,
+        method: "PATCH",
+        body: qualificationData,
+      }),
+      invalidatesTags: ["CandidateQualification", "Candidate"],
+    }),
+    deleteCandidateQualification: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/candidate-qualifications/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["CandidateQualification", "Candidate"],
+    }),
+
+    // Document endpoints
+    getDocuments: builder.query<
+      { documents: Document[]; pagination: any },
+      { candidateId: string; page?: number; limit?: number }
+    >({
+      query: ({ candidateId, page = 1, limit = 20 }) => ({
+        url: "/documents",
+        params: { candidateId, page, limit },
+      }),
+      providesTags: ["Document"],
+    }),
+    uploadDocument: builder.mutation<Document, UploadDocumentRequest>({
+      query: ({ candidateId, formData }) => ({
+        url: `/upload/document/${candidateId}`,
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Document", "Candidate"],
+    }),
   }),
 });
 
@@ -283,4 +509,10 @@ export const {
   useCreateWorkExperienceMutation,
   useUpdateWorkExperienceMutation,
   useDeleteWorkExperienceMutation,
+  useGetCandidateQualificationsQuery,
+  useCreateCandidateQualificationMutation,
+  useUpdateCandidateQualificationMutation,
+  useDeleteCandidateQualificationMutation,
+  useGetDocumentsQuery,
+  useUploadDocumentMutation,
 } = candidatesApi;

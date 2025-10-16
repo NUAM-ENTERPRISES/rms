@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { QualificationLevel } from '@prisma/client';
+import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
 
 export interface MatchedCandidate {
   candidateId: string;
@@ -12,13 +13,17 @@ export interface MatchingCriteria {
   roleNeededId: string;
   projectId: string;
   excludeStatuses?: string[];
+  candidateId?: string;
 }
 
 @Injectable()
 export class CandidateMatchingService {
   private readonly logger = new Logger(CandidateMatchingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eligibilityService: UnifiedEligibilityService,
+  ) {}
 
   /**
    * Find eligible candidates for a specific role with match scoring
@@ -59,6 +64,8 @@ export class CandidateMatchingService {
     const candidates = await this.prisma.candidate.findMany({
       where: {
         AND: [
+          // If specific candidate ID is provided, only get that candidate
+          ...(criteria.candidateId ? [{ id: criteria.candidateId }] : []),
           // Not already nominated for this project+role
           {
             projects: {
@@ -130,9 +137,36 @@ export class CandidateMatchingService {
   }
 
   /**
-   * Calculate match score for a candidate against role requirements
+   * Calculate match score for a candidate against role requirements using unified eligibility engine
    */
   private async calculateMatchScore(
+    candidate: any,
+    roleNeeded: any,
+  ): Promise<number> {
+    try {
+      const eligibilityResult = await this.eligibilityService.checkEligibility({
+        candidateId: candidate.id,
+        roleNeededId: roleNeeded.id,
+        projectId: roleNeeded.projectId,
+      });
+
+      // Return the comprehensive score from unified eligibility engine
+      return eligibilityResult.score;
+    } catch (error) {
+      this.logger.error(
+        `Error calculating match score for candidate ${candidate.id} and role ${roleNeeded.id}:`,
+        error.stack,
+      );
+
+      // Fallback to original calculation if unified service fails
+      return this.legacyCalculateMatchScore(candidate, roleNeeded);
+    }
+  }
+
+  /**
+   * Legacy match score calculation as fallback
+   */
+  private async legacyCalculateMatchScore(
     candidate: any,
     roleNeeded: any,
   ): Promise<number> {
@@ -255,7 +289,19 @@ export class CandidateMatchingService {
    * Match candidate experience against role requirements
    */
   private matchExperience(candidate: any, roleNeeded: any): number {
-    const candidateExp = candidate.totalExperience || candidate.experience || 0;
+    // Calculate experience from work experiences if direct fields are not available
+    let candidateExp = candidate.totalExperience || candidate.experience || 0;
+
+    // If no direct experience, calculate from work experiences
+    if (
+      candidateExp === 0 &&
+      candidate.workExperiences &&
+      candidate.workExperiences.length > 0
+    ) {
+      candidateExp = this.calculateExperienceFromWorkHistory(
+        candidate.workExperiences,
+      );
+    }
     const minExp = roleNeeded.minExperience || 0;
     const maxExp = roleNeeded.maxExperience || 100;
 
@@ -333,5 +379,23 @@ export class CandidateMatchingService {
     }
 
     return reasons;
+  }
+
+  /**
+   * Calculate total experience from work history
+   */
+  private calculateExperienceFromWorkHistory(workExperiences: any[]): number {
+    let totalMonths = 0;
+
+    workExperiences.forEach((exp) => {
+      const start = new Date(exp.startDate);
+      const end = exp.endDate ? new Date(exp.endDate) : new Date();
+
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffMonths = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
+      totalMonths += diffMonths;
+    });
+
+    return Math.floor(totalMonths / 12);
   }
 }

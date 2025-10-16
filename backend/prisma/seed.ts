@@ -71,12 +71,16 @@ const roles = [
     name: 'Recruiter',
     description: 'Recruiter - Candidate handling',
     permissions: [
+      'read:candidates',
       'read:assigned_candidates',
       'write:candidates',
       'nominate:candidates',
       'read:projects',
       'read:documents',
       'write:documents',
+      'read:interviews',
+      'schedule:interviews',
+      'write:interviews',
     ],
   },
   {
@@ -90,13 +94,26 @@ const roles = [
       'approve:candidates',
       'reject:candidates',
       'read:candidates',
+      'write:candidates',
       'read:projects',
+      'read:interviews',
+      'schedule:interviews',
+      'write:interviews',
     ],
   },
   {
     name: 'Processing Executive',
     description: 'Processing department - Post-selection workflows',
-    permissions: ['read:processing', 'write:processing', 'manage:processing'],
+    permissions: [
+      'read:processing',
+      'write:processing',
+      'manage:processing',
+      'read:candidates',
+      'write:candidates',
+      'read:interviews',
+      'schedule:interviews',
+      'write:interviews',
+    ],
   },
   {
     name: 'System Admin',
@@ -559,14 +576,14 @@ async function main() {
       name: 'System Administrator',
       password: hashedPassword,
       countryCode: '+91',
-      phone: '9876543210',
+      mobileNumber: '9876543210',
     },
     create: {
       email: 'admin@affiniks.com',
       name: 'System Administrator',
       password: hashedPassword,
       countryCode: '+91',
-      phone: '9876543210',
+      mobileNumber: '9876543210',
     },
   });
 
@@ -717,14 +734,14 @@ async function main() {
         name: userData.name,
         password: hashedPassword,
         countryCode: userData.countryCode,
-        phone: userData.phone,
+        mobileNumber: userData.phone,
       },
       create: {
         email: userData.email,
         name: userData.name,
         password: hashedPassword,
         countryCode: userData.countryCode,
-        phone: userData.phone,
+        mobileNumber: userData.phone,
       },
     });
 

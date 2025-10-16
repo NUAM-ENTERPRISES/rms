@@ -3,8 +3,16 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
+import { RoundRobinService } from '../round-robin/round-robin.service';
+import { CandidateAllocationService } from '../candidate-allocation/candidate-allocation.service';
+import { CandidateMatchingService } from '../candidate-matching/candidate-matching.service';
+import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
+import { OutboxService } from '../notifications/outbox.service';
+import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
 import { PrismaService } from '../database/prisma.service';
+import { PipelineService } from './pipeline.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
@@ -21,26 +29,34 @@ import {
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
 } from '../common/constants';
-import { OutboxService } from '../notifications/outbox.service';
 
 @Injectable()
 export class CandidatesService {
+  private readonly logger = new Logger(CandidatesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
+    private readonly pipelineService: PipelineService,
+    private readonly eligibilityService: UnifiedEligibilityService,
   ) {}
 
   async create(
     createCandidateDto: CreateCandidateDto,
     userId: string,
   ): Promise<CandidateWithRelations> {
-    // Check if contact already exists (unique constraint)
+    // Check if countryCode and mobileNumber combination already exists (unique constraint)
     const existingCandidate = await this.prisma.candidate.findUnique({
-      where: { contact: createCandidateDto.contact },
+      where: {
+        countryCode_mobileNumber: {
+          countryCode: createCandidateDto.countryCode,
+          mobileNumber: createCandidateDto.mobileNumber,
+        },
+      },
     });
     if (existingCandidate) {
       throw new ConflictException(
-        `Candidate with contact ${createCandidateDto.contact} already exists`,
+        `Candidate with contact ${createCandidateDto.countryCode}${createCandidateDto.mobileNumber} already exists`,
       );
     }
 
@@ -64,12 +80,13 @@ export class CandidatesService {
       }
     }
 
-    // Create candidate
+    // Create candidate with qualifications
     const candidate = await this.prisma.candidate.create({
       data: {
         firstName: createCandidateDto.firstName,
         lastName: createCandidateDto.lastName,
-        contact: createCandidateDto.contact,
+        countryCode: createCandidateDto.countryCode,
+        mobileNumber: createCandidateDto.mobileNumber,
         email: createCandidateDto.email,
         profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
@@ -89,12 +106,48 @@ export class CandidatesService {
         skills: createCandidateDto.skills
           ? JSON.parse(createCandidateDto.skills)
           : [],
-        assignedTo: userId, // Assign to the creating user
+        // Note: assignedTo field has been removed - all assignments tracked via CandidateProjectMap
         teamId: createCandidateDto.teamId,
+        // Handle multiple qualifications
+        qualifications: createCandidateDto.qualifications
+          ? {
+              create: createCandidateDto.qualifications.map((qual) => ({
+                qualificationId: qual.qualificationId,
+                university: qual.university,
+                graduationYear: qual.graduationYear,
+                gpa: qual.gpa,
+                isCompleted: qual.isCompleted ?? true,
+                notes: qual.notes,
+              })),
+            }
+          : undefined,
+        // Handle work experiences
+        workExperiences: createCandidateDto.workExperiences
+          ? {
+              create: createCandidateDto.workExperiences.map((exp) => ({
+                companyName: exp.companyName,
+                jobTitle: exp.jobTitle,
+                startDate: new Date(exp.startDate),
+                endDate: exp.endDate ? new Date(exp.endDate) : null,
+                isCurrent: exp.isCurrent ?? false,
+                description: exp.description,
+                salary: exp.salary,
+                location: exp.location,
+                skills: exp.skills ? JSON.parse(exp.skills) : [],
+                achievements: exp.achievements,
+              })),
+            }
+          : undefined,
       },
       include: {
-        recruiter: true,
+        // recruiter relation removed - now accessed via projects
         team: true,
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
         projects: {
           include: {
             project: {
@@ -112,6 +165,18 @@ export class CandidatesService {
         },
       },
     });
+
+    // Auto-allocate new candidate to active projects (only to recruiters)
+    try {
+      await this.autoAllocateCandidateToProjects(candidate.id);
+    } catch (error) {
+      // Log error but don't fail candidate creation
+      console.error(
+        'Auto-allocation failed for candidate:',
+        candidate.id,
+        error,
+      );
+    }
 
     return candidate;
   }
@@ -158,9 +223,8 @@ export class CandidatesService {
       where.teamId = teamId;
     }
 
-    if (assignedTo) {
-      where.assignedTo = assignedTo;
-    }
+    // Note: assignedTo filtering is now handled via CandidateProjectMap
+    // This will be implemented in the query logic below
 
     if (minExperience !== undefined || maxExperience !== undefined) {
       where.experience = {};
@@ -196,6 +260,15 @@ export class CandidatesService {
     const skip = (page - 1) * limit;
     const total = await this.prisma.candidate.count({ where });
 
+    // Handle assignedTo filter via CandidateProjectMap
+    if (assignedTo) {
+      where.projects = {
+        some: {
+          recruiterId: assignedTo,
+        },
+      };
+    }
+
     // Get candidates with relations
     const candidates = await this.prisma.candidate.findMany({
       where,
@@ -203,8 +276,13 @@ export class CandidatesService {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        recruiter: true,
         team: true,
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
         projects: {
           include: {
             project: {
@@ -216,6 +294,14 @@ export class CandidatesService {
                     type: true,
                   },
                 },
+              },
+            },
+            // Include recruiter information from CandidateProjectMap
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
           },
@@ -238,7 +324,6 @@ export class CandidatesService {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id },
       include: {
-        recruiter: true,
         team: true,
         projects: {
           include: {
@@ -253,6 +338,20 @@ export class CandidatesService {
                 },
               },
             },
+            // Include recruiter information from CandidateProjectMap
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
           },
         },
       },
@@ -262,7 +361,37 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    return candidate;
+    // Generate pipeline data for each project
+    const pipelineData = this.pipelineService.generatePipelinesForCandidate(
+      candidate.projects,
+    );
+
+    // Add pipeline data to the candidate object
+    return {
+      ...candidate,
+      pipeline: {
+        projects: pipelineData,
+        overallProgress: this.calculateOverallProgress(pipelineData),
+      },
+    } as CandidateWithRelations & {
+      pipeline: {
+        projects: any[];
+        overallProgress: number;
+      };
+    };
+  }
+
+  /**
+   * Calculate overall progress across all projects
+   */
+  private calculateOverallProgress(pipelineData: any[]): number {
+    if (pipelineData.length === 0) return 0;
+
+    const totalProgress = pipelineData.reduce(
+      (sum, project) => sum + project.overallProgress,
+      0,
+    );
+    return Math.round(totalProgress / pipelineData.length);
   }
 
   async update(
@@ -278,17 +407,28 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    // Check if contact is being updated and if it already exists
+    // Check if countryCode and mobileNumber combination is being updated and if it already exists
     if (
-      updateCandidateDto.contact &&
-      updateCandidateDto.contact !== existingCandidate.contact
+      (updateCandidateDto.countryCode || updateCandidateDto.mobileNumber) &&
+      (updateCandidateDto.countryCode !== existingCandidate.countryCode ||
+        updateCandidateDto.mobileNumber !== existingCandidate.mobileNumber)
     ) {
+      const countryCode =
+        updateCandidateDto.countryCode || existingCandidate.countryCode;
+      const mobileNumber =
+        updateCandidateDto.mobileNumber || existingCandidate.mobileNumber;
+
       const candidateWithContact = await this.prisma.candidate.findUnique({
-        where: { contact: updateCandidateDto.contact },
+        where: {
+          countryCode_mobileNumber: {
+            countryCode,
+            mobileNumber,
+          },
+        },
       });
-      if (candidateWithContact) {
+      if (candidateWithContact && candidateWithContact.id !== id) {
         throw new ConflictException(
-          `Candidate with contact ${updateCandidateDto.contact} already exists`,
+          `Candidate with contact ${countryCode}${mobileNumber} already exists`,
         );
       }
     }
@@ -319,8 +459,10 @@ export class CandidatesService {
       updateData.firstName = updateCandidateDto.firstName;
     if (updateCandidateDto.lastName)
       updateData.lastName = updateCandidateDto.lastName;
-    if (updateCandidateDto.contact)
-      updateData.contact = updateCandidateDto.contact;
+    if (updateCandidateDto.countryCode)
+      updateData.countryCode = updateCandidateDto.countryCode;
+    if (updateCandidateDto.mobileNumber)
+      updateData.mobileNumber = updateCandidateDto.mobileNumber;
     if (updateCandidateDto.email !== undefined)
       updateData.email = updateCandidateDto.email;
     if (updateCandidateDto.profileImage !== undefined)
@@ -359,8 +501,14 @@ export class CandidatesService {
       where: { id },
       data: updateData,
       include: {
-        recruiter: true,
+        // recruiter relation removed - now accessed via projects
         team: true,
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
         projects: {
           include: {
             project: {
@@ -453,14 +601,32 @@ export class CandidatesService {
       );
     }
 
-    // Create assignment (nomination)
+    // Get next available recruiter for round-robin allocation
+    const recruiters = await this.getProjectRecruiters(
+      assignProjectDto.projectId,
+    );
+    if (recruiters.length === 0) {
+      throw new BadRequestException('No recruiters available for this project');
+    }
+
+    // Use round-robin to get next recruiter
+    const roundRobinService = new RoundRobinService(this.prisma);
+    const recruiter = await roundRobinService.getNextRecruiter(
+      assignProjectDto.projectId,
+      '', // No specific role needed for manual assignment
+      recruiters,
+    );
+
+    // Create assignment (nomination) with recruiter assignment
     const assignment = await this.prisma.candidateProjectMap.create({
       data: {
         candidateId,
         projectId: assignProjectDto.projectId,
-        nominatedBy: assignProjectDto.notes || '', // TODO: Get from request user
+        nominatedBy: userId, // Use the requesting user
         notes: assignProjectDto.notes,
         status: 'nominated', // Initial status
+        recruiterId: recruiter.id,
+        assignedAt: new Date(),
       },
       include: {
         candidate: {
@@ -468,7 +634,8 @@ export class CandidatesService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
             currentStatus: true,
           },
@@ -487,6 +654,335 @@ export class CandidatesService {
       message: 'Candidate assigned to project successfully',
       assignment,
     };
+  }
+
+  /**
+   * Auto-allocate a new candidate to active projects
+   */
+  private async autoAllocateCandidateToProjects(
+    candidateId: string,
+  ): Promise<void> {
+    // Get the candidate with their details
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
+        workExperiences: true,
+      },
+    });
+
+    if (!candidate) {
+      return;
+    }
+
+    // Get all active projects with roles needed
+    const activeProjects = await this.prisma.project.findMany({
+      where: {
+        status: 'active',
+        deadline: {
+          gte: new Date(), // Not expired
+        },
+      },
+      include: {
+        rolesNeeded: true,
+        team: {
+          include: {
+            userTeams: {
+              include: {
+                user: {
+                  include: {
+                    userRoles: {
+                      include: {
+                        role: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Create service instances
+    const candidateMatchingService = new CandidateMatchingService(
+      this.prisma,
+      this.eligibilityService,
+    );
+    const recruiterPoolService = new RecruiterPoolService(this.prisma);
+    const roundRobinService = new RoundRobinService(this.prisma);
+    const outboxService = new OutboxService(this.prisma);
+
+    const allocationService = new CandidateAllocationService(
+      this.prisma,
+      candidateMatchingService,
+      recruiterPoolService,
+      roundRobinService,
+      outboxService,
+    );
+
+    // Get all global recruiters (not project-specific)
+    const recruiters = await this.getAllRecruiters();
+
+    if (recruiters.length === 0) {
+      return;
+    }
+
+    // Check each project for eligibility
+    for (const project of activeProjects) {
+      if (!project.rolesNeeded || project.rolesNeeded.length === 0) {
+        continue;
+      }
+
+      // Check each role for eligibility
+      for (const role of project.rolesNeeded) {
+        try {
+          // Check if candidate is already allocated to this project-role combination
+          const existingAllocation =
+            await this.prisma.candidateProjectMap.findUnique({
+              where: {
+                candidateId_projectId_roleNeededId: {
+                  candidateId,
+                  projectId: project.id,
+                  roleNeededId: role.id,
+                },
+              },
+            });
+
+          if (existingAllocation) {
+            continue; // Already allocated
+          }
+
+          // Check if candidate matches role requirements
+          const isEligible = await this.checkCandidateEligibility(
+            candidate,
+            role,
+          );
+          if (isEligible) {
+            // Allocate candidate to this role
+            await allocationService.allocateForRole(
+              project.id,
+              role.id,
+              recruiters,
+              candidateId,
+            );
+          }
+        } catch (error) {
+          console.error(
+            `Failed to check eligibility for candidate ${candidateId} and role ${role.id}:`,
+            error,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Check if a candidate is eligible for a specific role using unified eligibility engine
+   */
+  private async checkCandidateEligibility(
+    candidate: any,
+    role: any,
+  ): Promise<boolean> {
+    try {
+      const eligibilityResult = await this.eligibilityService.checkEligibility({
+        candidateId: candidate.id,
+        roleNeededId: role.id,
+        projectId: role.projectId,
+      });
+
+      return eligibilityResult.isEligible;
+    } catch (error) {
+      this.logger.error(
+        `Error checking eligibility for candidate ${candidate.id} and role ${role.id}:`,
+        error.stack,
+      );
+
+      // Fallback to basic check if eligibility service fails
+      return this.basicEligibilityCheck(candidate, role);
+    }
+  }
+
+  /**
+   * Basic eligibility check as fallback
+   */
+  private basicEligibilityCheck(candidate: any, role: any): boolean {
+    // Check experience requirements
+    if (role.minExperience && candidate.totalExperience < role.minExperience) {
+      return false;
+    }
+    if (role.maxExperience && candidate.totalExperience > role.maxExperience) {
+      return false;
+    }
+
+    // Check education requirements
+    if (role.educationRequirements && role.educationRequirements.length > 0) {
+      const candidateQualifications = candidate.qualifications.map(
+        (q: any) => q.qualification.name,
+      );
+      const hasRequiredEducation = role.educationRequirements.some(
+        (req: string) => candidateQualifications.includes(req),
+      );
+      if (!hasRequiredEducation) {
+        return false;
+      }
+    }
+
+    // Check skills match
+    if (role.skills && role.skills.length > 0) {
+      const candidateSkills = Array.isArray(candidate.skills)
+        ? candidate.skills
+        : [];
+      const hasRequiredSkills = role.skills.some((skill: string) =>
+        candidateSkills.includes(skill),
+      );
+      if (!hasRequiredSkills) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Validate that a user is a recruiter before assignment
+   */
+  private async validateRecruiterAssignment(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!user) return false;
+
+    const roles = user.userRoles.map((ur) => ur.role.name);
+    return roles.includes('Recruiter');
+  }
+
+  /**
+   * Get all global recruiters with workload calculation
+   */
+  private async getAllRecruiters(): Promise<any[]> {
+    const recruiters = await this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: 'Recruiter',
+            },
+          },
+        },
+      },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+        _count: {
+          select: {
+            candidateProjectMaps: {
+              where: {
+                status: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        id: 'asc', // Deterministic order for round-robin
+      },
+    });
+
+    return recruiters.map((recruiter) => ({
+      id: recruiter.id,
+      name: recruiter.name,
+      email: recruiter.email,
+      workload: recruiter._count.candidateProjectMaps,
+      roles: recruiter.userRoles.map((ur) => ur.role.name),
+    }));
+  }
+
+  /**
+   * Get recruiters assigned to a project (DEPRECATED - use getAllRecruiters for global allocation)
+   */
+  private async getProjectRecruiters(projectId: string): Promise<any[]> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        team: {
+          include: {
+            userTeams: {
+              include: {
+                user: {
+                  include: {
+                    userRoles: {
+                      include: {
+                        role: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!project?.team) {
+      return [];
+    }
+
+    // Filter users with Recruiter role and calculate workload
+    const recruiters = await Promise.all(
+      project.team.userTeams
+        .map((ut) => ut.user)
+        .filter((user) =>
+          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+        )
+        .map(async (user) => {
+          // Calculate current workload (active candidates)
+          const workload = await this.prisma.candidateProjectMap.count({
+            where: {
+              recruiterId: user.id,
+              status: {
+                in: [
+                  'nominated',
+                  'verification_in_progress',
+                  'pending_documents',
+                ],
+              },
+            },
+          });
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            workload,
+          };
+        }),
+    );
+
+    return recruiters;
   }
 
   async getCandidateProjects(candidateId: string): Promise<any[]> {
@@ -671,7 +1167,8 @@ export class CandidatesService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -824,13 +1321,7 @@ export class CandidatesService {
         },
       },
       include: {
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        // recruiter relation removed - now accessed via CandidateProjectMap
         team: {
           select: {
             id: true,
@@ -905,10 +1396,14 @@ export class CandidatesService {
           select: {
             // Count pending document verifications
             // This is a simplified approach - in production you'd want more sophisticated task counting
-            assignedCandidates: {
+            candidateProjectMaps: {
               where: {
-                currentStatus: {
-                  in: ['new', 'shortlisted', 'active'],
+                status: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
                 },
               },
             },
@@ -923,8 +1418,8 @@ export class CandidatesService {
 
     // Find executive with least tasks
     const assignedExecutive = documentExecutives.reduce((prev, current) => {
-      const prevTaskCount = prev._count.assignedCandidates;
-      const currentTaskCount = current._count.assignedCandidates;
+      const prevTaskCount = prev._count.candidateProjectMaps;
+      const currentTaskCount = current._count.candidateProjectMaps;
       return currentTaskCount < prevTaskCount ? current : prev;
     });
 

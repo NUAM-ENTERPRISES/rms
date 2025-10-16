@@ -96,7 +96,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -117,7 +118,7 @@ export class DocumentsService {
       },
     });
 
-    return document as DocumentWithRelations;
+    return document;
   }
 
   /**
@@ -170,7 +171,8 @@ export class DocumentsService {
               id: true,
               firstName: true,
               lastName: true,
-              contact: true,
+              countryCode: true,
+              mobileNumber: true,
               email: true,
             },
           },
@@ -216,7 +218,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -241,7 +244,7 @@ export class DocumentsService {
       throw new NotFoundException(`Document with ID ${id} not found`);
     }
 
-    return document as DocumentWithRelations;
+    return document;
   }
 
   /**
@@ -279,7 +282,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -300,7 +304,7 @@ export class DocumentsService {
       },
     });
 
-    return document as DocumentWithRelations;
+    return document;
   }
 
   /**
@@ -697,5 +701,130 @@ export class DocumentsService {
         },
       });
     }
+  }
+
+  /**
+   * Get candidates for document verification
+   * Returns candidates who are in document verification stages
+   */
+  async getVerificationCandidates(query: any) {
+    const { page = 1, limit = 20, status, search } = query;
+    const skip = (page - 1) * limit;
+
+    // Define the statuses that need document verification
+    const verificationStatuses = [
+      CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
+      CANDIDATE_PROJECT_STATUS.DOCUMENTS_SUBMITTED,
+      CANDIDATE_PROJECT_STATUS.VERIFICATION_IN_PROGRESS,
+      CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED,
+      CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
+    ];
+
+    const where: any = {
+      status: {
+        in: verificationStatuses,
+      },
+    };
+
+    // Apply status filter if provided
+    if (status && verificationStatuses.includes(status)) {
+      where.status = status;
+    }
+
+    // Apply search filter
+    if (search) {
+      where.OR = [
+        {
+          candidate: {
+            firstName: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          candidate: {
+            lastName: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          project: {
+            title: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ];
+    }
+
+    const [candidateProjects, total] = await Promise.all([
+      this.prisma.candidateProjectMap.findMany({
+        where,
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              mobileNumber: true,
+              countryCode: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+              client: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          recruiter: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          documentVerifications: {
+            include: {
+              document: {
+                select: {
+                  id: true,
+                  docType: true,
+                  fileName: true,
+                  status: true,
+                  uploadedBy: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: parseInt(limit.toString()),
+      }),
+      this.prisma.candidateProjectMap.count({ where }),
+    ]);
+
+    return {
+      candidateProjects,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

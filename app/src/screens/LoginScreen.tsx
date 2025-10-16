@@ -19,6 +19,7 @@ import { RootStackParamList } from '../types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import CustomButton from '../components/CustomButton';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import CountryPicker from '../components/CountryPicker';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -28,7 +29,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Responsive scaling functions
 const scaleWidth = (size: number) => (SCREEN_WIDTH / 375) * size;
 const scaleHeight = (size: number) => (SCREEN_HEIGHT / 812) * size;
-const moderateScale = (size: number, factor: number = 0.5) => 
+const moderateScale = (size: number, factor: number = 0.5) =>
     size + (scaleWidth(size) - size) * factor;
 
 // Device type detection
@@ -36,22 +37,22 @@ const isSmallDevice = SCREEN_WIDTH <= 320;
 const isTablet = SCREEN_WIDTH >= 768;
 
 type LoginMethod = 'password' | 'otp';
-type OtpInputType = 'email' | 'phone';
+type OtpInputType = 'whatsapp' | 'phone';
 
 const LoginScreen = () => {
     const navigation = useNavigation<LoginScreenNavigationProp>();
 
     // Login method state
     const [loginMethod, setLoginMethod] = useState<LoginMethod>('password');
-    const [otpInputType, setOtpInputType] = useState<OtpInputType>('phone');
+const [otpInputType, setOtpInputType] = useState<OtpInputType>('phone');
 
-    // Password login states
-    const [email, setEmail] = useState('');
+    // Password login states (use phone number instead of email)
+    // We'll reuse otpPhone as the primary phone state so the value persists across methods
+    const [selectedCountry, setSelectedCountry] = useState<{ name: string; code: string; dial_code: string; flag?: string } | null>({ name: 'India', code: 'IN', dial_code: '+91', flag: '🇮🇳' });
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
     // OTP login states
-    const [otpEmail, setOtpEmail] = useState('');
     const [otpPhone, setOtpPhone] = useState('');
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
@@ -59,23 +60,21 @@ const LoginScreen = () => {
 
     // Common states
     const [isLoading, setIsLoading] = useState(false);
-    const [errors, setErrors] = useState({ 
-        email: '', 
-        phone: '', 
-        password: '', 
-        otp: '', 
-        root: '' 
+    const [errors, setErrors] = useState({
+        phone: '',
+        password: '',
+        otp: '',
+        root: ''
     });
 
     const validatePasswordForm = () => {
-        const newErrors = { email: '', phone: '', password: '', otp: '', root: '' };
+        const newErrors = { phone: '', password: '', otp: '', root: '' };
         let isValid = true;
-
-        if (!email) {
-            newErrors.email = 'Email is required';
+        if (!otpPhone) {
+            newErrors.phone = 'Phone number is required';
             isValid = false;
-        } else if (!/\S+@\S+\.\S+/.test(email)) {
-            newErrors.email = 'Please enter a valid email address';
+        } else if (!/^[6-9]\d{9}$/.test(otpPhone)) {
+            newErrors.phone = 'Please enter a valid 10-digit phone number';
             isValid = false;
         }
 
@@ -89,25 +88,15 @@ const LoginScreen = () => {
     };
 
     const validateOtpInput = () => {
-        const newErrors = { email: '', phone: '', password: '', otp: '', root: '' };
+        const newErrors = { phone: '', password: '', otp: '', root: '' };
         let isValid = true;
-
-        if (otpInputType === 'email') {
-            if (!otpEmail) {
-                newErrors.email = 'Email is required';
-                isValid = false;
-            } else if (!/\S+@\S+\.\S+/.test(otpEmail)) {
-                newErrors.email = 'Please enter a valid email address';
-                isValid = false;
-            }
-        } else {
-            if (!otpPhone) {
-                newErrors.phone = 'Phone number is required';
-                isValid = false;
-            } else if (!/^[6-9]\d{9}$/.test(otpPhone)) {
-                newErrors.phone = 'Please enter a valid 10-digit phone number';
-                isValid = false;
-            }
+        // For both SMS and WhatsApp OTP we require a valid phone number
+        if (!otpPhone) {
+            newErrors.phone = 'Phone number is required';
+            isValid = false;
+        } else if (!/^[6-9]\d{9}$/.test(otpPhone)) {
+            newErrors.phone = 'Please enter a valid 10-digit phone number';
+            isValid = false;
         }
 
         setErrors(newErrors);
@@ -115,7 +104,7 @@ const LoginScreen = () => {
     };
 
     const validateOtp = () => {
-        const newErrors = { email: '', phone: '', password: '', otp: '', root: '' };
+    const newErrors = { phone: '', password: '', otp: '', root: '' };
         let isValid = true;
 
         if (!otp) {
@@ -137,11 +126,11 @@ const LoginScreen = () => {
 
         try {
             // TODO: Replace with actual API call
-            console.log('Password login:', { email, password });
-   
+            console.log('Password login:', { phone: otpPhone, password });
+
             navigation.replace('Home');
         } catch (error) {
-            setErrors({ ...errors, root: 'Invalid email or password' });
+            setErrors({ ...errors, root: 'Invalid phone or password' });
         } finally {
             setIsLoading(false);
         }
@@ -153,16 +142,21 @@ const LoginScreen = () => {
         setIsLoading(true);
 
         try {
-            // TODO: Replace with actual API call to send OTP
-            const identifier = otpInputType === 'email' ? otpEmail : otpPhone;
-            console.log(`Sending OTP to ${otpInputType}:`, identifier);
-            
-            
+            // TODO: Replace with actual API call to send OTP (SMS or WhatsApp)
+            const identifier = otpPhone;
+        if (otpInputType === 'whatsapp') {
+                console.log('Sending OTP via WhatsApp to:', identifier);
+            } else {
+                console.log('Sending OTP via SMS to:', identifier);
+            }
+
             setOtpSent(true);
             setCountdown(60);
             Alert.alert(
-                'Success', 
-                `OTP sent to your ${otpInputType === 'email' ? 'email' : 'phone number'}`
+                'Success',
+            otpInputType === 'whatsapp'
+                    ? `OTP sent via WhatsApp to +91 ${identifier}`
+                    : `OTP sent to +91 ${identifier}`
             );
 
             // Start countdown
@@ -189,9 +183,9 @@ const LoginScreen = () => {
 
         try {
             // TODO: Replace with actual API call to verify OTP
-            const identifier = otpInputType === 'email' ? otpEmail : otpPhone;
-            console.log('Verifying OTP:', { type: otpInputType, identifier, otp });
-       
+            const identifier = otpPhone;
+        console.log('Verifying OTP:', { type: otpInputType, identifier, otp });
+
             navigation.replace('Home');
         } catch (error) {
             setErrors({ ...errors, root: 'Invalid OTP. Please try again.' });
@@ -202,7 +196,7 @@ const LoginScreen = () => {
 
     const handleResendOtp = () => {
         setOtp('');
-        setErrors({ email: '', phone: '', password: '', otp: '', root: '' });
+        setErrors({ phone: '', password: '', otp: '', root: '' });
         handleSendOtp();
     };
 
@@ -217,24 +211,21 @@ const LoginScreen = () => {
     const switchLoginMethod = (method: LoginMethod) => {
         setLoginMethod(method);
         // Reset states when switching
-        setEmail('');
         setPassword('');
-        setOtpEmail('');
         setOtpPhone('');
         setOtp('');
         setOtpSent(false);
         setCountdown(0);
-        setErrors({ email: '', phone: '', password: '', otp: '', root: '' });
+        setErrors({ phone: '', password: '', otp: '', root: '' });
     };
 
-    const switchOtpInputType = (type: OtpInputType) => {
-        setOtpInputType(type);
-        setOtpEmail('');
+const switchOtpInputType = (type: OtpInputType) => {
+    setOtpInputType(type);
         setOtpPhone('');
         setOtp('');
         setOtpSent(false);
         setCountdown(0);
-        setErrors({ email: '', phone: '', password: '', otp: '', root: '' });
+        setErrors({ phone: '', password: '', otp: '', root: '' });
     };
 
     const formatPhoneNumber = (text: string) => {
@@ -284,12 +275,12 @@ const LoginScreen = () => {
                                 ]}
                                 onPress={() => switchLoginMethod('password')}
                             >
-                                <Icon 
-                                    name="lock-outline" 
-                                    size={moderateScale(18)} 
+                                <Icon
+                                    name="lock-outline"
+                                    size={moderateScale(18)}
                                     color={loginMethod === 'password' ? COLORS.primary : '#64748b'}
                                 />
-                                <CustomText 
+                                <CustomText
                                     style={[
                                         styles.tabText,
                                         loginMethod === 'password' && styles.activeTabText
@@ -306,12 +297,12 @@ const LoginScreen = () => {
                                 ]}
                                 onPress={() => switchLoginMethod('otp')}
                             >
-                                <Icon 
-                                    name="message-outline" 
-                                    size={moderateScale(18)} 
+                                <Icon
+                                    name="message-outline"
+                                    size={moderateScale(18)}
                                     color={loginMethod === 'otp' ? COLORS.primary : '#64748b'}
                                 />
-                                <CustomText 
+                                <CustomText
                                     style={[
                                         styles.tabText,
                                         loginMethod === 'otp' && styles.activeTabText
@@ -325,38 +316,45 @@ const LoginScreen = () => {
                         {/* Password Login Form */}
                         {loginMethod === 'password' && (
                             <View style={styles.form}>
-                                {/* Email */}
+                                {/* Phone Number (for password login) */}
                                 <View style={styles.inputGroup}>
                                     <CustomText preset="bodyMedium" style={styles.label}>
-                                        Email address
+                                        Phone number
                                     </CustomText>
                                     <View style={[
                                         styles.inputWrapper,
-                                        errors.email && styles.inputError
+                                        errors.phone && styles.inputError
                                     ]}>
-                                        <Icon 
-                                            name="email-outline" 
-                                            size={moderateScale(20)} 
-                                            color="#64748b" 
-                                            style={styles.leftIcon} 
+                                        <View style={styles.phonePrefix}>
+                                            <CountryPicker
+                                                value={selectedCountry}
+                                                onSelect={(c) => setSelectedCountry(c)}
+                                                // optionally pass `countries` prop fetched from your DB
+                                            />
+                                        </View>
+                                        <Icon
+                                            name="phone-outline"
+                                            size={moderateScale(20)}
+                                            color="#64748b"
+                                            style={styles.leftIcon}
                                         />
                                         <TextInput
                                             style={styles.textInput}
-                                            placeholder="Enter your email"
+                                            placeholder="e.g. 9876543210"
                                             placeholderTextColor="#94a3b8"
-                                            value={email}
+                                            value={otpPhone}
                                             onChangeText={(text) => {
-                                                setEmail(text);
-                                                setErrors({ ...errors, email: '' });
+                                                const formatted = formatPhoneNumber(text);
+                                                setOtpPhone(formatted);
+                                                setErrors({ ...errors, phone: '' });
                                             }}
-                                            keyboardType="email-address"
-                                            autoCapitalize="none"
-                                            autoComplete="email"
+                                            keyboardType="phone-pad"
+                                            maxLength={10}
                                         />
                                     </View>
-                                    {errors.email ? (
+                                    {errors.phone ? (
                                         <CustomText preset="caption" style={styles.errorText}>
-                                            {errors.email}
+                                            {errors.phone}
                                         </CustomText>
                                     ) : null}
                                 </View>
@@ -370,11 +368,11 @@ const LoginScreen = () => {
                                         styles.inputWrapper,
                                         errors.password && styles.inputError
                                     ]}>
-                                        <Icon 
-                                            name="lock-outline" 
-                                            size={moderateScale(20)} 
-                                            color="#64748b" 
-                                            style={styles.leftIcon} 
+                                        <Icon
+                                            name="lock-outline"
+                                            size={moderateScale(20)}
+                                            color="#64748b"
+                                            style={styles.leftIcon}
                                         />
                                         <TextInput
                                             style={styles.textInput}
@@ -443,16 +441,16 @@ const LoginScreen = () => {
                                             <TouchableOpacity
                                                 style={[
                                                     styles.otpTypeButton,
-                                                    otpInputType === 'phone' && styles.activeOtpType
+                                                otpInputType === 'phone' && styles.activeOtpType
                                                 ]}
                                                 onPress={() => switchOtpInputType('phone')}
                                             >
-                                                <Icon 
-                                                    name="phone-outline" 
-                                                    size={moderateScale(16)} 
+                                                <Icon
+                                                    name="phone-outline"
+                                                    size={moderateScale(16)}
                                                     color={otpInputType === 'phone' ? '#ffffff' : '#64748b'}
                                                 />
-                                                <CustomText 
+                                                <CustomText
                                                     style={[
                                                         styles.otpTypeText,
                                                         otpInputType === 'phone' && styles.activeOtpTypeText
@@ -465,28 +463,28 @@ const LoginScreen = () => {
                                             <TouchableOpacity
                                                 style={[
                                                     styles.otpTypeButton,
-                                                    otpInputType === 'email' && styles.activeOtpType
+                                                    otpInputType === 'whatsapp' && styles.activeOtpType
                                                 ]}
-                                                onPress={() => switchOtpInputType('email')}
+                                                onPress={() => switchOtpInputType('whatsapp')}
                                             >
-                                                <Icon 
-                                                    name="email-outline" 
-                                                    size={moderateScale(16)} 
-                                                    color={otpInputType === 'email' ? '#ffffff' : '#64748b'}
+                                                <Icon
+                                                    name="whatsapp"
+                                                    size={moderateScale(16)}
+                                                    color={otpInputType === 'whatsapp' ? '#ffffff' : '#64748b'}
                                                 />
-                                                <CustomText 
+                                                <CustomText
                                                     style={[
                                                         styles.otpTypeText,
-                                                        otpInputType === 'email' && styles.activeOtpTypeText
+                                                        otpInputType === 'whatsapp' && styles.activeOtpTypeText
                                                     ]}
                                                 >
-                                                    Email
+                                                    WhatsApp
                                                 </CustomText>
                                             </TouchableOpacity>
                                         </View>
 
-                                        {/* Phone Number Input */}
-                                        {otpInputType === 'phone' && (
+                                        {/* Phone Number Input (used for both SMS and WhatsApp) */}
+                                        {(otpInputType === 'phone' || otpInputType === 'whatsapp') && (
                                             <View style={styles.inputGroup}>
                                                 <CustomText preset="bodyMedium" style={styles.label}>
                                                     Phone number
@@ -496,17 +494,20 @@ const LoginScreen = () => {
                                                     errors.phone && styles.inputError
                                                 ]}>
                                                     <View style={styles.phonePrefix}>
-                                                        <CustomText style={styles.phonePrefixText}>+91</CustomText>
+                                                        <CountryPicker
+                                                            value={selectedCountry}
+                                                            onSelect={(c) => setSelectedCountry(c)}
+                                                        />
                                                     </View>
-                                                    <Icon 
-                                                        name="phone-outline" 
-                                                        size={moderateScale(20)} 
-                                                        color="#64748b" 
-                                                        style={styles.leftIcon} 
+                                                    <Icon
+                                                        name="phone-outline"
+                                                        size={moderateScale(20)}
+                                                        color="#64748b"
+                                                        style={styles.leftIcon}
                                                     />
                                                     <TextInput
                                                         style={styles.textInput}
-                                                        placeholder="Enter 10-digit number"
+                                                        placeholder="e.g. 9876543210"
                                                         placeholderTextColor="#94a3b8"
                                                         value={otpPhone}
                                                         onChangeText={(text) => {
@@ -526,43 +527,7 @@ const LoginScreen = () => {
                                             </View>
                                         )}
 
-                                        {/* Email Input */}
-                                        {otpInputType === 'email' && (
-                                            <View style={styles.inputGroup}>
-                                                <CustomText preset="bodyMedium" style={styles.label}>
-                                                    Email address
-                                                </CustomText>
-                                                <View style={[
-                                                    styles.inputWrapper,
-                                                    errors.email && styles.inputError
-                                                ]}>
-                                                    <Icon 
-                                                        name="email-outline" 
-                                                        size={moderateScale(20)} 
-                                                        color="#64748b" 
-                                                        style={styles.leftIcon} 
-                                                    />
-                                                    <TextInput
-                                                        style={styles.textInput}
-                                                        placeholder="Enter your email"
-                                                        placeholderTextColor="#94a3b8"
-                                                        value={otpEmail}
-                                                        onChangeText={(text) => {
-                                                            setOtpEmail(text);
-                                                            setErrors({ ...errors, email: '' });
-                                                        }}
-                                                        keyboardType="email-address"
-                                                        autoCapitalize="none"
-                                                        autoComplete="email"
-                                                    />
-                                                </View>
-                                                {errors.email ? (
-                                                    <CustomText preset="caption" style={styles.errorText}>
-                                                        {errors.email}
-                                                    </CustomText>
-                                                ) : null}
-                                            </View>
-                                        )}
+                                        {/* WhatsApp option uses the same phone input as SMS */}
 
                                         {/* Root Error */}
                                         {errors.root ? (
@@ -599,11 +564,11 @@ const LoginScreen = () => {
                                                 styles.inputWrapper,
                                                 errors.otp && styles.inputError
                                             ]}>
-                                                <Icon 
-                                                    name="shield-key-outline" 
-                                                    size={moderateScale(20)} 
-                                                    color="#64748b" 
-                                                    style={styles.leftIcon} 
+                                                <Icon
+                                                    name="shield-key-outline"
+                                                    size={moderateScale(20)}
+                                                    color="#64748b"
+                                                    style={styles.leftIcon}
                                                 />
                                                 <TextInput
                                                     style={styles.textInput}
@@ -625,7 +590,9 @@ const LoginScreen = () => {
                                                 </CustomText>
                                             ) : null}
                                             <CustomText style={styles.otpSentText}>
-                                                OTP sent to {otpInputType === 'email' ? otpEmail : `+91 ${otpPhone}`}
+                                                {otpInputType === 'whatsapp'
+                                                    ? `OTP sent via WhatsApp to +91 ${otpPhone}`
+                                                    : `OTP sent to +91 ${otpPhone}`}
                                             </CustomText>
                                         </View>
 
@@ -720,9 +687,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: isSmallDevice ? scaleWidth(20) : scaleWidth(28),
         paddingVertical: isSmallDevice ? scaleHeight(24) : scaleHeight(32),
         shadowColor: '#000',
-        shadowOffset: { 
-            width: 0, 
-            height: scaleHeight(12) 
+        shadowOffset: {
+            width: 0,
+            height: scaleHeight(12)
         },
         shadowOpacity: 0.1,
         shadowRadius: scaleWidth(20),

@@ -8,6 +8,7 @@ export const projectFormSchema = z.object({
   countryCode: z.string().optional(),
   deadline: z.date({ message: "Deadline is required" }),
   priority: z.enum(["low", "medium", "high", "urgent"]),
+  projectType: z.enum(["private", "ministry"]).default("private"),
   rolesNeeded: z
     .array(
       z.object({
@@ -46,6 +47,9 @@ export const projectFormSchema = z.object({
         relocationAssistance: z.boolean(),
         additionalRequirements: z.string().optional(),
         notes: z.string().optional(),
+        employmentType: z.enum(["contract", "permanent"]).default("permanent"),
+        contractDurationYears: z.number().min(1).max(10).optional(),
+        genderRequirement: z.enum(["female", "male", "all"]).default("all"),
       })
     )
     .min(1, "At least one role is required"),
@@ -57,15 +61,18 @@ export type ProjectFormData = z.infer<typeof projectFormSchema>;
 // Default values for new projects
 export const defaultProjectValues = {
   priority: "medium" as const,
+  projectType: "private" as const,
   rolesNeeded: [
     {
       designation: "",
       quantity: 1,
       priority: "medium" as const,
-      backgroundCheckRequired: true,
-      drugScreeningRequired: true,
+      backgroundCheckRequired: false,
+      drugScreeningRequired: false,
       onCallRequired: false,
       relocationAssistance: false,
+      employmentType: "permanent" as const,
+      genderRequirement: "all" as const,
     },
   ],
 };

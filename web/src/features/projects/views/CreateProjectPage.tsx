@@ -164,10 +164,12 @@ export default function CreateProjectPage() {
         designation: "",
         quantity: 1,
         priority: "medium",
-        backgroundCheckRequired: true,
-        drugScreeningRequired: true,
+        backgroundCheckRequired: false,
+        drugScreeningRequired: false,
         onCallRequired: false,
         relocationAssistance: false,
+        employmentType: "permanent",
+        genderRequirement: "all",
       },
     ]);
   };
@@ -329,6 +331,49 @@ export default function CreateProjectPage() {
                   />
                 </div>
 
+                {/* Project Type */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="projectType"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Project Type *
+                  </Label>
+                  <Controller
+                    name="projectType"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-blue-600" />
+                              Private Sector
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="ministry">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-purple-600" />
+                              Ministry/Government
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.projectType && (
+                    <p className="text-sm text-red-600">
+                      {errors.projectType.message}
+                    </p>
+                  )}
+                </div>
+
                 {/* Client Selection */}
                 <div className="space-y-2">
                   <Label
@@ -380,7 +425,7 @@ export default function CreateProjectPage() {
                       <CountrySelect
                         value={field.value}
                         onValueChange={field.onChange}
-                        label="Project Country"
+                        label="Project Country*"
                         placeholder="Select project country (optional)"
                         allowEmpty={true}
                         groupByRegion={true}
@@ -397,7 +442,7 @@ export default function CreateProjectPage() {
                   htmlFor="description"
                   className="text-sm font-medium text-slate-700"
                 >
-                  Project Description
+                  Project Description*
                 </Label>
                 <Controller
                   name="description"
@@ -508,43 +553,137 @@ export default function CreateProjectPage() {
                       </Select>
                     </div>
 
-                    {/* Experience Range */}
+                    {/* Employment Type */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-slate-700">
-                        Min Experience (years)
+                        Employment Type *
                       </Label>
-                      <Input
-                        type="number"
-                        value={role.minExperience || ""}
-                        onChange={(e) =>
-                          updateRole(
-                            index,
-                            "minExperience",
-                            parseInt(e.target.value)
-                          )
+                      <Select
+                        value={role.employmentType || "permanent"}
+                        onValueChange={(value) =>
+                          updateRole(index, "employmentType", value)
                         }
-                        min="0"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
+                      >
+                        <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="permanent">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              Permanent
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="contract">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              Contract
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
+                    {/* Contract Duration (only for contract roles) */}
+                    {role.employmentType === "contract" && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Contract Duration (years) *
+                        </Label>
+                        <Input
+                          type="number"
+                          value={role.contractDurationYears || ""}
+                          onChange={(e) =>
+                            updateRole(
+                              index,
+                              "contractDurationYears",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          min="1"
+                          max="10"
+                          placeholder="e.g., 2"
+                          className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      </div>
+                    )}
+
+                    {/* Gender Requirement */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-slate-700">
-                        Max Experience (years)
+                        Gender Requirement *
                       </Label>
-                      <Input
-                        type="number"
-                        value={role.maxExperience || ""}
-                        onChange={(e) =>
-                          updateRole(
-                            index,
-                            "maxExperience",
-                            parseInt(e.target.value)
-                          )
+                      <Select
+                        value={role.genderRequirement || "all"}
+                        onValueChange={(value) =>
+                          updateRole(index, "genderRequirement", value)
                         }
-                        min="0"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
+                      >
+                        <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              All Genders
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="female">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                              Female Only
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="male">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                              Male Only
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Experience Range - Same Row */}
+                    <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Min Experience (years)
+                        </Label>
+                        <Input
+                          type="number"
+                          value={role.minExperience || ""}
+                          onChange={(e) =>
+                            updateRole(
+                              index,
+                              "minExperience",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          min="0"
+                          className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Max Experience (years)
+                        </Label>
+                        <Input
+                          type="number"
+                          value={role.maxExperience || ""}
+                          onChange={(e) =>
+                            updateRole(
+                              index,
+                              "maxExperience",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          min="0"
+                          className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      </div>
                     </div>
 
                     {/* Shift Type */}
@@ -636,7 +775,7 @@ export default function CreateProjectPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                       <Label className="text-sm font-medium text-slate-700">
                         License Requirements
                       </Label>
@@ -670,7 +809,7 @@ export default function CreateProjectPage() {
                         placeholder="e.g., Accredited nursing program"
                         className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                       />
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Requirements Checkboxes */}

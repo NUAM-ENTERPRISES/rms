@@ -450,7 +450,6 @@ export default function ProjectEligibleCandidatesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
-                    <TableHead>Experience</TableHead>
                     <TableHead>Skills</TableHead>
                     <TableHead>Availability</TableHead>
                     <TableHead>Match Score</TableHead>
@@ -472,14 +471,6 @@ export default function ProjectEligibleCandidatesPage() {
                               {candidate.contact} • {candidate.location}
                             </p>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Briefcase className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">
-                            {candidate.experience} years
-                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
