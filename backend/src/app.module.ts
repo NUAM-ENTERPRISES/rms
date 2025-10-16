@@ -23,18 +23,13 @@ import { SystemModule } from './system/system.module';
 import { UploadModule } from './upload/upload.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CandidateAllocationModule } from './candidate-allocation/candidate-allocation.module';
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 import { OtpService } from './otp/otp.service';
 import { OtpModule } from './otp/otp.module';
-=======
-import { CandidateEligibilityModule } from './candidate-eligibility/candidate-eligibility.module';
+
+import { ¸ } from './candidate-eligibility/candidate-eligibility.module';
 import { InterviewsModule } from './interviews/interviews.module';
->>>>>>> f9dc18f89e09743a433ddd1ef758130f20c5c302
-=======
-import { CandidateEligibilityModule } from './candidate-eligibility/candidate-eligibility.module';
-import { InterviewsModule } from './interviews/interviews.module';
->>>>>>> f9dc18f89e09743a433ddd1ef758130f20c5c302
+
 
 @Module({
   imports: [
@@ -58,17 +53,9 @@ import { InterviewsModule } from './interviews/interviews.module';
     UploadModule,
     NotificationsModule,
     CandidateAllocationModule,
-<<<<<<< HEAD
-<<<<<<< HEAD
     OtpModule,
-=======
-    CandidateEligibilityModule,
-    InterviewsModule,
->>>>>>> f9dc18f89e09743a433ddd1ef758130f20c5c302
-=======
-    CandidateEligibilityModule,
-    InterviewsModule,
->>>>>>> f9dc18f89e09743a433ddd1ef758130f20c5c302
+
+  
   ],
   controllers: [AppController],
   providers: [
