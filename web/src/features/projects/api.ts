@@ -111,6 +111,13 @@ export interface CreateProjectRequest {
   countryCode?: string;
   projectType: "private" | "ministry";
   rolesNeeded: CreateRoleNeededRequest[];
+  documentRequirements: CreateDocumentRequirementRequest[];
+}
+
+export interface CreateDocumentRequirementRequest {
+  docType: string;
+  mandatory: boolean;
+  description?: string;
 }
 
 export interface CreateRoleNeededRequest {

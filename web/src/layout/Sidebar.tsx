@@ -9,7 +9,6 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -100,26 +99,6 @@ function NavItemComponent({ item, isCollapsed, depth = 0 }: NavItemProps) {
           </span>
         )}
       </div>
-      {!isCollapsed && item.badge && (
-        <Badge
-          variant={item.badge.variant || "secondary"}
-          className={cn(
-            "ml-auto text-xs font-medium px-2 py-1 transition-all duration-200",
-            "shadow-sm hover:shadow-md",
-            item.badge.variant === "default" &&
-              "bg-gradient-to-r from-blue-500 to-blue-600 text-white",
-            item.badge.variant === "secondary" &&
-              "bg-gradient-to-r from-slate-600 to-slate-700 text-white",
-            item.badge.variant === "destructive" &&
-              "bg-gradient-to-r from-red-500 to-red-600 text-white",
-            item.badge.variant === "outline" &&
-              "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300",
-            "hover:scale-105 hover:-translate-y-0.5"
-          )}
-        >
-          {item.badge.text}
-        </Badge>
-      )}
       {!isCollapsed && hasChildren && (
         <ChevronRightIcon
           className={cn(

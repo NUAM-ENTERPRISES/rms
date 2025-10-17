@@ -47,10 +47,6 @@ export const navigationConfig: NavItem[] = [
     label: "Projects",
     path: "/projects",
     icon: Building2,
-    badge: {
-      text: "Core",
-      variant: "secondary",
-    },
     // Accessible to all roles - core business function
   },
   {
@@ -59,10 +55,6 @@ export const navigationConfig: NavItem[] = [
     path: "/candidates",
     icon: UserCheck,
     // Accessible to all roles - core business function
-    badge: {
-      text: "HR",
-      variant: "outline",
-    },
   },
   {
     id: "clients",
@@ -70,10 +62,6 @@ export const navigationConfig: NavItem[] = [
     path: "/clients",
     icon: Briefcase,
     permissions: ["read:clients"],
-    badge: {
-      text: "Business",
-      variant: "outline",
-    },
     // Hidden from Recruiter and Documentation Executive roles
   },
   {
@@ -82,10 +70,6 @@ export const navigationConfig: NavItem[] = [
     path: "/teams",
     icon: Users,
     permissions: ["read:teams"],
-    badge: {
-      text: "Org",
-      variant: "outline",
-    },
   },
   {
     id: "interviews",
@@ -93,10 +77,6 @@ export const navigationConfig: NavItem[] = [
     path: "/interviews",
     icon: Calendar,
     // Accessible to all roles - core business function
-    badge: {
-      text: "Schedule",
-      variant: "outline",
-    },
   },
   {
     id: "documents",
@@ -104,10 +84,6 @@ export const navigationConfig: NavItem[] = [
     path: "/documents/verification",
     icon: FileText,
     permissions: ["read:documents"],
-    badge: {
-      text: "Verification",
-      variant: "outline",
-    },
   },
   // {
   //   id: "notifications",
@@ -136,10 +112,6 @@ export const navigationConfig: NavItem[] = [
     label: "Administration",
     icon: Shield,
     roles: ["CEO", "Director", "Manager", "System Admin"],
-    badge: {
-      text: "Admin",
-      variant: "destructive",
-    },
     children: [
       {
         id: "admin-users",
@@ -181,10 +153,6 @@ export const navigationConfig: NavItem[] = [
     label: "Profile",
     path: "/profile",
     icon: User,
-    badge: {
-      text: "Personal",
-      variant: "outline",
-    },
     // Accessible to all roles - users should manage their own profile
   },
 ];

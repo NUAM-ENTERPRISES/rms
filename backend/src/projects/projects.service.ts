@@ -1393,4 +1393,217 @@ export class ProjectsService {
 
     return recruiters;
   }
+
+  // ==================== DOCUMENT REQUIREMENTS ====================
+
+  /**
+   * Get document requirements for a project
+   */
+  async getDocumentRequirements(projectId: string): Promise<any[]> {
+    const requirements = await this.prisma.documentRequirement.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return requirements;
+  }
+
+  /**
+   * Add document requirement to project
+   */
+  async addDocumentRequirement(
+    projectId: string,
+    dto: { docType: string; mandatory: boolean; description?: string },
+    userId: string,
+  ): Promise<any> {
+    // Check if project exists
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    // Check if requirement already exists
+    const existing = await this.prisma.documentRequirement.findUnique({
+      where: {
+        projectId_docType: {
+          projectId,
+          docType: dto.docType,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        'Document requirement already exists for this project',
+      );
+    }
+
+    const requirement = await this.prisma.documentRequirement.create({
+      data: {
+        projectId,
+        docType: dto.docType,
+        mandatory: dto.mandatory,
+        description: dto.description,
+      },
+    });
+
+    return requirement;
+  }
+
+  /**
+   * Update document requirement
+   */
+  async updateDocumentRequirement(
+    projectId: string,
+    reqId: string,
+    dto: { mandatory?: boolean; description?: string },
+    userId: string,
+  ): Promise<any> {
+    // Check if requirement exists and belongs to project
+    const requirement = await this.prisma.documentRequirement.findFirst({
+      where: {
+        id: reqId,
+        projectId,
+      },
+    });
+
+    if (!requirement) {
+      throw new NotFoundException('Document requirement not found');
+    }
+
+    const updated = await this.prisma.documentRequirement.update({
+      where: { id: reqId },
+      data: {
+        mandatory: dto.mandatory,
+        description: dto.description,
+        updatedAt: new Date(),
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Remove document requirement
+   */
+  async removeDocumentRequirement(
+    projectId: string,
+    reqId: string,
+    userId: string,
+  ): Promise<any> {
+    // Check if requirement exists and belongs to project
+    const requirement = await this.prisma.documentRequirement.findFirst({
+      where: {
+        id: reqId,
+        projectId,
+      },
+    });
+
+    if (!requirement) {
+      throw new NotFoundException('Document requirement not found');
+    }
+
+    await this.prisma.documentRequirement.delete({
+      where: { id: reqId },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Complete document verification for a candidate
+   */
+  async completeVerification(
+    projectId: string,
+    candidateId: string,
+    userId: string,
+  ): Promise<any> {
+    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        projectId,
+        candidateId,
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException('Candidate not found in project');
+    }
+
+    // Check if all required documents are verified
+    const summary = await this.getDocumentVerificationSummary(
+      candidateProject.id,
+    );
+
+    if (!summary.allDocumentsVerified) {
+      throw new BadRequestException('Not all required documents are verified');
+    }
+
+    // Update status to documents_verified
+    const updated = await this.prisma.candidateProjectMap.update({
+      where: { id: candidateProject.id },
+      data: {
+        status: 'documents_verified',
+        documentsVerifiedDate: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Get document verification summary for a candidate-project
+   */
+  private async getDocumentVerificationSummary(
+    candidateProjectMapId: string,
+  ): Promise<any> {
+    // Get project document requirements
+    const candidateProject = await this.prisma.candidateProjectMap.findUnique({
+      where: { id: candidateProjectMapId },
+      include: { project: true },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException('Candidate project mapping not found');
+    }
+
+    const requirements = await this.prisma.documentRequirement.findMany({
+      where: { projectId: candidateProject.projectId },
+    });
+
+    // Get document verifications
+    const verifications =
+      await this.prisma.candidateProjectDocumentVerification.findMany({
+        where: { candidateProjectMapId },
+        include: { document: true },
+      });
+
+    const totalRequired = requirements.length;
+    const totalSubmitted = verifications.length;
+    const totalVerified = verifications.filter(
+      (v) => v.status === 'verified',
+    ).length;
+    const totalRejected = verifications.filter(
+      (v) => v.status === 'rejected',
+    ).length;
+    const totalPending = verifications.filter(
+      (v) => v.status === 'pending',
+    ).length;
+
+    const allDocumentsVerified =
+      totalVerified === totalRequired && totalRequired > 0;
+
+    return {
+      totalRequired,
+      totalSubmitted,
+      totalVerified,
+      totalRejected,
+      totalPending,
+      allDocumentsVerified,
+      canApproveCandidate: allDocumentsVerified,
+    };
+  }
 }

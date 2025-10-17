@@ -31,6 +31,7 @@ import {
   ProjectQualificationSelect,
   type EducationRequirement,
 } from "@/features/projects";
+import DocumentRequirementsSection from "../components/DocumentRequirementsSection";
 import { useGetClientsQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { useCan } from "@/hooks/useCan";
@@ -129,6 +130,7 @@ export default function CreateProjectPage() {
             ? role.institutionRequirements
             : undefined,
         })),
+        documentRequirements: previewData.documentRequirements || [],
       };
 
       const result = await createProject(transformedData).unwrap();
@@ -929,6 +931,14 @@ export default function CreateProjectPage() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Document Requirements Section */}
+          <DocumentRequirementsSection
+            control={control}
+            watch={watch}
+            setValue={setValue}
+            errors={errors}
+          />
 
           {/* Form Actions */}
           <div className="flex items-center justify-between pt-6 border-t border-slate-200">

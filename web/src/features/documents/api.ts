@@ -273,6 +273,48 @@ export const documentsApi = baseApi.injectEndpoints({
       }),
       providesTags: ["VerificationCandidates"],
     }),
+
+    // Enhanced Document Verification APIs
+    getCandidateProjects: builder.query<
+      { success: boolean; data: any[]; message: string },
+      string
+    >({
+      query: (candidateId) => `/documents/candidates/${candidateId}/projects`,
+      providesTags: ["DocumentVerification"],
+    }),
+
+    getCandidateProjectRequirements: builder.query<
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string }
+    >({
+      query: ({ candidateId, projectId }) =>
+        `/documents/candidates/${candidateId}/projects/${projectId}/requirements`,
+      providesTags: ["DocumentVerification"],
+    }),
+
+    reuseDocument: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { documentId: string; projectId: string }
+    >({
+      query: ({ documentId, projectId }) => ({
+        url: `/documents/${documentId}/reuse`,
+        method: "POST",
+        body: { projectId },
+      }),
+      invalidatesTags: ["DocumentVerification"],
+    }),
+
+    completeVerification: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { candidateProjectMapId: string }
+    >({
+      query: ({ candidateProjectMapId }) => ({
+        url: `/documents/complete-verification`,
+        method: "POST",
+        body: { candidateProjectMapId },
+      }),
+      invalidatesTags: ["DocumentVerification"],
+    }),
   }),
 });
 
@@ -287,4 +329,8 @@ export const {
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,
   useGetVerificationCandidatesQuery,
+  useGetCandidateProjectsQuery,
+  useGetCandidateProjectRequirementsQuery,
+  useReuseDocumentMutation,
+  useCompleteVerificationMutation,
 } = documentsApi;
