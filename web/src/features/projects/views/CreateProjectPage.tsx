@@ -1124,6 +1124,56 @@ export default function CreateProjectPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Document Requirements Summary */}
+              {previewData.documentRequirements &&
+                previewData.documentRequirements.length > 0 && (
+                  <div className="bg-slate-50 rounded-lg p-4 mt-4">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-3">
+                      Document Requirements (
+                      {previewData.documentRequirements.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {previewData.documentRequirements.map(
+                        (req: any, index: number) => (
+                          <div
+                            key={index}
+                            className="bg-white rounded-lg p-3 border border-slate-200 flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <CheckCircle className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-800 capitalize">
+                                  {req.docType.replace(/_/g, " ")}
+                                </p>
+                                {req.description && (
+                                  <p className="text-sm text-slate-600">
+                                    {req.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {req.mandatory && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  Mandatory
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                Required
+                              </Badge>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
             </div>
 
             <div className="p-6 border-t border-slate-200 bg-slate-50">

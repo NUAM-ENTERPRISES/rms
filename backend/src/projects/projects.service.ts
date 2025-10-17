@@ -182,6 +182,21 @@ export class ProjectsService {
         }
       }
 
+      // Create document requirements if provided
+      if (
+        createProjectDto.documentRequirements &&
+        createProjectDto.documentRequirements.length > 0
+      ) {
+        await tx.documentRequirement.createMany({
+          data: createProjectDto.documentRequirements.map((req) => ({
+            projectId: createdProject.id,
+            docType: req.docType,
+            mandatory: req.mandatory,
+            description: req.description,
+          })),
+        });
+      }
+
       return createdProject;
     });
 
@@ -224,6 +239,7 @@ export class ProjectsService {
             },
           },
         },
+        documentRequirements: true,
       },
     });
 
@@ -380,6 +396,7 @@ export class ProjectsService {
             },
           },
         },
+        documentRequirements: true,
       },
     });
 

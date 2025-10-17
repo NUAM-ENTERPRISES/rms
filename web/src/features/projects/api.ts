@@ -32,6 +32,7 @@ export interface Project {
   } | null;
   rolesNeeded: RoleNeeded[];
   candidateProjects: CandidateProject[];
+  documentRequirements?: DocumentRequirement[];
 }
 
 export interface RoleNeeded {
@@ -118,6 +119,15 @@ export interface CreateDocumentRequirementRequest {
   docType: string;
   mandatory: boolean;
   description?: string;
+}
+
+export interface DocumentRequirement {
+  id: string;
+  docType: string;
+  mandatory: boolean;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateRoleNeededRequest {

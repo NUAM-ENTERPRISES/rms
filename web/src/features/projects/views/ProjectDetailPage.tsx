@@ -32,6 +32,8 @@ import {
   UserMinus,
   BarChart3,
   User,
+  FileText,
+  CheckCircle,
 } from "lucide-react";
 import {
   useGetProjectQuery,
@@ -482,6 +484,30 @@ export default function ProjectDetailPage() {
                     {project.description}
                   </p>
                 )}
+
+                {/* Document Requirements */}
+                 {project.documentRequirements &&
+                   project.documentRequirements.length > 0 && (
+                     <div className="mt-4 pt-4 border-t border-slate-200">
+                       <h4 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                         <FileText className="h-4 w-4 text-blue-600" />
+                         Document Requirements
+                       </h4>
+                       <div className="flex flex-wrap gap-2">
+                         {project.documentRequirements.map(
+                           (req: any, index: number) => (
+                             <span
+                               key={index}
+                               className="text-sm text-slate-700 bg-slate-100 px-2 py-1 rounded-md"
+                             >
+                               {req.docType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                               {req.mandatory && " (Required)"}
+                             </span>
+                           )
+                         )}
+                       </div>
+                     </div>
+                   )}
               </CardContent>
             </Card>
 
