@@ -28,30 +28,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import {
   FileText,
   CheckCircle,
   XCircle,
   Clock,
   Eye,
-  Download,
   RefreshCw,
   AlertCircle,
   User,
-  Building2,
   Calendar,
   UserCheck,
+  Upload,
+  ArrowLeft,
 } from "lucide-react";
 import {
   useGetCandidateProjectsQuery,
   useGetCandidateProjectRequirementsQuery,
+  useGetCandidateEligibilityQuery,
+  useGetMatchmakingProcessQuery,
   useReuseDocumentMutation,
   useCompleteVerificationMutation,
   useVerifyDocumentMutation,
+  useCreateDocumentMutation,
 } from "@/features/documents";
+import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
+import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
+import { FlagIcon } from "@/shared/components/FlagIcon";
 
 export default function CandidateDocumentVerificationPage() {
   const { candidateId } = useParams<{ candidateId: string }>();
@@ -61,9 +68,19 @@ export default function CandidateDocumentVerificationPage() {
   // State
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [showReuseDialog, setShowReuseDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const [verificationNotes, setVerificationNotes] = useState("");
-  const [selectedVerification, setSelectedVerification] = useState<any>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadDocType, setUploadDocType] = useState<string>("");
+  const [isVerifyingAll, setIsVerifyingAll] = useState(false);
+
+  // PDF Viewer state
+  const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<{
+    fileUrl: string;
+    fileName: string;
+  } | null>(null);
 
   // API Queries
   const {
@@ -72,12 +89,31 @@ export default function CandidateDocumentVerificationPage() {
     error: projectsError,
   } = useGetCandidateProjectsQuery(candidateId!);
 
-  const {
-    data: requirementsData,
-    isLoading: requirementsLoading,
-    error: requirementsError,
-  } = useGetCandidateProjectRequirementsQuery(
-    { candidateId: candidateId!, projectId: selectedProjectId },
+  const { data: requirementsData, isLoading: requirementsLoading } =
+    useGetCandidateProjectRequirementsQuery(
+      { candidateId: candidateId!, projectId: selectedProjectId },
+      { skip: !selectedProjectId }
+    );
+
+  const selectedProject = projectsData?.data?.find(
+    (p: any) => p.project.id === selectedProjectId
+  );
+
+  // Eligibility and Matchmaking data
+  const { data: eligibilityData } = useGetCandidateEligibilityQuery(
+    {
+      candidateId: candidateId!,
+      projectId: selectedProjectId,
+      roleId: selectedProject?.roleNeeded?.id || "",
+    },
+    { skip: !selectedProjectId || !selectedProject?.roleNeeded?.id }
+  );
+
+  const { data: matchmakingData } = useGetMatchmakingProcessQuery(
+    {
+      candidateId: candidateId!,
+      projectId: selectedProjectId,
+    },
     { skip: !selectedProjectId }
   );
 
@@ -85,8 +121,11 @@ export default function CandidateDocumentVerificationPage() {
   const [reuseDocument, { isLoading: isReusing }] = useReuseDocumentMutation();
   const [completeVerification, { isLoading: isCompleting }] =
     useCompleteVerificationMutation();
-  const [verifyDocument, { isLoading: isVerifying }] =
-    useVerifyDocumentMutation();
+  const [verifyDocument] = useVerifyDocumentMutation();
+  const [uploadDocument, { isLoading: isUploading }] =
+    useUploadDocumentMutation();
+  const [createDocument, { isLoading: isCreating }] =
+    useCreateDocumentMutation();
 
   // Auto-select first project
   useEffect(() => {
@@ -99,10 +138,6 @@ export default function CandidateDocumentVerificationPage() {
     }
   }, [projectsData, selectedProjectId]);
 
-  const selectedProject = projectsData?.data?.find(
-    (p: any) => p.project.id === selectedProjectId
-  );
-
   const requirements = requirementsData?.data?.requirements || [];
   const verifications = requirementsData?.data?.verifications || [];
   const allCandidateDocuments =
@@ -114,6 +149,7 @@ export default function CandidateDocumentVerificationPage() {
     try {
       await verifyDocument({
         documentId: verificationId,
+        candidateProjectMapId: selectedProject?.id || "",
         status: "verified",
         notes: verificationNotes,
       }).unwrap();
@@ -129,6 +165,7 @@ export default function CandidateDocumentVerificationPage() {
     try {
       await verifyDocument({
         documentId: verificationId,
+        candidateProjectMapId: selectedProject?.id || "",
         status: "rejected",
         notes: verificationNotes,
         rejectionReason: verificationNotes,
@@ -137,6 +174,46 @@ export default function CandidateDocumentVerificationPage() {
       setVerificationNotes("");
     } catch (error) {
       toast.error("Failed to reject document");
+    }
+  };
+
+  // Handle verify all documents
+  const handleVerifyAllDocuments = async () => {
+    if (!selectedProject?.id) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setIsVerifyingAll(true);
+    try {
+      // Get all pending verifications
+      const pendingVerifications = verifications.filter(
+        (v: any) => v.status === "pending" && v.document
+      );
+
+      if (pendingVerifications.length === 0) {
+        toast.info("No pending documents to verify");
+        return;
+      }
+
+      // Verify all pending documents
+      const verifyPromises = pendingVerifications.map((verification: any) =>
+        verifyDocument({
+          documentId: verification.id,
+          candidateProjectMapId: selectedProject.id,
+          status: "verified",
+          notes: "Bulk verification",
+        }).unwrap()
+      );
+
+      await Promise.all(verifyPromises);
+      toast.success(
+        `Successfully verified ${pendingVerifications.length} documents!`
+      );
+    } catch (error) {
+      toast.error("Failed to verify some documents");
+    } finally {
+      setIsVerifyingAll(false);
     }
   };
 
@@ -157,6 +234,46 @@ export default function CandidateDocumentVerificationPage() {
     }
   };
 
+  // Handle document upload
+  const handleUploadDocument = async () => {
+    if (!uploadFile || !uploadDocType) return;
+
+    try {
+      // Step 1: Upload the file to S3
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("docType", uploadDocType);
+
+      const uploadResult = await uploadDocument({
+        candidateId: candidateId!,
+        formData,
+      }).unwrap();
+
+      // Step 2: Create Document record in database
+      const documentData = await createDocument({
+        candidateId: candidateId!,
+        docType: uploadDocType,
+        fileName: uploadResult.fileName,
+        fileUrl: uploadResult.fileUrl,
+        fileSize: uploadResult.fileSize,
+        mimeType: uploadResult.mimeType,
+      }).unwrap();
+
+      // Step 3: Link the document to the current project
+      await reuseDocument({
+        documentId: documentData.data.id,
+        projectId: selectedProjectId,
+      }).unwrap();
+
+      toast.success("Document uploaded and linked successfully!");
+      setShowUploadDialog(false);
+      setUploadFile(null);
+      setUploadDocType("");
+    } catch (error) {
+      toast.error("Failed to upload document");
+    }
+  };
+
   // Handle complete verification
   const handleCompleteVerification = async () => {
     if (!summary.allDocumentsVerified) {
@@ -173,6 +290,12 @@ export default function CandidateDocumentVerificationPage() {
     } catch (error) {
       toast.error("Failed to complete verification");
     }
+  };
+
+  // Handle opening PDF viewer
+  const handleOpenPDF = (fileUrl: string, fileName: string) => {
+    setSelectedDocument({ fileUrl, fileName });
+    setIsPDFViewerOpen(true);
   };
 
   // Get document status badge
@@ -243,11 +366,38 @@ export default function CandidateDocumentVerificationPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500">Project</p>
-                      <p className="text-sm font-medium">
-                        {selectedProject.project?.title}
-                      </p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 justify-end">
+                          <FlagIcon
+                            countryCode={selectedProject.project?.countryCode}
+                            size="3xl"
+                            className="rounded"
+                          />
+                          <p className="text-sm font-medium">
+                            {selectedProject.project?.title}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Verify All Documents Button */}
+                      {summary.totalSubmitted > 0 &&
+                        summary.totalVerified < summary.totalSubmitted &&
+                        canVerifyDocuments && (
+                          <Button
+                            onClick={handleVerifyAllDocuments}
+                            disabled={isVerifyingAll}
+                            variant="outline"
+                            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          >
+                            {isVerifyingAll ? (
+                              <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                            )}
+                            Verify
+                          </Button>
+                        )}
                     </div>
                   </div>
 
@@ -402,9 +552,9 @@ export default function CandidateDocumentVerificationPage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() =>
-                                      window.open(
+                                      handleOpenPDF(
                                         verification.document.fileUrl,
-                                        "_blank"
+                                        verification.document.fileName
                                       )
                                     }
                                     className="h-6 w-6 p-0"
@@ -422,45 +572,84 @@ export default function CandidateDocumentVerificationPage() {
                               <div className="flex items-center gap-2">
                                 {verification ? (
                                   <>
+                                    {/* Show verification buttons only if document exists and is pending */}
                                     {verification.status === "pending" &&
-                                      canVerifyDocuments && (
-                                        <>
+                                      canVerifyDocuments &&
+                                      verification.document && (
+                                        <div className="flex items-center gap-2">
                                           <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
                                             onClick={() =>
                                               handleVerifyDocument(
                                                 verification.id
                                               )
                                             }
-                                            className="h-8 text-green-600 hover:text-green-700"
+                                            className="h-8 text-green-600 border-green-600 hover:text-green-700 hover:bg-green-50"
                                           >
-                                            <CheckCircle className="h-4 w-4" />
+                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                            Verify
                                           </Button>
                                           <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
                                             onClick={() =>
                                               handleRejectDocument(
                                                 verification.id
                                               )
                                             }
-                                            className="h-8 text-red-600 hover:text-red-700"
+                                            className="h-8 text-red-600 border-red-600 hover:text-red-700 hover:bg-red-50"
                                           >
-                                            <XCircle className="h-4 w-4" />
+                                            <XCircle className="h-4 w-4 mr-1" />
+                                            Reject
                                           </Button>
-                                        </>
+                                        </div>
                                       )}
+
+                                    {/* Show status for verified/rejected documents */}
+                                    {verification.status !== "pending" && (
+                                      <div className="flex items-center gap-2">
+                                        {verification.status === "verified" && (
+                                          <Badge
+                                            variant="default"
+                                            className="text-xs bg-green-100 text-green-800 border-green-200"
+                                          >
+                                            <CheckCircle className="h-3 w-3 mr-1" />
+                                            Verified
+                                          </Badge>
+                                        )}
+                                        {verification.status === "rejected" && (
+                                          <Badge
+                                            variant="destructive"
+                                            className="text-xs"
+                                          >
+                                            <XCircle className="h-3 w-3 mr-1" />
+                                            Rejected
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
                                   </>
                                 ) : (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setShowReuseDialog(true)}
-                                    className="h-8"
-                                  >
-                                    Link Existing
-                                  </Button>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setShowReuseDialog(true)}
+                                      className="h-8"
+                                    >
+                                      Link Existing
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setShowUploadDialog(true)}
+                                      className="h-8"
+                                    >
+                                      <Upload className="h-3 w-3 mr-1" />
+                                      Upload
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             </TableCell>
@@ -491,6 +680,22 @@ export default function CandidateDocumentVerificationPage() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Eligibility Requirements */}
+        {selectedProjectId && eligibilityData?.data && (
+          <EligibilityRequirements
+            eligibilityData={eligibilityData.data}
+            className="mt-6"
+          />
+        )}
+
+        {/* Matchmaking Process */}
+        {selectedProjectId && matchmakingData?.data && (
+          <MatchmakingProcess
+            matchmakingData={matchmakingData.data}
+            className="mt-6"
+          />
         )}
 
         {/* Document Reuse Dialog */}
@@ -548,6 +753,91 @@ export default function CandidateDocumentVerificationPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Document Upload Dialog */}
+        <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Upload New Document</DialogTitle>
+              <DialogDescription>
+                Upload a new document for this candidate and link it to the
+                current project.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Document Type</Label>
+                <Select value={uploadDocType} onValueChange={setUploadDocType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose document type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {requirements.map((req: any) => (
+                      <SelectItem key={req.id} value={req.docType}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{req.docType}</span>
+                          {req.mandatory && (
+                            <span className="text-xs text-red-600">
+                              Required
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">File</Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Supported formats: PDF, JPG, PNG, WEBP (max 10MB)
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowUploadDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUploadDocument}
+                disabled={
+                  !uploadFile || !uploadDocType || isUploading || isCreating
+                }
+              >
+                {isUploading || isCreating ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Upload Document
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* PDF Viewer */}
+        <PDFViewer
+          fileUrl={selectedDocument?.fileUrl || ""}
+          fileName={selectedDocument?.fileName || "Document"}
+          isOpen={isPDFViewerOpen}
+          onClose={() => {
+            setIsPDFViewerOpen(false);
+            setSelectedDocument(null);
+          }}
+          showDownload={true}
+          showZoomControls={true}
+          showRotationControls={true}
+          showFullscreenToggle={true}
+        />
       </div>
     </div>
   );

@@ -292,6 +292,25 @@ export const documentsApi = baseApi.injectEndpoints({
       providesTags: ["DocumentVerification"],
     }),
 
+    // Eligibility and Matchmaking APIs
+    getCandidateEligibility: builder.query<
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string; roleId: string }
+    >({
+      query: ({ candidateId, projectId, roleId }) =>
+        `/eligibility/candidate/${candidateId}/project/${projectId}/role/${roleId}`,
+      providesTags: ["Eligibility"],
+    }),
+
+    getMatchmakingProcess: builder.query<
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string }
+    >({
+      query: ({ candidateId, projectId }) =>
+        `/eligibility/candidate/${candidateId}/project/${projectId}/matchmaking`,
+      providesTags: ["Matchmaking"],
+    }),
+
     reuseDocument: builder.mutation<
       { success: boolean; data: any; message: string },
       { documentId: string; projectId: string }
@@ -331,6 +350,8 @@ export const {
   useGetVerificationCandidatesQuery,
   useGetCandidateProjectsQuery,
   useGetCandidateProjectRequirementsQuery,
+  useGetCandidateEligibilityQuery,
+  useGetMatchmakingProcessQuery,
   useReuseDocumentMutation,
   useCompleteVerificationMutation,
 } = documentsApi;

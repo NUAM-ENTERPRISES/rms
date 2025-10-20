@@ -72,20 +72,8 @@ export function PDFViewer({
       setError(null);
       setZoom(100);
       setRotation(0);
-
-      // Set a timeout to handle cases where PDF doesn't load
-      const timeout = setTimeout(() => {
-        if (isLoading) {
-          setError(
-            "PDF is taking too long to load. Please try again or check your connection."
-          );
-          setIsLoading(false);
-        }
-      }, 10000); // 10 second timeout
-
-      return () => clearTimeout(timeout);
     }
-  }, [fileUrl, isLoading]);
+  }, [fileUrl]);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -98,6 +86,17 @@ export function PDFViewer({
       "Failed to load PDF. The file may be corrupted or the URL is invalid."
     );
   };
+
+  // Fallback timeout for PDFs that don't trigger onLoad event
+  useEffect(() => {
+    if (fileUrl && isLoading) {
+      const fallbackTimeout = setTimeout(() => {
+        setIsLoading(false);
+      }, 3000); // 3 second fallback timeout
+
+      return () => clearTimeout(fallbackTimeout);
+    }
+  }, [fileUrl, isLoading]);
 
   const handleDownload = () => {
     // Open the PDF in a new tab for download

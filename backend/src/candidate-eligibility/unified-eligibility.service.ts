@@ -249,35 +249,42 @@ export class UnifiedEligibilityService {
         }
 
         // 3. Check aliases (90 points)
-        for (const alias of qualification.aliases) {
-          if (
-            qualName.includes(alias.alias.toLowerCase()) ||
-            alias.alias.toLowerCase().includes(qualName)
-          ) {
-            matchScore = 90;
-            matchFound = true;
-            break;
+        if (qualification.aliases && Array.isArray(qualification.aliases)) {
+          for (const alias of qualification.aliases) {
+            if (
+              qualName.includes(alias.alias.toLowerCase()) ||
+              alias.alias.toLowerCase().includes(qualName)
+            ) {
+              matchScore = 90;
+              matchFound = true;
+              break;
+            }
           }
         }
 
         if (matchFound) break;
 
         // 4. Check equivalencies (85 points)
-        for (const equiv of qualification.equivalencies) {
-          const equivName = equiv.toQualification.name.toLowerCase();
-          const equivShortName =
-            equiv.toQualification.shortName?.toLowerCase() || '';
+        if (
+          qualification.equivalencies &&
+          Array.isArray(qualification.equivalencies)
+        ) {
+          for (const equiv of qualification.equivalencies) {
+            const equivName = equiv.toQualification.name.toLowerCase();
+            const equivShortName =
+              equiv.toQualification.shortName?.toLowerCase() || '';
 
-          if (
-            qualName.includes(equivName) ||
-            equivName.includes(qualName) ||
-            (equivShortName &&
-              (qualName.includes(equivShortName) ||
-                equivShortName.includes(qualName)))
-          ) {
-            matchScore = 85;
-            matchFound = true;
-            break;
+            if (
+              qualName.includes(equivName) ||
+              equivName.includes(qualName) ||
+              (equivShortName &&
+                (qualName.includes(equivShortName) ||
+                  equivShortName.includes(qualName)))
+            ) {
+              matchScore = 85;
+              matchFound = true;
+              break;
+            }
           }
         }
 
@@ -716,6 +723,447 @@ export class UnifiedEligibilityService {
       roleNeeded,
       eligibility,
       timestamp: new Date(),
+    };
+  }
+
+  /**
+   * Get project with all requirements
+   */
+  async getProjectWithRequirements(projectId: string) {
+    return await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        rolesNeeded: {
+          include: {
+            educationRequirementsList: {
+              include: {
+                qualification: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get candidate with all related data
+   */
+  async getCandidateWithData(candidateId: string) {
+    return await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        qualifications: {
+          include: {
+            qualification: {
+              include: {
+                aliases: true,
+                equivalencies: {
+                  include: {
+                    toQualification: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        workExperiences: true,
+      },
+    });
+  }
+
+  /**
+   * Get detailed matchmaking analysis
+   */
+  async getMatchmakingAnalysis(candidate: any, project: any) {
+    const analysis = {
+      candidate: {
+        id: candidate.id,
+        name: `${candidate.firstName} ${candidate.lastName}`,
+        experience: candidate.experience,
+        qualifications: candidate.qualifications,
+        workExperiences: candidate.workExperiences,
+        skills: candidate.skills,
+        certifications: candidate.certifications,
+      },
+      project: {
+        id: project.id,
+        title: project.title,
+        rolesNeeded: project.rolesNeeded,
+      },
+      matchmakingSteps: [] as any[],
+      overallScore: 0,
+      isEligible: false,
+    };
+
+    // Analyze each role requirement
+    for (const role of project.rolesNeeded) {
+      const roleAnalysis = await this.analyzeRoleMatch(candidate, role);
+      analysis.matchmakingSteps.push(roleAnalysis);
+
+      if (roleAnalysis.isEligible) {
+        analysis.isEligible = true;
+        analysis.overallScore = Math.max(
+          analysis.overallScore,
+          roleAnalysis.score,
+        );
+      }
+    }
+
+    return analysis;
+  }
+
+  /**
+   * Analyze match for a specific role
+   */
+  private async analyzeRoleMatch(candidate: any, role: any) {
+    const steps: any[] = [];
+    let totalScore = 0;
+    let isEligible = true;
+
+    // Education analysis
+    const educationAnalysis = await this.analyzeEducationMatch(candidate, role);
+    steps.push(educationAnalysis);
+    totalScore += educationAnalysis.score * 0.35;
+    if (!educationAnalysis.isEligible) isEligible = false;
+
+    // Experience analysis
+    const experienceAnalysis = this.analyzeExperienceMatch(candidate, role);
+    steps.push(experienceAnalysis);
+    totalScore += experienceAnalysis.score * 0.3;
+    if (!experienceAnalysis.isEligible) isEligible = false;
+
+    // Skills analysis
+    const skillsAnalysis = this.analyzeSkillsMatch(candidate, role);
+    steps.push(skillsAnalysis);
+    totalScore += skillsAnalysis.score * 0.2;
+
+    // Certifications analysis
+    const certificationsAnalysis = this.analyzeCertificationsMatch(
+      candidate,
+      role,
+    );
+    steps.push(certificationsAnalysis);
+    totalScore += certificationsAnalysis.score * 0.1;
+
+    return {
+      role: {
+        id: role.id,
+        designation: role.designation,
+        minExperience: role.minExperience,
+        maxExperience: role.maxExperience,
+      },
+      steps,
+      score: totalScore,
+      isEligible,
+    };
+  }
+
+  private async analyzeEducationMatch(candidate: any, role: any) {
+    const candidateQualifications = candidate.qualifications || [];
+    const roleRequirements = role.educationRequirementsList || [];
+
+    if (roleRequirements.length === 0) {
+      return {
+        category: 'Education',
+        score: 50,
+        isEligible: true,
+        details: 'No specific education requirements',
+        requirements: [],
+        candidateQualifications: candidateQualifications,
+      };
+    }
+
+    let maxScore = 0;
+    let matchedRequirements: string[] = [];
+    let missingRequirements: string[] = [];
+
+    for (const req of roleRequirements) {
+      const qualification = req.qualification;
+      let matchScore = 0;
+      let matchFound = false;
+
+      // Check direct qualification match
+      for (const candidateQual of candidateQualifications) {
+        const qualName = candidateQual.qualification.name.toLowerCase();
+        const qualShortName =
+          candidateQual.qualification.shortName?.toLowerCase() || '';
+
+        // 1. Direct name match (100 points)
+        if (
+          qualName.includes(qualification.name.toLowerCase()) ||
+          qualification.name.toLowerCase().includes(qualName)
+        ) {
+          matchScore = 100;
+          matchFound = true;
+          break;
+        }
+
+        // 2. Short name match (95 points)
+        if (
+          qualShortName &&
+          (qualShortName.includes(
+            qualification.shortName?.toLowerCase() || '',
+          ) ||
+            (qualification.shortName &&
+              qualification.shortName.toLowerCase().includes(qualShortName)))
+        ) {
+          matchScore = 95;
+          matchFound = true;
+          break;
+        }
+
+        // 3. Check aliases (90 points)
+        if (qualification.aliases && Array.isArray(qualification.aliases)) {
+          for (const alias of qualification.aliases) {
+            if (
+              qualName.includes(alias.alias.toLowerCase()) ||
+              alias.alias.toLowerCase().includes(qualName)
+            ) {
+              matchScore = 90;
+              matchFound = true;
+              break;
+            }
+          }
+        }
+
+        if (matchFound) break;
+
+        // 4. Check equivalencies (85 points)
+        if (
+          qualification.equivalencies &&
+          Array.isArray(qualification.equivalencies)
+        ) {
+          for (const equiv of qualification.equivalencies) {
+            const equivName = equiv.toQualification.name.toLowerCase();
+            const equivShortName =
+              equiv.toQualification.shortName?.toLowerCase() || '';
+
+            if (
+              qualName.includes(equivName) ||
+              equivName.includes(qualName) ||
+              (equivShortName &&
+                (qualName.includes(equivShortName) ||
+                  equivShortName.includes(qualName)))
+            ) {
+              matchScore = 85;
+              matchFound = true;
+              break;
+            }
+          }
+        }
+
+        if (matchFound) break;
+
+        // 5. Heuristic matching (70 points)
+        if (this.heuristicEducationMatch(qualName, qualification)) {
+          matchScore = 70;
+          matchFound = true;
+          break;
+        }
+      }
+
+      if (matchFound) {
+        maxScore = Math.max(maxScore, matchScore);
+        matchedRequirements.push(qualification.name);
+      } else {
+        missingRequirements.push(qualification.name);
+      }
+    }
+
+    const isEligible = maxScore >= 70; // Threshold for eligibility
+    const details = isEligible
+      ? `Education match: ${matchedRequirements.join(', ')} (${maxScore}% match)`
+      : `Missing education requirements: ${missingRequirements.join(', ')}`;
+
+    return {
+      category: 'Education',
+      score: maxScore,
+      isEligible,
+      details,
+      requirements: roleRequirements,
+      candidateQualifications: candidateQualifications,
+    };
+  }
+
+  private analyzeExperienceMatch(candidate: any, role: any) {
+    // Calculate experience from work experiences if direct fields are not available
+    let candidateExp = candidate.totalExperience || candidate.experience || 0;
+
+    // If no direct experience, calculate from work experiences
+    if (
+      candidateExp === 0 &&
+      candidate.workExperiences &&
+      candidate.workExperiences.length > 0
+    ) {
+      candidateExp = this.calculateExperienceFromWorkHistory(
+        candidate.workExperiences,
+      );
+    }
+
+    const minExp = role.minExperience || 0;
+    const maxExp = role.maxExperience || 100;
+
+    let score = 0;
+    let isEligible = true;
+    let details = '';
+
+    if (candidateExp < minExp) {
+      isEligible = false;
+      score = Math.max(0, 100 - Math.abs(candidateExp - minExp) * 10);
+      details = `Insufficient experience: ${candidateExp} years (required: ${minExp}+)`;
+    } else if (candidateExp > maxExp) {
+      isEligible = false;
+      score = Math.max(0, 100 - Math.abs(candidateExp - maxExp) * 5);
+      details = `Overqualified: ${candidateExp} years (max: ${maxExp})`;
+    } else {
+      // Calculate score based on how close to optimal range
+      const optimalMin = minExp;
+      const optimalMax = Math.min(maxExp, minExp + 5); // Optimal range is min to min+5 years
+
+      if (candidateExp >= optimalMin && candidateExp <= optimalMax) {
+        score = 100;
+        details = `Perfect experience match: ${candidateExp} years`;
+      } else if (candidateExp >= minExp && candidateExp <= maxExp) {
+        score = 80;
+        details = `Good experience match: ${candidateExp} years`;
+      } else {
+        score = 60;
+        details = `Acceptable experience: ${candidateExp} years`;
+      }
+    }
+
+    return {
+      category: 'Experience',
+      score,
+      isEligible,
+      details,
+      candidateExperience: candidateExp,
+      requiredExperience: { min: minExp, max: maxExp },
+    };
+  }
+
+  private analyzeSkillsMatch(candidate: any, role: any) {
+    const candidateSkills = (candidate.skills as string[]) || [];
+    const roleSkills = (role.skills as string[]) || [];
+    const technicalSkills = (role.technicalSkills as string[]) || [];
+
+    const allRequiredSkills = [...roleSkills, ...technicalSkills];
+
+    // If no skills required, pass with default score
+    if (allRequiredSkills.length === 0) {
+      return {
+        category: 'Skills',
+        score: 50,
+        isEligible: true,
+        details: 'No specific skills requirements',
+        candidateSkills: candidateSkills,
+        requiredSkills: [],
+      };
+    }
+
+    const matchingSkills: string[] = [];
+    const missingSkills: string[] = [];
+    let totalScore = 0;
+
+    for (const requiredSkill of allRequiredSkills) {
+      let bestMatch = 0;
+
+      for (const candidateSkill of candidateSkills) {
+        const matchScore = this.calculateSkillMatch(
+          candidateSkill,
+          requiredSkill,
+        );
+        bestMatch = Math.max(bestMatch, matchScore);
+      }
+
+      if (bestMatch >= 60) {
+        // Liberal threshold
+        matchingSkills.push(requiredSkill);
+        totalScore += bestMatch;
+      } else {
+        missingSkills.push(requiredSkill);
+      }
+    }
+
+    const score =
+      allRequiredSkills.length > 0
+        ? Math.round(totalScore / allRequiredSkills.length)
+        : 50;
+
+    const isEligible = true; // Skills are not mandatory
+    const details =
+      matchingSkills.length > 0
+        ? `Matching skills: ${matchingSkills.join(', ')}`
+        : `Missing skills: ${missingSkills.join(', ')}`;
+
+    return {
+      category: 'Skills',
+      score,
+      isEligible,
+      details,
+      candidateSkills: candidateSkills,
+      requiredSkills: allRequiredSkills,
+    };
+  }
+
+  private analyzeCertificationsMatch(candidate: any, role: any) {
+    const candidateCertifications = candidate.certifications || [];
+    const requiredCertifications = role.certifications || [];
+
+    // If no certifications required, pass with default score
+    if (requiredCertifications.length === 0) {
+      return {
+        category: 'Certifications',
+        score: 50,
+        isEligible: true,
+        details: 'No specific certification requirements',
+        candidateCertifications: candidateCertifications,
+        requiredCertifications: [],
+      };
+    }
+
+    const matchingCertifications: string[] = [];
+    const missingCertifications: string[] = [];
+    let totalScore = 0;
+
+    for (const requiredCert of requiredCertifications) {
+      let bestMatch = 0;
+
+      for (const candidateCert of candidateCertifications) {
+        const matchScore = this.calculateSkillMatch(
+          candidateCert,
+          requiredCert,
+        );
+        bestMatch = Math.max(bestMatch, matchScore);
+      }
+
+      if (bestMatch >= 60) {
+        matchingCertifications.push(requiredCert);
+        totalScore += bestMatch;
+      } else {
+        missingCertifications.push(requiredCert);
+      }
+    }
+
+    const score =
+      requiredCertifications.length > 0
+        ? Math.round(totalScore / requiredCertifications.length)
+        : 50;
+
+    const isEligible = true; // Certifications are not mandatory
+    const details =
+      matchingCertifications.length > 0
+        ? `Matching certifications: ${matchingCertifications.join(', ')}`
+        : `Missing certifications: ${missingCertifications.join(', ')}`;
+
+    return {
+      category: 'Certifications',
+      score,
+      isEligible,
+      details,
+      candidateCertifications: candidateCertifications,
+      requiredCertifications: requiredCertifications,
     };
   }
 }

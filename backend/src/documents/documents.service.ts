@@ -862,6 +862,7 @@ export class DocumentsService {
             title: true,
             deadline: true,
             createdAt: true,
+            countryCode: true,
           },
         },
         recruiter: {

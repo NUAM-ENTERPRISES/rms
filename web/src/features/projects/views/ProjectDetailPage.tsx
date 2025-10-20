@@ -338,51 +338,50 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-              {project.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">{project.status}</Badge>
-              <span className="text-sm text-slate-500">
-                Created {formatDate(project.createdAt)}
-              </span>
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardContent>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-4">
+                  <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                    {project.title}
+                  </h1>
+                  <ProjectCountryCell
+                    countryCode={project.countryCode}
+                    size="3xl"
+                    fallbackText="Not specified"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {canManageProjects && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate(`/projects/${project.id}/edit`)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {canManageProjects && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/projects/${project.id}/edit`)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="xl:col-span-2 space-y-6">
             {/* Compact Project Overview */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  Project Overview
-                </CardTitle>
-              </CardHeader>
               <CardContent className="space-y-3">
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -436,13 +435,6 @@ export default function ProjectDetailPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="h-3 w-3 text-slate-400" />
-                    <span className="text-slate-600">Team:</span>
-                    <span className="font-medium text-slate-800">
-                      {project.team?.name || "Not assigned"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <MapPin className="h-3 w-3 text-slate-400" />
                     <span className="text-slate-600">Country:</span>
                     <div className="font-medium text-slate-800">
@@ -484,42 +476,12 @@ export default function ProjectDetailPage() {
                     {project.description}
                   </p>
                 )}
-
-                {/* Document Requirements */}
-                 {project.documentRequirements &&
-                   project.documentRequirements.length > 0 && (
-                     <div className="mt-4 pt-4 border-t border-slate-200">
-                       <h4 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                         <FileText className="h-4 w-4 text-blue-600" />
-                         Document Requirements
-                       </h4>
-                       <div className="flex flex-wrap gap-2">
-                         {project.documentRequirements.map(
-                           (req: any, index: number) => (
-                             <span
-                               key={index}
-                               className="text-sm text-slate-700 bg-slate-100 px-2 py-1 rounded-md"
-                             >
-                               {req.docType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                               {req.mandatory && " (Required)"}
-                             </span>
-                           )
-                         )}
-                       </div>
-                     </div>
-                   )}
               </CardContent>
             </Card>
 
             {/* Candidate Management Tabs - Full Width */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <UserCheck className="h-5 w-5 text-emerald-600" />
-                  Candidate Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="px-4">
                 <ProjectDetailTabs projectId={projectId!} />
               </CardContent>
             </Card>
@@ -527,33 +489,35 @@ export default function ProjectDetailPage() {
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Client Information */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-blue-600" />
-                  Client Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <h4 className="font-medium text-slate-800 text-sm">
-                    {project.client?.name || "No client assigned"}
-                  </h4>
-                  {project.client && (
-                    <Badge variant="outline" className="mt-1 text-xs">
-                      {project.client.type}
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-xs text-slate-500">
-                  <div className="flex items-center gap-2 mb-1">
-                    <MapPin className="h-3 w-3" />
-                    <span>San Francisco, CA</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Document Requirements */}
+            {project.documentRequirements &&
+              project.documentRequirements.length > 0 && (
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      Document Requirements
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {project.documentRequirements.map(
+                        (req: any, index: number) => (
+                          <span
+                            key={index}
+                            className="text-sm text-slate-700 bg-slate-100 px-2 py-1 rounded-md"
+                          >
+                            {req.docType
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
+                            {req.mandatory && " (Required)"}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             {/* Roles Required */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -699,6 +663,34 @@ export default function ProjectDetailPage() {
                     )}
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            {/* Client Information */}
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  Client Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <h4 className="font-medium text-slate-800 text-sm">
+                    {project.client?.name || "No client assigned"}
+                  </h4>
+                  {project.client && (
+                    <Badge variant="outline" className="mt-1 text-xs">
+                      {project.client.type}
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MapPin className="h-3 w-3" />
+                    <span>San Francisco, CA</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

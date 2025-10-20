@@ -28,6 +28,7 @@ import { OtpService } from './otp/otp.service';
 import { OtpModule } from './otp/otp.module';
 
 import { CandidateEligibilityModule } from './candidate-eligibility/candidate-eligibility.module';
+import { EligibilityModule } from './candidate-eligibility/eligibility.module';
 import { InterviewsModule } from './interviews/interviews.module';
 
 @Module({
@@ -52,6 +53,7 @@ import { InterviewsModule } from './interviews/interviews.module';
     UploadModule,
     NotificationsModule,
     CandidateAllocationModule,
+    EligibilityModule,
     OtpModule,
   ],
   controllers: [AppController],
