@@ -16,7 +16,7 @@ export class SendLoginOtpDto {
         description: 'Recipient phone number without the country code',
         example: '4155550123',
     })
-    @IsString({ message: 'Phone must be a string' })
-    @IsNotEmpty({ message: 'Phone number is required' })
-    phone: string;
+    @IsString({ message: 'mobileNumber must be a string' })
+    @IsNotEmpty({ message: 'mobileNumber is required' })
+    mobileNumber: string;
 }

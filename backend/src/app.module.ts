@@ -27,8 +27,9 @@ import { CandidateAllocationModule } from './candidate-allocation/candidate-allo
 import { OtpService } from './otp/otp.service';
 import { OtpModule } from './otp/otp.module';
 
-import { ¸ } from './candidate-eligibility/candidate-eligibility.module';
+import { CandidateEligibilityModule } from './candidate-eligibility/candidate-eligibility.module';
 import { InterviewsModule } from './interviews/interviews.module';
+import { MetaModule } from './meta/meta.module';
 
 
 @Module({
@@ -54,6 +55,7 @@ import { InterviewsModule } from './interviews/interviews.module';
     NotificationsModule,
     CandidateAllocationModule,
     OtpModule,
+    MetaModule,
 
   
   ],

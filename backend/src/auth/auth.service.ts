@@ -188,13 +188,13 @@ export class AuthService {
 
 
   async sendLoginOtp(sendLoginOtpDto: SendLoginOtpDto) {
-    const { countryCode, phone } = sendLoginOtpDto;
+    const { countryCode, mobileNumber } = sendLoginOtpDto;
     // Validate user exists
     const user = await (this.prisma as any).user.findUnique({
       where: {
-        countryCode_phone: {
+        countryCode_mobileNumber: {
           countryCode: countryCode,
-          phone: phone,
+          mobileNumber: mobileNumber,
         },
       },
     });
@@ -220,20 +220,20 @@ export class AuthService {
     });
 
     // Send OTP via MSG91
-    const smsSent = await this.otpService.sendOtp(countryCode, phone, otp);
+    const smsSent = await this.otpService.sendOtp(countryCode, mobileNumber, otp);
     if (!smsSent) throw new Error('Failed to send OTP SMS');
 
     return true;
   }
 
   async sendLoginWhatsappOtp(sendLoginOtpDto: SendLoginOtpDto) {
-    const { countryCode, phone } = sendLoginOtpDto;
+    const { countryCode, mobileNumber } = sendLoginOtpDto;
     // Validate user exists
     const user = await (this.prisma as any).user.findUnique({
       where: {
-        countryCode_phone: {
+        countryCode_mobileNumber: {
           countryCode: countryCode,
-          phone: phone,
+          mobileNumber: mobileNumber,
         },
       },
     });
@@ -259,20 +259,20 @@ export class AuthService {
     });
 
     // Send OTP via MSG91 WhatsApp
-    const whatsappSent = await this.otpService.sendWhatsappOtp(countryCode, phone, otp);
+    const whatsappSent = await this.otpService.sendWhatsappOtp(countryCode, mobileNumber, otp);
     if (!whatsappSent) throw new Error('Failed to send OTP via WhatsApp');
 
     return true;
   }
 
   async verifyOtp(verifyOtpDto: VerifyOtpDto) {
-    const { countryCode, phone, otp } = verifyOtpDto;
+    const { countryCode, mobileNumber, otp } = verifyOtpDto;
     // Find user by country code and phone
     const user = await (this.prisma as any).user.findUnique({
       where: {
-        countryCode_phone: {
+        countryCode_mobileNumber: {
           countryCode,
-          phone,
+          mobileNumber,
         },
       },
     });
@@ -437,6 +437,101 @@ export class AuthService {
         where: { userId: familyIdOrUserId },
         data: { revokedAt: new Date() },
       });
+    }
+  }
+
+  async mobileRotate(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Missing refresh token');
+    }
+
+    // Find the refresh token by value (hash)
+    const tokens = await (this.prisma as any).refreshToken.findMany({
+      where: { 
+        revokedAt: null,
+        expiresAt: { gt: new Date() } 
+      },
+      include: {
+        user: {
+          include: {
+            userRoles: {
+              include: {
+                role: {
+                  include: {
+                    rolePermissions: {
+                      include: {
+                        permission: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            userTeams: true,
+          },
+        },
+      },
+    });
+
+    // Find the matching token by verifying the hash
+    let matchedToken: any = null;
+    for (const token of tokens) {
+      try {
+        const isMatch = await argon2.verify(token.hash, refreshToken);
+        if (isMatch) {
+          matchedToken = token;
+          break;
+        }
+      } catch (error) {
+        // Continue checking other tokens
+        continue;
+      }
+    }
+
+    if (!matchedToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // Rotate the token
+    const next = await this.rotateInTx(matchedToken);
+
+    const accessToken = this.issueAccess({
+      id: matchedToken.userId,
+      email: matchedToken.user.email,
+    });
+
+    return {
+      accessToken,
+      user: this.toUserDTO(matchedToken.user),
+      next,
+    };
+  }
+
+  async revokeFamilyByToken(refreshToken: string) {
+    if (!refreshToken) return;
+
+    // Find the refresh token by value (hash)
+    const tokens = await (this.prisma as any).refreshToken.findMany({
+      where: { revokedAt: null },
+    });
+
+    // Find the matching token by verifying the hash
+    let matchedToken: any = null;
+    for (const token of tokens) {
+      try {
+        const isMatch = await argon2.verify(token.hash, refreshToken);
+        if (isMatch) {
+          matchedToken = token;
+          break;
+        }
+      } catch (error) {
+        // Continue checking other tokens
+        continue;
+      }
+    }
+
+    if (matchedToken) {
+      await this.revokeFamily(matchedToken.familyId);
     }
   }
 

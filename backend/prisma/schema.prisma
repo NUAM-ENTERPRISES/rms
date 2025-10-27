@@ -28,8 +28,7 @@ model User {
   email                     String                @unique
   name                      String
   password                  String
-  dateOfBirth               DateTime?
-  phone                     String
+  dateOfBirth               DateTime?             
   otp                       String?
   otpExpiresAt              DateTime?
   createdAt                 DateTime              @default(now())

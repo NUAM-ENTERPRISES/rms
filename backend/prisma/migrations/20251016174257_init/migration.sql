@@ -45,6 +45,8 @@ CREATE TABLE "users" (
     "name" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "dateOfBirth" TIMESTAMP(3),
+    "otp" TEXT,
+    "otpExpiresAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "countryCode" TEXT NOT NULL,
@@ -176,6 +178,7 @@ CREATE TABLE "projects" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "priority" TEXT NOT NULL DEFAULT 'medium',
     "countryCode" TEXT,
+    "projectType" TEXT NOT NULL DEFAULT 'private',
 
     CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
 );
@@ -208,6 +211,9 @@ CREATE TABLE "roles_needed" (
     "salaryRange" JSONB,
     "shiftType" TEXT,
     "specificExperience" JSONB,
+    "employmentType" TEXT NOT NULL DEFAULT 'permanent',
+    "contractDurationYears" INTEGER,
+    "genderRequirement" TEXT NOT NULL DEFAULT 'all',
     "technicalSkills" JSONB,
 
     CONSTRAINT "roles_needed_pkey" PRIMARY KEY ("id")
@@ -342,7 +348,8 @@ CREATE TABLE "interviews" (
     "interviewer" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "candidateProjectMapId" TEXT NOT NULL,
+    "candidateProjectMapId" TEXT,
+    "projectId" TEXT,
     "interviewerEmail" TEXT,
     "meetingLink" TEXT,
     "mode" TEXT DEFAULT 'video',
@@ -717,6 +724,9 @@ CREATE INDEX "documents_status_idx" ON "documents"("status");
 CREATE INDEX "interviews_candidateProjectMapId_idx" ON "interviews"("candidateProjectMapId");
 
 -- CreateIndex
+CREATE INDEX "interviews_projectId_idx" ON "interviews"("projectId");
+
+-- CreateIndex
 CREATE INDEX "interviews_scheduledTime_idx" ON "interviews"("scheduledTime");
 
 -- CreateIndex
@@ -906,10 +916,16 @@ ALTER TABLE "candidate_project_map" ADD CONSTRAINT "candidate_project_map_projec
 ALTER TABLE "candidate_project_map" ADD CONSTRAINT "candidate_project_map_roleNeededId_fkey" FOREIGN KEY ("roleNeededId") REFERENCES "roles_needed"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "candidate_project_map" ADD CONSTRAINT "candidate_project_map_recruiterId_fkey" FOREIGN KEY ("recruiterId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "documents" ADD CONSTRAINT "documents_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "candidates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "interviews" ADD CONSTRAINT "interviews_candidateProjectMapId_fkey" FOREIGN KEY ("candidateProjectMapId") REFERENCES "candidate_project_map"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "interviews" ADD CONSTRAINT "interviews_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "processing" ADD CONSTRAINT "processing_candidateProjectMapId_fkey" FOREIGN KEY ("candidateProjectMapId") REFERENCES "candidate_project_map"("id") ON DELETE CASCADE ON UPDATE CASCADE;

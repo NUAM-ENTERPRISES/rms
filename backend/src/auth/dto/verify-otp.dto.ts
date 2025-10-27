@@ -14,9 +14,9 @@ export class VerifyOtpDto {
         description: 'Recipient phone number without the country code',
         example: '4155550123',
     })
-    @IsString({ message: 'Phone must be a string' })
-    @IsNotEmpty({ message: 'Phone number is required' })
-    phone: string;
+    @IsString({ message: 'Mobile number must be a string' })
+    @IsNotEmpty({ message: 'Mobile number is required' })
+    mobileNumber: string;
 
     @ApiProperty({
         description: 'One-time password (OTP) sent to the user',
