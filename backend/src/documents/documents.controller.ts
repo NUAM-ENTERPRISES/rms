@@ -290,4 +290,160 @@ export class DocumentsController {
       message: 'Resubmission request sent successfully',
     };
   }
+
+  // ==================== ENHANCED DOCUMENT VERIFICATION ====================
+
+  @Get('candidates/:candidateId/projects')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get candidate projects for document verification',
+    description:
+      'Retrieve all projects where a candidate is nominated for document verification.',
+  })
+  @ApiParam({
+    name: 'candidateId',
+    description: 'Candidate ID',
+    example: 'cand_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate projects retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate not found',
+  })
+  async getCandidateProjects(@Param('candidateId') candidateId: string) {
+    const result =
+      await this.documentsService.getCandidateProjects(candidateId);
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate projects retrieved successfully',
+    };
+  }
+
+  @Get('candidates/:candidateId/projects/:projectId/requirements')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get project document requirements for candidate',
+    description:
+      'Retrieve document requirements and verification status for a specific candidate-project.',
+  })
+  @ApiParam({
+    name: 'candidateId',
+    description: 'Candidate ID',
+    example: 'cand_123abc',
+  })
+  @ApiParam({
+    name: 'projectId',
+    description: 'Project ID',
+    example: 'proj_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Project requirements retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or project not found',
+  })
+  async getCandidateProjectRequirements(
+    @Param('candidateId') candidateId: string,
+    @Param('projectId') projectId: string,
+  ) {
+    const result = await this.documentsService.getCandidateProjectRequirements(
+      candidateId,
+      projectId,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Project requirements retrieved successfully',
+    };
+  }
+
+  @Post(':documentId/reuse')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Reuse existing document for project',
+    description: 'Link an existing document to a new project for verification.',
+  })
+  @ApiParam({
+    name: 'documentId',
+    description: 'Document ID',
+    example: 'doc_123abc',
+  })
+  @ApiParam({
+    name: 'projectId',
+    description: 'Project ID',
+    example: 'proj_123abc',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Document linked to project successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document or project not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Document already linked to this project',
+  })
+  async reuseDocument(
+    @Param('documentId') documentId: string,
+    @Body() body: { projectId: string },
+    @Request() req,
+  ) {
+    const result = await this.documentsService.reuseDocument(
+      documentId,
+      body.projectId,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document linked to project successfully',
+    };
+  }
+
+  @Post('complete-verification')
+  @Permissions('verify:documents')
+  @ApiOperation({
+    summary: 'Complete document verification for candidate-project',
+    description:
+      'Mark all document verification as complete for a candidate-project.',
+  })
+  @ApiParam({
+    name: 'candidateProjectMapId',
+    description: 'Candidate Project Map ID',
+    example: 'cpm_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document verification completed successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate project mapping not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Not all required documents are verified',
+  })
+  async completeVerification(
+    @Body() body: { candidateProjectMapId: string },
+    @Request() req,
+  ) {
+    const result = await this.documentsService.completeVerification(
+      body.candidateProjectMapId,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document verification completed successfully',
+    };
+  }
 }

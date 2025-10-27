@@ -53,6 +53,15 @@ export const projectFormSchema = z.object({
       })
     )
     .min(1, "At least one role is required"),
+  documentRequirements: z
+    .array(
+      z.object({
+        docType: z.string().min(1, "Document type is required"),
+        mandatory: z.boolean().default(true),
+        description: z.string().optional(),
+      })
+    )
+    .min(1, "At least one document requirement is mandatory"),
 });
 
 // Type inference from schema
@@ -73,6 +82,13 @@ export const defaultProjectValues = {
       relocationAssistance: false,
       employmentType: "permanent" as const,
       genderRequirement: "all" as const,
+    },
+  ],
+  documentRequirements: [
+    {
+      docType: "resume",
+      mandatory: true,
+      description: "Updated resume/CV",
     },
   ],
 };

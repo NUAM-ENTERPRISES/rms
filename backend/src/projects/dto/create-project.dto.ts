@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EducationRequirementDto } from './education-requirement.dto';
+import { CreateDocumentRequirementDto } from './document-requirement.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoleNeededDto {
@@ -319,4 +320,14 @@ export class CreateProjectDto {
   @ValidateNested({ each: true })
   @Type(() => CreateRoleNeededDto)
   rolesNeeded?: CreateRoleNeededDto[];
+
+  @ApiPropertyOptional({
+    description: 'Document requirements for this project',
+    type: [CreateDocumentRequirementDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateDocumentRequirementDto)
+  documentRequirements?: CreateDocumentRequirementDto[];
 }

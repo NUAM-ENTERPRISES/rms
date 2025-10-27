@@ -547,18 +547,6 @@ export default function ProfilePage() {
                         </div>
                         <Button variant="outline">Enable</Button>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Globe className="h-5 w-5 text-slate-600" />
-                          <div>
-                            <p className="font-medium">Login Sessions</p>
-                            <p className="text-sm text-slate-600">
-                              Manage active sessions
-                            </p>
-                          </div>
-                        </div>
-                        <Button variant="outline">View</Button>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>

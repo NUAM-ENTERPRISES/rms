@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { SystemConfigResponse } from './dto/system-config.dto';
+import { DOCUMENT_TYPE_META } from '../common/constants/document-types';
 
 @Injectable()
 export class SystemService {
@@ -44,17 +45,22 @@ export class SystemService {
 
     // Get system constants
     const constants = {
-      documentTypes: {
-        PASSPORT: { displayName: 'Passport', category: 'identity' },
-        AADHAAR: { displayName: 'Aadhaar Card', category: 'identity' },
-        PAN_CARD: { displayName: 'PAN Card', category: 'identity' },
-        // Add more as needed
-      },
+      documentTypes: DOCUMENT_TYPE_META,
       candidateStatuses: {
         APPLIED: { displayName: 'Applied', color: 'blue' },
         SHORTLISTED: { displayName: 'Shortlisted', color: 'green' },
         REJECTED: { displayName: 'Rejected', color: 'red' },
-        // Add more as needed
+        NOMINATED: { displayName: 'Nominated', color: 'orange' },
+        VERIFICATION_IN_PROGRESS: {
+          displayName: 'Verification in Progress',
+          color: 'yellow',
+        },
+        DOCUMENTS_VERIFIED: {
+          displayName: 'Documents Verified',
+          color: 'green',
+        },
+        REJECTED_DOCUMENTS: { displayName: 'Documents Rejected', color: 'red' },
+        PENDING_DOCUMENTS: { displayName: 'Pending Documents', color: 'gray' },
       },
     };
 

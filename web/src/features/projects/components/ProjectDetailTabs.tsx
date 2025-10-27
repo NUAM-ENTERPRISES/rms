@@ -52,6 +52,7 @@ export default function ProjectDetailTabs({
               "Manager",
               "Team Head",
               "Team Lead",
+              "Recruiter",
               "Documentation Executive",
               "Processing Executive",
             ]}
@@ -65,6 +66,7 @@ export default function ProjectDetailTabs({
               "Manager",
               "Team Head",
               "Team Lead",
+              "Recruiter",
               "Documentation Executive",
             ]}
           >
@@ -97,6 +99,7 @@ export default function ProjectDetailTabs({
             "Manager",
             "Team Head",
             "Team Lead",
+            "Recruiter",
             "Documentation Executive",
             "Processing Executive",
           ]}

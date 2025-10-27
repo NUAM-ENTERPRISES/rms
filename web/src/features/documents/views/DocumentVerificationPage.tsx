@@ -31,7 +31,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label as FormLabel } from "@/components/ui/label";
 import {
   Search,
-  Eye,
   CheckCircle,
   XCircle,
   Clock,
@@ -42,6 +41,7 @@ import { useGetVerificationCandidatesQuery } from "@/features/documents";
 import { useCan } from "@/hooks/useCan";
 import { Can } from "@/components/auth/Can";
 import { toast } from "sonner";
+import VerificationActionsMenu from "../components/VerificationActionsMenu";
 
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
@@ -174,11 +174,6 @@ export default function DocumentVerificationPage() {
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Can anyOf={["write:documents"]}>
-              <Button size="sm" onClick={() => navigate("/documents/upload")}>
-                Upload
-              </Button>
-            </Can>
           </div>
         </div>
 
@@ -361,10 +356,17 @@ export default function DocumentVerificationPage() {
                             {candidateProject.candidate.firstName.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">
+                            <button
+                              onClick={() =>
+                                navigate(
+                                  `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
+                                )
+                              }
+                              className="font-medium text-slate-900 hover:text-blue-600 hover:underline cursor-pointer text-left"
+                            >
                               {candidateProject.candidate.firstName}{" "}
                               {candidateProject.candidate.lastName}
-                            </p>
+                            </button>
                             <p className="text-xs text-slate-500">
                               {candidateProject.candidate.email}
                             </p>
@@ -411,47 +413,10 @@ export default function DocumentVerificationPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              navigate(
-                                `/candidates/${candidateProject.candidate.id}`
-                              )
-                            }
-                            className="h-8 w-8 p-0 text-slate-600 hover:text-slate-900"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Can anyOf={["verify:documents"]}>
-                            {candidateProject.status ===
-                              "documents_submitted" && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleVerifyCandidate(candidateProject)
-                                  }
-                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleRejectCandidate(candidateProject)
-                                  }
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </Can>
-                        </div>
+                        <VerificationActionsMenu
+                          candidateProject={candidateProject}
+                          onReject={handleRejectCandidate}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

@@ -203,151 +203,118 @@ export default function RecruiterCandidatesTab({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>My Assigned Candidates</CardTitle>
-          <CardDescription>
-            Candidates assigned to you for this project via round-robin
-            allocation
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search candidates..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="nominated">Nominated</SelectItem>
-                <SelectItem value="verification_in_progress">
-                  In Verification
-                </SelectItem>
-                <SelectItem value="documents_verified">Verified</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search candidates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="nominated">Nominated</SelectItem>
+            <SelectItem value="verification_in_progress">
+              In Verification
+            </SelectItem>
+            <SelectItem value="documents_verified">Verified</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-          {filteredCandidates.length === 0 ? (
-            <div className="text-center py-8">
-              <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No Candidates Assigned
-              </h3>
-              <p className="text-gray-600">
-                You don't have any candidates assigned to this project yet.
-              </p>
-            </div>
-          ) : (
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Candidate</TableHead>
-                    <TableHead>Match Score</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCandidates.map((candidate) => (
-                    <TableRow key={candidate.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                            {candidate.candidate.firstName
-                              ?.charAt(0)
-                              .toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {candidate.candidate.firstName}{" "}
-                              {candidate.candidate.lastName}
+      {filteredCandidates.length === 0 ? (
+        <div className="text-center py-8">
+          <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No Candidates Assigned
+          </h3>
+          <p className="text-gray-600">
+            You don't have any candidates assigned to this project yet.
+          </p>
+        </div>
+      ) : (
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Candidate</TableHead>
+                <TableHead>Match Score</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCandidates.map((candidate) => (
+                <TableRow key={candidate.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                        {candidate.candidate.firstName
+                          ?.charAt(0)
+                          .toUpperCase() || "?"}
+                      </div>
+                      <div>
+                        <button
+                          onClick={() =>
+                            handleViewCandidate(candidate.candidateId)
+                          }
+                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer text-left"
+                        >
+                          {candidate.candidate.firstName}{" "}
+                          {candidate.candidate.lastName}
+                        </button>
+                        <div className="text-sm text-gray-500 flex items-center gap-2">
+                          {candidate.candidate.email && (
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {candidate.candidate.email}
                             </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-2">
-                              {candidate.candidate.email && (
-                                <div className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {candidate.candidate.email}
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {candidate.candidate.countryCode}{" "}
-                                {candidate.candidate.mobileNumber}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <MatchScoreBadge score={candidate.matchScore || 0} />
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={candidate.status} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-gray-600">
-                          {format(
-                            new Date(candidate.assignedAt),
-                            "dd MMM yyyy"
                           )}
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {candidate.candidate.countryCode}{" "}
+                            {candidate.candidate.mobileNumber}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleViewCandidate(candidate.candidateId)
-                              }
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            {candidate.status === "nominated" && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleSendForVerification(
-                                      candidate.candidateId
-                                    )
-                                  }
-                                  disabled={isSending}
-                                >
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Send for Verification
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <MatchScoreBadge score={candidate.matchScore || 0} />
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={candidate.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {candidate.status === "nominated" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleSendForVerification(candidate.candidateId)
+                          }
+                          disabled={isSending}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send for Verification
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

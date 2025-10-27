@@ -76,6 +76,9 @@ const DocumentUploadPage = lazy(
 const DocumentVerificationPage = lazy(
   () => import("@/features/documents/views/DocumentVerificationPage")
 );
+const CandidateDocumentVerificationPage = lazy(
+  () => import("@/features/documents/views/CandidateDocumentVerificationPage")
+);
 
 const UsersPage = lazy(() => import("@/features/admin/views/UsersPage"));
 const UserDetailPage = lazy(
@@ -421,6 +424,18 @@ function App() {
                       <ProtectedRoute permissions={["read:documents"]}>
                         <AppLayout>
                           <DocumentVerificationPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    </RouteErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/candidates/:candidateId/documents/:projectId"
+                  element={
+                    <RouteErrorBoundary>
+                      <ProtectedRoute permissions={["verify:documents"]}>
+                        <AppLayout>
+                          <CandidateDocumentVerificationPage />
                         </AppLayout>
                       </ProtectedRoute>
                     </RouteErrorBoundary>

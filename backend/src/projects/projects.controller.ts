@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Put,
   Query,
   Request,
   HttpCode,
@@ -717,6 +718,186 @@ export class ProjectsController {
       success: true,
       data: result,
       message: 'Candidate sent for verification successfully',
+    };
+  }
+
+  // ==================== DOCUMENT REQUIREMENTS ====================
+
+  @Get(':id/document-requirements')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get project document requirements',
+    description: 'Retrieve all document requirements for a specific project.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiResponse({
+    status: 200,
+    description: 'Document requirements retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async getDocumentRequirements(@Param('id') projectId: string) {
+    const result =
+      await this.projectsService.getDocumentRequirements(projectId);
+    return {
+      success: true,
+      data: result,
+      message: 'Document requirements retrieved successfully',
+    };
+  }
+
+  @Post(':id/document-requirements')
+  @Permissions('manage:projects')
+  @ApiOperation({
+    summary: 'Add document requirement to project',
+    description: 'Add a new document requirement to a project.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiResponse({
+    status: 201,
+    description: 'Document requirement added successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Document requirement already exists for this project',
+  })
+  async addDocumentRequirement(
+    @Param('id') projectId: string,
+    @Body() dto: any, // Will create proper DTO
+    @Request() req,
+  ) {
+    const result = await this.projectsService.addDocumentRequirement(
+      projectId,
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document requirement added successfully',
+    };
+  }
+
+  @Put(':id/document-requirements/:reqId')
+  @Permissions('manage:projects')
+  @ApiOperation({
+    summary: 'Update document requirement',
+    description: 'Update an existing document requirement.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiParam({
+    name: 'reqId',
+    description: 'Document Requirement ID',
+    example: 'req_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document requirement updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project or document requirement not found',
+  })
+  async updateDocumentRequirement(
+    @Param('id') projectId: string,
+    @Param('reqId') reqId: string,
+    @Body() dto: any, // Will create proper DTO
+    @Request() req,
+  ) {
+    const result = await this.projectsService.updateDocumentRequirement(
+      projectId,
+      reqId,
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document requirement updated successfully',
+    };
+  }
+
+  @Delete(':id/document-requirements/:reqId')
+  @Permissions('manage:projects')
+  @ApiOperation({
+    summary: 'Remove document requirement',
+    description: 'Remove a document requirement from a project.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiParam({
+    name: 'reqId',
+    description: 'Document Requirement ID',
+    example: 'req_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document requirement removed successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project or document requirement not found',
+  })
+  async removeDocumentRequirement(
+    @Param('id') projectId: string,
+    @Param('reqId') reqId: string,
+    @Request() req,
+  ) {
+    const result = await this.projectsService.removeDocumentRequirement(
+      projectId,
+      reqId,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document requirement removed successfully',
+    };
+  }
+
+  @Post(':id/candidates/:candidateId/complete-verification')
+  @Permissions('verify:documents')
+  @ApiOperation({
+    summary: 'Complete document verification',
+    description: 'Mark candidate as having completed document verification.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiParam({
+    name: 'candidateId',
+    description: 'Candidate ID',
+    example: 'cand_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document verification completed successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or project not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Not all required documents are verified',
+  })
+  async completeVerification(
+    @Param('id') projectId: string,
+    @Param('candidateId') candidateId: string,
+    @Request() req,
+  ) {
+    const result = await this.projectsService.completeVerification(
+      projectId,
+      candidateId,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document verification completed successfully',
     };
   }
 }
