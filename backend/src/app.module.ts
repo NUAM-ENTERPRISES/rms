@@ -59,6 +59,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     EligibilityModule,
     OtpModule,
     InterviewsModule,
+    InterviewsModule,
     MetaModule,
   ],
   controllers: [AppController],
