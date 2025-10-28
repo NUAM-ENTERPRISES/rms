@@ -56,9 +56,8 @@ import { MetaModule } from './meta/meta.module';
     CandidateAllocationModule,
     EligibilityModule,
     OtpModule,
+    InterviewsModule,
     MetaModule,
-
-  
   ],
   controllers: [AppController],
   providers: [

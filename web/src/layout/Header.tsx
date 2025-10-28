@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export default function Header({ onMobileMenuToggle }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-[#0D0E10] overflow-hidden py-1">
+    <header className="sticky top-0 z-50 w-full border-b bg-[#051027] overflow-hidden py-1">
       {/* Background Texture & Vignette */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"></div>
       <div

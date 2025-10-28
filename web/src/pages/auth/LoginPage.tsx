@@ -53,7 +53,7 @@ function RmsRightPanel({
     <div
       className={`hidden lg:flex flex-1 items-center justify-center p-8 relative z-10 ${className}`}
     >
-      <div className="bg-[#0D0E10] rounded-[28px] overflow-hidden relative w-full h-full">
+      <div className="bg-[#040f27] rounded-[28px] overflow-hidden relative w-full h-full">
         {/* Background Texture & Vignette */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"></div>
         <div
