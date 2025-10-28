@@ -24,7 +24,42 @@ This document tracks all **development items** completed in the Affiniks RMS pro
 
 ## ✅ **COMPLETED DEVELOPMENT ITEMS**
 
-### **🔄 1. Recent Updates (January 8, 2025)**
+### **🔄 1. Recent Updates (January 15, 2025)**
+
+#### **1.1 Database Schema Updates**
+
+- **Status**: ✅ **COMPLETED**
+- **Date**: January 15, 2025
+- **Priority**: 🔴 **HIGH**
+- **Files**:
+  - `backend/prisma/schema.prisma`
+  - `backend/prisma/migrations/20250115120000_add_candidate_qualifications/migration.sql`
+  - `docs/DATABASE_SCHEMA.md`
+- **Features**:
+  - Added CandidateQualification model for tracking candidate qualifications
+  - Updated User and Candidate models to use `mobileNumber` instead of `phone`
+  - Enhanced contact field structure with separate `countryCode` and `mobileNumber`
+  - Updated database documentation with latest schema changes
+  - Added comprehensive migration history tracking
+
+#### **1.2 Contact Field Standardization**
+
+- **Status**: ✅ **COMPLETED**
+- **Date**: January 15, 2025
+- **Priority**: 🔴 **HIGH**
+- **Files**:
+  - `backend/prisma/migrations/20251014155203_update_candidate_contact_fields/migration.sql`
+  - `backend/prisma/migrations/20251014155559_rename_phone_to_mobile_number/migration.sql`
+  - `backend/prisma/migrations/20251014160000_rename_phone_to_mobile_number_user/migration.sql`
+- **Features**:
+  - Standardized contact fields across User and Candidate models
+  - Separated country code from mobile number for better normalization
+  - Updated unique constraints to use `countryCode + mobileNumber` combination
+  - Maintained data integrity during field migration
+
+---
+
+### **🔄 2. Previous Updates (January 8, 2025)**
 
 #### **1.1 Enhanced Team Management**
 
@@ -646,6 +681,8 @@ This document tracks all **development items** completed in the Affiniks RMS pro
 
 | **Date**       | **Update**                              | **Description**                                                                                                                                                               |
 | -------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2025-01-15** | **Database Schema Updates**             | Added CandidateQualification model, standardized contact fields (mobileNumber), updated database documentation with latest schema changes and migration history               |
+| **2025-01-15** | **Contact Field Standardization**       | Migrated from single contact field to separate countryCode + mobileNumber fields across User and Candidate models for better normalization and data integrity                 |
 | **2025-09-30** | **Document Verification Workflow v2.0** | Complete workflow implementation: nomination → document verification → approval → interview → selection → processing → hiring. Added 2 new models, enhanced 4 existing models |
 | **2025-09-30** | **Documents Module Complete**           | Full CRUD + verification workflow, resubmission requests, per-project verification, document reusability, auto-status updates, 35+ document types with validation             |
 | **2025-09-30** | **Workflow Constants & State Machine**  | Created comprehensive constants (statuses, document-types, permissions) with 17-state workflow state machine, validation helpers, and UI metadata for frontend                |

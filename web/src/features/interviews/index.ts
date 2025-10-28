@@ -1,5 +1,2 @@
-// Barrel exports for interviews feature
+export { default as InterviewsPage } from "./views/InterviewsPage";
 export * from "./api";
-export * from "./hooks";
-export * from "./types";
-export * from "./views";

@@ -28,14 +28,15 @@ model User {
   email                     String                @unique
   name                      String
   password                  String
-  dateOfBirth               DateTime?
-  phone                     String
+  dateOfBirth               DateTime?             
+  otp                       String?
+  otpExpiresAt              DateTime?
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt
   countryCode               String
   profileImage              String?
+  mobileNumber              String
   auditLogs                 AuditLog[]
-  assignedCandidates        Candidate[]           @relation("CandidateRecruiter")
   notifications             Notification[]
   createdProjects           Project[]             @relation("ProjectCreator")
   refreshTokens             RefreshToken[]
@@ -44,10 +45,14 @@ model User {
   transferRequestsReceived  TeamTransferRequest[] @relation("TransferUser")
   userRoles                 UserRole[]
   userTeams                 UserTeam[]
+  candidateProjectMaps      CandidateProjectMap[]
+  candidateRecruiterAssignments CandidateRecruiterAssignment[]
+  assignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("AssignedByUser")
+  unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
 
-  @@unique([countryCode, phone])
+  @@unique([countryCode, mobileNumber])
   @@index([email])
-  @@index([countryCode, phone])
+  @@index([countryCode, mobileNumber])
   @@index([createdAt])
   @@map("users")
 }
@@ -191,8 +196,13 @@ model Project {
   updatedAt            DateTime              @updatedAt
   priority             String                @default("medium")
   countryCode          String?
+  projectType          String                @default("private") // "private" or "ministry"
+  resumeEditable       Boolean               @default(true) // Whether resume can be edited according to requirements
+  groomingRequired     String                @default("formal") // "formal", "casual", "not_specified"
+  hideContactInfo      Boolean               @default(true) // Hide email and mobile in resume for private projects
   candidateProjects    CandidateProjectMap[]
   documentRequirements DocumentRequirement[]
+  interviews           Interview[]
   client               Client?               @relation(fields: [clientId], references: [id])
   country              Country?              @relation(fields: [countryCode], references: [code])
   creator              User                  @relation("ProjectCreator", fields: [createdBy], references: [id])
@@ -229,28 +239,37 @@ model RoleNeeded {
   salaryRange               Json?
   shiftType                 String?
   specificExperience        Json?
+  employmentType            String                           @default("permanent") // "contract" or "permanent"
+  contractDurationYears     Int?                             // Only applicable if employmentType is "contract"
+  genderRequirement         String                           @default("all") // "female", "male", or "all"
   technicalSkills           Json?
+  visaType                  String                           @default("contract") // "contract", "permanent", "work_permit", "student"
+  requiredSkills            Json                             @default("[]") // Array of required skills
+  candidateStates           Json                             @default("[]") // Array of allowed states for candidates
+  candidateReligions        Json                             @default("[]") // Array of allowed religions for candidates
+  minHeight                 Float?                           // Minimum height in cm
+  maxHeight                 Float?                           // Maximum height in cm
+  minWeight                 Float?                           // Minimum weight in kg
+  maxWeight                 Float?                           // Maximum weight in kg
+  candidateAllocations      CandidateProjectMap[]
   educationRequirementsList RoleNeededEducationRequirement[]
-  candidateAllocations      CandidateProjectMap[]            // NEW: candidate allocations for this role
   project                   Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("roles_needed")
 }
 
 model Candidate {
-  id               String                @id @default(cuid())
-  contact          String                @unique
+  id               String                   @id @default(cuid())
   email            String?
-  source           String                @default("manual")
+  source           String                   @default("manual")
   dateOfBirth      DateTime
-  currentStatus    String                @default("new")
+  currentStatus    String                   @default("untouched")
   experience       Int?
-  skills           Json                  @default("[]")
+  skills           Json                     @default("[]")
   currentEmployer  String?
   expectedSalary   Int?
-  assignedTo       String?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
   teamId           String?
   profileImage     String?
   currentRole      String?
@@ -262,17 +281,21 @@ model Candidate {
   lastName         String
   totalExperience  Int?
   university       String?
+  countryCode      String
+  mobileNumber     String
   projects         CandidateProjectMap[]
-  recruiter        User?                 @relation("CandidateRecruiter", fields: [assignedTo], references: [id])
-  team             Team?                 @relation(fields: [teamId], references: [id])
+  qualifications   CandidateQualification[]
+  team             Team?                    @relation(fields: [teamId], references: [id])
   certifications   Certification[]
   documents        Document[]
   talentPool       TalentPool?
   workExperiences  WorkExperience[]
+  recruiterAssignments CandidateRecruiterAssignment[]
 
-  @@index([assignedTo])
+  @@unique([countryCode, mobileNumber])
   @@index([teamId])
   @@index([currentStatus])
+  @@index([countryCode, mobileNumber])
   @@map("candidates")
 }
 
@@ -299,11 +322,30 @@ model WorkExperience {
   @@map("work_experiences")
 }
 
+model CandidateQualification {
+  id              String        @id @default(cuid())
+  candidateId     String
+  qualificationId String
+  university      String?
+  graduationYear  Int?
+  gpa             Float?
+  isCompleted     Boolean       @default(true)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  candidate       Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  qualification   Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([qualificationId])
+  @@map("candidate_qualifications")
+}
+
 model CandidateProjectMap {
   id                     String                                 @id @default(cuid())
   candidateId            String
   projectId              String
-  roleNeededId           String?                                // NEW: which role this nomination targets
+  roleNeededId           String?
   notes                  String?
   createdAt              DateTime                               @default(now())
   updatedAt              DateTime                               @updatedAt
@@ -319,10 +361,13 @@ model CandidateProjectMap {
   rejectionReason        String?
   selectedDate           DateTime?
   status                 String                                 @default("nominated")
+  assignedAt             DateTime?
+  recruiterId            String?
   documentVerifications  CandidateProjectDocumentVerification[]
   candidate              Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   project                Project                                @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  roleNeeded             RoleNeeded?                            @relation(fields: [roleNeededId], references: [id], onDelete: SetNull)
+  roleNeeded             RoleNeeded?                            @relation(fields: [roleNeededId], references: [id])
+  recruiter               User?                                  @relation(fields: [recruiterId], references: [id])
   interviews             Interview[]
   processing             Processing?
 
@@ -372,13 +417,16 @@ model Interview {
   interviewer           String?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
-  candidateProjectMapId String
+  candidateProjectMapId String?
+  projectId             String?
   interviewerEmail      String?
   meetingLink           String?
   mode                  String?             @default("video")
-  candidateProjectMap   CandidateProjectMap @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  candidateProjectMap   CandidateProjectMap? @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  project               Project?            @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([candidateProjectMapId])
+  @@index([projectId])
   @@index([scheduledTime])
   @@map("interviews")
 }
@@ -510,9 +558,9 @@ model TalentPool {
 }
 
 /// *
-///  * DocumentRequirement
-///  * Defines what documents are required for a specific project
-///  * Set by recruiter/manager when creating/updating a project
+/// * DocumentRequirement
+/// * Defines what documents are required for a specific project
+/// * Set by recruiter/manager when creating/updating a project
 model DocumentRequirement {
   id          String   @id @default(cuid())
   projectId   String
@@ -529,10 +577,10 @@ model DocumentRequirement {
 }
 
 /// *
-///  * CandidateProjectDocumentVerification
-///  * Junction table linking Documents to specific Project nominations
-///  * Tracks verification status of each document for each project
-///  * Multiple projects can reference the same document (e.g., same passport for multiple projects)
+/// * CandidateProjectDocumentVerification
+/// * Junction table linking Documents to specific Project nominations
+/// * Tracks verification status of each document for each project
+/// * Multiple projects can reference the same document (e.g., same passport for multiple projects)
 model CandidateProjectDocumentVerification {
   id                      String              @id @default(cuid())
   candidateProjectMapId   String
@@ -560,9 +608,9 @@ model CandidateProjectDocumentVerification {
 }
 
 /// *
-///  * RoleCatalog
-///  * Normalized catalog of healthcare and general staff roles
-///  * Separate from system RBAC roles (Role model)
+/// * RoleCatalog
+/// * Normalized catalog of healthcare and general staff roles
+/// * Separate from system RBAC roles (Role model)
 model RoleCatalog {
   id                        String                         @id @default(cuid())
   name                      String                         @unique
@@ -583,25 +631,26 @@ model RoleCatalog {
 }
 
 /// *
-///  * Qualification
-///  * Normalized catalog of educational qualifications, degrees, and certifications
+/// * Qualification
+/// * Normalized catalog of educational qualifications, degrees, and certifications
 model Qualification {
-  id                     String                           @id @default(cuid())
-  name                   String                           @unique
-  shortName              String?
-  level                  QualificationLevel
-  field                  String
-  program                String?
-  description            String?
-  isActive               Boolean                          @default(true)
-  createdAt              DateTime                         @default(now())
-  updatedAt              DateTime                         @updatedAt
-  aliases                QualificationAlias[]
-  countryProfiles        QualificationCountryProfile[]
-  equivalencies          QualificationEquivalency[]       @relation("FromQualification")
-  reverseEquivalencies   QualificationEquivalency[]       @relation("ToQualification")
-  roleNeededRequirements RoleNeededEducationRequirement[]
-  roleRecommendations    RoleRecommendedQualification[]
+  id                      String                           @id @default(cuid())
+  name                    String                           @unique
+  shortName               String?
+  level                   QualificationLevel
+  field                   String
+  program                 String?
+  description             String?
+  isActive                Boolean                          @default(true)
+  createdAt               DateTime                         @default(now())
+  updatedAt               DateTime                         @updatedAt
+  candidateQualifications CandidateQualification[]
+  aliases                 QualificationAlias[]
+  countryProfiles         QualificationCountryProfile[]
+  equivalencies           QualificationEquivalency[]       @relation("FromQualification")
+  reverseEquivalencies    QualificationEquivalency[]       @relation("ToQualification")
+  roleNeededRequirements  RoleNeededEducationRequirement[]
+  roleRecommendations     RoleRecommendedQualification[]
 
   @@index([level])
   @@index([field])
@@ -610,8 +659,8 @@ model Qualification {
 }
 
 /// *
-///  * QualificationAlias
-///  * Alternative names for qualifications (e.g., "RN" for "Registered Nurse")
+/// * QualificationAlias
+/// * Alternative names for qualifications (e.g., "RN" for "Registered Nurse")
 model QualificationAlias {
   id              String        @id @default(cuid())
   qualificationId String
@@ -626,8 +675,8 @@ model QualificationAlias {
 }
 
 /// *
-///  * QualificationCountryProfile
-///  * Country-specific information for qualifications
+/// * QualificationCountryProfile
+/// * Country-specific information for qualifications
 model QualificationCountryProfile {
   id                  String        @id @default(cuid())
   qualificationId     String
@@ -647,8 +696,8 @@ model QualificationCountryProfile {
 }
 
 /// *
-///  * QualificationEquivalency
-///  * Cross-qualification equivalence mapping
+/// * QualificationEquivalency
+/// * Cross-qualification equivalence mapping
 model QualificationEquivalency {
   id                  String        @id @default(cuid())
   fromQualificationId String
@@ -669,8 +718,8 @@ model QualificationEquivalency {
 }
 
 /// *
-///  * RoleRecommendedQualification
-///  * Mapping of recommended qualifications for specific roles
+/// * RoleRecommendedQualification
+/// * Mapping of recommended qualifications for specific roles
 model RoleRecommendedQualification {
   id              String        @id @default(cuid())
   roleId          String
@@ -693,9 +742,9 @@ model RoleRecommendedQualification {
 }
 
 /// *
-///  * RoleNeededEducationRequirement
-///  * Junction table linking RoleNeeded to specific Qualifications
-///  * Replaces free-text educationRequirements with normalized IDs
+/// * RoleNeededEducationRequirement
+/// * Junction table linking RoleNeeded to specific Qualifications
+/// * Replaces free-text educationRequirements with normalized IDs
 model RoleNeededEducationRequirement {
   id              String        @id @default(cuid())
   roleNeededId    String
@@ -797,4 +846,50 @@ enum QualificationLevel {
   BACHELOR
   MASTER
   DOCTORATE
+}
+
+model Religion {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("religions")
+}
+
+model State {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  countryCode String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("states")
+}
+
+model CandidateRecruiterAssignment {
+  id          String    @id @default(cuid())
+  candidateId String
+  recruiterId String
+  assignedBy  String
+  assignedAt  DateTime  @default(now())
+  unassignedAt DateTime?
+  unassignedBy String?
+  reason      String?   // Reason for assignment change
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter   User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  assignedByUser User   @relation("AssignedByUser", fields: [assignedBy], references: [id])
+  unassignedByUser User? @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
+
+  @@index([candidateId])
+  @@index([recruiterId])
+  @@index([isActive])
+  @@map("candidate_recruiter_assignments")
 }

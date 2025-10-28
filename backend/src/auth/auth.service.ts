@@ -11,7 +11,10 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
 import { LoginDto } from './dto/login.dto';
-import { randomBytes } from 'crypto';
+import { randomBytes, Verify } from 'crypto';
+import { SendLoginOtpDto } from './dto/send-login-otp.dto';
+import { OtpService } from 'src/otp/otp.service';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 const REFRESH_DAYS = Number(process.env.JWT_REFRESH_DAYS ?? 7);
 const REFRESH_MS = REFRESH_DAYS * 24 * 60 * 60 * 1000;
@@ -34,14 +37,19 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private auditService: AuditService,
-  ) {}
+    private otpService: OtpService,
+  ) { }
 
-  async validateUser(countryCode: string, phone: string, password: string) {
+  async validateUser(
+    countryCode: string,
+    mobileNumber: string,
+    password: string,
+  ) {
     const user = await (this.prisma as any).user.findUnique({
       where: {
-        countryCode_phone: {
+        countryCode_mobileNumber: {
           countryCode,
-          phone,
+          mobileNumber,
         },
       },
       include: {
@@ -92,7 +100,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.validateUser(
       loginDto.countryCode,
-      loginDto.phone,
+      loginDto.mobileNumber,
       loginDto.password,
     );
     if (!user) {
@@ -106,7 +114,7 @@ export class AuthService {
     await this.auditService.logAuthAction('login', user.id, {
       action: 'user_login',
       countryCode: loginDto.countryCode,
-      phone: loginDto.phone,
+      mobileNumber: loginDto.mobileNumber,
       timestamp: new Date(),
     });
 
@@ -177,6 +185,158 @@ export class AuthService {
     });
     if (row) await this.revokeFamily(row.familyId);
   }
+
+
+  async sendLoginOtp(sendLoginOtpDto: SendLoginOtpDto) {
+    const { countryCode, mobileNumber } = sendLoginOtpDto;
+    // Validate user exists
+    const user = await (this.prisma as any).user.findUnique({
+      where: {
+        countryCode_mobileNumber: {
+          countryCode: countryCode,
+          mobileNumber: mobileNumber,
+        },
+      },
+    });
+
+    console.log('User found for OTP:', user);
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    };
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
+
+    // Optionally, store the OTP hash and expiration in the database for verification later
+    const otpHash = await argon2.hash(otp);
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
+
+    await (this.prisma as any).user.update({
+      where: { id: user.id },
+      data: {
+        otp: otpHash,
+        otpExpiresAt: otpExpiresAt,
+      },
+    });
+
+    // Send OTP via MSG91
+    const smsSent = await this.otpService.sendOtp(countryCode, mobileNumber, otp);
+    if (!smsSent) throw new Error('Failed to send OTP SMS');
+
+    return true;
+  }
+
+  async sendLoginWhatsappOtp(sendLoginOtpDto: SendLoginOtpDto) {
+    const { countryCode, mobileNumber } = sendLoginOtpDto;
+    // Validate user exists
+    const user = await (this.prisma as any).user.findUnique({
+      where: {
+        countryCode_mobileNumber: {
+          countryCode: countryCode,
+          mobileNumber: mobileNumber,
+        },
+      },
+    });
+
+    console.log('User found for WhatsApp OTP:', user);
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    };
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
+
+    // Optionally, store the OTP hash and expiration in the database for verification later
+    const otpHash = await argon2.hash(otp);
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
+
+    await (this.prisma as any).user.update({
+      where: { id: user.id },
+      data: {
+        otp: otpHash,
+        otpExpiresAt: otpExpiresAt,
+      },
+    });
+
+    // Send OTP via MSG91 WhatsApp
+    const whatsappSent = await this.otpService.sendWhatsappOtp(countryCode, mobileNumber, otp);
+    if (!whatsappSent) throw new Error('Failed to send OTP via WhatsApp');
+
+    return true;
+  }
+
+  async verifyOtp(verifyOtpDto: VerifyOtpDto) {
+    const { countryCode, mobileNumber, otp } = verifyOtpDto;
+    // Find user by country code and phone
+    const user = await (this.prisma as any).user.findUnique({
+      where: {
+        countryCode_mobileNumber: {
+          countryCode,
+          mobileNumber,
+        },
+      },
+    });
+
+    if (!user || !user.otp || !user.otpExpiresAt) {
+      throw new BadRequestException('Invalid OTP or user not found');
+    }
+
+    // Check if OTP is expired
+    if (user.otpExpiresAt < new Date()) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    // Verify the OTP
+    const isOtpValid = await argon2.verify(user.otp, otp);
+    if (!isOtpValid) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    // Clear OTP fields after successful verification
+    await (this.prisma as any).user.update({
+      where: { id: user.id },
+      data: {
+        otp: null,
+        otpExpiresAt: null,
+      },
+    });
+
+    // Re-fetch the user including relations needed for DTO (roles, permissions, teams)
+    const fullUser = await (this.prisma as any).user.findUnique({
+      where: { id: user.id },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: { permission: true },
+                },
+              },
+            },
+          },
+        },
+        userTeams: true,
+      },
+    });
+
+    if (!fullUser) {
+      // Unexpected - user was present earlier but not found now
+      throw new BadRequestException('User not found after OTP verification');
+    }
+
+    // Issue tokens upon successful OTP verification
+    const accessToken = this.issueAccess({ id: fullUser.id, email: fullUser.email });
+    const refresh = await this.issueRefresh(fullUser.id); // { id, value, maxAgeMs }
+
+    return {
+      accessToken,
+      user: this.toUserDTO(fullUser),
+      refresh,
+    };
+
+  }
+
 
   async logout(userId: string) {
     // Revoke all refresh tokens for the user
@@ -280,20 +440,119 @@ export class AuthService {
     }
   }
 
+  async mobileRotate(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Missing refresh token');
+    }
+
+    // Find the refresh token by value (hash)
+    const tokens = await (this.prisma as any).refreshToken.findMany({
+      where: { 
+        revokedAt: null,
+        expiresAt: { gt: new Date() } 
+      },
+      include: {
+        user: {
+          include: {
+            userRoles: {
+              include: {
+                role: {
+                  include: {
+                    rolePermissions: {
+                      include: {
+                        permission: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            userTeams: true,
+          },
+        },
+      },
+    });
+
+    // Find the matching token by verifying the hash
+    let matchedToken: any = null;
+    for (const token of tokens) {
+      try {
+        const isMatch = await argon2.verify(token.hash, refreshToken);
+        if (isMatch) {
+          matchedToken = token;
+          break;
+        }
+      } catch (error) {
+        // Continue checking other tokens
+        continue;
+      }
+    }
+
+    if (!matchedToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // Rotate the token
+    const next = await this.rotateInTx(matchedToken);
+
+    const accessToken = this.issueAccess({
+      id: matchedToken.userId,
+      email: matchedToken.user.email,
+    });
+
+    return {
+      accessToken,
+      user: this.toUserDTO(matchedToken.user),
+      next,
+    };
+  }
+
+  async revokeFamilyByToken(refreshToken: string) {
+    if (!refreshToken) return;
+
+    // Find the refresh token by value (hash)
+    const tokens = await (this.prisma as any).refreshToken.findMany({
+      where: { revokedAt: null },
+    });
+
+    // Find the matching token by verifying the hash
+    let matchedToken: any = null;
+    for (const token of tokens) {
+      try {
+        const isMatch = await argon2.verify(token.hash, refreshToken);
+        if (isMatch) {
+          matchedToken = token;
+          break;
+        }
+      } catch (error) {
+        // Continue checking other tokens
+        continue;
+      }
+    }
+
+    if (matchedToken) {
+      await this.revokeFamily(matchedToken.familyId);
+    }
+  }
+
   private toUserDTO(user: any) {
     // Get user's team IDs for scope filtering
-    const teamIds = user.userTeams?.map((ut: any) => ut.teamId) || [];
+    const teamIds = (user.userTeams ?? []).map((ut: any) => ut.teamId);
+
+    const roles = (user.userRoles ?? []).map((ur: any) => ur.role?.name).filter(Boolean);
+
+    const permissions = (user.userRoles ?? []).flatMap((ur: any) =>
+      (ur.role?.rolePermissions ?? []).map((rp: any) => rp.permission?.key).filter(Boolean),
+    );
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      roles: user.userRoles.map((ur: any) => ur.role.name),
-      permissions: user.userRoles.flatMap((ur: any) =>
-        ur.role.rolePermissions.map((rp: any) => rp.permission.key),
-      ),
+      roles,
+      permissions,
       teamIds,
-      userVersion: user.updatedAt.getTime(), // Use updatedAt as version for cache invalidation
+      userVersion: user.updatedAt ? user.updatedAt.getTime() : Date.now(), // Use updatedAt as version for cache invalidation
     };
   }
 }

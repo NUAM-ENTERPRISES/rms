@@ -207,6 +207,146 @@ export class UsersController {
     };
   }
 
+  @Get('profile')
+  @ApiOperation({
+    summary: 'Get current user profile',
+    description:
+      'Retrieve current user profile with analytics and detailed information.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            email: { type: 'string' },
+            mobileNumber: { type: 'string' },
+            countryCode: { type: 'string' },
+            dateOfBirth: { type: 'string', format: 'date-time' },
+            profileImage: { type: 'string' },
+            location: { type: 'string' },
+            timezone: { type: 'string' },
+            roles: { type: 'array', items: { type: 'string' } },
+            permissions: { type: 'array', items: { type: 'string' } },
+            createdAt: { type: 'string', format: 'date-time' },
+            lastLogin: { type: 'string', format: 'date-time' },
+            stats: {
+              type: 'object',
+              properties: {
+                candidatesManaged: { type: 'number' },
+                projectsCreated: { type: 'number' },
+                documentsVerified: { type: 'number' },
+              },
+            },
+          },
+        },
+        message: { type: 'string', example: 'Profile retrieved successfully' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProfile(@Request() req) {
+    const userId = req.user.id;
+    const profile = await this.usersService.getUserProfile(userId);
+    return {
+      success: true,
+      data: profile,
+      message: 'Profile retrieved successfully',
+    };
+  }
+
+  @Put('profile')
+  @ApiOperation({
+    summary: 'Update current user profile',
+    description: 'Update current user profile information.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(@Request() req, @Body() updateData: UpdateUserDto) {
+    const userId = req.user.id;
+    const updatedUser = await this.usersService.update(userId, updateData);
+    return {
+      success: true,
+      data: updatedUser,
+      message: 'Profile updated successfully',
+    };
+  }
+
+  @Post('profile/change-password')
+  @ApiOperation({
+    summary: 'Change current user password',
+    description: 'Change password for the current user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async changeProfilePassword(
+    @Request() req,
+    @Body() changePasswordData: ChangePasswordDto,
+  ) {
+    const userId = req.user.id;
+    await this.usersService.changePassword(userId, changePasswordData);
+    return {
+      success: true,
+      message: 'Password changed successfully',
+    };
+  }
+
+  @Delete('profile')
+  @ApiOperation({
+    summary: 'Delete current user account',
+    description: 'Delete the current user account permanently.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Account deleted successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async deleteAccount(@Request() req) {
+    const userId = req.user.id;
+    await this.usersService.remove(userId);
+    return {
+      success: true,
+      message: 'Account deleted successfully',
+    };
+  }
+
+  @Post('profile/upload-image')
+  @ApiOperation({
+    summary: 'Upload profile image',
+    description: 'Upload profile image for the current user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile image uploaded successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async uploadProfileImage(
+    @Request() req,
+    @Body() imageData: { profileImage: string },
+  ) {
+    const userId = req.user.id;
+    await this.usersService.update(userId, {
+      profileImage: imageData.profileImage,
+    });
+    return {
+      success: true,
+      data: { profileImage: imageData.profileImage },
+      message: 'Profile image uploaded successfully',
+    };
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get user by ID',

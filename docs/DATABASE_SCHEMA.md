@@ -1,7 +1,7 @@
 # 🗄️ **Affiniks RMS - Database Schema Documentation**
 
-> **Last Updated**: October 8, 2025  
-> **Version**: 2.1.0  
+> **Last Updated**: January 15, 2025  
+> **Version**: 2.2.0  
 > **Database**: PostgreSQL  
 > **ORM**: Prisma
 
@@ -52,7 +52,7 @@ Table: users
 | `password` | String | Required | Hashed password |
 | `dateOfBirth` | DateTime | Optional | User's date of birth |
 | `countryCode` | String | Required | Country calling code (e.g., "+91", "+1") |
-| `phone` | String | Required, Unique | Phone number without country code (e.g., "9876543210") |
+| `mobileNumber` | String | Required, Unique | Mobile number without country code (e.g., "9876543210") |
 | `profileImage` | String | Optional | Profile image URL stored in Digital Ocean Spaces |
 | `createdAt` | DateTime | Auto-generated | Record creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
@@ -70,14 +70,14 @@ Table: users
 **Indexes:**
 
 - `email` (Unique, for lookups)
-- `countryCode, phone` (Unique composite, for authentication queries)
+- `countryCode, mobileNumber` (Unique composite, for authentication queries)
 - `createdAt` (For user listing and analytics)
 
 **Authentication:**
 
-- Users authenticate using `countryCode + phone` combination (not email)
-- Phone numbers are stored separately from country code for better normalization
-- Example: `countryCode: "+91"`, `phone: "9876543210"`
+- Users authenticate using `countryCode + mobileNumber` combination (not email)
+- Mobile numbers are stored separately from country code for better normalization
+- Example: `countryCode: "+91"`, `mobileNumber: "9876543210"`
 
 ---
 
@@ -480,7 +480,8 @@ Table: candidates
 | `id` | String | Primary Key, CUID | Unique candidate identifier |
 | `firstName` | String | Required | Candidate first name |
 | `lastName` | String | Required | Candidate last name |
-| `contact` | String | Unique | Contact number |
+| `countryCode` | String | Required | Country calling code (e.g., "+91", "+1") |
+| `mobileNumber` | String | Required, Unique | Mobile number without country code (e.g., "9876543210") |
 | `email` | String | Optional | Email address |
 | `profileImage` | String | Optional | Profile image URL stored in Digital Ocean Spaces |
 | `source` | String | Default: "manual" | Source of candidate (manual, meta, referral) |
@@ -519,10 +520,48 @@ Table: candidates
 - `certifications` → `Certification[]` (One-to-Many)
 - `talentPool` → `TalentPool` (One-to-One)
 - `workExperiences` → `WorkExperience[]` (One-to-Many)
+- `qualifications` → `CandidateQualification[]` (One-to-Many)
 
 ---
 
-#### **5.2 WorkExperience Model**
+#### **5.2 CandidateQualification Model**
+
+```sql
+Table: candidate_qualifications
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique qualification identifier |
+| `candidateId` | String | Foreign Key, Indexed | Reference to Candidate |
+| `qualificationId` | String | Foreign Key, Indexed | Reference to Qualification |
+| `university` | String | Optional | University name |
+| `graduationYear` | Int | Optional | Year of graduation |
+| `gpa` | Float | Optional | Grade Point Average |
+| `isCompleted` | Boolean | Default: true | Whether qualification is completed |
+| `notes` | String | Optional | Additional notes |
+| `createdAt` | DateTime | Auto-generated | Record creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Record modification timestamp |
+
+**Constraints:**
+
+- Foreign Key: `candidateId` → `candidates.id` (CASCADE DELETE)
+- Foreign Key: `qualificationId` → `qualifications.id` (CASCADE DELETE)
+
+**Indexes:**
+
+- `candidateId` (For querying candidate qualifications)
+- `qualificationId` (For qualification-based queries)
+
+**Relationships:**
+
+- `candidate` → `Candidate` (Many-to-One)
+- `qualification` → `Qualification` (Many-to-One)
+
+---
+
+#### **5.3 WorkExperience Model**
 
 ```sql
 Table: work_experiences
@@ -1417,7 +1456,7 @@ erDiagram
 | **Talent Pool Management**   | 1          | ~200        | ~100KB    |
 | **Healthcare Roles Catalog** | 7          | ~1000       | ~500KB    |
 | **Audit Management**         | 1          | ~10000      | ~5MB      |
-| **TOTAL**                    | **31**     | **~25,000** | **~15MB** |
+| **TOTAL**                    | **32**     | **~25,000** | **~15MB** |
 
 ---
 
@@ -1464,6 +1503,10 @@ erDiagram
 | `20251008071747_separate_country_code_from_phone`                           | Oct 8, 2024  | Separated country code from phone                           |
 | `20251008132317_add_profile_images`                                         | Oct 8, 2024  | Added profile image support                                 |
 | `20251008143620_enhance_candidate_model_with_education_and_work_experience` | Oct 8, 2024  | Enhanced candidate model with education and work experience |
+| `20251014155203_update_candidate_contact_fields`                            | Oct 14, 2024 | Updated candidate contact fields (countryCode + phone)      |
+| `20251014155559_rename_phone_to_mobile_number`                              | Oct 14, 2024 | Renamed phone to mobileNumber in candidates table           |
+| `20251014160000_rename_phone_to_mobile_number_user`                         | Oct 14, 2024 | Renamed phone to mobileNumber in users table                |
+| `20250115120000_add_candidate_qualifications`                               | Jan 15, 2025 | Added candidate qualifications junction table               |
 
 ---
 

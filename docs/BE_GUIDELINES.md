@@ -79,9 +79,10 @@ Each feature module **MUST** include:
 
 - **Authentication Method**:
 
-  - Primary: Phone number + Password
-  - Phone number must be unique and include country code (E.164 format)
-  - Example: `+919876543210`
+  - Primary: Mobile number + Password
+  - Mobile number must be unique and stored separately from country code
+  - Country code and mobile number are stored as separate fields for better normalization
+  - Example: `countryCode: "+91"`, `mobileNumber: "9876543210"`
 
 - **JWT + Refresh**:
 

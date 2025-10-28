@@ -17,7 +17,8 @@ export interface ProjectWithRelations extends Project {
       id: string;
       firstName: string;
       lastName: string;
-      contact: string;
+      countryCode: string;
+      mobileNumber: string;
       email: string | null;
       currentStatus: string;
     };

@@ -18,10 +18,10 @@ const ProjectsPage = lazy(
   () => import("@/features/projects/views/ProjectsPage")
 );
 const CreateProjectPage = lazy(
-  () => import("@/features/projects/views/CreateProjectPage")
+  () => import("@/features/projects/views/MultiStepCreateProjectPage")
 );
 const EditProjectPage = lazy(
-  () => import("@/features/projects/views/EditProjectPage")
+  () => import("@/features/projects/views/MultiStepEditProjectPage")
 );
 const ProjectDetailPage = lazy(
   () => import("@/features/projects/views/ProjectDetailPage")
@@ -76,6 +76,9 @@ const DocumentUploadPage = lazy(
 const DocumentVerificationPage = lazy(
   () => import("@/features/documents/views/DocumentVerificationPage")
 );
+const CandidateDocumentVerificationPage = lazy(
+  () => import("@/features/documents/views/CandidateDocumentVerificationPage")
+);
 
 const UsersPage = lazy(() => import("@/features/admin/views/UsersPage"));
 const UserDetailPage = lazy(
@@ -89,6 +92,7 @@ const EditUserPage = lazy(() => import("@/features/admin/views/EditUserPage"));
 const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
 );
+const ProfilePage = lazy(() => import("@/features/profile/views/ProfilePage"));
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -215,7 +219,7 @@ function App() {
                   path="/candidates/create"
                   element={
                     <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:candidates"]}>
+                      <ProtectedRoute permissions={["write:candidates"]}>
                         <AppLayout>
                           <CreateCandidatePage />
                         </AppLayout>
@@ -228,7 +232,7 @@ function App() {
                   path="/candidates/:id/edit"
                   element={
                     <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:candidates"]}>
+                      <ProtectedRoute permissions={["write:candidates"]}>
                         <AppLayout>
                           <EditCandidatePage />
                         </AppLayout>
@@ -341,12 +345,7 @@ function App() {
                     <RouteErrorBoundary>
                       <ProtectedRoute>
                         <AppLayout>
-                          <div className="p-8">
-                            <h1 className="text-2xl font-bold">Profile</h1>
-                            <p className="text-muted-foreground">
-                              Manage your personal information and preferences
-                            </p>
-                          </div>
+                          <ProfilePage />
                         </AppLayout>
                       </ProtectedRoute>
                     </RouteErrorBoundary>
@@ -430,6 +429,18 @@ function App() {
                     </RouteErrorBoundary>
                   }
                 />
+                <Route
+                  path="/candidates/:candidateId/documents/:projectId"
+                  element={
+                    <RouteErrorBoundary>
+                      <ProtectedRoute permissions={["verify:documents"]}>
+                        <AppLayout>
+                          <CandidateDocumentVerificationPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    </RouteErrorBoundary>
+                  }
+                />
 
                 <Route
                   path="/projects/:projectId/nominate"
@@ -448,9 +459,7 @@ function App() {
                   path="/projects/:projectId/candidates"
                   element={
                     <RouteErrorBoundary>
-                      <ProtectedRoute
-                        permissions={["read:projects", "read:candidates"]}
-                      >
+                      <ProtectedRoute>
                         <AppLayout>
                           <ProjectEligibleCandidatesPage />
                         </AppLayout>

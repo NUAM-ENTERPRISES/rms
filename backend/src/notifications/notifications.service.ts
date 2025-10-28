@@ -60,6 +60,8 @@ export class NotificationsService {
           title: notification.title,
           message: notification.message,
           link: notification.link,
+          meta: notification.meta,
+          status: notification.status,
           createdAt: notification.createdAt,
         },
       );

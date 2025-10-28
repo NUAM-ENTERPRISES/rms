@@ -56,7 +56,8 @@ import { useGetCandidatesQuery } from "@/features/candidates";
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
-  const canReadCandidates = useCan("read:candidates");
+  // All roles can read candidates
+  const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
 
   // State for filters and pagination
@@ -451,9 +452,6 @@ export default function CandidatesPage() {
                       Status
                     </TableHead>
                     <TableHead className="font-semibold text-slate-700">
-                      Experience
-                    </TableHead>
-                    <TableHead className="font-semibold text-slate-700">
                       Last Updated
                     </TableHead>
                     <TableHead className="font-semibold text-slate-700">
@@ -466,8 +464,6 @@ export default function CandidatesPage() {
                     filteredCandidates.map((candidate) => {
                       const statusInfo = getStatusInfo(candidate.currentStatus);
                       const StatusIcon = statusInfo.icon;
-                      const experience =
-                        candidate.totalExperience || candidate.experience || 0;
 
                       return (
                         <TableRow
@@ -479,15 +475,35 @@ export default function CandidatesPage() {
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold">
                                 {candidate.firstName.charAt(0)}
                               </div>
-                              <div>
-                                <div
-                                  className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                >
-                                  {candidate.firstName} {candidate.lastName}
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <div
+                                    className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/candidates/${candidate.id}`);
+                                    }}
+                                  >
+                                    {candidate.firstName} {candidate.lastName}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={`p-1 rounded-full ${statusInfo.bgColor}`}
+                                    >
+                                      <StatusIcon
+                                        className={`h-3 w-3 ${statusInfo.color}`}
+                                      />
+                                    </div>
+                                    <Badge
+                                      variant={statusInfo.variant}
+                                      className="text-xs"
+                                    >
+                                      {candidate.currentStatus
+                                        .charAt(0)
+                                        .toUpperCase() +
+                                        candidate.currentStatus.slice(1)}
+                                    </Badge>
+                                  </div>
                                 </div>
                                 <div className="text-sm text-slate-500">
                                   {candidate.currentRole || "No current role"}
@@ -551,14 +567,6 @@ export default function CandidatesPage() {
                                   .toUpperCase() +
                                   candidate.currentStatus.slice(1)}
                               </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Briefcase className="h-4 w-4 text-slate-400" />
-                              <span className="text-sm font-medium text-slate-700">
-                                {experience} years
-                              </span>
                             </div>
                           </TableCell>
                           <TableCell>

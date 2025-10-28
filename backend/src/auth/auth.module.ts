@@ -15,9 +15,12 @@ import { RolesGuard } from './rbac/roles.guard';
 import { PermissionsGuard } from './rbac/permissions.guard';
 import { TeamScopeGuard } from './rbac/team-scope.guard';
 import { ServerTimingInterceptor } from '../common/interceptors/server-timing.interceptor';
+import { OtpService } from 'src/otp/otp.service';
+import { OtpModule } from 'src/otp/otp.module';
 
 @Module({
   imports: [
+    OtpModule,
     PassportModule,
     PrismaModule,
     AuditModule,

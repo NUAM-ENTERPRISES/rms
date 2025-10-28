@@ -23,11 +23,15 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { Public } from './decorators/public.decorator';
+import { send } from 'process';
+import { SendLoginOtpDto } from './dto/send-login-otp.dto';
+import { tryCatch } from 'bullmq';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -80,6 +84,7 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -91,6 +96,125 @@ export class AuthController {
       success: true,
       data: { accessToken, user },
       message: 'Login successful',
+    };
+  }
+
+  @Post('login-otp')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @ApiOperation({
+    summary: 'Send login OTP',
+    description:
+      'Send a one-time password (OTP) to the user\'s phone number for login verification.',
+  })
+  @ApiBody({ type: SendLoginOtpDto })
+  async sendLoginOtp(@Body() sendLoginOtpDto: SendLoginOtpDto) {
+    await this.authService.sendLoginOtp(sendLoginOtpDto);
+    return {
+      success: true,
+      message: 'OTP sent successfully',
+    };
+  }
+
+  @Post('login-whatsapp-otp')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @ApiOperation({
+    summary: 'Send login WhatsApp OTP',
+    description:
+      'Send a one-time password (OTP) to the user\'s phone number via WhatsApp for login verification.',
+  })
+  @ApiBody({ type: SendLoginOtpDto })
+  async sendLoginWhatsappOtp(@Body() sendLoginOtpDto: SendLoginOtpDto) {
+    await this.authService.sendLoginWhatsappOtp(sendLoginOtpDto);
+    return {
+      success: true,
+      message: 'OTP sent successfully',
+    };
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @ApiOperation({
+    summary: 'Verify login OTP',
+    description:
+      'Verify the one-time password (OTP) sent to the user\'s phone number and authenticate the user.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        countryCode: {
+          type: 'string',
+          example: '+1',
+          description: 'Country dialing code for the phone number',
+        },
+        phone: {
+          type: 'string',
+          example: '4155550123',
+          description: 'Recipient phone number without the country code',
+        },
+        otp: {
+          type: 'string',
+          example: '123456',
+          description: 'The one-time password sent to the user',
+        },
+      },
+      required: ['countryCode', 'phone', 'otp'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP verified and login successful',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            accessToken: {
+              type: 'string',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'user123' },
+                email: { type: 'string', example: 'user@example.com' },
+                name: { type: 'string', example: 'John Doe' },
+                roles: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['Manager'],
+                },
+                permissions: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['read:all', 'manage:users'],
+                },
+              },
+            },
+          },
+        },
+        message: { type: 'string', example: 'OTP verified and login successful' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid OTP or phone number' })
+  async verifyOtp(
+    @Body()
+    verifyOtpDto: VerifyOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, user, refresh } = await this.authService.verifyOtp(verifyOtpDto);
+    this.setRefreshCookies(res, refresh);
+    // writes rfi & rft
+    return {
+      success: true,
+      data: { accessToken, user },
+      message: 'OTP verified and login successful',
     };
   }
 
@@ -180,6 +304,189 @@ export class AuthController {
     await this.authService.revokeFamilyByTokenId(rfi);
     res.clearCookie('rfi', { path: '/api/v1/auth' });
     res.clearCookie('rft', { path: '/api/v1/auth' });
+    return { success: true, message: 'Logged out' };
+  }
+
+  @Post('mobile-login')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @UseGuards(LocalAuthGuard)
+  @ApiOperation({
+    summary: 'Mobile app login',
+    description:
+      'Authenticate user for mobile app. Returns access token and refresh token in response body (no cookies).',
+  })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Mobile login successful',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            accessToken: {
+              type: 'string',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            refreshToken: {
+              type: 'string',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'user123' },
+                email: { type: 'string', example: 'user@example.com' },
+                countryCode: { type: 'string', example: '+91' },
+                phone: { type: 'string', example: '9876543210' },
+                name: { type: 'string', example: 'John Doe' },
+                roles: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['Manager'],
+                },
+                permissions: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['read:all', 'manage:users'],
+                },
+              },
+            },
+          },
+        },
+        message: { type: 'string', example: 'Mobile login successful' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async mobileLogin(@Body() loginDto: LoginDto) {
+    const { accessToken, user, refresh } =
+      await this.authService.login(loginDto);
+    
+    return {
+      success: true,
+      data: { 
+        accessToken, 
+        refreshToken: refresh.value, // Return refresh token in body for mobile
+        user 
+      },
+      message: 'Mobile login successful',
+    };
+  }
+
+  @Post('mobile-refresh')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @ApiOperation({
+    summary: 'Mobile refresh access token',
+    description: 'Refresh access token for mobile app using refresh token from request body.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        refreshToken: {
+          type: 'string',
+          description: 'Refresh token obtained from mobile login',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+      required: ['refreshToken'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token refreshed successfully for mobile',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            accessToken: {
+              type: 'string',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            refreshToken: {
+              type: 'string',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'user123' },
+                email: { type: 'string', example: 'user@example.com' },
+                name: { type: 'string', example: 'John Doe' },
+                roles: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['Manager'],
+                },
+                permissions: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['read:all', 'manage:users'],
+                },
+              },
+            },
+          },
+        },
+        message: { type: 'string', example: 'Token refreshed successfully' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async mobileRefresh(@Body('refreshToken') refreshToken: string) {
+    const { accessToken, user, next } = await this.authService.mobileRotate(refreshToken);
+    
+    return {
+      success: true,
+      data: { 
+        accessToken, 
+        refreshToken: next.value, // Return new refresh token
+        user 
+      },
+      message: 'Token refreshed successfully',
+    };
+  }
+
+  @Post('mobile-logout')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @ApiOperation({
+    summary: 'Mobile app logout',
+    description: 'Revoke refresh token for mobile app.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        refreshToken: {
+          type: 'string',
+          description: 'Refresh token to revoke',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+      required: ['refreshToken'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Mobile logout successful',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'Logout successful' },
+      },
+    },
+  })
+  async mobileLogout(@Body('refreshToken') refreshToken: string) {
+    await this.authService.revokeFamilyByToken(refreshToken);
     return { success: true, message: 'Logged out' };
   }
 

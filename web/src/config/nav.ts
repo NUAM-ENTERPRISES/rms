@@ -31,26 +31,22 @@ export interface NavItem {
 }
 
 export const navigationConfig: NavItem[] = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: Home,
-    roles: ["CEO", "Director", "Manager"],
-    badge: {
-      text: "Analytics",
-      variant: "default",
-    },
-  },
+  // {
+  //   id: "dashboard",
+  //   label: "Dashboard",
+  //   path: "/dashboard",
+  //   icon: Home,
+  //   roles: ["CEO", "Director", "Manager"],
+  //   badge: {
+  //     text: "Analytics",
+  //     variant: "default",
+  //   },
+  // },
   {
     id: "projects",
     label: "Projects",
     path: "/projects",
     icon: Building2,
-    badge: {
-      text: "Core",
-      variant: "secondary",
-    },
     // Accessible to all roles - core business function
   },
   {
@@ -58,22 +54,15 @@ export const navigationConfig: NavItem[] = [
     label: "Candidates",
     path: "/candidates",
     icon: UserCheck,
-    permissions: ["read:candidates"],
-    badge: {
-      text: "HR",
-      variant: "outline",
-    },
+    // Accessible to all roles - core business function
   },
   {
     id: "clients",
     label: "Clients",
     path: "/clients",
     icon: Briefcase,
-    badge: {
-      text: "Business",
-      variant: "outline",
-    },
-    // Accessible to all roles - essential context
+    permissions: ["read:clients"],
+    // Hidden from Recruiter and Documentation Executive roles
   },
   {
     id: "teams",
@@ -81,130 +70,89 @@ export const navigationConfig: NavItem[] = [
     path: "/teams",
     icon: Users,
     permissions: ["read:teams"],
-    badge: {
-      text: "Org",
-      variant: "outline",
-    },
   },
   {
     id: "interviews",
     label: "Interviews",
     path: "/interviews",
     icon: Calendar,
-    permissions: ["read:interviews"],
-    badge: {
-      text: "Schedule",
-      variant: "outline",
-    },
+    // Accessible to all roles - core business function
   },
   {
     id: "documents",
-    label: "Documents",
+    label: "Documentation",
+    path: "/documents/verification",
     icon: FileText,
     permissions: ["read:documents"],
-    badge: {
-      text: "Verification",
-      variant: "outline",
-    },
-    children: [
-      {
-        id: "documents-verification",
-        label: "Verification Dashboard",
-        path: "/documents/verification",
-        permissions: ["read:documents", "verify:documents"],
-        badge: {
-          text: "Review",
-          variant: "default",
-        },
-      },
-      {
-        id: "documents-upload",
-        label: "Upload Documents",
-        path: "/documents/upload",
-        permissions: ["write:documents"],
-        badge: {
-          text: "Upload",
-          variant: "secondary",
-        },
-      },
-    ],
   },
-  {
-    id: "notifications",
-    label: "Notifications",
-    path: "/notifications",
-    icon: Bell,
-    badge: {
-      text: "Updates",
-      variant: "outline",
-    },
-    // Accessible to all roles - important for staying updated
-  },
-  {
-    id: "analytics",
-    label: "Analytics",
-    path: "/analytics",
-    icon: BarChart3,
-    permissions: ["read:analytics"],
-    badge: {
-      text: "Insights",
-      variant: "default",
-    },
-  },
+  // {
+  //   id: "notifications",
+  //   label: "Notifications",
+  //   path: "/notifications",
+  //   icon: Bell,
+  //   badge: {
+  //     text: "Updates",
+  //     variant: "outline",
+  //   },
+  //   // Accessible to all roles - important for staying updated
+  // },
+  // {
+  //   id: "analytics",
+  //   label: "Analytics",
+  //   path: "/analytics",
+  //   icon: BarChart3,
+  //   permissions: ["read:analytics"],
+  //   badge: {
+  //     text: "Insights",
+  //     variant: "default",
+  //   },
+  // },
   {
     id: "admin",
     label: "Administration",
     icon: Shield,
-    roles: ["CEO", "Director", "Manager"],
-    badge: {
-      text: "Admin",
-      variant: "destructive",
-    },
+    roles: ["CEO", "Director", "Manager", "System Admin"],
     children: [
       {
         id: "admin-users",
         label: "Users",
         path: "/admin/users",
         permissions: ["read:users"],
-        roles: ["CEO", "Director", "Manager"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
       },
       {
         id: "admin-roles",
         label: "Roles & Permissions",
         path: "/admin/roles",
         permissions: ["read:roles"],
-        roles: ["CEO", "Director", "Manager"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
       },
       {
         id: "admin-teams",
         label: "Team Management",
         path: "/admin/teams",
         permissions: ["read:teams"],
-        roles: ["CEO", "Director", "Manager"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
       },
     ],
   },
-  {
-    id: "settings",
-    label: "Settings",
-    path: "/settings",
-    icon: Settings,
-    permissions: ["read:settings"],
-    roles: ["CEO", "Director", "Manager"],
-    badge: {
-      text: "Config",
-      variant: "outline",
-    },
-  },
+  // {
+  //   id: "settings",
+  //   label: "Settings",
+  //   path: "/settings",
+  //   icon: Settings,
+  //   permissions: ["read:settings"],
+  //   roles: ["CEO", "Director", "Manager"],
+  //   badge: {
+  //     text: "Config",
+  //     variant: "outline",
+  //   },
+  // },
   {
     id: "profile",
     label: "Profile",
     path: "/profile",
     icon: User,
-    badge: {
-      text: "Personal",
-      variant: "outline",
-    },
     // Accessible to all roles - users should manage their own profile
   },
 ];

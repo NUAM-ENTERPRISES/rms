@@ -271,21 +271,23 @@ export function CountryCodeSelect({
         <SelectTrigger
           id={name}
           className={cn(
-            "h-12 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
+            "h-12 w-full bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
             error && "border-destructive focus:border-destructive",
             className
           )}
         >
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder} className="truncate" />
         </SelectTrigger>
 
         <SelectContent className="max-h-[300px]">
           {COUNTRY_CODES.map(({ code, country, flag }) => (
             <SelectItem key={code} value={code}>
-              <div className="flex items-center gap-2">
-                <span className="text-base">{flag}</span>
-                <span className="font-medium">{code}</span>
-                <span className="text-xs text-muted-foreground">{country}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base flex-shrink-0">{flag}</span>
+                <span className="font-medium flex-shrink-0">{code}</span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {country}
+                </span>
               </div>
             </SelectItem>
           ))}
@@ -310,20 +312,22 @@ export function CountryCodeSelect({
         <SelectTrigger
           id={name}
           className={cn(
-            "h-12 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
+            "h-12 w-full bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
             error && "border-destructive focus:border-destructive"
           )}
         >
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder} className="truncate" />
         </SelectTrigger>
 
         <SelectContent className="max-h-[300px]">
           {COUNTRY_CODES.map(({ code, country, flag }) => (
             <SelectItem key={code} value={code}>
-              <div className="flex items-center gap-2">
-                <span className="text-base">{flag}</span>
-                <span className="font-medium">{code}</span>
-                <span className="text-xs text-muted-foreground">{country}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base flex-shrink-0">{flag}</span>
+                <span className="font-medium flex-shrink-0">{code}</span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {country}
+                </span>
               </div>
             </SelectItem>
           ))}

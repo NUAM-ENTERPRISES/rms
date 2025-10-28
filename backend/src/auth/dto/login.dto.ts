@@ -15,14 +15,14 @@ export class LoginDto {
   countryCode: string;
 
   @ApiProperty({
-    description: 'Phone number without country code',
+    description: 'Mobile number without country code',
     example: '9876543210',
   })
-  @IsString({ message: 'Phone number must be a string' })
+  @IsString({ message: 'Mobile number must be a string' })
   @Matches(/^\d{6,15}$/, {
-    message: 'Please provide a valid phone number (6-15 digits)',
+    message: 'Please provide a valid mobile number (6-15 digits)',
   })
-  phone: string;
+  mobileNumber: string;
 
   @ApiProperty({
     description: 'User password',

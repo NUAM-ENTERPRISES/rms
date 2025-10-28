@@ -96,7 +96,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -170,7 +171,8 @@ export class DocumentsService {
               id: true,
               firstName: true,
               lastName: true,
-              contact: true,
+              countryCode: true,
+              mobileNumber: true,
               email: true,
             },
           },
@@ -216,7 +218,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -279,7 +282,8 @@ export class DocumentsService {
             id: true,
             firstName: true,
             lastName: true,
-            contact: true,
+            countryCode: true,
+            mobileNumber: true,
             email: true,
           },
         },
@@ -697,5 +701,411 @@ export class DocumentsService {
         },
       });
     }
+  }
+
+  /**
+   * Get candidates for document verification
+   * Returns candidates who are in document verification stages
+   */
+  async getVerificationCandidates(query: any) {
+    const { page = 1, limit = 20, status, search } = query;
+    const skip = (page - 1) * limit;
+
+    // Define the statuses that need document verification
+    const verificationStatuses = [
+      CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
+      CANDIDATE_PROJECT_STATUS.DOCUMENTS_SUBMITTED,
+      CANDIDATE_PROJECT_STATUS.VERIFICATION_IN_PROGRESS,
+      CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED,
+      CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
+    ];
+
+    const where: any = {
+      status: {
+        in: verificationStatuses,
+      },
+    };
+
+    // Apply status filter if provided
+    if (status && verificationStatuses.includes(status)) {
+      where.status = status;
+    }
+
+    // Apply search filter
+    if (search) {
+      where.OR = [
+        {
+          candidate: {
+            firstName: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          candidate: {
+            lastName: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          project: {
+            title: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ];
+    }
+
+    const [candidateProjects, total] = await Promise.all([
+      this.prisma.candidateProjectMap.findMany({
+        where,
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              mobileNumber: true,
+              countryCode: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+              client: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          recruiter: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          documentVerifications: {
+            include: {
+              document: {
+                select: {
+                  id: true,
+                  docType: true,
+                  fileName: true,
+                  status: true,
+                  uploadedBy: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: parseInt(limit.toString()),
+      }),
+      this.prisma.candidateProjectMap.count({ where }),
+    ]);
+
+    return {
+      candidateProjects,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // ==================== ENHANCED DOCUMENT VERIFICATION ====================
+
+  /**
+   * Get all projects where a candidate is nominated for document verification
+   */
+  async getCandidateProjects(candidateId: string): Promise<any[]> {
+    const candidateProjects = await this.prisma.candidateProjectMap.findMany({
+      where: {
+        candidateId,
+        status: {
+          in: [
+            'verification_in_progress',
+            'documents_verified',
+            'rejected_documents',
+            'pending_documents',
+          ],
+        },
+      },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            highestEducation: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            deadline: true,
+            createdAt: true,
+            countryCode: true,
+          },
+        },
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            id: true,
+            designation: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return candidateProjects;
+  }
+
+  /**
+   * Get project document requirements and verification status for a candidate
+   */
+  async getCandidateProjectRequirements(
+    candidateId: string,
+    projectId: string,
+  ): Promise<any> {
+    // Get candidate project mapping
+    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        candidateId,
+        projectId,
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            deadline: true,
+            createdAt: true,
+          },
+        },
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException('Candidate project mapping not found');
+    }
+
+    // Get project document requirements
+    const requirements = await this.prisma.documentRequirement.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Get candidate's documents for this project
+    const verifications =
+      await this.prisma.candidateProjectDocumentVerification.findMany({
+        where: { candidateProjectMapId: candidateProject.id },
+        include: {
+          document: {
+            select: {
+              id: true,
+              docType: true,
+              fileName: true,
+              fileUrl: true,
+              status: true,
+              uploadedBy: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+    // Get all candidate documents (for reuse functionality)
+    const allCandidateDocuments = await this.prisma.document.findMany({
+      where: { candidateId },
+      select: {
+        id: true,
+        docType: true,
+        fileName: true,
+        fileUrl: true,
+        status: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Calculate verification status
+    const totalRequired = requirements.length;
+    const totalSubmitted = verifications.length;
+    const totalVerified = verifications.filter(
+      (v) => v.status === 'verified',
+    ).length;
+    const totalRejected = verifications.filter(
+      (v) => v.status === 'rejected',
+    ).length;
+    const totalPending = verifications.filter(
+      (v) => v.status === 'pending',
+    ).length;
+
+    const allDocumentsVerified =
+      totalVerified === totalRequired && totalRequired > 0;
+
+    return {
+      candidateProject,
+      requirements,
+      verifications,
+      allCandidateDocuments,
+      summary: {
+        totalRequired,
+        totalSubmitted,
+        totalVerified,
+        totalRejected,
+        totalPending,
+        allDocumentsVerified,
+        canApproveCandidate: allDocumentsVerified,
+      },
+    };
+  }
+
+  /**
+   * Reuse an existing document for a new project
+   */
+  async reuseDocument(
+    documentId: string,
+    projectId: string,
+    userId: string,
+  ): Promise<any> {
+    // Check if document exists
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    // Check if project exists
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    // Get candidate project mapping
+    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+      where: {
+        candidateId: document.candidateId,
+        projectId,
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException('Candidate not found in project');
+    }
+
+    // Check if document is already linked to this project
+    const existingVerification =
+      await this.prisma.candidateProjectDocumentVerification.findFirst({
+        where: {
+          candidateProjectMapId: candidateProject.id,
+          documentId,
+        },
+      });
+
+    if (existingVerification) {
+      throw new BadRequestException('Document already linked to this project');
+    }
+
+    // Create document verification record
+    const verification =
+      await this.prisma.candidateProjectDocumentVerification.create({
+        data: {
+          candidateProjectMapId: candidateProject.id,
+          documentId,
+          status: 'pending',
+        },
+      });
+
+    return verification;
+  }
+
+  /**
+   * Complete document verification for a candidate-project
+   */
+  async completeVerification(
+    candidateProjectMapId: string,
+    userId: string,
+  ): Promise<any> {
+    // Get candidate project mapping
+    const candidateProject = await this.prisma.candidateProjectMap.findUnique({
+      where: { id: candidateProjectMapId },
+      include: { project: true },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException('Candidate project mapping not found');
+    }
+
+    // Get project document requirements
+    const requirements = await this.prisma.documentRequirement.findMany({
+      where: { projectId: candidateProject.projectId },
+    });
+
+    // Get document verifications
+    const verifications =
+      await this.prisma.candidateProjectDocumentVerification.findMany({
+        where: { candidateProjectMapId },
+      });
+
+    const totalRequired = requirements.length;
+    const totalVerified = verifications.filter(
+      (v) => v.status === 'verified',
+    ).length;
+
+    if (totalVerified < totalRequired) {
+      throw new BadRequestException('Not all required documents are verified');
+    }
+
+    // Update candidate project status
+    const updated = await this.prisma.candidateProjectMap.update({
+      where: { id: candidateProjectMapId },
+      data: {
+        status: 'documents_verified',
+        documentsVerifiedDate: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    return updated;
   }
 }

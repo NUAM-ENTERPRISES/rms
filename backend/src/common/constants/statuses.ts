@@ -218,10 +218,26 @@ export type JoiningStatus =
 // ==================== CANDIDATE GLOBAL STATUSES ====================
 
 /**
- * Candidate Global Status Constants (Legacy - kept for compatibility)
- * Note: This is being phased out in favor of per-project statuses
+ * Candidate Global Status Constants - New Status System
+ * Tracks candidate engagement and follow-up status
  */
 export const CANDIDATE_STATUS = {
+  // Initial status when candidate is created
+  UNTOUCHED: 'untouched',
+
+  // Engagement statuses
+  INTERESTED: 'interested',
+  NOT_INTERESTED: 'not_interested',
+  NOT_ELIGIBLE: 'not_eligible',
+  OTHER_ENQUIRY: 'other_enquiry',
+  FUTURE: 'future',
+  ON_HOLD: 'on_hold',
+  RNR: 'rnr', // Ringing No Response
+
+  // Qualification status
+  QUALIFIED: 'qualified',
+
+  // Legacy statuses (kept for compatibility)
   NEW: 'new',
   NOMINATED: 'nominated',
   VERIFIED: 'verified',
@@ -234,6 +250,157 @@ export const CANDIDATE_STATUS = {
 
 export type CandidateStatus =
   (typeof CANDIDATE_STATUS)[keyof typeof CANDIDATE_STATUS];
+
+// ==================== STATUS CONFIGURATION ====================
+
+export interface StatusConfig {
+  label: string;
+  description: string;
+  color: string;
+  badgeClass: string;
+  icon: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+}
+
+export const CANDIDATE_STATUS_CONFIG: Record<CandidateStatus, StatusConfig> = {
+  [CANDIDATE_STATUS.UNTOUCHED]: {
+    label: 'Untouched',
+    description: 'New candidate, not yet contacted',
+    color: 'gray',
+    badgeClass: 'bg-gray-50 text-gray-700 border-gray-200',
+    icon: 'User',
+    priority: 'high',
+  },
+  [CANDIDATE_STATUS.INTERESTED]: {
+    label: 'Interested',
+    description: 'Candidate has shown interest',
+    color: 'green',
+    badgeClass: 'bg-green-50 text-green-700 border-green-200',
+    icon: 'ThumbsUp',
+    priority: 'high',
+  },
+  [CANDIDATE_STATUS.NOT_INTERESTED]: {
+    label: 'Not Interested',
+    description: 'Candidate declined the opportunity',
+    color: 'red',
+    badgeClass: 'bg-red-50 text-red-700 border-red-200',
+    icon: 'XCircle',
+    priority: 'low',
+  },
+  [CANDIDATE_STATUS.NOT_ELIGIBLE]: {
+    label: 'Not Eligible',
+    description: 'Candidate does not meet requirements',
+    color: 'red',
+    badgeClass: 'bg-red-50 text-red-700 border-red-200',
+    icon: 'XCircle',
+    priority: 'low',
+  },
+  [CANDIDATE_STATUS.OTHER_ENQUIRY]: {
+    label: 'Other Enquiry',
+    description: 'Candidate has other questions or needs',
+    color: 'orange',
+    badgeClass: 'bg-orange-50 text-orange-700 border-orange-200',
+    icon: 'MessageCircle',
+    priority: 'medium',
+  },
+  [CANDIDATE_STATUS.FUTURE]: {
+    label: 'Future',
+    description: 'Candidate for future opportunities',
+    color: 'blue',
+    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+    icon: 'Clock',
+    priority: 'low',
+  },
+  [CANDIDATE_STATUS.ON_HOLD]: {
+    label: 'On Hold',
+    description: 'Candidate temporarily on hold',
+    color: 'yellow',
+    badgeClass: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    icon: 'Pause',
+    priority: 'medium',
+  },
+  [CANDIDATE_STATUS.RNR]: {
+    label: 'RNR',
+    description: 'Ringing No Response - requires CRE handling',
+    color: 'red',
+    badgeClass: 'bg-red-50 text-red-700 border-red-200',
+    icon: 'PhoneOff',
+    priority: 'urgent',
+  },
+  [CANDIDATE_STATUS.QUALIFIED]: {
+    label: 'Qualified',
+    description: 'Candidate has been qualified',
+    color: 'green',
+    badgeClass: 'bg-green-50 text-green-700 border-green-200',
+    icon: 'CheckCircle',
+    priority: 'high',
+  },
+  // Legacy statuses
+  [CANDIDATE_STATUS.NEW]: {
+    label: 'New',
+    description: 'New candidate',
+    color: 'blue',
+    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+    icon: 'UserPlus',
+    priority: 'high',
+  },
+  [CANDIDATE_STATUS.NOMINATED]: {
+    label: 'Nominated',
+    description: 'Candidate has been nominated',
+    color: 'blue',
+    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+    icon: 'UserCheck',
+    priority: 'high',
+  },
+  [CANDIDATE_STATUS.VERIFIED]: {
+    label: 'Verified',
+    description: 'Candidate documents verified',
+    color: 'green',
+    badgeClass: 'bg-green-50 text-green-700 border-green-200',
+    icon: 'CheckCircle2',
+    priority: 'high',
+  },
+  [CANDIDATE_STATUS.INTERVIEWING]: {
+    label: 'Interviewing',
+    description: 'Candidate is in interview process',
+    color: 'purple',
+    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
+    icon: 'Users',
+    priority: 'high',
+  },
+  [CANDIDATE_STATUS.SELECTED]: {
+    label: 'Selected',
+    description: 'Candidate has been selected',
+    color: 'green',
+    badgeClass: 'bg-green-50 text-green-700 border-green-200',
+    icon: 'Star',
+    priority: 'high',
+  },
+  [CANDIDATE_STATUS.PROCESSING]: {
+    label: 'Processing',
+    description: 'Candidate is being processed',
+    color: 'orange',
+    badgeClass: 'bg-orange-50 text-orange-700 border-orange-200',
+    icon: 'Cog',
+    priority: 'medium',
+  },
+  [CANDIDATE_STATUS.HIRED]: {
+    label: 'Hired',
+    description: 'Candidate has been hired',
+    color: 'green',
+    badgeClass: 'bg-green-50 text-green-700 border-green-200',
+    icon: 'BadgeCheck',
+    priority: 'low',
+  },
+  [CANDIDATE_STATUS.REJECTED]: {
+    label: 'Rejected',
+    description: 'Candidate has been rejected',
+    color: 'red',
+    badgeClass: 'bg-red-50 text-red-700 border-red-200',
+    icon: 'XCircle',
+    priority: 'low',
+  },
+};
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -286,4 +453,68 @@ export function getStatusStage(status: CandidateProjectStatus): string {
   };
 
   return stageMap[status] ?? 'unknown';
+}
+
+// ==================== CANDIDATE STATUS HELPER FUNCTIONS ====================
+
+/**
+ * Check if a candidate status requires CRE (Customer Relationship Executive) handling
+ */
+export function requiresCREHandling(status: CandidateStatus): boolean {
+  return status === CANDIDATE_STATUS.RNR;
+}
+
+/**
+ * Check if a candidate status is terminal (no further follow-up needed)
+ */
+export function isCandidateStatusTerminal(status: CandidateStatus): boolean {
+  const terminalStatuses: CandidateStatus[] = [
+    CANDIDATE_STATUS.NOT_INTERESTED,
+    CANDIDATE_STATUS.NOT_ELIGIBLE,
+    CANDIDATE_STATUS.QUALIFIED,
+  ];
+  return terminalStatuses.includes(status);
+}
+
+/**
+ * Check if a candidate status requires immediate follow-up
+ */
+export function requiresImmediateFollowUp(status: CandidateStatus): boolean {
+  return (
+    status === CANDIDATE_STATUS.UNTOUCHED ||
+    status === CANDIDATE_STATUS.INTERESTED
+  );
+}
+
+/**
+ * Get the priority level of a candidate status
+ */
+export function getCandidateStatusPriority(
+  status: CandidateStatus,
+): 'low' | 'medium' | 'high' | 'urgent' {
+  const priorityMap: Record<
+    CandidateStatus,
+    'low' | 'medium' | 'high' | 'urgent'
+  > = {
+    [CANDIDATE_STATUS.UNTOUCHED]: 'high',
+    [CANDIDATE_STATUS.INTERESTED]: 'high',
+    [CANDIDATE_STATUS.RNR]: 'urgent',
+    [CANDIDATE_STATUS.ON_HOLD]: 'medium',
+    [CANDIDATE_STATUS.FUTURE]: 'low',
+    [CANDIDATE_STATUS.OTHER_ENQUIRY]: 'medium',
+    [CANDIDATE_STATUS.NOT_INTERESTED]: 'low',
+    [CANDIDATE_STATUS.NOT_ELIGIBLE]: 'low',
+    [CANDIDATE_STATUS.QUALIFIED]: 'high',
+    // Legacy statuses
+    [CANDIDATE_STATUS.NEW]: 'high',
+    [CANDIDATE_STATUS.NOMINATED]: 'high',
+    [CANDIDATE_STATUS.VERIFIED]: 'high',
+    [CANDIDATE_STATUS.INTERVIEWING]: 'high',
+    [CANDIDATE_STATUS.SELECTED]: 'high',
+    [CANDIDATE_STATUS.PROCESSING]: 'high',
+    [CANDIDATE_STATUS.HIRED]: 'low',
+    [CANDIDATE_STATUS.REJECTED]: 'low',
+  };
+
+  return priorityMap[status] ?? 'medium';
 }

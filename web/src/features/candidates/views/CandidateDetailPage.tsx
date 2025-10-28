@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -24,15 +24,10 @@ import {
   Edit,
   Trash2,
   Calendar,
-  Building2,
-  Users,
   Phone,
   Mail,
   MapPin,
-  ExternalLink,
-  TrendingUp,
   AlertTriangle,
-  Info,
   Star,
   DollarSign,
   FileText,
@@ -41,30 +36,29 @@ import {
   XCircle,
   Briefcase,
   Target,
-  Shield,
   UserCheck,
-  Activity,
   BarChart3,
   History,
-  Settings,
-  Download,
-  Share2,
   Eye,
-  ArrowRight,
   User,
   GraduationCap,
   Award,
   Clock3,
   CheckCircle2,
-  AlertCircle,
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
+  Plus,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { cn } from "@/lib/utils";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
+import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
+import { CandidateResumeList } from "@/components/molecules";
+import { DocumentUploadSection } from "../components/DocumentUploadSection";
+import { CandidatePipeline } from "../components/CandidatePipeline";
+import { StatusUpdateModal } from "../components/StatusUpdateModal";
+import { useStatusConfig } from '../hooks/useStatusConfig';
+import type {
+  CandidateQualification,
+  WorkExperience,
+} from "@/features/candidates/api";
 
 // Helper function to format date - following FE guidelines: DD MMM YYYY
 const formatDate = (dateString?: string) => {
@@ -86,183 +80,70 @@ const formatCurrency = (amount?: number) => {
   }).format(amount);
 };
 
-// Status badge component
-const StatusBadge = ({ status }: { status: string }) => {
-  const statusConfig = {
-    active: {
-      color: "bg-green-100 text-green-800 border-green-200",
-      icon: CheckCircle,
-    },
-    inactive: {
-      color: "bg-gray-100 text-gray-800 border-gray-200",
-      icon: XCircle,
-    },
-    pending: {
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      icon: Clock,
-    },
-    interviewing: {
-      color: "bg-blue-100 text-blue-800 border-blue-200",
-      icon: UserCheck,
-    },
-    placed: {
-      color: "bg-green-100 text-green-800 border-green-200",
-      icon: CheckCircle2,
-    },
-    rejected: {
-      color: "bg-red-100 text-red-800 border-red-200",
-      icon: XCircle,
-    },
-  };
-
-  const config =
-    statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
-  const Icon = config.icon;
-
-  return (
-    <Badge className={`${config.color} border gap-1 px-2 py-1`}>
-      <Icon className="h-3 w-3" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </Badge>
-  );
-};
-
-// Pipeline Stage Component
-const PipelineStage = ({
-  stage,
-  isActive,
-  isCompleted,
-  isCurrent,
-  title,
-  description,
-  date,
-  icon: Icon,
-  isLast = false,
-}: {
-  stage: string;
-  isActive: boolean;
-  isCompleted: boolean;
-  isCurrent: boolean;
-  title: string;
-  description: string;
-  date?: string;
-  icon: any;
-  isLast?: boolean;
-}) => {
-  return (
-    <div className="flex flex-col items-center">
-      {/* Stage Circle */}
-      <div className="relative">
-        <div
-          className={cn(
-            "w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm",
-            isCompleted &&
-              "bg-green-500 border-green-500 text-white shadow-green-200",
-            isCurrent &&
-              "bg-blue-500 border-blue-500 text-white shadow-blue-200",
-            !isCompleted &&
-              !isCurrent &&
-              "bg-gray-100 border-gray-300 text-gray-500"
-          )}
-        >
-          {isCompleted ? (
-            <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6" />
-          ) : (
-            <Icon className="h-5 w-5 md:h-6 md:w-6" />
-          )}
-        </div>
-
-        {/* Current stage indicator */}
-        {isCurrent && (
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 rounded-full border-2 border-white animate-pulse" />
-        )}
-      </div>
-
-      {/* Stage Title */}
-      <div className="text-center mt-2 max-w-20 md:max-w-24">
-        <div className="text-xs md:text-sm font-medium text-slate-900">
-          {title}
-        </div>
-        {date && (
-          <div className="text-xs text-slate-500 mt-1">{formatDate(date)}</div>
-        )}
-      </div>
-
-      {/* Connecting Line */}
-      {!isLast && (
-        <div className="hidden md:block w-full mt-4">
-          <div
-            className={cn(
-              "h-0.5 transition-all duration-300",
-              isCompleted ? "bg-green-500" : "bg-gray-200"
-            )}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Mobile Pipeline Stage Component
-const MobilePipelineStage = ({
-  stage,
-  isActive,
-  isCompleted,
-  isCurrent,
-  title,
-  description,
-  date,
-  icon: Icon,
-}: {
-  stage: string;
-  isActive: boolean;
-  isCompleted: boolean;
-  isCurrent: boolean;
-  title: string;
-  description: string;
-  date?: string;
-  icon: any;
-}) => {
-  return (
-    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-white/50">
-      <div
-        className={cn(
-          "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 flex-shrink-0",
-          isCompleted && "bg-green-500 border-green-500 text-white",
-          isCurrent && "bg-blue-500 border-blue-500 text-white",
-          !isCompleted &&
-            !isCurrent &&
-            "bg-gray-100 border-gray-300 text-gray-500"
-        )}
-      >
-        {isCompleted ? (
-          <CheckCircle2 className="h-4 w-4" />
-        ) : (
-          <Icon className="h-4 w-4" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-slate-900">{title}</div>
-        <div className="text-xs text-slate-500">{description}</div>
-        {date && (
-          <div className="text-xs text-slate-400 mt-1">{formatDate(date)}</div>
-        )}
-      </div>
-      {isCurrent && (
-        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-      )}
-    </div>
-  );
-};
 
 export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
 
-  const canReadCandidates = useCan("read:candidates");
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<
+    "qualification" | "workExperience"
+  >("qualification");
+  const [editData, setEditData] = useState<
+    CandidateQualification | WorkExperience | undefined
+  >();
+
+  // Status update modal state
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const { statusConfig } = useStatusConfig();
+
+  // Status badge component
+  const StatusBadge = ({ status }: { status?: string }) => {
+    const safeStatus = status || "unknown";
+    const config = statusConfig[safeStatus];
+
+    if (!config) {
+      return (
+        <Badge className="bg-gray-100 text-gray-800 border-gray-200 border gap-1 px-2 py-1">
+          <AlertTriangle className="h-3 w-3" />
+          {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
+        </Badge>
+      );
+    }
+
+    // Map icon names to actual components
+    const iconMap: Record<string, any> = {
+      User: User,
+      ThumbsUp: CheckCircle,
+      XCircle: XCircle,
+      MessageCircle: Clock,
+      Clock: Clock,
+      Pause: Clock,
+      PhoneOff: XCircle,
+      CheckCircle: CheckCircle2,
+      UserPlus: UserCheck,
+      UserCheck: UserCheck,
+      Users: UserCheck,
+      Star: Star,
+      Cog: Clock,
+      BadgeCheck: CheckCircle2,
+    };
+
+    const Icon = iconMap[config.icon] || AlertTriangle;
+
+    return (
+      <Badge className={`${config.badgeClass} border gap-1 px-2 py-1`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
-  const canManageCandidates = useCan("manage:candidates");
+  const canManageCandidates = useCan("write:candidates");
 
   // Fetch candidate data from API
   const {
@@ -281,6 +162,36 @@ export default function CandidateDetailPage() {
     toast.error("Delete functionality coming soon");
   };
 
+  // Modal handlers
+  const openAddModal = (type: "qualification" | "workExperience") => {
+    setModalType(type);
+    setEditData(undefined);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (
+    type: "qualification" | "workExperience",
+    data: CandidateQualification | WorkExperience
+  ) => {
+    setModalType(type);
+    setEditData(data);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditData(undefined);
+  };
+
+  const handleModalSuccess = () => {
+    // The candidate data will be refetched automatically due to cache invalidation
+    toast.success(
+      `${
+        modalType === "qualification" ? "Qualification" : "Work experience"
+      } saved successfully`
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="p-8">
@@ -297,7 +208,29 @@ export default function CandidateDetailPage() {
     );
   }
 
-  if (error || !candidate) {
+  if (error) {
+    console.error("Candidate fetch error:", error);
+    return (
+      <div className="p-8">
+        <div className="text-center py-12">
+          <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            Error Loading Candidate
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            There was an error loading the candidate details.
+          </p>
+          <Button onClick={() => navigate("/candidates")} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Candidates
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!candidate) {
+    console.log("No candidate data received");
     return (
       <div className="p-8">
         <div className="text-center py-12">
@@ -321,14 +254,32 @@ export default function CandidateDetailPage() {
     <div>
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-            {candidate.firstName} {candidate.lastName}
-          </h1>
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+              {candidate.firstName} {candidate.lastName}
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Status:</span>
+              <StatusBadge status={candidate.currentStatus} />
+              <span className="text-sm text-slate-600">
+                {statusConfig[candidate.currentStatus]?.description}
+              </span>
+              {canWriteCandidates && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsStatusModalOpen(true)}
+                  className="h-6 w-6 p-0 hover:bg-slate-100"
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={candidate.currentStatus} />
             <span className="text-sm text-slate-500">
-              {candidate.currentRole} • {candidate.location}
+              {candidate.currentRole || "No role specified"}
             </span>
             <span className="text-sm text-slate-400">
               Created {formatDate(candidate.createdAt)}
@@ -363,92 +314,10 @@ export default function CandidateDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          {/* Desktop Pipeline View */}
-          <div className="hidden lg:block">
-            <div className="grid grid-cols-10 gap-4 items-start">
-              {candidate.pipeline.stages.map((stage, index) => (
-                <div key={stage.stage} className="flex flex-col items-center">
-                  <PipelineStage
-                    stage={stage.stage}
-                    isActive={stage.isCurrent}
-                    isCompleted={stage.isCompleted}
-                    isCurrent={stage.isCurrent}
-                    title={stage.title}
-                    description={stage.description}
-                    date={stage.date}
-                    icon={stage.icon}
-                    isLast={index === candidate.pipeline.stages.length - 1}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tablet Pipeline View */}
-          <div className="hidden md:block lg:hidden">
-            <div className="grid grid-cols-5 gap-6 items-start">
-              {candidate.pipeline.stages.map((stage, index) => (
-                <div key={stage.stage} className="flex flex-col items-center">
-                  <PipelineStage
-                    stage={stage.stage}
-                    isActive={stage.isCurrent}
-                    isCompleted={stage.isCompleted}
-                    isCurrent={stage.isCurrent}
-                    title={stage.title}
-                    description={stage.description}
-                    date={stage.date}
-                    icon={stage.icon}
-                    isLast={index === candidate.pipeline.stages.length - 1}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Mobile Pipeline View */}
-          <div className="md:hidden">
-            <div className="space-y-3">
-              {candidate.pipeline.stages.map((stage) => (
-                <MobilePipelineStage
-                  key={stage.stage}
-                  stage={stage.stage}
-                  isActive={stage.isCurrent}
-                  isCompleted={stage.isCompleted}
-                  isCurrent={stage.isCurrent}
-                  title={stage.title}
-                  description={stage.description}
-                  date={stage.date}
-                  icon={stage.icon}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Progress Summary */}
-          <div className="mt-8 p-4 bg-slate-50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-slate-700">
-                Overall Progress
-              </span>
-              <span className="text-sm text-slate-600">
-                {candidate.pipeline.stages.filter((s) => s.isCompleted).length}{" "}
-                of {candidate.pipeline.stages.length} stages completed
-              </span>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-2">
-              <div
-                className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${
-                    (candidate.pipeline.stages.filter((s) => s.isCompleted)
-                      .length /
-                      candidate.pipeline.stages.length) *
-                    100
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
+          <CandidatePipeline
+            projects={candidate.pipeline?.projects || []}
+            overallProgress={candidate.pipeline?.overallProgress || 0}
+          />
         </CardContent>
       </Card>
 
@@ -458,9 +327,11 @@ export default function CandidateDetailPage() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
         </TabsList>
@@ -476,89 +347,130 @@ export default function CandidateDetailPage() {
                   Candidate Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                       Email
                     </label>
-                    <p className="text-sm flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      {candidate.email}
+                    <p className="text-sm flex items-center gap-2 mt-1">
+                      <Mail className="h-3 w-3 text-slate-400" />
+                      {candidate.email || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                       Phone
                     </label>
-                    <p className="text-sm flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      {candidate.contact}
+                    <p className="text-sm flex items-center gap-2 mt-1">
+                      <Phone className="h-3 w-3 text-slate-400" />
+                      {candidate.mobileNumber || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Location
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Date of Birth
                     </label>
-                    <p className="text-sm flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      {candidate.location}
+                    <p className="text-sm flex items-center gap-2 mt-1">
+                      <Calendar className="h-3 w-3 text-slate-400" />
+                      {formatDate(candidate.dateOfBirth)}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                       Experience
                     </label>
-                    <p className="text-sm flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      {candidate.totalExperience ||
-                        candidate.experience ||
-                        0}{" "}
-                      years
+                    <p className="text-sm flex items-center gap-2 mt-1">
+                      <Clock className="h-3 w-3 text-slate-400" />
+                      {(() => {
+                        if (
+                          candidate.workExperiences &&
+                          candidate.workExperiences.length > 0
+                        ) {
+                          // Calculate total experience from work experiences
+                          let totalMonths = 0;
+                          candidate.workExperiences.forEach((exp) => {
+                            const startDate = new Date(exp.startDate);
+                            const endDate = exp.isCurrent
+                              ? new Date()
+                              : new Date(exp.endDate || new Date());
+                            const months =
+                              (endDate.getFullYear() -
+                                startDate.getFullYear()) *
+                                12 +
+                              (endDate.getMonth() - startDate.getMonth());
+                            totalMonths += months;
+                          });
+                          const years = Math.floor(totalMonths / 12);
+                          const months = totalMonths % 12;
+                          return years > 0
+                            ? `${years} years ${
+                                months > 0 ? `${months} months` : ""
+                              }`
+                            : `${months} months`;
+                        }
+                        return (
+                          candidate.totalExperience || candidate.experience || 0
+                        );
+                      })()}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Current Role
-                    </label>
-                    <p className="text-sm">{candidate.currentRole}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Target Role
-                    </label>
-                    <p className="text-sm">{candidate.targetRole}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                       Expected Salary
                     </label>
-                    <p className="text-sm flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      {formatCurrency(candidate.expectedSalary)}
+                    <p className="text-sm flex items-center gap-2 mt-1">
+                      <DollarSign className="h-3 w-3 text-slate-400" />
+                      {candidate.expectedSalary
+                        ? formatCurrency(candidate.expectedSalary)
+                        : "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Availability
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Source
                     </label>
-                    <p className="text-sm">
-                      {candidate.availability.replace("_", " ")}
+                    <p className="text-sm mt-1 capitalize">
+                      {candidate.source || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Created
+                    </label>
+                    <p className="text-sm mt-1">
+                      {formatDate(candidate.createdAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Last Updated
+                    </label>
+                    <p className="text-sm mt-1">
+                      {formatDate(candidate.updatedAt)}
                     </p>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Skills
-                  </label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {candidate.skills.map((skill) => (
-                      <Badge key={skill} variant="secondary">
-                        {skill}
-                      </Badge>
-                    ))}
+
+                {/* Skills Section */}
+                {candidate.skills && candidate.skills.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-slate-200">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+                      Skills
+                    </label>
+                    <div className="flex flex-wrap gap-1">
+                      {candidate.skills.map((skill) => (
+                        <Badge
+                          key={skill}
+                          variant="secondary"
+                          className="text-xs px-2 py-1"
+                        >
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -576,7 +488,7 @@ export default function CandidateDetailPage() {
                     Applications
                   </span>
                   <span className="font-semibold">
-                    {candidate.metrics.totalApplications}
+                    {candidate.metrics?.totalApplications ?? 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -584,13 +496,13 @@ export default function CandidateDetailPage() {
                     Interviews
                   </span>
                   <span className="font-semibold text-blue-600">
-                    {candidate.metrics.interviewsScheduled}
+                    {candidate.metrics?.interviewsScheduled ?? 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Offers</span>
                   <span className="font-semibold text-green-600">
-                    {candidate.metrics.offersReceived}
+                    {candidate.metrics?.offersReceived ?? 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -598,66 +510,306 @@ export default function CandidateDetailPage() {
                     Placements
                   </span>
                   <span className="font-semibold text-purple-600">
-                    {candidate.metrics.placements}
+                    {candidate.metrics?.placements ?? 0}
                   </span>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Additional Information */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-200">
-              <CardTitle className="flex items-center gap-2 text-slate-900">
-                <Info className="h-5 w-5 text-blue-600" />
-                Additional Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Current Employer
-                  </label>
-                  <p className="text-sm">
-                    {candidate.currentEmployer || "N/A"}
-                  </p>
+          {/* Resume List */}
+          <div className="mb-8">
+            <CandidateResumeList candidateId={id!} />
+          </div>
+
+          {/* Educational Qualifications and Work Experience - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Educational Qualifications - LinkedIn Style */}
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <GraduationCap className="h-5 w-5 text-blue-600" />
+                    Educational Qualifications
+                  </CardTitle>
+                  {canWriteCandidates && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openAddModal("qualification")}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </Button>
+                  )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Date of Birth
-                  </label>
-                  <p className="text-sm">{formatDate(candidate.dateOfBirth)}</p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {candidate.qualifications &&
+                candidate.qualifications.length > 0 ? (
+                  <div className="space-y-4">
+                    {candidate.qualifications.map((qual) => (
+                      <div
+                        key={qual.id}
+                        className="border-l-4 border-blue-200 pl-4 py-3 hover:border-blue-400 transition-colors duration-200"
+                      >
+                        {/* Qualification Header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-base font-semibold text-slate-900 mb-1">
+                              {qual.qualification.name}
+                            </h3>
+                            {qual.qualification.shortName && (
+                              <p className="text-xs text-slate-600 font-medium mb-1">
+                                {qual.qualification.shortName}
+                              </p>
+                            )}
+                            {qual.university && (
+                              <p className="text-xs text-slate-700 font-medium">
+                                {qual.university}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                qual.isCompleted ? "default" : "secondary"
+                              }
+                              className={`text-xs px-2 py-1 ${
+                                qual.isCompleted
+                                  ? "bg-green-100 text-green-800 border-green-200"
+                                  : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                              }`}
+                            >
+                              {qual.isCompleted ? "Completed" : "In Progress"}
+                            </Badge>
+                            {canWriteCandidates && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  openEditModal("qualification", qual)
+                                }
+                                className="h-8 w-8 p-0 hover:bg-slate-100"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Qualification Details */}
+                        <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+                          {qual.graduationYear && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-slate-500" />
+                              <span>{qual.graduationYear}</span>
+                            </div>
+                          )}
+                          {qual.gpa && (
+                            <div className="flex items-center gap-1">
+                              <Star className="h-3 w-3 text-amber-500" />
+                              <span>GPA: {qual.gpa}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Notes */}
+                        {qual.notes && (
+                          <div className="mt-3 p-2 bg-slate-50 rounded-md">
+                            <p className="text-xs text-slate-700 italic">
+                              "{qual.notes}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center space-y-4">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                        <GraduationCap className="h-8 w-8 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-slate-600 font-medium">
+                          No educational qualifications
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          Add degrees and certifications to showcase expertise
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Work Experience - LinkedIn Style */}
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <Briefcase className="h-5 w-5 text-blue-600" />
+                    Work Experience
+                  </CardTitle>
+                  {canWriteCandidates && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openAddModal("workExperience")}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </Button>
+                  )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Assigned Recruiter
-                  </label>
-                  <p className="text-sm">
-                    {candidate.assignedRecruiter || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Last Contact
-                  </label>
-                  <p className="text-sm">{formatDate(candidate.lastContact)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Created
-                  </label>
-                  <p className="text-sm">{formatDate(candidate.createdAt)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Last Updated
-                  </label>
-                  <p className="text-sm">{formatDate(candidate.updatedAt)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {candidate.workExperiences &&
+                candidate.workExperiences.length > 0 ? (
+                  <div className="space-y-4">
+                    {candidate.workExperiences.map((exp) => (
+                      <div
+                        key={exp.id}
+                        className="border-l-4 border-emerald-200 pl-4 py-3 hover:border-emerald-400 transition-colors duration-200"
+                      >
+                        {/* Job Header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-base font-semibold text-slate-900 mb-1">
+                              {exp.jobTitle}
+                            </h3>
+                            <p className="text-xs text-emerald-600 font-medium mb-2">
+                              {exp.companyName}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-slate-600">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3 text-slate-500" />
+                                <span>
+                                  {formatDate(exp.startDate)} -{" "}
+                                  {exp.isCurrent
+                                    ? "Present"
+                                    : exp.endDate
+                                    ? formatDate(exp.endDate)
+                                    : "Not specified"}
+                                </span>
+                              </div>
+                              {exp.location && (
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3 text-slate-500" />
+                                  <span>{exp.location}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {exp.isCurrent && (
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs px-2 py-1">
+                                Current
+                              </Badge>
+                            )}
+                            {canWriteCandidates && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  openEditModal("workExperience", exp)
+                                }
+                                className="h-8 w-8 p-0 hover:bg-slate-100"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Job Details */}
+                        <div className="space-y-3">
+                          {/* Description */}
+                          {exp.description && (
+                            <div>
+                              <p className="text-xs text-slate-700 leading-relaxed">
+                                {exp.description}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Salary */}
+                          {exp.salary && (
+                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                              <DollarSign className="h-3 w-3 text-green-500" />
+                              <span className="font-medium">
+                                {formatCurrency(exp.salary)}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Achievements */}
+                          {exp.achievements && (
+                            <div className="p-2 bg-amber-50 rounded-md border border-amber-200">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Award className="h-3 w-3 text-amber-600" />
+                                <span className="text-xs font-medium text-amber-600 uppercase tracking-wide">
+                                  Achievements
+                                </span>
+                              </div>
+                              <p className="text-xs text-amber-800">
+                                {exp.achievements}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Skills */}
+                          {exp.skills &&
+                            Array.isArray(exp.skills) &&
+                            exp.skills.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-1 mb-1">
+                                  <Star className="h-3 w-3 text-purple-500" />
+                                  <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">
+                                    Skills
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {exp.skills.map((skill, index) => (
+                                    <Badge
+                                      key={index}
+                                      variant="secondary"
+                                      className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 border-purple-200"
+                                    >
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center space-y-4">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                        <Briefcase className="h-8 w-8 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-slate-600 font-medium">
+                          No work experience
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          Add professional experience to build credibility
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Projects Tab */}
@@ -666,10 +818,10 @@ export default function CandidateDetailPage() {
             <CardHeader className="border-b border-slate-200">
               <CardTitle className="flex items-center gap-2 text-slate-900">
                 <Briefcase className="h-5 w-5 text-blue-600" />
-                Available Projects
+                Assigned Projects
               </CardTitle>
               <CardDescription className="text-slate-600">
-                Projects where this candidate can be allocated
+                Projects where this candidate is currently assigned
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -677,65 +829,63 @@ export default function CandidateDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Project</TableHead>
-                    <TableHead>Client</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Deadline</TableHead>
-                    <TableHead>Match Score</TableHead>
-                    <TableHead>Assignment</TableHead>
+                    <TableHead>Recruiter</TableHead>
+                    <TableHead>Assigned Date</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {candidate.projects.map((project) => (
-                    <TableRow key={project.id}>
+                  {(candidate.projects || []).map((projectMap) => (
+                    <TableRow key={projectMap.id}>
                       <TableCell className="font-medium">
-                        {project.title}
+                        {projectMap.project?.title || "Unknown Project"}
                       </TableCell>
-                      <TableCell>{project.client}</TableCell>
                       <TableCell>
-                        <StatusBadge status={project.status} />
+                        <StatusBadge status={projectMap.status} />
                       </TableCell>
-                      <TableCell>{formatDate(project.deadline)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div
-                              className={cn(
-                                "h-2 rounded-full",
-                                project.matchScore >= 90
-                                  ? "bg-green-600"
-                                  : project.matchScore >= 80
-                                  ? "bg-blue-600"
-                                  : project.matchScore >= 70
-                                  ? "bg-yellow-600"
-                                  : "bg-red-600"
-                              )}
-                              style={{ width: `${project.matchScore}%` }}
-                            />
+                        {projectMap.recruiter ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">
+                                {projectMap.recruiter.name}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {projectMap.recruiter.email}
+                              </p>
+                            </div>
                           </div>
-                          <span className="text-sm font-medium">
-                            {project.matchScore}%
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {project.isAssigned ? (
-                          <Badge className="bg-green-100 text-green-800 border-green-200">
-                            Assigned
-                          </Badge>
                         ) : (
-                          <Badge variant="outline">Available</Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-orange-600 border-orange-200"
+                          >
+                            Unassigned
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>
+                        {formatDate(projectMap.nominatedDate)}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              navigate(`/projects/${projectMap.projectId}`)
+                            }
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!project.isAssigned && (
+                          {projectMap.status === "nominated" && (
                             <Button variant="outline" size="sm">
                               <UserCheck className="h-4 w-4 mr-1" />
-                              Assign
+                              Review
                             </Button>
                           )}
                         </div>
@@ -746,6 +896,19 @@ export default function CandidateDetailPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Pipeline Tab */}
+        <TabsContent value="pipeline" className="space-y-6">
+          <CandidatePipeline
+            projects={candidate.pipeline?.projects || []}
+            overallProgress={candidate.pipeline?.overallProgress || 0}
+          />
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
+          <DocumentUploadSection candidateId={id!} />
         </TabsContent>
 
         {/* History Tab */}
@@ -762,7 +925,7 @@ export default function CandidateDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {candidate.history.map((item) => (
+                {(candidate.history || []).map((item) => (
                   <div
                     key={item.id}
                     className="flex items-start gap-4 p-4 border rounded-lg"
@@ -801,7 +964,7 @@ export default function CandidateDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {candidate.metrics.totalApplications}
+                  {candidate.metrics?.totalApplications ?? 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Across all projects
@@ -818,10 +981,10 @@ export default function CandidateDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {candidate.metrics.interviewsScheduled}
+                  {candidate.metrics?.interviewsScheduled ?? 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {candidate.metrics.interviewsCompleted} completed
+                  {candidate.metrics?.interviewsCompleted ?? 0} completed
                 </p>
               </CardContent>
             </Card>
@@ -835,10 +998,10 @@ export default function CandidateDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {candidate.metrics.offersReceived}
+                  {candidate.metrics?.offersReceived ?? 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {candidate.metrics.placements} accepted
+                  {candidate.metrics?.placements ?? 0} accepted
                 </p>
               </CardContent>
             </Card>
@@ -852,7 +1015,7 @@ export default function CandidateDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {candidate.metrics.averageResponseTime} days
+                  {candidate.metrics?.averageResponseTime ?? 0} days
                 </div>
                 <p className="text-xs text-muted-foreground">
                   From application to response
@@ -862,6 +1025,25 @@ export default function CandidateDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modal for adding/editing qualifications and work experience */}
+      <QualificationWorkExperienceModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        candidateId={id!}
+        type={modalType}
+        editData={editData}
+        onSuccess={handleModalSuccess}
+      />
+
+      {/* Status update modal */}
+      <StatusUpdateModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        candidateId={id!}
+        currentStatus={candidate.currentStatus}
+        candidateName={`${candidate.firstName} ${candidate.lastName}`}
+      />
     </div>
   );
 }

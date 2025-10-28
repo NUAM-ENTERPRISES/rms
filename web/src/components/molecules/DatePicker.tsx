@@ -90,11 +90,12 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto min-w-[350px] max-w-[450px] p-4 sm:p-6"
+        className="w-auto min-w-[600px] max-w-[700px] p-4 sm:p-6"
         align="start"
       >
-        <div className="space-y-4 sm:space-y-6">
-          <div className="space-y-3">
+        <div className="flex gap-6">
+          {/* Left side - Date Calendar */}
+          <div className="flex-1 space-y-3">
             <Label className="text-sm font-medium text-slate-700">
               Select Date
             </Label>
@@ -111,42 +112,45 @@ export function DatePicker({
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label
-              htmlFor="time"
-              className="text-sm font-medium text-slate-700"
-            >
-              Select Time
-            </Label>
-            <div className="flex items-center gap-3">
-              <Clock className="h-4 w-4 text-slate-500 flex-shrink-0" />
-              <Input
-                id="time"
-                type="time"
-                value={timeValue}
-                onChange={(e) => handleTimeChange(e.target.value)}
-                className="w-full h-10 sm:h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-              />
+          {/* Right side - Time picker and buttons */}
+          <div className="flex-1 space-y-4">
+            <div className="space-y-3">
+              <Label
+                htmlFor="time"
+                className="text-sm font-medium text-slate-700"
+              >
+                Select Time
+              </Label>
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                <Input
+                  id="time"
+                  type="time"
+                  value={timeValue}
+                  onChange={(e) => handleTimeChange(e.target.value)}
+                  className="w-full h-10 sm:h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              className="h-9 sm:h-10 px-4 sm:px-6 border-slate-200 hover:border-slate-300 text-sm"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleApply}
-              disabled={!selectedDate}
-              className="h-9 sm:h-10 px-4 sm:px-6 bg-blue-600 hover:bg-blue-700 text-sm"
-            >
-              OK
-            </Button>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancel}
+                className="h-9 sm:h-10 px-4 sm:px-6 border-slate-200 hover:border-slate-300 text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleApply}
+                disabled={!selectedDate}
+                className="h-9 sm:h-10 px-4 sm:px-6 bg-blue-600 hover:bg-blue-700 text-sm"
+              >
+                OK
+              </Button>
+            </div>
           </div>
         </div>
       </PopoverContent>

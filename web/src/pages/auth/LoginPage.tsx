@@ -20,10 +20,10 @@ const loginSchema = z.object({
     .string()
     .min(1, "Country code is required")
     .regex(/^\+[1-9]\d{0,3}$/, "Please select a valid country code"),
-  phone: z
+  mobileNumber: z
     .string()
-    .min(1, "Phone number is required")
-    .regex(/^\d{6,15}$/, "Please enter a valid phone number (6-15 digits)"),
+    .min(1, "Mobile number is required")
+    .regex(/^\d{6,15}$/, "Please enter a valid mobile number (6-15 digits)"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -53,7 +53,7 @@ function RmsRightPanel({
     <div
       className={`hidden lg:flex flex-1 items-center justify-center p-8 relative z-10 ${className}`}
     >
-      <div className="bg-[#0D0E10] rounded-[28px] overflow-hidden relative w-full h-full">
+      <div className="bg-[#040f27] rounded-[28px] overflow-hidden relative w-full h-full">
         {/* Background Texture & Vignette */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"></div>
         <div
@@ -186,7 +186,7 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       countryCode: "+91",
-      phone: "",
+      mobileNumber: "",
       password: "",
     },
   });
@@ -219,7 +219,7 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       const errorMessage =
-        error?.data?.message || "Invalid phone number or password";
+        error?.data?.message || "Invalid mobile number or password";
       setError("root", { message: errorMessage });
       toast.error(errorMessage);
     }
@@ -263,10 +263,10 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="space-y-2">
                   <Label
-                    htmlFor="phone"
+                    htmlFor="mobileNumber"
                     className="text-sm font-medium text-slate-700"
                   >
-                    Phone Number
+                    Mobile Number
                   </Label>
                   <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
                     <div>
@@ -286,11 +286,11 @@ export default function LoginPage() {
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
-                        id="phone"
+                        id="mobileNumber"
                         type="tel"
                         placeholder="9876543210"
                         className="pl-10 h-12 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
-                        {...register("phone")}
+                        {...register("mobileNumber")}
                       />
                     </div>
                   </div>
@@ -299,9 +299,9 @@ export default function LoginPage() {
                       {errors.countryCode.message}
                     </p>
                   )}
-                  {errors.phone && (
+                  {errors.mobileNumber && (
                     <p className="text-sm text-red-600 mt-1">
-                      {errors.phone.message}
+                      {errors.mobileNumber.message}
                     </p>
                   )}
                 </div>

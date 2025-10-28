@@ -262,6 +262,78 @@ export const documentsApi = baseApi.injectEndpoints({
         `/documents/summary/${candidateProjectMapId}`,
       providesTags: (_, __, id) => [{ type: "DocumentSummary", id }],
     }),
+
+    getVerificationCandidates: builder.query<
+      { success: boolean; data: any },
+      { page?: number; limit?: number; status?: string; search?: string }
+    >({
+      query: (params = {}) => ({
+        url: "/documents/verification-candidates",
+        params,
+      }),
+      providesTags: ["VerificationCandidates"],
+    }),
+
+    // Enhanced Document Verification APIs
+    getCandidateProjects: builder.query<
+      { success: boolean; data: any[]; message: string },
+      string
+    >({
+      query: (candidateId) => `/documents/candidates/${candidateId}/projects`,
+      providesTags: ["DocumentVerification"],
+    }),
+
+    getCandidateProjectRequirements: builder.query<
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string }
+    >({
+      query: ({ candidateId, projectId }) =>
+        `/documents/candidates/${candidateId}/projects/${projectId}/requirements`,
+      providesTags: ["DocumentVerification"],
+    }),
+
+    // Eligibility and Matchmaking APIs
+    getCandidateEligibility: builder.query<
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string; roleId: string }
+    >({
+      query: ({ candidateId, projectId, roleId }) =>
+        `/eligibility/candidate/${candidateId}/project/${projectId}/role/${roleId}`,
+      providesTags: ["Eligibility"],
+    }),
+
+    getMatchmakingProcess: builder.query<
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string }
+    >({
+      query: ({ candidateId, projectId }) =>
+        `/eligibility/candidate/${candidateId}/project/${projectId}/matchmaking`,
+      providesTags: ["Matchmaking"],
+    }),
+
+    reuseDocument: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { documentId: string; projectId: string }
+    >({
+      query: ({ documentId, projectId }) => ({
+        url: `/documents/${documentId}/reuse`,
+        method: "POST",
+        body: { projectId },
+      }),
+      invalidatesTags: ["DocumentVerification"],
+    }),
+
+    completeVerification: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { candidateProjectMapId: string }
+    >({
+      query: ({ candidateProjectMapId }) => ({
+        url: `/documents/complete-verification`,
+        method: "POST",
+        body: { candidateProjectMapId },
+      }),
+      invalidatesTags: ["DocumentVerification"],
+    }),
   }),
 });
 
@@ -275,4 +347,11 @@ export const {
   useRequestResubmissionMutation,
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,
+  useGetVerificationCandidatesQuery,
+  useGetCandidateProjectsQuery,
+  useGetCandidateProjectRequirementsQuery,
+  useGetCandidateEligibilityQuery,
+  useGetMatchmakingProcessQuery,
+  useReuseDocumentMutation,
+  useCompleteVerificationMutation,
 } = documentsApi;
