@@ -9,15 +9,20 @@ export const projectFormSchema = z.object({
   deadline: z.date({ message: "Deadline is required" }),
   priority: z.enum(["low", "medium", "high", "urgent"]),
   projectType: z.enum(["private", "ministry"]).default("private"),
+  resumeEditable: z.boolean().default(true),
+  groomingRequired: z
+    .enum(["formal", "casual", "not_specified"])
+    .default("formal"),
+  hideContactInfo: z.boolean().default(true), // Default to hide contact info for private projects
   rolesNeeded: z
     .array(
       z.object({
         designation: z.string().min(1, "Designation is required"),
         quantity: z.number().min(1, "Quantity must be at least 1"),
-        priority: z.enum(["low", "medium", "high", "urgent"]),
+        // Removed priority from requirement criteria
         minExperience: z.union([z.number().min(0), z.undefined()]).optional(),
         maxExperience: z.union([z.number().min(0), z.undefined()]).optional(),
-        specificExperience: z.string().optional(),
+        specificExperience: z.string().nullable().optional(),
         educationRequirementsList: z
           .array(
             z.object({
@@ -26,30 +31,51 @@ export const projectFormSchema = z.object({
             })
           )
           .optional(),
-        requiredCertifications: z.string().optional(),
-        institutionRequirements: z.string().optional(),
-        skills: z.string().optional(),
-        technicalSkills: z.string().optional(),
-        languageRequirements: z.string().optional(),
-        licenseRequirements: z.string().optional(),
-        salaryRange: z.string().optional(),
-        benefits: z.string().optional(),
-        backgroundCheckRequired: z.boolean(),
-        drugScreeningRequired: z.boolean(),
+        requiredCertifications: z.string().nullable().optional(),
+        institutionRequirements: z.string().nullable().optional(),
+        skills: z.string().nullable().optional(),
+        // Removed technicalSkills
+        languageRequirements: z.string().nullable().optional(),
+        licenseRequirements: z.string().nullable().optional(),
+        salaryRange: z.string().nullable().optional(),
+        benefits: z.string().nullable().optional(),
+        // Commented out for now as per requirements
+        // backgroundCheckRequired: z.boolean(),
+        // drugScreeningRequired: z.boolean(),
         shiftType: z
-          .union([
-            z.enum(["day", "night", "rotating", "flexible"]),
-            z.literal(""),
-          ])
+          .string()
+          .nullable()
+          .optional()
+          .transform((val) =>
+            val === "" || val === "none" || val === null ? undefined : val
+          )
+          .pipe(
+            z
+              .union([
+                z.enum(["day", "night", "rotating", "flexible"]),
+                z.undefined(),
+              ])
+              .optional()
+          ),
+        // onCallRequired: z.boolean(),
+        physicalDemands: z.string().nullable().optional(),
+        // relocationAssistance: z.boolean(),
+        additionalRequirements: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+        // Changed from employmentType to visaType
+        visaType: z.enum(["contract", "permanent"]).default("contract"),
+        contractDurationYears: z
+          .union([z.number().min(1).max(10), z.undefined()])
           .optional(),
-        onCallRequired: z.boolean(),
-        physicalDemands: z.string().optional(),
-        relocationAssistance: z.boolean(),
-        additionalRequirements: z.string().optional(),
-        notes: z.string().optional(),
-        employmentType: z.enum(["contract", "permanent"]).default("permanent"),
-        contractDurationYears: z.number().min(1).max(10).optional(),
         genderRequirement: z.enum(["female", "male", "all"]).default("all"),
+        // New candidate criteria fields
+        requiredSkills: z.array(z.string()).default([]),
+        candidateStates: z.array(z.string()).default([]),
+        candidateReligions: z.array(z.string()).default([]),
+        minHeight: z.union([z.number().min(0), z.undefined()]).optional(),
+        maxHeight: z.union([z.number().min(0), z.undefined()]).optional(),
+        minWeight: z.union([z.number().min(0), z.undefined()]).optional(),
+        maxWeight: z.union([z.number().min(0), z.undefined()]).optional(),
       })
     )
     .min(1, "At least one role is required"),
@@ -71,17 +97,18 @@ export type ProjectFormData = z.infer<typeof projectFormSchema>;
 export const defaultProjectValues = {
   priority: "medium" as const,
   projectType: "private" as const,
+  resumeEditable: true,
+  groomingRequired: "formal" as const,
+  hideContactInfo: true, // Default to hide contact info for private projects
   rolesNeeded: [
     {
       designation: "",
       quantity: 1,
-      priority: "medium" as const,
-      backgroundCheckRequired: false,
-      drugScreeningRequired: false,
-      onCallRequired: false,
-      relocationAssistance: false,
-      employmentType: "permanent" as const,
+      visaType: "contract" as const,
       genderRequirement: "all" as const,
+      requiredSkills: [],
+      candidateStates: [],
+      candidateReligions: [],
     },
   ],
   documentRequirements: [

@@ -18,10 +18,10 @@ const ProjectsPage = lazy(
   () => import("@/features/projects/views/ProjectsPage")
 );
 const CreateProjectPage = lazy(
-  () => import("@/features/projects/views/CreateProjectPage")
+  () => import("@/features/projects/views/MultiStepCreateProjectPage")
 );
 const EditProjectPage = lazy(
-  () => import("@/features/projects/views/EditProjectPage")
+  () => import("@/features/projects/views/MultiStepEditProjectPage")
 );
 const ProjectDetailPage = lazy(
   () => import("@/features/projects/views/ProjectDetailPage")

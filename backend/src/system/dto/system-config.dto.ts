@@ -14,6 +14,8 @@ export interface RoleConfig {
 export interface SystemConstants {
   documentTypes: Record<string, { displayName: string; category: string }>;
   candidateStatuses: Record<string, { displayName: string; color: string }>;
+  religions: Array<{ id: string; name: string }>;
+  indianStates: Array<{ id: string; name: string; code: string }>;
 }
 
 export interface SystemConfigData {

@@ -231,6 +231,79 @@ export class CreateRoleNeededDto {
   @IsOptional()
   @IsEnum(['female', 'male', 'all'])
   genderRequirement?: string = 'all';
+
+  @ApiPropertyOptional({
+    description: 'Visa type for this role',
+    enum: ['contract', 'permanent'],
+    default: 'contract',
+  })
+  @IsOptional()
+  @IsEnum(['contract', 'permanent'])
+  visaType?: string = 'contract';
+
+  @ApiPropertyOptional({
+    description: 'Required skills as JSON array',
+    example: '["Nursing", "Patient Care", "Emergency Response"]',
+  })
+  @IsOptional()
+  @IsJSON()
+  requiredSkills?: string;
+
+  @ApiPropertyOptional({
+    description: 'Candidate states as JSON array',
+    example: '["state1", "state2"]',
+  })
+  @IsOptional()
+  @IsJSON()
+  candidateStates?: string;
+
+  @ApiPropertyOptional({
+    description: 'Candidate religions as JSON array',
+    example: '["religion1", "religion2"]',
+  })
+  @IsOptional()
+  @IsJSON()
+  candidateReligions?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum height in cm',
+    example: 150,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  minHeight?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum height in cm',
+    example: 200,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxHeight?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum weight in kg',
+    example: 50,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  minWeight?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum weight in kg',
+    example: 100,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxWeight?: number;
 }
 
 export class CreateProjectDto {
@@ -310,6 +383,31 @@ export class CreateProjectDto {
   @IsOptional()
   @IsEnum(['private', 'ministry'])
   projectType?: string = 'private';
+
+  @ApiPropertyOptional({
+    description: 'Whether resume can be edited according to requirements',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  resumeEditable?: boolean = true;
+
+  @ApiPropertyOptional({
+    description: 'Grooming requirements',
+    enum: ['formal', 'casual', 'not_specified'],
+    default: 'formal',
+  })
+  @IsOptional()
+  @IsEnum(['formal', 'casual', 'not_specified'])
+  groomingRequired?: string = 'formal';
+
+  @ApiPropertyOptional({
+    description: 'Hide email and mobile numbers in resume for private projects',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  hideContactInfo?: boolean = true;
 
   @ApiPropertyOptional({
     description: 'Roles needed for this project',

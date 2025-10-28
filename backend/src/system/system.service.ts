@@ -30,6 +30,30 @@ export class SystemService {
       },
     });
 
+    // Get religions
+    const religions = await this.prisma.religion.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    // Get Indian states
+    const indianStates = await this.prisma.state.findMany({
+      where: {
+        countryCode: 'IN',
+        isActive: true,
+      },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+      },
+    });
+
     // Get role badge configurations
     const roleBadgeConfig = {
       CEO: { variant: 'default', priority: 1 },
@@ -62,6 +86,8 @@ export class SystemService {
         REJECTED_DOCUMENTS: { displayName: 'Documents Rejected', color: 'red' },
         PENDING_DOCUMENTS: { displayName: 'Pending Documents', color: 'gray' },
       },
+      religions: religions,
+      indianStates: indianStates,
     };
 
     return {

@@ -30,6 +30,22 @@ export class ProjectsService {
     private readonly qualificationsService: QualificationsService,
   ) {}
 
+  // Helper method to safely parse JSON fields
+  private parseJsonField(field: any): any[] {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.warn('Failed to parse JSON field:', field, error);
+        return [];
+      }
+    }
+    return [];
+  }
+
   async create(
     createProjectDto: CreateProjectDto,
     userId: string,
@@ -117,6 +133,11 @@ export class ProjectsService {
           createdBy: userId,
           teamId: createProjectDto.teamId,
           countryCode: createProjectDto.countryCode?.toUpperCase(),
+          // New project-level fields
+          projectType: createProjectDto.projectType || 'private',
+          resumeEditable: createProjectDto.resumeEditable ?? true,
+          groomingRequired: createProjectDto.groomingRequired || 'formal',
+          hideContactInfo: createProjectDto.hideContactInfo ?? true,
         },
       });
 
@@ -163,6 +184,24 @@ export class ProjectsService {
               relocationAssistance: role.relocationAssistance ?? false,
               additionalRequirements: role.additionalRequirements,
               notes: role.notes,
+              // New fields
+              employmentType: role.employmentType || 'permanent',
+              contractDurationYears: role.contractDurationYears,
+              genderRequirement: role.genderRequirement || 'all',
+              visaType: role.visaType || 'contract',
+              requiredSkills: role.requiredSkills
+                ? JSON.parse(role.requiredSkills)
+                : [],
+              candidateStates: role.candidateStates
+                ? JSON.parse(role.candidateStates)
+                : [],
+              candidateReligions: role.candidateReligions
+                ? JSON.parse(role.candidateReligions)
+                : [],
+              minHeight: role.minHeight,
+              maxHeight: role.maxHeight,
+              minWeight: role.minWeight,
+              maxWeight: role.maxWeight,
             },
           });
 
@@ -346,8 +385,29 @@ export class ProjectsService {
       },
     });
 
+    // Parse JSON fields in rolesNeeded for all projects
+    const projectsWithParsedData = projects.map((project) => ({
+      ...project,
+      rolesNeeded: project.rolesNeeded.map((role) => ({
+        ...role,
+        requiredSkills: this.parseJsonField(role.requiredSkills),
+        candidateStates: this.parseJsonField(role.candidateStates),
+        candidateReligions: this.parseJsonField(role.candidateReligions),
+        skills: this.parseJsonField(role.skills),
+        languageRequirements: this.parseJsonField(role.languageRequirements),
+        licenseRequirements: this.parseJsonField(role.licenseRequirements),
+        requiredCertifications: this.parseJsonField(
+          role.requiredCertifications,
+        ),
+        specificExperience: this.parseJsonField(role.specificExperience),
+        salaryRange: this.parseJsonField(role.salaryRange),
+        educationRequirements: this.parseJsonField(role.educationRequirements),
+        technicalSkills: this.parseJsonField(role.technicalSkills),
+      })),
+    }));
+
     return {
-      projects,
+      projects: projectsWithParsedData,
       pagination: {
         page,
         limit,
@@ -404,7 +464,28 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
-    return project;
+    // Parse JSON fields in rolesNeeded
+    const projectWithParsedData = {
+      ...project,
+      rolesNeeded: project.rolesNeeded.map((role) => ({
+        ...role,
+        requiredSkills: this.parseJsonField(role.requiredSkills),
+        candidateStates: this.parseJsonField(role.candidateStates),
+        candidateReligions: this.parseJsonField(role.candidateReligions),
+        skills: this.parseJsonField(role.skills),
+        languageRequirements: this.parseJsonField(role.languageRequirements),
+        licenseRequirements: this.parseJsonField(role.licenseRequirements),
+        requiredCertifications: this.parseJsonField(
+          role.requiredCertifications,
+        ),
+        specificExperience: this.parseJsonField(role.specificExperience),
+        salaryRange: this.parseJsonField(role.salaryRange),
+        educationRequirements: this.parseJsonField(role.educationRequirements),
+        technicalSkills: this.parseJsonField(role.technicalSkills),
+      })),
+    };
+
+    return projectWithParsedData;
   }
 
   async update(
@@ -474,6 +555,15 @@ export class ProjectsService {
       updateData.teamId = updateProjectDto.teamId;
     if (updateProjectDto.countryCode !== undefined)
       updateData.countryCode = updateProjectDto.countryCode?.toUpperCase();
+    // New project-level fields
+    if (updateProjectDto.projectType !== undefined)
+      updateData.projectType = updateProjectDto.projectType;
+    if (updateProjectDto.resumeEditable !== undefined)
+      updateData.resumeEditable = updateProjectDto.resumeEditable;
+    if (updateProjectDto.groomingRequired !== undefined)
+      updateData.groomingRequired = updateProjectDto.groomingRequired;
+    if (updateProjectDto.hideContactInfo !== undefined)
+      updateData.hideContactInfo = updateProjectDto.hideContactInfo;
 
     // Handle rolesNeeded updates if provided
     if (updateProjectDto.rolesNeeded !== undefined) {
@@ -522,6 +612,24 @@ export class ProjectsService {
               relocationAssistance: role.relocationAssistance ?? false,
               additionalRequirements: role.additionalRequirements,
               notes: role.notes,
+              // New fields
+              employmentType: role.employmentType || 'permanent',
+              contractDurationYears: role.contractDurationYears,
+              genderRequirement: role.genderRequirement || 'all',
+              visaType: role.visaType || 'contract',
+              requiredSkills: role.requiredSkills
+                ? JSON.parse(role.requiredSkills)
+                : [],
+              candidateStates: role.candidateStates
+                ? JSON.parse(role.candidateStates)
+                : [],
+              candidateReligions: role.candidateReligions
+                ? JSON.parse(role.candidateReligions)
+                : [],
+              minHeight: role.minHeight,
+              maxHeight: role.maxHeight,
+              minWeight: role.minWeight,
+              maxWeight: role.maxWeight,
             },
           });
 

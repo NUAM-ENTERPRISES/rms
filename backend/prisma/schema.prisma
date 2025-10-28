@@ -194,6 +194,9 @@ model Project {
   priority             String                @default("medium")
   countryCode          String?
   projectType          String                @default("private") // "private" or "ministry"
+  resumeEditable       Boolean               @default(true) // Whether resume can be edited according to requirements
+  groomingRequired     String                @default("formal") // "formal", "casual", "not_specified"
+  hideContactInfo      Boolean               @default(true) // Hide email and mobile in resume for private projects
   candidateProjects    CandidateProjectMap[]
   documentRequirements DocumentRequirement[]
   interviews           Interview[]
@@ -237,6 +240,14 @@ model RoleNeeded {
   contractDurationYears     Int?                             // Only applicable if employmentType is "contract"
   genderRequirement         String                           @default("all") // "female", "male", or "all"
   technicalSkills           Json?
+  visaType                  String                           @default("contract") // "contract", "permanent", "work_permit", "student"
+  requiredSkills            Json                             @default("[]") // Array of required skills
+  candidateStates           Json                             @default("[]") // Array of allowed states for candidates
+  candidateReligions        Json                             @default("[]") // Array of allowed religions for candidates
+  minHeight                 Float?                           // Minimum height in cm
+  maxHeight                 Float?                           // Maximum height in cm
+  minWeight                 Float?                           // Minimum weight in kg
+  maxWeight                 Float?                           // Maximum weight in kg
   candidateAllocations      CandidateProjectMap[]
   educationRequirementsList RoleNeededEducationRequirement[]
   project                   Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -831,4 +842,26 @@ enum QualificationLevel {
   BACHELOR
   MASTER
   DOCTORATE
+}
+
+model Religion {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("religions")
+}
+
+model State {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  countryCode String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("states")
 }

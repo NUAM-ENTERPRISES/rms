@@ -130,7 +130,7 @@ export default function DocumentRequirementsSection({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
+          <FileText className="h-5 w-5 text-orange-600" />
           Document Requirements
         </CardTitle>
         <p className="text-sm text-muted-foreground">

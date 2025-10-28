@@ -421,21 +421,21 @@ export default function ProjectDetailPage() {
                 {/* Project Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-slate-400" />
+                    <Calendar className="h-3 w-3 text-blue-500" />
                     <span className="text-slate-600">Deadline:</span>
                     <span className="font-medium text-slate-800">
                       {formatDateTime(project.deadline)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3 text-slate-400" />
+                    <Clock className="h-3 w-3 text-green-500" />
                     <span className="text-slate-600">Created:</span>
                     <span className="font-medium text-slate-800">
                       {formatDate(project.createdAt)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-3 w-3 text-slate-400" />
+                    <MapPin className="h-3 w-3 text-purple-500" />
                     <span className="text-slate-600">Country:</span>
                     <div className="font-medium text-slate-800">
                       <ProjectCountryCell
@@ -446,26 +446,55 @@ export default function ProjectDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <UserCheck className="h-3 w-3 text-slate-400" />
+                    <UserCheck className="h-3 w-3 text-emerald-500" />
                     <span className="text-slate-600">Status:</span>
                     <Badge variant="outline" className="text-xs">
                       {project.status}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2">
-                    <User className="h-3 w-3 text-slate-400" />
+                    <User className="h-3 w-3 text-indigo-500" />
                     <span className="text-slate-600">Created By:</span>
                     <span className="font-medium text-slate-800">
                       {project.creator.name}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-3 w-3 text-slate-400" />
+                    <Building2 className="h-3 w-3 text-orange-500" />
                     <span className="text-slate-600">Project Type:</span>
                     <Badge variant="outline" className="text-xs">
                       {project.projectType === "ministry"
                         ? "Ministry/Government"
                         : "Private Sector"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-3 w-3 text-cyan-500" />
+                    <span className="text-slate-600">Resume:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {project.resumeEditable ? "Editable" : "Fixed"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-3 w-3 text-pink-500" />
+                    <span className="text-slate-600">Grooming:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {project.groomingRequired === "formal"
+                        ? "Formal"
+                        : project.groomingRequired === "casual"
+                        ? "Casual"
+                        : "Not Specified"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Target className="h-3 w-3 text-red-500" />
+                    <span className="text-slate-600">
+                      Candidate mobile and email:
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {project.hideContactInfo
+                        ? "Should not be visible"
+                        : "Visible/Optional"}
                     </Badge>
                   </div>
                 </div>
@@ -495,7 +524,7 @@ export default function ProjectDetailPage() {
                 <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-600" />
+                      <FileText className="h-4 w-4 text-orange-600" />
                       Document Requirements
                     </CardTitle>
                   </CardHeader>
@@ -562,19 +591,20 @@ export default function ProjectDetailPage() {
                       )}
                     </div>
 
-                    {/* Employment Type and Gender Requirement */}
+                    {/* Visa Type and Gender Requirement */}
                     <div className="flex items-center gap-4 text-xs text-slate-600 mb-2">
                       <div className="flex items-center gap-1">
                         <span className="font-medium text-slate-600">
-                          Employment:
+                          Visa Type:
                         </span>
                         <Badge variant="outline" className="text-xs">
-                          {role.employmentType === "contract"
-                            ? "Contract"
+                          {role.visaType === "contract"
+                            ? `Contract${
+                                role.contractDurationYears
+                                  ? ` (${role.contractDurationYears} years)`
+                                  : ""
+                              }`
                             : "Permanent"}
-                          {role.employmentType === "contract" &&
-                            role.contractDurationYears &&
-                            ` (${role.contractDurationYears} years)`}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1">
@@ -591,16 +621,16 @@ export default function ProjectDetailPage() {
                       </div>
                     </div>
 
-                    {/* Skills */}
-                    {role.skills && (
+                    {/* Required Skills */}
+                    {role.requiredSkills && (
                       <div className="text-xs text-slate-500 mb-2">
                         <span className="font-medium text-slate-600">
-                          Skills:
+                          Required Skills:
                         </span>{" "}
-                        {typeof role.skills === "string"
-                          ? role.skills
-                          : Array.isArray(role.skills)
-                          ? (role.skills as string[]).join(", ")
+                        {typeof role.requiredSkills === "string"
+                          ? role.requiredSkills
+                          : Array.isArray(role.requiredSkills)
+                          ? (role.requiredSkills as string[]).join(", ")
                           : "Not specified"}
                       </div>
                     )}
@@ -620,6 +650,46 @@ export default function ProjectDetailPage() {
                         </div>
                       )}
 
+                    {/* Candidate Location and Religion */}
+                    {(role.candidateStates || role.candidateReligions) && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                          {role.candidateStates && (
+                            <div>
+                              <div className="font-medium text-slate-600 mb-1">
+                                Preferred Location:
+                              </div>
+                              <div className="text-slate-500">
+                                {typeof role.candidateStates === "string"
+                                  ? role.candidateStates
+                                  : Array.isArray(role.candidateStates)
+                                  ? (role.candidateStates as string[]).join(
+                                      ", "
+                                    )
+                                  : "Not specified"}
+                              </div>
+                            </div>
+                          )}
+                          {role.candidateReligions && (
+                            <div>
+                              <div className="font-medium text-slate-600 mb-1">
+                                Religion Preferences:
+                              </div>
+                              <div className="text-slate-500">
+                                {typeof role.candidateReligions === "string"
+                                  ? role.candidateReligions
+                                  : Array.isArray(role.candidateReligions)
+                                  ? (role.candidateReligions as string[]).join(
+                                      ", "
+                                    )
+                                  : "Not specified"}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Required Certifications */}
                     {role.requiredCertifications && (
                       <div className="mt-2 pt-2 border-t border-slate-200">
@@ -634,6 +704,44 @@ export default function ProjectDetailPage() {
                                 ", "
                               )
                             : "Not specified"}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Physical Requirements */}
+                    {(role.minHeight ||
+                      role.maxHeight ||
+                      role.minWeight ||
+                      role.maxWeight) && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <div className="text-xs font-medium text-slate-600 mb-1">
+                          Physical Requirements:
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-500">
+                          {(role.minHeight || role.maxHeight) && (
+                            <div>
+                              <span className="font-medium text-slate-600">
+                                Height:
+                              </span>{" "}
+                              {role.minHeight && role.maxHeight
+                                ? `${role.minHeight}-${role.maxHeight} cm`
+                                : role.minHeight
+                                ? `${role.minHeight}+ cm`
+                                : `Up to ${role.maxHeight} cm`}
+                            </div>
+                          )}
+                          {(role.minWeight || role.maxWeight) && (
+                            <div>
+                              <span className="font-medium text-slate-600">
+                                Weight:
+                              </span>{" "}
+                              {role.minWeight && role.maxWeight
+                                ? `${role.minWeight}-${role.maxWeight} kg`
+                                : role.minWeight
+                                ? `${role.minWeight}+ kg`
+                                : `Up to ${role.maxWeight} kg`}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -670,7 +778,7 @@ export default function ProjectDetailPage() {
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-blue-600" />
+                  <Building2 className="h-4 w-4 text-teal-600" />
                   Client Details
                 </CardTitle>
               </CardHeader>
@@ -684,12 +792,6 @@ export default function ProjectDetailPage() {
                       {project.client.type}
                     </Badge>
                   )}
-                </div>
-                <div className="text-xs text-slate-500">
-                  <div className="flex items-center gap-2 mb-1">
-                    <MapPin className="h-3 w-3" />
-                    <span>San Francisco, CA</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
