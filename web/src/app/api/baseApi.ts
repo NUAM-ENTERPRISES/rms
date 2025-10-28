@@ -31,6 +31,8 @@ export const baseApi = createApi({
     "NotificationBadge",
     "ProjectCandidates",
     "DocumentVerification",
+    "RecruiterAssignment",
+    "StatusConfig",
   ],
   endpoints: () => ({}),
 });

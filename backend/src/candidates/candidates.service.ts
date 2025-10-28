@@ -20,6 +20,9 @@ import { AssignProjectDto } from './dto/assign-project.dto';
 import { NominateCandidateDto } from './dto/nominate-candidate.dto';
 import { ApproveCandidateDto } from './dto/approve-candidate.dto';
 import { SendForVerificationDto } from './dto/send-for-verification.dto';
+import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
+import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
+import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
@@ -27,7 +30,10 @@ import {
 } from './types';
 import {
   CANDIDATE_PROJECT_STATUS,
+  CANDIDATE_STATUS,
   canTransitionStatus,
+  requiresCREHandling,
+  isCandidateStatusTerminal,
 } from '../common/constants';
 
 @Injectable()
@@ -39,6 +45,7 @@ export class CandidatesService {
     private readonly outboxService: OutboxService,
     private readonly pipelineService: PipelineService,
     private readonly eligibilityService: UnifiedEligibilityService,
+    private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {}
 
   async create(
@@ -91,7 +98,7 @@ export class CandidatesService {
         profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
         dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
-        currentStatus: createCandidateDto.currentStatus || 'new',
+        currentStatus: createCandidateDto.currentStatus || 'untouched',
         totalExperience: createCandidateDto.totalExperience,
         currentSalary: createCandidateDto.currentSalary,
         currentEmployer: createCandidateDto.currentEmployer,
@@ -174,6 +181,22 @@ export class CandidatesService {
       console.error(
         'Auto-allocation failed for candidate:',
         candidate.id,
+        error,
+      );
+    }
+
+    // Assign recruiter to candidate
+    try {
+      await this.recruiterAssignmentService.assignRecruiterToCandidate(
+        candidate.id,
+        userId,
+        'Automatic assignment on candidate creation',
+      );
+      this.logger.log(`Assigned recruiter to candidate ${candidate.id}`);
+    } catch (error) {
+      // Log error but don't fail candidate creation
+      this.logger.error(
+        `Failed to assign recruiter to candidate ${candidate.id}:`,
         error,
       );
     }
@@ -1442,5 +1465,202 @@ export class CandidatesService {
       message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} sent for verification`,
       assignedTo: assignedExecutive.name,
     };
+  }
+
+  /**
+   * Update candidate status
+   */
+  async updateStatus(
+    candidateId: string,
+    updateStatusDto: UpdateCandidateStatusDto,
+    userId: string,
+  ): Promise<{ message: string; candidate: any }> {
+    // Check if candidate exists
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // Update candidate status
+    const updatedCandidate = await this.prisma.candidate.update({
+      where: { id: candidateId },
+      data: {
+        currentStatus: updateStatusDto.status,
+        updatedAt: new Date(),
+      },
+      include: {
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: {
+            recruiter: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+          orderBy: { assignedAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    // Check if status requires CRE handling
+    if (requiresCREHandling(updateStatusDto.status as any)) {
+      this.logger.log(
+        `Candidate ${candidateId} status changed to ${updateStatusDto.status} - requires CRE handling`,
+      );
+
+      // Assign CRE to handle RNR candidates
+      try {
+        await this.recruiterAssignmentService.assignCREToCandidate(
+          candidateId,
+          userId,
+          `Status changed to ${updateStatusDto.status} - CRE assignment required`,
+        );
+        this.logger.log(
+          `Assigned CRE to candidate ${candidateId} for RNR handling`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to assign CRE to candidate ${candidateId}:`,
+          error,
+        );
+      }
+    }
+
+    // Publish status change event
+    await this.outboxService.publishEvent('CandidateStatusUpdated', {
+      candidateId,
+      oldStatus: candidate.currentStatus,
+      newStatus: updateStatusDto.status,
+      updatedBy: userId,
+      reason: updateStatusDto.reason,
+    });
+
+    return {
+      message: `Candidate status updated to ${updateStatusDto.status}`,
+      candidate: updatedCandidate,
+    };
+  }
+
+  /**
+   * Assign recruiter to candidate
+   */
+  async assignRecruiter(
+    candidateId: string,
+    assignRecruiterDto: AssignRecruiterDto,
+    userId: string,
+  ): Promise<{ message: string; assignment: any }> {
+    // Check if candidate exists
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // Check if recruiter exists
+    const recruiter = await this.prisma.user.findUnique({
+      where: { id: assignRecruiterDto.recruiterId },
+    });
+
+    if (!recruiter) {
+      throw new NotFoundException(
+        `Recruiter with ID ${assignRecruiterDto.recruiterId} not found`,
+      );
+    }
+
+    // Deactivate any existing active assignments
+    await this.prisma.candidateRecruiterAssignment.updateMany({
+      where: {
+        candidateId,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+        unassignedAt: new Date(),
+        unassignedBy: userId,
+      },
+    });
+
+    // Create new assignment
+    const assignment = await this.prisma.candidateRecruiterAssignment.create({
+      data: {
+        candidateId,
+        recruiterId: assignRecruiterDto.recruiterId,
+        assignedBy: userId,
+        reason: assignRecruiterDto.reason,
+      },
+      include: {
+        recruiter: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Publish assignment event
+    await this.outboxService.publishEvent('CandidateRecruiterAssigned', {
+      candidateId,
+      recruiterId: assignRecruiterDto.recruiterId,
+      assignedBy: userId,
+      reason: assignRecruiterDto.reason,
+    });
+
+    return {
+      message: `Recruiter ${recruiter.name} assigned to candidate`,
+      assignment,
+    };
+  }
+
+  /**
+   * Get candidate's current recruiter assignment
+   */
+  async getCurrentRecruiterAssignment(candidateId: string): Promise<any> {
+    const assignment = await this.prisma.candidateRecruiterAssignment.findFirst(
+      {
+        where: {
+          candidateId,
+          isActive: true,
+        },
+        include: {
+          recruiter: {
+            select: { id: true, name: true, email: true },
+          },
+          assignedByUser: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { assignedAt: 'desc' },
+      },
+    );
+
+    return assignment;
+  }
+
+  /**
+   * Get candidate's recruiter assignment history
+   */
+  async getRecruiterAssignmentHistory(candidateId: string): Promise<any[]> {
+    const assignments = await this.prisma.candidateRecruiterAssignment.findMany(
+      {
+        where: { candidateId },
+        include: {
+          recruiter: {
+            select: { id: true, name: true, email: true },
+          },
+          assignedByUser: {
+            select: { id: true, name: true, email: true },
+          },
+          unassignedByUser: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { assignedAt: 'desc' },
+      },
+    );
+
+    return assignments;
   }
 }

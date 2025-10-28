@@ -295,6 +295,43 @@ export interface UpdateCandidateRequest {
   assignedTo?: string;
 }
 
+export interface UpdateCandidateStatusRequest {
+  status: string;
+  reason?: string;
+}
+
+export interface AssignRecruiterRequest {
+  recruiterId: string;
+  reason?: string;
+}
+
+export interface RecruiterAssignment {
+  id: string;
+  candidateId: string;
+  recruiterId: string;
+  assignedBy: string;
+  assignedAt: string;
+  unassignedAt?: string;
+  unassignedBy?: string;
+  reason?: string;
+  isActive: boolean;
+  recruiter: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  assignedByUser: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  unassignedByUser?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCandidates: builder.query<Candidate[], void>({
@@ -492,6 +529,68 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Document", "Candidate"],
     }),
+
+    // Status update endpoints
+    updateCandidateStatus: builder.mutation<
+      { success: boolean; data: Candidate; message: string },
+      { candidateId: string; status: UpdateCandidateStatusRequest }
+    >({
+      query: ({ candidateId, status }) => ({
+        url: `/candidates/${candidateId}/status`,
+        method: "PATCH",
+        body: status,
+      }),
+      invalidatesTags: (_, __, { candidateId }) => [
+        { type: "Candidate", id: candidateId },
+        "Candidate",
+      ],
+    }),
+
+    // Recruiter assignment endpoints
+    assignRecruiter: builder.mutation<
+      { success: boolean; data: RecruiterAssignment; message: string },
+      { candidateId: string; assignment: AssignRecruiterRequest }
+    >({
+      query: ({ candidateId, assignment }) => ({
+        url: `/candidates/${candidateId}/assign-recruiter`,
+        method: "POST",
+        body: assignment,
+      }),
+      invalidatesTags: (_, __, { candidateId }) => [
+        { type: "Candidate", id: candidateId },
+        "Candidate",
+      ],
+    }),
+
+    getCurrentRecruiterAssignment: builder.query<
+      { success: boolean; data: RecruiterAssignment; message: string },
+      string
+    >({
+      query: (candidateId) => `/candidates/${candidateId}/recruiter-assignment`,
+      providesTags: (_, __, candidateId) => [
+        { type: "RecruiterAssignment", id: candidateId },
+      ],
+    }),
+
+    getRecruiterAssignmentHistory: builder.query<
+      { success: boolean; data: RecruiterAssignment[]; message: string },
+      string
+    >({
+      query: (candidateId) =>
+        `/candidates/${candidateId}/recruiter-assignment-history`,
+      providesTags: (_, __, candidateId) => [
+        { type: "RecruiterAssignment", id: candidateId },
+      ],
+    }),
+
+    // Status configuration
+    getStatusConfig: builder.query<
+      { success: boolean; data: Record<string, any>; message: string },
+      void
+    >({
+      query: () => '/candidates/status-config',
+      providesTags: ['StatusConfig'],
+    }),
   }),
 });
 
@@ -515,4 +614,9 @@ export const {
   useDeleteCandidateQualificationMutation,
   useGetDocumentsQuery,
   useUploadDocumentMutation,
+  useUpdateCandidateStatusMutation,
+  useAssignRecruiterMutation,
+  useGetCurrentRecruiterAssignmentQuery,
+  useGetRecruiterAssignmentHistoryQuery,
+  useGetStatusConfigQuery,
 } = candidatesApi;

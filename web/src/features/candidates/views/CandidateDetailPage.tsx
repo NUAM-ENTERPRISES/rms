@@ -53,6 +53,8 @@ import QualificationWorkExperienceModal from "@/components/molecules/Qualificati
 import { CandidateResumeList } from "@/components/molecules";
 import { DocumentUploadSection } from "../components/DocumentUploadSection";
 import { CandidatePipeline } from "../components/CandidatePipeline";
+import { StatusUpdateModal } from "../components/StatusUpdateModal";
+import { useStatusConfig } from '../hooks/useStatusConfig';
 import type {
   CandidateQualification,
   WorkExperience,
@@ -78,52 +80,6 @@ const formatCurrency = (amount?: number) => {
   }).format(amount);
 };
 
-// Status badge component
-const StatusBadge = ({ status }: { status?: string }) => {
-  const statusConfig = {
-    active: {
-      color: "bg-green-100 text-green-800 border-green-200",
-      icon: CheckCircle,
-    },
-    inactive: {
-      color: "bg-gray-100 text-gray-800 border-gray-200",
-      icon: XCircle,
-    },
-    pending: {
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      icon: Clock,
-    },
-    interviewing: {
-      color: "bg-blue-100 text-blue-800 border-blue-200",
-      icon: UserCheck,
-    },
-    placed: {
-      color: "bg-green-100 text-green-800 border-green-200",
-      icon: CheckCircle2,
-    },
-    rejected: {
-      color: "bg-red-100 text-red-800 border-red-200",
-      icon: XCircle,
-    },
-    unknown: {
-      color: "bg-gray-100 text-gray-800 border-gray-200",
-      icon: AlertTriangle,
-    },
-  };
-
-  const safeStatus = status || "unknown";
-  const config =
-    statusConfig[safeStatus as keyof typeof statusConfig] ||
-    statusConfig.active;
-  const Icon = config.icon;
-
-  return (
-    <Badge className={`${config.color} border gap-1 px-2 py-1`}>
-      <Icon className="h-3 w-3" />
-      {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
-    </Badge>
-  );
-};
 
 export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -138,6 +94,52 @@ export default function CandidateDetailPage() {
   const [editData, setEditData] = useState<
     CandidateQualification | WorkExperience | undefined
   >();
+
+  // Status update modal state
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const { statusConfig } = useStatusConfig();
+
+  // Status badge component
+  const StatusBadge = ({ status }: { status?: string }) => {
+    const safeStatus = status || "unknown";
+    const config = statusConfig[safeStatus];
+
+    if (!config) {
+      return (
+        <Badge className="bg-gray-100 text-gray-800 border-gray-200 border gap-1 px-2 py-1">
+          <AlertTriangle className="h-3 w-3" />
+          {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
+        </Badge>
+      );
+    }
+
+    // Map icon names to actual components
+    const iconMap: Record<string, any> = {
+      User: User,
+      ThumbsUp: CheckCircle,
+      XCircle: XCircle,
+      MessageCircle: Clock,
+      Clock: Clock,
+      Pause: Clock,
+      PhoneOff: XCircle,
+      CheckCircle: CheckCircle2,
+      UserPlus: UserCheck,
+      UserCheck: UserCheck,
+      Users: UserCheck,
+      Star: Star,
+      Cog: Clock,
+      BadgeCheck: CheckCircle2,
+    };
+
+    const Icon = iconMap[config.icon] || AlertTriangle;
+
+    return (
+      <Badge className={`${config.badgeClass} border gap-1 px-2 py-1`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
 
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
@@ -252,12 +254,30 @@ export default function CandidateDetailPage() {
     <div>
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-            {candidate.firstName} {candidate.lastName}
-          </h1>
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+              {candidate.firstName} {candidate.lastName}
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Status:</span>
+              <StatusBadge status={candidate.currentStatus} />
+              <span className="text-sm text-slate-600">
+                {statusConfig[candidate.currentStatus]?.description}
+              </span>
+              {canWriteCandidates && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsStatusModalOpen(true)}
+                  className="h-6 w-6 p-0 hover:bg-slate-100"
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={candidate.currentStatus} />
             <span className="text-sm text-slate-500">
               {candidate.currentRole || "No role specified"}
             </span>
@@ -1014,6 +1034,15 @@ export default function CandidateDetailPage() {
         type={modalType}
         editData={editData}
         onSuccess={handleModalSuccess}
+      />
+
+      {/* Status update modal */}
+      <StatusUpdateModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        candidateId={id!}
+        currentStatus={candidate.currentStatus}
+        candidateName={`${candidate.firstName} ${candidate.lastName}`}
       />
     </div>
   );

@@ -31,12 +31,14 @@ import { CandidateEligibilityModule } from './candidate-eligibility/candidate-el
 import { EligibilityModule } from './candidate-eligibility/eligibility.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { MetaModule } from './meta/meta.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     RolesModule,

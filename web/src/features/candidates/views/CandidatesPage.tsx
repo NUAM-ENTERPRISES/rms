@@ -475,15 +475,35 @@ export default function CandidatesPage() {
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold">
                                 {candidate.firstName.charAt(0)}
                               </div>
-                              <div>
-                                <div
-                                  className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                >
-                                  {candidate.firstName} {candidate.lastName}
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <div
+                                    className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/candidates/${candidate.id}`);
+                                    }}
+                                  >
+                                    {candidate.firstName} {candidate.lastName}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={`p-1 rounded-full ${statusInfo.bgColor}`}
+                                    >
+                                      <StatusIcon
+                                        className={`h-3 w-3 ${statusInfo.color}`}
+                                      />
+                                    </div>
+                                    <Badge
+                                      variant={statusInfo.variant}
+                                      className="text-xs"
+                                    >
+                                      {candidate.currentStatus
+                                        .charAt(0)
+                                        .toUpperCase() +
+                                        candidate.currentStatus.slice(1)}
+                                    </Badge>
+                                  </div>
                                 </div>
                                 <div className="text-sm text-slate-500">
                                   {candidate.currentRole || "No current role"}

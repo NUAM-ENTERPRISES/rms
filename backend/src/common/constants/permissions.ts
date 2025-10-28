@@ -63,6 +63,15 @@ export const PERMISSIONS = {
 
   // Recruiter management
   MANAGE_RECRUITERS: 'manage:recruiters',
+  READ_RECRUITERS: 'read:recruiters',
+  WRITE_RECRUITERS: 'write:recruiters',
+
+  // CRE (Customer Relationship Executive) management
+  READ_CRE: 'read:cre',
+  WRITE_CRE: 'write:cre',
+  MANAGE_CRE: 'manage:cre',
+  ASSIGN_CRE: 'assign:cre',
+  HANDLE_RNR_CANDIDATES: 'handle:rnr_candidates',
 
   // Role management
   READ_ROLES: 'read:roles',
@@ -153,5 +162,17 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.READ_PROCESSING,
     PERMISSIONS.WRITE_PROCESSING,
     PERMISSIONS.MANAGE_PROCESSING,
+  ],
+  RECRUITER: [
+    PERMISSIONS.READ_RECRUITERS,
+    PERMISSIONS.WRITE_RECRUITERS,
+    PERMISSIONS.MANAGE_RECRUITERS,
+  ],
+  CRE: [
+    PERMISSIONS.READ_CRE,
+    PERMISSIONS.WRITE_CRE,
+    PERMISSIONS.MANAGE_CRE,
+    PERMISSIONS.ASSIGN_CRE,
+    PERMISSIONS.HANDLE_RNR_CANDIDATES,
   ],
 } as const;

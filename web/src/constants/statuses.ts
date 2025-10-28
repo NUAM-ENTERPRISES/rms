@@ -288,6 +288,203 @@ export const DOCUMENT_STATUS = {
 export type DocumentStatus =
   (typeof DOCUMENT_STATUS)[keyof typeof DOCUMENT_STATUS];
 
+// ==================== CANDIDATE GLOBAL STATUSES ====================
+
+/**
+ * Candidate Global Status Constants - New Status System
+ * Tracks candidate engagement and follow-up status
+ */
+export const CANDIDATE_STATUS = {
+  // Initial status when candidate is created
+  UNTOUCHED: "untouched",
+
+  // Engagement statuses
+  INTERESTED: "interested",
+  NOT_INTERESTED: "not_interested",
+  NOT_ELIGIBLE: "not_eligible",
+  OTHER_ENQUIRY: "other_enquiry",
+  FUTURE: "future",
+  ON_HOLD: "on_hold",
+  RNR: "rnr", // Ringing No Response
+
+  // Qualification status
+  QUALIFIED: "qualified",
+
+  // Legacy statuses (kept for compatibility)
+  NEW: "new",
+  NOMINATED: "nominated",
+  VERIFIED: "verified",
+  INTERVIEWING: "interviewing",
+  SELECTED: "selected",
+  PROCESSING: "processing",
+  HIRED: "hired",
+  REJECTED: "rejected",
+} as const;
+
+export type CandidateStatus =
+  (typeof CANDIDATE_STATUS)[keyof typeof CANDIDATE_STATUS];
+
+/**
+ * UI Configuration for candidate statuses
+ */
+export const CANDIDATE_STATUS_CONFIG: Record<
+  CandidateStatus,
+  {
+    label: string;
+    description: string;
+    color:
+      | "blue"
+      | "yellow"
+      | "orange"
+      | "purple"
+      | "green"
+      | "red"
+      | "gray"
+      | "indigo";
+    badgeClass: string;
+    icon: string;
+    priority: "low" | "medium" | "high" | "urgent";
+  }
+> = {
+  [CANDIDATE_STATUS.UNTOUCHED]: {
+    label: "Untouched",
+    description: "New candidate, not yet contacted",
+    color: "gray",
+    badgeClass: "bg-gray-50 text-gray-700 border-gray-200",
+    icon: "User",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.INTERESTED]: {
+    label: "Interested",
+    description: "Candidate has shown interest",
+    color: "green",
+    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    icon: "ThumbsUp",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.NOT_INTERESTED]: {
+    label: "Not Interested",
+    description: "Candidate declined the opportunity",
+    color: "red",
+    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    icon: "XCircle",
+    priority: "low",
+  },
+  [CANDIDATE_STATUS.NOT_ELIGIBLE]: {
+    label: "Not Eligible",
+    description: "Candidate does not meet requirements",
+    color: "red",
+    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    icon: "XCircle",
+    priority: "low",
+  },
+  [CANDIDATE_STATUS.OTHER_ENQUIRY]: {
+    label: "Other Enquiry",
+    description: "Candidate has other questions or needs",
+    color: "orange",
+    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    icon: "MessageCircle",
+    priority: "medium",
+  },
+  [CANDIDATE_STATUS.FUTURE]: {
+    label: "Future",
+    description: "Candidate for future opportunities",
+    color: "blue",
+    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    icon: "Clock",
+    priority: "low",
+  },
+  [CANDIDATE_STATUS.ON_HOLD]: {
+    label: "On Hold",
+    description: "Candidate temporarily on hold",
+    color: "yellow",
+    badgeClass: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    icon: "Pause",
+    priority: "medium",
+  },
+  [CANDIDATE_STATUS.RNR]: {
+    label: "RNR",
+    description: "Ringing No Response - requires CRE handling",
+    color: "red",
+    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    icon: "PhoneOff",
+    priority: "urgent",
+  },
+  [CANDIDATE_STATUS.QUALIFIED]: {
+    label: "Qualified",
+    description: "Candidate has been qualified",
+    color: "green",
+    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    icon: "CheckCircle",
+    priority: "high",
+  },
+  // Legacy statuses
+  [CANDIDATE_STATUS.NEW]: {
+    label: "New",
+    description: "New candidate",
+    color: "blue",
+    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    icon: "UserPlus",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.NOMINATED]: {
+    label: "Nominated",
+    description: "Nominated for project",
+    color: "blue",
+    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    icon: "UserCheck",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.VERIFIED]: {
+    label: "Verified",
+    description: "Documents verified",
+    color: "green",
+    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    icon: "CheckCircle",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.INTERVIEWING]: {
+    label: "Interviewing",
+    description: "Currently in interview process",
+    color: "purple",
+    badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+    icon: "Users",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.SELECTED]: {
+    label: "Selected",
+    description: "Selected by client",
+    color: "green",
+    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    icon: "Star",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.PROCESSING]: {
+    label: "Processing",
+    description: "In processing stage",
+    color: "blue",
+    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    icon: "Cog",
+    priority: "high",
+  },
+  [CANDIDATE_STATUS.HIRED]: {
+    label: "Hired",
+    description: "Successfully hired",
+    color: "green",
+    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    icon: "BadgeCheck",
+    priority: "low",
+  },
+  [CANDIDATE_STATUS.REJECTED]: {
+    label: "Rejected",
+    description: "Rejected",
+    color: "red",
+    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    icon: "XCircle",
+    priority: "low",
+  },
+};
+
 export const DOCUMENT_STATUS_CONFIG: Record<
   DocumentStatus,
   {

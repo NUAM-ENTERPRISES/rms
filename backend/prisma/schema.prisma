@@ -46,6 +46,9 @@ model User {
   userRoles                 UserRole[]
   userTeams                 UserTeam[]
   candidateProjectMaps      CandidateProjectMap[]
+  candidateRecruiterAssignments CandidateRecruiterAssignment[]
+  assignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("AssignedByUser")
+  unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
 
   @@unique([countryCode, mobileNumber])
   @@index([email])
@@ -260,7 +263,7 @@ model Candidate {
   email            String?
   source           String                   @default("manual")
   dateOfBirth      DateTime
-  currentStatus    String                   @default("new")
+  currentStatus    String                   @default("untouched")
   experience       Int?
   skills           Json                     @default("[]")
   currentEmployer  String?
@@ -287,6 +290,7 @@ model Candidate {
   documents        Document[]
   talentPool       TalentPool?
   workExperiences  WorkExperience[]
+  recruiterAssignments CandidateRecruiterAssignment[]
 
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
@@ -864,4 +868,28 @@ model State {
   updatedAt   DateTime @updatedAt
 
   @@map("states")
+}
+
+model CandidateRecruiterAssignment {
+  id          String    @id @default(cuid())
+  candidateId String
+  recruiterId String
+  assignedBy  String
+  assignedAt  DateTime  @default(now())
+  unassignedAt DateTime?
+  unassignedBy String?
+  reason      String?   // Reason for assignment change
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter   User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  assignedByUser User   @relation("AssignedByUser", fields: [assignedBy], references: [id])
+  unassignedByUser User? @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
+
+  @@index([candidateId])
+  @@index([recruiterId])
+  @@index([isActive])
+  @@map("candidate_recruiter_assignments")
 }
