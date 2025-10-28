@@ -117,13 +117,13 @@ export const candidatesApi = createApi({
       invalidatesTags: ["Candidate"],
     }),
     assignToProject: builder.mutation<
-      void,
-      { candidateId: string; projectId: string }
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string; notes?: string }
     >({
-      query: ({ candidateId, projectId }) => ({
-        url: `/candidates/${candidateId}/projects`,
+      query: ({ candidateId, projectId, notes }) => ({
+        url: `/candidates/${candidateId}/assign-project`,
         method: "POST",
-        body: { projectId },
+        body: { projectId, notes },
       }),
       invalidatesTags: ["Candidate"],
     }),

@@ -1,13 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,49 +21,35 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Search,
-  Filter,
-  Eye,
   UserCheck,
   Send,
-  MoreHorizontal,
-  BarChart3,
   Phone,
   Mail,
+  UserPlus,
+  Check,
 } from "lucide-react";
 import {
   useGetProjectCandidatesByRoleQuery,
   useSendForVerificationMutation,
 } from "@/features/projects";
-import { usePermissions } from "@/shared/hooks/usePermissions";
-import { format } from "date-fns";
+import {
+  useGetCandidatesQuery,
+  useAssignToProjectMutation,
+} from "@/features/candidates";
 
 interface RecruiterCandidatesTabProps {
   projectId: string;
 }
-
-const MatchScoreBadge = ({ score }: { score: number }) => {
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return "bg-green-100 text-green-800 border-green-200";
-    if (score >= 80) return "bg-blue-100 text-blue-800 border-blue-200";
-    if (score >= 70) return "bg-amber-100 text-amber-800 border-amber-200";
-    return "bg-red-100 text-red-800 border-red-200";
-  };
-
-  return (
-    <Badge variant="outline" className={`${getScoreColor(score)} border`}>
-      <BarChart3 className="h-3 w-3 mr-1" />
-      {score}%
-    </Badge>
-  );
-};
 
 const StatusBadge = ({ status }: { status: string }) => {
   const getStatusConfig = (status: string) => {
@@ -119,16 +99,20 @@ export default function RecruiterCandidatesTab({
   projectId,
 }: RecruiterCandidatesTabProps) {
   const navigate = useNavigate();
-  const { user } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [assignSearchTerm, setAssignSearchTerm] = useState("");
 
-  // Get candidates assigned to the current recruiter
-  const {
-    data: candidatesData,
-    isLoading,
-    error,
-  } = useGetProjectCandidatesByRoleQuery({
+  // Get current user (recruiter) - for future use
+  // const { user } = useAppSelector((state) => state.auth);
+
+  // Get all candidates assigned to the current recruiter
+  const { data: candidatesData, isLoading, error } = useGetCandidatesQuery();
+
+  // Get candidates already assigned to this project for filtering
+  const { data: projectCandidatesData } = useGetProjectCandidatesByRoleQuery({
     projectId,
     role: "Recruiter",
   });
@@ -136,26 +120,45 @@ export default function RecruiterCandidatesTab({
   const [sendForVerification, { isLoading: isSending }] =
     useSendForVerificationMutation();
 
-  const candidates = candidatesData?.data || [];
+  const [assignToProject, { isLoading: isAssigning }] =
+    useAssignToProjectMutation();
 
-  // Filter candidates
-  const filteredCandidates = candidates.filter((candidate) => {
+  // Get all candidates (we'll filter by recruiter on the frontend for now)
+  const allCandidates = candidatesData || [];
+
+  // Get candidates already assigned to this project
+  const projectCandidates = projectCandidatesData?.data || [];
+  const assignedToProjectIds = projectCandidates.map((c) => c.candidateId);
+
+  // Filter candidates assigned to this recruiter (for now, show all candidates)
+  // TODO: Implement proper recruiter filtering on backend
+  const recruiterCandidates = allCandidates;
+
+  // Filter candidates (show all recruiter's candidates)
+  const filteredCandidates = recruiterCandidates.filter((candidate: any) => {
     const matchesSearch =
-      candidate.candidate.firstName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      candidate.candidate.lastName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      candidate.candidate.email
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      candidate.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
-      statusFilter === "all" || candidate.status === statusFilter;
+      statusFilter === "all" || candidate.currentStatus === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
+
+  // Filter candidates for assignment dialog (exclude already assigned to this project)
+  const availableCandidates = recruiterCandidates.filter(
+    (candidate: any) =>
+      !assignedToProjectIds.includes(candidate.id) &&
+      (candidate.firstName
+        .toLowerCase()
+        .includes(assignSearchTerm.toLowerCase()) ||
+        candidate.lastName
+          .toLowerCase()
+          .includes(assignSearchTerm.toLowerCase()) ||
+        candidate.email?.toLowerCase().includes(assignSearchTerm.toLowerCase()))
+  );
 
   const handleSendForVerification = async (candidateId: string) => {
     try {
@@ -170,6 +173,73 @@ export default function RecruiterCandidatesTab({
 
   const handleViewCandidate = (candidateId: string) => {
     navigate(`/candidates/${candidateId}`);
+  };
+
+  const handleAssignSingleCandidate = async (candidateId: string) => {
+    try {
+      const result = await assignToProject({
+        candidateId,
+        projectId,
+        notes: `Assigned by recruiter to project`,
+      }).unwrap();
+      toast.success(
+        result.message || "Candidate assigned to project successfully"
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.data?.message || "Failed to assign candidate to project"
+      );
+    }
+  };
+
+  const handleCandidateSelection = (
+    candidateId: string,
+    isSelected: boolean
+  ) => {
+    if (isSelected) {
+      setSelectedCandidates((prev) => [...prev, candidateId]);
+    } else {
+      setSelectedCandidates((prev) => prev.filter((id) => id !== candidateId));
+    }
+  };
+
+  const handleAssignCandidates = async () => {
+    if (selectedCandidates.length === 0) {
+      toast.error("Please select at least one candidate");
+      return;
+    }
+
+    try {
+      const assignments = selectedCandidates.map((candidateId) =>
+        assignToProject({
+          candidateId,
+          projectId,
+          notes: `Bulk assigned by recruiter to project`,
+        }).unwrap()
+      );
+
+      await Promise.all(assignments);
+      toast.success(
+        `${selectedCandidates.length} candidate(s) assigned to project successfully`
+      );
+
+      // Reset state
+      setSelectedCandidates([]);
+      setIsAssignDialogOpen(false);
+      setAssignSearchTerm("");
+    } catch (error: any) {
+      toast.error(
+        error?.data?.message || "Failed to assign candidates to project"
+      );
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCandidates.length === availableCandidates.length) {
+      setSelectedCandidates([]);
+    } else {
+      setSelectedCandidates(availableCandidates.map((c: any) => c.id));
+    }
   };
 
   if (isLoading) {
@@ -219,14 +289,189 @@ export default function RecruiterCandidatesTab({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="nominated">Nominated</SelectItem>
-            <SelectItem value="verification_in_progress">
-              In Verification
-            </SelectItem>
-            <SelectItem value="documents_verified">Verified</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="untouched">Untouched</SelectItem>
+            <SelectItem value="interested">Interested</SelectItem>
+            <SelectItem value="not_interested">Not Interested</SelectItem>
+            <SelectItem value="not_eligible">Not Eligible</SelectItem>
+            <SelectItem value="qualified">Qualified</SelectItem>
+            <SelectItem value="new">New</SelectItem>
+            <SelectItem value="shortlisted">Shortlisted</SelectItem>
+            <SelectItem value="selected">Selected</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="hired">Hired</SelectItem>
           </SelectContent>
         </Select>
+        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-auto">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Assign Candidates
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Assign Candidates to Project</DialogTitle>
+              <DialogDescription>
+                Select candidates to assign to this project. They will be
+                automatically assigned to you as the recruiter.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex gap-4 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search candidates to assign..."
+                    value={assignSearchTerm}
+                    onChange={(e) => setAssignSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSelectAll}
+                  className="whitespace-nowrap"
+                >
+                  {selectedCandidates.length === availableCandidates.length
+                    ? "Deselect All"
+                    : "Select All"}
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-auto border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedCandidates.length ===
+                              availableCandidates.length &&
+                            availableCandidates.length > 0
+                          }
+                          onChange={handleSelectAll}
+                          className="rounded"
+                        />
+                      </TableHead>
+                      <TableHead>Candidate</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8">
+                          <div className="animate-pulse">
+                            Loading candidates...
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : availableCandidates.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center py-8 text-gray-500"
+                        >
+                          No available candidates found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      availableCandidates.map((candidate: any) => (
+                        <TableRow key={candidate.id}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedCandidates.includes(
+                                candidate.id
+                              )}
+                              onChange={(e) =>
+                                handleCandidateSelection(
+                                  candidate.id,
+                                  e.target.checked
+                                )
+                              }
+                              className="rounded"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                {candidate.firstName?.charAt(0).toUpperCase() ||
+                                  "?"}
+                              </div>
+                              <div>
+                                <div className="font-medium">
+                                  {candidate.firstName} {candidate.lastName}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {candidate.totalExperience
+                                    ? `${candidate.totalExperience} years exp`
+                                    : "No experience"}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {candidate.email && (
+                                <div className="flex items-center gap-1 mb-1">
+                                  <Mail className="h-3 w-3" />
+                                  {candidate.email}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {candidate.countryCode} {candidate.mobileNumber}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="bg-gray-100 text-gray-800"
+                            >
+                              {candidate.currentStatus || "untouched"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAssignDialogOpen(false);
+                  setSelectedCandidates([]);
+                  setAssignSearchTerm("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAssignCandidates}
+                disabled={selectedCandidates.length === 0 || isAssigning}
+              >
+                {isAssigning ? (
+                  "Assigning..."
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Assign {selectedCandidates.length} Candidate
+                    {selectedCandidates.length !== 1 ? "s" : ""}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {filteredCandidates.length === 0 ? (
@@ -236,7 +481,7 @@ export default function RecruiterCandidatesTab({
             No Candidates Assigned
           </h3>
           <p className="text-gray-600">
-            You don't have any candidates assigned to this project yet.
+            You don't have any candidates assigned to you yet.
           </p>
         </div>
       ) : (
@@ -245,72 +490,119 @@ export default function RecruiterCandidatesTab({
             <TableHeader>
               <TableRow>
                 <TableHead>Candidate</TableHead>
-                <TableHead>Match Score</TableHead>
+                <TableHead>Experience</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Project Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCandidates.map((candidate) => (
-                <TableRow key={candidate.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                        {candidate.candidate.firstName
-                          ?.charAt(0)
-                          .toUpperCase() || "?"}
-                      </div>
-                      <div>
-                        <button
-                          onClick={() =>
-                            handleViewCandidate(candidate.candidateId)
-                          }
-                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer text-left"
-                        >
-                          {candidate.candidate.firstName}{" "}
-                          {candidate.candidate.lastName}
-                        </button>
-                        <div className="text-sm text-gray-500 flex items-center gap-2">
-                          {candidate.candidate.email && (
+              {filteredCandidates.map((candidate: any) => {
+                const isAssignedToProject = assignedToProjectIds.includes(
+                  candidate.id
+                );
+                const projectAssignment = projectCandidates.find(
+                  (pc: any) => pc.candidateId === candidate.id
+                );
+
+                return (
+                  <TableRow key={candidate.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                          {candidate.firstName?.charAt(0).toUpperCase() || "?"}
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => handleViewCandidate(candidate.id)}
+                            className="font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer text-left"
+                          >
+                            {candidate.firstName} {candidate.lastName}
+                          </button>
+                          <div className="text-sm text-gray-500 flex items-center gap-2">
+                            {candidate.email && (
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {candidate.email}
+                              </div>
+                            )}
                             <div className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {candidate.candidate.email}
+                              <Phone className="h-3 w-3" />
+                              {candidate.countryCode} {candidate.mobileNumber}
                             </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {candidate.candidate.countryCode}{" "}
-                            {candidate.candidate.mobileNumber}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <MatchScoreBadge score={candidate.matchScore || 0} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={candidate.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {candidate.status === "nominated" && (
-                        <Button
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {candidate.totalExperience
+                          ? `${candidate.totalExperience} years`
+                          : "No experience"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={candidate.currentStatus} />
+                    </TableCell>
+                    <TableCell>
+                      {isAssignedToProject ? (
+                        <Badge
                           variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleSendForVerification(candidate.candidateId)
-                          }
-                          disabled={isSending}
+                          className="bg-green-100 text-green-800"
                         >
-                          <Send className="h-4 w-4 mr-2" />
-                          Send for Verification
-                        </Button>
+                          {projectAssignment?.status || "Assigned"}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-gray-100 text-gray-600"
+                        >
+                          Not Assigned
+                        </Badge>
                       )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {!isAssignedToProject ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleAssignSingleCandidate(candidate.id)
+                            }
+                            disabled={isAssigning}
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Assign to Project
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {projectAssignment?.status === "nominated" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleSendForVerification(candidate.id)
+                                }
+                                disabled={isSending}
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Send for Verification
+                              </Button>
+                            )}
+                            <Badge
+                              variant="outline"
+                              className="bg-green-100 text-green-800"
+                            >
+                              ✓ Assigned
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

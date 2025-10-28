@@ -383,13 +383,13 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Candidate"],
     }),
     assignToProject: builder.mutation<
-      void,
-      { candidateId: string; projectId: string }
+      { success: boolean; data: any; message: string },
+      { candidateId: string; projectId: string; notes?: string }
     >({
-      query: ({ candidateId, projectId }) => ({
-        url: `/candidates/${candidateId}/projects`,
+      query: ({ candidateId, projectId, notes }) => ({
+        url: `/candidates/${candidateId}/assign-project`,
         method: "POST",
-        body: { projectId },
+        body: { projectId, notes },
       }),
       invalidatesTags: ["Candidate"],
     }),
@@ -588,8 +588,8 @@ export const candidatesApi = baseApi.injectEndpoints({
       { success: boolean; data: Record<string, any>; message: string },
       void
     >({
-      query: () => '/candidates/status-config',
-      providesTags: ['StatusConfig'],
+      query: () => "/candidates/status-config",
+      providesTags: ["StatusConfig"],
     }),
   }),
 });
