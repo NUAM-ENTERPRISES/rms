@@ -74,6 +74,7 @@ const roles = [
       'read:candidates',
       'read:assigned_candidates',
       'write:candidates',
+      'manage:candidates',
       'nominate:candidates',
       'read:projects',
       'read:documents',
