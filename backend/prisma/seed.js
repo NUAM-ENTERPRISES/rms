@@ -414,9 +414,93 @@ async function seedRoleRecommendedQualifications() {
         throw error;
     }
 }
+async function seedReligions() {
+    console.log('🕉️ Seeding religions...');
+    const religions = [
+        'Hinduism',
+        'Islam',
+        'Christianity',
+        'Sikhism',
+        'Buddhism',
+        'Jainism',
+        'Zoroastrianism',
+        'Judaism',
+        'Baháʼí Faith',
+        'Other',
+        'No Religion',
+        'Prefer not to say',
+    ];
+    for (const religionName of religions) {
+        await prisma.religion.upsert({
+            where: { name: religionName },
+            update: {},
+            create: {
+                name: religionName,
+                isActive: true,
+            },
+        });
+    }
+    console.log(`✅ Religions seeded: ${religions.length} created/updated`);
+}
+async function seedStates() {
+    console.log('🗺️ Seeding Indian states...');
+    const indianStates = [
+        { name: 'Andhra Pradesh', code: 'AP' },
+        { name: 'Arunachal Pradesh', code: 'AR' },
+        { name: 'Assam', code: 'AS' },
+        { name: 'Bihar', code: 'BR' },
+        { name: 'Chhattisgarh', code: 'CG' },
+        { name: 'Goa', code: 'GA' },
+        { name: 'Gujarat', code: 'GJ' },
+        { name: 'Haryana', code: 'HR' },
+        { name: 'Himachal Pradesh', code: 'HP' },
+        { name: 'Jharkhand', code: 'JH' },
+        { name: 'Karnataka', code: 'KA' },
+        { name: 'Kerala', code: 'KL' },
+        { name: 'Madhya Pradesh', code: 'MP' },
+        { name: 'Maharashtra', code: 'MH' },
+        { name: 'Manipur', code: 'MN' },
+        { name: 'Meghalaya', code: 'ML' },
+        { name: 'Mizoram', code: 'MZ' },
+        { name: 'Nagaland', code: 'NL' },
+        { name: 'Odisha', code: 'OR' },
+        { name: 'Punjab', code: 'PB' },
+        { name: 'Rajasthan', code: 'RJ' },
+        { name: 'Sikkim', code: 'SK' },
+        { name: 'Tamil Nadu', code: 'TN' },
+        { name: 'Telangana', code: 'TG' },
+        { name: 'Tripura', code: 'TR' },
+        { name: 'Uttar Pradesh', code: 'UP' },
+        { name: 'Uttarakhand', code: 'UK' },
+        { name: 'West Bengal', code: 'WB' },
+        { name: 'Andaman and Nicobar Islands', code: 'AN' },
+        { name: 'Chandigarh', code: 'CH' },
+        { name: 'Dadra and Nagar Haveli and Daman and Diu', code: 'DH' },
+        { name: 'Delhi', code: 'DL' },
+        { name: 'Jammu and Kashmir', code: 'JK' },
+        { name: 'Ladakh', code: 'LA' },
+        { name: 'Lakshadweep', code: 'LD' },
+        { name: 'Puducherry', code: 'PY' },
+    ];
+    for (const state of indianStates) {
+        await prisma.state.upsert({
+            where: { code: state.code },
+            update: {},
+            create: {
+                name: state.name,
+                code: state.code,
+                countryCode: 'IN',
+                isActive: true,
+            },
+        });
+    }
+    console.log(`✅ States seeded: ${indianStates.length} created/updated`);
+}
 async function main() {
     console.log('🌱 Starting database seeding...');
     await seedCountries();
+    await seedReligions();
+    await seedStates();
     await seedRoleCatalog();
     await seedQualifications();
     await seedQualificationAliases();
