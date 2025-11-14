@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, RefreshCw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Loader2, RefreshCw, CheckCheck, Trash2 } from "lucide-react";
 import {
   useNotificationsList,
   useMarkNotificationRead,
+  useClearNotifications,
 } from "@/features/notifications/hooks";
 import { NotificationsList } from "@/features/notifications/components";
 import type { QueryNotificationsRequest } from "@/features/notifications/data";
@@ -14,8 +15,10 @@ import type { QueryNotificationsRequest } from "@/features/notifications/data";
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<"unread" | "all">("unread");
   const [refreshing, setRefreshing] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const { markAsRead } = useMarkNotificationRead();
+  const { clearAll } = useClearNotifications();
 
   // Query parameters based on active tab
   const queryParams: QueryNotificationsRequest = {
@@ -54,6 +57,12 @@ export default function NotificationsPage() {
     for (const notification of unreadNotifications) {
       await markAsRead(notification.id);
     }
+    await refetch();
+  };
+
+  const handleClearAll = async () => {
+    await clearAll();
+    await refetch();
   };
 
   const unreadCount = notifications.filter((n) => n.status === "unread").length;
@@ -72,7 +81,20 @@ export default function NotificationsPage() {
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
+              <CheckCheck className="h-4 w-4 mr-2" />
               Mark all as read
+            </Button>
+          )}
+
+          {notifications.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowConfirmDialog(true)}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear all
             </Button>
           )}
 
@@ -133,6 +155,17 @@ export default function NotificationsPage() {
           />
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        onConfirm={handleClearAll}
+        title="Clear All Notifications?"
+        description="This will permanently delete all your notifications. This action cannot be undone."
+        confirmText="Clear All"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 }

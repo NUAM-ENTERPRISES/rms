@@ -2,6 +2,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/organisms/NotificationBell";
 import UserMenu from "@/components/organisms/UserMenu";
+import { RNRReminderBadge } from "@/features/candidates/components/RNRReminderBadge";
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -74,6 +75,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
         {/* Right side actions */}
         <div className="flex items-center space-x-1">
+          <RNRReminderBadge />
           <NotificationBell />
           <UserMenu />
         </div>

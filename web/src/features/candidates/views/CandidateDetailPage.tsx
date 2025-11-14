@@ -54,6 +54,7 @@ import { CandidateResumeList } from "@/components/molecules";
 import { DocumentUploadSection } from "../components/DocumentUploadSection";
 import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
+import { StatusHistoryTable } from "../components/StatusHistoryTable";
 import { useStatusConfig } from '../hooks/useStatusConfig';
 import type {
   CandidateQualification,
@@ -186,8 +187,7 @@ export default function CandidateDetailPage() {
   const handleModalSuccess = () => {
     // The candidate data will be refetched automatically due to cache invalidation
     toast.success(
-      `${
-        modalType === "qualification" ? "Qualification" : "Work experience"
+      `${modalType === "qualification" ? "Qualification" : "Work experience"
       } saved successfully`
     );
   };
@@ -261,9 +261,9 @@ export default function CandidateDetailPage() {
             </h1>
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Status:</span>
-              <StatusBadge status={candidate.currentStatus} />
+              <StatusBadge status={candidate.currentStatus.statusName} />
               <span className="text-sm text-slate-600">
-                {statusConfig[candidate.currentStatus]?.description}
+                {statusConfig[candidate.currentStatus.statusName]?.description}
               </span>
               {canWriteCandidates && (
                 <Button
@@ -397,16 +397,15 @@ export default function CandidateDetailPage() {
                             const months =
                               (endDate.getFullYear() -
                                 startDate.getFullYear()) *
-                                12 +
+                              12 +
                               (endDate.getMonth() - startDate.getMonth());
                             totalMonths += months;
                           });
                           const years = Math.floor(totalMonths / 12);
                           const months = totalMonths % 12;
                           return years > 0
-                            ? `${years} years ${
-                                months > 0 ? `${months} months` : ""
-                              }`
+                            ? `${years} years ${months > 0 ? `${months} months` : ""
+                            }`
                             : `${months} months`;
                         }
                         return (
@@ -547,7 +546,7 @@ export default function CandidateDetailPage() {
               </CardHeader>
               <CardContent className="pt-6">
                 {candidate.qualifications &&
-                candidate.qualifications.length > 0 ? (
+                  candidate.qualifications.length > 0 ? (
                   <div className="space-y-4">
                     {candidate.qualifications.map((qual) => (
                       <div
@@ -576,11 +575,10 @@ export default function CandidateDetailPage() {
                               variant={
                                 qual.isCompleted ? "default" : "secondary"
                               }
-                              className={`text-xs px-2 py-1 ${
-                                qual.isCompleted
+                              className={`text-xs px-2 py-1 ${qual.isCompleted
                                   ? "bg-green-100 text-green-800 border-green-200"
                                   : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                              }`}
+                                }`}
                             >
                               {qual.isCompleted ? "Completed" : "In Progress"}
                             </Badge>
@@ -669,7 +667,7 @@ export default function CandidateDetailPage() {
               </CardHeader>
               <CardContent className="pt-6">
                 {candidate.workExperiences &&
-                candidate.workExperiences.length > 0 ? (
+                  candidate.workExperiences.length > 0 ? (
                   <div className="space-y-4">
                     {candidate.workExperiences.map((exp) => (
                       <div
@@ -693,8 +691,8 @@ export default function CandidateDetailPage() {
                                   {exp.isCurrent
                                     ? "Present"
                                     : exp.endDate
-                                    ? formatDate(exp.endDate)
-                                    : "Not specified"}
+                                      ? formatDate(exp.endDate)
+                                      : "Not specified"}
                                 </span>
                               </div>
                               {exp.location && (
@@ -917,37 +915,14 @@ export default function CandidateDetailPage() {
             <CardHeader className="border-b border-slate-200">
               <CardTitle className="flex items-center gap-2 text-slate-900">
                 <History className="h-5 w-5 text-blue-600" />
-                Activity History
+                Status History
               </CardTitle>
               <CardDescription className="text-slate-600">
-                Recent activities and changes for this candidate
+                Track all status changes for this candidate
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {(candidate.history || []).map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start gap-4 p-4 border rounded-lg"
-                  >
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">{item.action}</h4>
-                        <span className="text-sm text-muted-foreground">
-                          {formatDate(item.date)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {item.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        By {item.user}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="pt-6">
+              <StatusHistoryTable candidateId={id!} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1041,7 +1016,7 @@ export default function CandidateDetailPage() {
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
         candidateId={id!}
-        currentStatus={candidate.currentStatus}
+        currentStatus={candidate.currentStatus.statusName}
         candidateName={`${candidate.firstName} ${candidate.lastName}`}
       />
     </div>

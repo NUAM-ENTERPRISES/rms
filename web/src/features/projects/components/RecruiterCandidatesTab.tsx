@@ -542,7 +542,7 @@ export default function RecruiterCandidatesTab({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={candidate.currentStatus} />
+                      <StatusBadge status={candidate.currentStatus.statusName} />
                     </TableCell>
                     <TableCell>
                       {isAssignedToProject ? (

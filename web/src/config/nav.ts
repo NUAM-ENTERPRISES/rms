@@ -31,6 +31,14 @@ export interface NavItem {
 }
 
 export const navigationConfig: NavItem[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    path: "/",
+    icon: Home,
+    roles: ["CRE"],
+    // Only visible to CRE users
+  },
   // {
   //   id: "dashboard",
   //   label: "Dashboard",
@@ -47,14 +55,15 @@ export const navigationConfig: NavItem[] = [
     label: "Projects",
     path: "/projects",
     icon: Building2,
-    // Accessible to all roles - core business function
+    roles: ["CEO", "Director", "Manager", "Recruiter", "Documentation Executive", "System Admin"],
+    // Hidden from CRE - they only manage candidates
   },
   {
     id: "candidates",
     label: "Candidates",
     path: "/candidates",
     icon: UserCheck,
-    // Accessible to all roles - core business function
+    // Accessible to all roles including CRE - core business function
   },
   {
     id: "clients",
@@ -62,7 +71,7 @@ export const navigationConfig: NavItem[] = [
     path: "/clients",
     icon: Briefcase,
     permissions: ["read:clients"],
-    // Hidden from Recruiter and Documentation Executive roles
+    // Hidden from Recruiter, Documentation Executive, and CRE roles
   },
   {
     id: "teams",
@@ -70,13 +79,15 @@ export const navigationConfig: NavItem[] = [
     path: "/teams",
     icon: Users,
     permissions: ["read:teams"],
+    // Hidden from CRE - they work independently
   },
   {
     id: "interviews",
     label: "Interviews",
     path: "/interviews",
     icon: Calendar,
-    // Accessible to all roles - core business function
+    roles: ["CEO", "Director", "Manager", "Recruiter", "Documentation Executive", "System Admin"],
+    // Hidden from CRE - they focus on RNR candidates
   },
   {
     id: "documents",

@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotificationItem from "./NotificationItem";
@@ -41,8 +39,11 @@ export default function NotificationsList({
 
   if (error) {
     return (
-      <div className={cn("p-4 text-center", className)}>
-        <p className="text-sm text-muted-foreground mb-2">
+      <div className={cn("p-8 text-center bg-white", className)}>
+        <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+          <span className="text-3xl">⚠️</span>
+        </div>
+        <p className="text-sm font-medium text-slate-900 mb-2">
           Failed to load notifications
         </p>
         <Button
@@ -50,13 +51,14 @@ export default function NotificationsList({
           size="sm"
           onClick={handleRefresh}
           disabled={refreshing}
+          className="mt-2"
         >
           {refreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-4 w-4 mr-2" />
           )}
-          Retry
+          Try Again
         </Button>
       </div>
     );
@@ -64,9 +66,11 @@ export default function NotificationsList({
 
   if (isLoading && notifications.length === 0) {
     return (
-      <div className={cn("p-4 text-center", className)}>
-        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">
+      <div className={cn("p-8 text-center bg-white", className)}>
+        <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3 animate-pulse">
+          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+        </div>
+        <p className="text-sm font-medium text-slate-700">
           Loading notifications...
         </p>
       </div>
@@ -75,9 +79,15 @@ export default function NotificationsList({
 
   if (notifications.length === 0) {
     return (
-      <div className={cn("p-4 text-center", className)}>
-        <p className="text-sm text-muted-foreground mb-2">
+      <div className={cn("p-8 text-center bg-white", className)}>
+        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-3">
+          <span className="text-3xl">🔔</span>
+        </div>
+        <p className="text-sm font-semibold text-slate-900 mb-1">
           No notifications yet
+        </p>
+        <p className="text-xs text-slate-500 mb-3">
+          We'll notify you when something new arrives
         </p>
         {onRefresh && (
           <Button
@@ -87,9 +97,9 @@ export default function NotificationsList({
             disabled={refreshing}
           >
             {refreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4 mr-2" />
             )}
             Refresh
           </Button>
@@ -99,33 +109,31 @@ export default function NotificationsList({
   }
 
   return (
-    <div className={cn("flex flex-col", className)}>
-      <ScrollArea className="flex-1 max-h-96">
-        <div className="space-y-1 p-2">
-          {notifications.map((notification, index) => (
-            <div key={notification.id}>
-              <NotificationItem notification={notification} />
-              {index < notifications.length - 1 && (
-                <Separator className="my-1" />
-              )}
-            </div>
+    <div className={cn("flex flex-col bg-white", className)}>
+      <div className="max-h-[500px] overflow-y-auto overflow-x-hidden">
+        <div className="space-y-2 p-3">
+          {notifications.map((notification) => (
+            <NotificationItem key={notification.id} notification={notification} />
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
       {hasMore && (
-        <div className="p-2 border-t">
+        <div className="p-3 border-t bg-slate-50">
           <Button
             variant="outline"
             size="sm"
-            className="w-full"
+            className="w-full border-2 hover:bg-white font-medium"
             onClick={onLoadMore}
             disabled={isLoading}
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Loading...
+              </>
             ) : (
-              "Load More"
+              "Load More Notifications"
             )}
           </Button>
         </div>

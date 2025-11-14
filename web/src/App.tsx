@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import AuthProvider from "@/app/providers/auth-provider";
 import NotificationsSocketProvider from "@/app/providers/notifications-socket.provider";
+import { RNRReminderProvider } from "@/app/providers/rnr-reminder.provider";
 import ProtectedRoute from "@/app/router/protected-route";
 import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
@@ -12,6 +13,7 @@ import { useAppSelector } from "@/app/hooks";
 // Lazy load pages
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const CREDashboardPage = lazy(() => import("@/pages/CREDashboardPage"));
 
 // Feature-based views
 const ProjectsPage = lazy(
@@ -98,8 +100,16 @@ const ProfilePage = lazy(() => import("@/features/profile/views/ProfilePage"));
 function RoleBasedRedirect() {
   const { user } = useAppSelector((state) => state.auth);
 
+  // CRE role gets their own dashboard
+  if (user?.roles.some((role) => role === "CRE")) {
+    return (
+      <AppLayout>
+        <CREDashboardPage />
+      </AppLayout>
+    );
+  }
+
   // Only Manager, Director, and CEO can access dashboard
-  // All other roles (Recruiter, Team Head, Team Lead, etc.) go to projects
   if (
     user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
   ) {
@@ -110,7 +120,7 @@ function RoleBasedRedirect() {
     );
   }
 
-  // All other roles go to projects page
+  // All other roles (Recruiter, Team Head, Team Lead, etc.) go to projects page
   return (
     <AppLayout>
       <ProjectsPage />
@@ -123,9 +133,10 @@ function App() {
     <Router>
       <AuthProvider>
         <NotificationsSocketProvider>
-          <div className="min-h-screen bg-background">
-            <Suspense fallback={<LoadingScreen />}>
-              <Routes>
+          <RNRReminderProvider>
+            <div className="min-h-screen bg-background">
+              <Suspense fallback={<LoadingScreen />}>
+                <Routes>
                 {/* Public routes */}
                 <Route
                   path="/login"
@@ -144,6 +155,20 @@ function App() {
                       <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
                         <AppLayout>
                           <DashboardPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    </RouteErrorBoundary>
+                  }
+                />
+
+                {/* CRE Dashboard */}
+                <Route
+                  path="/cre-dashboard"
+                  element={
+                    <RouteErrorBoundary>
+                      <ProtectedRoute roles={["CRE"]}>
+                        <AppLayout>
+                          <CREDashboardPage />
                         </AppLayout>
                       </ProtectedRoute>
                     </RouteErrorBoundary>
@@ -662,6 +687,7 @@ function App() {
               duration={3000}
             />
           </div>
+          </RNRReminderProvider>
         </NotificationsSocketProvider>
       </AuthProvider>
     </Router>

@@ -53,9 +53,16 @@ import {
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
 import { useGetCandidatesQuery } from "@/features/candidates";
+import { useGetMyAssignedCandidatesQuery } from "@/services/candidatesApi";
+import { useAppSelector } from "@/app/hooks";
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
+  const { user } = useAppSelector((state) => state.auth);
+  
+  // Check if user is CRE
+  const isCRE = user?.roles?.includes("CRE");
+  
   // All roles can read candidates
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
@@ -69,20 +76,40 @@ export default function CandidatesPage() {
     limit: 20,
   });
 
-  // Fetch candidates from API
-  const { data: candidates = [], isLoading, error } = useGetCandidatesQuery();
+  // Fetch candidates - use different API for CRE users
+  const { data: allCandidatesData = [], isLoading: isLoadingAll, error: errorAll } = useGetCandidatesQuery(
+    undefined,
+    { skip: isCRE } // Skip this query if user is CRE
+  );
+  
+  const { data: assignedCandidatesData, isLoading: isLoadingAssigned, error: errorAssigned } = useGetMyAssignedCandidatesQuery(
+    {
+      page: filters.page,
+      limit: filters.limit,
+      search: filters.search || undefined,
+    },
+    { skip: !isCRE } // Skip this query if user is NOT CRE
+  );
+
+  // Use the appropriate data source
+  const candidates: any[] = isCRE 
+    ? (assignedCandidatesData?.data || [])
+    : (Array.isArray(allCandidatesData) ? allCandidatesData : []);
+  
+  const isLoading = isCRE ? isLoadingAssigned : isLoadingAll;
+  const error = isCRE ? errorAssigned : errorAll;
 
   // Handle search
   const handleSearch = (value: string) => {
     setFilters((prev) => ({ ...prev, search: value, page: 1 }));
   };
 
-  // Filter candidates based on search and filters
-  const filteredCandidates = useMemo(() => {
+  // Filter and paginate candidates
+  const { filteredCandidates, paginatedCandidates, totalCount } = useMemo(() => {
     // Ensure candidates is an array
     if (!Array.isArray(candidates)) {
       console.warn("Candidates data is not an array:", candidates);
-      return [];
+      return { filteredCandidates: [], paginatedCandidates: [], totalCount: 0 };
     }
 
     let filtered = candidates;
@@ -97,17 +124,17 @@ export default function CandidatesPage() {
             candidate.email
               .toLowerCase()
               .includes(filters.search.toLowerCase())) ||
-          candidate.skills.some((skill) =>
+          candidate?.skills?.some((skill: string) =>
             skill.toLowerCase().includes(filters.search.toLowerCase())
           )
       );
     }
 
-    if (filters.status !== "all") {
-      filtered = filtered.filter(
-        (candidate) => candidate.currentStatus === filters.status
-      );
-    }
+    // if (filters.status !== "all") {
+    //   filtered = filtered.filter(
+    //     (candidate) => candidate.currentStatus === filters.status
+    //   );
+    // }
 
     if (filters.experience !== "all") {
       const experienceMap: { [key: string]: [number, number] } = {
@@ -131,7 +158,16 @@ export default function CandidatesPage() {
     //   );
     // }
 
-    return filtered;
+    // Calculate pagination
+    const startIndex = (filters.page - 1) * filters.limit;
+    const endIndex = startIndex + filters.limit;
+    const paginated = filtered.slice(startIndex, endIndex);
+
+    return {
+      filteredCandidates: filtered,
+      paginatedCandidates: paginated,
+      totalCount: filtered.length,
+    };
   }, [candidates, filters]);
 
   // Format date - following FE guidelines: DD MMM YYYY
@@ -147,38 +183,77 @@ export default function CandidatesPage() {
 
   // Get status badge variant and icon
   const getStatusInfo = (status: string) => {
+    console.log("Determining status info for status:", status.toLowerCase());
     switch (status?.toLowerCase()) {
-      case "active":
-      case "available":
+      case "untouched":
+        return {
+          variant: "outline" as const,
+          icon: AlertCircle,
+          color: "text-gray-600",
+          bgColor: "bg-gray-100",
+        };
+      case "interested":
         return {
           variant: "default" as const,
           icon: UserCheck,
           color: "text-blue-600",
           bgColor: "bg-blue-100",
         };
-      case "interviewing":
-      case "in_interview":
+      case "not interested":
+        return {
+          variant: "secondary" as const,
+          icon: XCircle,
+          color: "text-slate-600",
+          bgColor: "bg-slate-100",
+        };
+      case "not eligible":
+        return {
+          variant: "destructive" as const,
+          icon: XCircle,
+          color: "text-red-600",
+          bgColor: "bg-red-100",
+        };
+      case "other enquiry":
+        return {
+          variant: "outline" as const,
+          icon: Mail,
+          color: "text-purple-600",
+          bgColor: "bg-purple-100",
+        };
+      case "future":
+        return {
+          variant: "secondary" as const,
+          icon: Calendar,
+          color: "text-indigo-600",
+          bgColor: "bg-indigo-100",
+        };
+      case "on hold":
         return {
           variant: "secondary" as const,
           icon: Clock,
           color: "text-orange-600",
           bgColor: "bg-orange-100",
         };
-      case "placed":
-      case "hired":
+      case "rnr":
+        return {
+          variant: "outline" as const,
+          icon: AlertCircle,
+          color: "text-yellow-600",
+          bgColor: "bg-yellow-100",
+        };
+      case "qualified":
         return {
           variant: "default" as const,
           icon: CheckCircle,
           color: "text-green-600",
           bgColor: "bg-green-100",
         };
-      case "rejected":
-      case "not_selected":
+      case "working":
         return {
-          variant: "destructive" as const,
-          icon: XCircle,
-          color: "text-red-600",
-          bgColor: "bg-red-100",
+          variant: "default" as const,
+          icon: Briefcase,
+          color: "text-emerald-600",
+          bgColor: "bg-emerald-100",
         };
       default:
         return {
@@ -460,9 +535,9 @@ export default function CandidatesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.isArray(filteredCandidates) &&
-                    filteredCandidates.map((candidate) => {
-                      const statusInfo = getStatusInfo(candidate.currentStatus);
+                  {Array.isArray(paginatedCandidates) &&
+                    paginatedCandidates.map((candidate) => {
+                      const statusInfo = getStatusInfo(candidate.currentStatus.statusName);
                       const StatusIcon = statusInfo.icon;
 
                       return (
@@ -494,15 +569,14 @@ export default function CandidatesPage() {
                                         className={`h-3 w-3 ${statusInfo.color}`}
                                       />
                                     </div>
+
                                     <Badge
                                       variant={statusInfo.variant}
                                       className="text-xs"
                                     >
-                                      {candidate.currentStatus
-                                        .charAt(0)
-                                        .toUpperCase() +
-                                        candidate.currentStatus.slice(1)}
+                                      {candidate.currentStatus.statusName}
                                     </Badge>
+
                                   </div>
                                 </div>
                                 <div className="text-sm text-slate-500">
@@ -532,8 +606,8 @@ export default function CandidatesPage() {
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
                               {candidate.skills
-                                .slice(0, 3)
-                                .map((skill, index) => (
+                                ?.slice(0, 3)
+                                .map((skill: string, index: number) => (
                                   <Badge
                                     key={index}
                                     variant="outline"
@@ -542,7 +616,7 @@ export default function CandidatesPage() {
                                     {skill}
                                   </Badge>
                                 ))}
-                              {candidate.skills.length > 3 && (
+                              {candidate.skills && candidate.skills.length > 3 && (
                                 <Badge variant="outline" className="text-xs">
                                   +{candidate.skills.length - 3}
                                 </Badge>
@@ -562,10 +636,7 @@ export default function CandidatesPage() {
                                 variant={statusInfo.variant}
                                 className="text-xs"
                               >
-                                {candidate.currentStatus
-                                  .charAt(0)
-                                  .toUpperCase() +
-                                  candidate.currentStatus.slice(1)}
+                                {candidate.currentStatus.statusName}
                               </Badge>
                             </div>
                           </TableCell>
@@ -652,14 +723,86 @@ export default function CandidatesPage() {
           </CardContent>
         </Card>
 
-        {/* Results Count - Bottom */}
+        {/* Pagination */}
         {Array.isArray(filteredCandidates) && filteredCandidates.length > 0 && (
-          <div className="flex items-center justify-center pt-6 border-t border-slate-200">
-            <p className="text-slate-600">
-              Showing {filteredCandidates.length} of{" "}
-              {Array.isArray(candidates) ? candidates.length : 0} candidates
-            </p>
-          </div>
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-slate-600">
+                  Showing {(filters.page - 1) * filters.limit + 1} to{" "}
+                  {Math.min(filters.page * filters.limit, totalCount)} of{" "}
+                  {totalCount} candidates
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                    disabled={filters.page === 1}
+                    className="h-9 px-3"
+                  >
+                    Previous
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.ceil(totalCount / filters.limit) }, (_, i) => i + 1)
+                      .filter((pageNum) => {
+                        // Show first page, last page, current page, and pages around current
+                        const totalPages = Math.ceil(totalCount / filters.limit);
+                        return (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= filters.page - 1 && pageNum <= filters.page + 1)
+                        );
+                      })
+                      .map((pageNum, idx, arr) => {
+                        // Add ellipsis if there's a gap
+                        const prevPageNum = arr[idx - 1];
+                        const showEllipsis = prevPageNum && pageNum - prevPageNum > 1;
+                        
+                        return (
+                          <div key={pageNum} className="flex items-center">
+                            {showEllipsis && (
+                              <span className="px-2 text-slate-400">...</span>
+                            )}
+                            <Button
+                              variant={filters.page === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setFilters((prev) => ({ ...prev, page: pageNum }))}
+                              className={`h-9 w-9 p-0 ${
+                                filters.page === pageNum
+                                  ? "bg-blue-600 hover:bg-blue-700"
+                                  : ""
+                              }`}
+                            >
+                              {pageNum}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        page: Math.min(
+                          Math.ceil(totalCount / filters.limit),
+                          prev.page + 1
+                        ),
+                      }))
+                    }
+                    disabled={filters.page >= Math.ceil(totalCount / filters.limit)}
+                    className="h-9 px-3"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

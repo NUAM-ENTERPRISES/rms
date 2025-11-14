@@ -33,6 +33,7 @@ export const baseApi = createApi({
     "DocumentVerification",
     "RecruiterAssignment",
     "StatusConfig",
+    "RNRReminder",
   ],
   endpoints: () => ({}),
 });

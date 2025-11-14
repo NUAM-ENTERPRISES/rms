@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,13 +28,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CANDIDATE_STATUS } from "@/constants/statuses";
 import { useUpdateCandidateStatusMutation } from "../api";
-import { useStatusConfig } from "../hooks/useStatusConfig";
+import { useGetCandidateStatusesQuery } from "@/services/candidatesApi";
 import { Loader2 } from "lucide-react";
 
 const statusUpdateSchema = z.object({
-  status: z.string().min(1, "Please select a status"),
+  currentStatusId: z.string().min(1, "Please select a status"),
   reason: z.string().optional(),
 });
 
@@ -57,12 +55,13 @@ export function StatusUpdateModal({
   candidateName,
 }: StatusUpdateModalProps) {
   const [updateStatus, { isLoading }] = useUpdateCandidateStatusMutation();
-  const { statusConfig } = useStatusConfig();
+  const { data: statusesData, isLoading: isLoadingStatuses } =
+    useGetCandidateStatusesQuery();
 
   const form = useForm<StatusUpdateFormData>({
     resolver: zodResolver(statusUpdateSchema),
     defaultValues: {
-      status: currentStatus,
+      currentStatusId: "",
       reason: "",
     },
   });
@@ -71,7 +70,10 @@ export function StatusUpdateModal({
     try {
       await updateStatus({
         candidateId,
-        status: data,
+        status: {
+          currentStatusId: parseInt(data.currentStatusId),
+          reason: data.reason,
+        },
       }).unwrap();
 
       toast.success("Candidate status updated successfully");
@@ -88,7 +90,7 @@ export function StatusUpdateModal({
     onClose();
   };
 
-  const currentStatusConfig = statusConfig[currentStatus];
+  const statuses = statusesData?.data || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -109,21 +111,22 @@ export function StatusUpdateModal({
             <div className="space-y-2">
               <FormLabel>Current Status</FormLabel>
               <div className="flex items-center gap-2">
-                <Badge className={currentStatusConfig?.badgeClass}>
-                  {currentStatusConfig?.label || currentStatus}
+                <Badge variant="outline">
+                  {currentStatus}
                 </Badge>
               </div>
             </div>
 
             <FormField
               control={form.control}
-              name="status"
+              name="currentStatusId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>New Status</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={isLoadingStatuses}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -131,24 +134,20 @@ export function StatusUpdateModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(CANDIDATE_STATUS).map(([key, value]) => {
-                        const config = statusConfig[value];
-                        return (
-                          <SelectItem key={value} value={value}>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant="outline"
-                                className={`${config?.badgeClass} text-xs`}
-                              >
-                                {config?.label}
-                              </Badge>
-                              <span className="text-sm text-muted-foreground">
-                                {config?.description}
-                              </span>
-                            </div>
+                      {isLoadingStatuses ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            Loading statuses...
+                          </span>
+                        </div>
+                      ) : (
+                        statuses.map((status) => (
+                          <SelectItem key={status.id} value={status.id.toString()}>
+                            {status.statusName}
                           </SelectItem>
-                        );
-                      })}
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

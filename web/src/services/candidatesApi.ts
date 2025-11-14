@@ -1,5 +1,4 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQuery } from "@/services/baseApi";
+import { baseApi } from "@/app/api/baseApi";
 
 interface Candidate {
   id: string;
@@ -77,13 +76,61 @@ interface UpdateCandidateRequest {
   assignedTo?: string;
 }
 
-export const candidatesApi = createApi({
-  reducerPath: "candidatesApi",
-  baseQuery,
-  tagTypes: ["Candidate"],
+interface GetMyAssignedCandidatesParams {
+  search?: string;
+  currentStatus?: number;
+  page?: number;
+  limit?: number;
+}
+
+interface PaginatedCandidatesResponse {
+  data: Candidate[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+interface MyAssignedCandidatesApiResponse {
+  success: boolean;
+  data: {
+    candidates: Candidate[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+  message: string;
+}
+
+export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCandidates: builder.query<Candidate[], void>({
       query: () => "/candidates",
+      providesTags: ["Candidate"],
+    }),
+    getMyAssignedCandidates: builder.query<
+      PaginatedCandidatesResponse,
+      GetMyAssignedCandidatesParams
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.search) queryParams.append("search", params.search);
+        if (params.currentStatus) queryParams.append("currentStatus", params.currentStatus.toString());
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+        
+        return `/candidates/my-assigned?${queryParams.toString()}`;
+      },
+      transformResponse: (response: MyAssignedCandidatesApiResponse) => ({
+        data: response.data.candidates,
+        total: response.data.pagination.total,
+        page: response.data.pagination.page,
+        limit: response.data.pagination.limit,
+        totalPages: response.data.pagination.totalPages,
+      }),
       providesTags: ["Candidate"],
     }),
     getCandidateById: builder.query<Candidate, string>({
@@ -164,11 +211,55 @@ export const candidatesApi = createApi({
       query: (projectId) => `/projects/${projectId}/eligible-candidates`,
       providesTags: ["Candidate"],
     }),
+
+    getCandidateStatuses: builder.query<
+      { success: boolean; data: Array<{ id: string; statusName: string }> },
+      void
+    >({
+      query: () => "/candidate-status",
+    }),
+
+    getCandidateStatusHistory: builder.query<
+      {
+        success: boolean;
+        data: {
+          candidate: {
+            id: string;
+            name: string;
+            currentStatus: {
+              id: number;
+              statusName: string;
+            };
+          };
+          history: Array<{
+            id: string;
+            candidateId: string;
+            statusId: number;
+            statusNameSnapshot: string;
+            changedById: string;
+            changedByName: string;
+            statusUpdatedAt: string;
+            notificationCount: number;
+            reason?: string;
+            createdAt: string;
+          }>;
+          totalEntries: number;
+        };
+        message: string;
+      },
+      string
+    >({
+      query: (candidateId) => `/candidate-status-history/candidate/${candidateId}`,
+      providesTags: (_, __, candidateId) => [
+        { type: "Candidate", id: candidateId },
+      ],
+    }),
   }),
 });
 
 export const {
   useGetCandidatesQuery,
+  useGetMyAssignedCandidatesQuery,
   useGetCandidateByIdQuery,
   useCreateCandidateMutation,
   useUpdateCandidateMutation,
@@ -177,4 +268,6 @@ export const {
   useNominateCandidateMutation,
   useApproveOrRejectCandidateMutation,
   useGetEligibleCandidatesQuery,
+  useGetCandidateStatusesQuery,
+  useGetCandidateStatusHistoryQuery,
 } = candidatesApi;

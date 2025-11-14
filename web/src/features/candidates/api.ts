@@ -34,7 +34,10 @@ export interface Candidate {
   profileImage?: string;
   source: string;
   dateOfBirth: string; // Now mandatory
-  currentStatus: string;
+  currentStatus: {
+    id: number;
+    statusName: string;
+  };
   totalExperience?: number;
   currentSalary?: number;
   currentEmployer?: string;
@@ -296,7 +299,7 @@ export interface UpdateCandidateRequest {
 }
 
 export interface UpdateCandidateStatusRequest {
-  status: string;
+  currentStatusId: number;
   reason?: string;
 }
 
