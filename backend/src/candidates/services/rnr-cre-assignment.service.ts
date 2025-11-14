@@ -159,7 +159,9 @@ export class RnrCreAssignmentService {
   }> {
     const totalRnrCandidates = await this.prisma.candidate.count({
       where: {
-        currentStatus: CANDIDATE_STATUS.RNR,
+        currentStatus: {
+          statusName: CANDIDATE_STATUS.RNR,
+        },
       },
     });
 
@@ -167,7 +169,9 @@ export class RnrCreAssignmentService {
 
     const candidatesWithCre = await this.prisma.candidate.count({
       where: {
-        currentStatus: CANDIDATE_STATUS.RNR,
+        currentStatus: {
+          statusName: CANDIDATE_STATUS.RNR,
+        },
         recruiterAssignments: {
           some: {
             isActive: true,
@@ -188,7 +192,9 @@ export class RnrCreAssignmentService {
     // Calculate average days in RNR
     const rnrCandidates = await this.prisma.candidate.findMany({
       where: {
-        currentStatus: CANDIDATE_STATUS.RNR,
+        currentStatus: {
+          statusName: CANDIDATE_STATUS.RNR,
+        },
       },
       select: {
         updatedAt: true,

@@ -647,7 +647,7 @@ export class TeamsService {
       name: `${candidate.firstName} ${candidate.lastName}`,
       contact: `${candidate.countryCode}${candidate.mobileNumber}`,
       email: candidate.email,
-      currentStatus: candidate.currentStatus,
+      // currentStatus: candidate.currentStatus,
       experience: candidate.totalExperience || 0,
       skills: candidate.skills || [],
       assignedProject: {

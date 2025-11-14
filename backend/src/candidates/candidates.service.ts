@@ -23,6 +23,7 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
@@ -46,7 +47,8 @@ export class CandidatesService {
     private readonly pipelineService: PipelineService,
     private readonly eligibilityService: UnifiedEligibilityService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
-  ) {}
+    private readonly rnrRemindersService: RnrRemindersService,
+  ) { }
 
   async create(
     createCandidateDto: CreateCandidateDto,
@@ -98,7 +100,7 @@ export class CandidatesService {
         profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
         dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
-        currentStatus: createCandidateDto.currentStatus || 'untouched',
+        currentStatusId: createCandidateDto.currentStatusId ?? 1,
         totalExperience: createCandidateDto.totalExperience,
         currentSalary: createCandidateDto.currentSalary,
         currentEmployer: createCandidateDto.currentEmployer,
@@ -118,32 +120,32 @@ export class CandidatesService {
         // Handle multiple qualifications
         qualifications: createCandidateDto.qualifications
           ? {
-              create: createCandidateDto.qualifications.map((qual) => ({
-                qualificationId: qual.qualificationId,
-                university: qual.university,
-                graduationYear: qual.graduationYear,
-                gpa: qual.gpa,
-                isCompleted: qual.isCompleted ?? true,
-                notes: qual.notes,
-              })),
-            }
+            create: createCandidateDto.qualifications.map((qual) => ({
+              qualificationId: qual.qualificationId,
+              university: qual.university,
+              graduationYear: qual.graduationYear,
+              gpa: qual.gpa,
+              isCompleted: qual.isCompleted ?? true,
+              notes: qual.notes,
+            })),
+          }
           : undefined,
         // Handle work experiences
         workExperiences: createCandidateDto.workExperiences
           ? {
-              create: createCandidateDto.workExperiences.map((exp) => ({
-                companyName: exp.companyName,
-                jobTitle: exp.jobTitle,
-                startDate: new Date(exp.startDate),
-                endDate: exp.endDate ? new Date(exp.endDate) : null,
-                isCurrent: exp.isCurrent ?? false,
-                description: exp.description,
-                salary: exp.salary,
-                location: exp.location,
-                skills: exp.skills ? JSON.parse(exp.skills) : [],
-                achievements: exp.achievements,
-              })),
-            }
+            create: createCandidateDto.workExperiences.map((exp) => ({
+              companyName: exp.companyName,
+              jobTitle: exp.jobTitle,
+              startDate: new Date(exp.startDate),
+              endDate: exp.endDate ? new Date(exp.endDate) : null,
+              isCurrent: exp.isCurrent ?? false,
+              description: exp.description,
+              salary: exp.salary,
+              location: exp.location,
+              skills: exp.skills ? JSON.parse(exp.skills) : [],
+              achievements: exp.achievements,
+            })),
+          }
           : undefined,
       },
       include: {
@@ -299,6 +301,12 @@ export class CandidatesService {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
+        currentStatus: {
+          select: {
+            id: true,
+            statusName: true,
+          },
+        },
         team: true,
         workExperiences: true,
         qualifications: {
@@ -343,10 +351,135 @@ export class CandidatesService {
     };
   }
 
+  /**
+   * Get candidates assigned to a specific CRE user
+   * Used for CRE dashboard to show only their assigned candidates
+   */
+  async getCREAssignedCandidates(
+    creUserId: string,
+    query: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      currentStatus?: string;
+    },
+  ): Promise<{
+    candidates: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const { page = 1, limit = 10, search, currentStatus } = query;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {
+      recruiterAssignments: {
+        some: {
+          recruiterId: creUserId,
+          isActive: true, // Only active assignments
+        },
+      },
+    };
+
+    // Add search filter
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { mobileNumber: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Add status filter
+    if (currentStatus) {
+      where.currentStatusId = parseInt(currentStatus);
+    }
+
+    // Get total count
+    const total = await this.prisma.candidate.count({ where });
+
+    // Get candidates with relations
+    const candidates = await this.prisma.candidate.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { updatedAt: 'desc' }, // Show most recently updated first
+      include: {
+        currentStatus: {
+          select: {
+            id: true,
+            statusName: true,
+          },
+        },
+        workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
+        recruiterAssignments: {
+          where: {
+            recruiterId: creUserId,
+            isActive: true,
+          },
+          include: {
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        // Include RNR reminder info if exists
+        rnrReminders: {
+          where: {
+            status: {
+              in: ['pending', 'sent'],
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+
+    return {
+      candidates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async findOne(id: string): Promise<CandidateWithRelations> {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id },
       include: {
+        currentStatus: {
+          select: {
+            id: true,
+            statusName: true,
+          },
+        },
         team: true,
         projects: {
           include: {
@@ -494,8 +627,8 @@ export class CandidatesService {
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.dateOfBirth)
       updateData.dateOfBirth = new Date(updateCandidateDto.dateOfBirth);
-    if (updateCandidateDto.currentStatus)
-      updateData.currentStatus = updateCandidateDto.currentStatus;
+    if (updateCandidateDto.currentStatusId !== undefined)
+      updateData.currentStatusId = updateCandidateDto.currentStatusId;
     if (updateCandidateDto.totalExperience !== undefined)
       updateData.totalExperience = updateCandidateDto.totalExperience;
     if (updateCandidateDto.currentSalary !== undefined)
@@ -1056,11 +1189,11 @@ export class CandidatesService {
       hiredCandidates,
     ] = await Promise.all([
       this.prisma.candidate.count(),
-      this.prisma.candidate.count({ where: { currentStatus: 'new' } }),
-      this.prisma.candidate.count({ where: { currentStatus: 'shortlisted' } }),
-      this.prisma.candidate.count({ where: { currentStatus: 'selected' } }),
-      this.prisma.candidate.count({ where: { currentStatus: 'rejected' } }),
-      this.prisma.candidate.count({ where: { currentStatus: 'hired' } }),
+      this.prisma.candidate.count({ where: { currentStatusId: 1 } }),
+      this.prisma.candidate.count({ where: { currentStatusId: 2 } }),
+      this.prisma.candidate.count({ where: { currentStatusId: 3 } }),
+      this.prisma.candidate.count({ where: { currentStatusId: 4 } }),
+      this.prisma.candidate.count({ where: { currentStatusId: 5 } }),
     ]);
 
     // Get candidates by status
@@ -1256,7 +1389,7 @@ export class CandidatesService {
     // Validate current status allows approval/rejection
     if (
       candidateProjectMap.status !==
-        CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED &&
+      CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED &&
       approveDto.action === 'approve'
     ) {
       throw new BadRequestException(
@@ -1484,11 +1617,28 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
     }
 
+    // Find the new status info (to get its name for snapshot)
+    const status = await this.prisma.candidateStatus.findUnique({
+      where: { id: updateStatusDto.currentStatusId },
+    });
+
+    if (!status) {
+      throw new NotFoundException(`Candidate status ${updateStatusDto.currentStatusId} not found`);
+    }
+
+    //Get the user (who’s changing the status)
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true },
+    });
+
+
+
     // Update candidate status
     const updatedCandidate = await this.prisma.candidate.update({
       where: { id: candidateId },
       data: {
-        currentStatus: updateStatusDto.status,
+        currentStatusId: updateStatusDto.currentStatusId,
         updatedAt: new Date(),
       },
       include: {
@@ -1505,10 +1655,68 @@ export class CandidatesService {
       },
     });
 
-    // Check if status requires CRE handling
-    if (requiresCREHandling(updateStatusDto.status as any)) {
+    // update candidate status history
+    const statusHistory = await this.prisma.candidateStatusHistory.create({
+      data: {
+        candidateId: candidateId,
+        changedById: user?.id,
+        changedByName: user?.name ?? "System", // fallback if user null
+        statusId: status.id,
+        statusNameSnapshot: status.statusName, // snapshot for history
+        statusUpdatedAt: new Date(),
+        notificationCount: 0,
+        reason: updateStatusDto.reason, // Save reason for status change
+      },
+    });
+
+    // ===== RNR REMINDER LOGIC START =====
+    // If status is changing TO RNR (statusId = 8), create a reminder
+    if (updateStatusDto.currentStatusId === 8) {
       this.logger.log(
-        `Candidate ${candidateId} status changed to ${updateStatusDto.status} - requires CRE handling`,
+        `Candidate ${candidateId} status changed to RNR. Creating reminder...`,
+      );
+      
+      try {
+        await this.rnrRemindersService.createRNRReminder(
+          candidateId,
+          userId, // The recruiter who marked as RNR
+          statusHistory.id, // Link to the status history record
+        );
+        this.logger.log(
+          `RNR reminder created for candidate ${candidateId}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to create RNR reminder for candidate ${candidateId}:`,
+          error,
+        );
+      }
+    }
+
+    // If status is changing FROM RNR to something else, cancel pending reminders
+    if (candidate.currentStatusId === 8 && updateStatusDto.currentStatusId !== 8) {
+      this.logger.log(
+        `Candidate ${candidateId} status changed from RNR. Cancelling reminders...`,
+      );
+      
+      try {
+        await this.rnrRemindersService.cancelRNRReminders(candidateId);
+        this.logger.log(
+          `RNR reminders cancelled for candidate ${candidateId}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to cancel RNR reminders for candidate ${candidateId}:`,
+          error,
+        );
+      }
+    }
+    // ===== RNR REMINDER LOGIC END =====
+
+    // Check if status requires CRE handling
+    if (requiresCREHandling(updateStatusDto.currentStatusId as any)) {
+      this.logger.log(
+        `Candidate ${candidateId} status changed to ${updateStatusDto.currentStatusId} - requires CRE handling`,
       );
 
       // Assign CRE to handle RNR candidates
@@ -1516,7 +1724,7 @@ export class CandidatesService {
         await this.recruiterAssignmentService.assignCREToCandidate(
           candidateId,
           userId,
-          `Status changed to ${updateStatusDto.status} - CRE assignment required`,
+          `Status changed to ${updateStatusDto.currentStatusId} - CRE assignment required`,
         );
         this.logger.log(
           `Assigned CRE to candidate ${candidateId} for RNR handling`,
@@ -1532,17 +1740,19 @@ export class CandidatesService {
     // Publish status change event
     await this.outboxService.publishEvent('CandidateStatusUpdated', {
       candidateId,
-      oldStatus: candidate.currentStatus,
-      newStatus: updateStatusDto.status,
+      oldStatus: candidate.currentStatusId,
+      newStatus: updateStatusDto.currentStatusId,
       updatedBy: userId,
       reason: updateStatusDto.reason,
     });
 
     return {
-      message: `Candidate status updated to ${updateStatusDto.status}`,
+      message: `Candidate status updated to ${updateStatusDto.currentStatusId}`,
       candidate: updatedCandidate,
     };
-  }
+  };
+
+
 
   /**
    * Assign recruiter to candidate

@@ -91,43 +91,12 @@ export class CreateCandidateDto {
   dateOfBirth: string;
 
   @ApiPropertyOptional({
-    description: 'Current status of the candidate',
-    enum: [
-      'untouched',
-      'interested',
-      'not_interested',
-      'not_eligible',
-      'other_enquiry',
-      'future',
-      'on_hold',
-      'rnr',
-      'qualified',
-      'new',
-      'shortlisted',
-      'selected',
-      'rejected',
-      'hired',
-    ],
-    default: 'untouched',
+    description: 'Candidate current status ID (from candidate_status table)',
+    example: 1,
   })
   @IsOptional()
-  @IsEnum([
-    'untouched',
-    'interested',
-    'not_interested',
-    'not_eligible',
-    'other_enquiry',
-    'future',
-    'on_hold',
-    'rnr',
-    'qualified',
-    'new',
-    'shortlisted',
-    'selected',
-    'rejected',
-    'hired',
-  ])
-  currentStatus?: string = 'untouched';
+  @IsInt()
+  currentStatusId?: number;
 
   @ApiPropertyOptional({
     description: 'Total years of experience',

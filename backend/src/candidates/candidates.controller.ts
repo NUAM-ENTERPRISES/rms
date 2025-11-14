@@ -68,7 +68,7 @@ export class CandidatesController {
             name: { type: 'string', example: 'John Doe' },
             contact: { type: 'string', example: '+1234567890' },
             email: { type: 'string', example: 'john.doe@example.com' },
-            currentStatus: { type: 'string', example: 'new' },
+            currentStatusId: { type: 'number', example: 1 },
             experience: { type: 'number', example: 5 },
             skills: { type: 'array', items: { type: 'string' } },
             expectedSalary: { type: 'number', example: 50000 },
@@ -303,6 +303,81 @@ export class CandidatesController {
       success: true,
       data: stats,
       message: 'Candidate statistics retrieved successfully',
+    };
+  }
+
+  @Get('my-assigned')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get candidates assigned to logged-in CRE user',
+    description:
+      'Retrieve all candidates that are currently assigned to the logged-in CRE user. This is specifically for CRE dashboard.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by candidate name, email, or mobile',
+  })
+  @ApiQuery({
+    name: 'currentStatus',
+    required: false,
+    description: 'Filter by candidate status (e.g., RNR)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'CRE assigned candidates retrieved successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async getMyCREAssignedCandidates(
+    @Request() req,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+    @Query('currentStatus') currentStatus?: string,
+  ): Promise<{
+    success: boolean;
+    data: {
+      candidates: any[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    };
+    message: string;
+  }> {
+    const userId = req.user.id; // Get logged-in CRE user ID
+    
+    const result = await this.candidatesService.getCREAssignedCandidates(
+      userId,
+      {
+        page: Number(page),
+        limit: Number(limit),
+        search,
+        currentStatus,
+      },
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'CRE assigned candidates retrieved successfully',
     };
   }
 

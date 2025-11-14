@@ -575,6 +575,36 @@ async function seedStates() {
   console.log(`✅ States seeded: ${indianStates.length} created/updated`);
 }
 
+async function seedCandidateStatus() {
+  console.log('🧾 Seeding candidate statuses...');
+
+  const statuses = [
+    'Untouched',
+    'Interested',
+    'Not Interested',
+    'Not Eligible',
+    'Other Enquiry',
+    'Future',
+    'On Hold',
+    'RNR',
+    'Qualified',
+    'Working',
+  ];
+
+  for (const statusName of statuses) {
+    await prisma.candidateStatus.upsert({
+      where: { statusName: statusName },
+      update: {},
+      create: {
+        statusName: statusName,
+      },
+    });
+  }
+
+  console.log(`✅ Candidate statuses seeded: ${statuses.length} created/updated`);
+}
+
+
 async function main() {
   console.log('🌱 Starting database seeding...');
 
@@ -586,6 +616,9 @@ async function main() {
 
   // Seed states
   await seedStates();
+
+  // Seed candidate statuses
+  await seedCandidateStatus();
 
   // Seed healthcare roles catalog
   await seedRoleCatalog();

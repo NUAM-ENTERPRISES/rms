@@ -1,15 +1,15 @@
-import { IsString, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsInt } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 
 export class UpdateCandidateStatusDto {
   @ApiProperty({
-    description: 'New status for the candidate',
-    enum: Object.values(CANDIDATE_STATUS),
-    example: 'interested',
+    description: 'New status ID for the candidate',
+    example: 1,
   })
-  @IsEnum(Object.values(CANDIDATE_STATUS))
-  status: string;
+
+  @IsInt()
+  currentStatusId: number;
 
   @ApiProperty({
     description: 'Reason for status change (optional)',

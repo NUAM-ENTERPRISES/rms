@@ -125,9 +125,9 @@ export class RecruiterAssignmentService {
         candidateRecruiterAssignments: {
           where: {
             isActive: true,
-            candidate: {
-              currentStatus: CANDIDATE_STATUS.RNR,
-            },
+            // candidate: {
+            //   currentStatus: CANDIDATE_STATUS.RNR,
+            // },
           },
         },
       },
@@ -205,10 +205,14 @@ export class RecruiterAssignmentService {
    */
   async assignCREToCandidate(
     candidateId: string,
-    assignedByUserId: string,
+    assignedByUserId?: string,
     reason?: string,
   ): Promise<RecruiterInfo> {
     const cre = await this.getCREWithLeastWorkload();
+    const assignerUserId = await this.resolveAssignerUserId(
+      assignedByUserId,
+      cre.id,
+    );
 
     // Deactivate any existing active assignments
     await this.prisma.candidateRecruiterAssignment.updateMany({
@@ -219,7 +223,7 @@ export class RecruiterAssignmentService {
       data: {
         isActive: false,
         unassignedAt: new Date(),
-        unassignedBy: assignedByUserId,
+        unassignedBy: assignerUserId,
       },
     });
 
@@ -228,7 +232,7 @@ export class RecruiterAssignmentService {
       data: {
         candidateId,
         recruiterId: cre.id,
-        assignedBy: assignedByUserId,
+        assignedBy: assignerUserId,
         reason: reason || 'Automatic CRE assignment for RNR status',
       },
     });
@@ -238,6 +242,28 @@ export class RecruiterAssignmentService {
     );
 
     return cre;
+  }
+
+  private async resolveAssignerUserId(
+    preferredUserId: string | undefined,
+    fallbackUserId: string,
+  ): Promise<string> {
+    if (preferredUserId) {
+      const userExists = await this.prisma.user.findUnique({
+        where: { id: preferredUserId },
+        select: { id: true },
+      });
+
+      if (userExists) {
+        return preferredUserId;
+      }
+
+      this.logger.warn(
+        `Assigner user ${preferredUserId} not found. Falling back to ${fallbackUserId}.`,
+      );
+    }
+
+    return fallbackUserId;
   }
 
   /**
@@ -254,7 +280,7 @@ export class RecruiterAssignmentService {
 
     const rnrCandidates = await this.prisma.candidate.findMany({
       where: {
-        currentStatus: CANDIDATE_STATUS.RNR,
+        // currentStatus: CANDIDATE_STATUS.RNR,
         updatedAt: {
           lte: threeDaysAgo,
         },

@@ -50,6 +50,10 @@ model User {
   assignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("AssignedByUser")
   unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
 
+  statusChanges     CandidateStatusHistory[] @relation("UserToHistory")
+  rnrReminders      RNRReminder[] @relation("RecruiterRNRReminders")
+
+
   @@unique([countryCode, mobileNumber])
   @@index([email])
   @@index([countryCode, mobileNumber])
@@ -263,7 +267,8 @@ model Candidate {
   email            String?
   source           String                   @default("manual")
   dateOfBirth      DateTime
-  currentStatus    String                   @default("untouched")
+  currentStatusId  Int?
+  currentStatus    CandidateStatus?          @relation(fields: [currentStatusId], references: [id])
   experience       Int?
   skills           Json                     @default("[]")
   currentEmployer  String?
@@ -291,10 +296,13 @@ model Candidate {
   talentPool       TalentPool?
   workExperiences  WorkExperience[]
   recruiterAssignments CandidateRecruiterAssignment[]
+  statusHistories    CandidateStatusHistory[] @relation("CandidateToHistory")
+  rnrReminders       RNRReminder[]
+
 
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
-  @@index([currentStatus])
+   @@index([currentStatusId]) 
   @@index([countryCode, mobileNumber])
   @@map("candidates")
 }
@@ -880,6 +888,7 @@ model CandidateRecruiterAssignment {
   unassignedBy String?
   reason      String?   // Reason for assignment change
   isActive    Boolean   @default(true)
+  assignmentType String @default("manual") // manual, cre_auto, cre_manual
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -891,5 +900,105 @@ model CandidateRecruiterAssignment {
   @@index([candidateId])
   @@index([recruiterId])
   @@index([isActive])
+  @@index([assignmentType])
   @@map("candidate_recruiter_assignments")
 }
+
+
+model CandidateStatus {
+  id          Int       @id @default(autoincrement())
+  statusName  String    @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  candidates Candidate[] 
+
+    statusHistories  CandidateStatusHistory[] @relation("StatusToHistory")
+
+
+  @@map("candidate_status")
+}
+
+
+model CandidateStatusHistory {
+  id                 String           @id @default(cuid())
+
+  candidateId        String
+  candidate          Candidate        @relation("CandidateToHistory", fields: [candidateId], references: [id], onDelete: Cascade)
+
+  changedById        String?
+  changedBy          User?            @relation("UserToHistory", fields: [changedById], references: [id])
+
+    changedByName      String?          // snapshot of who changed it (optional, for quick read)
+
+  statusId           Int
+  status             CandidateStatus  @relation("StatusToHistory", fields: [statusId], references: [id])
+  statusNameSnapshot String
+
+  reason             String?          @db.Text // Reason for status change (optional, supports long text)
+
+  notificationCount  Int              @default(0)
+  lastNotifiedAt     DateTime?
+  statusUpdatedAt    DateTime         @default(now())
+
+  @@map("candidate_status_history")
+  @@index([candidateId])
+  @@index([changedById])
+  
+  rnrReminders RNRReminder[]
+}
+
+model RNRReminder {
+  id               String   @id @default(cuid())
+  candidateId      String
+  recruiterId      String   // The recruiter who needs to be reminded
+  statusHistoryId  String   // Link to the RNR status change
+  
+  scheduledFor     DateTime // When to send reminder (4 hours from RNR)
+  sentAt           DateTime? // When reminder was actually sent
+  
+  reminderCount    Int      @default(0) // Total reminders sent across all days
+  dailyCount       Int      @default(0) // How many sent today (resets each day)
+  daysCompleted    Int      @default(0) // How many days completed (0-3)
+  lastReminderDate DateTime @default(now()) // Track the day
+  
+  status           String   @default("pending") // pending, completed, cancelled
+  
+  // CRE (Candidate Recruitment Employee) Assignment tracking
+  creAssigned      Boolean  @default(false)  // Was this assigned to CRE after 3 days?
+  creAssignedAt    DateTime? // When was it assigned to CRE
+  creAssignedTo    String?  // Which CRE user ID got assigned
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter        User      @relation("RecruiterRNRReminders", fields: [recruiterId], references: [id], onDelete: Cascade)
+  statusHistory    CandidateStatusHistory @relation(fields: [statusHistoryId], references: [id], onDelete: Cascade)
+  
+  @@index([scheduledFor, status])
+  @@index([recruiterId, status])
+  @@index([candidateId])
+  @@index([daysCompleted, status])
+  @@map("rnr_reminders")
+}
+
+/// System-wide configuration settings
+/// Stores JSON configuration for various features
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique  // e.g., "RNR_SETTINGS", "EMAIL_CONFIG"
+  value     Json                // Configuration as JSON object
+  description String?            // Optional description of this config
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([isActive])
+  @@map("system_config")
+}
+
+
+
+

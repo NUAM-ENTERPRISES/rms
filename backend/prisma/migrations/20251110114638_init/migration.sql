@@ -179,6 +179,9 @@ CREATE TABLE "projects" (
     "priority" TEXT NOT NULL DEFAULT 'medium',
     "countryCode" TEXT,
     "projectType" TEXT NOT NULL DEFAULT 'private',
+    "resumeEditable" BOOLEAN NOT NULL DEFAULT true,
+    "groomingRequired" TEXT NOT NULL DEFAULT 'formal',
+    "hideContactInfo" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
 );
@@ -215,6 +218,14 @@ CREATE TABLE "roles_needed" (
     "contractDurationYears" INTEGER,
     "genderRequirement" TEXT NOT NULL DEFAULT 'all',
     "technicalSkills" JSONB,
+    "visaType" TEXT NOT NULL DEFAULT 'contract',
+    "requiredSkills" JSONB NOT NULL DEFAULT '[]',
+    "candidateStates" JSONB NOT NULL DEFAULT '[]',
+    "candidateReligions" JSONB NOT NULL DEFAULT '[]',
+    "minHeight" DOUBLE PRECISION,
+    "maxHeight" DOUBLE PRECISION,
+    "minWeight" DOUBLE PRECISION,
+    "maxWeight" DOUBLE PRECISION,
 
     CONSTRAINT "roles_needed_pkey" PRIMARY KEY ("id")
 );
@@ -225,7 +236,7 @@ CREATE TABLE "candidates" (
     "email" TEXT,
     "source" TEXT NOT NULL DEFAULT 'manual',
     "dateOfBirth" TIMESTAMP(3) NOT NULL,
-    "currentStatus" TEXT NOT NULL DEFAULT 'new',
+    "currentStatus" TEXT NOT NULL DEFAULT 'untouched',
     "experience" INTEGER,
     "skills" JSONB NOT NULL DEFAULT '[]',
     "currentEmployer" TEXT,
@@ -627,6 +638,57 @@ CREATE TABLE "allocation_cursors" (
     CONSTRAINT "allocation_cursors_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "religions" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "religions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "states" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "countryCode" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "states_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "candidate_recruiter_assignments" (
+    "id" TEXT NOT NULL,
+    "candidateId" TEXT NOT NULL,
+    "recruiterId" TEXT NOT NULL,
+    "assignedBy" TEXT NOT NULL,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "unassignedAt" TIMESTAMP(3),
+    "unassignedBy" TEXT,
+    "reason" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "candidate_recruiter_assignments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "candidate_status" (
+    "id" SERIAL NOT NULL,
+    "statusName" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "candidate_status_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "refresh_tokens_userId_idx" ON "refresh_tokens"("userId");
 
@@ -858,6 +920,24 @@ CREATE UNIQUE INDEX "role_needed_education_requirements_roleNeededId_qualificati
 -- CreateIndex
 CREATE UNIQUE INDEX "allocation_cursors_projectId_roleNeededId_key" ON "allocation_cursors"("projectId", "roleNeededId");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "religions_name_key" ON "religions"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "states_code_key" ON "states"("code");
+
+-- CreateIndex
+CREATE INDEX "candidate_recruiter_assignments_candidateId_idx" ON "candidate_recruiter_assignments"("candidateId");
+
+-- CreateIndex
+CREATE INDEX "candidate_recruiter_assignments_recruiterId_idx" ON "candidate_recruiter_assignments"("recruiterId");
+
+-- CreateIndex
+CREATE INDEX "candidate_recruiter_assignments_isActive_idx" ON "candidate_recruiter_assignments"("isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "candidate_status_statusName_key" ON "candidate_status"("statusName");
+
 -- AddForeignKey
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -998,3 +1078,15 @@ ALTER TABLE "role_needed_education_requirements" ADD CONSTRAINT "role_needed_edu
 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "candidate_recruiter_assignments" ADD CONSTRAINT "candidate_recruiter_assignments_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "candidates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "candidate_recruiter_assignments" ADD CONSTRAINT "candidate_recruiter_assignments_recruiterId_fkey" FOREIGN KEY ("recruiterId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "candidate_recruiter_assignments" ADD CONSTRAINT "candidate_recruiter_assignments_assignedBy_fkey" FOREIGN KEY ("assignedBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "candidate_recruiter_assignments" ADD CONSTRAINT "candidate_recruiter_assignments_unassignedBy_fkey" FOREIGN KEY ("unassignedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

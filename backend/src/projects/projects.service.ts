@@ -273,7 +273,11 @@ export class ProjectsService {
                 countryCode: true,
                 mobileNumber: true,
                 email: true,
-                currentStatus: true,
+                currentStatus: {
+                  select: {
+                    statusName: true,
+                  },
+                },
               },
             },
           },

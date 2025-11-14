@@ -65,7 +65,7 @@ export class CandidateMatchingService {
       where: {
         AND: [
           // If specific candidate ID is provided, only get that candidate
-          ...(criteria.candidateId ? [{ id: criteria.candidateId }] : []),
+          // ...(criteria.candidateId ? [{ id: criteria.candidateId }] : []),
           // Not already nominated for this project+role
           {
             projects: {
@@ -77,11 +77,11 @@ export class CandidateMatchingService {
           },
           // Not in late pipeline states
           {
-            OR: [
-              { currentStatus: 'new' },
-              { currentStatus: 'shortlisted' },
-              { currentStatus: 'active' },
-            ],
+            // OR: [
+            //   { currentStatus: 'new' },
+            //   { currentStatus: 'shortlisted' },
+            //   { currentStatus: 'active' },
+            // ],
           },
           // Not already hired/joined
           {

@@ -12,9 +12,10 @@ import { PrismaModule } from '../database/prisma.module';
 import { WorkExperienceModule } from './work-experience.module';
 import { OutboxService } from '../notifications/outbox.service';
 import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
+import { RnrRemindersModule } from '../rnr-reminders/rnr-reminders.module';
 
 @Module({
-  imports: [PrismaModule, WorkExperienceModule],
+  imports: [PrismaModule, WorkExperienceModule, RnrRemindersModule],
   controllers: [
     CandidatesController,
     CandidateQualificationController,
@@ -30,6 +31,10 @@ import { UnifiedEligibilityService } from '../candidate-eligibility/unified-elig
     OutboxService,
     UnifiedEligibilityService,
   ],
-  exports: [CandidatesService, CandidateQualificationService],
+  exports: [
+    CandidatesService, 
+    CandidateQualificationService,
+    RecruiterAssignmentService, // Export for RNR CRE assignment
+  ],
 })
 export class CandidatesModule {}

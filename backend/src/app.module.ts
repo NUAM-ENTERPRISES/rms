@@ -32,6 +32,10 @@ import { EligibilityModule } from './candidate-eligibility/eligibility.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { MetaModule } from './meta/meta.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CandidateStatusModule } from './candidate-status/candidate-status.module';
+import { CandidateStatusHistoryModule } from './candidate-status-history/candidate-status-history.module';
+import { RnrRemindersModule } from './rnr-reminders/rnr-reminders.module';
+import { SystemConfigModule } from './system-config/system-config.module';
 
 @Module({
   imports: [
@@ -40,6 +44,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
+    SystemConfigModule, // Add system config globally
     AuthModule,
     RolesModule,
     UsersModule,
@@ -61,6 +66,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     InterviewsModule,
     InterviewsModule,
     MetaModule,
+    CandidateStatusModule,
+    CandidateStatusHistoryModule,
+    RnrRemindersModule,
   ],
   controllers: [AppController],
   providers: [

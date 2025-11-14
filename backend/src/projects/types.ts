@@ -20,7 +20,9 @@ export interface ProjectWithRelations extends Project {
       countryCode: string;
       mobileNumber: string;
       email: string | null;
-      currentStatus: string;
+      currentStatus: {
+        statusName: string;
+      } | null;
     };
   })[];
 }
