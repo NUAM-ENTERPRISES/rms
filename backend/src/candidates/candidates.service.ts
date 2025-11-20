@@ -157,6 +157,19 @@ export class CandidatesService {
 
     this.logger.log(`Calculated experience: ${calculatedExperience}, Final totalExperience: ${totalExperience}`);
 
+    // Get the default status info for history tracking
+    const defaultStatusId = createCandidateDto.currentStatusId ?? 1;
+    const defaultStatus = await this.prisma.candidateStatus.findUnique({
+      where: { id: defaultStatusId },
+      select: { statusName: true },
+    });
+
+    // Get user info for status history
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
     // Create candidate with qualifications
     const candidate = await this.prisma.candidate.create({
       data: {
@@ -168,7 +181,7 @@ export class CandidatesService {
         profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
         dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
-        currentStatusId: createCandidateDto.currentStatusId ?? 1,
+        currentStatusId: defaultStatusId,
         totalExperience: totalExperience,
         currentSalary: createCandidateDto.currentSalary,
         currentEmployer: createCandidateDto.currentEmployer,
@@ -257,6 +270,31 @@ export class CandidatesService {
         },
       },
     });
+
+    // Create initial status history entry
+    try {
+      await this.prisma.candidateStatusHistory.create({
+        data: {
+          candidateId: candidate.id,
+          statusId: defaultStatusId,
+          statusNameSnapshot: defaultStatus?.statusName || 'Untouched',
+          changedById: userId,
+          changedByName: user?.name || 'System',
+          reason: 'Initial candidate creation',
+          notificationCount: 0,
+          statusUpdatedAt: new Date(),
+        },
+      });
+      this.logger.log(
+        `✅ Created initial status history entry for candidate ${candidate.id} with status '${defaultStatus?.statusName || 'Untouched'}'`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to create status history for candidate ${candidate.id}:`,
+        error,
+      );
+      // Don't fail candidate creation if status history fails
+    }
 
     // Skip auto-allocation to projects - only perform recruiter assignment
     // Project allocation should be done manually or through other workflows

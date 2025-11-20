@@ -49,7 +49,7 @@ export class CandidateStatusHistoryService {
       },
       message: 'Candidate status history retrieved successfully',
     };
-  }
+}
 
   /**
    * Get a single status history entry by ID
@@ -290,6 +290,46 @@ export class CandidateStatusHistoryService {
         totalEntries: history.length,
       },
       message: `Recent status changes (last ${days} days) retrieved successfully`,
+    };
+  }
+
+  /**
+   * Get candidate status pipeline
+   * Shows the complete journey of a candidate through different statuses
+   */
+  async getCandidateStatusPipeline(candidateId: string) {
+    // Check if candidate exists
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { id: true },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // Get status history ordered by date
+    const history = await this.prisma.candidateStatusHistory.findMany({
+      where: { candidateId },
+      orderBy: { statusUpdatedAt: 'asc' },
+    });
+
+    // Build pipeline with transitions (minimal info)
+    const pipeline = history.map((entry, index) => ({
+      step: index + 1,
+      statusId: entry.statusId,
+      statusName: entry.statusNameSnapshot,
+      enteredAt: entry.statusUpdatedAt,
+      exitedAt: history[index + 1]?.statusUpdatedAt || null,
+    }));
+
+    return {
+      success: true,
+      data: {
+        totalSteps: pipeline.length,
+        pipeline,
+      },
+      message: 'Candidate status pipeline retrieved successfully',
     };
   }
 }
