@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   UserCheck,
@@ -16,15 +17,17 @@ import {
   ChevronRight,
   UserPlus,
   Send,
+  BarChart3,
+  CheckCircle2,
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui";
 import {
   useGetEligibleCandidatesQuery,
   useGetProjectCandidatesByRoleQuery,
   useSendForVerificationMutation,
+  useGetProjectQuery,
 } from "@/features/projects";
 import { useAssignToProjectMutation } from "@/features/candidates";
-import { format } from "date-fns";
 import CandidateCard from "./CandidateCard";
 
 interface EligibleCandidatesTabProps {
@@ -70,12 +73,20 @@ export default function EligibleCandidatesTab({
     role: "Manager",
   });
 
+  // Get project details for comparison
+  const { data: projectData } = useGetProjectQuery(projectId);
+
   const [sendForVerification] = useSendForVerificationMutation();
   const [assignToProject, { isLoading: isAssigning }] = useAssignToProjectMutation();
 
   const eligibleCandidates = candidatesData?.data || [];
   const projectCandidates = projectCandidatesData?.data || [];
   const assignedToProjectIds = projectCandidates.map((c) => c.candidateId);
+
+  // Get candidate by ID for comparison
+  const getCandidateById = (candidateId: string) => {
+    return eligibleCandidates.find((c: any) => c.id === candidateId);
+  };
 
   const showVerifyConfirmation = (candidateId: string, candidateName: string) => {
     setVerifyConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
@@ -360,6 +371,77 @@ export default function EligibleCandidatesTab({
         description={
           <div className="space-y-4">
             <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+            
+            {/* Candidate-Project Comparison */}
+            {verifyConfirm.candidateId && projectData && (() => {
+              const candidate = getCandidateById(verifyConfirm.candidateId);
+              const project = (projectData as any)?.data || projectData;
+              if (!candidate || !project) return null;
+              
+              return (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Candidate vs Project Requirements
+                  </h4>
+                  
+                  <div className="space-y-2 text-sm">
+                    {/* Match Score */}
+                    {candidate.matchScore !== undefined && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Match Score:</span>
+                        <Badge variant="outline" className={
+                          candidate.matchScore >= 80 ? "bg-green-100 text-green-800" :
+                          candidate.matchScore >= 60 ? "bg-blue-100 text-blue-800" :
+                          "bg-amber-100 text-amber-800"
+                        }>
+                          {candidate.matchScore}%
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Experience Comparison */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Experience:</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-white">
+                          Candidate: {candidate.totalExperience || candidate.experience || 0} years
+                        </Badge>
+                        <span className="text-gray-400">vs</span>
+                        <Badge variant="outline" className="bg-white">
+                          Required: {(project as any).minExperience || 0}-{(project as any).maxExperience || 0} years
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Role Comparison */}
+                    {candidate.currentRole && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Current Role:</span>
+                        <Badge variant="outline" className="bg-white">
+                          {candidate.currentRole}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Skills Comparison */}
+                    {candidate.skills && candidate.skills.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-gray-700">Skills:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {candidate.skills.map((skill: string) => (
+                            <Badge key={skill} variant="secondary" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="space-y-2">
               <label htmlFor="verify-notes" className="text-sm font-medium text-gray-700">
                 Notes (Optional)
@@ -395,6 +477,107 @@ export default function EligibleCandidatesTab({
         description={
           <div className="space-y-4">
             <p>Are you sure you want to assign {assignConfirm.candidateName} to this project?</p>
+            
+            {/* Candidate-Project Comparison */}
+            {assignConfirm.candidateId && projectData && (() => {
+              const candidate = getCandidateById(assignConfirm.candidateId);
+              const project = (projectData as any)?.data || projectData;
+              if (!candidate || !project) return null;
+              
+              const candidateExp = candidate.totalExperience || candidate.experience || 0;
+              const minExp = (project as any).minExperience || 0;
+              const maxExp = (project as any).maxExperience || 0;
+              const expMatch = candidateExp >= minExp && candidateExp <= maxExp;
+              
+              return (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Candidate vs Project Requirements
+                  </h4>
+                  
+                  <div className="space-y-2 text-sm">
+                    {/* Match Score */}
+                    {candidate.matchScore !== undefined && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Match Score:</span>
+                        <Badge variant="outline" className={
+                          candidate.matchScore >= 80 ? "bg-green-100 text-green-800" :
+                          candidate.matchScore >= 60 ? "bg-blue-100 text-blue-800" :
+                          "bg-amber-100 text-amber-800"
+                        }>
+                          {candidate.matchScore}%
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Experience Comparison with Match Indicator */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Experience:</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={expMatch ? "bg-green-100 text-green-800" : "bg-white"}>
+                          Candidate: {candidateExp} years
+                        </Badge>
+                        <span className="text-gray-400">vs</span>
+                        <Badge variant="outline" className="bg-white">
+                          Required: {minExp}-{maxExp} years
+                        </Badge>
+                        {expMatch && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      </div>
+                    </div>
+
+                    {/* Role Comparison */}
+                    {candidate.currentRole && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Current Role:</span>
+                        <Badge variant="outline" className="bg-white">
+                          {candidate.currentRole}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Qualifications */}
+                    {candidate.qualifications && candidate.qualifications.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-gray-700">Qualifications:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {candidate.qualifications.slice(0, 3).map((qual: any) => (
+                            <Badge key={qual.id} variant="secondary" className="text-xs">
+                              {qual.degreeName || qual.name}
+                            </Badge>
+                          ))}
+                          {candidate.qualifications.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{candidate.qualifications.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Skills Comparison */}
+                    {candidate.skills && candidate.skills.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-gray-700">Skills:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {candidate.skills.slice(0, 5).map((skill: string) => (
+                            <Badge key={skill} variant="secondary" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                          {candidate.skills.length > 5 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{candidate.skills.length - 5} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="space-y-2">
               <label htmlFor="assign-notes" className="text-sm font-medium text-gray-700">
                 Notes (Optional)
