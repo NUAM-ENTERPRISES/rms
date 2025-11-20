@@ -65,7 +65,7 @@ export class CandidateMatchingService {
       where: {
         AND: [
           // If specific candidate ID is provided, only get that candidate
-          // ...(criteria.candidateId ? [{ id: criteria.candidateId }] : []),
+          ...(criteria.candidateId ? [{ id: criteria.candidateId }] : []),
           // Not already nominated for this project+role
           {
             projects: {
@@ -75,20 +75,22 @@ export class CandidateMatchingService {
               },
             },
           },
-          // Not in late pipeline states
+          // Not in late pipeline states - Allow Untouched, Interested, Qualified, Future, RNR
           {
-            // OR: [
-            //   { currentStatus: 'new' },
-            //   { currentStatus: 'shortlisted' },
-            //   { currentStatus: 'active' },
-            // ],
+            currentStatus: {
+              statusName: {
+                in: ['Untouched', 'Interested', 'Qualified', 'Future', 'RNR', 'On Hold'],
+              },
+            },
           },
-          // Not already hired/joined
+          // Not already hired/joined in other projects
           {
             projects: {
               none: {
-                status: {
-                  in: ['selected', 'processing', 'hired'],
+                currentProjectStatus: {
+                  statusName: {
+                    in: ['selected', 'processing', 'hired'],
+                  },
                 },
               },
             },
@@ -97,6 +99,21 @@ export class CandidateMatchingService {
       },
       include: {
         workExperiences: true,
+        qualifications: {
+          include: {
+            qualification: {
+              include: {
+                aliases: true,
+                equivalencies: {
+                  include: {
+                    toQualification: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        currentStatus: true,
         projects: {
           include: {
             processing: true,
@@ -105,20 +122,36 @@ export class CandidateMatchingService {
       },
     });
 
-    this.logger.debug(`Found ${candidates.length} candidates to evaluate`);
+    this.logger.debug(
+      `Found ${candidates.length} candidates to evaluate for ${roleNeeded.designation} (min exp: ${roleNeeded.minExperience}, max exp: ${roleNeeded.maxExperience})`,
+    );
 
     // Score and filter candidates
     const matchedCandidates: MatchedCandidate[] = [];
 
     for (const candidate of candidates) {
+      const candidateExp = candidate.totalExperience || candidate.experience || 0;
+      const qualCount = candidate.qualifications?.length || 0;
+      
+      this.logger.debug(
+        `Evaluating candidate ${candidate.firstName} ${candidate.lastName} - Experience: ${candidateExp} years, Qualifications: ${qualCount}`,
+      );
+
       const score = await this.calculateMatchScore(candidate, roleNeeded);
 
       if (score > 0) {
+        this.logger.debug(
+          `✓ Candidate ${candidate.firstName} ${candidate.lastName} matched with score ${score}`,
+        );
         matchedCandidates.push({
           candidateId: candidate.id,
           score,
           matchReasons: this.getMatchReasons(candidate, roleNeeded, score),
         });
+      } else {
+        this.logger.debug(
+          `✗ Candidate ${candidate.firstName} ${candidate.lastName} did not match (score: ${score})`,
+        );
       }
     }
 
@@ -199,64 +232,121 @@ export class CandidateMatchingService {
 
   /**
    * Match candidate education against role requirements
+   * Uses CandidateQualification junction table for proper matching
    */
   private async matchEducation(
     candidate: any,
     roleNeeded: any,
   ): Promise<number> {
+    // If no education requirements, give default pass score
     if (
-      !candidate.highestEducation ||
-      !roleNeeded.educationRequirementsList?.length
+      !roleNeeded.educationRequirementsList ||
+      roleNeeded.educationRequirementsList.length === 0
     ) {
       return 50; // Default score if no education requirements
     }
 
-    const candidateEducation = candidate.highestEducation.toLowerCase();
+    // Use CandidateQualification data (from junction table)
+    const candidateQualifications = candidate.qualifications || [];
+    
+    // No qualifications recorded for candidate
+    if (candidateQualifications.length === 0) {
+      this.logger.debug(
+        `Candidate ${candidate.firstName} ${candidate.lastName} has no qualifications recorded`,
+      );
+      return 0; // Fail - no qualifications
+    }
+
     let maxScore = 0;
 
+    // Check each required qualification
     for (const req of roleNeeded.educationRequirementsList) {
       const qualification = req.qualification;
+      this.logger.debug(
+        `Checking requirement: ${qualification.name} (${qualification.level}, ${qualification.field})`,
+      );
 
-      // Check direct match
-      if (
-        candidateEducation.includes(qualification.name.toLowerCase()) ||
-        candidateEducation.includes(
-          qualification.shortName?.toLowerCase() || '',
-        )
-      ) {
-        maxScore = Math.max(maxScore, 100);
-        continue;
-      }
+      // Check against each candidate qualification
+      for (const candidateQual of candidateQualifications) {
+        const candidateQualification = candidateQual.qualification;
+        
+        this.logger.debug(
+          `  Comparing with candidate qual: ${candidateQualification.name}`,
+        );
 
-      // Check aliases
-      for (const alias of qualification.aliases) {
-        if (candidateEducation.includes(alias.alias.toLowerCase())) {
-          maxScore = Math.max(maxScore, 90);
-          break;
+        // 1. Direct match by ID (100 points) - Most reliable
+        if (candidateQualification.id === qualification.id) {
+          maxScore = Math.max(maxScore, 100);
+          this.logger.debug(`    ✓ Direct ID match (100 points)`);
+          continue;
         }
-      }
 
-      // Check equivalencies
-      for (const equiv of qualification.equivalencies) {
+        // 2. Direct name match (95 points)
         if (
-          candidateEducation.includes(
-            equiv.toQualification.name.toLowerCase(),
-          ) ||
-          candidateEducation.includes(
-            equiv.toQualification.shortName?.toLowerCase() || '',
+          candidateQualification.name.toLowerCase() ===
+            qualification.name.toLowerCase() ||
+          candidateQualification.shortName?.toLowerCase() ===
+            qualification.shortName?.toLowerCase()
+        ) {
+          maxScore = Math.max(maxScore, 95);
+          this.logger.debug(`    ✓ Name match (95 points)`);
+          continue;
+        }
+
+        // 3. Check aliases (90 points)
+        if (qualification.aliases && Array.isArray(qualification.aliases)) {
+          const aliasMatch = qualification.aliases.some(
+            (alias) =>
+              candidateQualification.name
+                .toLowerCase()
+                .includes(alias.alias.toLowerCase()) ||
+              alias.alias
+                .toLowerCase()
+                .includes(candidateQualification.name.toLowerCase()),
+          );
+          if (aliasMatch) {
+            maxScore = Math.max(maxScore, 90);
+            this.logger.debug(`    ✓ Alias match (90 points)`);
+            continue;
+          }
+        }
+
+        // 4. Check equivalencies (85 points)
+        if (
+          qualification.equivalencies &&
+          Array.isArray(qualification.equivalencies)
+        ) {
+          const equivMatch = qualification.equivalencies.some(
+            (equiv) =>
+              candidateQualification.id === equiv.toQualification.id ||
+              candidateQualification.name.toLowerCase() ===
+                equiv.toQualification.name.toLowerCase(),
+          );
+          if (equivMatch) {
+            maxScore = Math.max(maxScore, 85);
+            this.logger.debug(`    ✓ Equivalency match (85 points)`);
+            continue;
+          }
+        }
+
+        // 5. Heuristic matching for field and level (70 points)
+        if (
+          this.heuristicEducationMatch(
+            candidateQualification.name.toLowerCase(),
+            qualification,
           )
         ) {
-          maxScore = Math.max(maxScore, 85);
-          break;
+          maxScore = Math.max(maxScore, 70);
+          this.logger.debug(
+            `    ✓ Heuristic match (field+level) (70 points)`,
+          );
         }
-      }
-
-      // Heuristic matching for common patterns
-      if (this.heuristicEducationMatch(candidateEducation, qualification)) {
-        maxScore = Math.max(maxScore, 70);
       }
     }
 
+    this.logger.debug(
+      `Education match score for ${candidate.firstName} ${candidate.lastName}: ${maxScore}`,
+    );
     return maxScore;
   }
 
@@ -287,6 +377,7 @@ export class CandidateMatchingService {
 
   /**
    * Match candidate experience against role requirements
+   * STRICT: Candidate MUST meet minimum experience requirement
    */
   private matchExperience(candidate: any, roleNeeded: any): number {
     // Calculate experience from work experiences if direct fields are not available
@@ -305,15 +396,28 @@ export class CandidateMatchingService {
     const minExp = roleNeeded.minExperience || 0;
     const maxExp = roleNeeded.maxExperience || 100;
 
+    // STRICT: Candidate MUST have minimum experience
+    if (candidateExp < minExp) {
+      return 0; // Does not meet minimum requirement - FAIL
+    }
+    
+    // Perfect match: within range
     if (candidateExp >= minExp && candidateExp <= maxExp) {
       return 100; // Perfect match
-    } else if (candidateExp >= minExp - 1 && candidateExp <= maxExp + 1) {
-      return 80; // Close match
-    } else if (candidateExp >= minExp - 2 && candidateExp <= maxExp + 2) {
-      return 60; // Acceptable match
-    } else {
-      return 20; // Poor match but not zero
     }
+    
+    // Slightly over max experience
+    if (candidateExp <= maxExp + 2) {
+      return 90; // Slightly overqualified but acceptable
+    }
+    
+    // Too overqualified
+    if (candidateExp <= maxExp + 5) {
+      return 70; // Overqualified but might be interested
+    }
+    
+    // Way too overqualified - might not be interested
+    return 40; // Significant overqualification
   }
 
   /**

@@ -1,0 +1,299 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
+import { CandidateProjectsService } from './candidate-projects.service';
+import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
+import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
+import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
+import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
+import { Permissions } from '../auth/rbac/permissions.decorator';
+
+@ApiTags('Candidate Projects')
+@ApiBearerAuth()
+@Controller('candidate-projects')
+export class CandidateProjectsController {
+  constructor(
+    private readonly candidateProjectsService: CandidateProjectsService,
+  ) {}
+
+  @Post('assign')
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Assign candidate to project',
+    description: 'Create a new candidate-project assignment with nominated status',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate successfully assigned to project',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Candidate already assigned to project',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate, project, role, or recruiter not found',
+  })
+  async assignCandidateToProject(
+    @Body() createDto: CreateCandidateProjectDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.assignCandidateToProject(
+      createDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate successfully assigned to project',
+    };
+  }
+
+  @Post('send-for-verification')
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Send candidate for document verification',
+    description: 'Creates candidate-project assignment (if not exists) and updates status to verification_in_progress',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate sent for verification successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or project not found',
+  })
+  async sendForVerification(
+    @Body() dto: CreateCandidateProjectDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.sendForVerification(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate sent for verification successfully',
+    };
+  }
+
+  @Get()
+  @Permissions('view:projects', 'view:candidates')
+  @ApiOperation({
+    summary: 'Get all candidate-project assignments',
+    description: 'Retrieve paginated list of candidate-project assignments with filters',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of candidate-project assignments retrieved successfully',
+  })
+  async findAll(@Query() queryDto: QueryCandidateProjectsDto) {
+    const result = await this.candidateProjectsService.findAll(queryDto);
+    return {
+      success: true,
+      ...result,
+    };
+  }
+
+  @Get('project/:projectId')
+  @Permissions('view:projects')
+  @ApiOperation({
+    summary: 'Get candidates for a project',
+    description: 'Retrieve all candidates assigned to a specific project',
+  })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Project candidates retrieved successfully',
+  })
+  async getProjectCandidates(
+    @Param('projectId') projectId: string,
+    @Query() queryDto: QueryCandidateProjectsDto,
+  ) {
+    const result = await this.candidateProjectsService.getProjectCandidates(
+      projectId,
+      queryDto,
+    );
+    return {
+      success: true,
+      ...result,
+    };
+  }
+
+  @Get('candidate/:candidateId')
+  @Permissions('view:candidates')
+  @ApiOperation({
+    summary: 'Get projects for a candidate',
+    description: 'Retrieve all projects a candidate is assigned to',
+  })
+  @ApiParam({ name: 'candidateId', description: 'Candidate ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate projects retrieved successfully',
+  })
+  async getCandidateProjects(
+    @Param('candidateId') candidateId: string,
+    @Query() queryDto: QueryCandidateProjectsDto,
+  ) {
+    const result = await this.candidateProjectsService.getCandidateProjects(
+      candidateId,
+      queryDto,
+    );
+    return {
+      success: true,
+      ...result,
+    };
+  }
+
+  @Get(':id')
+  @Permissions('view:projects', 'view:candidates')
+  @ApiOperation({
+    summary: 'Get candidate-project assignment details',
+    description: 'Retrieve detailed information about a specific assignment',
+  })
+  @ApiParam({ name: 'id', description: 'Assignment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Assignment details retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assignment not found',
+  })
+  async findOne(@Param('id') id: string) {
+    const result = await this.candidateProjectsService.findOne(id);
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Get(':id/status-history')
+  @Permissions('view:projects', 'view:candidates')
+  @ApiOperation({
+    summary: 'Get status change history',
+    description: 'Retrieve the complete status change history for an assignment',
+  })
+  @ApiParam({ name: 'id', description: 'Assignment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Status history retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assignment not found',
+  })
+  async getStatusHistory(@Param('id') id: string) {
+    const result = await this.candidateProjectsService.getStatusHistory(id);
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Patch(':id')
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Update candidate-project assignment',
+    description: 'Update assignment details like role or recruiter',
+  })
+  @ApiParam({ name: 'id', description: 'Assignment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Assignment updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assignment not found',
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateCandidateProjectDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.update(
+      id,
+      updateDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Assignment updated successfully',
+    };
+  }
+
+  @Patch(':id/status')
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Update project status',
+    description: 'Change the project status of a candidate assignment',
+  })
+  @ApiParam({ name: 'id', description: 'Assignment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Status updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assignment or status not found',
+  })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() updateStatusDto: UpdateProjectStatusDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.updateStatus(
+      id,
+      updateStatusDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Status updated successfully',
+    };
+  }
+
+  @Delete(':id')
+  @Permissions('manage:projects', 'manage:candidates')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Remove candidate from project',
+    description: 'Delete a candidate-project assignment',
+  })
+  @ApiParam({ name: 'id', description: 'Assignment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Assignment deleted successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assignment not found',
+  })
+  async remove(@Param('id') id: string) {
+    const result = await this.candidateProjectsService.remove(id);
+    return {
+      success: true,
+      message: result.message,
+    };
+  }
+}

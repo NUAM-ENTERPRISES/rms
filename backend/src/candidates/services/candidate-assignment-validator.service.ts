@@ -30,7 +30,7 @@ export class CandidateAssignmentValidatorService {
     );
 
     // Get all candidate project assignments with recruiter information
-    const assignments = await this.prisma.candidateProjectMap.findMany({
+    const assignments = await this.prisma.candidateProjects.findMany({
       where: {
         recruiterId: { not: null },
       },
@@ -172,7 +172,7 @@ export class CandidateAssignmentValidatorService {
         );
 
         // Update candidate project assignment
-        await this.prisma.candidateProjectMap.updateMany({
+        await this.prisma.candidateProjects.updateMany({
           where: {
             candidateId: assignment.candidateId,
             projectId: assignment.projectId,
@@ -227,17 +227,7 @@ export class CandidateAssignmentValidatorService {
         },
         _count: {
           select: {
-            candidateProjectMaps: {
-              where: {
-                status: {
-                  in: [
-                    'nominated',
-                    'verification_in_progress',
-                    'pending_documents',
-                  ],
-                },
-              },
-            },
+            candidateProjectMaps: true,
           },
         },
       },

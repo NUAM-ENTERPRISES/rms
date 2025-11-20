@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
+import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
 
 export interface RecruiterInfo {
   id: string;
@@ -17,12 +18,14 @@ export class RecruiterAssignmentService {
 
   /**
    * Get the best recruiter to assign to a candidate based on user role and workload
+   * If the creator is a recruiter, assign the candidate to them directly
+   * Otherwise, use round-robin (least workload) assignment
    */
   async getBestRecruiterForAssignment(
     candidateId: string,
     createdByUserId: string,
   ): Promise<RecruiterInfo> {
-    // Get the user who created the candidate
+    // Get the user who created the candidate with their roles
     const creator = await this.prisma.user.findUnique({
       where: { id: createdByUserId },
       include: {
@@ -38,14 +41,18 @@ export class RecruiterAssignmentService {
       throw new Error(`User with ID ${createdByUserId} not found`);
     }
 
-    // Check if creator is a recruiter
+    // Check if creator has the Recruiter role (case-insensitive check)
     const isRecruiter = creator.userRoles.some(
-      (userRole) => userRole.role.name === 'Recruiter',
+      (userRole) => userRole.role.name.toLowerCase() === 'recruiter',
+    );
+
+    this.logger.log(
+      `Candidate ${candidateId} created by ${creator.name} (${creator.email}). User roles: ${creator.userRoles.map((ur) => ur.role.name).join(', ')}`,
     );
 
     if (isRecruiter) {
       this.logger.log(
-        `Creator ${creator.name} is a recruiter, assigning to them`,
+        `✅ Creator ${creator.name} is a Recruiter - assigning candidate directly to them (skipping round-robin)`,
       );
       return {
         id: creator.id,
@@ -54,7 +61,10 @@ export class RecruiterAssignmentService {
       };
     }
 
-    // If not a recruiter, find the best recruiter using workload-based assignment
+    // If not a recruiter, find the best recruiter using workload-based round-robin assignment
+    this.logger.log(
+      `Creator ${creator.name} is NOT a Recruiter - using round-robin assignment based on least workload`,
+    );
     return await this.getRecruiterWithLeastWorkload();
   }
 
@@ -319,5 +329,168 @@ export class RecruiterAssignmentService {
         currentRecruiterId: candidate.recruiterAssignments[0]?.recruiterId,
       };
     });
+  }
+
+  /**
+   * Get all candidates assigned to a recruiter with pagination and filtering
+   */
+  async getRecruiterCandidates(
+    recruiterId: string,
+    dto: GetRecruiterCandidatesDto,
+  ) {
+    const { page = 1, limit = 10, status, search } = dto;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const whereClause: any = {
+      recruiterAssignments: {
+        some: {
+          recruiterId,
+          isActive: true,
+        },
+      },
+    };
+
+    // Add status filter if provided
+    if (status) {
+      whereClause.status = status;
+    }
+
+    // Add search filter if provided
+    if (search) {
+      whereClause.OR = [
+        {
+          firstName: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          lastName: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          email: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          mobileNumber: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
+
+    // Get total count
+    const totalCount = await this.prisma.candidate.count({
+      where: whereClause,
+    });
+
+    // Get candidates
+    const candidates = await this.prisma.candidate.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      include: {
+        team: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        currentStatus: {
+          select: {
+            id: true,
+            statusName: true,
+          },
+        },
+        recruiterAssignments: {
+          where: {
+            recruiterId,
+            isActive: true,
+          },
+          include: {
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            assignedAt: 'desc',
+          },
+          take: 1,
+        },
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
+        workExperiences: true,
+        projects: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+                clientId: true,
+                client: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            roleNeeded: {
+              select: {
+                id: true,
+                designation: true,
+              },
+            },
+            currentProjectStatus: {
+              select: {
+                id: true,
+                statusName: true,
+              },
+            },
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      data: candidates,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

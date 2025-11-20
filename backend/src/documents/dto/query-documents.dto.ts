@@ -38,14 +38,6 @@ export class QueryDocumentsDto {
   uploadedBy?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by verifier user ID',
-    example: 'user_456def',
-  })
-  @IsOptional()
-  @IsString()
-  verifiedBy?: string;
-
-  @ApiPropertyOptional({
     description: 'Page number',
     example: 1,
     minimum: 1,

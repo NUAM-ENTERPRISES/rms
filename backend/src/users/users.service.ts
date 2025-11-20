@@ -520,7 +520,7 @@ export class UsersService {
 
   private async getUserStats(userId: string) {
     // Get candidates assigned to this user (if they're a recruiter)
-    const candidatesManaged = await this.prisma.candidateProjectMap.count({
+    const candidatesManaged = await this.prisma.candidateProjects.count({
       where: {
         recruiterId: userId,
       },

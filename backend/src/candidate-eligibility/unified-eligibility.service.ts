@@ -389,13 +389,15 @@ export class UnifiedEligibilityService {
     const minExp = roleNeeded.minExperience || 0;
     const maxExp = roleNeeded.maxExperience || 100;
 
+    // STRICT: Candidate MUST meet minimum experience
     if (candidateExp < minExp) {
       result.isEligible = false;
+      result.score = 0; // Hard fail
       result.missingRequirements.push(
-        `Minimum ${minExp} years experience required`,
+        `Minimum ${minExp} years experience required (has ${candidateExp} years)`,
       );
       result.reasons.push(
-        `Insufficient experience: ${candidateExp} years (required: ${minExp}+)`,
+        `Insufficient experience: ${candidateExp} years (required: ${minExp}+ years)`,
       );
     } else if (candidateExp > maxExp) {
       result.isEligible = false;

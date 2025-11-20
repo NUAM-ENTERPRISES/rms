@@ -35,12 +35,14 @@ export class RecruiterPoolService {
           select: {
             candidateProjectMaps: {
               where: {
-                status: {
-                  in: [
-                    'nominated',
-                    'verification_in_progress',
-                    'pending_documents',
-                  ],
+                currentProjectStatus: {
+                  statusName: {
+                    in: [
+                      'nominated',
+                      'verification_in_progress',
+                      'pending_documents',
+                    ],
+                  },
                 },
               },
             },
@@ -110,12 +112,14 @@ export class RecruiterPoolService {
           select: {
             candidateProjectMaps: {
               where: {
-                status: {
-                  in: [
-                    'nominated',
-                    'verification_in_progress',
-                    'pending_documents',
-                  ],
+                currentProjectStatus: {
+                  statusName: {
+                    in: [
+                      'nominated',
+                      'verification_in_progress',
+                      'pending_documents',
+                    ],
+                  },
                 },
               },
             },

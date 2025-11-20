@@ -727,6 +727,7 @@ export class TeamsService {
         candidateProjects: {
           include: {
             candidate: true,
+            currentProjectStatus: true,
           },
         },
       },
@@ -756,7 +757,7 @@ export class TeamsService {
       const placements = monthProjects.reduce(
         (acc, project) =>
           acc +
-          project.candidateProjects.filter((cp) => cp.status === 'hired')
+          project.candidateProjects.filter((cp) => cp.currentProjectStatus.statusName === 'hired')
             .length,
         0,
       );
@@ -764,7 +765,7 @@ export class TeamsService {
       const revenue = monthProjects.reduce((acc, project) => {
         // Calculate revenue based on hired candidates
         const hiredCandidates = project.candidateProjects.filter(
-          (cp) => cp.status === 'hired',
+          (cp) => cp.currentProjectStatus.statusName === 'hired',
         );
         return acc + hiredCandidates.length * 50000; // Assume $50k per placement
       }, 0);
@@ -814,6 +815,7 @@ export class TeamsService {
                 title: true,
               },
             },
+            currentProjectStatus: true,
           },
         },
       },
@@ -822,12 +824,12 @@ export class TeamsService {
     // Calculate success rate distribution
     const totalCandidates = candidates.length;
     const hiredCandidates = candidates.filter((c) =>
-      c.projects.some((cp) => cp.status === 'hired'),
+      c.projects.some((cp) => cp.currentProjectStatus.statusName === 'hired'),
     ).length;
     const inProgressCandidates = candidates.filter((c) =>
       c.projects.some((cp) =>
         ['nominated', 'documents_submitted', 'interview_scheduled'].includes(
-          cp.status,
+          cp.currentProjectStatus.statusName,
         ),
       ),
     ).length;
@@ -837,7 +839,7 @@ export class TeamsService {
           'rejected_documents',
           'rejected_interview',
           'rejected_selection',
-        ].includes(cp.status),
+        ].includes(cp.currentProjectStatus.statusName),
       ),
     ).length;
 

@@ -132,7 +132,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Load candidate project mapping with candidate and project details
       const candidateProjectMap =
-        await this.prisma.candidateProjectMap.findUnique({
+        await this.prisma.candidateProjects.findUnique({
           where: { id: candidateProjectMapId },
           include: {
             candidate: {
@@ -161,9 +161,17 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
+      // Check if recruiter exists
+      if (!candidateProjectMap.recruiterId) {
+        this.logger.warn(
+          `No recruiter assigned to candidate project mapping ${candidateProjectMapId}`,
+        );
+        return;
+      }
+
       // Get the recruiter who nominated this candidate
       const recruiter = await this.prisma.user.findUnique({
-        where: { id: candidateProjectMap.nominatedBy },
+        where: { id: candidateProjectMap.recruiterId },
         select: {
           id: true,
           name: true,
@@ -173,7 +181,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       if (!recruiter) {
         this.logger.warn(
-          `Recruiter ${candidateProjectMap.nominatedBy} not found`,
+          `Recruiter ${candidateProjectMap.recruiterId} not found`,
         );
         return;
       }
@@ -221,7 +229,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Load candidate project mapping with candidate and project details
       const candidateProjectMap =
-        await this.prisma.candidateProjectMap.findUnique({
+        await this.prisma.candidateProjects.findUnique({
           where: { id: candidateProjectMapId },
           include: {
             candidate: {

@@ -1,7 +1,7 @@
 import {
   Project,
   RoleNeeded,
-  CandidateProjectMap,
+  CandidateProjects,
   Client,
   User,
   Team,
@@ -12,7 +12,7 @@ export interface ProjectWithRelations extends Project {
   creator: User;
   team: Team | null;
   rolesNeeded: RoleNeeded[];
-  candidateProjects: (CandidateProjectMap & {
+  candidateProjects: (CandidateProjects & {
     candidate: {
       id: string;
       firstName: string;
