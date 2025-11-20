@@ -220,10 +220,37 @@ export default function EligibleCandidatesTab({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {paginatedCandidates.map((candidate: any) => {
-              const isAssignedToProject = assignedToProjectIds.includes(candidate.id);
+              // Check from both sources: candidate's projects array and projectCandidates query
+              const currentProjectInCandidate = candidate.projects?.find(
+                (p: any) => p.projectId === projectId
+              );
+              
               const projectAssignment = projectCandidates.find(
                 (pc: any) => pc.candidateId === candidate.id
               );
+
+              // Candidate is assigned if found in either source
+              const isAssignedToProject = !!currentProjectInCandidate || assignedToProjectIds.includes(candidate.id);
+
+              // Get the actual project status (only if assigned to project)
+              const actualProjectStatus = isAssignedToProject
+                ? (currentProjectInCandidate?.currentProjectStatus?.statusName || 
+                   projectAssignment?.currentProjectStatus?.statusName)
+                : null;
+
+              // Determine the status to display (use "not_in_project" if not assigned)
+              const projectStatusToShow = isAssignedToProject && actualProjectStatus
+                ? actualProjectStatus
+                : "not_in_project";
+
+              // Check if candidate is nominated OR not in project - show verify button in both cases
+              const isNominated = 
+                isAssignedToProject && 
+                !!actualProjectStatus && 
+                actualProjectStatus.toLowerCase() === "nominated";
+
+              // Show verify button if: 1) Not in project, OR 2) In project and nominated
+              const showVerifyBtn = !isAssignedToProject || isNominated;
 
               const actions = [];
 
@@ -252,7 +279,7 @@ export default function EligibleCandidatesTab({
                   actions={actions}
                   showMatchScore={true}
                   matchScore={candidate.matchScore}
-                  showVerifyButton={isAssignedToProject}
+                  showVerifyButton={showVerifyBtn}
                   onVerify={(candidateId) =>
                     showVerifyConfirmation(
                       candidateId,
@@ -260,7 +287,7 @@ export default function EligibleCandidatesTab({
                     )
                   }
                   isAlreadyInProject={isAssignedToProject}
-                  projectStatus={projectAssignment?.currentProjectStatus?.statusName}
+                  projectStatus={projectStatusToShow}
                   className="hover:scale-100"
                 />
               );
