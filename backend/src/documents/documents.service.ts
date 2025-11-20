@@ -147,10 +147,6 @@ export class DocumentsService {
       where.uploadedBy = filters.uploadedBy;
     }
 
-    if (filters.verifiedBy) {
-      where.verifiedBy = filters.verifiedBy;
-    }
-
     if (search) {
       where.OR = [
         { fileName: { contains: search, mode: 'insensitive' } },
@@ -342,7 +338,7 @@ export class DocumentsService {
 
     // Check candidateProjectMap exists
     const candidateProjectMap =
-      await this.prisma.candidateProjectMap.findUnique({
+      await this.prisma.candidateProjects.findUnique({
         where: { id: verifyDto.candidateProjectMapId },
         include: {
           candidate: true,
@@ -366,6 +362,12 @@ export class DocumentsService {
       );
     }
 
+    // Get verifier details for history
+    const verifier = await this.prisma.user.findUnique({
+      where: { id: verifierId },
+      select: { name: true },
+    });
+
     // Check if verification record exists
     let verification =
       await this.prisma.candidateProjectDocumentVerification.findUnique({
@@ -377,53 +379,47 @@ export class DocumentsService {
         },
       });
 
-    // Create or update verification
-    if (!verification) {
-      verification =
-        await this.prisma.candidateProjectDocumentVerification.create({
+    // Create or update verification in a transaction with history
+    verification = await this.prisma.$transaction(async (tx) => {
+      let updatedVerification;
+      
+      if (!verification) {
+        // Create new verification
+        updatedVerification = await tx.candidateProjectDocumentVerification.create({
           data: {
             candidateProjectMapId: verifyDto.candidateProjectMapId,
             documentId: documentId,
             status: verifyDto.status,
-            verifiedBy:
-              verifyDto.status === DOCUMENT_STATUS.VERIFIED ? verifierId : null,
-            verifiedAt:
-              verifyDto.status === DOCUMENT_STATUS.VERIFIED ? new Date() : null,
-            rejectedBy:
-              verifyDto.status === DOCUMENT_STATUS.REJECTED ? verifierId : null,
-            rejectedAt:
-              verifyDto.status === DOCUMENT_STATUS.REJECTED ? new Date() : null,
             notes: verifyDto.notes,
             rejectionReason: verifyDto.rejectionReason,
           },
         });
-    } else {
-      verification =
-        await this.prisma.candidateProjectDocumentVerification.update({
+      } else {
+        // Update existing verification
+        updatedVerification = await tx.candidateProjectDocumentVerification.update({
           where: { id: verification.id },
           data: {
             status: verifyDto.status,
-            verifiedBy:
-              verifyDto.status === DOCUMENT_STATUS.VERIFIED
-                ? verifierId
-                : verification.verifiedBy,
-            verifiedAt:
-              verifyDto.status === DOCUMENT_STATUS.VERIFIED
-                ? new Date()
-                : verification.verifiedAt,
-            rejectedBy:
-              verifyDto.status === DOCUMENT_STATUS.REJECTED
-                ? verifierId
-                : verification.rejectedBy,
-            rejectedAt:
-              verifyDto.status === DOCUMENT_STATUS.REJECTED
-                ? new Date()
-                : verification.rejectedAt,
             notes: verifyDto.notes,
             rejectionReason: verifyDto.rejectionReason,
           },
         });
-    }
+      }
+
+      // Create history entry
+      await tx.documentVerificationHistory.create({
+        data: {
+          verificationId: updatedVerification.id,
+          action: verifyDto.status,
+          performedBy: verifierId,
+          performedByName: verifier?.name || null,
+          notes: verifyDto.notes,
+          reason: verifyDto.rejectionReason,
+        },
+      });
+
+      return updatedVerification;
+    });
 
     // Update CandidateProjectMap status based on verification
     await this.updateCandidateProjectStatus(verifyDto.candidateProjectMapId);
@@ -464,7 +460,7 @@ export class DocumentsService {
 
     // Check candidateProjectMap exists
     const candidateProjectMap =
-      await this.prisma.candidateProjectMap.findUnique({
+      await this.prisma.candidateProjects.findUnique({
         where: { id: requestDto.candidateProjectMapId },
       });
     if (!candidateProjectMap) {
@@ -473,9 +469,15 @@ export class DocumentsService {
       );
     }
 
-    // Get or create verification record
-    let verification =
-      await this.prisma.candidateProjectDocumentVerification.findUnique({
+    // Get requester details for history
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { name: true },
+    });
+
+    // Get or create verification record with history
+    let verification = await this.prisma.$transaction(async (tx) => {
+      let updatedVerification = await tx.candidateProjectDocumentVerification.findUnique({
         where: {
           candidateProjectMapId_documentId: {
             candidateProjectMapId: requestDto.candidateProjectMapId,
@@ -484,40 +486,55 @@ export class DocumentsService {
         },
       });
 
-    if (!verification) {
-      verification =
-        await this.prisma.candidateProjectDocumentVerification.create({
+      if (!updatedVerification) {
+        updatedVerification = await tx.candidateProjectDocumentVerification.create({
           data: {
             candidateProjectMapId: requestDto.candidateProjectMapId,
             documentId: documentId,
             status: DOCUMENT_STATUS.RESUBMISSION_REQUIRED,
             resubmissionRequested: true,
-            resubmissionRequestedAt: new Date(),
-            resubmissionRequestedBy: requesterId,
             rejectionReason: requestDto.reason,
           },
         });
-    } else {
-      verification =
-        await this.prisma.candidateProjectDocumentVerification.update({
-          where: { id: verification.id },
+      } else {
+        updatedVerification = await tx.candidateProjectDocumentVerification.update({
+          where: { id: updatedVerification.id },
           data: {
             status: DOCUMENT_STATUS.RESUBMISSION_REQUIRED,
             resubmissionRequested: true,
-            resubmissionRequestedAt: new Date(),
-            resubmissionRequestedBy: requesterId,
             rejectionReason: requestDto.reason,
           },
         });
-    }
+      }
+
+      // Create history entry
+      await tx.documentVerificationHistory.create({
+        data: {
+          verificationId: updatedVerification.id,
+          action: 'resubmission_requested',
+          performedBy: requesterId,
+          performedByName: requester?.name || null,
+          reason: requestDto.reason,
+        },
+      });
+
+      return updatedVerification;
+    });
+
+    // Get pending documents status
+    const pendingDocsStatus = await this.prisma.candidateProjectStatus.findFirst({
+      where: { statusName: 'pending_documents' },
+    });
 
     // Update candidateProjectMap status to pending_documents
-    await this.prisma.candidateProjectMap.update({
-      where: { id: requestDto.candidateProjectMapId },
-      data: {
-        status: CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
-      },
-    });
+    if (pendingDocsStatus) {
+      await this.prisma.candidateProjects.update({
+        where: { id: requestDto.candidateProjectMapId },
+        data: {
+          currentProjectStatusId: pendingDocsStatus.id,
+        },
+      });
+    }
 
     return verification;
   }
@@ -529,7 +546,7 @@ export class DocumentsService {
     candidateProjectMapId: string,
   ): Promise<CandidateProjectDocumentSummary> {
     const candidateProjectMap =
-      await this.prisma.candidateProjectMap.findUnique({
+      await this.prisma.candidateProjects.findUnique({
         where: { id: candidateProjectMapId },
         include: {
           candidate: true,
@@ -541,6 +558,15 @@ export class DocumentsService {
           documentVerifications: {
             include: {
               document: true,
+              verificationHistory: {
+                where: {
+                  action: 'verified',
+                },
+                orderBy: {
+                  performedAt: 'desc',
+                },
+                take: 1,
+              },
             },
           },
         },
@@ -588,7 +614,7 @@ export class DocumentsService {
         status: v.document.status,
         verificationStatus: v.status,
         uploadedAt: v.document.createdAt,
-        verifiedAt: v.verifiedAt,
+        verifiedAt: v.verificationHistory[0]?.performedAt || null,
       })),
     };
   }
@@ -663,43 +689,45 @@ export class DocumentsService {
     const summary = await this.getDocumentSummary(candidateProjectMapId);
 
     const candidateProjectMap =
-      await this.prisma.candidateProjectMap.findUnique({
+      await this.prisma.candidateProjects.findUnique({
         where: { id: candidateProjectMapId },
+        include: {
+          currentProjectStatus: true,
+        },
       });
 
     if (!candidateProjectMap) return;
 
-    // Determine new status based on document verification
-    let newStatus = candidateProjectMap.status;
+    // Determine new status name based on document verification
+    let newStatusName = candidateProjectMap.currentProjectStatus.statusName;
 
     if (summary.totalSubmitted === 0) {
-      newStatus = CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS;
+      newStatusName = 'pending_documents';
     } else if (
       summary.totalPending > 0 ||
       summary.totalSubmitted < summary.totalRequired
     ) {
-      newStatus = CANDIDATE_PROJECT_STATUS.VERIFICATION_IN_PROGRESS;
+      newStatusName = 'verification_in_progress';
     } else if (summary.totalRejected > 0) {
-      newStatus = CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS;
+      newStatusName = 'rejected_documents';
     } else if (summary.allDocumentsVerified) {
-      newStatus = CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED;
+      newStatusName = 'documents_verified';
     }
 
-    // Only update if status changed and transition is valid
-    if (
-      newStatus !== candidateProjectMap.status &&
-      canTransitionStatus(candidateProjectMap.status as any, newStatus as any)
-    ) {
-      await this.prisma.candidateProjectMap.update({
-        where: { id: candidateProjectMapId },
-        data: {
-          status: newStatus,
-          documentsVerifiedDate:
-            newStatus === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED
-              ? new Date()
-              : undefined,
-        },
+    // Only update if status changed
+    if (newStatusName !== candidateProjectMap.currentProjectStatus.statusName) {
+      const newStatus = await this.prisma.candidateProjectStatus.findFirst({
+        where: { statusName: newStatusName },
       });
+
+      if (newStatus) {
+        await this.prisma.candidateProjects.update({
+          where: { id: candidateProjectMapId },
+          data: {
+            currentProjectStatusId: newStatus.id,
+          },
+        });
+      }
     }
   }
 
@@ -711,25 +739,10 @@ export class DocumentsService {
     const { page = 1, limit = 20, status, search } = query;
     const skip = (page - 1) * limit;
 
-    // Define the statuses that need document verification
-    const verificationStatuses = [
-      CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
-      CANDIDATE_PROJECT_STATUS.DOCUMENTS_SUBMITTED,
-      CANDIDATE_PROJECT_STATUS.VERIFICATION_IN_PROGRESS,
-      CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED,
-      CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
-    ];
-
+    // Filter for candidates with status 4 (verification_in_progress)
     const where: any = {
-      status: {
-        in: verificationStatuses,
-      },
+      currentProjectStatusId: 4,
     };
-
-    // Apply status filter if provided
-    if (status && verificationStatuses.includes(status)) {
-      where.status = status;
-    }
 
     // Apply search filter
     if (search) {
@@ -762,7 +775,7 @@ export class DocumentsService {
     }
 
     const [candidateProjects, total] = await Promise.all([
-      this.prisma.candidateProjectMap.findMany({
+      this.prisma.candidateProjects.findMany({
         where,
         include: {
           candidate: {
@@ -786,11 +799,24 @@ export class DocumentsService {
               },
             },
           },
+          roleNeeded: {
+            select: {
+              id: true,
+              designation: true,
+            },
+          },
           recruiter: {
             select: {
               id: true,
               name: true,
               email: true,
+            },
+          },
+          currentProjectStatus: {
+            select: {
+              id: true,
+              statusName: true,
+              label: true,
             },
           },
           documentVerifications: {
@@ -814,7 +840,7 @@ export class DocumentsService {
         skip,
         take: parseInt(limit.toString()),
       }),
-      this.prisma.candidateProjectMap.count({ where }),
+      this.prisma.candidateProjects.count({ where }),
     ]);
 
     return {
@@ -834,16 +860,18 @@ export class DocumentsService {
    * Get all projects where a candidate is nominated for document verification
    */
   async getCandidateProjects(candidateId: string): Promise<any[]> {
-    const candidateProjects = await this.prisma.candidateProjectMap.findMany({
+    const candidateProjects = await this.prisma.candidateProjects.findMany({
       where: {
         candidateId,
-        status: {
-          in: [
-            'verification_in_progress',
-            'documents_verified',
-            'rejected_documents',
-            'pending_documents',
-          ],
+        currentProjectStatus: {
+          statusName: {
+            in: [
+              'verification_in_progress',
+              'documents_verified',
+              'rejected_documents',
+              'pending_documents',
+            ],
+          },
         },
       },
       include: {
@@ -895,7 +923,7 @@ export class DocumentsService {
     projectId: string,
   ): Promise<any> {
     // Get candidate project mapping
-    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+    const candidateProject = await this.prisma.candidateProjects.findFirst({
       where: {
         candidateId,
         projectId,
@@ -1022,7 +1050,7 @@ export class DocumentsService {
     }
 
     // Get candidate project mapping
-    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+    const candidateProject = await this.prisma.candidateProjects.findFirst({
       where: {
         candidateId: document.candidateId,
         projectId,
@@ -1067,7 +1095,7 @@ export class DocumentsService {
     userId: string,
   ): Promise<any> {
     // Get candidate project mapping
-    const candidateProject = await this.prisma.candidateProjectMap.findUnique({
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
       where: { id: candidateProjectMapId },
       include: { project: true },
     });
@@ -1096,16 +1124,24 @@ export class DocumentsService {
       throw new BadRequestException('Not all required documents are verified');
     }
 
-    // Update candidate project status
-    const updated = await this.prisma.candidateProjectMap.update({
-      where: { id: candidateProjectMapId },
-      data: {
-        status: 'documents_verified',
-        documentsVerifiedDate: new Date(),
-        updatedAt: new Date(),
-      },
+    // Get documents_verified status
+    const verifiedStatus = await this.prisma.candidateProjectStatus.findFirst({
+      where: { statusName: 'documents_verified' },
     });
 
-    return updated;
+    // Update candidate project status
+    if (verifiedStatus) {
+      const updated = await this.prisma.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          currentProjectStatusId: verifiedStatus.id,
+          updatedAt: new Date(),
+        },
+      });
+
+      return updated;
+    }
+
+    throw new BadRequestException('documents_verified status not found in system');
   }
 }

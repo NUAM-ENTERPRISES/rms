@@ -64,9 +64,6 @@ export interface RoleNeeded {
   relocationAssistance: boolean;
   additionalRequirements?: string;
   notes?: string;
-  employmentType: "contract" | "permanent";
-  contractDurationYears?: number;
-  genderRequirement: "female" | "male" | "all";
 }
 
 export interface EducationRequirement {
@@ -99,6 +96,32 @@ export interface CandidateProject {
     contact: string;
     email: string | null;
     currentStatus: string;
+  };
+}
+
+export interface ProjectRole {
+  id: string;
+  name: string;
+  category?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectRoleCatalogParams {
+  search?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ProjectRoleCatalogResponse {
+  roles: ProjectRole[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
   };
 }
 
@@ -200,6 +223,12 @@ export interface ProjectStats {
   upcomingDeadlines: Project[];
 }
 
+// Eligible Candidate with match score
+// API returns candidate data at root level with matchScore property
+export interface EligibleCandidate extends Candidate {
+  matchScore: number;
+}
+
 // API Response types
 interface ApiResponse<T> {
   success: boolean;
@@ -243,7 +272,7 @@ export const projectsApi = baseApi.injectEndpoints({
     }),
 
     // Get eligible candidates for a project
-    getEligibleCandidates: builder.query<ApiResponse<Candidate[]>, string>({
+    getEligibleCandidates: builder.query<ApiResponse<EligibleCandidate[]>, string>({
       query: (projectId) => `/projects/${projectId}/eligible-candidates`,
       providesTags: ["Candidate"],
     }),
@@ -330,17 +359,97 @@ export const projectsApi = baseApi.injectEndpoints({
     // Send candidate for verification
     sendForVerification: builder.mutation<
       ApiResponse<any>,
-      { projectId: string; candidateId: string }
+      { 
+        projectId: string; 
+        candidateId: string; 
+        roleNeededId?: string;
+        recruiterId?: string;
+        notes?: string 
+      }
     >({
-      query: ({ projectId, candidateId }) => ({
-        url: `/projects/${projectId}/candidates/${candidateId}/send-for-verification`,
+      query: ({ projectId, candidateId, roleNeededId, recruiterId, notes }) => ({
+        url: `/candidate-projects/send-for-verification`,
         method: "POST",
+        body: { 
+          candidateId, 
+          projectId, 
+          roleNeededId, 
+          recruiterId, 
+          notes 
+        },
       }),
       invalidatesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
         "ProjectCandidates",
         "DocumentVerification",
       ],
+    }),
+
+    // Get nominated candidates for a project
+    getNominatedCandidates: builder.query<
+      ApiResponse<{
+        candidates: Candidate[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>,
+      { 
+        projectId: string; 
+        search?: string; 
+        statusId?: number;
+        page?: number; 
+        limit?: number;
+      }
+    >({
+      query: ({ projectId, search, statusId, page = 1, limit = 20 }) => ({
+        url: `/projects/${projectId}/nominated-candidates`,
+        params: { search, statusId, page, limit },
+      }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+      ],
+    }),
+
+    // Get candidate project statuses
+    getCandidateProjectStatuses: builder.query<
+      ApiResponse<{
+        statuses: Array<{
+          id: number;
+          statusName: string;
+          label: string;
+          description: string;
+          stage: string;
+          isTerminal: boolean;
+          color: string;
+          createdAt: string;
+          updatedAt: string;
+        }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>,
+      void
+    >({
+      query: () => "/candidate-project-status",
+    }),
+
+    // Get project role catalog
+    getProjectRoleCatalog: builder.query<
+      ApiResponse<ProjectRoleCatalogResponse>,
+      ProjectRoleCatalogParams | void
+    >({
+      query: (params) => ({
+        url: "/project-role-catalog",
+        method: "GET",
+        params: params || {},
+      }),
     }),
   }),
 });
@@ -357,4 +466,7 @@ export const {
   useGetProjectCandidatesByRoleQuery,
   useGetDocumentVerificationCandidatesQuery,
   useSendForVerificationMutation,
+  useGetNominatedCandidatesQuery,
+  useGetCandidateProjectStatusesQuery,
+  useGetProjectRoleCatalogQuery,
 } = projectsApi;

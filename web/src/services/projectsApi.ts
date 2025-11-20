@@ -74,6 +74,32 @@ export interface CandidateProject {
   };
 }
 
+export interface ProjectRole {
+  id: string;
+  name: string;
+  category?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectRoleCatalogParams {
+  search?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ProjectRoleCatalogResponse {
+  roles: ProjectRole[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
 export interface CreateProjectRequest {
   title: string;
   description?: string;
@@ -250,6 +276,18 @@ export const projectsApi = createApi({
         { type: "Project", id: "LIST" },
       ],
     }),
+
+    // Get project role catalog
+    getProjectRoleCatalog: builder.query<
+      ApiResponse<ProjectRoleCatalogResponse>,
+      ProjectRoleCatalogParams | void
+    >({
+      query: (params) => ({
+        url: "/project-role-catalog",
+        method: "GET",
+        params: params || {},
+      }),
+    }),
   }),
 });
 
@@ -261,4 +299,5 @@ export const {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
   useAssignCandidateMutation,
+  useGetProjectRoleCatalogQuery,
 } = projectsApi;

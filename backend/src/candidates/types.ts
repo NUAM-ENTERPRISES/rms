@@ -1,6 +1,6 @@
 import {
   Candidate,
-  CandidateProjectMap,
+  CandidateProjects,
   User,
   Team,
   Project,
@@ -11,7 +11,7 @@ import {
 
 export interface CandidateWithRelations extends Candidate {
   team: Team | null;
-  projects: (CandidateProjectMap & {
+  projects: (CandidateProjects & {
     project: {
       id: string;
       title: string;

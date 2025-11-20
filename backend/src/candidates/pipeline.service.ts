@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
-import { CandidateProjectMap, User, Project } from '@prisma/client';
+import { CandidateProjects, User, Project } from '@prisma/client';
 
 export interface PipelineStage {
   stage: string;
@@ -27,11 +27,12 @@ export class PipelineService {
    * Generate pipeline stages for a candidate-project combination
    */
   generatePipelineForProject(
-    projectMap: CandidateProjectMap & {
+    projectMap: CandidateProjects & {
       project: Project;
+      currentProjectStatus: { statusName: string };
     },
   ): ProjectPipeline {
-    const status = projectMap.status as keyof typeof CANDIDATE_PROJECT_STATUS;
+    const status = projectMap.currentProjectStatus.statusName as keyof typeof CANDIDATE_PROJECT_STATUS;
     const allStages = this.getAllPipelineStages();
 
     // Find current stage index
@@ -61,8 +62,9 @@ export class PipelineService {
    */
   generatePipelinesForCandidate(
     projects: Array<
-      CandidateProjectMap & {
+      CandidateProjects & {
         project: Project;
+        currentProjectStatus: { statusName: string };
       }
     >,
   ): ProjectPipeline[] {
@@ -189,24 +191,17 @@ export class PipelineService {
 
   /**
    * Get stage date based on project map data
+   * Note: With the new status history system, detailed dates are tracked in CandidateProjectStatusHistory
+   * This simplified version uses createdAt for nomination, other dates should be fetched from history
    */
   private getStageDate(
-    projectMap: CandidateProjectMap,
+    projectMap: CandidateProjects,
     stage: string,
   ): string | undefined {
     switch (stage) {
       case CANDIDATE_PROJECT_STATUS.NOMINATED:
-        return projectMap.nominatedDate?.toISOString();
-      case CANDIDATE_PROJECT_STATUS.DOCUMENTS_SUBMITTED:
-        return projectMap.documentsSubmittedDate?.toISOString();
-      case CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED:
-        return projectMap.documentsVerifiedDate?.toISOString();
-      case CANDIDATE_PROJECT_STATUS.APPROVED:
-        return projectMap.approvedDate?.toISOString();
-      case CANDIDATE_PROJECT_STATUS.SELECTED:
-        return projectMap.selectedDate?.toISOString();
-      case CANDIDATE_PROJECT_STATUS.HIRED:
-        return projectMap.hiredDate?.toISOString();
+        return projectMap.createdAt?.toISOString();
+      // Other stage dates should be fetched from CandidateProjectStatusHistory table
       default:
         return undefined;
     }

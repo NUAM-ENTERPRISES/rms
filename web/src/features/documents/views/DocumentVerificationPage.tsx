@@ -386,19 +386,19 @@ export default function DocumentVerificationPage() {
                       <TableCell>
                         <Badge
                           variant={
-                            candidateProject.status === "documents_verified"
+                            candidateProject.currentProjectStatus?.statusName === "documents_verified"
                               ? "default"
-                              : candidateProject.status === "rejected_documents"
+                              : candidateProject.currentProjectStatus?.statusName === "rejected_documents"
                               ? "destructive"
-                              : candidateProject.status ===
+                              : candidateProject.currentProjectStatus?.statusName ===
                                 "verification_in_progress"
                               ? "secondary"
                               : "outline"
                           }
                         >
-                          {candidateProject.status
-                            .replace("_", " ")
-                            .toUpperCase()}
+                          {candidateProject.currentProjectStatus?.label || 
+                           candidateProject.currentProjectStatus?.statusName?.replace(/_/g, " ").toUpperCase() || 
+                           "UNKNOWN"}
                         </Badge>
                       </TableCell>
                       <TableCell>

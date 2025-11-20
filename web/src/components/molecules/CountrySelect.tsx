@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { FlagIcon } from "@/shared";
 import { useCountriesLookup, Country } from "@/shared/hooks/useCountriesLookup";
 import { cn } from "@/lib/utils";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 
 export interface CountrySelectProps {
   /** Current selected country code */

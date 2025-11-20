@@ -50,6 +50,58 @@ export class CandidatesService {
     private readonly rnrRemindersService: RnrRemindersService,
   ) { }
 
+  /**
+   * Calculate total experience in years from work experiences
+   * Considers overlapping periods and current jobs
+   */
+  private calculateTotalExperience(workExperiences?: any[]): number {
+    if (!workExperiences || workExperiences.length === 0) {
+      return 0;
+    }
+
+    // Create date ranges for each experience
+    const dateRanges = workExperiences.map((exp) => {
+      const startDate = new Date(exp.startDate);
+      const endDate = exp.endDate ? new Date(exp.endDate) : new Date();
+      return { startDate, endDate };
+    });
+
+    // Sort by start date
+    dateRanges.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+    // Merge overlapping date ranges
+    const mergedRanges: Array<{ startDate: Date; endDate: Date }> = [];
+    let currentRange = dateRanges[0];
+
+    for (let i = 1; i < dateRanges.length; i++) {
+      const nextRange = dateRanges[i];
+      
+      // Check if ranges overlap or are adjacent
+      if (nextRange.startDate <= currentRange.endDate) {
+        // Merge: extend current range to max end date
+        currentRange.endDate = new Date(
+          Math.max(currentRange.endDate.getTime(), nextRange.endDate.getTime())
+        );
+      } else {
+        // No overlap: save current range and start new one
+        mergedRanges.push(currentRange);
+        currentRange = nextRange;
+      }
+    }
+    mergedRanges.push(currentRange);
+
+    // Calculate total years from merged ranges
+    const totalMonths = mergedRanges.reduce((total, range) => {
+      const months = 
+        (range.endDate.getFullYear() - range.startDate.getFullYear()) * 12 +
+        (range.endDate.getMonth() - range.startDate.getMonth());
+      return total + months;
+    }, 0);
+
+    // Convert to years (rounded to 1 decimal place)
+    return Math.round((totalMonths / 12) * 10) / 10;
+  }
+
   async create(
     createCandidateDto: CreateCandidateDto,
     userId: string,
@@ -89,6 +141,22 @@ export class CandidatesService {
       }
     }
 
+    // Log work experiences for debugging
+    this.logger.log(`Creating candidate with ${createCandidateDto.workExperiences?.length || 0} work experiences`);
+    if (createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0) {
+      this.logger.log(`Work experiences data: ${JSON.stringify(createCandidateDto.workExperiences)}`);
+    }
+
+    // Calculate total experience from work experiences if provided
+    const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
+      ? this.calculateTotalExperience(createCandidateDto.workExperiences)
+      : 0;
+
+    // Use provided totalExperience or calculated value
+    const totalExperience = createCandidateDto.totalExperience ?? calculatedExperience;
+
+    this.logger.log(`Calculated experience: ${calculatedExperience}, Final totalExperience: ${totalExperience}`);
+
     // Create candidate with qualifications
     const candidate = await this.prisma.candidate.create({
       data: {
@@ -101,7 +169,7 @@ export class CandidatesService {
         source: createCandidateDto.source || 'manual',
         dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
         currentStatusId: createCandidateDto.currentStatusId ?? 1,
-        totalExperience: createCandidateDto.totalExperience,
+        totalExperience: totalExperience,
         currentSalary: createCandidateDto.currentSalary,
         currentEmployer: createCandidateDto.currentEmployer,
         currentRole: createCandidateDto.currentRole,
@@ -111,11 +179,11 @@ export class CandidatesService {
         graduationYear: createCandidateDto.graduationYear,
         gpa: createCandidateDto.gpa,
         // Legacy fields for backward compatibility
-        experience: createCandidateDto.totalExperience,
+        experience: totalExperience,
         skills: createCandidateDto.skills
           ? JSON.parse(createCandidateDto.skills)
           : [],
-        // Note: assignedTo field has been removed - all assignments tracked via CandidateProjectMap
+        // Note: assignedTo field has been removed - all assignments tracked via CandidateProjects
         teamId: createCandidateDto.teamId,
         // Handle multiple qualifications
         qualifications: createCandidateDto.qualifications
@@ -133,18 +201,33 @@ export class CandidatesService {
         // Handle work experiences
         workExperiences: createCandidateDto.workExperiences
           ? {
-            create: createCandidateDto.workExperiences.map((exp) => ({
-              companyName: exp.companyName,
-              jobTitle: exp.jobTitle,
-              startDate: new Date(exp.startDate),
-              endDate: exp.endDate ? new Date(exp.endDate) : null,
-              isCurrent: exp.isCurrent ?? false,
-              description: exp.description,
-              salary: exp.salary,
-              location: exp.location,
-              skills: exp.skills ? JSON.parse(exp.skills) : [],
-              achievements: exp.achievements,
-            })),
+            create: createCandidateDto.workExperiences.map((exp) => {
+              // Handle skills - it might be a JSON string or already parsed
+              let parsedSkills = [];
+              if (exp.skills) {
+                try {
+                  parsedSkills = typeof exp.skills === 'string' 
+                    ? JSON.parse(exp.skills) 
+                    : exp.skills;
+                } catch (error) {
+                  this.logger.warn(`Failed to parse skills for work experience: ${error.message}`);
+                  parsedSkills = [];
+                }
+              }
+
+              return {
+                companyName: exp.companyName,
+                jobTitle: exp.jobTitle,
+                startDate: new Date(exp.startDate),
+                endDate: exp.endDate ? new Date(exp.endDate) : null,
+                isCurrent: exp.isCurrent ?? false,
+                description: exp.description,
+                salary: exp.salary,
+                location: exp.location,
+                skills: parsedSkills,
+                achievements: exp.achievements,
+              };
+            }),
           }
           : undefined,
       },
@@ -175,30 +258,33 @@ export class CandidatesService {
       },
     });
 
-    // Auto-allocate new candidate to active projects (only to recruiters)
-    try {
-      await this.autoAllocateCandidateToProjects(candidate.id);
-    } catch (error) {
-      // Log error but don't fail candidate creation
-      console.error(
-        'Auto-allocation failed for candidate:',
-        candidate.id,
-        error,
-      );
-    }
+    // Skip auto-allocation to projects - only perform recruiter assignment
+    // Project allocation should be done manually or through other workflows
+    // try {
+    //   await this.autoAllocateCandidateToProjects(candidate.id);
+    // } catch (error) {
+    //   console.error('Auto-allocation failed for candidate:', candidate.id, error);
+    // }
 
     // Assign recruiter to candidate
+    // If creator is a recruiter, they will be assigned directly
+    // Otherwise, round-robin assignment (least workload) will be used
     try {
-      await this.recruiterAssignmentService.assignRecruiterToCandidate(
+      this.logger.log(
+        `Starting recruiter assignment for candidate ${candidate.id}, created by user ${userId}`,
+      );
+      const assignedRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
         candidate.id,
         userId,
         'Automatic assignment on candidate creation',
       );
-      this.logger.log(`Assigned recruiter to candidate ${candidate.id}`);
+      this.logger.log(
+        `✅ Successfully assigned recruiter ${assignedRecruiter.name} (${assignedRecruiter.email}) to candidate ${candidate.id}`,
+      );
     } catch (error) {
       // Log error but don't fail candidate creation
       this.logger.error(
-        `Failed to assign recruiter to candidate ${candidate.id}:`,
+        `❌ Failed to assign recruiter to candidate ${candidate.id}:`,
         error,
       );
     }
@@ -248,7 +334,7 @@ export class CandidatesService {
       where.teamId = teamId;
     }
 
-    // Note: assignedTo filtering is now handled via CandidateProjectMap
+    // Note: assignedTo filtering is now handled via CandidateProjects
     // This will be implemented in the query logic below
 
     if (minExperience !== undefined || maxExperience !== undefined) {
@@ -285,7 +371,7 @@ export class CandidatesService {
     const skip = (page - 1) * limit;
     const total = await this.prisma.candidate.count({ where });
 
-    // Handle assignedTo filter via CandidateProjectMap
+    // Handle assignedTo filter via CandidateProjects
     if (assignedTo) {
       where.projects = {
         some: {
@@ -308,6 +394,23 @@ export class CandidatesService {
           },
         },
         team: true,
+        recruiterAssignments: {
+          where: {
+            isActive: true,
+          },
+          include: {
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            assignedAt: 'desc',
+          },
+        },
         workExperiences: true,
         qualifications: {
           include: {
@@ -317,7 +420,11 @@ export class CandidatesService {
         projects: {
           include: {
             project: {
-              include: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                clientId: true,
                 client: {
                   select: {
                     id: true,
@@ -327,7 +434,18 @@ export class CandidatesService {
                 },
               },
             },
-            // Include recruiter information from CandidateProjectMap
+            roleNeeded: {
+              select: {
+                id: true,
+                designation: true,
+              },
+            },
+            currentProjectStatus: {
+              select: {
+                id: true,
+                statusName: true,
+              },
+            },
             recruiter: {
               select: {
                 id: true,
@@ -335,6 +453,9 @@ export class CandidatesService {
                 email: true,
               },
             },
+          },
+          orderBy: {
+            createdAt: 'desc',
           },
         },
       },
@@ -494,12 +615,18 @@ export class CandidatesService {
                 },
               },
             },
-            // Include recruiter information from CandidateProjectMap
+            // Include recruiter information from CandidateProjects
             recruiter: {
               select: {
                 id: true,
                 name: true,
                 email: true,
+              },
+            },
+            currentProjectStatus: {
+              select: {
+                id: true,
+                statusName: true,
               },
             },
           },
@@ -744,7 +871,7 @@ export class CandidatesService {
     }
 
     // Check if assignment already exists
-    const existingAssignment = await this.prisma.candidateProjectMap.findFirst({
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({
       where: {
         candidateId,
         projectId: assignProjectDto.projectId,
@@ -774,13 +901,12 @@ export class CandidatesService {
     );
 
     // Create assignment (nomination) with recruiter assignment
-    const assignment = await this.prisma.candidateProjectMap.create({
+    const assignment = await this.prisma.candidateProjects.create({
       data: {
         candidateId,
         projectId: assignProjectDto.projectId,
-        nominatedBy: userId, // Use the requesting user
         notes: assignProjectDto.notes,
-        status: 'nominated', // Initial status
+        currentProjectStatusId: 1, // Nominated status
         recruiterId: recruiter.id,
         assignedAt: new Date(),
       },
@@ -900,7 +1026,7 @@ export class CandidatesService {
         try {
           // Check if candidate is already allocated to this project-role combination
           const existingAllocation =
-            await this.prisma.candidateProjectMap.findUnique({
+            await this.prisma.candidateProjects.findUnique({
               where: {
                 candidateId_projectId_roleNeededId: {
                   candidateId,
@@ -1048,17 +1174,7 @@ export class CandidatesService {
         },
         _count: {
           select: {
-            candidateProjectMaps: {
-              where: {
-                status: {
-                  in: [
-                    'nominated',
-                    'verification_in_progress',
-                    'pending_documents',
-                  ],
-                },
-              },
-            },
+            candidateProjectMaps: true,
           },
         },
       },
@@ -1116,15 +1232,17 @@ export class CandidatesService {
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)
-          const workload = await this.prisma.candidateProjectMap.count({
+          const workload = await this.prisma.candidateProjects.count({
             where: {
               recruiterId: user.id,
-              status: {
-                in: [
-                  'nominated',
-                  'verification_in_progress',
-                  'pending_documents',
-                ],
+              currentProjectStatus: {
+                statusName: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
+                },
               },
             },
           });
@@ -1151,7 +1269,7 @@ export class CandidatesService {
     }
 
     // Get all projects assigned to the candidate
-    const assignments = await this.prisma.candidateProjectMap.findMany({
+    const assignments = await this.prisma.candidateProjects.findMany({
       where: { candidateId },
       include: {
         project: {
@@ -1172,7 +1290,7 @@ export class CandidatesService {
           },
         },
       },
-      orderBy: { nominatedDate: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     return assignments;
@@ -1296,7 +1414,7 @@ export class CandidatesService {
     }
 
     // Check if already nominated
-    const existingNomination = await this.prisma.candidateProjectMap.findFirst({
+    const existingNomination = await this.prisma.candidateProjects.findFirst({
       where: {
         candidateId,
         projectId: nominateDto.projectId,
@@ -1309,12 +1427,11 @@ export class CandidatesService {
     }
 
     // Create nomination
-    const nomination = await this.prisma.candidateProjectMap.create({
+    const nomination = await this.prisma.candidateProjects.create({
       data: {
         candidateId,
         projectId: nominateDto.projectId,
-        nominatedBy: nominatorId,
-        status: CANDIDATE_PROJECT_STATUS.NOMINATED,
+        currentProjectStatusId: 1, // NOMINATED status
         notes: nominateDto.notes,
       },
       include: {
@@ -1345,12 +1462,17 @@ export class CandidatesService {
 
     // Auto-transition to pending_documents if project has document requirements
     if (project.documentRequirements.length > 0) {
-      await this.prisma.candidateProjectMap.update({
-        where: { id: nomination.id },
-        data: {
-          status: CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
-        },
+      const pendingDocsStatus = await this.prisma.candidateProjectStatus.findFirst({
+        where: { statusName: 'pending_documents' },
       });
+      if (pendingDocsStatus) {
+        await this.prisma.candidateProjects.update({
+          where: { id: nomination.id },
+          data: {
+            currentProjectStatusId: pendingDocsStatus.id,
+          },
+        });
+      }
     }
 
     return nomination;
@@ -1367,7 +1489,7 @@ export class CandidatesService {
   ): Promise<any> {
     // Get candidateProjectMap
     const candidateProjectMap =
-      await this.prisma.candidateProjectMap.findUnique({
+      await this.prisma.candidateProjects.findUnique({
         where: { id: candidateProjectMapId },
         include: {
           candidate: true,
@@ -1377,6 +1499,7 @@ export class CandidatesService {
             },
           },
           documentVerifications: true,
+          currentProjectStatus: true,
         },
       });
 
@@ -1388,12 +1511,11 @@ export class CandidatesService {
 
     // Validate current status allows approval/rejection
     if (
-      candidateProjectMap.status !==
-      CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED &&
+      candidateProjectMap.currentProjectStatus.statusName !== 'documents_verified' &&
       approveDto.action === 'approve'
     ) {
       throw new BadRequestException(
-        `Cannot approve candidate. Current status is ${candidateProjectMap.status}. Documents must be verified first.`,
+        `Cannot approve candidate. Current status is ${candidateProjectMap.currentProjectStatus.statusName}. Documents must be verified first.`,
       );
     }
 
@@ -1412,31 +1534,21 @@ export class CandidatesService {
       }
     }
 
-    // Update status
-    const newStatus =
-      approveDto.action === 'approve'
-        ? CANDIDATE_PROJECT_STATUS.APPROVED
-        : CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS;
+    // Get new status
+    const newStatusName = approveDto.action === 'approve' ? 'approved' : 'rejected_documents';
+    const newStatus = await this.prisma.candidateProjectStatus.findFirst({
+      where: { statusName: newStatusName },
+    });
 
-    // Validate status transition
-    if (
-      !canTransitionStatus(candidateProjectMap.status as any, newStatus as any)
-    ) {
-      throw new BadRequestException(
-        `Cannot transition from ${candidateProjectMap.status} to ${newStatus}`,
-      );
+    if (!newStatus) {
+      throw new BadRequestException(`Status '${newStatusName}' not found`);
     }
 
-    // Update candidateProjectMap
-    const updated = await this.prisma.candidateProjectMap.update({
+    // Update candidateProjectMap with new status
+    const updated = await this.prisma.candidateProjects.update({
       where: { id: candidateProjectMapId },
       data: {
-        status: newStatus,
-        approvedBy: approveDto.action === 'approve' ? approverId : undefined,
-        approvedDate: approveDto.action === 'approve' ? new Date() : undefined,
-        rejectedBy: approveDto.action === 'reject' ? approverId : undefined,
-        rejectedDate: approveDto.action === 'reject' ? new Date() : undefined,
-        rejectionReason: approveDto.rejectionReason,
+        currentProjectStatusId: newStatus.id,
         notes: approveDto.notes
           ? `${candidateProjectMap.notes || ''}\n${approveDto.notes}`.trim()
           : candidateProjectMap.notes,
@@ -1502,7 +1614,7 @@ export class CandidatesService {
   ): Promise<{ message: string; assignedTo: string }> {
     // Check if candidate project mapping exists
     const candidateProjectMap =
-      await this.prisma.candidateProjectMap.findUnique({
+      await this.prisma.candidateProjects.findUnique({
         where: { id: sendForVerificationDto.candidateProjectMapId },
         include: {
           candidate: {
@@ -1518,6 +1630,7 @@ export class CandidatesService {
               title: true,
             },
           },
+          currentProjectStatus: true,
         },
       });
 
@@ -1528,9 +1641,9 @@ export class CandidatesService {
     }
 
     // Check if candidate is in correct status for verification
-    if (candidateProjectMap.status !== CANDIDATE_PROJECT_STATUS.NOMINATED) {
+    if (candidateProjectMap.currentProjectStatus.statusName !== 'nominated') {
       throw new BadRequestException(
-        `Candidate must be in 'nominated' status to send for verification. Current status: ${candidateProjectMap.status}`,
+        `Candidate must be in 'nominated' status to send for verification. Current status: ${candidateProjectMap.currentProjectStatus.statusName}`,
       );
     }
 
@@ -1550,19 +1663,7 @@ export class CandidatesService {
       include: {
         _count: {
           select: {
-            // Count pending document verifications
-            // This is a simplified approach - in production you'd want more sophisticated task counting
-            candidateProjectMaps: {
-              where: {
-                status: {
-                  in: [
-                    'nominated',
-                    'verification_in_progress',
-                    'pending_documents',
-                  ],
-                },
-              },
-            },
+            candidateProjectMaps: true,
           },
         },
       },
@@ -1579,14 +1680,21 @@ export class CandidatesService {
       return currentTaskCount < prevTaskCount ? current : prev;
     });
 
-    // Update candidate project status to pending documents
-    await this.prisma.candidateProjectMap.update({
-      where: { id: sendForVerificationDto.candidateProjectMapId },
-      data: {
-        status: CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
-        notes: sendForVerificationDto.notes,
-      },
+    // Get pending documents status
+    const pendingDocsStatus = await this.prisma.candidateProjectStatus.findFirst({
+      where: { statusName: 'pending_documents' },
     });
+
+    // Update candidate project status to pending documents
+    if (pendingDocsStatus) {
+      await this.prisma.candidateProjects.update({
+        where: { id: sendForVerificationDto.candidateProjectMapId },
+        data: {
+          currentProjectStatusId: pendingDocsStatus.id,
+          notes: sendForVerificationDto.notes,
+        },
+      });
+    }
 
     // Publish event to notify document executive
     await this.outboxService.publishCandidateSentForVerification(

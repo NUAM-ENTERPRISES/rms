@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAppSelector } from "@/app/hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -32,84 +27,84 @@ import {
 import {
   Search,
   UserCheck,
-  Send,
   Phone,
   Mail,
   UserPlus,
   Check,
+  Send,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui";
 import {
   useGetProjectCandidatesByRoleQuery,
   useSendForVerificationMutation,
 } from "@/features/projects";
 import {
   useGetCandidatesQuery,
+  useGetRecruiterMyCandidatesQuery,
   useAssignToProjectMutation,
 } from "@/features/candidates";
+import CandidateCard from "./CandidateCard";
 
 interface RecruiterCandidatesTabProps {
   projectId: string;
 }
-
-const StatusBadge = ({ status }: { status: string }) => {
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "nominated":
-        return {
-          label: "Nominated",
-          variant: "default" as const,
-          color: "bg-blue-100 text-blue-800",
-        };
-      case "verification_in_progress":
-        return {
-          label: "In Verification",
-          variant: "secondary" as const,
-          color: "bg-amber-100 text-amber-800",
-        };
-      case "documents_verified":
-        return {
-          label: "Verified",
-          variant: "outline" as const,
-          color: "bg-green-100 text-green-800",
-        };
-      case "approved":
-        return {
-          label: "Approved",
-          variant: "outline" as const,
-          color: "bg-green-100 text-green-800",
-        };
-      default:
-        return {
-          label: status,
-          variant: "outline" as const,
-          color: "bg-gray-100 text-gray-800",
-        };
-    }
-  };
-
-  const config = getStatusConfig(status);
-  return (
-    <Badge variant={config.variant} className={config.color}>
-      {config.label}
-    </Badge>
-  );
-};
 
 export default function RecruiterCandidatesTab({
   projectId,
 }: RecruiterCandidatesTabProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [assignSearchTerm, setAssignSearchTerm] = useState("");
+  
+  // Confirmation dialog states
+  const [verifyConfirm, setVerifyConfirm] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    notes: string;
+  }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+  
+  const [assignConfirm, setAssignConfirm] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    notes: string;
+  }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
 
-  // Get current user (recruiter) - for future use
-  // const { user } = useAppSelector((state) => state.auth);
+  // Get current user to filter candidates based on role
+  const { user } = useAppSelector((state) => state.auth);
 
-  // Get all candidates assigned to the current recruiter
-  const { data: candidatesData, isLoading, error } = useGetCandidatesQuery();
+  // Check if user is a recruiter (non-manager)
+  const isRecruiter = user?.roles?.includes("Recruiter");
+  const isManager = user?.roles?.some(role => 
+    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+  );
+
+  // Use different APIs based on role
+  // Recruiters use dedicated endpoint, managers use general endpoint
+  const { data: recruiterCandidatesData, isLoading: isLoadingRecruiter, error: recruiterError } = 
+    useGetRecruiterMyCandidatesQuery(undefined, {
+      skip: !isRecruiter || isManager, // Skip if not recruiter or if manager
+    });
+
+  const { data: allCandidatesData, isLoading: isLoadingAll, error: allError } = 
+    useGetCandidatesQuery(undefined, {
+      skip: !isManager, // Skip if not manager
+    });
+
+  // Determine which data to use
+  const candidatesData = isRecruiter && !isManager 
+    ? recruiterCandidatesData?.data 
+    : allCandidatesData;
+  
+  const isLoading = isLoadingRecruiter || isLoadingAll;
+  const error = recruiterError || allError;
 
   // Get candidates already assigned to this project for filtering
   const { data: projectCandidatesData } = useGetProjectCandidatesByRoleQuery({
@@ -117,21 +112,19 @@ export default function RecruiterCandidatesTab({
     role: "Recruiter",
   });
 
-  const [sendForVerification, { isLoading: isSending }] =
-    useSendForVerificationMutation();
+  const [sendForVerification] = useSendForVerificationMutation();
 
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
 
-  // Get all candidates (we'll filter by recruiter on the frontend for now)
+  // Get candidates (already filtered by backend based on role)
   const allCandidates = candidatesData || [];
 
   // Get candidates already assigned to this project
   const projectCandidates = projectCandidatesData?.data || [];
   const assignedToProjectIds = projectCandidates.map((c) => c.candidateId);
 
-  // Filter candidates assigned to this recruiter (for now, show all candidates)
-  // TODO: Implement proper recruiter filtering on backend
+  // Candidates are already filtered by the API based on user role
   const recruiterCandidates = allCandidates;
 
   // Filter candidates (show all recruiter's candidates)
@@ -141,11 +134,20 @@ export default function RecruiterCandidatesTab({
       candidate.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       candidate.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" || candidate.currentStatus === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCandidates = filteredCandidates.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
 
   // Filter candidates for assignment dialog (exclude already assigned to this project)
   const availableCandidates = recruiterCandidates.filter(
@@ -160,10 +162,20 @@ export default function RecruiterCandidatesTab({
         candidate.email?.toLowerCase().includes(assignSearchTerm.toLowerCase()))
   );
 
-  const handleSendForVerification = async (candidateId: string) => {
+  const showVerifyConfirmation = (candidateId: string, candidateName: string) => {
+    setVerifyConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
+  };
+
+  const handleSendForVerification = async () => {
     try {
-      await sendForVerification({ projectId, candidateId }).unwrap();
+      await sendForVerification({ 
+        projectId, 
+        candidateId: verifyConfirm.candidateId,
+        recruiterId: user?.id,
+        notes: verifyConfirm.notes || undefined
+      }).unwrap();
       toast.success("Candidate sent for verification successfully");
+      setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
     } catch (error: any) {
       toast.error(
         error?.data?.message || "Failed to send candidate for verification"
@@ -175,16 +187,22 @@ export default function RecruiterCandidatesTab({
     navigate(`/candidates/${candidateId}`);
   };
 
-  const handleAssignSingleCandidate = async (candidateId: string) => {
+  const showAssignConfirmation = (candidateId: string, candidateName: string) => {
+    setAssignConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
+  };
+
+  const handleAssignSingleCandidate = async () => {
     try {
       const result = await assignToProject({
-        candidateId,
+        candidateId: assignConfirm.candidateId,
         projectId,
-        notes: `Assigned by recruiter to project`,
+        recruiterId: user?.id,
+        notes: assignConfirm.notes || `Assigned by recruiter to project`,
       }).unwrap();
       toast.success(
         result.message || "Candidate assigned to project successfully"
       );
+      setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
     } catch (error: any) {
       toast.error(
         error?.data?.message || "Failed to assign candidate to project"
@@ -214,6 +232,7 @@ export default function RecruiterCandidatesTab({
         assignToProject({
           candidateId,
           projectId,
+          recruiterId: user?.id,
           notes: `Bulk assigned by recruiter to project`,
         }).unwrap()
       );
@@ -279,35 +298,19 @@ export default function RecruiterCandidatesTab({
           <Input
             placeholder="Search candidates..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="untouched">Untouched</SelectItem>
-            <SelectItem value="interested">Interested</SelectItem>
-            <SelectItem value="not_interested">Not Interested</SelectItem>
-            <SelectItem value="not_eligible">Not Eligible</SelectItem>
-            <SelectItem value="qualified">Qualified</SelectItem>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="shortlisted">Shortlisted</SelectItem>
-            <SelectItem value="selected">Selected</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="hired">Hired</SelectItem>
-          </SelectContent>
-        </Select>
-        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Assign Candidates
-            </Button>
-          </DialogTrigger>
+      </div>
+
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-full sm:w-auto hidden">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Assign Candidates
+          </Button>
+        </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Assign Candidates to Project</DialogTitle>
@@ -472,10 +475,9 @@ export default function RecruiterCandidatesTab({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
 
       {filteredCandidates.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-12">
           <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No Candidates Assigned
@@ -485,128 +487,217 @@ export default function RecruiterCandidatesTab({
           </p>
         </div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Candidate</TableHead>
-                <TableHead>Experience</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Project Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCandidates.map((candidate: any) => {
-                const isAssignedToProject = assignedToProjectIds.includes(
-                  candidate.id
+        <div>
+          <div className="bg-blue-50 rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">
+              {isRecruiter && !isManager ? "My Candidates" : "All Candidates"}
+            </h3>
+            <p className="text-xs text-gray-600">
+              Available candidates to assign to project
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {paginatedCandidates.map((candidate: any) => {
+                // Check from both sources: candidate's projects array and projectCandidates query
+                const currentProjectInCandidate = candidate.projects?.find(
+                  (p: any) => p.projectId === projectId
                 );
+                
                 const projectAssignment = projectCandidates.find(
                   (pc: any) => pc.candidateId === candidate.id
                 );
 
+                // Candidate is assigned if found in either source
+                const isAssignedToProject = !!currentProjectInCandidate || assignedToProjectIds.includes(candidate.id);
+
+                // Get the actual project status (only if assigned to project)
+                const actualProjectStatus = isAssignedToProject
+                  ? (currentProjectInCandidate?.currentProjectStatus?.statusName || 
+                     projectAssignment?.currentProjectStatus?.statusName)
+                  : null;
+
+                // Determine the status to display (use "not_in_project" if not assigned)
+                const projectStatusToShow = isAssignedToProject && actualProjectStatus
+                  ? actualProjectStatus
+                  : "not_in_project";
+
+                // Check if candidate is nominated OR not in project - show verify button in both cases
+                const isNominated = 
+                  isAssignedToProject && 
+                  !!actualProjectStatus && 
+                  actualProjectStatus.toLowerCase() === "nominated";
+
+                // Show verify button if: 1) Not in project, OR 2) In project and nominated
+                const showVerifyBtn = !isAssignedToProject || isNominated;
+
+                const actions = [];
+
+                // Only show assign button if NOT in project
+                if (!isAssignedToProject) {
+                  actions.push({
+                    label: "Assign to Project",
+                    action: "assign",
+                    variant: "default" as const,
+                    icon: UserPlus,
+                  });
+                }
+
                 return (
-                  <TableRow key={candidate.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                          {candidate.firstName?.charAt(0).toUpperCase() || "?"}
-                        </div>
-                        <div>
-                          <button
-                            onClick={() => handleViewCandidate(candidate.id)}
-                            className="font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer text-left"
-                          >
-                            {candidate.firstName} {candidate.lastName}
-                          </button>
-                          <div className="text-sm text-gray-500 flex items-center gap-2">
-                            {candidate.email && (
-                              <div className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {candidate.email}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {candidate.countryCode} {candidate.mobileNumber}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {candidate.totalExperience
-                          ? `${candidate.totalExperience} years`
-                          : "No experience"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={candidate.currentStatus.statusName} />
-                    </TableCell>
-                    <TableCell>
-                      {isAssignedToProject ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-green-100 text-green-800"
-                        >
-                          {projectAssignment?.status || "Assigned"}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-gray-100 text-gray-600"
-                        >
-                          Not Assigned
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {!isAssignedToProject ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleAssignSingleCandidate(candidate.id)
-                            }
-                            disabled={isAssigning}
-                          >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Assign to Project
-                          </Button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {projectAssignment?.status === "nominated" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  handleSendForVerification(candidate.id)
-                                }
-                                disabled={isSending}
-                              >
-                                <Send className="h-4 w-4 mr-2" />
-                                Send for Verification
-                              </Button>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className="bg-green-100 text-green-800"
-                            >
-                              ✓ Assigned
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <CandidateCard
+                    key={candidate.id}
+                    candidate={candidate}
+                    onView={handleViewCandidate}
+                    onAction={(candidateId, action) => {
+                      if (action === "assign") {
+                        showAssignConfirmation(
+                          candidateId,
+                          `${candidate.firstName} ${candidate.lastName}`
+                        );
+                      }
+                    }}
+                    actions={actions}
+                    projectStatus={projectStatusToShow}
+                    showVerifyButton={showVerifyBtn}
+                    onVerify={(candidateId) =>
+                      showVerifyConfirmation(
+                        candidateId,
+                        `${candidate.firstName} ${candidate.lastName}`
+                      )
+                    }
+                    isAlreadyInProject={isAssignedToProject}
+                    className="hover:scale-100"
+                  />
                 );
               })}
-            </TableBody>
-          </Table>
+            </div>
+          
+          {/* Pagination Controls */}
+          {filteredCandidates.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredCandidates.length)} of {filteredCandidates.length} candidates
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      // Show first page, last page, current page, and pages around current
+                      if (page === 1 || page === totalPages || 
+                          (page >= currentPage - 1 && page <= currentPage + 1)) {
+                        return true;
+                      }
+                      return false;
+                    })
+                    .map((page, idx, arr) => (
+                      <>
+                        {idx > 0 && arr[idx - 1] !== page - 1 && (
+                          <span key={`ellipsis-${page}`} className="px-2 text-gray-400">...</span>
+                        )}
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      </>
+                    ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Verification Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={verifyConfirm.isOpen}
+        onClose={() => setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" })}
+        onConfirm={handleSendForVerification}
+        title="Send for Verification"
+        description={
+          <div className="space-y-4">
+            <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+            <div className="space-y-2">
+              <label htmlFor="verify-notes" className="text-sm font-medium text-gray-700">
+                Notes (Optional)
+              </label>
+              <Textarea
+                id="verify-notes"
+                placeholder="Add any notes for the verification team..."
+                value={verifyConfirm.notes}
+                onChange={(e) => setVerifyConfirm(prev => ({ ...prev, notes: e.target.value }))}
+                rows={3}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Send for Verification"
+        cancelText="Cancel"
+        isLoading={false}
+        variant="default"
+        icon={
+          <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+            <Send className="h-5 w-5 text-blue-600" />
+          </div>
+        }
+      />
+
+      {/* Assignment Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={assignConfirm.isOpen}
+        onClose={() => setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" })}
+        onConfirm={handleAssignSingleCandidate}
+        title="Assign to Project"
+        description={
+          <div className="space-y-4">
+            <p>Are you sure you want to assign {assignConfirm.candidateName} to this project?</p>
+            <div className="space-y-2">
+              <label htmlFor="notes" className="text-sm font-medium text-gray-700">
+                Notes (Optional)
+              </label>
+              <Textarea
+                id="notes"
+                placeholder="Add any notes about this assignment..."
+                value={assignConfirm.notes}
+                onChange={(e) => setAssignConfirm(prev => ({ ...prev, notes: e.target.value }))}
+                rows={3}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Assign to Project"
+        cancelText="Cancel"
+        isLoading={isAssigning}
+        variant="default"
+        icon={
+          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+            <UserPlus className="h-5 w-5 text-green-600" />
+          </div>
+        }
+      />
     </div>
   );
 }

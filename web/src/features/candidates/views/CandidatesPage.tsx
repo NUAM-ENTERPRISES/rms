@@ -52,16 +52,18 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { useGetCandidatesQuery } from "@/features/candidates";
-import { useGetMyAssignedCandidatesQuery } from "@/services/candidatesApi";
+import { useGetCandidatesQuery, useGetRecruiterMyCandidatesQuery } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   
-  // Check if user is CRE
-  const isCRE = user?.roles?.includes("CRE");
+  // Check if user is a recruiter (non-manager)
+  const isRecruiter = user?.roles?.includes("Recruiter");
+  const isManager = user?.roles?.some(role => 
+    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+  );
   
   // All roles can read candidates
   const canReadCandidates = true;
@@ -76,28 +78,29 @@ export default function CandidatesPage() {
     limit: 20,
   });
 
-  // Fetch candidates - use different API for CRE users
+  // Fetch candidates - use different API for Recruiter users
   const { data: allCandidatesData = [], isLoading: isLoadingAll, error: errorAll } = useGetCandidatesQuery(
     undefined,
-    { skip: isCRE } // Skip this query if user is CRE
+    { skip: isRecruiter && !isManager } // Skip this query if user is recruiter without manager role
   );
   
-  const { data: assignedCandidatesData, isLoading: isLoadingAssigned, error: errorAssigned } = useGetMyAssignedCandidatesQuery(
+  const { data: recruiterCandidatesData, isLoading: isLoadingRecruiter, error: errorRecruiter } = useGetRecruiterMyCandidatesQuery(
     {
       page: filters.page,
       limit: filters.limit,
       search: filters.search || undefined,
+      status: filters.status !== 'all' ? filters.status : undefined,
     },
-    { skip: !isCRE } // Skip this query if user is NOT CRE
+    { skip: !isRecruiter || isManager } // Skip this query if user is not recruiter or is manager
   );
 
   // Use the appropriate data source
-  const candidates: any[] = isCRE 
-    ? (assignedCandidatesData?.data || [])
+  const candidates: any[] = isRecruiter && !isManager
+    ? (recruiterCandidatesData?.data || [])
     : (Array.isArray(allCandidatesData) ? allCandidatesData : []);
   
-  const isLoading = isCRE ? isLoadingAssigned : isLoadingAll;
-  const error = isCRE ? errorAssigned : errorAll;
+  const isLoading = isLoadingRecruiter || isLoadingAll;
+  const error = errorRecruiter || errorAll;
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -498,7 +501,7 @@ export default function CandidatesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-slate-800">
-                  All Candidates
+                  {isRecruiter && !isManager ? "My Assigned Candidates" : "All Candidates"}
                 </CardTitle>
                 <CardDescription>
                   {Array.isArray(filteredCandidates)

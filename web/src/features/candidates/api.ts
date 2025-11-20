@@ -335,10 +335,49 @@ export interface RecruiterAssignment {
   };
 }
 
+export interface GetCandidatesParams {
+  assignedTo?: string;
+  page?: number;
+  limit?: number;
+  status?: string;
+}
+
+export interface GetRecruiterMyCandidatesParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+}
+
+export interface RecruiterMyCandidatesResponse {
+  success: boolean;
+  data: Candidate[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+  message: string;
+}
+
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getCandidates: builder.query<Candidate[], void>({
-      query: () => "/candidates",
+    getCandidates: builder.query<Candidate[], GetCandidatesParams | void>({
+      query: (params) => {
+        if (!params) return "/candidates";
+        
+        const queryParams = new URLSearchParams();
+        if (params.assignedTo) queryParams.append('assignedTo', params.assignedTo);
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        if (params.status) queryParams.append('status', params.status);
+        
+        const queryString = queryParams.toString();
+        return queryString ? `/candidates?${queryString}` : "/candidates";
+      },
       transformResponse: (response: {
         success: boolean;
         data: { candidates: Candidate[]; pagination: any };
@@ -387,12 +426,18 @@ export const candidatesApi = baseApi.injectEndpoints({
     }),
     assignToProject: builder.mutation<
       { success: boolean; data: any; message: string },
-      { candidateId: string; projectId: string; notes?: string }
+      { 
+        candidateId: string; 
+        projectId: string; 
+        roleNeededId?: string;
+        recruiterId?: string;
+        notes?: string 
+      }
     >({
-      query: ({ candidateId, projectId, notes }) => ({
-        url: `/candidates/${candidateId}/assign-project`,
+      query: ({ candidateId, projectId, roleNeededId, recruiterId, notes }) => ({
+        url: `/candidate-projects/assign`,
         method: "POST",
-        body: { projectId, notes },
+        body: { candidateId, projectId, roleNeededId, recruiterId, notes },
       }),
       invalidatesTags: ["Candidate"],
     }),
@@ -586,6 +631,26 @@ export const candidatesApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Get recruiter's assigned candidates
+    getRecruiterMyCandidates: builder.query<
+      RecruiterMyCandidatesResponse,
+      GetRecruiterMyCandidatesParams | void
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.status) queryParams.append('status', params.status);
+        if (params?.search) queryParams.append('search', params.search);
+        
+        const queryString = queryParams.toString();
+        return queryString 
+          ? `/candidates/recruiter/my-candidates?${queryString}` 
+          : '/candidates/recruiter/my-candidates';
+      },
+      providesTags: ["Candidate"],
+    }),
+
     // Status configuration
     getStatusConfig: builder.query<
       { success: boolean; data: Record<string, any>; message: string },
@@ -621,5 +686,6 @@ export const {
   useAssignRecruiterMutation,
   useGetCurrentRecruiterAssignmentQuery,
   useGetRecruiterAssignmentHistoryQuery,
+  useGetRecruiterMyCandidatesQuery,
   useGetStatusConfigQuery,
 } = candidatesApi;

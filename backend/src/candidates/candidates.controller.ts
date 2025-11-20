@@ -29,7 +29,9 @@ import { ApproveCandidateDto } from './dto/approve-candidate.dto';
 import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
+import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
+import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import {
@@ -45,6 +47,7 @@ export class CandidatesController {
   constructor(
     private readonly candidatesService: CandidatesService,
     private readonly rnrCreAssignmentService: RnrCreAssignmentService,
+    private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {}
 
   @Post()
@@ -120,6 +123,89 @@ export class CandidatesController {
       success: true,
       data: candidate,
       message: 'Candidate created successfully',
+    };
+  }
+
+  @Get('recruiter/my-candidates')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get all candidates assigned to the logged-in recruiter',
+    description:
+      'Retrieve a paginated list of candidates assigned to the current recruiter with optional status filtering and search.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidates retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              firstName: { type: 'string' },
+              lastName: { type: 'string' },
+              email: { type: 'string' },
+              mobileNumber: { type: 'string' },
+              countryCode: { type: 'string' },
+              currentStatus: {
+                type: 'object',
+                properties: {
+                  id: { type: 'number' },
+                  statusName: { type: 'string' },
+                },
+              },
+              team: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            page: { type: 'number', example: 1 },
+            limit: { type: 'number', example: 10 },
+            totalCount: { type: 'number', example: 50 },
+            totalPages: { type: 'number', example: 5 },
+            hasNextPage: { type: 'boolean', example: true },
+            hasPreviousPage: { type: 'boolean', example: false },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'Recruiter candidates retrieved successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  async getRecruiterCandidates(
+    @Query() query: GetRecruiterCandidatesDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: any[];
+    pagination: any;
+    message: string;
+  }> {
+    const result = await this.recruiterAssignmentService.getRecruiterCandidates(
+      req.user.id,
+      query,
+    );
+
+    return {
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      message: 'Recruiter candidates retrieved successfully',
     };
   }
 

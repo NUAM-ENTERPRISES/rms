@@ -111,21 +111,19 @@ export class CandidateAllocationService {
         // Create allocation in transaction
         await this.prisma.$transaction(async (tx) => {
           // Create candidate project mapping
-          await tx.candidateProjectMap.create({
+          await tx.candidateProjects.create({
             data: {
               candidateId: matchedCandidate.candidateId,
               projectId,
               roleNeededId,
-              status: 'nominated',
-              nominatedBy: recruiter.id,
-              nominatedDate: new Date(),
+              currentProjectStatusId: 1,
               recruiterId: recruiter.id,
               assignedAt: new Date(),
             },
           });
 
           // Note: No need to update candidate.assignedTo as it's been removed
-          // All recruiter assignments are tracked via CandidateProjectMap.recruiterId
+          // All recruiter assignments are tracked via CandidateProjects.recruiterId
         });
 
         // Publish notification event
@@ -237,6 +235,7 @@ export class CandidateAllocationService {
                     currentStatus: true,
                   },
                 },
+                currentProjectStatus: true,
               },
             },
           },
@@ -252,7 +251,8 @@ export class CandidateAllocationService {
       const allocations = role.candidateAllocations;
       const statusCounts = allocations.reduce(
         (acc, allocation) => {
-          acc[allocation.status] = (acc[allocation.status] || 0) + 1;
+          const statusName = allocation.currentProjectStatus?.statusName || 'unknown';
+          acc[statusName] = (acc[statusName] || 0) + 1;
           return acc;
         },
         {} as Record<string, number>,
@@ -282,9 +282,9 @@ export class CandidateAllocationService {
       throw new NotFoundException(`Recruiter ${recruiterId} not found`);
     }
 
-    const allocations = await this.prisma.candidateProjectMap.findMany({
+    const allocations = await this.prisma.candidateProjects.findMany({
       where: {
-        nominatedBy: recruiterId,
+        recruiterId: recruiterId,
       },
       include: {
         candidate: {
@@ -307,12 +307,14 @@ export class CandidateAllocationService {
             designation: true,
           },
         },
+        currentProjectStatus: true,
       },
     });
 
     const statusCounts = allocations.reduce(
       (acc, allocation) => {
-        acc[allocation.status] = (acc[allocation.status] || 0) + 1;
+        const statusName = allocation.currentProjectStatus?.statusName || 'unknown';
+        acc[statusName] = (acc[statusName] || 0) + 1;
         return acc;
       },
       {} as Record<string, number>,
@@ -366,15 +368,17 @@ export class CandidateAllocationService {
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)
-          const workload = await this.prisma.candidateProjectMap.count({
+          const workload = await this.prisma.candidateProjects.count({
             where: {
               recruiterId: user.id,
-              status: {
-                in: [
-                  'nominated',
-                  'verification_in_progress',
-                  'pending_documents',
-                ],
+              currentProjectStatus: {
+                statusName: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
+                },
               },
             },
           });

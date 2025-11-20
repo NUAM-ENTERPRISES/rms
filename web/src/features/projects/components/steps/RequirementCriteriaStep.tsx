@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Target, Plus, X } from "lucide-react";
 import { ProjectFormData } from "../../schemas/project-schemas";
+import { JobTitleSelect } from "@/components/molecules";
 
 interface RequirementCriteriaStepProps {
   control: Control<ProjectFormData>;
@@ -125,19 +126,14 @@ export const RequirementCriteriaStep: React.FC<
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Job Title */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">
-                  Job Title *
-                </Label>
-                <Input
-                  value={role.designation}
-                  onChange={(e) =>
-                    updateRole(index, "designation", e.target.value)
-                  }
-                  placeholder="e.g., Registered Nurse"
-                  className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                />
-              </div>
+              <JobTitleSelect
+                value={role.designation}
+                onValueChange={(value) => updateRole(index, "designation", value)}
+                label="Job Title"
+                placeholder="e.g., Registered Nurse"
+                required
+                allowEmpty={false}
+              />
 
               {/* Positions Needed */}
               <div className="space-y-2">

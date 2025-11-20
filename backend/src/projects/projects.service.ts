@@ -290,18 +290,6 @@ export class ProjectsService {
       throw new Error('Failed to create project');
     }
 
-    // Auto-allocate existing eligible candidates to the new project
-    try {
-      await this.autoAllocateCandidatesToProject(completeProject.id);
-    } catch (error) {
-      // Log error but don't fail project creation
-      console.error(
-        'Auto-allocation failed for project:',
-        completeProject.id,
-        error,
-      );
-    }
-
     return completeProject;
   }
 
@@ -758,7 +746,7 @@ export class ProjectsService {
     }
 
     // Check if assignment already exists
-    const existingAssignment = await this.prisma.candidateProjectMap.findFirst({
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({
       where: {
         candidateId: assignCandidateDto.candidateId,
         projectId,
@@ -786,13 +774,12 @@ export class ProjectsService {
     );
 
     // Create assignment (nomination) with recruiter assignment
-    const assignment = await this.prisma.candidateProjectMap.create({
+    const assignment = await this.prisma.candidateProjects.create({
       data: {
         candidateId: assignCandidateDto.candidateId,
         projectId,
-        nominatedBy: userId, // Use the requesting user
         notes: assignCandidateDto.notes,
-        status: 'nominated', // Initial status
+        currentProjectStatusId: 1, // Nominated status
         recruiterId: recruiter.id,
         assignedAt: new Date(),
       },
@@ -824,6 +811,182 @@ export class ProjectsService {
     };
   }
 
+  /**
+   * Get nominated candidates for a project with match scoring, search, and pagination
+   * Nominated = candidates in candidate_projects table for this project (any status)
+   * Recruiters see only their nominated candidates, other roles see all
+   */
+  async getNominatedCandidates(
+    projectId: string,
+    userId: string,
+    userRoles: string[],
+    query: {
+      search?: string;
+      statusId?: number;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
+  ): Promise<{
+    candidates: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    // Check if project exists
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        rolesNeeded: true,
+      },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    const { search, statusId, page = 1, limit = 10, sortBy = 'matchScore', sortOrder = 'desc' } = query;
+
+    // Build where clause for candidates in this project
+    const whereClause: any = {
+      projectId,
+    };
+
+    // Optional status filter
+    if (statusId !== undefined) {
+      whereClause.currentProjectStatusId = statusId;
+    }
+
+    // If user is a recruiter (not Manager, CEO, Director), filter by their assignments
+    const isRecruiter =
+      userRoles.includes('Recruiter') &&
+      !userRoles.includes('Manager') &&
+      !userRoles.includes('CEO') &&
+      !userRoles.includes('Director');
+
+    if (isRecruiter) {
+      whereClause.recruiterId = userId;
+    }
+
+    // Add search filter if provided
+    if (search) {
+      whereClause.candidate = {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { mobileNumber: { contains: search } },
+        ],
+      };
+    }
+
+    // Get total count for pagination
+    const total = await this.prisma.candidateProjects.count({
+      where: whereClause,
+    });
+
+    // Get nominated candidates
+    const assignments = await this.prisma.candidateProjects.findMany({
+      where: whereClause,
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        candidate: {
+          include: {
+            qualifications: {
+              include: {
+                qualification: true,
+              },
+            },
+            currentStatus: true,
+          },
+        },
+        currentProjectStatus: true,
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Calculate match score for each candidate
+    const candidatesWithScore = assignments.map((assignment) => {
+      const matchScore = this.calculateMatchScore(
+        assignment.candidate,
+        project.rolesNeeded,
+      );
+
+      return {
+        id: assignment.id,
+        candidateId: assignment.candidate.id,
+        firstName: assignment.candidate.firstName,
+        lastName: assignment.candidate.lastName,
+        email: assignment.candidate.email,
+        countryCode: assignment.candidate.countryCode,
+        mobileNumber: assignment.candidate.mobileNumber,
+        experience: assignment.candidate.totalExperience ?? assignment.candidate.experience,
+        skills: this.parseJsonField(assignment.candidate.skills),
+        expectedSalary: assignment.candidate.expectedSalary,
+        currentStatus: assignment.candidate.currentStatus,
+        qualifications: assignment.candidate.qualifications.map((q) => ({
+          id: q.qualification.id,
+          name: q.qualification.name,
+          shortName: q.qualification.shortName,
+          level: q.qualification.level,
+          field: q.qualification.field,
+        })),
+        projectStatus: assignment.currentProjectStatus,
+        recruiter: assignment.recruiter,
+        nominatedAt: assignment.createdAt,
+        assignedAt: assignment.assignedAt,
+        notes: assignment.notes,
+        matchScore,
+      };
+    });
+
+    // Sort candidates
+    let sortedCandidates = candidatesWithScore;
+    if (sortBy === 'matchScore') {
+      sortedCandidates.sort((a, b) =>
+        sortOrder === 'desc' ? b.matchScore - a.matchScore : a.matchScore - b.matchScore,
+      );
+    } else if (sortBy === 'experience') {
+      sortedCandidates.sort((a, b) =>
+        sortOrder === 'desc' 
+          ? (b.experience || 0) - (a.experience || 0) 
+          : (a.experience || 0) - (b.experience || 0),
+      );
+    } else if (sortBy === 'firstName') {
+      sortedCandidates.sort((a, b) =>
+        sortOrder === 'desc'
+          ? b.firstName.localeCompare(a.firstName)
+          : a.firstName.localeCompare(b.firstName),
+      );
+    } else if (sortBy === 'createdAt') {
+      sortedCandidates.sort((a, b) => {
+        const dateA = new Date(a.nominatedAt).getTime();
+        const dateB = new Date(b.nominatedAt).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+    }
+
+    return {
+      candidates: sortedCandidates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async getProjectCandidates(projectId: string): Promise<any[]> {
     // Check if project exists
     const project = await this.prisma.project.findUnique({
@@ -834,7 +997,7 @@ export class ProjectsService {
     }
 
     // Get all candidates assigned to the project
-    const assignments = await this.prisma.candidateProjectMap.findMany({
+    const assignments = await this.prisma.candidateProjects.findMany({
       where: { projectId },
       include: {
         candidate: {
@@ -853,7 +1016,7 @@ export class ProjectsService {
           },
         },
       },
-      orderBy: { nominatedDate: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     return assignments;
@@ -968,7 +1131,11 @@ export class ProjectsService {
    * Get eligible candidates for a project
    * Returns candidates who match project requirements and are not yet nominated
    */
-  async getEligibleCandidates(projectId: string): Promise<any[]> {
+  async getEligibleCandidates(
+    projectId: string,
+    userId: string,
+    userRoles: string[],
+  ): Promise<any[]> {
     // Get project with requirements
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -981,21 +1148,73 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
-    // Get candidates not already nominated for this project
-    const candidates = await this.prisma.candidate.findMany({
-      where: {
-        projects: {
-          none: {
-            projectId,
-          },
+    // Build where clause for candidates
+    const whereClause: any = {
+      projects: {
+        none: {
+          projectId,
         },
       },
+    };
+
+    // If user is a recruiter (not Manager, CEO, Director), filter by their assigned candidates
+    const isRecruiter = userRoles.includes('Recruiter') &&
+      !userRoles.includes('Manager') &&
+      !userRoles.includes('CEO') &&
+      !userRoles.includes('Director');
+
+    if (isRecruiter) {
+      whereClause.recruiterAssignments = {
+        some: {
+          recruiterId: userId,
+          isActive: true,
+        },
+      };
+    }
+
+    // Get candidates not already nominated for this project
+    const candidates = await this.prisma.candidate.findMany({
+      where: whereClause,
       include: {
-        // recruiter relation removed - now accessed via CandidateProjectMap
         team: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        qualifications: {
+          include: {
+            qualification: {
+              select: {
+                id: true,
+                name: true,
+                level: true,
+              },
+            },
+          },
+        },
+        currentStatus: {
+          select: {
+            id: true,
+            statusName: true,
+          },
+        },
+        recruiterAssignments: {
+          where: {
+            isActive: true,
+          },
+          include: {
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          take: 1,
+          orderBy: {
+            assignedAt: 'desc',
           },
         },
       },
@@ -1005,9 +1224,12 @@ export class ProjectsService {
     const matchedCandidates = candidates.filter((candidate) => {
       // Check if candidate matches any role requirements
       return project.rolesNeeded.some((role) => {
+        // Use totalExperience (preferred) or fall back to experience field
+        const candidateExperience = candidate.totalExperience ?? candidate.experience;
+
         // Experience matching
         const experienceMatch = this.matchExperience(
-          candidate.experience,
+          candidateExperience,
           role.minExperience,
           role.maxExperience,
         );
@@ -1018,8 +1240,7 @@ export class ProjectsService {
           role.skills as string,
         );
 
-        // Basic matching - for now, return true if experience matches
-        // TODO: Add more sophisticated matching logic for education, certifications, etc.
+        // Both experience and skills must match
         return experienceMatch && skillsMatch;
       });
     });
@@ -1053,27 +1274,41 @@ export class ProjectsService {
    */
   private matchSkills(
     candidateSkills: string[] | null | undefined,
-    roleSkills: string | null | undefined,
+    roleSkills: string | any[] | null | undefined,
   ): boolean {
-    if (!roleSkills) return true; // No skill requirements
+    // No skill requirements - always match
+    if (!roleSkills) return true;
+
+    // Handle case where roleSkills is already an array (from Prisma JSON field)
+    let requiredSkills: string[] = [];
+    
+    if (Array.isArray(roleSkills)) {
+      requiredSkills = roleSkills;
+    } else if (typeof roleSkills === 'string') {
+      // Try to parse if it's a JSON string
+      try {
+        const parsed = JSON.parse(roleSkills);
+        requiredSkills = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        // If parsing fails and it's a non-empty string, treat as single skill
+        if (roleSkills.trim() !== '' && roleSkills !== '[]') {
+          requiredSkills = [roleSkills];
+        }
+      }
+    }
+
+    // If no skills required (empty array), always match
+    if (requiredSkills.length === 0) return true;
+
+    // Skills are required but candidate has no skills
     if (!candidateSkills || candidateSkills.length === 0) return false;
 
-    try {
-      const requiredSkills = JSON.parse(roleSkills) as string[];
-      if (!Array.isArray(requiredSkills)) return true;
-
-      // Check if candidate has at least one required skill
-      return requiredSkills.some((skill) =>
-        candidateSkills.some((candidateSkill) =>
-          candidateSkill.toLowerCase().includes(skill.toLowerCase()),
-        ),
-      );
-    } catch {
-      // If parsing fails, do simple string matching
-      return candidateSkills.some((skill) =>
-        skill.toLowerCase().includes(roleSkills.toLowerCase()),
-      );
-    }
+    // Check if candidate has at least one required skill
+    return requiredSkills.some((skill) =>
+      candidateSkills.some((candidateSkill) =>
+        candidateSkill.toLowerCase().includes(skill.toLowerCase()),
+      ),
+    );
   }
 
   /**
@@ -1087,11 +1322,14 @@ export class ProjectsService {
       maxScore += 100; // Max score per role
       let roleScore = 0;
 
+      // Use totalExperience (preferred) or fall back to experience field
+      const candidateExperience = candidate.totalExperience ?? candidate.experience;
+
       // Experience scoring (40 points)
       if (
-        candidate.experience &&
+        candidateExperience &&
         this.matchExperience(
-          candidate.experience,
+          candidateExperience,
           role.minExperience,
           role.maxExperience,
         )
@@ -1148,6 +1386,7 @@ export class ProjectsService {
                 email: true,
               },
             },
+            currentProjectStatus: true,
           },
         },
         rolesNeeded: true,
@@ -1180,7 +1419,7 @@ export class ProjectsService {
               'verification_in_progress',
               'pending_documents',
               'documents_verified',
-            ].includes(cp.status),
+            ].includes(cp.currentProjectStatus.statusName),
           )
           .map((cp) => ({
             ...cp,
@@ -1195,7 +1434,7 @@ export class ProjectsService {
         return project.candidateProjects
           .filter((cp) =>
             ['documents_verified', 'approved', 'processing'].includes(
-              cp.status,
+              cp.currentProjectStatus.statusName,
             ),
           )
           .map((cp) => ({
@@ -1223,15 +1462,17 @@ export class ProjectsService {
    * Returns candidates in verification stages with document status
    */
   async getDocumentVerificationCandidates(projectId: string): Promise<any[]> {
-    const candidates = await this.prisma.candidateProjectMap.findMany({
+    const candidates = await this.prisma.candidateProjects.findMany({
       where: {
         projectId,
-        status: {
-          in: [
-            'verification_in_progress',
-            'pending_documents',
-            'documents_verified',
-          ],
+        currentProjectStatus: {
+          statusName: {
+            in: [
+              'verification_in_progress',
+              'pending_documents',
+              'documents_verified',
+            ],
+          },
         },
       },
       include: {
@@ -1276,7 +1517,7 @@ export class ProjectsService {
     candidateId: string,
     userId: string,
   ): Promise<any> {
-    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+    const candidateProject = await this.prisma.candidateProjects.findFirst({
       where: {
         projectId,
         candidateId,
@@ -1287,18 +1528,26 @@ export class ProjectsService {
       throw new NotFoundException('Candidate not found in project');
     }
 
-    if (candidateProject.status !== 'nominated') {
+    // Check if candidate is nominated (status ID 1)
+    if (candidateProject.currentProjectStatusId !== 1) {
       throw new BadRequestException(
         'Candidate must be nominated before sending for verification',
       );
     }
 
-    const updated = await this.prisma.candidateProjectMap.update({
+    // Find verification_in_progress status
+    const verificationStatus = await this.prisma.candidateProjectStatus.findFirst({
+      where: { statusName: 'verification_in_progress' },
+    });
+
+    if (!verificationStatus) {
+      throw new BadRequestException('Verification status not found in system');
+    }
+
+    const updated = await this.prisma.candidateProjects.update({
       where: { id: candidateProject.id },
       data: {
-        status: 'verification_in_progress',
-        // Note: sentForVerificationBy and sentForVerificationDate fields need to be added to schema
-        // For now, we'll use existing fields
+        currentProjectStatusId: verificationStatus.id,
         updatedAt: new Date(),
       },
     });
@@ -1432,12 +1681,14 @@ export class ProjectsService {
           select: {
             candidateProjectMaps: {
               where: {
-                status: {
-                  in: [
-                    'nominated',
-                    'verification_in_progress',
-                    'pending_documents',
-                  ],
+                currentProjectStatus: {
+                  statusName: {
+                    in: [
+                      'nominated',
+                      'verification_in_progress',
+                      'pending_documents',
+                    ],
+                  },
                 },
               },
             },
@@ -1498,15 +1749,17 @@ export class ProjectsService {
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)
-          const workload = await this.prisma.candidateProjectMap.count({
+          const workload = await this.prisma.candidateProjects.count({
             where: {
               recruiterId: user.id,
-              status: {
-                in: [
-                  'nominated',
-                  'verification_in_progress',
-                  'pending_documents',
-                ],
+              currentProjectStatus: {
+                statusName: {
+                  in: [
+                    'nominated',
+                    'verification_in_progress',
+                    'pending_documents',
+                  ],
+                },
               },
             },
           });
@@ -1650,7 +1903,7 @@ export class ProjectsService {
     candidateId: string,
     userId: string,
   ): Promise<any> {
-    const candidateProject = await this.prisma.candidateProjectMap.findFirst({
+    const candidateProject = await this.prisma.candidateProjects.findFirst({
       where: {
         projectId,
         candidateId,
@@ -1670,12 +1923,20 @@ export class ProjectsService {
       throw new BadRequestException('Not all required documents are verified');
     }
 
+    // Find documents_verified status
+    const verifiedStatus = await this.prisma.candidateProjectStatus.findFirst({
+      where: { statusName: 'documents_verified' },
+    });
+
+    if (!verifiedStatus) {
+      throw new BadRequestException('Documents verified status not found in system');
+    }
+
     // Update status to documents_verified
-    const updated = await this.prisma.candidateProjectMap.update({
+    const updated = await this.prisma.candidateProjects.update({
       where: { id: candidateProject.id },
       data: {
-        status: 'documents_verified',
-        documentsVerifiedDate: new Date(),
+        currentProjectStatusId: verifiedStatus.id,
         updatedAt: new Date(),
       },
     });
@@ -1690,7 +1951,7 @@ export class ProjectsService {
     candidateProjectMapId: string,
   ): Promise<any> {
     // Get project document requirements
-    const candidateProject = await this.prisma.candidateProjectMap.findUnique({
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
       where: { id: candidateProjectMapId },
       include: { project: true },
     });

@@ -36,6 +36,9 @@ import { CandidateStatusModule } from './candidate-status/candidate-status.modul
 import { CandidateStatusHistoryModule } from './candidate-status-history/candidate-status-history.module';
 import { RnrRemindersModule } from './rnr-reminders/rnr-reminders.module';
 import { SystemConfigModule } from './system-config/system-config.module';
+import { ProjectRoleCatalogModule } from './project-role-catalog/project-role-catalog.module';
+import { CandidateProjectStatusModule } from './candidate-project-status/candidate-project-status.module';
+import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
 
 @Module({
   imports: [
@@ -69,6 +72,9 @@ import { SystemConfigModule } from './system-config/system-config.module';
     CandidateStatusModule,
     CandidateStatusHistoryModule,
     RnrRemindersModule,
+    ProjectRoleCatalogModule,
+    CandidateProjectStatusModule,
+    CandidateProjectsModule,
   ],
   controllers: [AppController],
   providers: [

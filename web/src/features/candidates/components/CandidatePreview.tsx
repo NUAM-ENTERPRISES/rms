@@ -34,7 +34,7 @@ interface CandidatePreviewProps {
     graduationYear?: number;
     gpa?: number;
     qualifications?: any[];
-    workExperiences: any[];
+    workExperiences?: any[];
   };
   onConfirm: () => void;
   onCancel: () => void;
@@ -262,66 +262,67 @@ export default function CandidatePreview({
             </Card>
           )}
           {/* Work Experience */}
-          {candidateData.workExperiences.length > 0 && (
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800">
-                  <Briefcase className="h-4 w-4 text-blue-600" />
-                  Work Experience ({candidateData.workExperiences.length}{" "}
-                  entries)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {candidateData.workExperiences.map((experience, index) => (
-                  <div
-                    key={experience.id || index}
-                    className="border border-slate-200 rounded-lg p-3 bg-slate-50"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-slate-900 text-sm">
-                          {experience.jobTitle}
-                        </h4>
-                        <p className="text-slate-600 font-medium text-xs">
-                          {experience.companyName}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {formatDate(experience.startDate)} -{" "}
-                          {experience.isCurrent
-                            ? "Present"
-                            : formatDate(experience.endDate)}
-                        </p>
-                        {experience.location && (
-                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {experience.location}
+          {candidateData.workExperiences &&
+            candidateData.workExperiences.length > 0 && (
+              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800">
+                    <Briefcase className="h-4 w-4 text-blue-600" />
+                    Work Experience ({candidateData.workExperiences.length}{" "}
+                    entries)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {candidateData.workExperiences.map((experience, index) => (
+                    <div
+                      key={experience.id || index}
+                      className="border border-slate-200 rounded-lg p-3 bg-slate-50"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-900 text-sm">
+                            {experience.jobTitle}
+                          </h4>
+                          <p className="text-slate-600 font-medium text-xs">
+                            {experience.companyName}
                           </p>
-                        )}
-                        {experience.description && (
-                          <p className="text-xs text-slate-600 mt-2">
-                            {experience.description}
+                          <p className="text-xs text-slate-500 mt-1">
+                            {formatDate(experience.startDate)} -{" "}
+                            {experience.isCurrent
+                              ? "Present"
+                              : formatDate(experience.endDate)}
                           </p>
-                        )}
-                        {experience.skills && experience.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {experience.skills.map(
-                              (skill: string, skillIndex: number) => (
-                                <Badge
-                                  key={skillIndex}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {skill}
-                                </Badge>
-                              )
-                            )}
-                          </div>
-                        )}
+                          {experience.location && (
+                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                              <MapPin className="h-3 w-3" />
+                              {experience.location}
+                            </p>
+                          )}
+                          {experience.description && (
+                            <p className="text-xs text-slate-600 mt-2">
+                              {experience.description}
+                            </p>
+                          )}
+                          {experience.skills && experience.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {experience.skills.map(
+                                (skill: string, skillIndex: number) => (
+                                  <Badge
+                                    key={skillIndex}
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
+                                    {skill}
+                                  </Badge>
+                                )
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </CardContent>
+                  ))}
+                </CardContent>
             </Card>
           )}
         </div>

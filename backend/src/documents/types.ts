@@ -2,7 +2,7 @@ import {
   Document,
   Candidate,
   CandidateProjectDocumentVerification,
-  CandidateProjectMap,
+  CandidateProjects,
   Project,
 } from '@prisma/client';
 
@@ -21,7 +21,7 @@ export interface DocumentWithRelations extends Document {
   verifications: (CandidateProjectDocumentVerification & {
     candidateProjectMap: {
       id: string;
-      status: string;
+      currentProjectStatusId: number;
       project: {
         id: string;
         title: string;

@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CountrySelect, DatePicker } from "@/components/molecules";
+import { CountrySelect, DatePicker, ClientSelect, JobTitleSelect } from "@/components/molecules";
 import { FlagWithName } from "@/shared";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { Plus, X, Building2, Target, Save } from "lucide-react";
@@ -32,7 +32,7 @@ import {
   ProjectQualificationSelect,
   type EducationRequirement,
 } from "@/features/projects";
-import { useGetClientsQuery } from "@/features/clients";
+import { useGetClientQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -53,9 +53,15 @@ export default function EditProjectPage() {
     error: projectError,
   } = useGetProjectQuery(projectId!);
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
-  const { data: clientsData } = useGetClientsQuery();
   const { data: qualificationsData } = useGetQualificationsQuery({});
   const { getCountryName } = useCountryValidation();
+
+  // Fetch selected client data for preview
+  const selectedClientId = watch("clientId");
+  const { data: selectedClientData } = useGetClientQuery(
+    selectedClientId || "",
+    { skip: !selectedClientId }
+  );
 
   // Helper function to get qualification name by ID
   const getQualificationName = (qualificationId: string) => {
@@ -481,44 +487,21 @@ export default function EditProjectPage() {
 
                 {/* Client Selection */}
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="clientId"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Client
-                  </Label>
                   <Controller
                     name="clientId"
                     control={control}
                     render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
+                      <ClientSelect
                         value={field.value || ""}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select a client (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clientsData?.data?.clients?.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-slate-400" />
-                                {client.name}
-                                <Badge variant="outline" className="text-xs">
-                                  {client.type}
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onValueChange={field.onChange}
+                        label="Client"
+                        placeholder="Search and select a client (optional)"
+                        allowEmpty={true}
+                        error={errors.clientId?.message}
+                        pageSize={10}
+                      />
                     )}
                   />
-                  {errors.clientId && (
-                    <p className="text-sm text-red-600">
-                      {errors.clientId.message}
-                    </p>
-                  )}
                 </div>
 
                 {/* Country */}
@@ -602,19 +585,14 @@ export default function EditProjectPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {/* Designation */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
-                        Job Title *
-                      </Label>
-                      <Input
-                        value={role.designation}
-                        onChange={(e) =>
-                          updateRole(index, "designation", e.target.value)
-                        }
-                        placeholder="e.g., Registered Nurse"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    </div>
+                    <JobTitleSelect
+                      value={role.designation}
+                      onValueChange={(value) => updateRole(index, "designation", value)}
+                      label="Job Title"
+                      placeholder="e.g., Registered Nurse"
+                      required
+                      allowEmpty={false}
+                    />
 
                     {/* Quantity */}
                     <div className="space-y-2">
@@ -1018,9 +996,7 @@ export default function EditProjectPage() {
                   <div>
                     <p className="text-sm text-slate-600">Client</p>
                     <p className="font-medium text-slate-800">
-                      {clientsData?.data?.clients?.find(
-                        (c: any) => c.id === previewData.clientId
-                      )?.name || "N/A"}
+                      {selectedClientData?.data?.name || "N/A"}
                     </p>
                   </div>
                   <div>

@@ -13,7 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 
 export interface RoleSelectProps {
   value?: string;

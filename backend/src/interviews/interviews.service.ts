@@ -18,7 +18,7 @@ export class InterviewsService {
 
     // Handle candidate-project combination or project-only interviews
     if (createInterviewDto.candidateProjectMapId) {
-      candidateProjectMap = await this.prisma.candidateProjectMap.findUnique({
+      candidateProjectMap = await this.prisma.candidateProjects.findUnique({
         where: {
           id: createInterviewDto.candidateProjectMapId,
         },

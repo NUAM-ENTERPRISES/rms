@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 
 interface SystemConfigProviderProps {
   children: ReactNode;

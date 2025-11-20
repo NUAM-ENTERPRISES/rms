@@ -24,6 +24,7 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
+import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { ProjectWithRelations, PaginatedProjects, ProjectStats } from './types';
@@ -455,11 +456,135 @@ export class ProjectsController {
     };
   }
 
+  @Get(':id/nominated-candidates')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get nominated candidates for a project',
+    description: 'Retrieve candidates added to a project (nominated = in candidate_projects table) with match scores, search, pagination, and status filtering. Recruiters see only their nominated candidates, other roles see all.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search term for candidate name, email, or mobile',
+  })
+  @ApiQuery({
+    name: 'statusId',
+    required: false,
+    description: 'Filter by project status ID (1=nominated, 2=pending_documents, 4=verification_in_progress, etc.)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'Sort by field',
+    enum: ['matchScore', 'createdAt', 'firstName', 'experience'],
+    example: 'matchScore',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'Sort order',
+    enum: ['asc', 'desc'],
+    example: 'desc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Nominated candidates retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            candidates: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  candidateId: { type: 'string' },
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                  email: { type: 'string' },
+                  mobileNumber: { type: 'string' },
+                  experience: { type: 'number' },
+                  skills: { type: 'array', items: { type: 'string' } },
+                  expectedSalary: { type: 'number' },
+                  matchScore: { type: 'number', example: 85 },
+                  currentStatus: { type: 'object' },
+                  projectStatus: { type: 'object' },
+                  qualifications: { type: 'array' },
+                  recruiter: { type: 'object' },
+                  nominatedAt: { type: 'string', format: 'date-time' },
+                  assignedAt: { type: 'string', format: 'date-time' },
+                  notes: { type: 'string' },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' },
+              },
+            },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'Nominated candidates retrieved successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Not Found - Project not found' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async getNominatedCandidates(
+    @Param('id') id: string,
+    @Query() query: QueryNominatedCandidatesDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: any;
+    message: string;
+  }> {
+    const result = await this.projectsService.getNominatedCandidates(
+      id,
+      req.user.id,
+      req.user.roles,
+      query,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Nominated candidates retrieved successfully',
+    };
+  }
+
   @Get(':id/candidates')
   @Permissions('read:projects')
   @ApiOperation({
-    summary: 'Get project candidates',
-    description: 'Retrieve all candidates assigned to a specific project.',
+    summary: 'Get all project candidates',
+    description: 'Retrieve all candidates assigned to a specific project (all statuses).',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
   @ApiResponse({
@@ -598,7 +723,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Get eligible candidates for a project',
     description:
-      'Retrieve candidates who match project requirements and are not yet nominated.',
+      'Retrieve candidates who match project requirements and are not yet nominated. Recruiters see only their assigned candidates, managers see all.',
   })
   @ApiParam({
     name: 'id',
@@ -613,8 +738,15 @@ export class ProjectsController {
     status: 404,
     description: 'Project not found',
   })
-  async getEligibleCandidates(@Param('id') id: string) {
-    const candidates = await this.projectsService.getEligibleCandidates(id);
+  async getEligibleCandidates(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    const candidates = await this.projectsService.getEligibleCandidates(
+      id,
+      req.user.id,
+      req.user.roles,
+    );
     return {
       success: true,
       data: candidates,
