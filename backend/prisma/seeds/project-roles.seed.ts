@@ -91,7 +91,7 @@ const projectRoles = [
   { name: 'Unit Secretary', category: 'Support Services' },
 ];
 
-async function seedProjectRoles() {
+export async function seedProjectRoles() {
   console.log('🌱 Seeding project roles...');
 
   for (const role of projectRoles) {
@@ -106,11 +106,14 @@ async function seedProjectRoles() {
   console.log(`✅ Successfully seeded ${count} project roles`);
 }
 
-seedProjectRoles()
-  .catch((e) => {
-    console.error('❌ Error seeding project roles:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Run if executed directly
+if (require.main === module) {
+  seedProjectRoles()
+    .catch((e) => {
+      console.error('❌ Error seeding project roles:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
