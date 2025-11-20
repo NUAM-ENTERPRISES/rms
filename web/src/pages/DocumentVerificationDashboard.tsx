@@ -161,26 +161,26 @@ export default function DocumentVerificationDashboard() {
     error,
   } = useGetDocumentVerificationCandidatesQuery("all"); // This would need to be implemented to get all projects
 
-  const candidates = candidatesData?.data || [];
+  const candidates = candidatesData?.data?.candidateProjects || [];
 
   // Filter candidates
   const filteredCandidates = candidates.filter((candidate) => {
     const matchesSearch =
-      candidate.candidate.firstName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      candidate.candidate.lastName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      candidate.candidate.email
+      candidate.candidate?.firstName
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      candidate.project.title.toLowerCase().includes(searchTerm.toLowerCase());
+      candidate.candidate?.lastName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      candidate.candidate?.email
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      candidate.project?.title?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
-      statusFilter === "all" || candidate.status === statusFilter;
+      statusFilter === "all" || candidate.currentProjectStatus?.statusName === statusFilter;
     const matchesProject =
-      projectFilter === "all" || candidate.project.id === projectFilter;
+      projectFilter === "all" || candidate.projectId === projectFilter;
 
     return matchesSearch && matchesStatus && matchesProject;
   });

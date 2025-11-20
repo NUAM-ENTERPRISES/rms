@@ -3,9 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { Can } from "@/components/auth/Can";
 import RecruiterCandidatesTab from "./RecruiterCandidatesTab";
-import NominatedCandidatesTab from "./NominatedCandidatesTab";
-import VerificationCandidatesTab from "./VerificationCandidatesTab";
-import ProcessingCandidatesTab from "./ProcessingCandidatesTab";
+import EligibleCandidatesTab from "./EligibleCandidatesTab";
+import SubmittedCandidatesSection from "./SubmittedCandidatesSection";
 
 interface ProjectDetailTabsProps {
   projectId: string;
@@ -15,12 +14,9 @@ export default function ProjectDetailTabs({
   projectId,
 }: ProjectDetailTabsProps) {
   const { hasRole } = usePermissions();
-  const [activeTab, setActiveTab] = useState("recruiter");
-
-  // Determine which tabs to show based on user role
+  
+  // Check if user is a recruiter (non-manager)
   const isRecruiter = hasRole("Recruiter");
-  const isDocumentationExecutive = hasRole("Documentation Executive");
-  const isProcessingExecutive = hasRole("Processing Executive");
   const isManager = hasRole([
     "CEO",
     "Director",
@@ -29,22 +25,19 @@ export default function ProjectDetailTabs({
     "Team Lead",
   ]);
 
-  // Set default tab based on role
-  if (isRecruiter && activeTab !== "recruiter") {
-    setActiveTab("recruiter");
-  } else if (isDocumentationExecutive && activeTab === "recruiter") {
-    setActiveTab("verification");
-  } else if (isProcessingExecutive && activeTab === "recruiter") {
-    setActiveTab("processing");
-  }
+  // Set default tab - "eligible" (Eligible Candidates) is the first tab for all roles
+  const [activeTab, setActiveTab] = useState("eligible");
 
   return (
     <div className="w-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <Can roles={["Recruiter"]}>
-            <TabsTrigger value="recruiter">My Assigned Candidates</TabsTrigger>
-          </Can>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Section: Fixed Submitted Candidates */}
+        <SubmittedCandidatesSection projectId={projectId} />
+
+        {/* Right Section: Tabs Content */}
+        <div className="lg:col-span-2">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
           <Can
             roles={[
               "CEO",
@@ -57,40 +50,14 @@ export default function ProjectDetailTabs({
               "Processing Executive",
             ]}
           >
-            <TabsTrigger value="nominated">Nominated Candidates</TabsTrigger>
+            <TabsTrigger value="eligible">Eligible Candidates</TabsTrigger>
           </Can>
-          <Can
-            roles={[
-              "CEO",
-              "Director",
-              "Manager",
-              "Team Head",
-              "Team Lead",
-              "Recruiter",
-              "Documentation Executive",
-            ]}
-          >
-            <TabsTrigger value="verification">In Verification</TabsTrigger>
-          </Can>
-          <Can
-            roles={[
-              "CEO",
-              "Director",
-              "Manager",
-              "Team Head",
-              "Team Lead",
-              "Processing Executive",
-            ]}
-          >
-            <TabsTrigger value="processing">Processing</TabsTrigger>
+          <Can roles={["Recruiter", "CEO", "Director", "Manager", "Team Head", "Team Lead"]}>
+            <TabsTrigger value="recruiter">
+              {isRecruiter && !isManager ? "My Candidates" : "All Candidates"}
+            </TabsTrigger>
           </Can>
         </TabsList>
-
-        <Can roles={["Recruiter"]}>
-          <TabsContent value="recruiter" className="mt-6">
-            <RecruiterCandidatesTab projectId={projectId} />
-          </TabsContent>
-        </Can>
 
         <Can
           roles={[
@@ -104,41 +71,19 @@ export default function ProjectDetailTabs({
             "Processing Executive",
           ]}
         >
-          <TabsContent value="nominated" className="mt-6">
-            <NominatedCandidatesTab projectId={projectId} />
+          <TabsContent value="eligible" className="mt-6">
+            <EligibleCandidatesTab projectId={projectId} />
           </TabsContent>
         </Can>
 
-        <Can
-          roles={[
-            "CEO",
-            "Director",
-            "Manager",
-            "Team Head",
-            "Team Lead",
-            "Documentation Executive",
-          ]}
-        >
-          <TabsContent value="verification" className="mt-6">
-            <VerificationCandidatesTab projectId={projectId} />
+        <Can roles={["Recruiter", "CEO", "Director", "Manager", "Team Head", "Team Lead"]}>
+          <TabsContent value="recruiter" className="mt-6">
+            <RecruiterCandidatesTab projectId={projectId} />
           </TabsContent>
         </Can>
-
-        <Can
-          roles={[
-            "CEO",
-            "Director",
-            "Manager",
-            "Team Head",
-            "Team Lead",
-            "Processing Executive",
-          ]}
-        >
-          <TabsContent value="processing" className="mt-6">
-            <ProcessingCandidatesTab projectId={projectId} />
-          </TabsContent>
-        </Can>
-      </Tabs>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

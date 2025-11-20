@@ -264,7 +264,19 @@ export const documentsApi = baseApi.injectEndpoints({
     }),
 
     getVerificationCandidates: builder.query<
-      { success: boolean; data: any },
+      { 
+        success: boolean; 
+        data: {
+          candidateProjects: any[];
+          pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+          }
+        };
+        message: string;
+      },
       { page?: number; limit?: number; status?: string; search?: string }
     >({
       query: (params = {}) => ({

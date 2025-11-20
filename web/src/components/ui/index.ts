@@ -96,5 +96,6 @@ export { Progress } from "./progress";
 export { Toaster } from "./sonner";
 
 // Custom Components
-export { LoadingSpinner } from "./LoadingSpinner";
-export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
+export { LoadingSpinner } from "../molecules/LoadingSpinner";
+export { DeleteConfirmationDialog } from "../molecules/DeleteConfirmationDialog";
+export { ConfirmationDialog } from "../molecules/ConfirmationDialog";

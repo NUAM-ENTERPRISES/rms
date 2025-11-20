@@ -21,6 +21,7 @@ import RequirementCriteriaStep from "../components/steps/RequirementCriteriaStep
 import CandidateCriteriaStep from "../components/steps/CandidateCriteriaStep";
 import DocumentRequirementsStep from "../components/steps/DocumentRequirementsStep";
 import PreviewStep from "../components/steps/PreviewStep";
+import { CreateClientModal } from "@/features/clients";
 
 const STEPS = [
   {
@@ -54,6 +55,7 @@ export default function MultiStepCreateProjectPage() {
   const navigate = useNavigate();
   const canCreateProjects = useCan("manage:projects");
   const [currentStep, setCurrentStep] = useState(0);
+  const [showCreateClientModal, setShowCreateClientModal] = useState(false);
 
   // RTK Query hooks
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
@@ -202,7 +204,12 @@ export default function MultiStepCreateProjectPage() {
 
     switch (currentStep) {
       case 0:
-        return <ProjectDetailsStep {...stepProps} />;
+        return (
+          <ProjectDetailsStep
+            {...stepProps}
+            onCreateClientClick={() => setShowCreateClientModal(true)}
+          />
+        );
       case 1:
         return <RequirementCriteriaStep {...stepProps} />;
       case 2:
@@ -306,6 +313,15 @@ export default function MultiStepCreateProjectPage() {
           </div>
         </div>
       </div>
+
+      <CreateClientModal
+        open={showCreateClientModal}
+        onClose={() => setShowCreateClientModal(false)}
+        onSuccess={(clientId, clientName) => {
+          setValue("clientId", clientId);
+          toast.success(`Client "${clientName}" created and selected!`);
+        }}
+      />
     </div>
   );
 }

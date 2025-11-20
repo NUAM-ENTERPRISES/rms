@@ -14,5 +14,7 @@ export { default as CandidateQualificationSelect } from "./CandidateQualificatio
 export { default as QualificationWorkExperienceModal } from "./QualificationWorkExperienceModal";
 export { CandidateResumeList } from "./CandidateResumeList";
 export { PDFViewer } from "./PDFViewer";
+export { ClientSelect } from "./ClientSelect";
+export { JobTitleSelect } from "./JobTitleSelect";
 export type { UploadedDocument } from "./DocumentUpload";
 export type { CandidateQualification } from "./CandidateQualificationSelect";

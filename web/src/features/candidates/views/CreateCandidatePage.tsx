@@ -284,7 +284,7 @@ export default function CreateCandidatePage() {
           location: exp.location || undefined,
           skills:
             exp.skills && exp.skills.length > 0
-              ? JSON.stringify(exp.skills)
+              ? exp.skills
               : undefined,
           achievements: exp.achievements || undefined,
         }));

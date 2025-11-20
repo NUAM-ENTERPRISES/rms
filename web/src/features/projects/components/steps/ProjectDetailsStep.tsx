@@ -24,9 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CountrySelect, DatePicker } from "@/components/molecules";
+import { CountrySelect, DatePicker, ClientSelect } from "@/components/molecules";
 import { Building2, Target, CheckCircle } from "lucide-react";
-import { useGetClientsQuery } from "@/features/clients";
 import { ProjectFormData } from "../../schemas/project-schemas";
 
 interface ProjectDetailsStepProps {
@@ -34,6 +33,7 @@ interface ProjectDetailsStepProps {
   watch: UseFormWatch<ProjectFormData>;
   setValue: UseFormSetValue<ProjectFormData>;
   errors: FieldErrors<ProjectFormData>;
+  onCreateClientClick?: () => void;
 }
 
 export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
@@ -41,8 +41,8 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
   watch,
   setValue,
   errors,
+  onCreateClientClick,
 }) => {
-  const { data: clientsData } = useGetClientsQuery();
   const projectType = watch("projectType");
 
   // Set default contact visibility based on project type
@@ -202,39 +202,23 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
 
           {/* Client Selection */}
           <div className="space-y-1">
-            <Label
-              htmlFor="clientId"
-              className="text-sm font-medium text-slate-700"
-            >
-              Client
-            </Label>
             <Controller
               name="clientId"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                    <SelectValue placeholder="Select a client (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clientsData?.data?.clients?.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-slate-400" />
-                          {client.name}
-                          <Badge variant="outline" className="text-xs">
-                            {client.type}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ClientSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  label="Client"
+                  placeholder="Search and select a client (optional)"
+                  allowEmpty={true}
+                  error={errors.clientId?.message}
+                  pageSize={10}
+                  showCreateButton
+                  onCreateClick={onCreateClientClick}
+                />
               )}
             />
-            {errors.clientId && (
-              <p className="text-sm text-red-600">{errors.clientId.message}</p>
-            )}
           </div>
 
           {/* Country */}

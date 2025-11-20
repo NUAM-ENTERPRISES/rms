@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CountrySelect, DatePicker } from "@/components/molecules";
+import { CountrySelect, DatePicker, ClientSelect, JobTitleSelect } from "@/components/molecules";
 import { FlagWithName } from "@/shared";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { Plus, X, Building2, Target, CheckCircle } from "lucide-react";
@@ -32,7 +32,7 @@ import {
   type EducationRequirement,
 } from "@/features/projects";
 import DocumentRequirementsSection from "../components/DocumentRequirementsSection";
-import { useGetClientsQuery } from "@/features/clients";
+import { useGetClientQuery, CreateClientModal } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -45,9 +45,11 @@ export default function CreateProjectPage() {
   const navigate = useNavigate();
   const canCreateProjects = useCan("manage:projects");
 
+  // State for create client modal
+  const [showCreateClientModal, setShowCreateClientModal] = useState(false);
+
   // RTK Query hooks
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
-  const { data: clientsData } = useGetClientsQuery();
   const { data: qualificationsData } = useGetQualificationsQuery({});
   const { getCountryName } = useCountryValidation();
 
@@ -68,7 +70,12 @@ export default function CreateProjectPage() {
     setValue,
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectFormSchema),
-    defaultValues: defaultProjectValues,
+    defaultValues: {
+      ...defaultProjectValues,
+      title: "",
+      deadline: undefined as any,
+    },
+    mode: "onChange",
   });
 
   const watchedRoles = watch("rolesNeeded");
@@ -76,6 +83,12 @@ export default function CreateProjectPage() {
   // State for preview modal
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
+
+  // Fetch selected client data for preview
+  const { data: selectedClientData } = useGetClientQuery(
+    previewData?.clientId || "",
+    { skip: !previewData?.clientId }
+  );
 
   // Handle preview submission
   const handlePreviewSubmit = async () => {
@@ -165,13 +178,11 @@ export default function CreateProjectPage() {
       {
         designation: "",
         quantity: 1,
-        priority: "medium",
-        backgroundCheckRequired: false,
-        drugScreeningRequired: false,
-        onCallRequired: false,
-        relocationAssistance: false,
-        employmentType: "permanent",
-        genderRequirement: "all",
+        visaType: "contract" as const,
+        genderRequirement: "all" as const,
+        requiredSkills: [],
+        candidateStates: [],
+        candidateReligions: [],
       },
     ]);
   };
@@ -378,44 +389,23 @@ export default function CreateProjectPage() {
 
                 {/* Client Selection */}
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="clientId"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Client
-                  </Label>
                   <Controller
                     name="clientId"
                     control={control}
                     render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
+                      <ClientSelect
                         value={field.value}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select a client (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clientsData?.data?.clients?.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-slate-400" />
-                                {client.name}
-                                <Badge variant="outline" className="text-xs">
-                                  {client.type}
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onValueChange={field.onChange}
+                        label="Client"
+                        placeholder="Search and select a client (optional)"
+                        allowEmpty={true}
+                        error={errors.clientId?.message}
+                        pageSize={10}
+                        showCreateButton
+                        onCreateClick={() => setShowCreateClientModal(true)}
+                      />
                     )}
                   />
-                  {errors.clientId && (
-                    <p className="text-sm text-red-600">
-                      {errors.clientId.message}
-                    </p>
-                  )}
                 </div>
 
                 {/* Country */}
@@ -498,19 +488,14 @@ export default function CreateProjectPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {/* Designation */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
-                        Job Title *
-                      </Label>
-                      <Input
-                        value={role.designation}
-                        onChange={(e) =>
-                          updateRole(index, "designation", e.target.value)
-                        }
-                        placeholder="e.g., Registered Nurse"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    </div>
+                    <JobTitleSelect
+                      value={role.designation}
+                      onValueChange={(value) => updateRole(index, "designation", value)}
+                      label="Job Title"
+                      placeholder="e.g., Registered Nurse"
+                      required
+                      allowEmpty={false}
+                    />
 
                     {/* Quantity */}
                     <div className="space-y-2">
@@ -532,38 +517,15 @@ export default function CreateProjectPage() {
                       />
                     </div>
 
-                    {/* Priority */}
+                    {/* Visa Type */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-slate-700">
-                        Priority
+                        Visa Type *
                       </Label>
                       <Select
-                        value={role.priority}
+                        value={role.visaType || "contract"}
                         onValueChange={(value) =>
-                          updateRole(index, "priority", value)
-                        }
-                      >
-                        <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Employment Type */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
-                        Employment Type *
-                      </Label>
-                      <Select
-                        value={role.employmentType || "permanent"}
-                        onValueChange={(value) =>
-                          updateRole(index, "employmentType", value)
+                          updateRole(index, "visaType", value)
                         }
                       >
                         <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
@@ -587,7 +549,7 @@ export default function CreateProjectPage() {
                     </div>
 
                     {/* Contract Duration (only for contract roles) */}
-                    {role.employmentType === "contract" && (
+                    {role.visaType === "contract" && (
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-slate-700">
                           Contract Duration (years) *
@@ -728,19 +690,7 @@ export default function CreateProjectPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
-                        Technical Skills
-                      </Label>
-                      <Input
-                        value={role.technicalSkills || ""}
-                        onChange={(e) =>
-                          updateRole(index, "technicalSkills", e.target.value)
-                        }
-                        placeholder="e.g., EPIC, Ventilator Management"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    </div>
+
 
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-slate-700">
@@ -814,92 +764,7 @@ export default function CreateProjectPage() {
                     </div> */}
                   </div>
 
-                  {/* Requirements Checkboxes */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`backgroundCheck-${index}`}
-                        checked={role.backgroundCheckRequired}
-                        onChange={(e) =>
-                          updateRole(
-                            index,
-                            "backgroundCheckRequired",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <Label
-                        htmlFor={`backgroundCheck-${index}`}
-                        className="text-sm text-slate-700"
-                      >
-                        Background Check
-                      </Label>
-                    </div>
 
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`drugScreening-${index}`}
-                        checked={role.drugScreeningRequired}
-                        onChange={(e) =>
-                          updateRole(
-                            index,
-                            "drugScreeningRequired",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <Label
-                        htmlFor={`drugScreening-${index}`}
-                        className="text-sm text-slate-700"
-                      >
-                        Drug Screening
-                      </Label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`onCall-${index}`}
-                        checked={role.onCallRequired}
-                        onChange={(e) =>
-                          updateRole(index, "onCallRequired", e.target.checked)
-                        }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <Label
-                        htmlFor={`onCall-${index}`}
-                        className="text-sm text-slate-700"
-                      >
-                        On-Call
-                      </Label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`relocation-${index}`}
-                        checked={role.relocationAssistance}
-                        onChange={(e) =>
-                          updateRole(
-                            index,
-                            "relocationAssistance",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <Label
-                        htmlFor={`relocation-${index}`}
-                        className="text-sm text-slate-700"
-                      >
-                        Relocation
-                      </Label>
-                    </div>
-                  </div>
 
                   {/* Notes */}
                   <div className="mt-4">
@@ -1010,9 +875,7 @@ export default function CreateProjectPage() {
                   <div>
                     <p className="text-sm text-slate-600">Client</p>
                     <p className="font-medium text-slate-800">
-                      {clientsData?.data?.clients?.find(
-                        (c: any) => c.id === previewData.clientId
-                      )?.name || "N/A"}
+                      {selectedClientData?.data?.name || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -1085,9 +948,11 @@ export default function CreateProjectPage() {
                           <Badge variant="secondary" className="text-xs">
                             Qty: {role.quantity}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {role.priority}
-                          </Badge>
+                          {role.visaType && (
+                            <Badge variant="outline" className="text-xs">
+                              {role.visaType}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-600">
@@ -1097,12 +962,7 @@ export default function CreateProjectPage() {
                           </span>
                         )}
                         {role.shiftType && <span>Shift: {role.shiftType}</span>}
-                        {role.backgroundCheckRequired && (
-                          <span>✓ Background Check</span>
-                        )}
-                        {role.drugScreeningRequired && (
-                          <span>✓ Drug Screening</span>
-                        )}
+                        {role.visaType && <span>Visa: {role.visaType}</span>}
                       </div>
                       {/* Education Requirements */}
                       {role.educationRequirementsList &&
@@ -1197,6 +1057,16 @@ export default function CreateProjectPage() {
           </div>
         </div>
       )}
+
+      {/* Create Client Modal */}
+      <CreateClientModal
+        open={showCreateClientModal}
+        onClose={() => setShowCreateClientModal(false)}
+        onSuccess={(clientId, clientName) => {
+          setValue("clientId", clientId);
+          toast.success(`Client "${clientName}" created and selected!`);
+        }}
+      />
     </div>
   );
 }

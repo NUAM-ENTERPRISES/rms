@@ -22,7 +22,7 @@ import {
 import { FlagWithName } from "@/shared";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
-import { useGetClientsQuery } from "@/features/clients";
+import { useGetClientQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
 
@@ -31,12 +31,14 @@ interface PreviewStepProps {
 }
 
 export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
-  const { data: clientsData } = useGetClientsQuery();
+  const formData = watch();
+  const { data: selectedClientData } = useGetClientQuery(
+    formData.clientId || "",
+    { skip: !formData.clientId }
+  );
   const { data: systemConfig } = useGetSystemConfigQuery();
   const { data: qualificationsData } = useGetQualificationsQuery();
   const { getCountryName } = useCountryValidation();
-
-  const formData = watch();
 
   // Helper function to get qualification name by ID
   const getQualificationName = (qualificationId: string) => {
@@ -47,9 +49,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
   };
 
   const getClientName = (clientId: string) => {
-    return (
-      clientsData?.data?.clients?.find((c) => c.id === clientId)?.name || "N/A"
-    );
+    return selectedClientData?.data?.name || "N/A";
   };
 
   const getStateName = (stateId: string) => {
