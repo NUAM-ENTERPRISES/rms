@@ -9,6 +9,7 @@ import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import AppLayout from "@/layout/AppLayout";
 import { useAppSelector } from "@/app/hooks";
+import CandidateProjectDetailsPage from "@/features/candidates/views/CandidateProjectDetailsPage";
 
 // Lazy load pages
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
@@ -273,6 +274,19 @@ function App() {
                       <ProtectedRoute>
                         <AppLayout>
                           <CandidateDetailPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    </RouteErrorBoundary>
+                  }
+                />
+
+                <Route
+                  path="/candidate-project/:candidateId/projects/:projectId"
+                  element={
+                    <RouteErrorBoundary>
+                      <ProtectedRoute>
+                        <AppLayout>
+                          <CandidateProjectDetailsPage />
                         </AppLayout>
                       </ProtectedRoute>
                     </RouteErrorBoundary>

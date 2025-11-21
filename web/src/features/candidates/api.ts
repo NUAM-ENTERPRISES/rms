@@ -1,3 +1,4 @@
+
 import { baseApi } from "@/app/api/baseApi";
 
 // Document types
@@ -229,6 +230,11 @@ export interface CandidateProjectMap {
   deadline?: string;
   matchScore?: number;
   isAssigned?: boolean;
+  assignedAt?: string;
+  currentProjectStatus: {
+    id: number;
+    statusName: string;
+  }
   project: {
     id: string;
     title: string;
@@ -363,6 +369,105 @@ export interface RecruiterMyCandidatesResponse {
   message: string;
 }
 
+export interface GetCandidateProjectPipelineResponse {
+    success: boolean;
+    data: {
+      candidate: Candidate & {
+        mobileNumber?: string;
+        countryCode?: string;
+        profileImage?: string;
+        teamId?: string;
+        currentStatusId?: number;
+        qualifications?: Array<{
+          id: string;
+          qualificationId: string;
+          university?: string;
+          graduationYear?: number;
+          gpa?: number;
+          isCompleted: boolean;
+          notes?: string;
+          qualification: {
+            id: string;
+            name: string;
+            shortName?: string;
+            description?: string;
+          };
+        }>;
+        experience?: number;
+        expectedSalary?: number;
+        currentEmployer?: string;
+        currentRole?: string;
+        graduationYear?: number;
+        highestEducation?: string;
+        gpa?: number;
+        university?: string;
+        skills?: string[];
+        source?: string;
+      };
+      project: {
+        id: string;
+        title: string;
+        status: string;
+        description?: string;
+        deadline?: string;
+        createdAt?: string;
+        updatedAt?: string;
+        priority?: string;
+        countryCode?: string;
+        projectType?: string;
+        resumeEditable?: boolean;
+        groomingRequired?: string;
+        hideContactInfo?: boolean;
+        clientId?: string;
+        teamId?: string;
+        client?: {
+          id: string;
+          name: string;
+          type?: string;
+        };
+        team?: {
+          id: string;
+          name: string;
+        };
+        rolesNeeded?: Array<{
+          id: string;
+          designation: string;
+          quantity: number;
+        }>;
+        documentRequirements?: Array<{
+          id: string;
+          docType: string;
+          mandatory: boolean;
+        }>;
+        interviews?: Array<{
+          id: string;
+          scheduledTime: string;
+          type: string;
+        }>;
+      };
+      history: Array<{
+        id: string;
+        candidateProjectMapId: string;
+        projectStatus: {
+          id: number;
+          statusName: string;
+        };
+        changedBy: {
+          id: string;
+          name: string;
+          email: string;
+        };
+        reason: string;
+        notes: string;
+        statusChangedAt: string;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+      totalEntries: number;
+    };
+    message: string;
+}
+
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCandidates: builder.query<Candidate[], GetCandidatesParams | void>({
@@ -387,6 +492,21 @@ export const candidatesApi = baseApi.injectEndpoints({
       },
       providesTags: ["Candidate"],
     }),
+    
+
+    getCandidateProjectPipeline: builder.query<
+      GetCandidateProjectPipelineResponse,
+      { candidateId: string; projectId: string }
+    >({
+      query: ({ candidateId, projectId }) =>
+        `/candidate-project-pipeline/candidate/${candidateId}/project/${projectId}`,
+      transformResponse: (response: GetCandidateProjectPipelineResponse) => {
+        return response;
+      },
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: candidateId }],
+    }),
+
+
     getCandidateById: builder.query<Candidate, string>({
       query: (id) => `/candidates/${id}`,
       transformResponse: (response: {
@@ -398,6 +518,8 @@ export const candidatesApi = baseApi.injectEndpoints({
       },
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
     }),
+
+
     createCandidate: builder.mutation<Candidate, CreateCandidateRequest>({
       query: (candidateData) => ({
         url: "/candidates",
@@ -406,6 +528,8 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Candidate"],
     }),
+
+
     updateCandidate: builder.mutation<Candidate, UpdateCandidateRequest>({
       query: ({ id, ...candidateData }) => ({
         url: `/candidates/${id}`,
@@ -688,4 +812,5 @@ export const {
   useGetRecruiterAssignmentHistoryQuery,
   useGetRecruiterMyCandidatesQuery,
   useGetStatusConfigQuery,
+  useGetCandidateProjectPipelineQuery,
 } = candidatesApi;

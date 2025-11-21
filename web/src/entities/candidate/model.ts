@@ -42,6 +42,7 @@ export interface CandidateProjectMap {
   selectedDate?: string;
   hiredDate?: string;
   notes?: string;
+  assignedAt?: string;
   rejectionReason?: string;
   project: {
     id: string;

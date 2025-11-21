@@ -331,7 +331,7 @@ export default function CandidateDetailPage() {
           ) : pipelineData?.data ? (
             <CandidatePipeline
               pipeline={pipelineData.data.pipeline}
-              summary={pipelineData.data.summary}
+            
             />
           ) : (
             <div className="text-center py-8 text-muted-foreground">
@@ -860,7 +860,7 @@ export default function CandidateDetailPage() {
                         {projectMap.project?.title || "Unknown Project"}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={projectMap.status} />
+                        <StatusBadge status={projectMap.currentProjectStatus.statusName} />
                       </TableCell>
                       <TableCell>
                         {projectMap.recruiter ? (
@@ -887,7 +887,7 @@ export default function CandidateDetailPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {formatDate(projectMap.nominatedDate)}
+                        {formatDate(projectMap.assignedAt)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -895,7 +895,7 @@ export default function CandidateDetailPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              navigate(`/projects/${projectMap.projectId}`)
+                              navigate(`/candidate-project/${id}/projects/${projectMap.projectId}`)
                             }
                           >
                             <Eye className="h-4 w-4" />
@@ -926,7 +926,7 @@ export default function CandidateDetailPage() {
           ) : pipelineData?.data ? (
             <CandidatePipeline
               pipeline={pipelineData.data.pipeline}
-              summary={pipelineData.data.summary}
+  
             />
           ) : (
             <div className="text-center py-12 text-muted-foreground">
