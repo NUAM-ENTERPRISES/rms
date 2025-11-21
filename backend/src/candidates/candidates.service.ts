@@ -2019,4 +2019,53 @@ export class CandidatesService {
 
     return assignments;
   }
+
+  /**
+   * Get candidate-project mapping details by candidateId and projectId
+   */
+  async getCandidateProjectMapping(candidateId: string, projectId: string): Promise<any> {
+    const mapping = await this.prisma.candidateProjects.findFirst({
+      where: {
+        candidateId,
+        projectId,
+      },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobileNumber: true,
+            countryCode: true,
+            currentStatus: true,
+            team: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            client: true,
+            team: true,
+          },
+        },
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        currentProjectStatus: {
+          select: {
+            id: true,
+            statusName: true,
+          },
+        },
+      },
+    });
+    return mapping;
+  }
 }

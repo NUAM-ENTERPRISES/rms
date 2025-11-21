@@ -23,6 +23,7 @@ import { SystemModule } from './system/system.module';
 import { UploadModule } from './upload/upload.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CandidateAllocationModule } from './candidate-allocation/candidate-allocation.module';
+import { CandidateProjectStatusHistoryModule } from './candidate-project-status-history/candidate-project-status-history.module';
 
 import { OtpService } from './otp/otp.service';
 import { OtpModule } from './otp/otp.module';
@@ -75,6 +76,7 @@ import { CandidateProjectsModule } from './candidate-projects/candidate-projects
     ProjectRoleCatalogModule,
     CandidateProjectStatusModule,
     CandidateProjectsModule,
+    CandidateProjectStatusHistoryModule,
   ],
   controllers: [AppController],
   providers: [

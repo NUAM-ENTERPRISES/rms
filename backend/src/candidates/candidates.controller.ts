@@ -1160,4 +1160,67 @@ export class CandidatesController {
       message: 'RNR CRE assignment statistics retrieved successfully',
     };
   }
+
+  @Get(':candidateId/projects/:projectId')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get candidate-project mapping details',
+    description: 'Fetch details for a specific candidate and project mapping including candidate, project, recruiter, status, and notes.'
+  })
+  @ApiParam({
+    name: 'candidateId',
+    description: 'Candidate ID',
+    example: 'candidate123',
+  })
+  @ApiParam({
+    name: 'projectId',
+    description: 'Project ID',
+    example: 'project456',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate-project mapping retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            candidate: { type: 'object' },
+            project: { type: 'object' },
+            recruiter: { type: 'object' },
+            currentProjectStatus: { type: 'object' },
+            assignedAt: { type: 'string', format: 'date-time' },
+            notes: { type: 'string' },
+          },
+        },
+        message: { type: 'string', example: 'Mapping retrieved successfully' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Mapping not found' })
+  async getCandidateProjectMapping(
+    @Param('candidateId') candidateId: string,
+    @Param('projectId') projectId: string
+  ): Promise<{
+    success: boolean;
+    data: any;
+    message: string;
+  }> {
+    const mapping = await this.candidatesService.getCandidateProjectMapping(candidateId, projectId);
+    if (!mapping) {
+      return {
+        success: false,
+        data: null,
+        message: 'Mapping not found',
+      };
+    }
+    return {
+      success: true,
+      data: mapping,
+      message: 'Mapping retrieved successfully',
+    };
+  }
 }
