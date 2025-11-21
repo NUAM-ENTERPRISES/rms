@@ -39,13 +39,15 @@ import {
   Users,
   User,
   Building2,
+  FileText,
+  TrendingUp,
+  Briefcase,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useGetVerificationCandidatesQuery } from "@/features/documents";
 import { useCan } from "@/hooks/useCan";
 import { Can } from "@/components/auth/Can";
-import { FileText, } from "lucide-react";
-import { cn } from "@/lib/utils"; // assuming you have a cn utility
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 
@@ -119,12 +121,8 @@ export default function DocumentVerificationPage() {
 
     try {
       if (verificationAction === "verify") {
-        // Update candidate-project status to documents_verified
-        // This would require a new API endpoint to update candidate-project status
         toast.success("Candidate documents verified successfully");
       } else {
-        // Update candidate-project status to rejected_documents
-        // This would require a new API endpoint to update candidate-project status
         toast.success("Candidate documents rejected successfully");
       }
 
@@ -156,81 +154,20 @@ export default function DocumentVerificationPage() {
   };
 
   const statusCounts = getStatusCounts();
-const statusCards = [
-  {
-    label: "Pending",
-    value: statusCounts.pending_documents,
-    icon: Clock,
-    color: "amber",
-    gradient: "from-amber-400/20 to-orange-500/10",
-    glow: "shadow-amber-500/30",
-    border: "border-amber-500/30",
-    text: "text-amber-600",
-    iconColor: "text-amber-500",
-    delay: 0.1,
-  },
-  {
-    label: "Submitted",
-    value: statusCounts.documents_submitted,
-    icon: FileText,
-    color: "blue",
-    gradient: "from-blue-400/20 to-cyan-500/10",
-    glow: "shadow-blue-500/30",
-    border: "border-blue-500/30",
-    text: "text-blue-600",
-    iconColor: "text-blue-500",
-    delay: 0.2,
-  },
-  {
-    label: "In Progress",
-    value: statusCounts.verification_in_progress,
-    icon: AlertCircle,
-    color: "purple",
-    gradient: "from-purple-400/25 to-pink-500/10",
-    glow: "shadow-purple-500/40",
-    border: "border-purple-500/40",
-    text: "text-purple-600",
-    iconColor: "text-purple-500",
-    delay: 0.3,
-  },
-  {
-    label: "Verified",
-    value: statusCounts.documents_verified,
-    icon: CheckCircle,
-    color: "green",
-    gradient: "from-emerald-400/25 to-teal-500/10",
-    glow: "shadow-emerald-500/40",
-    border: "border-emerald-500/40",
-    text: "text-emerald-600",
-    iconColor: "text-emerald-500",
-    delay: 0.4,
-  },
-  {
-    label: "Rejected",
-    value: statusCounts.rejected_documents,
-    icon: XCircle,
-    color: "red",
-    gradient: "from-red-400/20 to-rose-600/10",
-    glow: "shadow-red-500/30",
-    border: "border-red-500/30",
-    text: "text-red-600",
-    iconColor: "text-red-500",
-    delay: 0.5,
-  },
-];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Compact Header */}
-      <div className="flex items-center justify-between bg-white rounded-xl shadow-lg border border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between bg-white rounded-xl shadow-lg border border-gray-200 px-6 py-4">
           <div>
-   <h1 className="text-2xl font-extrabold text-slate-900">
-  Document Verification
-  </h1>
-    <p className="mt-1 text-sm text-gray-500">
-      <span className="font-semibold text-gray-900">{totalCandidates}</span> candidates &bull; Review and verify candidate documents
-    </p>
-  </div>
+            <h1 className="text-2xl font-extrabold text-slate-900">
+              Document Verification
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              <span className="font-semibold text-gray-900">{totalCandidates}</span> candidates &bull; Review and verify candidate documents
+            </p>
+          </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
@@ -243,98 +180,104 @@ const statusCards = [
           </div>
         </div>
 
-        {/* Compact Stats Cards */}
-       <div className="grid grid-cols-2 md:grid-cols-5 gap-5 p-2">
-    {statusCards.map((card) => {
-      const Icon = card.icon;
-      const isHigh = card.value > 50; // optional: highlight high numbers
+        {/* Dashboard Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Candidates Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 mb-1">Total Candidates</p>
+                    <h3 className="text-3xl font-bold text-blue-600">
+                      {totalCandidates}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-2">For verification</p>
+                  </div>
+                  <div className="p-3 bg-blue-200/40 rounded-full">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-      return (
-        <motion.div
-          key={card.label}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: card.delay, ease: "easeOut" }}
-          whileHover={{ y: -6, scale: 1.04 }}
-          className={cn(
-            "relative group overflow-hidden rounded-2xl border backdrop-blur-xl bg-white/70 dark:bg-gray-900/80",
-            "shadow-lg hover:shadow-2xl transition-all duration-400",
-            card.border,
-            card.glow && "hover:shadow-[0_0_30px_-5px]",
-            card.glow
-          )}
-          style={{
-            backgroundImage: `linear-gradient(to bottom right, ${card.gradient})`,
-          }}
-        >
-          {/* Subtle animated background glow */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-            <div className={cn("absolute -inset-1 blur-3xl", card.gradient)} />
-          </div>
+          {/* Verified Documents Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 mb-1">Verified</p>
+                    <h3 className="text-3xl font-bold text-green-600">
+                      {statusCounts.documents_verified}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-2">Approved</p>
+                  </div>
+                  <div className="p-3 bg-green-200/40 rounded-full">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          {/* Floating particles effect (optional visual flair) */}
-          <div className="absolute top-2 right-2 opacity-20">
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{
-                  y: [0, -10, 0],
-                  opacity: [0.3, 0.8, 0.3],
-                }}
-                transition={{
-                  duration: 3 + i,
-                  repeat: Infinity,
-                  delay: i * 0.4,
-                }}
-                className={cn("w-1 h-1 rounded-full", `bg-${card.color}-400`)}
-                style={{ position: "absolute" }}
-              />
-            ))}
-          </div>
+          {/* In Progress Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 mb-1">In Progress</p>
+                    <h3 className="text-3xl font-bold text-orange-600">
+                      {statusCounts.verification_in_progress + statusCounts.documents_submitted}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-2">Pending review</p>
+                  </div>
+                  <div className="p-3 bg-orange-200/40 rounded-full">
+                    <TrendingUp className="h-6 w-6 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <div className="relative p-6 flex items-center justify-between">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                {card.label}
-              </p>
-              <motion.p
-                key={card.value}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                className={cn(
-                  "text-3xl font-bold tracking-tight",
-                  card.text,
-                  isHigh && "drop-shadow-md"
-                )}
-              >
-                {card.value}
-              </motion.p>
-            </div>
-
-            {/* Icon with pulse animation on high values */}
-            <div
-              className={cn(
-                "p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md shadow-inner",
-                "border border-white/50",
-                isHigh && "animate-pulse"
-              )}
-            >
-              <Icon className={cn("h-7 w-7", card.iconColor)} strokeWidth={2.2} />
-            </div>
-          </div>
-
-          {/* Bottom accent bar */}
-          <div
-            className={cn(
-              "h-1 w-full bg-gradient-to-r opacity-70",
-              `from-${card.color}-500 to-${card.color}-600`
-            )}
-          />
-        </motion.div>
-      );
-    })}
-  </div>
+          {/* Rejected Documents Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 mb-1">Rejected</p>
+                    <h3 className="text-3xl font-bold text-red-600">
+                      {statusCounts.rejected_documents}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-2">Not approved</p>
+                  </div>
+                  <div className="p-3 bg-red-200/40 rounded-full">
+                    <XCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
 
         {/* Compact Filters */}
         <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
@@ -377,186 +320,186 @@ const statusCards = [
         </div>
 
         {/* Compact Documents Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-  {/* Header */}
-  <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-gray-900 p-2.5">
-          <User className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Candidates for Verification
-          </h3>
-          <p className="text-sm text-gray-500">
-            {candidateProjects.length} candidate{candidateProjects.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-      </div>
-      {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
-    </div>
-  </div>
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-gray-900 p-2.5">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Candidates for Verification
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {candidateProjects.length} candidate{candidateProjects.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+              {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
+            </div>
+          </div>
 
-  {/* Loading */}
-  {isLoading && (
-    <div className="py-24 text-center">
-      <RefreshCw className="mx-auto h-8 w-8 animate-spin text-gray-400" />
-      <p className="mt-3 text-sm text-gray-500">Loading candidates...</p>
-    </div>
-  )}
+          {/* Loading */}
+          {isLoading && (
+            <div className="py-24 text-center">
+              <RefreshCw className="mx-auto h-8 w-8 animate-spin text-gray-400" />
+              <p className="mt-3 text-sm text-gray-500">Loading candidates...</p>
+            </div>
+          )}
 
-  {/* Error */}
-  {error && (
-    <div className="py-24 text-center">
-      <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
-      <p className="mt-4 text-sm font-medium text-gray-900">Failed to load candidates</p>
-      <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-4">
-        Try Again
-      </Button>
-    </div>
-  )}
+          {/* Error */}
+          {error && (
+            <div className="py-24 text-center">
+              <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
+              <p className="mt-4 text-sm font-medium text-gray-900">Failed to load candidates</p>
+              <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-4">
+                Try Again
+              </Button>
+            </div>
+          )}
 
-  {/* Table */}
-  {!isLoading && !error && candidateProjects.length > 0 && (
-    <Table>
-      <TableHeader>
-        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-            Candidate
-          </TableHead>
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-            Project
-          </TableHead>
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-            Status
-          </TableHead>
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-            Documents
-          </TableHead>
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-            Recruiter
-          </TableHead>
-          <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
-            Actions
-          </TableHead>
-        </TableRow>
-      </TableHeader>
+          {/* Table */}
+          {!isLoading && !error && candidateProjects.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    Candidate
+                  </TableHead>
+                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    Project
+                  </TableHead>
+                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    Status
+                  </TableHead>
+                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    Documents
+                  </TableHead>
+                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    Recruiter
+                  </TableHead>
+                  <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
 
-      <TableBody>
-        {candidateProjects.map((candidateProject: any, index: number) => {
-          const status = candidateProject.currentProjectStatus?.statusName || "";
-          const statusConfig = {
-            documents_verified: { Icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
-            rejected_documents: { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-            verification_in_progress: { Icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-            documents_submitted: { Icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-            pending_documents: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
-          }[status] || { Icon: AlertCircle, color: "text-gray-500", bg: "bg-gray-50" };
-          const { Icon } = statusConfig;
+              <TableBody>
+                {candidateProjects.map((candidateProject: any, index: number) => {
+                  const status = candidateProject.currentProjectStatus?.statusName || "";
+                  const statusConfig = {
+                    documents_verified: { Icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    rejected_documents: { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
+                    verification_in_progress: { Icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+                    documents_submitted: { Icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
+                    pending_documents: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
+                  }[status] || { Icon: AlertCircle, color: "text-gray-500", bg: "bg-gray-50" };
+                  const { Icon } = statusConfig;
 
-          return (
-            <motion.tr
-              key={candidateProject.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.03 }}
-              className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors"
-            >
-              {/* Candidate */}
-              <TableCell className="px-6 py-5">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-medium text-white">
-                    {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
-                  </div>
-                  <div>
-                    <button
-                      onClick={() =>
-                        navigate(
-                          `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
-                        )
-                      }
-                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                  return (
+                    <motion.tr
+                      key={candidateProject.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors"
                     >
-                      {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
-                    </button>
-                    <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
-                  </div>
-                </div>
-              </TableCell>
+                      {/* Candidate */}
+                      <TableCell className="px-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-medium text-white">
+                            {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
+                          </div>
+                          <div>
+                            <button
+                              onClick={() =>
+                                navigate(
+                                  `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
+                                )
+                              }
+                              className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                            >
+                              {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
+                            </button>
+                            <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
 
-              {/* Project */}
-              <TableCell className="px-6 py-5">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-gray-100 p-2">
-                    <Building2 className="h-4 w-4 text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {candidateProject.project.title}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {candidateProject.project.client?.name || "—"}
-                    </p>
-                  </div>
-                </div>
-              </TableCell>
+                      {/* Project */}
+                      <TableCell className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-lg bg-gray-100 p-2">
+                            <Building2 className="h-4 w-4 text-gray-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {candidateProject.project.title}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {candidateProject.project.client?.name || "—"}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
 
-              {/* Status */}
-              <TableCell className="px-6 py-5">
-                <div className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium", statusConfig.bg, statusConfig.color)}>
-                  <Icon className="h-3.5 w-3.5" />
-                  {statusConfig === statusConfig.documents_verified
-                    ? "Verified"
-                    : statusConfig === statusConfig.rejected_documents
-                    ? "Rejected"
-                    : statusConfig === statusConfig.verification_in_progress
-                    ? "In Progress"
-                    : statusConfig === statusConfig.documents_submitted
-                    ? "Submitted"
-                    : statusConfig === statusConfig.pending_documents
-                    ? "Pending"
-                    : "Unknown"}
-                </div>
-              </TableCell>
+                      {/* Status */}
+                      <TableCell className="px-6 py-5">
+                        <div className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium", statusConfig.bg, statusConfig.color)}>
+                          <Icon className="h-3.5 w-3.5" />
+                          {status === "documents_verified"
+                            ? "Verified"
+                            : status === "rejected_documents"
+                            ? "Rejected"
+                            : status === "verification_in_progress"
+                            ? "In Progress"
+                            : status === "documents_submitted"
+                            ? "Submitted"
+                            : status === "pending_documents"
+                            ? "Pending"
+                            : "Unknown"}
+                        </div>
+                      </TableCell>
 
-              {/* Documents */}
-              <TableCell className="px-6 py-5 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-gray-400" />
-                  {candidateProject.documentVerifications?.length || 0}
-                </div>
-              </TableCell>
+                      {/* Documents */}
+                      <TableCell className="px-6 py-5 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-gray-400" />
+                          {candidateProject.documentVerifications?.length || 0}
+                        </div>
+                      </TableCell>
 
-              {/* Recruiter */}
-              <TableCell className="px-6 py-5 text-sm text-gray-600">
-                {candidateProject.recruiter?.name || "Unassigned"}
-              </TableCell>
+                      {/* Recruiter */}
+                      <TableCell className="px-6 py-5 text-sm text-gray-600">
+                        {candidateProject.recruiter?.name || "Unassigned"}
+                      </TableCell>
 
-              {/* Actions */}
-              <TableCell className="px-6 py-5 text-right">
-                <VerificationActionsMenu
-                  candidateProject={candidateProject}
-                  onReject={handleRejectCandidate}
-                />
-              </TableCell>
-            </motion.tr>
-          );
-        })}
-      </TableBody>
-    </Table>
-  )}
+                      {/* Actions */}
+                      <TableCell className="px-6 py-5 text-right">
+                        <VerificationActionsMenu
+                          candidateProject={candidateProject}
+                          onReject={handleRejectCandidate}
+                        />
+                      </TableCell>
+                    </motion.tr>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
 
-  {/* Empty State */}
-  {!isLoading && !error && candidateProjects.length === 0 && (
-    <div className="py-24 text-center">
-      <div className="mx-auto h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
-        <User className="h-6 w-6 text-gray-400" />
-      </div>
-      <p className="mt-4 text-sm text-gray-500">No candidates found</p>
-    </div>
-  )}
-</div>
+          {/* Empty State */}
+          {!isLoading && !error && candidateProjects.length === 0 && (
+            <div className="py-24 text-center">
+              <div className="mx-auto h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                <User className="h-6 w-6 text-gray-400" />
+              </div>
+              <p className="mt-4 text-sm text-gray-500">No candidates found</p>
+            </div>
+          )}
+        </div>
 
         {/* Compact Verification Dialog */}
         <Dialog open={verificationDialog} onOpenChange={setVerificationDialog}>
