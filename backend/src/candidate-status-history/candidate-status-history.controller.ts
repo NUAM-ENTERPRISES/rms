@@ -154,6 +154,144 @@ export class CandidateStatusHistoryController {
     );
   }
 
+  @Get('candidate/:candidateId/pipeline')
+  @ApiOperation({
+    summary: 'Get candidate status pipeline',
+    description:
+      'Retrieve the status pipeline showing the journey of a candidate through different statuses with transitions, completion percentage, and detailed statistics',
+  })
+  @ApiParam({
+    name: 'candidateId',
+    type: 'string',
+    description: 'Candidate ID',
+    example: 'clx123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate status pipeline retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            candidate: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'clx123abc' },
+                name: { type: 'string', example: 'John Doe' },
+                currentStatus: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'number', example: 3 },
+                    statusName: { type: 'string', example: 'Qualified' },
+                  },
+                },
+              },
+            },
+            pipeline: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  step: { type: 'number', example: 1 },
+                  statusId: { type: 'number', example: 1 },
+                  statusName: { type: 'string', example: 'Untouched' },
+                  stage: { type: 'string', example: 'initial' },
+                  completionWeight: { type: 'number', example: 5 },
+                  enteredAt: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-01-15T10:30:00Z',
+                  },
+                  exitedAt: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-01-20T14:45:00Z',
+                    nullable: true,
+                  },
+                  durationInDays: { type: 'number', example: 5 },
+                  changedBy: { type: 'string', example: 'Admin User' },
+                  reason: {
+                    type: 'string',
+                    example: 'Initial status',
+                    nullable: true,
+                  },
+                  notificationsSent: { type: 'number', example: 2 },
+                  isCurrentStatus: { type: 'boolean', example: false },
+                  isTerminalStatus: { type: 'boolean', example: false },
+                },
+              },
+            },
+            completionPercentage: {
+              type: 'number',
+              example: 70,
+              description: 'Overall completion percentage (0-100)',
+            },
+            summary: {
+              type: 'object',
+              properties: {
+                totalSteps: { type: 'number', example: 4 },
+                totalDuration: { type: 'number', example: 45 },
+                averageDurationPerStatus: { type: 'number', example: 11.25 },
+                totalNotifications: { type: 'number', example: 8 },
+              },
+            },
+            statistics: {
+              type: 'object',
+              properties: {
+                progressStage: {
+                  type: 'string',
+                  example: 'Qualified',
+                  description:
+                    'Current progress stage: Not Started, Initial Contact, Engaged, In Progress, Qualified, Completed',
+                },
+                stagesCompleted: { type: 'number', example: 4 },
+                totalStages: { type: 'number', example: 6 },
+                isInTerminalStatus: { type: 'boolean', example: false },
+                statusBreakdown: {
+                  type: 'object',
+                  description:
+                    'Breakdown of time spent in each status with occurrences',
+                },
+                stageBreakdown: {
+                  type: 'object',
+                  description: 'Breakdown of time spent in each stage category',
+                },
+                timelineMetrics: {
+                  type: 'object',
+                  properties: {
+                    firstStatusDate: {
+                      type: 'string',
+                      format: 'date-time',
+                    },
+                    lastStatusDate: { type: 'string', format: 'date-time' },
+                    totalDaysInPipeline: { type: 'number', example: 45 },
+                    averageDaysPerStatus: { type: 'number', example: 11.25 },
+                    currentStatusDuration: { type: 'number', example: 10 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'Candidate status pipeline retrieved successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Candidate not found' })
+  async getCandidateStatusPipeline(
+    @Param('candidateId') candidateId: string,
+  ) {
+    return this.candidateStatusHistoryService.getCandidateStatusPipeline(
+      candidateId,
+    );
+  }
+
   @Get('entry/:historyId')
   @ApiOperation({
     summary: 'Get a single status history entry',

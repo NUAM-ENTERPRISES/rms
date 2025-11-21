@@ -254,6 +254,46 @@ export const candidatesApi = baseApi.injectEndpoints({
         { type: "Candidate", id: candidateId },
       ],
     }),
+    getCandidateStatusPipeline: builder.query<
+      {
+        success: boolean;
+        data: {
+          candidate: {
+            id: string;
+            name: string;
+            currentStatus: {
+              id: number;
+              statusName: string;
+            };
+          };
+          pipeline: Array<{
+            step: number;
+            statusId: number;
+            statusName: string;
+            enteredAt: string;
+            exitedAt: string | null;
+            durationInDays: number;
+            changedBy: string;
+            reason?: string;
+            notificationsSent: number;
+            isCurrentStatus: boolean;
+          }>;
+          summary: {
+            totalSteps: number;
+            totalDuration: number;
+            averageDurationPerStatus: number;
+            totalNotifications: number;
+          };
+        };
+        message: string;
+      },
+      string
+    >({
+      query: (candidateId) => `/candidate-status-history/candidate/${candidateId}/pipeline`,
+      providesTags: (_, __, candidateId) => [
+        { type: "Candidate", id: candidateId },
+      ],
+    }),
   }),
 });
 
@@ -270,4 +310,5 @@ export const {
   useGetEligibleCandidatesQuery,
   useGetCandidateStatusesQuery,
   useGetCandidateStatusHistoryQuery,
+  useGetCandidateStatusPipelineQuery,
 } = candidatesApi;

@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
+import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { CandidateResumeList } from "@/components/molecules";
 import { DocumentUploadSection } from "../components/DocumentUploadSection";
@@ -152,6 +153,14 @@ export default function CandidateDetailPage() {
     isLoading,
     error,
   } = useGetCandidateByIdQuery(id!, {
+    skip: !id,
+  });
+
+  // Fetch candidate status pipeline
+  const {
+    data: pipelineData,
+    isLoading: isPipelineLoading,
+  } = useGetCandidateStatusPipelineQuery(id!, {
     skip: !id,
   });
 
@@ -307,17 +316,28 @@ export default function CandidateDetailPage() {
         <CardHeader className="border-b border-slate-200">
           <CardTitle className="flex items-center gap-2 text-slate-900">
             <Target className="h-5 w-5 text-blue-600" />
-            Recruitment Pipeline
+            Candidate Status Pipeline
           </CardTitle>
           <CardDescription className="text-slate-600">
-            Complete journey from application to placement
+            Track status changes and progression
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          <CandidatePipeline
-            projects={candidate.pipeline?.projects || []}
-            overallProgress={candidate.pipeline?.overallProgress || 0}
-          />
+          {isPipelineLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-sm text-muted-foreground">Loading pipeline...</p>
+            </div>
+          ) : pipelineData?.data ? (
+            <CandidatePipeline
+              pipeline={pipelineData.data.pipeline}
+              summary={pipelineData.data.summary}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No pipeline data available</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -898,10 +918,22 @@ export default function CandidateDetailPage() {
 
         {/* Pipeline Tab */}
         <TabsContent value="pipeline" className="space-y-6">
-          <CandidatePipeline
-            projects={candidate.pipeline?.projects || []}
-            overallProgress={candidate.pipeline?.overallProgress || 0}
-          />
+          {isPipelineLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading pipeline...</p>
+            </div>
+          ) : pipelineData?.data ? (
+            <CandidatePipeline
+              pipeline={pipelineData.data.pipeline}
+              summary={pipelineData.data.summary}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Clock className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+              <p>No pipeline data available</p>
+            </div>
+          )}
         </TabsContent>
 
         {/* Documents Tab */}
