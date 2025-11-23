@@ -29,7 +29,7 @@ export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
-  ) {}
+  ) { }
 
   /**
    * Upload a new document for a candidate
@@ -382,7 +382,7 @@ export class DocumentsService {
     // Create or update verification in a transaction with history
     verification = await this.prisma.$transaction(async (tx) => {
       let updatedVerification;
-      
+
       if (!verification) {
         // Create new verification
         updatedVerification = await tx.candidateProjectDocumentVerification.create({
@@ -735,124 +735,153 @@ export class DocumentsService {
    * Get candidates for document verification
    * Returns candidates who are in document verification stages
    */
-  async getVerificationCandidates(query: any) {
-    const { page = 1, limit = 20, status, search } = query;
-    const skip = (page - 1) * limit;
+async getVerificationCandidates(query: any) {
+  const { page = 1, limit = 20, search, status } = query;
+  const skip = (page - 1) * limit;
 
-    // Filter for candidates with status 4 (verification_in_progress)
-    const where: any = {
-      currentProjectStatusId: 4,
-    };
+  // ------------------------------------------------------
+  // 🔥 1. Resolve sub-status based on ?status=
+  // ------------------------------------------------------
+  let subStatusFilter: string | undefined = undefined;
 
-    // Apply search filter
-    if (search) {
-      where.OR = [
-        {
-          candidate: {
-            firstName: {
-              contains: search,
-              mode: 'insensitive',
-            },
-          },
-        },
-        {
-          candidate: {
-            lastName: {
-              contains: search,
-              mode: 'insensitive',
-            },
-          },
-        },
-        {
-          project: {
-            title: {
-              contains: search,
-              mode: 'insensitive',
-            },
-          },
-        },
-      ];
+  if (status) {
+    const sub = await this.prisma.candidateProjectSubStatus.findFirst({
+      where: { name: status },
+    });
+
+    if (!sub) {
+      throw new BadRequestException(`Invalid status filter: ${status}`);
     }
 
-    const [candidateProjects, total] = await Promise.all([
-      this.prisma.candidateProjects.findMany({
-        where,
-        include: {
-          candidate: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              mobileNumber: true,
-              countryCode: true,
-            },
-          },
-          project: {
-            select: {
-              id: true,
-              title: true,
-              client: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          roleNeeded: {
-            select: {
-              id: true,
-              designation: true,
-            },
-          },
-          recruiter: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          currentProjectStatus: {
-            select: {
-              id: true,
-              statusName: true,
-              label: true,
-            },
-          },
-          documentVerifications: {
-            include: {
-              document: {
-                select: {
-                  id: true,
-                  docType: true,
-                  fileName: true,
-                  status: true,
-                  uploadedBy: true,
-                  createdAt: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip,
-        take: parseInt(limit.toString()),
-      }),
-      this.prisma.candidateProjects.count({ where }),
-    ]);
-
-    return {
-      candidateProjects,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    subStatusFilter = sub.id;
   }
+
+  // ------------------------------------------------------
+  // 🔥 2. Default = pending (verification_in_progress_document)
+  // ------------------------------------------------------
+  const defaultPending = await this.prisma.candidateProjectSubStatus.findFirst({
+    where: { name: 'verification_in_progress_document' },
+  });
+
+  if (!defaultPending) {
+    throw new Error('Missing sub-status: verification_in_progress_document');
+  }
+
+  const where: any = {
+    subStatusId: subStatusFilter ?? defaultPending.id,
+  };
+
+  // 🔍 Search support
+  if (search) {
+    where.OR = [
+      { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
+      { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+      { project: { title: { contains: search, mode: 'insensitive' } } },
+    ];
+  }
+
+  // ------------------------------------------------------
+  // 🔥 3. Fetch list + total
+  // ------------------------------------------------------
+  const [candidateProjects, total] = await Promise.all([
+    this.prisma.candidateProjects.findMany({
+      where,
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobileNumber: true,
+            countryCode: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            client: { select: { name: true } },
+          },
+        },
+        roleNeeded: { select: { id: true, designation: true } },
+        recruiter: { select: { id: true, name: true, email: true } },
+        mainStatus: true,
+        subStatus: true,
+
+        documentVerifications: {
+          include: {
+            document: {
+              select: {
+                id: true,
+                docType: true,
+                fileName: true,
+                status: true,
+                uploadedBy: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: Number(limit),
+    }),
+
+    this.prisma.candidateProjects.count({ where }),
+  ]);
+
+  // ------------------------------------------------------
+  // 🔥 4. ADD THE 3 COUNTS (no change to structure)
+  // ------------------------------------------------------
+
+  const [
+    pendingCount,
+    verifiedCount,
+    rejectedCount,
+  ] = await Promise.all([
+    this.prisma.candidateProjects.count({
+      where: {
+        subStatus: { name: 'verification_in_progress_document' },
+      },
+    }),
+
+    this.prisma.candidateProjects.count({
+      where: {
+        subStatus: { name: 'documents_verified' },
+      },
+    }),
+
+    this.prisma.candidateProjects.count({
+      where: {
+        subStatus: { name: 'rejected_documents' },
+      },
+    }),
+  ]);
+
+  // ------------------------------------------------------
+  // 🔥 5. Return SAME old structure + counts added
+  // ------------------------------------------------------
+  return {
+    candidateProjects,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+
+    // NEW SECTION ADDED (frontend won’t break)
+    counts: {
+      pending: pendingCount,
+      verified: verifiedCount,
+      rejected: rejectedCount,
+    },
+  };
+}
+
+
 
   // ==================== ENHANCED DOCUMENT VERIFICATION ====================
 
@@ -863,17 +892,22 @@ export class DocumentsService {
     const candidateProjects = await this.prisma.candidateProjects.findMany({
       where: {
         candidateId,
-        currentProjectStatus: {
-          statusName: {
+        // 🔥 New status filtering using main/sub status instead of old statusName
+        mainStatus: {
+          name: "documents" // Main stage: DOCUMENTS
+        },
+        subStatus: {
+          name: {
             in: [
-              'verification_in_progress',
-              'documents_verified',
-              'rejected_documents',
-              'pending_documents',
+              "verification_in_progress_document",
+              "documents_verified",
+              "rejected_documents",
+              "pending_documents"
             ],
           },
         },
       },
+
       include: {
         candidate: {
           select: {
@@ -884,6 +918,7 @@ export class DocumentsService {
             highestEducation: true,
           },
         },
+
         project: {
           select: {
             id: true,
@@ -893,6 +928,7 @@ export class DocumentsService {
             countryCode: true,
           },
         },
+
         recruiter: {
           select: {
             id: true,
@@ -900,13 +936,37 @@ export class DocumentsService {
             email: true,
           },
         },
+
         roleNeeded: {
           select: {
             id: true,
             designation: true,
           },
         },
+
+        // 🔥 NEW: include main + sub status (non-breaking)
+        mainStatus: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            color: true,
+            icon: true,
+            order: true,
+          },
+        },
+        subStatus: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            color: true,
+            icon: true,
+            order: true,
+          },
+        },
       },
+
       orderBy: {
         createdAt: 'desc',
       },
@@ -1090,11 +1150,12 @@ export class DocumentsService {
   /**
    * Complete document verification for a candidate-project
    */
+
   async completeVerification(
     candidateProjectMapId: string,
     userId: string,
   ): Promise<any> {
-    // Get candidate project mapping
+    // 1. Find candidate project mapping
     const candidateProject = await this.prisma.candidateProjects.findUnique({
       where: { id: candidateProjectMapId },
       include: { project: true },
@@ -1104,12 +1165,12 @@ export class DocumentsService {
       throw new NotFoundException('Candidate project mapping not found');
     }
 
-    // Get project document requirements
+    // 2. Get required documents
     const requirements = await this.prisma.documentRequirement.findMany({
       where: { projectId: candidateProject.projectId },
     });
 
-    // Get document verifications
+    // 3. Get verification records
     const verifications =
       await this.prisma.candidateProjectDocumentVerification.findMany({
         where: { candidateProjectMapId },
@@ -1124,24 +1185,111 @@ export class DocumentsService {
       throw new BadRequestException('Not all required documents are verified');
     }
 
-    // Get documents_verified status
-    const verifiedStatus = await this.prisma.candidateProjectStatus.findFirst({
-      where: { statusName: 'documents_verified' },
+    // 4. Fetch NEW MAIN STATUS: "documents"
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findFirst({
+      where: { name: 'documents' },
     });
 
-    // Update candidate project status
-    if (verifiedStatus) {
-      const updated = await this.prisma.candidateProjects.update({
-        where: { id: candidateProjectMapId },
-        data: {
-          currentProjectStatusId: verifiedStatus.id,
-          updatedAt: new Date(),
-        },
-      });
-
-      return updated;
+    if (!mainStatus) {
+      throw new NotFoundException('Main status "documents" not found');
     }
 
-    throw new BadRequestException('documents_verified status not found in system');
+    // 5. Fetch NEW SUB STATUS: "documents_verified"
+    const subStatus = await this.prisma.candidateProjectSubStatus.findFirst({
+      where: { name: 'documents_verified' },
+    });
+
+    if (!subStatus) {
+      throw new NotFoundException('Sub status "documents_verified" not found');
+    }
+
+    // 6. Update main + sub statuses
+    const updated = await this.prisma.candidateProjects.update({
+      where: { id: candidateProjectMapId },
+      data: {
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+        updatedAt: new Date(),
+      },
+    });
+
+    // 7. Add history entry
+    await this.prisma.candidateProjectStatusHistory.create({
+      data: {
+        candidateProjectMapId,
+        changedById: userId,
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+        mainStatusSnapshot: mainStatus.label,
+        subStatusSnapshot: subStatus.label,
+        reason: 'Document verification completed',
+      },
+    });
+
+    return updated;
   }
+
+
+  /**
+ * Reject document verification for a candidate-project
+ */
+async rejectVerification(
+  candidateProjectMapId: string,
+  userId: string,
+  reason?: string,
+): Promise<any> {
+  // 1. Ensure candidateProject exists
+  const candidateProject = await this.prisma.candidateProjects.findUnique({
+    where: { id: candidateProjectMapId },
+  });
+
+  if (!candidateProject) {
+    throw new NotFoundException('Candidate project mapping not found');
+  }
+
+  // 2. Fetch MAIN STATUS: documents
+  const mainStatus = await this.prisma.candidateProjectMainStatus.findFirst({
+    where: { name: 'documents' },
+  });
+
+  if (!mainStatus) {
+    throw new NotFoundException('Main status "documents" not found');
+  }
+
+  // 3. Fetch SUB STATUS: rejected_documents
+  const subStatus = await this.prisma.candidateProjectSubStatus.findFirst({
+    where: { name: 'rejected_documents' },
+  });
+
+  if (!subStatus) {
+    throw new NotFoundException('Sub status "rejected_documents" not found');
+  }
+
+  // 4. Update candidate project with new status
+  const updated = await this.prisma.candidateProjects.update({
+    where: { id: candidateProjectMapId },
+    data: {
+      mainStatusId: mainStatus.id,
+      subStatusId: subStatus.id,
+      updatedAt: new Date(),
+    },
+  });
+
+  // 5. Add status history entry
+  await this.prisma.candidateProjectStatusHistory.create({
+    data: {
+      candidateProjectMapId,
+      changedById: userId,
+      mainStatusId: mainStatus.id,
+      subStatusId: subStatus.id,
+      mainStatusSnapshot: mainStatus.label,
+      subStatusSnapshot: subStatus.label,
+      reason: reason || 'Document verification rejected',
+    },
+  });
+
+  return updated;
+}
+
+
 }

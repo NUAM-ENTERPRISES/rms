@@ -65,15 +65,45 @@ Retrieves all candidates added to a specific project with match scores and filte
         "skills": ["Nursing", "Emergency Care", "Patient Care"],
         "expectedSalary": 50000,
         "matchScore": 85,
+        "currentStatusId": 1,
         "currentStatus": {
           "id": 1,
-          "statusName": "active",
-          "label": "Active"
+          "statusName": "active"
         },
-        "projectStatus": {
-          "id": 1,
-          "statusName": "nominated",
-          "label": "Nominated"
+        "project": {
+          "id": "proj-123",
+          "title": "Night Shift Nurses",
+          "description": "Nursing staff for night shift at Hospital",
+          "status": "active",
+          "deadline": null,
+          "priority": "medium",
+          "countryCode": "US",
+          "projectType": "private",
+          "resumeEditable": true,
+          "groomingRequired": "formal",
+          "hideContactInfo": false,
+          "clientId": "client-123",
+          "createdBy": "user-123",
+          "teamId": null,
+          "createdAt": "2025-10-01T12:00:00.000Z",
+          "updatedAt": "2025-10-01T12:00:00.000Z"
+          ,
+          "rolesNeeded": [
+            {
+              "id": "role-123",
+              "projectId": "proj-123",
+              "designation": "Night Shift Nurse",
+              "quantity": 5,
+              "minExperience": 2,
+              "maxExperience": 6,
+              "skills": ["Patient care", "IV administration"],
+              "requiredSkills": ["Nursing"],
+              "candidateStates": [],
+              "candidateReligions": [],
+              "requiredCertifications": [],
+              "salaryRange": { "min": 30000, "max": 50000 }
+            }
+          ]
         },
         "qualifications": [
           {
@@ -218,7 +248,7 @@ GET /api/v1/projects/proj-123/nominated-candidates?sortBy=createdAt&sortOrder=de
 ### Includes in Query
 - Candidate data with qualifications
 - Current candidate status (global status, not project-specific)
-- Project status (project-specific status)
+- Project details (full `project` object for the nominated assignment)
 - Assigned recruiter details
 
 ## Testing

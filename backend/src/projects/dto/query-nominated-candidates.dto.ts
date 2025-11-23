@@ -18,13 +18,40 @@ export class QueryNominatedCandidatesDto {
   search?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by project status ID',
-    example: 1,
+    description:
+      'Filter by MAIN or SUB status ID (cuid). If you pass a sub-status id it will match subStatusId; otherwise statusId will match either mainStatusId or subStatusId. Prefer using `status` (string name) so your clients are resilient to changing seed IDs.',
+    example: 'clx9gfdt12345mainstatus',
   })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  statusId?: number;
+  @IsString()
+  statusId?: string;   // 🔥 FIXED
+
+  @ApiPropertyOptional({
+    description:
+      'Filter by MAIN or SUB status NAME. This is preferred over IDs because seed IDs can change — the service will match this string against both mainStatus.name and subStatus.name.',
+    example: 'nominated_initial',
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Filter by SUB status ID (cuid). Prefer `subStatus` (name) for stable filtering across environments.',
+    example: 'clx9gfdt12345substatus',
+  })
+  @IsOptional()
+  @IsString()
+  subStatusId?: string;   // 🔥 NEW FIELD
+
+  @ApiPropertyOptional({
+    description:
+      'Filter specifically by SUB status NAME. This is preferred over subStatusId (cuid) because seed IDs can change across environments.',
+    example: 'documents_verified',
+  })
+  @IsOptional()
+  @IsString()
+  subStatus?: string;
 
   @ApiPropertyOptional({
     description: 'Page number (1-based)',

@@ -1,18 +1,33 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateProjectStatusDto {
-  @ApiProperty({ description: 'New project status ID' })
-  @IsInt()
+  @ApiProperty({
+    description: 'Sub-status ID (required)',
+    example: 'clx123abc456substatus'
+  })
+  @IsString()
   @IsNotEmpty()
-  projectStatusId: number;
+  subStatusId: string;
 
-  @ApiPropertyOptional({ description: 'Reason for status change' })
+  @ApiPropertyOptional({
+    description: 'Main status ID (optional, system auto-detects from sub-status if not provided)',
+    example: 'clx123abc456mainstatus',
+  })
+  @IsString()
+  @IsOptional()
+  mainStatusId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Reason for changing status',
+  })
   @IsString()
   @IsOptional()
   reason?: string;
 
-  @ApiPropertyOptional({ description: 'Additional notes' })
+  @ApiPropertyOptional({
+    description: 'Additional notes for status change',
+  })
   @IsString()
   @IsOptional()
   notes?: string;

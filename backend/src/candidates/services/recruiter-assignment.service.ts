@@ -14,7 +14,7 @@ export interface RecruiterInfo {
 export class RecruiterAssignmentService {
   private readonly logger = new Logger(RecruiterAssignmentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Get the best recruiter to assign to a candidate based on user role and workload
@@ -455,12 +455,31 @@ export class RecruiterAssignmentService {
                 designation: true,
               },
             },
-            currentProjectStatus: {
+
+            // 🔥 NEW MAIN & SUB STATUS (from candidate_projects)
+            mainStatus: {
               select: {
                 id: true,
-                statusName: true,
+                name: true,
+                label: true,
+                color: true,
+                icon: true,
+                order: true,
               },
             },
+
+            subStatus: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                color: true,
+                icon: true,
+                order: true,
+              },
+            },
+
+
             recruiter: {
               select: {
                 id: true,

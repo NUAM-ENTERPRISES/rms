@@ -816,176 +816,290 @@ export class ProjectsService {
    * Nominated = candidates in candidate_projects table for this project (any status)
    * Recruiters see only their nominated candidates, other roles see all
    */
-  async getNominatedCandidates(
-    projectId: string,
-    userId: string,
-    userRoles: string[],
-    query: {
-      search?: string;
-      statusId?: number;
-      page?: number;
-      limit?: number;
-      sortBy?: string;
-      sortOrder?: 'asc' | 'desc';
+async getNominatedCandidates(
+  projectId: string,
+  userId: string,
+  userRoles: string[],
+  query: {
+    search?: string;
+    /** legacy/id-based status filter (cuid) -- kept for backward compatibility */
+    statusId?: string;
+    /** legacy/id-based sub-status filter (cuid) -- kept for backward compatibility */
+    subStatusId?: string;
+    /** preferred: status name to match against mainStatus.name OR subStatus.name */
+    status?: string;
+    /** preferred: sub-status name to match against subStatus.name */
+    subStatus?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  },
+) {
+  // ---------------------------------------------
+  // 1. Validate project
+  // ---------------------------------------------
+  const project = await this.prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      rolesNeeded: {
+        include: {
+          educationRequirementsList: {
+            include: { qualification: true },
+          },
+        },
+      },
     },
-  ): Promise<{
-    candidates: any[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
-  }> {
-    // Check if project exists
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        rolesNeeded: true,
-      },
-    });
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
-    }
+  });
 
-    const { search, statusId, page = 1, limit = 10, sortBy = 'matchScore', sortOrder = 'desc' } = query;
+  if (!project) {
+    throw new NotFoundException(`Project with ID ${projectId} not found`);
+  }
 
-    // Build where clause for candidates in this project
-    const whereClause: any = {
-      projectId,
-    };
+  const {
+    search,
+    statusId,
+    subStatusId,
+    status,
+    subStatus,
+    page = 1,
+    limit = 10,
+    sortBy = 'matchScore',
+    sortOrder = 'desc',
+  } = query;
 
-    // Optional status filter
-    if (statusId !== undefined) {
-      whereClause.currentProjectStatusId = statusId;
-    }
+  // ---------------------------------------------
+  // 2. Build WHERE clause
+  // ---------------------------------------------
+  const whereClause: any = { projectId };
 
-    // If user is a recruiter (not Manager, CEO, Director), filter by their assignments
-    const isRecruiter =
-      userRoles.includes('Recruiter') &&
-      !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
-      !userRoles.includes('Director');
+  // Sub-status name has highest precedence (preferred), then subStatusId.
+  if (subStatus) {
+    // Match by relation name (Prisma): subStatus.name
+    whereClause.subStatus = { name: subStatus };
+  } else if (subStatusId) {
+    whereClause.subStatusId = subStatusId;
+  }
 
-    if (isRecruiter) {
-      whereClause.recruiterId = userId;
-    }
+  // Status (name) can match either mainStatus.name OR subStatus.name.
+  // If provided, we add an AND condition requiring one of them to match.
+  if (status) {
+    whereClause.AND = whereClause.AND || [];
+    whereClause.AND.push({ OR: [{ mainStatus: { name: status } }, { subStatus: { name: status } }] });
+  } else if (statusId) {
+    // Backwards compatible: statusId matches either mainStatusId OR subStatusId
+    whereClause.AND = whereClause.AND || [];
+    whereClause.AND.push({ OR: [{ mainStatusId: statusId }, { subStatusId: statusId }] });
+  }
 
-    // Add search filter if provided
-    if (search) {
-      whereClause.candidate = {
-        OR: [
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { mobileNumber: { contains: search } },
-        ],
-      };
-    }
+  const isRecruiter =
+    userRoles.includes('Recruiter') &&
+    !userRoles.includes('Manager') &&
+    !userRoles.includes('CEO') &&
+    !userRoles.includes('Director');
 
-    // Get total count for pagination
-    const total = await this.prisma.candidateProjects.count({
-      where: whereClause,
-    });
+  if (isRecruiter) {
+    whereClause.recruiterId = userId;
+  }
 
-    // Get nominated candidates
-    const assignments = await this.prisma.candidateProjects.findMany({
-      where: whereClause,
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
-        candidate: {
-          include: {
-            qualifications: {
-              include: {
-                qualification: true,
-              },
-            },
-            currentStatus: true,
-          },
-        },
-        currentProjectStatus: true,
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    // Calculate match score for each candidate
-    const candidatesWithScore = assignments.map((assignment) => {
-      const matchScore = this.calculateMatchScore(
-        assignment.candidate,
-        project.rolesNeeded,
-      );
-
-      return {
-        id: assignment.id,
-        candidateId: assignment.candidate.id,
-        firstName: assignment.candidate.firstName,
-        lastName: assignment.candidate.lastName,
-        email: assignment.candidate.email,
-        countryCode: assignment.candidate.countryCode,
-        mobileNumber: assignment.candidate.mobileNumber,
-        experience: assignment.candidate.totalExperience ?? assignment.candidate.experience,
-        skills: this.parseJsonField(assignment.candidate.skills),
-        expectedSalary: assignment.candidate.expectedSalary,
-        currentStatus: assignment.candidate.currentStatus,
-        qualifications: assignment.candidate.qualifications.map((q) => ({
-          id: q.qualification.id,
-          name: q.qualification.name,
-          shortName: q.qualification.shortName,
-          level: q.qualification.level,
-          field: q.qualification.field,
-        })),
-        projectStatus: assignment.currentProjectStatus,
-        recruiter: assignment.recruiter,
-        nominatedAt: assignment.createdAt,
-        assignedAt: assignment.assignedAt,
-        notes: assignment.notes,
-        matchScore,
-      };
-    });
-
-    // Sort candidates
-    let sortedCandidates = candidatesWithScore;
-    if (sortBy === 'matchScore') {
-      sortedCandidates.sort((a, b) =>
-        sortOrder === 'desc' ? b.matchScore - a.matchScore : a.matchScore - b.matchScore,
-      );
-    } else if (sortBy === 'experience') {
-      sortedCandidates.sort((a, b) =>
-        sortOrder === 'desc' 
-          ? (b.experience || 0) - (a.experience || 0) 
-          : (a.experience || 0) - (b.experience || 0),
-      );
-    } else if (sortBy === 'firstName') {
-      sortedCandidates.sort((a, b) =>
-        sortOrder === 'desc'
-          ? b.firstName.localeCompare(a.firstName)
-          : a.firstName.localeCompare(b.firstName),
-      );
-    } else if (sortBy === 'createdAt') {
-      sortedCandidates.sort((a, b) => {
-        const dateA = new Date(a.nominatedAt).getTime();
-        const dateB = new Date(b.nominatedAt).getTime();
-        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-      });
-    }
-
-    return {
-      candidates: sortedCandidates,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+  // 🔍 Search filter
+  if (search) {
+    whereClause.candidate = {
+      OR: [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { mobileNumber: { contains: search } },
+      ],
     };
   }
+
+  // ---------------------------------------------
+  // 3. Pagination Count
+  // ---------------------------------------------
+  const total = await this.prisma.candidateProjects.count({
+    where: whereClause,
+  });
+
+  // ---------------------------------------------
+  // 4. Fetch Assignments (WITH MAIN & SUB STATUS)
+  // ---------------------------------------------
+  const assignments = await this.prisma.candidateProjects.findMany({
+    where: whereClause,
+    skip: (page - 1) * limit,
+    take: limit,
+    include: {
+      candidate: {
+        include: {
+          team: true,
+          qualifications: {
+            include: {
+              qualification: true,
+            },
+          },
+          currentStatus: {
+            select: {
+              id: true,
+              statusName: true,
+            },
+          },
+          recruiterAssignments: {
+            where: { isActive: true },
+            include: {
+              recruiter: { select: { id: true, name: true, email: true } },
+            },
+            take: 1,
+            orderBy: { assignedAt: 'desc' },
+          },
+        },
+      },
+
+      // New Status System
+      mainStatus: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
+          color: true,
+          icon: true,
+          order: true,
+        },
+      },
+      subStatus: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
+          color: true,
+          icon: true,
+          order: true,
+        },
+      },
+
+      project: {
+        include: {
+          rolesNeeded: {
+            include: {
+              educationRequirementsList: {
+                include: { qualification: true },
+              },
+            },
+          },
+        },
+      },
+
+      recruiter: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // ---------------------------------------------
+  // 5. Map Output EXACTLY like eligible-candidates
+  // ---------------------------------------------
+  const candidatesWithScore = assignments.map((assignment) => {
+    const c = assignment.candidate;
+
+    const matchScore = this.calculateMatchScore(
+      c,
+      project.rolesNeeded,
+    );
+
+    return {
+      // Candidate Fields (Same as Eligible)
+      id: assignment.id,
+      candidateId: c.id,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email,
+      countryCode: c.countryCode,
+      mobileNumber: c.mobileNumber,
+      experience: c.totalExperience ?? c.experience,
+      skills: this.parseJsonField(c.skills),
+      expectedSalary: c.expectedSalary,
+
+      // Team
+      team: c.team ? { id: c.team.id, name: c.team.name } : null,
+
+      // Current Global Candidate Status
+      currentStatus: c.currentStatus,
+
+      // Recruiter Assignments (same as Eligible)
+      recruiterAssignments: c.recruiterAssignments,
+
+      // New Project-level Status
+      projectMainStatus: assignment.mainStatus,
+      projectSubStatus: assignment.subStatus,
+
+      // Qualifications
+      qualifications: c.qualifications.map((q) => ({
+        id: q.qualification.id,
+        name: q.qualification.name,
+        level: q.qualification.level,
+        field: q.qualification.field,
+      })),
+
+      // Recruiter who nominated
+      recruiter: assignment.recruiter,
+
+      // Metadata
+      nominatedAt: assignment.createdAt,
+      assignedAt: assignment.assignedAt,
+      notes: assignment.notes,
+
+      // Match Score
+      matchScore,
+    };
+  });
+
+  // ---------------------------------------------
+  // 6. Sorting
+  // ---------------------------------------------
+  let sorted = [...candidatesWithScore];
+
+  if (sortBy === 'matchScore') {
+    sorted.sort((a, b) =>
+      sortOrder === 'desc' ? b.matchScore - a.matchScore : a.matchScore - b.matchScore,
+    );
+  } else if (sortBy === 'experience') {
+    sorted.sort((a, b) =>
+      sortOrder === 'desc'
+        ? (b.experience || 0) - (a.experience || 0)
+        : (a.experience || 0) - (b.experience || 0),
+    );
+  } else if (sortBy === 'firstName') {
+    sorted.sort((a, b) =>
+      sortOrder === 'desc'
+        ? b.firstName.localeCompare(a.firstName)
+        : a.firstName.localeCompare(b.firstName),
+    );
+  } else if (sortBy === 'createdAt') {
+    sorted.sort((a, b) => {
+      const dateA = new Date(a.nominatedAt).getTime();
+      const dateB = new Date(b.nominatedAt).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+  }
+
+  // ---------------------------------------------
+  // 7. Final Return
+  // ---------------------------------------------
+  return {
+    candidates: sorted,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
 
   async getProjectCandidates(projectId: string): Promise<any[]> {
     // Check if project exists
@@ -1127,130 +1241,173 @@ export class ProjectsService {
     };
   }
 
-  /**
-   * Get eligible candidates for a project
-   * Returns candidates who match project requirements and are not yet nominated
-   */
-  async getEligibleCandidates(
-    projectId: string,
-    userId: string,
-    userRoles: string[],
-  ): Promise<any[]> {
-    // Get project with requirements
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        rolesNeeded: true,
+ /**
+ * Get eligible candidates for a project
+ * Returns candidates who match project requirements and are not yet nominated
+ */
+async getEligibleCandidates(
+  projectId: string,
+  userId: string,
+  userRoles: string[],
+): Promise<any[]> {
+  // --------------------------------
+  // 1. GET PROJECT WITH REQUIREMENTS
+  // --------------------------------
+  const project = await this.prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      rolesNeeded: true,
+    },
+  });
+
+  if (!project) {
+    throw new NotFoundException(`Project with ID ${projectId} not found`);
+  }
+
+  // --------------------------------
+  // 2. BUILD WHERE CLAUSE
+  // --------------------------------
+  const whereClause: any = {
+    projects: {
+      none: {
+        projectId,
       },
-    });
+    },
+  };
 
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
-    }
+  // Recruiter specific filter
+  const isRecruiter =
+    userRoles.includes('Recruiter') &&
+    !userRoles.includes('Manager') &&
+    !userRoles.includes('CEO') &&
+    !userRoles.includes('Director');
 
-    // Build where clause for candidates
-    const whereClause: any = {
-      projects: {
-        none: {
-          projectId,
-        },
+  if (isRecruiter) {
+    whereClause.recruiterAssignments = {
+      some: {
+        recruiterId: userId,
+        isActive: true,
       },
     };
+  }
 
-    // If user is a recruiter (not Manager, CEO, Director), filter by their assigned candidates
-    const isRecruiter = userRoles.includes('Recruiter') &&
-      !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
-      !userRoles.includes('Director');
-
-    if (isRecruiter) {
-      whereClause.recruiterAssignments = {
-        some: {
-          recruiterId: userId,
-          isActive: true,
+  // --------------------------------
+  // 3. GET CANDIDATES
+  // --------------------------------
+  const candidates = await this.prisma.candidate.findMany({
+    where: whereClause,
+    include: {
+      team: {
+        select: {
+          id: true,
+          name: true,
         },
-      };
-    }
-
-    // Get candidates not already nominated for this project
-    const candidates = await this.prisma.candidate.findMany({
-      where: whereClause,
-      include: {
-        team: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: {
-              select: {
-                id: true,
-                name: true,
-                level: true,
-              },
+      },
+      qualifications: {
+        include: {
+          qualification: {
+            select: {
+              id: true,
+              name: true,
+              level: true,
             },
-          },
-        },
-        currentStatus: {
-          select: {
-            id: true,
-            statusName: true,
-          },
-        },
-        recruiterAssignments: {
-          where: {
-            isActive: true,
-          },
-          include: {
-            recruiter: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          take: 1,
-          orderBy: {
-            assignedAt: 'desc',
           },
         },
       },
+
+      // ----------------------------
+      // 🔥 NEW PROJECT-STATUS INCLUDE
+      // ----------------------------
+      projects: {
+        where: { projectId },
+        select: {
+          id: true,
+          assignedAt: true,
+
+          // MAIN STATUS (big stage)
+          mainStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+              color: true,
+              icon: true,
+              order: true,
+            },
+          },
+
+          // SUB STATUS (progress inside stage)
+          subStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+              color: true,
+              icon: true,
+              order: true,
+            },
+          },
+        },
+        // NO extra include inside projects
+        take: 1,
+        orderBy: { assignedAt: 'desc' },
+      },
+
+      currentStatus: {
+        select: {
+          id: true,
+          statusName: true,
+        },
+      },
+
+      recruiterAssignments: {
+        where: { isActive: true },
+        include: {
+          recruiter: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        take: 1,
+        orderBy: { assignedAt: 'desc' },
+      },
+    },
+  });
+
+  // --------------------------------
+  // 4. FILTER MATCHING CANDIDATES
+  // --------------------------------
+  const matchedCandidates = candidates.filter((candidate) => {
+    return project.rolesNeeded.some((role) => {
+      const candidateExperience =
+        candidate.totalExperience ?? candidate.experience;
+
+      const experienceMatch = this.matchExperience(
+        candidateExperience,
+        role.minExperience,
+        role.maxExperience,
+      );
+
+      const skillsMatch = this.matchSkills(
+        candidate.skills as string[],
+        role.skills as string,
+      );
+
+      return experienceMatch && skillsMatch;
     });
+  });
 
-    // Implement advanced matching logic based on project requirements
-    const matchedCandidates = candidates.filter((candidate) => {
-      // Check if candidate matches any role requirements
-      return project.rolesNeeded.some((role) => {
-        // Use totalExperience (preferred) or fall back to experience field
-        const candidateExperience = candidate.totalExperience ?? candidate.experience;
-
-        // Experience matching
-        const experienceMatch = this.matchExperience(
-          candidateExperience,
-          role.minExperience,
-          role.maxExperience,
-        );
-
-        // Skills matching (if skills are stored as arrays)
-        const skillsMatch = this.matchSkills(
-          candidate.skills as string[],
-          role.skills as string,
-        );
-
-        // Both experience and skills must match
-        return experienceMatch && skillsMatch;
-      });
-    });
-
-    // Add match score to each candidate
-    return matchedCandidates.map((candidate) => ({
-      ...candidate,
-      matchScore: this.calculateMatchScore(candidate, project.rolesNeeded),
-    }));
-  }
+  // --------------------------------
+  // 5. RETURN MATCH SCORE
+  // --------------------------------
+  return matchedCandidates.map((candidate) => ({
+    ...candidate,
+    matchScore: this.calculateMatchScore(candidate, project.rolesNeeded),
+  }));
+}
 
   /**
    * Match candidate experience against role requirements

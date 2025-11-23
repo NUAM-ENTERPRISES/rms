@@ -446,4 +446,37 @@ export class DocumentsController {
       message: 'Document verification completed successfully',
     };
   }
+
+
+  @Post('reject-verification')
+@Permissions('verify:documents')
+@ApiOperation({
+  summary: 'Reject document verification for candidate-project',
+  description: 'Mark candidate-project document verification as rejected.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Document verification rejected successfully',
+})
+@ApiResponse({
+  status: 404,
+  description: 'Candidate project mapping not found',
+})
+async rejectVerification(
+  @Body() body: { candidateProjectMapId: string; reason?: string },
+  @Request() req,
+) {
+  const result = await this.documentsService.rejectVerification(
+    body.candidateProjectMapId,
+    req.user.sub,
+    body.reason,
+  );
+
+  return {
+    success: true,
+    data: result,
+    message: 'Document verification rejected successfully',
+  };
+}
+
 }

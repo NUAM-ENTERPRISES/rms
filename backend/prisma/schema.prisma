@@ -24,37 +24,36 @@ model RefreshToken {
 }
 
 model User {
-  id                        String                @id @default(cuid())
-  email                     String                @unique
-  name                      String
-  password                  String
-  dateOfBirth               DateTime?             
-  otp                       String?
-  otpExpiresAt              DateTime?
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
-  countryCode               String
-  profileImage              String?
-  mobileNumber              String
-  auditLogs                 AuditLog[]
-  notifications             Notification[]
-  createdProjects           Project[]             @relation("ProjectCreator")
-  refreshTokens             RefreshToken[]
-  transferRequestsApproved  TeamTransferRequest[] @relation("TransferApprover")
-  transferRequestsRequested TeamTransferRequest[] @relation("TransferRequester")
-  transferRequestsReceived  TeamTransferRequest[] @relation("TransferUser")
-  userRoles                 UserRole[]
-  userTeams                 UserTeam[]
-  candidateProjectMaps      CandidateProjects[]
-  candidateRecruiterAssignments CandidateRecruiterAssignment[]
-  assignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("AssignedByUser")
+  id                               String                         @id @default(cuid())
+  email                            String                         @unique
+  name                             String
+  password                         String
+  dateOfBirth                      DateTime?
+  otp                              String?
+  otpExpiresAt                     DateTime?
+  createdAt                        DateTime                       @default(now())
+  updatedAt                        DateTime                       @updatedAt
+  countryCode                      String
+  profileImage                     String?
+  mobileNumber                     String
+  auditLogs                        AuditLog[]
+  notifications                    Notification[]
+  createdProjects                  Project[]                      @relation("ProjectCreator")
+  refreshTokens                    RefreshToken[]
+  transferRequestsApproved         TeamTransferRequest[]          @relation("TransferApprover")
+  transferRequestsRequested        TeamTransferRequest[]          @relation("TransferRequester")
+  transferRequestsReceived         TeamTransferRequest[]          @relation("TransferUser")
+  userRoles                        UserRole[]
+  userTeams                        UserTeam[]
+  candidateProjectMaps             CandidateProjects[]
+  candidateRecruiterAssignments    CandidateRecruiterAssignment[]
+  assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
   unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
 
-  statusChanges     CandidateStatusHistory[] @relation("UserToHistory")
-  rnrReminders      RNRReminder[] @relation("RecruiterRNRReminders")
-  projectStatusChanges CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
-  documentVerificationActions DocumentVerificationHistory[] @relation("DocumentVerificationPerformer")
-
+  statusChanges               CandidateStatusHistory[]        @relation("UserToHistory")
+  rnrReminders                RNRReminder[]                   @relation("RecruiterRNRReminders")
+  projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
+  documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
 
   @@unique([countryCode, mobileNumber])
   @@index([email])
@@ -62,8 +61,6 @@ model User {
   @@index([createdAt])
   @@map("users")
 }
-
-
 
 model Role {
   id              String           @id @default(cuid())
@@ -248,17 +245,17 @@ model RoleNeeded {
   shiftType                 String?
   specificExperience        Json?
   employmentType            String                           @default("permanent") // "contract" or "permanent"
-  contractDurationYears     Int?                             // Only applicable if employmentType is "contract"
+  contractDurationYears     Int? // Only applicable if employmentType is "contract"
   genderRequirement         String                           @default("all") // "female", "male", or "all"
   technicalSkills           Json?
   visaType                  String                           @default("contract") // "contract", "permanent", "work_permit", "student"
   requiredSkills            Json                             @default("[]") // Array of required skills
   candidateStates           Json                             @default("[]") // Array of allowed states for candidates
   candidateReligions        Json                             @default("[]") // Array of allowed religions for candidates
-  minHeight                 Float?                           // Minimum height in cm
-  maxHeight                 Float?                           // Maximum height in cm
-  minWeight                 Float?                           // Minimum weight in kg
-  maxWeight                 Float?                           // Maximum weight in kg
+  minHeight                 Float? // Minimum height in cm
+  maxHeight                 Float? // Maximum height in cm
+  minWeight                 Float? // Minimum weight in kg
+  maxWeight                 Float? // Maximum weight in kg
   candidateAllocations      CandidateProjects[]
   educationRequirementsList RoleNeededEducationRequirement[]
   project                   Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -267,46 +264,45 @@ model RoleNeeded {
 }
 
 model Candidate {
-  id               String                   @id @default(cuid())
-  email            String?
-  source           String                   @default("manual")
-  dateOfBirth      DateTime
-  currentStatusId  Int?
-  currentStatus    CandidateStatus?          @relation(fields: [currentStatusId], references: [id])
-  experience       Int?
-  skills           Json                     @default("[]")
-  currentEmployer  String?
-  expectedSalary   Int?
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-  teamId           String?
-  profileImage     String?
-  currentRole      String?
-  currentSalary    Int?
-  firstName        String
-  gpa              Float?
-  graduationYear   Int?
-  highestEducation String?
-  lastName         String
-  totalExperience  Int?
-  university       String?
-  countryCode      String
-  mobileNumber     String
-  projects         CandidateProjects[]
-  qualifications   CandidateQualification[]
-  team             Team?                    @relation(fields: [teamId], references: [id])
-  certifications   Certification[]
-  documents        Document[]
-  talentPool       TalentPool?
-  workExperiences  WorkExperience[]
+  id                   String                         @id @default(cuid())
+  email                String?
+  source               String                         @default("manual")
+  dateOfBirth          DateTime
+  currentStatusId      Int?
+  currentStatus        CandidateStatus?               @relation(fields: [currentStatusId], references: [id])
+  experience           Int?
+  skills               Json                           @default("[]")
+  currentEmployer      String?
+  expectedSalary       Int?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  teamId               String?
+  profileImage         String?
+  currentRole          String?
+  currentSalary        Int?
+  firstName            String
+  gpa                  Float?
+  graduationYear       Int?
+  highestEducation     String?
+  lastName             String
+  totalExperience      Int?
+  university           String?
+  countryCode          String
+  mobileNumber         String
+  projects             CandidateProjects[]
+  qualifications       CandidateQualification[]
+  team                 Team?                          @relation(fields: [teamId], references: [id])
+  certifications       Certification[]
+  documents            Document[]
+  talentPool           TalentPool?
+  workExperiences      WorkExperience[]
   recruiterAssignments CandidateRecruiterAssignment[]
-  statusHistories    CandidateStatusHistory[] @relation("CandidateToHistory")
-  rnrReminders       RNRReminder[]
-
+  statusHistories      CandidateStatusHistory[]       @relation("CandidateToHistory")
+  rnrReminders         RNRReminder[]
 
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
-   @@index([currentStatusId]) 
+  @@index([currentStatusId])
   @@index([countryCode, mobileNumber])
   @@map("candidates")
 }
@@ -354,34 +350,42 @@ model CandidateQualification {
 }
 
 model CandidateProjects {
-  id                     String                                 @id @default(cuid())
-  candidateId            String
-  projectId              String
-  roleNeededId           String?
-  notes                  String?
-  createdAt              DateTime                               @default(now())
-  updatedAt              DateTime                               @updatedAt
-  
+  id           String   @id @default(cuid())
+  candidateId  String
+  projectId    String
+  roleNeededId String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   // Current status tracking
-  currentProjectStatusId Int                                    @default(1) // Default to first status (e.g., "nominated")
-  currentProjectStatus   CandidateProjectStatus                 @relation("CurrentProjectStatus", fields: [currentProjectStatusId], references: [id])
-  
+  currentProjectStatusId Int                    @default(1) // Default to first status (e.g., "nominated")
+  currentProjectStatus   CandidateProjectStatus @relation("CurrentProjectStatus", fields: [currentProjectStatusId], references: [id])
+
+  mainStatusId String?
+  mainStatus   CandidateProjectMainStatus? @relation(fields: [mainStatusId], references: [id])
+
+  subStatusId String?
+  subStatus   CandidateProjectSubStatus? @relation(fields: [subStatusId], references: [id])
+
   // Recruiter assignment
-  assignedAt             DateTime?
-  recruiterId            String?
-  recruiter              User?                                  @relation(fields: [recruiterId], references: [id])
-  
+  assignedAt  DateTime?
+  recruiterId String?
+  recruiter   User?     @relation(fields: [recruiterId], references: [id])
+
   // Relations
-  documentVerifications  CandidateProjectDocumentVerification[]
-  candidate              Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  project                Project                                @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  roleNeeded             RoleNeeded?                            @relation(fields: [roleNeededId], references: [id])
-  interviews             Interview[]
-  processing             Processing?
-  projectStatusHistory   CandidateProjectStatusHistory[]
+  documentVerifications CandidateProjectDocumentVerification[]
+  candidate             Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  project               Project                                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  roleNeeded            RoleNeeded?                            @relation(fields: [roleNeededId], references: [id])
+  interviews            Interview[]
+  processing            Processing?
+  projectStatusHistory  CandidateProjectStatusHistory[]
 
   @@unique([candidateId, projectId, roleNeededId])
   @@index([currentProjectStatusId])
+  @@index([mainStatusId])
+  @@index([subStatusId])
   @@index([recruiterId])
   @@index([projectId, roleNeededId])
   @@map("candidate_projects")
@@ -395,18 +399,23 @@ model Document {
   fileUrl         String
   uploadedBy      String
   verifiedBy      String?
-  status          String                                 @default("pending")
+
+status          String   @default("pending") // "pending", "verified", "rejected"
+
   notes           String?
   createdAt       DateTime                               @default(now())
   updatedAt       DateTime                               @updatedAt
+
   documentNumber  String?
   expiryDate      DateTime?
   fileSize        Int?
   mimeType        String?
+
   rejectedAt      DateTime?
   rejectedBy      String?
   rejectionReason String?
   verifiedAt      DateTime?
+
   verifications   CandidateProjectDocumentVerification[]
   candidate       Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
@@ -417,22 +426,22 @@ model Document {
 }
 
 model Interview {
-  id                    String              @id @default(cuid())
+  id                    String             @id @default(cuid())
   scheduledTime         DateTime
-  duration              Int                 @default(60)
-  type                  String              @default("technical")
+  duration              Int                @default(60)
+  type                  String             @default("technical")
   outcome               String?
   notes                 String?
   interviewer           String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
   candidateProjectMapId String?
   projectId             String?
   interviewerEmail      String?
   meetingLink           String?
-  mode                  String?             @default("video")
-  candidateProjectMap   CandidateProjects?  @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  project               Project?            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mode                  String?            @default("video")
+  candidateProjectMap   CandidateProjects? @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  project               Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([candidateProjectMapId])
   @@index([projectId])
@@ -441,22 +450,22 @@ model Interview {
 }
 
 model Processing {
-  id                    String              @id @default(cuid())
-  qvpStatus             String              @default("not_started")
-  medicalStatus         String              @default("not_started")
-  visaStatus            String              @default("not_started")
-  travelStatus          String              @default("not_started")
+  id                    String            @id @default(cuid())
+  qvpStatus             String            @default("not_started")
+  medicalStatus         String            @default("not_started")
+  visaStatus            String            @default("not_started")
+  travelStatus          String            @default("not_started")
   notes                 String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
   actualJoiningDate     DateTime?
   arrivalDate           DateTime?
-  candidateProjectMapId String              @unique
+  candidateProjectMapId String            @unique
   departureDate         DateTime?
   expectedJoiningDate   DateTime?
   flightBookedDate      DateTime?
   joiningNotes          String?
-  joiningStatus         String              @default("pending")
+  joiningStatus         String            @default("pending")
   medicalClearance      String?
   medicalCompletionDate DateTime?
   medicalNotes          String?
@@ -469,7 +478,7 @@ model Processing {
   visaExpiryDate        DateTime?
   visaNotes             String?
   visaType              String?
-  candidateProjectMap   CandidateProjects   @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
 
   @@index([candidateProjectMapId])
   @@map("processing")
@@ -591,17 +600,25 @@ model DocumentRequirement {
 /// * Tracks verification status of each document for each project
 /// * Multiple projects can reference the same document (e.g., same passport for multiple projects)
 model CandidateProjectDocumentVerification {
-  id                    String                            @id @default(cuid())
+
+  id                    String                        @id @default(cuid())
   candidateProjectMapId String
   documentId            String
-  status                String                            @default("pending")
+
+  // Document status inside this project
+  status                String   @default("pending") 
+  // "pending" | "verified" | "rejected" | "resubmission_requested"
+  
   notes                 String?
   rejectionReason       String?
-  resubmissionRequested Boolean                           @default(false)
-  createdAt             DateTime                          @default(now())
-  updatedAt             DateTime                          @updatedAt
-  candidateProjectMap   CandidateProjects                 @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  document              Document                          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  resubmissionRequested Boolean                       @default(false)
+
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+
+  candidateProjectMap   CandidateProjects             @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  document              Document                      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
   verificationHistory   DocumentVerificationHistory[]
 
   @@unique([candidateProjectMapId, documentId])
@@ -616,16 +633,20 @@ model CandidateProjectDocumentVerification {
 /// * Tracks all verification actions on documents
 /// * Records who performed the action, when, and why
 model DocumentVerificationHistory {
-  id                    String                                 @id @default(cuid())
-  verificationId        String
-  action                String                                 // "verified", "rejected", "resubmission_requested", "pending"
-  performedBy           String
-  performedByName       String?
-  notes                 String?
-  reason                String?
-  performedAt           DateTime                               @default(now())
-  verification          CandidateProjectDocumentVerification   @relation(fields: [verificationId], references: [id], onDelete: Cascade)
-  performer             User                                   @relation("DocumentVerificationPerformer", fields: [performedBy], references: [id])
+  id              String                               @id @default(cuid())
+  verificationId  String
+
+  action          String // "verified", "rejected", "resubmission_requested", "pending"
+
+  performedBy     String
+  performedByName String?
+  
+  notes           String?
+  reason          String?
+  performedAt     DateTime                             @default(now())
+  
+  verification    CandidateProjectDocumentVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  performer       User                                 @relation("DocumentVerificationPerformer", fields: [performedBy], references: [id])
 
   @@index([verificationId])
   @@index([performedBy])
@@ -913,23 +934,23 @@ model State {
 }
 
 model CandidateRecruiterAssignment {
-  id          String    @id @default(cuid())
-  candidateId String
-  recruiterId String
-  assignedBy  String
-  assignedAt  DateTime  @default(now())
-  unassignedAt DateTime?
-  unassignedBy String?
-  reason      String?   // Reason for assignment change
-  isActive    Boolean   @default(true)
-  assignmentType String @default("manual") // manual, cre_auto, cre_manual
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  candidateId    String
+  recruiterId    String
+  assignedBy     String
+  assignedAt     DateTime  @default(now())
+  unassignedAt   DateTime?
+  unassignedBy   String?
+  reason         String? // Reason for assignment change
+  isActive       Boolean   @default(true)
+  assignmentType String    @default("manual") // manual, cre_auto, cre_manual
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  recruiter   User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
-  assignedByUser User   @relation("AssignedByUser", fields: [assignedBy], references: [id])
-  unassignedByUser User? @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
+  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter        User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  assignedByUser   User      @relation("AssignedByUser", fields: [assignedBy], references: [id])
+  unassignedByUser User?     @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
 
   @@index([candidateId])
   @@index([recruiterId])
@@ -938,34 +959,31 @@ model CandidateRecruiterAssignment {
   @@map("candidate_recruiter_assignments")
 }
 
-
 model CandidateStatus {
-  id          Int       @id @default(autoincrement())
-  statusName  String    @unique
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         Int      @id @default(autoincrement())
+  statusName String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  candidates Candidate[] 
+  candidates Candidate[]
 
-    statusHistories  CandidateStatusHistory[] @relation("StatusToHistory")
-
+  statusHistories CandidateStatusHistory[] @relation("StatusToHistory")
 
   @@map("candidate_status")
 }
 
 model CandidateProjectStatus {
-  id          Int       @id @default(autoincrement())
-  statusName  String    @unique
+  id          Int      @id @default(autoincrement())
+  statusName  String   @unique
   label       String
   description String?
-  stage       String    // nomination, documents, approval, interview, selection, processing, final, rejected, withdrawn, on_hold
-  isTerminal  Boolean   @default(false)
-  color       String?   // For UI representation
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  stage       String // nomination, documents, approval, interview, selection, processing, final, rejected, withdrawn, on_hold
+  isTerminal  Boolean  @default(false)
+  color       String? // For UI representation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  currentCandidateProjects CandidateProjects[]             @relation("CurrentProjectStatus")
-  statusHistories          CandidateProjectStatusHistory[] @relation("ProjectStatusToHistory")
+  currentCandidateProjects CandidateProjects[] @relation("CurrentProjectStatus")
 
   @@index([stage])
   @@index([isTerminal])
@@ -977,90 +995,98 @@ model CandidateProjectStatus {
 /// * Tracks status changes for candidates in specific projects
 /// * Records who changed the status, when, and why
 model CandidateProjectStatusHistory {
-  id                      String                    @id @default(cuid())
-  
-  candidateProjectMapId   String
-  candidateProjectMap     CandidateProjects         @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  
-  changedById             String?
-  changedBy               User?                     @relation("UserToProjectStatusHistory", fields: [changedById], references: [id])
-  changedByName           String?                   // Snapshot of who changed it
-  
-  projectStatusId         Int
-  projectStatus           CandidateProjectStatus    @relation("ProjectStatusToHistory", fields: [projectStatusId], references: [id])
-  statusNameSnapshot      String                    // Snapshot of status name at time of change
-  
-  reason                  String?                   @db.Text // Reason for status change
-  notes                   String?                   @db.Text // Additional notes
-  
-  statusChangedAt         DateTime                  @default(now())
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
-  
+  id String @id @default(cuid())
+
+  candidateProjectMapId String
+  candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+
+  // Who changed the status
+  changedById   String?
+  changedBy     User?   @relation("UserToProjectStatusHistory", fields: [changedById], references: [id])
+  changedByName String?
+
+  // NEW STATUS SYSTEM
+  mainStatusId String?
+  mainStatus   CandidateProjectMainStatus? @relation(fields: [mainStatusId], references: [id])
+
+  subStatusId String?
+  subStatus   CandidateProjectSubStatus? @relation(fields: [subStatusId], references: [id])
+
+  // Snapshots for fast UI rendering (avoid extra joins)
+  mainStatusSnapshot String?
+  subStatusSnapshot  String?
+
+  reason String? @db.Text
+  notes  String? @db.Text
+
+  statusChangedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
   @@index([candidateProjectMapId])
   @@index([changedById])
-  @@index([projectStatusId])
+  @@index([mainStatusId])
+  @@index([subStatusId])
   @@index([statusChangedAt])
   @@map("candidate_project_status_history")
 }
 
-
 model CandidateStatusHistory {
-  id                 String           @id @default(cuid())
+  id String @id @default(cuid())
 
-  candidateId        String
-  candidate          Candidate        @relation("CandidateToHistory", fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Candidate @relation("CandidateToHistory", fields: [candidateId], references: [id], onDelete: Cascade)
 
-  changedById        String?
-  changedBy          User?            @relation("UserToHistory", fields: [changedById], references: [id])
+  changedById String?
+  changedBy   User?   @relation("UserToHistory", fields: [changedById], references: [id])
 
-    changedByName      String?          // snapshot of who changed it (optional, for quick read)
+  changedByName String? // snapshot of who changed it (optional, for quick read)
 
   statusId           Int
-  status             CandidateStatus  @relation("StatusToHistory", fields: [statusId], references: [id])
+  status             CandidateStatus @relation("StatusToHistory", fields: [statusId], references: [id])
   statusNameSnapshot String
 
-  reason             String?          @db.Text // Reason for status change (optional, supports long text)
+  reason String? @db.Text // Reason for status change (optional, supports long text)
 
-  notificationCount  Int              @default(0)
-  lastNotifiedAt     DateTime?
-  statusUpdatedAt    DateTime         @default(now())
+  notificationCount Int       @default(0)
+  lastNotifiedAt    DateTime?
+  statusUpdatedAt   DateTime  @default(now())
 
-  @@map("candidate_status_history")
+  rnrReminders RNRReminder[]
+
   @@index([candidateId])
   @@index([changedById])
-  
-  rnrReminders RNRReminder[]
+  @@map("candidate_status_history")
 }
 
 model RNRReminder {
-  id               String   @id @default(cuid())
-  candidateId      String
-  recruiterId      String   // The recruiter who needs to be reminded
-  statusHistoryId  String   // Link to the RNR status change
-  
-  scheduledFor     DateTime // When to send reminder (4 hours from RNR)
-  sentAt           DateTime? // When reminder was actually sent
-  
+  id              String @id @default(cuid())
+  candidateId     String
+  recruiterId     String // The recruiter who needs to be reminded
+  statusHistoryId String // Link to the RNR status change
+
+  scheduledFor DateTime // When to send reminder (4 hours from RNR)
+  sentAt       DateTime? // When reminder was actually sent
+
   reminderCount    Int      @default(0) // Total reminders sent across all days
   dailyCount       Int      @default(0) // How many sent today (resets each day)
   daysCompleted    Int      @default(0) // How many days completed (0-3)
   lastReminderDate DateTime @default(now()) // Track the day
-  
-  status           String   @default("pending") // pending, completed, cancelled
-  
+
+  status String @default("pending") // pending, completed, cancelled
+
   // CRE (Candidate Recruitment Employee) Assignment tracking
-  creAssigned      Boolean  @default(false)  // Was this assigned to CRE after 3 days?
-  creAssignedAt    DateTime? // When was it assigned to CRE
-  creAssignedTo    String?  // Which CRE user ID got assigned
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  recruiter        User      @relation("RecruiterRNRReminders", fields: [recruiterId], references: [id], onDelete: Cascade)
-  statusHistory    CandidateStatusHistory @relation(fields: [statusHistoryId], references: [id], onDelete: Cascade)
-  
+  creAssigned   Boolean   @default(false) // Was this assigned to CRE after 3 days?
+  creAssignedAt DateTime? // When was it assigned to CRE
+  creAssignedTo String? // Which CRE user ID got assigned
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidate     Candidate              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter     User                   @relation("RecruiterRNRReminders", fields: [recruiterId], references: [id], onDelete: Cascade)
+  statusHistory CandidateStatusHistory @relation(fields: [statusHistoryId], references: [id], onDelete: Cascade)
+
   @@index([scheduledFor, status])
   @@index([recruiterId, status])
   @@index([candidateId])
@@ -1071,19 +1097,54 @@ model RNRReminder {
 /// System-wide configuration settings
 /// Stores JSON configuration for various features
 model SystemConfig {
-  id        String   @id @default(cuid())
-  key       String   @unique  // e.g., "RNR_SETTINGS", "EMAIL_CONFIG"
-  value     Json                // Configuration as JSON object
-  description String?            // Optional description of this config
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g., "RNR_SETTINGS", "EMAIL_CONFIG"
+  value       Json // Configuration as JSON object
+  description String? // Optional description of this config
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([key])
   @@index([isActive])
   @@map("system_config")
 }
 
+model CandidateProjectMainStatus {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  label       String
+  color       String?
+  order       Int
+  icon        String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
+  subStatuses       CandidateProjectSubStatus[]
+  candidateProjects CandidateProjects[]
+  statusHistory     CandidateProjectStatusHistory[]
 
+  @@map("candidate_project_main_statuses")
+}
 
+model CandidateProjectSubStatus {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  label       String
+  description String?
+  color       String?
+  order       Int
+  icon        String?
+
+  stageId String
+  stage   CandidateProjectMainStatus @relation(fields: [stageId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidateProjects CandidateProjects[]
+  statusHistory     CandidateProjectStatusHistory[]
+
+  @@map("candidate_project_sub_statuses")
+}

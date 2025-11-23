@@ -471,8 +471,29 @@ export class ProjectsController {
   @ApiQuery({
     name: 'statusId',
     required: false,
-    description: 'Filter by project status ID (1=nominated, 2=pending_documents, 4=verification_in_progress, etc.)',
-    example: 1,
+    description:
+      'Filter by MAIN or SUB status ID (cuid). If you pass a sub-status id it will match subStatusId; otherwise this will match either mainStatusId or subStatusId. (Legacy — prefer `status` name.)',
+    example: 'cmi8q5uzi000aq4j0tbkb145k',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description:
+      'Filter by MAIN or SUB status NAME (preferred). The service will match this string against both mainStatus.name and subStatus.name so clients are resilient if seed IDs change.',
+    example: 'nominated_initial',
+  })
+  @ApiQuery({
+    name: 'subStatus',
+    required: false,
+    description:
+      'Filter specifically by SUB status NAME (preferred) — e.g. documents_verified. For ID matching use subStatusId.',
+    example: 'documents_verified',
+  })
+  @ApiQuery({
+    name: 'subStatusId',
+    required: false,
+    description: 'Filter by SUB status ID (cuid).',
+    example: 'cmi8q5uzn000iq4j0qsrmr317',
   })
   @ApiQuery({
     name: 'page',
@@ -553,6 +574,8 @@ export class ProjectsController {
       },
     },
   })
+
+  
   @ApiResponse({ status: 404, description: 'Not Found - Project not found' })
   @ApiResponse({
     status: 403,

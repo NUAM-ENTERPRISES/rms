@@ -15,7 +15,7 @@ export class VerifyDocumentDto {
     enum: [DOCUMENT_STATUS.VERIFIED, DOCUMENT_STATUS.REJECTED],
     example: DOCUMENT_STATUS.VERIFIED,
   })
-  @IsEnum([DOCUMENT_STATUS.VERIFIED, DOCUMENT_STATUS.REJECTED])
+  @IsEnum(DOCUMENT_STATUS)  
   status: string;
 
   @ApiPropertyOptional({

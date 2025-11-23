@@ -64,20 +64,36 @@ export class CandidateProjectStatusHistoryService {
             interviews: true,
           }
         },
+        currentProjectStatus: {
+          select: {
+            id: true,
+            statusName: true,
+          }
+        },
       },
     });
     if (!mapping) {
       throw new NotFoundException('Candidate-project mapping not found');
     }
-    // Get status history for this mapping, joining projectStatus and changedBy
+    // Get status history for this mapping, joining mainStatus/subStatus and changedBy
     const history = await this.prisma.candidateProjectStatusHistory.findMany({
       where: { candidateProjectMapId: mapping.id },
       orderBy: { statusChangedAt: 'asc' },
       include: {
-        projectStatus: {
+        mainStatus: {
           select: {
             id: true,
-            statusName: true,
+            name: true,
+            label: true,
+            color: true,
+          },
+        },
+        subStatus: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            color: true,
           },
         },
         changedBy: {
@@ -94,6 +110,7 @@ export class CandidateProjectStatusHistoryService {
       data: {
         candidate: mapping.candidate,
         project: mapping.project,
+        currentProjectStatus: mapping.currentProjectStatus,
         history,
         totalEntries: history.length,
       },

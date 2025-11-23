@@ -5,6 +5,7 @@ import * as path from 'path';
 import { seedSystemConfig } from './seeds/system-config.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
 import { seedProjectRoles } from './seeds/project-roles.seed';
+import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
 
 const prisma = new PrismaClient();
 
@@ -813,6 +814,10 @@ async function main() {
 
   // Seed CRE role and permissions
   await seedCRERole();
+
+  // Seed candidate project workflow
+  await seedCandidateProjectWorkflow();
+
 
   // Create permissions
   console.log('📝 Creating permissions...');

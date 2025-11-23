@@ -1,0 +1,105 @@
+// prisma/seeds/candidate-project-workflow.seed.ts
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+export async function seedCandidateProjectWorkflow() {
+  console.log("🌱 Seeding Candidate Project Main & Sub Statuses...");
+
+  // -----------------------------
+  // MAIN STATUS DEFINITIONS
+  // -----------------------------
+  const mainStatuses = [
+    { name: "nominated", label: "Nominated", color: "blue", order: 1 },
+    { name: "documents", label: "Documents", color: "yellow", order: 2 },
+    { name: "interview", label: "Interview", color: "purple", order: 3 },
+    { name: "selection", label: "Selection", color: "green", order: 4 },
+    { name: "processing", label: "Processing", color: "orange", order: 5 },
+    { name: "final", label: "Final", color: "green", order: 6 },
+    { name: "rejected", label: "Rejected", color: "red", order: 7 },
+    { name: "withdrawn", label: "Withdrawn", color: "gray", order: 8 },
+    { name: "on_hold", label: "On Hold", color: "yellow", order: 9 },
+  ];
+
+  // -----------------------------
+  // SUB STATUS DEFINITIONS
+  // -----------------------------
+  const subStatuses = [
+    // NOMINATED
+    { name: "nominated_initial", label: "Nominated", order: 1, main: "nominated" },
+
+    // DOCUMENTS
+    { name: "pending_documents", label: "Pending Documents", order: 1, main: "documents" },
+    { name: "documents_submitted", label: "Documents Submitted", order: 2, main: "documents" },
+    { name: "verification_in_progress_document", label: "Verification In Progress", order: 3, main: "documents" },
+    { name: "documents_verified", label: "Verified Documents", order: 4, main: "documents" },
+    { name: "rejected_documents", label: "Rejected Documents", order: 5, main: "documents" },
+
+    // INTERVIEW
+    { name: "interview_scheduled", label: "Interview Scheduled", order: 1, main: "interview" },
+    { name: "interview_rescheduled", label: "Interview Rescheduled", order: 2, main: "interview" },
+    { name: "interview_completed", label: "Interview Completed", order: 3, main: "interview" },
+    { name: "interview_passed", label: "Interview Passed", order: 4, main: "interview" },
+    { name: "interview_failed", label: "Interview Failed", order: 5, main: "interview" },
+
+    // SELECTION
+    { name: "selected", label: "Selected", order: 1, main: "selection" },
+
+    // PROCESSING
+    { name: "processing_started", label: "Processing Started", order: 1, main: "processing" },
+
+    // FINAL
+    { name: "hired", label: "Hired", order: 1, main: "final" },
+
+    // REJECTED
+    { name: "rejected_interview", label: "Rejected - Interview", order: 1, main: "rejected" },
+    { name: "rejected_selection", label: "Rejected - Selection", order: 2, main: "rejected" },
+
+    // WITHDRAWN
+    { name: "withdrawn", label: "Withdrawn", order: 1, main: "withdrawn" },
+
+    // ON HOLD
+    { name: "on_hold", label: "On Hold", order: 1, main: "on_hold" },
+  ];
+
+  // Insert MAIN statuses using upsert
+  const mainMap: Record<string, string> = {};
+
+  for (const main of mainStatuses) {
+    const created = await prisma.candidateProjectMainStatus.upsert({
+      where: { name: main.name },
+      update: {
+        label: main.label,
+        color: main.color,
+        order: main.order,
+      },
+      create: {
+        name: main.name,
+        label: main.label,
+        color: main.color,
+        order: main.order,
+      },
+    });
+
+    mainMap[main.name] = created.id; // Store ID for linking sub statuses
+  }
+
+  // Insert SUB statuses
+  for (const sub of subStatuses) {
+    await prisma.candidateProjectSubStatus.upsert({
+      where: { name: sub.name },
+      update: {
+        label: sub.label,
+        order: sub.order,
+        stageId: mainMap[sub.main],
+      },
+      create: {
+        name: sub.name,
+        label: sub.label,
+        order: sub.order,
+        stageId: mainMap[sub.main],
+      },
+    });
+  }
+
+  console.log("✅ Main & Sub Statuses Seeded Successfully!");
+}

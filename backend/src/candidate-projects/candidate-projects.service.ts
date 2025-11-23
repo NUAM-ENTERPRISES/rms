@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
 import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
@@ -6,203 +7,180 @@ import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 
 @Injectable()
+
 export class CandidateProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CandidateProjectsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Assign candidate to project with nominated status
    * Creates a new candidate-project assignment with status ID 1 (nominated)
    * and creates an initial status history entry
    * Automatically matches candidate qualifications with project roles if roleNeededId not provided
+   * 
    */
   async assignCandidateToProject(createDto: CreateCandidateProjectDto, userId: string) {
-    let { candidateId, projectId, roleNeededId, recruiterId } = createDto;
 
-    // Verify candidate exists and get their qualifications
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id: candidateId },
-      include: {
-        qualifications: {
-          include: {
-            qualification: {
-              include: {
-                roleRecommendations: {
-                  include: {
-                    role: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+  let { candidateId, projectId, roleNeededId, recruiterId } = createDto;
+
+  // -------------------------------
+  // VERIFY candidate exists
+  // -------------------------------
+  const candidate = await this.prisma.candidate.findUnique({
+    where: { id: candidateId },
+  });
+  if (!candidate) {
+    throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+  }
+
+  // -------------------------------
+  // VERIFY project exists
+  // -------------------------------
+  const project = await this.prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      rolesNeeded: true,
+    },
+  });
+  if (!project) {
+    throw new NotFoundException(`Project with ID ${projectId} not found`);
+  }
+
+  // -------------------------------
+  // AUTO-MATCH ROLE
+  // -------------------------------
+  if (!roleNeededId && project.rolesNeeded.length > 0) {
+    const matchedRoleId = await this.autoMatchCandidateToRole(candidate, project.rolesNeeded);
+    if (matchedRoleId) {
+      roleNeededId = matchedRoleId;
+    }
+  }
+
+  // -------------------------------
+  // VERIFY role if provided
+  // -------------------------------
+  if (roleNeededId) {
+    const roleNeeded = await this.prisma.roleNeeded.findUnique({
+      where: { id: roleNeededId },
     });
-    if (!candidate) {
-      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    if (!roleNeeded) {
+      throw new NotFoundException(`Role with ID ${roleNeededId} not found`);
     }
-
-    // Verify project exists and get available roles
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        rolesNeeded: true,
-      },
-    });
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    if (roleNeeded.projectId !== projectId) {
+      throw new BadRequestException(`Role does not belong to this project`);
     }
+  }
 
-    // Auto-match role if not provided
-    if (!roleNeededId && project.rolesNeeded.length > 0) {
-      const matchedRoleId = await this.autoMatchCandidateToRole(candidate, project.rolesNeeded);
-      
-      if (matchedRoleId) {
-        roleNeededId = matchedRoleId;
-        console.log(`Auto-matched candidate ${candidateId} to role ${roleNeededId}`);
-      }
-    }
+  // -------------------------------
+  // RECRUITER VALIDATION
+  // -------------------------------
+  if (!recruiterId) {
+    recruiterId = userId;
+  }
 
-    // Verify role if provided (roleNeededId is optional but should be validated if present)
-    if (roleNeededId) {
-      const roleNeeded = await this.prisma.roleNeeded.findUnique({
-        where: { id: roleNeededId },
-      });
-      if (!roleNeeded) {
-        throw new NotFoundException(`Role with ID ${roleNeededId} not found`);
-      }
-      
-      // Verify role belongs to the project
-      if (roleNeeded.projectId !== projectId) {
-        throw new BadRequestException(
-          `Role ${roleNeededId} does not belong to project ${projectId}`,
-        );
-      }
-    }
+  const recruiter = await this.prisma.user.findUnique({
+    where: { id: recruiterId },
+  });
+  if (!recruiter) {
+    throw new NotFoundException(`Recruiter not found`);
+  }
 
-    // If no recruiter provided, use the current user
-    if (!recruiterId) {
-      recruiterId = userId;
-    }
+  // -------------------------------
+  // CHECK EXISTING assignment
+  // -------------------------------
+  const exists = await this.prisma.candidateProjects.findFirst({
+    where: {
+      candidateId,
+      projectId,
+      roleNeededId: roleNeededId || null,
+    },
+  });
 
-    // Verify recruiter exists
-    if (recruiterId) {
-      const recruiter = await this.prisma.user.findUnique({
-        where: { id: recruiterId },
-      });
-      if (!recruiter) {
-        throw new NotFoundException(`User with ID ${recruiterId} not found`);
-      }
-    }
+  if (exists) {
+    throw new BadRequestException(
+      `Candidate already assigned to this project${roleNeededId ? ' for this role' : ''}`
+    );
+  }
 
-    // Check if candidate already assigned to project with same role
-    const existingAssignment = await this.prisma.candidateProjects.findFirst({
-      where: {
+  // -------------------------------
+  // GET NOMINATED MAIN & SUB STATUS
+  // -------------------------------
+  const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({
+    where: { name: "nominated" },
+  });
+
+  const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
+    where: { name: "nominated_initial" },
+  });
+
+  if (!mainStatus || !subStatus) {
+    throw new BadRequestException("Nominated status not found. Please seed the DB.");
+  }
+
+  // -------------------------------
+  // GET user name for history
+  // -------------------------------
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+
+  // -------------------------------
+  // CREATE ASSIGNMENT + HISTORY
+  // -------------------------------
+  const assignment = await this.prisma.$transaction(async (tx) => {
+    // CREATE assignment with NEW STATUS SYSTEM
+    const newAssignment = await tx.candidateProjects.create({
+      data: {
         candidateId,
         projectId,
         roleNeededId: roleNeededId || null,
+        recruiterId: recruiterId || null,
+        assignedAt: new Date(),
+        notes: createDto.notes || null,
+
+        // NEW STATUS SYSTEM
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+      },
+      include: {
+        candidate: true,
+        project: true,
+        roleNeeded: true,
+        recruiter: true,
+        mainStatus: true,
+        subStatus: true,
       },
     });
 
-    if (existingAssignment) {
-      throw new BadRequestException(
-        `Candidate is already assigned to this project${roleNeededId ? ' for this role' : ''}`,
-      );
-    }
+    // CREATE NEW STATUS HISTORY RECORD
+    await tx.candidateProjectStatusHistory.create({
+      data: {
+        candidateProjectMapId: newAssignment.id,
+        changedById: userId,
+        changedByName: user?.name || null,
 
-    // Get nominated status (ID 1)
-    const nominatedStatus = await this.prisma.candidateProjectStatus.findUnique({
-      where: { id: 1 },
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+
+        mainStatusSnapshot: mainStatus.label,
+        subStatusSnapshot: subStatus.label,
+
+        reason: "Initial assignment to project",
+        notes: `Assigned to project${roleNeededId ? " for specific role" : ""}`,
+      },
     });
 
-    if (!nominatedStatus) {
-      throw new BadRequestException(
-        'Nominated status (ID 1) not found in system. Please seed the database.',
-      );
-    }
+    return newAssignment;
+  });
 
-    // Get user details for history
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true },
-    });
+  return assignment;
+}
 
-    // Create candidate project assignment and status history in a transaction
-    const candidateProject = await this.prisma.$transaction(async (tx) => {
-      // Create the assignment with nominated status (ID 1)
-      const newAssignment = await tx.candidateProjects.create({
-        data: {
-          candidateId,
-          projectId,
-          roleNeededId: roleNeededId || null,
-          recruiterId: recruiterId || null,
-          currentProjectStatusId: 1, // Always start with nominated status
-          assignedAt: new Date(),
-          notes: createDto.notes || null,
-        },
-        include: {
-          candidate: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              mobileNumber: true,
-              countryCode: true,
-            },
-          },
-          project: {
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              status: true,
-              deadline: true,
-            },
-          },
-          roleNeeded: {
-            select: {
-              id: true,
-              designation: true,
-              minExperience: true,
-              maxExperience: true,
-            },
-          },
-          recruiter: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          currentProjectStatus: {
-            select: {
-              id: true,
-              statusName: true,
-              description: true,
-            },
-          },
-        },
-      });
-
-      // Create initial status history entry
-      await tx.candidateProjectStatusHistory.create({
-        data: {
-          candidateProjectMapId: newAssignment.id,
-          changedById: userId,
-          changedByName: user?.name || null,
-          projectStatusId: 1, // Nominated status
-          statusNameSnapshot: nominatedStatus.statusName,
-          reason: 'Initial assignment to project',
-          notes: `Candidate assigned to project${roleNeededId ? ' for specific role' : ''}`,
-          statusChangedAt: new Date(),
-        },
-      });
-
-      return newAssignment;
-    });
-
-    return candidateProject;
-  }
 
   /**
    * Send candidate for verification
@@ -210,255 +188,161 @@ export class CandidateProjectsService {
    * Sets status to verification_in_progress (ID 4)
    * Automatically matches candidate qualifications with project roles if roleNeededId not provided
    */
-  async sendForVerification(createDto: CreateCandidateProjectDto, userId: string) {
-    let { candidateId, projectId, roleNeededId, recruiterId } = createDto;
+ async sendForVerification(createDto: CreateCandidateProjectDto, userId: string) {
+  let { candidateId, projectId, roleNeededId, recruiterId } = createDto;
 
-    // Verify candidate exists and get their qualifications
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id: candidateId },
-      include: {
-        qualifications: {
-          include: {
-            qualification: {
-              include: {
-                roleRecommendations: {
-                  include: {
-                    role: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-    if (!candidate) {
-      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
-    }
+  // -------------------------------
+  // VERIFY candidate
+  // -------------------------------
+  const candidate = await this.prisma.candidate.findUnique({
+    where: { id: candidateId },
+  });
+  if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
 
-    // Verify project exists and get available roles
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        rolesNeeded: true,
-      },
-    });
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
-    }
+  // -------------------------------
+  // VERIFY project
+  // -------------------------------
+  const project = await this.prisma.project.findUnique({
+    where: { id: projectId },
+    include: { rolesNeeded: true },
+  });
+  if (!project) throw new NotFoundException(`Project ${projectId} not found`);
 
-    // Auto-match role if not provided
-    if (!roleNeededId && project.rolesNeeded.length > 0) {
-      const matchedRoleId = await this.autoMatchCandidateToRole(candidate, project.rolesNeeded);
-      if (matchedRoleId) {
-        roleNeededId = matchedRoleId;
-        console.log(
-          `Auto-matched candidate ${candidateId} to role ${roleNeededId} for verification`,
-        );
-      }
-    }
-
-    // Verify role exists in project if provided
-    if (roleNeededId) {
-      const roleExists = project.rolesNeeded.some((r) => r.id === roleNeededId);
-      if (!roleExists) {
-        throw new NotFoundException(
-          `Role ${roleNeededId} not found in project ${projectId}`,
-        );
-      }
-    }
-
-    // If no recruiter provided, use the current user
-    if (!recruiterId) {
-      recruiterId = userId;
-    }
-
-    // Verify recruiter exists
-    if (recruiterId) {
-      const recruiter = await this.prisma.user.findUnique({
-        where: { id: recruiterId },
-      });
-      if (!recruiter) {
-        throw new NotFoundException(`User with ID ${recruiterId} not found`);
-      }
-    }
-
-    // Get verification_in_progress status (ID 4)
-    const verificationStatus = await this.prisma.candidateProjectStatus.findUnique({
-      where: { id: 4 },
-    });
-
-    if (!verificationStatus) {
-      throw new BadRequestException(
-        'Verification in progress status (ID 4) not found in system. Please seed the database.',
-      );
-    }
-
-    // Get user details for history
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true },
-    });
-
-    // Check if candidate already assigned to project with same role
-    const existingAssignment = await this.prisma.candidateProjects.findFirst({
-      where: {
-        candidateId,
-        projectId,
-        roleNeededId: roleNeededId || null,
-      },
-    });
-
-    // Create or update candidate project assignment and status history in a transaction
-    const candidateProject = await this.prisma.$transaction(async (tx) => {
-      let assignment;
-
-      if (existingAssignment) {
-        // Update existing assignment to verification status
-        assignment = await tx.candidateProjects.update({
-          where: { id: existingAssignment.id },
-          data: {
-            currentProjectStatusId: 4, // verification_in_progress
-            notes: createDto.notes || existingAssignment.notes,
-          },
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                mobileNumber: true,
-                countryCode: true,
-              },
-            },
-            project: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                status: true,
-                deadline: true,
-              },
-            },
-            roleNeeded: {
-              select: {
-                id: true,
-                designation: true,
-                minExperience: true,
-                maxExperience: true,
-              },
-            },
-            recruiter: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            currentProjectStatus: {
-              select: {
-                id: true,
-                statusName: true,
-                description: true,
-              },
-            },
-          },
-        });
-
-        // Create status history entry for the update
-        await tx.candidateProjectStatusHistory.create({
-          data: {
-            candidateProjectMapId: assignment.id,
-            changedById: userId,
-            changedByName: user?.name || null,
-            projectStatusId: 4,
-            statusNameSnapshot: verificationStatus.statusName,
-            reason: 'Sent for document verification',
-            notes: createDto.notes || 'Documents sent for verification',
-            statusChangedAt: new Date(),
-          },
-        });
-      } else {
-        // Create new assignment with verification status
-        assignment = await tx.candidateProjects.create({
-          data: {
-            candidateId,
-            projectId,
-            roleNeededId: roleNeededId || null,
-            recruiterId: recruiterId || null,
-            currentProjectStatusId: 4, // verification_in_progress
-            assignedAt: new Date(),
-            notes: createDto.notes || null,
-          },
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                mobileNumber: true,
-                countryCode: true,
-              },
-            },
-            project: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                status: true,
-                deadline: true,
-              },
-            },
-            roleNeeded: {
-              select: {
-                id: true,
-                designation: true,
-                minExperience: true,
-                maxExperience: true,
-              },
-            },
-            recruiter: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            currentProjectStatus: {
-              select: {
-                id: true,
-                statusName: true,
-                description: true,
-              },
-            },
-          },
-        });
-
-        // Create initial status history entry
-        await tx.candidateProjectStatusHistory.create({
-          data: {
-            candidateProjectMapId: assignment.id,
-            changedById: userId,
-            changedByName: user?.name || null,
-            projectStatusId: 4,
-            statusNameSnapshot: verificationStatus.statusName,
-            reason: 'Sent for document verification',
-            notes: createDto.notes || 'Candidate sent directly for verification',
-            statusChangedAt: new Date(),
-          },
-        });
-      }
-
-      return assignment;
-    });
-
-    // Send notifications to all Documentation Executive users
-    await this.notifyDocumentationExecutives(candidateProject, candidate);
-
-    return candidateProject;
+  // -------------------------------
+  // AUTO MATCH ROLE
+  // -------------------------------
+  if (!roleNeededId && project.rolesNeeded.length > 0) {
+    const matchedRoleId = await this.autoMatchCandidateToRole(candidate, project.rolesNeeded);
+    if (matchedRoleId) roleNeededId = matchedRoleId;
   }
+
+  // -------------------------------
+  // VALIDATE ROLE (IF PROVIDED)
+  // -------------------------------
+  if (roleNeededId) {
+    const role = project.rolesNeeded.find((r) => r.id === roleNeededId);
+    if (!role) throw new NotFoundException(`Role ${roleNeededId} not found in this project`);
+  }
+
+  // -------------------------------
+  // RECRUITER HANDLING
+  // -------------------------------
+  if (!recruiterId) recruiterId = userId;
+
+  const recruiter = await this.prisma.user.findUnique({
+    where: { id: recruiterId },
+  });
+  if (!recruiter) throw new NotFoundException(`Recruiter ${recruiterId} not found`);
+
+  // -------------------------------
+  // NEW STATUS SYSTEM
+  // -------------------------------
+  const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({
+    where: { name: "documents" },
+  });
+
+  const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
+    where: { name: "verification_in_progress_document" },
+  });
+
+  if (!mainStatus || !subStatus) {
+    throw new BadRequestException("Document verification statuses missing. Please seed the DB.");
+  }
+
+  // -------------------------------
+  // GET USER (FOR HISTORY SNAPSHOT)
+  // -------------------------------
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+
+  // -------------------------------
+  // CHECK EXISTING ASSIGNMENT
+  // -------------------------------
+  const existingAssignment = await this.prisma.candidateProjects.findFirst({
+    where: {
+      candidateId,
+      projectId,
+      roleNeededId: roleNeededId || null,
+    },
+  });
+
+  // -------------------------------
+  // CREATE OR UPDATE ASSIGNMENT
+  // -------------------------------
+  const candidateProject = await this.prisma.$transaction(async (tx) => {
+    let assignment;
+
+    if (existingAssignment) {
+      // UPDATE
+      assignment = await tx.candidateProjects.update({
+        where: { id: existingAssignment.id },
+        data: {
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          notes: createDto.notes ?? existingAssignment.notes,
+        },
+        include: {
+          candidate: true,
+          project: true,
+          roleNeeded: true,
+          recruiter: true,
+          mainStatus: true,
+          subStatus: true,
+        },
+      });
+    } else {
+      // CREATE
+      assignment = await tx.candidateProjects.create({
+        data: {
+          candidateId,
+          projectId,
+          roleNeededId: roleNeededId || null,
+          recruiterId: recruiterId || null,
+
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          assignedAt: new Date(),
+          notes: createDto.notes || null,
+        },
+        include: {
+          candidate: true,
+          project: true,
+          roleNeeded: true,
+          recruiter: true,
+          mainStatus: true,
+          subStatus: true,
+        },
+      });
+    }
+
+    // CREATE NEW HISTORY ENTRY
+    await tx.candidateProjectStatusHistory.create({
+      data: {
+        candidateProjectMapId: assignment.id,
+        changedById: userId,
+        changedByName: user?.name || null,
+
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+
+        mainStatusSnapshot: mainStatus.label,
+        subStatusSnapshot: subStatus.label,
+
+        reason: "Sent for document verification",
+        notes: createDto.notes || "Verification started",
+      },
+    });
+
+    return assignment;
+  });
+
+  // Notify documentation team (your existing function)
+  await this.notifyDocumentationExecutives(candidateProject, candidate);
+
+  return candidateProject;
+}
 
   /**
    * Send notifications to all Documentation Executive users
@@ -482,30 +366,37 @@ export class CandidateProjectsService {
         return;
       }
 
-      // Create notifications for each Documentation Executive user
-      const notifications = docRole.userRoles.map((userRole) => ({
-        userId: userRole.user.id,
-        type: 'DOCUMENT_VERIFICATION',
-        title: 'New Document Verification Request',
-        message: `${candidate.firstName} ${candidate.lastName} has been sent for document verification in project "${candidateProject.project.title}"`,
-        idemKey: `doc-verify-${candidateProject.id}-${userRole.user.id}-${Date.now()}`,
-        link: `/candidates/${candidate.id}/documents/${candidateProject.id}`,
-        meta: {
-          candidateProjectId: candidateProject.id,
-          candidateId: candidate.id,
-          projectId: candidateProject.projectId,
-          candidateName: `${candidate.firstName} ${candidate.lastName}`,
-          projectTitle: candidateProject.project.title,
-        },
-        status: 'unread',
-      }));
+      // Use NotificationsService to create notifications so realtime socket events are emitted
+      const createPromises = docRole.userRoles.map(async (userRole) => {
+        const dto = {
+          userId: userRole.user.id,
+          type: 'DOCUMENT_VERIFICATION',
+          title: 'New Document Verification Request',
+          message: `${candidate.firstName} ${candidate.lastName} has been sent for document verification in project "${candidateProject.project.title}"`,
+          idemKey: `doc-verify-${candidateProject.id}-${userRole.user.id}-${Date.now()}`,
+          link: `/candidates/${candidate.id}/documents/${candidateProject.id}`,
+          meta: {
+            candidateProjectId: candidateProject.id,
+            candidateId: candidate.id,
+            projectId: candidateProject.projectId,
+            candidateName: `${candidate.firstName} ${candidate.lastName}`,
+            projectTitle: candidateProject.project.title,
+          },
+        };
 
-      // Create all notifications
-      await this.prisma.notification.createMany({
-        data: notifications,
+        try {
+          await this.notificationsService.createNotification(dto as any);
+        } catch (err) {
+          // Log and continue — the notification shouldn't block verification
+          this.logger.error(
+            `Failed to create/emit notification for user ${userRole.user.id}: ${err?.message || err}`,
+          );
+        }
       });
 
-      console.log(`✅ Sent notifications to ${notifications.length} Documentation Executive users`);
+      await Promise.all(createPromises);
+
+      this.logger.log(`✅ Sent notifications to ${docRole.userRoles.length} Documentation Executive users (issued via NotificationsService)`);
     } catch (error) {
       console.error('Error sending notifications to Documentation Executives:', error);
       // Don't throw error - notifications are not critical
@@ -618,71 +509,79 @@ export class CandidateProjectsService {
     };
   }
 
-  async findOne(id: string) {
-    const candidateProject = await this.prisma.candidateProjects.findUnique({
-      where: { id },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            mobileNumber: true,
-            dateOfBirth: true,
-            countryCode: true,
-          },
-        },
-        project: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            status: true,
-            deadline: true,
-          },
-        },
-        roleNeeded: {
-          select: {
-            id: true,
-            designation: true,
-            minExperience: true,
-            maxExperience: true,
-            additionalRequirements: true,
-          },
-        },
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        currentProjectStatus: true,
-        projectStatusHistory: {
-          include: {
-            changedBy: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            projectStatus: true,
-          },
-          orderBy: {
-            statusChangedAt: 'desc',
-          },
+ async findOne(id: string) {
+  const candidateProject = await this.prisma.candidateProjects.findUnique({
+    where: { id },
+    include: {
+      candidate: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          mobileNumber: true,
+          dateOfBirth: true,
+          countryCode: true,
         },
       },
-    });
+      project: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          status: true,
+          deadline: true,
+        },
+      },
+      roleNeeded: {
+        select: {
+          id: true,
+          designation: true,
+          minExperience: true,
+          maxExperience: true,
+          additionalRequirements: true,
+        },
+      },
+      recruiter: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
 
-    if (!candidateProject) {
-      throw new NotFoundException(`Candidate project assignment with ID ${id} not found`);
-    }
+      // NEW STATUS SYSTEM
+      mainStatus: true,
+      subStatus: true,
 
-    return candidateProject;
+      // NEW STATUS HISTORY
+      projectStatusHistory: {
+        include: {
+          changedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+
+          // include main + sub status objects
+          mainStatus: true,
+          subStatus: true,
+        },
+        orderBy: {
+          statusChangedAt: "desc",
+        },
+      },
+    },
+  });
+
+  if (!candidateProject) {
+    throw new NotFoundException(`Candidate project assignment with ID ${id} not found`);
   }
+
+  return candidateProject;
+}
 
   async update(id: string, updateDto: UpdateCandidateProjectDto, userId: string) {
     const candidateProject = await this.prisma.candidateProjects.findUnique({
@@ -761,104 +660,109 @@ export class CandidateProjectsService {
     return updated;
   }
 
+ 
+
   async updateStatus(
-    id: string,
-    updateStatusDto: UpdateProjectStatusDto,
-    userId: string,
-  ) {
-    const { projectStatusId, reason, notes } = updateStatusDto;
+  id: string,
+  updateStatusDto: UpdateProjectStatusDto,
+  userId: string,
+) {
+  const { mainStatusId, subStatusId, reason, notes } = updateStatusDto;
 
-    const candidateProject = await this.prisma.candidateProjects.findUnique({
-      where: { id },
-      include: {
-        currentProjectStatus: true,
-      },
-    });
+  // -------------------------------------
+  // FIND candidate project
+  // -------------------------------------
+  const candidateProject = await this.prisma.candidateProjects.findUnique({
+    where: { id },
+  });
 
-    if (!candidateProject) {
-      throw new NotFoundException(`Candidate project assignment with ID ${id} not found`);
-    }
-
-    // Verify new status exists
-    const newStatus = await this.prisma.candidateProjectStatus.findUnique({
-      where: { id: projectStatusId },
-    });
-
-    if (!newStatus) {
-      throw new NotFoundException(`Project status with ID ${projectStatusId} not found`);
-    }
-
-    // Get user details for snapshot
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        name: true,
-      },
-    });
-
-    // Update status and create history entry in a transaction
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Update current status
-      const updated = await tx.candidateProjects.update({
-        where: { id },
-        data: {
-          currentProjectStatusId: projectStatusId,
-        },
-        include: {
-          candidate: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              mobileNumber: true,
-            },
-          },
-          project: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-            },
-          },
-          roleNeeded: {
-            select: {
-              id: true,
-              designation: true,
-              minExperience: true,
-              maxExperience: true,
-            },
-          },
-          recruiter: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          currentProjectStatus: true,
-        },
-      });
-
-      // Create history entry
-      await tx.candidateProjectStatusHistory.create({
-        data: {
-          candidateProjectMapId: id,
-          changedById: userId,
-          changedByName: user ? user.name : null,
-          projectStatusId,
-          statusNameSnapshot: newStatus.statusName,
-          reason,
-          notes,
-          statusChangedAt: new Date(),
-        },
-      });
-
-      return updated;
-    });
-
-    return result;
+  if (!candidateProject) {
+    throw new NotFoundException(`Candidate project assignment with ID ${id} not found`);
   }
+
+  // -------------------------------------
+  // GET sub-status (required)
+  // -------------------------------------
+  const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
+    where: { id: subStatusId },
+    include: {
+      stage: true, // includes main status reference
+    },
+  });
+
+  if (!subStatus) {
+    throw new NotFoundException(`Sub-status ${subStatusId} not found`);
+  }
+
+  // -------------------------------------
+  // IF mainStatusId not given → use subStatus.stage
+  // -------------------------------------
+  const mainStatus =
+    mainStatusId
+      ? await this.prisma.candidateProjectMainStatus.findUnique({
+          where: { id: mainStatusId },
+        })
+      : subStatus.stage; // auto detected
+
+  if (!mainStatus) {
+    throw new NotFoundException(`Main status not found`);
+  }
+
+  // -------------------------------------
+  // GET USER NAME FOR HISTORY
+  // -------------------------------------
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+
+  // -------------------------------------
+  // UPDATE & ADD HISTORY IN TRANSACTION
+  // -------------------------------------
+  const result = await this.prisma.$transaction(async (tx) => {
+    // UPDATE current status (NEW SYSTEM)
+    const updated = await tx.candidateProjects.update({
+      where: { id },
+      data: {
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+      },
+      include: {
+        candidate: true,
+        project: true,
+        roleNeeded: true,
+        recruiter: true,
+        mainStatus: true,
+        subStatus: true,
+      },
+    });
+
+    // Create history entry (NEW SYSTEM)
+    await tx.candidateProjectStatusHistory.create({
+      data: {
+        candidateProjectMapId: id,
+        changedById: userId,
+        changedByName: user?.name || null,
+
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+
+        mainStatusSnapshot: mainStatus.label,
+        subStatusSnapshot: subStatus.label,
+
+        reason: reason || null,
+        notes: notes || null,
+      },
+    });
+
+    return updated;
+  });
+
+  return result;
+}
+
+
+
 
   async remove(id: string) {
     const candidateProject = await this.prisma.candidateProjects.findUnique({
@@ -876,36 +780,62 @@ export class CandidateProjectsService {
     return { message: 'Candidate project assignment deleted successfully' };
   }
 
-  async getStatusHistory(id: string) {
-    const candidateProject = await this.prisma.candidateProjects.findUnique({
-      where: { id },
-    });
+ async getStatusHistory(id: string) {
+  // -------------------------------------
+  // VALIDATE candidate–project assignment
+  // -------------------------------------
+  const candidateProject = await this.prisma.candidateProjects.findUnique({
+    where: { id },
+  });
 
-    if (!candidateProject) {
-      throw new NotFoundException(`Candidate project assignment with ID ${id} not found`);
-    }
-
-    const history = await this.prisma.candidateProjectStatusHistory.findMany({
-      where: {
-        candidateProjectMapId: id,
-      },
-      include: {
-        changedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        projectStatus: true,
-      },
-      orderBy: {
-        statusChangedAt: 'desc',
-      },
-    });
-
-    return history;
+  if (!candidateProject) {
+    throw new NotFoundException(`Candidate project assignment with ID ${id} not found`);
   }
+
+  // -------------------------------------
+  // FETCH STATUS HISTORY (NEW SYSTEM)
+  // -------------------------------------
+  const history = await this.prisma.candidateProjectStatusHistory.findMany({
+    where: {
+      candidateProjectMapId: id,
+    },
+    include: {
+      changedBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+
+      // NEW RELATIONS
+      mainStatus: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
+          color: true,
+          order: true,
+        },
+      },
+      subStatus: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
+          color: true,
+          order: true,
+        },
+      },
+    },
+    orderBy: {
+      statusChangedAt: "desc",
+    },
+  });
+
+  return history;
+}
+
 
   async getProjectCandidates(projectId: string, queryDto: QueryCandidateProjectsDto) {
     const { page = 1, limit = 10, statusId, search } = queryDto;

@@ -75,7 +75,7 @@ export class CandidatesService {
 
     for (let i = 1; i < dateRanges.length; i++) {
       const nextRange = dateRanges[i];
-      
+
       // Check if ranges overlap or are adjacent
       if (nextRange.startDate <= currentRange.endDate) {
         // Merge: extend current range to max end date
@@ -92,7 +92,7 @@ export class CandidatesService {
 
     // Calculate total years from merged ranges
     const totalMonths = mergedRanges.reduce((total, range) => {
-      const months = 
+      const months =
         (range.endDate.getFullYear() - range.startDate.getFullYear()) * 12 +
         (range.endDate.getMonth() - range.startDate.getMonth());
       return total + months;
@@ -219,8 +219,8 @@ export class CandidatesService {
               let parsedSkills = [];
               if (exp.skills) {
                 try {
-                  parsedSkills = typeof exp.skills === 'string' 
-                    ? JSON.parse(exp.skills) 
+                  parsedSkills = typeof exp.skills === 'string'
+                    ? JSON.parse(exp.skills)
                     : exp.skills;
                 } catch (error) {
                   this.logger.warn(`Failed to parse skills for work experience: ${error.message}`);
@@ -478,12 +478,32 @@ export class CandidatesService {
                 designation: true,
               },
             },
-            currentProjectStatus: {
+
+            // 🔥 NEW → MAIN STATUS (Nominated / Documents / Interview / Processing)
+            mainStatus: {
               select: {
                 id: true,
-                statusName: true,
+                name: true,
+                label: true,
+                color: true,
+                icon: true,
+                order: true,
               },
             },
+
+            // 🔥 NEW → SUB STATUS (pending_documents / verification / etc.)
+            subStatus: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                color: true,
+                icon: true,
+                order: true,
+              },
+            },
+
+
             recruiter: {
               select: {
                 id: true,
@@ -1821,7 +1841,7 @@ export class CandidatesService {
       this.logger.log(
         `Candidate ${candidateId} status changed to RNR. Creating reminder...`,
       );
-      
+
       try {
         await this.rnrRemindersService.createRNRReminder(
           candidateId,
@@ -1844,7 +1864,7 @@ export class CandidatesService {
       this.logger.log(
         `Candidate ${candidateId} status changed from RNR. Cancelling reminders...`,
       );
-      
+
       try {
         await this.rnrRemindersService.cancelRNRReminders(candidateId);
         this.logger.log(
