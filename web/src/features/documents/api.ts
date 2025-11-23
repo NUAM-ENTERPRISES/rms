@@ -194,7 +194,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: documentData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "VerificationCandidates"],
     }),
 
     updateDocument: builder.mutation<
@@ -219,7 +219,7 @@ export const documentsApi = baseApi.injectEndpoints({
         url: `/documents/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "VerificationCandidates"],
     }),
 
     verifyDocument: builder.mutation<
@@ -231,7 +231,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: verifyData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification"],
     }),
 
     requestResubmission: builder.mutation<
@@ -332,7 +332,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: { projectId },
       }),
-      invalidatesTags: ["DocumentVerification"],
+      invalidatesTags: ["DocumentVerification", "VerificationCandidates"],
     }),
 
     completeVerification: builder.mutation<
@@ -344,7 +344,19 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: { candidateProjectMapId },
       }),
-      invalidatesTags: ["DocumentVerification"],
+      invalidatesTags: ["DocumentVerification", "VerificationCandidates"],
+    }),
+
+    rejectVerification: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { candidateProjectMapId: string; reason?: string }
+    >({
+      query: ({ candidateProjectMapId, reason }) => ({
+        url: `/documents/reject-verification`,
+        method: "POST",
+        body: { candidateProjectMapId, reason },
+      }),
+      invalidatesTags: ["DocumentVerification", "VerificationCandidates"],
     }),
   }),
 });
@@ -366,4 +378,5 @@ export const {
   useGetMatchmakingProcessQuery,
   useReuseDocumentMutation,
   useCompleteVerificationMutation,
+  useRejectVerificationMutation,
 } = documentsApi;

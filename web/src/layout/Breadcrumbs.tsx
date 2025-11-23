@@ -43,11 +43,27 @@ export default function Breadcrumbs() {
           isCurrent: i === pathSegments.length - 1,
         });
       } else {
-        // Fallback for dynamic routes or unknown paths
-        const label = segment
-          .split("-")
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ");
+        // Fallback for dynamic routes or unknown paths.
+        // If the segment looks like an ID (long alphanumeric string), show
+        // a context-aware placeholder instead of the raw id to avoid
+        // revealing internal IDs in the breadcrumb UI.
+        const looksLikeId = /^(?:[A-Za-z0-9_-]{6,}|\d{3,})$/.test(segment);
+
+        let label = "";
+
+        if (looksLikeId) {
+          // Use the previous segment as context. If the previous segment is
+          // plural (e.g. "candidates"), show the singular form "Candidate".
+          const prev = pathSegments[i - 1] || "details";
+          label = prev.replace(/-+/g, " ").replace(/s$/i, "");
+          label = label.charAt(0).toUpperCase() + label.slice(1);
+        } else {
+          // Normal text segment (not an id-looking string) — prettify it.
+          label = segment
+            .split("-")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+        }
 
         breadcrumbs.push({
           label,

@@ -382,6 +382,8 @@ export const projectsApi = baseApi.injectEndpoints({
         { type: "Project", id: projectId },
         "ProjectCandidates",
         "DocumentVerification",
+        // Candidate queries should also refresh so lists that show candidate status update live
+        "Candidate",
       ],
     }),
 
@@ -396,17 +398,35 @@ export const projectsApi = baseApi.injectEndpoints({
           totalPages: number;
         };
       }>,
-      { 
-        projectId: string; 
-        search?: string; 
-        statusId?: number;
-        page?: number; 
+      {
+        projectId: string;
+        search?: string;
+        // The backend now accepts readable names for main status and sub-status
+        // prefer `status` / `subStatus` (string names) but keep backwards compatible
+        // `statusId` / `subStatusId` when only IDs are available.
+        status?: string;
+        subStatus?: string;
+        statusId?: string;
+        subStatusId?: string;
+        page?: number;
         limit?: number;
       }
     >({
-      query: ({ projectId, search, statusId, page = 1, limit = 20 }) => ({
+      query: ({ projectId, search, status, subStatus, statusId, subStatusId, page = 1, limit = 20 }) => ({
         url: `/projects/${projectId}/nominated-candidates`,
-        params: { search, statusId, page, limit },
+        // Prefer sending readable status/subStatus names. Fall back to IDs for
+        // backward compatibility.
+        params: {
+          search,
+          status: status || undefined,
+          subStatus: subStatus || undefined,
+          // If names are not provided, include legacy id params to support
+          // older clients/backends until rollout completes.
+          statusId: status ? undefined : statusId || undefined,
+          subStatusId: subStatus ? undefined : subStatusId || undefined,
+          page,
+          limit,
+        },
       }),
       providesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
@@ -418,9 +438,12 @@ export const projectsApi = baseApi.injectEndpoints({
     getCandidateProjectStatuses: builder.query<
       ApiResponse<{
         statuses: Array<{
-          id: number;
-          statusName: string;
-          label: string;
+          id: number | string;
+          // new stable name (slug) for this status that can be passed to
+          // APIs as `status` / `subStatus` — prefer this over id
+          name?: string;
+          statusName?: string;
+          label?: string;
           description: string;
           stage: string;
           isTerminal: boolean;

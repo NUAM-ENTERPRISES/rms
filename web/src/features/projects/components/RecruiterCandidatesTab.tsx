@@ -322,7 +322,7 @@ export default function RecruiterCandidatesTab({
             Assign Candidates
           </Button>
         </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogContent className="w-full max-w-3xl sm:max-w-4xl p-6 max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Assign Candidates to Project</DialogTitle>
               <DialogDescription>
@@ -521,25 +521,39 @@ export default function RecruiterCandidatesTab({
                 // Candidate is assigned if found in either source
                 const isAssignedToProject = !!currentProjectInCandidate || assignedToProjectIds.includes(candidate.id);
 
-                // Get the actual project status (only if assigned to project)
-                const actualProjectStatus = isAssignedToProject
-                  ? (currentProjectInCandidate?.currentProjectStatus?.statusName || 
-                     projectAssignment?.currentProjectStatus?.statusName)
+                // Prefer showing the project's sub-status (label/name) for display.
+                // For logical checks (e.g. 'nominated') prefer the canonical name.
+                const actualSubStatusLabel = isAssignedToProject
+                  ? (currentProjectInCandidate?.subStatus?.label || projectAssignment?.subStatus?.label)
                   : null;
 
-                // Determine the status to display (use "not_in_project" if not assigned)
-                const projectStatusToShow = isAssignedToProject && actualProjectStatus
-                  ? actualProjectStatus
+                const actualSubStatusName = isAssignedToProject
+                  ? (currentProjectInCandidate?.subStatus?.name || projectAssignment?.subStatus?.name)
+                  : null;
+
+                // Determine the status to display (prefer sub-status label, then name, then fallbacks)
+                const projectStatusToShow = isAssignedToProject
+                  ? (actualSubStatusLabel || actualSubStatusName || currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName)
                   : "not_in_project";
 
                 // Check if candidate is nominated OR not in project - show verify button in both cases
-                const isNominated = 
-                  isAssignedToProject && 
-                  !!actualProjectStatus && 
-                  actualProjectStatus.toLowerCase() === "nominated";
+                // Consider nominated if either sub-status name or main/current status indicates nominated
+                const isNominated = isAssignedToProject && (
+                  (!!actualSubStatusName && actualSubStatusName.toLowerCase().startsWith("nominated")) ||
+                  ((currentProjectInCandidate?.mainStatus?.name || projectAssignment?.mainStatus?.name || "").toLowerCase() === "nominated") ||
+                  ((currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase() === "nominated")
+                );
 
-                // Show verify button if: 1) Not in project, OR 2) In project and nominated
-                const showVerifyBtn = !isAssignedToProject || isNominated;
+                // Explicitly detect verification-in-progress states so we never show the
+                // "Send for Verification" button for candidates already in verification.
+                const isVerificationInProgress = isAssignedToProject && (
+                  (!!actualSubStatusName && actualSubStatusName.toLowerCase().includes("verification")) ||
+                  (!!actualSubStatusLabel && actualSubStatusLabel.toLowerCase().includes("verification")) ||
+                  ((currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase().includes("verification"))
+                );
+
+                // Show verify button if: 1) not in project OR 2) in project and nominated AND not already in verification
+                const showVerifyBtn = !isAssignedToProject || (isNominated && !isVerificationInProgress);
 
                 const actions = [];
 
@@ -737,6 +751,8 @@ export default function RecruiterCandidatesTab({
         isOpen={assignConfirm.isOpen}
         onClose={() => setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" })}
         onConfirm={handleAssignSingleCandidate}
+        // make the confirmation dialog wider so Candidate vs Project comparison doesn't break layout
+        className="w-full max-w-3xl sm:max-w-4xl p-6 max-h-[90vh] overflow-y-auto"
         title="Assign to Project"
         description={
           <div className="space-y-4">

@@ -12,13 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Status filter dropdown removed — tiles act as status filters now
 import {
   Dialog,
   DialogContent,
@@ -57,7 +51,10 @@ export default function DocumentVerificationPage() {
 
   // State
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // default to verification_in_progress_document so the list shows candidates needing verification
+  const [statusFilter, setStatusFilter] = useState(
+    "verification_in_progress_document"
+  );
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [verificationDialog, setVerificationDialog] = useState(false);
   const [verificationAction, setVerificationAction] = useState<
@@ -134,10 +131,26 @@ export default function DocumentVerificationPage() {
     }
   };
 
-  // Calculate status counts from API data
+  // Calculate status counts from API data (prefer server-supplied counts when available)
   const getStatusCounts = () => {
+    // API can return a counts object like: { pending: 1, verified: 2, rejected: 1 }
+    const apiCounts = verificationData?.data?.counts;
+
+    if (apiCounts) {
+      // Map API count keys to our internal canonical keys
+      // Keep both verification_in_progress_document and verification_in_progress for compatibility
+      return {
+        verification_in_progress_document: Number(apiCounts.pending || 0),
+        documents_submitted: 0,
+        verification_in_progress: Number(apiCounts.pending || 0),
+        documents_verified: Number(apiCounts.verified || 0),
+        rejected_documents: Number(apiCounts.rejected || 0),
+      };
+    }
+
+    // Fallback: compute counts from returned candidateProjects array
     const counts = {
-      pending_documents: 0,
+      verification_in_progress_document: 0,
       documents_submitted: 0,
       verification_in_progress: 0,
       documents_verified: 0,
@@ -145,8 +158,21 @@ export default function DocumentVerificationPage() {
     };
 
     candidateProjects.forEach((candidateProject: any) => {
-      if (candidateProject.status in counts) {
-        counts[candidateProject.status as keyof typeof counts]++;
+      // status can come from different properties depending on API shape
+      const rawStatus =
+        candidateProject.status || candidateProject.subStatus?.name || candidateProject.subStatus?.label;
+
+      // normalize known aliases into the keys we track
+      let key = rawStatus;
+      if (!key) return;
+
+      // map legacy/alternate names to our chosen bucket
+      if (key === "pending_documents" || key === "verification_in_progress") {
+        key = "verification_in_progress_document";
+      }
+
+      if (key in counts) {
+        counts[key as keyof typeof counts]++;
       }
     });
 
@@ -181,20 +207,26 @@ export default function DocumentVerificationPage() {
         </div>
 
         {/* Dashboard Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
           {/* Total Candidates Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <Card
+              className={cn(
+                "border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
+                statusFilter === "verification_in_progress_document" ? "ring-2 ring-blue-300" : ""
+              )}
+              onClick={() => setStatusFilter("verification_in_progress_document")}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">Total Candidates</p>
+                    <p className="text-sm font-medium text-slate-600 mb-1">Pending Candidates</p>
                     <h3 className="text-3xl font-bold text-blue-600">
-                      {totalCandidates}
+                      {statusCounts.verification_in_progress_document}
                     </h3>
                     <p className="text-xs text-slate-500 mt-2">For verification</p>
                   </div>
@@ -212,7 +244,13 @@ export default function DocumentVerificationPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <Card
+              className={cn(
+                "border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
+                statusFilter === "documents_verified" ? "ring-2 ring-green-300" : ""
+              )}
+              onClick={() => setStatusFilter("documents_verified")}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -230,29 +268,7 @@ export default function DocumentVerificationPage() {
             </Card>
           </motion.div>
 
-          {/* In Progress Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">In Progress</p>
-                    <h3 className="text-3xl font-bold text-orange-600">
-                      {statusCounts.verification_in_progress + statusCounts.documents_submitted}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-2">Pending review</p>
-                  </div>
-                  <div className="p-3 bg-orange-200/40 rounded-full">
-                    <TrendingUp className="h-6 w-6 text-orange-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          {/* In-progress (merged into Total/Pending) - removed duplicate card */}
 
           {/* Rejected Documents Card */}
           <motion.div
@@ -260,7 +276,13 @@ export default function DocumentVerificationPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <Card
+              className={cn(
+                "border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
+                statusFilter === "rejected_documents" ? "ring-2 ring-red-300" : ""
+              )}
+              onClick={() => setStatusFilter("rejected_documents")}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -281,7 +303,7 @@ export default function DocumentVerificationPage() {
 
         {/* Compact Filters */}
         <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -293,29 +315,7 @@ export default function DocumentVerificationPage() {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 h-9 text-sm">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending_documents">
-                  Pending Documents
-                </SelectItem>
-                <SelectItem value="documents_submitted">
-                  Documents Submitted
-                </SelectItem>
-                <SelectItem value="verification_in_progress">
-                  Verification in Progress
-                </SelectItem>
-                <SelectItem value="documents_verified">
-                  Documents Verified
-                </SelectItem>
-                <SelectItem value="rejected_documents">
-                  Rejected Documents
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            {/* removed status dropdown — use tiles above to filter by status */}
           </div>
         </div>
 
@@ -330,10 +330,24 @@ export default function DocumentVerificationPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Candidates for Verification
+                    {(() => {
+                      switch (statusFilter) {
+                        case "documents_verified":
+                          return "Verified Candidates";
+                        case "verification_in_progress_document":
+                          return "In-progress Candidates";
+                        case "rejected_documents":
+                          return "Rejected Candidates";
+                        default:
+                          return "Candidates for Verification";
+                      }
+                    })()}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {candidateProjects.length} candidate{candidateProjects.length !== 1 ? "s" : ""}
+                    <span className="font-semibold text-gray-900">{candidateProjects.length}</span>{' '}
+                    {(() => {
+                      return candidateProjects.length === 1 ? 'candidate' : 'candidates';
+                    })()} {statusFilter === 'all' ? 'to review' : ''}
                   </p>
                 </div>
               </div>
@@ -371,9 +385,25 @@ export default function DocumentVerificationPage() {
                   <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
                     Project
                   </TableHead>
-                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                    Status
-                  </TableHead>
+                  {/* Dynamic columns based on selected status */}
+                  {statusFilter === "documents_verified" ? (
+                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                      Verified
+                    </TableHead>
+                  ) : statusFilter === "verification_in_progress_document" ? (
+                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                      Pending / Submitted
+                    </TableHead>
+                  ) : statusFilter === "rejected_documents" ? (
+                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                      Rejected
+                    </TableHead>
+                  ) : (
+                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                      Status
+                    </TableHead>
+                  )}
+
                   <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
                     Documents
                   </TableHead>
@@ -388,13 +418,13 @@ export default function DocumentVerificationPage() {
 
               <TableBody>
                 {candidateProjects.map((candidateProject: any, index: number) => {
-                  const status = candidateProject.currentProjectStatus?.statusName || "";
+                  const status = candidateProject?.subStatus?.label || "";
                   const statusConfig = {
                     documents_verified: { Icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
                     rejected_documents: { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
                     verification_in_progress: { Icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
                     documents_submitted: { Icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-                    pending_documents: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
+                    verification_in_progress_document: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
                   }[status] || { Icon: AlertCircle, color: "text-gray-500", bg: "bg-gray-50" };
                   const { Icon } = statusConfig;
 
@@ -445,22 +475,62 @@ export default function DocumentVerificationPage() {
                         </div>
                       </TableCell>
 
-                      {/* Status */}
+                      {/* Dynamic status/summary column */}
                       <TableCell className="px-6 py-5">
-                        <div className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium", statusConfig.bg, statusConfig.color)}>
-                          <Icon className="h-3.5 w-3.5" />
-                          {status === "documents_verified"
-                            ? "Verified"
-                            : status === "rejected_documents"
-                            ? "Rejected"
-                            : status === "verification_in_progress"
-                            ? "In Progress"
-                            : status === "documents_submitted"
-                            ? "Submitted"
-                            : status === "pending_documents"
-                            ? "Pending"
-                            : "Unknown"}
-                        </div>
+                        {(() => {
+                          const docs = candidateProject.documentVerifications || [];
+                          const totalDocs = docs.length;
+                          const verifiedCount = docs.filter((d: any) => d.status === "verified").length;
+                          const pendingCount = docs.filter((d: any) => d.status === "pending").length;
+                          const rejectedCount = docs.filter((d: any) => d.status === "rejected").length;
+
+                          if (statusFilter === "documents_verified") {
+                            const lastVerified = docs
+                              .filter((d: any) => d.status === "verified")
+                              .map((d: any) => d.verifiedAt)
+                              .filter(Boolean)
+                              .sort()
+                              .reverse()[0];
+
+                            return (
+                              <div className="text-sm text-gray-700">
+                                <div className="font-medium">{verifiedCount} / {totalDocs} verified</div>
+                                {lastVerified ? (
+                                  <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
+                          if (statusFilter === "verification_in_progress_document") {
+                            return (
+                              <div className="text-sm text-gray-700">
+                                <div className="font-medium">Pending: {pendingCount}</div>
+                                <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
+                              </div>
+                            );
+                          }
+
+                          if (statusFilter === "rejected_documents") {
+                            const lastRejected = docs
+                              .filter((d: any) => d.status === "rejected")
+                              .map((d: any) => ({at: d.rejectedAt, reason: d.rejectionReason}))
+                              .filter((x: any) => x.at)
+                              .sort((a: any, b: any) => (a.at > b.at ? -1 : 1))[0];
+
+                            return (
+                              <div className="text-sm text-gray-700">
+                                <div className="font-medium">Rejected: {rejectedCount}</div>
+                                {lastRejected?.reason ? (
+                                  <div className="text-xs text-gray-500 truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
+                          // default / 'all' view
+                          return <div className="text-sm text-gray-700">{status}</div>;
+                        })()}
                       </TableCell>
 
                       {/* Documents */}

@@ -278,21 +278,23 @@ export default function CandidateCard({
 
           {/* Status Badges */}
           <div className="flex flex-col gap-1.5">
-            {/* Always show candidate's overall status */}
-            <Badge
-              variant="outline"
-              className={`${getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").color} border text-xs w-fit`}
-            >
-              {getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").label}
-            </Badge>
-            
-            {/* Show project status if candidate is in this project */}
-            {projectStatus && (
+            {/*
+              If candidate is part of a project we prefer showing the project's
+              (sub-)status on the card — otherwise fall back to the candidate's overall status.
+            */}
+            {projectStatus ? (
               <Badge
                 variant="outline"
                 className={`${statusConfig.color} border text-xs w-fit`}
               >
                 {statusConfig.label}
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className={`${getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").color} border text-xs w-fit`}
+              >
+                {getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").label}
               </Badge>
             )}
 

@@ -7,8 +7,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Search,
@@ -243,22 +243,26 @@ export default function EligibleCandidatesTab({
               // Candidate is assigned if found in either source
               const isAssignedToProject = !!currentProjectInCandidate || assignedToProjectIds.includes(candidate.id);
 
-              // Get the actual project status (only if assigned to project)
-              const actualProjectStatus = isAssignedToProject
-                ? (currentProjectInCandidate?.currentProjectStatus?.statusName || 
-                   projectAssignment?.currentProjectStatus?.statusName)
+              // Prefer sub-status for display/checks. Fall back to currentProjectStatus.
+              const actualSubStatusLabel = isAssignedToProject
+                ? (currentProjectInCandidate?.subStatus?.label || projectAssignment?.subStatus?.label)
                 : null;
 
-              // Determine the status to display (use "not_in_project" if not assigned)
-              const projectStatusToShow = isAssignedToProject && actualProjectStatus
-                ? actualProjectStatus
+              const actualSubStatusName = isAssignedToProject
+                ? (currentProjectInCandidate?.subStatus?.name || projectAssignment?.subStatus?.name)
+                : null;
+
+              // Determine the status to display (prefer sub-status label, then name, then currentProjectStatus)
+              const projectStatusToShow = isAssignedToProject
+                ? (actualSubStatusLabel || actualSubStatusName || currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName)
                 : "not_in_project";
 
-              // Check if candidate is nominated OR not in project - show verify button in both cases
-              const isNominated = 
-                isAssignedToProject && 
-                !!actualProjectStatus && 
-                actualProjectStatus.toLowerCase() === "nominated";
+              // Consider nominated when sub-status name or main/current status indicates nominated
+              const isNominated = isAssignedToProject && (
+                !!actualSubStatusName && actualSubStatusName.toLowerCase().startsWith("nominated") ||
+                (currentProjectInCandidate?.mainStatus?.name || projectAssignment?.mainStatus?.name || "").toLowerCase() === "nominated" ||
+                (currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase() === "nominated"
+              );
 
               // Show verify button if: 1) Not in project, OR 2) In project and nominated
               const showVerifyBtn = !isAssignedToProject || isNominated;
@@ -473,6 +477,7 @@ export default function EligibleCandidatesTab({
         isOpen={assignConfirm.isOpen}
         onClose={() => setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" })}
         onConfirm={handleAssignSingleCandidate}
+        className="w-full max-w-3xl sm:max-w-4xl p-6 max-h-[90vh] overflow-y-auto"
         title="Assign to Project"
         description={
           <div className="space-y-4">

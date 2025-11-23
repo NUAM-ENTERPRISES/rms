@@ -563,7 +563,11 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: { candidateId, projectId, roleNeededId, recruiterId, notes },
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: (_, __, { projectId, candidateId }) => [
+        "Candidate",
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+      ],
     }),
 
     nominateCandidate: builder.mutation<

@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 import { useAppSelector } from "@/app/hooks";
 import { useAppDispatch } from "@/app/hooks";
 import { notificationsApi } from "@/features/notifications/data";
+import { documentsApi } from "@/features/documents/api";
 import { toast } from "sonner";
 
 interface NotificationEvent {
@@ -109,6 +110,35 @@ export default function NotificationsSocketProvider({
           }
         )
       );
+
+      // If notification relates to documents or verification, invalidate doc verification cache
+      // The notification.meta may contain context such as candidateProjectMapId or a type like 'document:verified'
+      const typeLower = notification.type?.toLowerCase?.() || "";
+      const meta = notification.meta as Record<string, any> | undefined;
+
+      // Always try to refresh verification candidates when any notification arrives.
+      // This is defensive: server notifications may be inconsistent in `type`/`meta` naming
+      // and it's better for the UI to be updated than to miss an important verification change.
+      if (true) {
+        // Invalidate the verification candidates query so the list refetches in real-time
+        try {
+          console.debug("Invalidating VerificationCandidates due to notification", notification.id, notification.type, meta);
+          // Invalidate tag so active queries refetch
+          dispatch(documentsApi.util.invalidateTags([{ type: "VerificationCandidates" }]));
+
+          // As an extra defensive measure, trigger an explicit refetch for the common default args
+          // used by the Document Verification page (page:1, limit:50). This ensures the UI refreshes
+          // even if the query key/args differ slightly or invalidation isn't picked up immediately.
+          dispatch(
+            documentsApi.endpoints.getVerificationCandidates.initiate(
+              { page: 1, limit: 50 },
+              { forceRefetch: true }
+            )
+          );
+        } catch (err) {
+          console.warn("Failed to refresh VerificationCandidates cache:", err);
+        }
+      }
     });
 
     // Handle connection errors
