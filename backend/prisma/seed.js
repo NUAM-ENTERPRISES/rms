@@ -58,8 +58,6 @@ var __importStar =
 Object.defineProperty(exports, '__esModule', { value: true });
 const client_1 = require('@prisma/client');
 const bcrypt = __importStar(require('bcrypt'));
-const fs = __importStar(require('fs'));
-const path = __importStar(require('path'));
 const prisma = new client_1.PrismaClient();
 const roles = [
   {
@@ -92,17 +90,10 @@ const roles = [
       'read:assigned_teams',
       'write:assigned_teams',
       'manage:candidates',
-      'nominate:candidates',
-      'approve:candidates',
-      'reject:candidates',
       'read:projects',
       'write:projects',
       'read:clients',
       'write:clients',
-      'read:documents',
-      'schedule:interviews',
-      'read:interviews',
-      'write:interviews',
     ],
   },
   {
@@ -113,69 +104,30 @@ const roles = [
       'write:assigned_teams',
       'read:projects',
       'read:candidates',
-      'write:candidates',
-      'nominate:candidates',
       'read:teams',
       'read:interviews',
-      'schedule:interviews',
+      'write:candidates',
       'manage:recruiters',
-      'read:documents',
     ],
   },
   {
     name: 'Recruiter',
     description: 'Recruiter - Candidate handling',
     permissions: [
-      'read:candidates',
       'read:assigned_candidates',
       'write:candidates',
-      'manage:candidates',
-      'nominate:candidates',
       'read:projects',
-      'read:documents',
-      'write:documents',
-      'read:interviews',
-      'schedule:interviews',
-      'write:interviews',
     ],
   },
   {
     name: 'Documentation Executive',
     description: 'Documentation Team - Document verification',
-    permissions: [
-      'read:documents',
-      'write:documents',
-      'verify:documents',
-      'request:resubmission',
-      'approve:candidates',
-      'reject:candidates',
-      'read:candidates',
-      'write:candidates',
-      'read:projects',
-      'read:interviews',
-      'schedule:interviews',
-      'write:interviews',
-    ],
+    permissions: ['read:documents', 'write:documents', 'verify:documents'],
   },
   {
     name: 'Processing Executive',
     description: 'Processing department - Post-selection workflows',
-    permissions: [
-      'read:processing',
-      'write:processing',
-      'manage:processing',
-      'read:candidates',
-      'write:candidates',
-      'read:interviews',
-      'schedule:interviews',
-      'write:interviews',
-    ],
-  },
-  {
-    name: 'System Admin',
-    description:
-      'System Administrator - Full system access and user management',
-    permissions: ['*'],
+    permissions: ['read:processing', 'write:processing', 'manage:processing'],
   },
 ];
 const allPermissions = [
@@ -200,14 +152,10 @@ const allPermissions = [
   'manage:candidates',
   'read:assigned_candidates',
   'write:assigned_candidates',
-  'nominate:candidates',
-  'approve:candidates',
-  'reject:candidates',
   'read:documents',
   'write:documents',
   'verify:documents',
   'manage:documents',
-  'request:resubmission',
   'read:processing',
   'write:processing',
   'manage:processing',
@@ -221,7 +169,6 @@ const allPermissions = [
   'read:interviews',
   'write:interviews',
   'manage:interviews',
-  'schedule:interviews',
   'read:analytics',
   'write:analytics',
   'manage:analytics',
@@ -232,242 +179,8 @@ const allPermissions = [
   'write:audit',
   'manage:audit',
 ];
-async function seedCountries() {
-  console.log('🌍 Seeding countries...');
-  try {
-    const countriesPath = path.join(__dirname, '..', 'countries.json');
-    const countriesData = JSON.parse(fs.readFileSync(countriesPath, 'utf8'));
-    let createdCount = 0;
-    let updatedCount = 0;
-    for (const country of countriesData) {
-      const result = await prisma.country.upsert({
-        where: { code: country.code },
-        update: {
-          name: country.name,
-          region: country.region,
-          callingCode: country.callingCode || '',
-          currency: country.currency || 'N/A',
-          timezone: country.timezone || 'UTC',
-          isActive: true,
-        },
-        create: {
-          code: country.code,
-          name: country.name,
-          region: country.region,
-          callingCode: country.callingCode || '',
-          currency: country.currency || 'N/A',
-          timezone: country.timezone || 'UTC',
-          isActive: true,
-        },
-      });
-      if (result.createdAt === result.updatedAt) {
-        createdCount++;
-      } else {
-        updatedCount++;
-      }
-    }
-    console.log(
-      `✅ Countries seeded: ${createdCount} created, ${updatedCount} updated`,
-    );
-  } catch (error) {
-    console.error('❌ Error seeding countries:', error);
-    throw error;
-  }
-}
-async function seedRoleCatalog() {
-  console.log('🏥 Seeding healthcare roles catalog...');
-  try {
-    const rolesPath = path.join(__dirname, 'seeds', 'role-catalog.json');
-    const rolesData = JSON.parse(fs.readFileSync(rolesPath, 'utf8'));
-    let createdCount = 0;
-    let updatedCount = 0;
-    for (const role of rolesData) {
-      const result = await prisma.roleCatalog.upsert({
-        where: { slug: role.slug },
-        update: {
-          name: role.name,
-          category: role.category,
-          subCategory: role.subCategory,
-          isClinical: role.isClinical,
-          description: role.description,
-          isActive: true,
-        },
-        create: {
-          name: role.name,
-          slug: role.slug,
-          category: role.category,
-          subCategory: role.subCategory,
-          isClinical: role.isClinical,
-          description: role.description,
-          isActive: true,
-        },
-      });
-      if (result.createdAt === result.updatedAt) {
-        createdCount++;
-      } else {
-        updatedCount++;
-      }
-    }
-    console.log(
-      `✅ Role catalog seeded: ${createdCount} created, ${updatedCount} updated`,
-    );
-  } catch (error) {
-    console.error('❌ Error seeding role catalog:', error);
-    throw error;
-  }
-}
-async function seedQualifications() {
-  console.log('🎓 Seeding qualifications catalog...');
-  try {
-    const qualificationsPath = path.join(
-      __dirname,
-      'seeds',
-      'qualifications.json',
-    );
-    const qualificationsData = JSON.parse(
-      fs.readFileSync(qualificationsPath, 'utf8'),
-    );
-    let createdCount = 0;
-    let updatedCount = 0;
-    for (const qualification of qualificationsData) {
-      const result = await prisma.qualification.upsert({
-        where: { name: qualification.name },
-        update: {
-          shortName: qualification.shortName,
-          level: qualification.level,
-          field: qualification.field,
-          program: qualification.program,
-          description: qualification.description,
-          isActive: true,
-        },
-        create: {
-          name: qualification.name,
-          shortName: qualification.shortName,
-          level: qualification.level,
-          field: qualification.field,
-          program: qualification.program,
-          description: qualification.description,
-          isActive: true,
-        },
-      });
-      if (result.createdAt === result.updatedAt) {
-        createdCount++;
-      } else {
-        updatedCount++;
-      }
-    }
-    console.log(
-      `✅ Qualifications seeded: ${createdCount} created, ${updatedCount} updated`,
-    );
-  } catch (error) {
-    console.error('❌ Error seeding qualifications:', error);
-    throw error;
-  }
-}
-async function seedQualificationAliases() {
-  console.log('🔗 Seeding qualification aliases...');
-  try {
-    const aliasesPath = path.join(
-      __dirname,
-      'seeds',
-      'qualification-aliases.json',
-    );
-    const aliasesData = JSON.parse(fs.readFileSync(aliasesPath, 'utf8'));
-    let createdCount = 0;
-    for (const aliasData of aliasesData) {
-      const qualification = await prisma.qualification.findFirst({
-        where: { shortName: aliasData.qualificationShortName },
-      });
-      if (qualification) {
-        try {
-          await prisma.qualificationAlias.create({
-            data: {
-              qualificationId: qualification.id,
-              alias: aliasData.alias,
-              isCommon: aliasData.isCommon,
-            },
-          });
-          createdCount++;
-        } catch (error) {
-          if (!error.message.includes('Unique constraint')) {
-            console.warn(
-              `Warning: Could not create alias "${aliasData.alias}":`,
-              error.message,
-            );
-          }
-        }
-      } else {
-        console.warn(
-          `Warning: Qualification not found for shortName: ${aliasData.qualificationShortName}`,
-        );
-      }
-    }
-    console.log(`✅ Qualification aliases seeded: ${createdCount} created`);
-  } catch (error) {
-    console.error('❌ Error seeding qualification aliases:', error);
-    throw error;
-  }
-}
-async function seedRoleRecommendedQualifications() {
-  console.log('🎯 Seeding role recommended qualifications...');
-  try {
-    const recommendationsPath = path.join(
-      __dirname,
-      'seeds',
-      'role-recommended-qualifications.json',
-    );
-    const recommendationsData = JSON.parse(
-      fs.readFileSync(recommendationsPath, 'utf8'),
-    );
-    let createdCount = 0;
-    for (const recommendation of recommendationsData) {
-      const role = await prisma.roleCatalog.findFirst({
-        where: { slug: recommendation.roleSlug },
-      });
-      const qualification = await prisma.qualification.findFirst({
-        where: { shortName: recommendation.qualificationShortName },
-      });
-      if (role && qualification) {
-        try {
-          await prisma.roleRecommendedQualification.create({
-            data: {
-              roleId: role.id,
-              qualificationId: qualification.id,
-              weight: recommendation.weight,
-              isPreferred: recommendation.isPreferred,
-              notes: recommendation.notes,
-            },
-          });
-          createdCount++;
-        } catch (error) {
-          if (!error.message.includes('Unique constraint')) {
-            console.warn(
-              `Warning: Could not create recommendation:`,
-              error.message,
-            );
-          }
-        }
-      } else {
-        console.warn(
-          `Warning: Role or qualification not found for: ${recommendation.roleSlug} -> ${recommendation.qualificationShortName}`,
-        );
-      }
-    }
-    console.log(
-      `✅ Role recommended qualifications seeded: ${createdCount} created`,
-    );
-  } catch (error) {
-    console.error('❌ Error seeding role recommended qualifications:', error);
-    throw error;
-  }
-}
 async function main() {
   console.log('🌱 Starting database seeding...');
-  await seedCountries();
-  await seedRoleCatalog();
-  await seedQualifications();
-  await seedQualificationAliases();
-  await seedRoleRecommendedQualifications();
   console.log('📝 Creating permissions...');
   for (const permissionKey of allPermissions) {
     await prisma.permission.upsert({
@@ -518,7 +231,7 @@ async function main() {
   if (!defaultTeam) {
     defaultTeam = await prisma.team.create({
       data: {
-        id: 'mhvfuykewhjnhgsevcj',
+        id: 'default-team-id',
         name: 'Default Team',
       },
     });
@@ -531,15 +244,11 @@ async function main() {
     update: {
       name: 'System Administrator',
       password: hashedPassword,
-      countryCode: '+91',
-      mobileNumber: '9876543210',
     },
     create: {
       email: 'admin@affiniks.com',
       name: 'System Administrator',
       password: hashedPassword,
-      countryCode: '+91',
-      mobileNumber: '9876543210',
     },
   });
   const ceoRole = await prisma.role.findUnique({
@@ -579,97 +288,43 @@ async function main() {
       email: 'director@affiniks.com',
       name: 'Sarah Director',
       password: 'director123',
-      countryCode: '+91',
-      phone: '9876543211',
       role: 'Director',
     },
     {
       email: 'manager@affiniks.com',
       name: 'Mike Manager',
       password: 'manager123',
-      countryCode: '+91',
-      phone: '9876543212',
       role: 'Manager',
     },
     {
       email: 'teamhead@affiniks.com',
       name: 'Lisa Team Head',
       password: 'teamhead123',
-      countryCode: '+91',
-      phone: '9876543213',
       role: 'Team Head',
     },
     {
       email: 'teamlead@affiniks.com',
       name: 'David Team Lead',
       password: 'teamlead123',
-      countryCode: '+91',
-      phone: '9876543214',
       role: 'Team Lead',
     },
     {
-      email: 'recruiter1@affiniks.com',
+      email: 'recruiter@affiniks.com',
       name: 'Emma Recruiter',
       password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543215',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter2@affiniks.com',
-      name: 'John Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543216',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter3@affiniks.com',
-      name: 'Sarah Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543217',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter4@affiniks.com',
-      name: 'Mike Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543218',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter5@affiniks.com',
-      name: 'Lisa Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543219',
       role: 'Recruiter',
     },
     {
       email: 'docs@affiniks.com',
       name: 'Alex Documentation',
       password: 'docs123',
-      countryCode: '+91',
-      phone: '9876543220',
       role: 'Documentation Executive',
     },
     {
       email: 'processing@affiniks.com',
       name: 'Jordan Processing',
       password: 'processing123',
-      countryCode: '+91',
-      phone: '9876543221',
       role: 'Processing Executive',
-    },
-    {
-      email: 'sysadmin@affiniks.com',
-      name: 'Alex System Admin',
-      password: 'sysadmin123',
-      countryCode: '+91',
-      phone: '9876543222',
-      role: 'System Admin',
     },
   ];
   for (const userData of testUsers) {
@@ -679,15 +334,11 @@ async function main() {
       update: {
         name: userData.name,
         password: hashedPassword,
-        countryCode: userData.countryCode,
-        mobileNumber: userData.phone,
       },
       create: {
         email: userData.email,
         name: userData.name,
         password: hashedPassword,
-        countryCode: userData.countryCode,
-        mobileNumber: userData.phone,
       },
     });
     const role = await prisma.role.findUnique({
@@ -708,27 +359,19 @@ async function main() {
         },
       });
     }
-    const eligibleRolesForTeamMembership = [
-      'Team Lead',
-      'Recruiter',
-      'Documentation Executive',
-      'Processing Executive',
-    ];
-    if (eligibleRolesForTeamMembership.includes(userData.role)) {
-      await prisma.userTeam.upsert({
-        where: {
-          userId_teamId: {
-            userId: user.id,
-            teamId: defaultTeam.id,
-          },
-        },
-        update: {},
-        create: {
+    await prisma.userTeam.upsert({
+      where: {
+        userId_teamId: {
           userId: user.id,
           teamId: defaultTeam.id,
         },
-      });
-    }
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        teamId: defaultTeam.id,
+      },
+    });
   }
   console.log('🏥 Creating sample clients...');
   const healthcareClient = await prisma.client.upsert({
@@ -848,47 +491,16 @@ async function main() {
     },
   });
   console.log('✅ Database seeding completed successfully!');
-  console.log('\n🔑 Test Users Created (Login with Phone + Password):');
-  console.log(`👑 CEO: +919876543210 / ${adminPassword} (admin@affiniks.com)`);
-  console.log(
-    `👔 Director: +919876543211 / director123 (director@affiniks.com)`,
-  );
-  console.log(`📊 Manager: +919876543212 / manager123 (manager@affiniks.com)`);
-  console.log(
-    `👥 Team Head: +919876543213 / teamhead123 (teamhead@affiniks.com)`,
-  );
-  console.log(
-    `🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 1: +919876543215 / recruiter123 (recruiter1@affiniks.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 2: +919876543216 / recruiter123 (recruiter2@affiniks.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 3: +919876543217 / recruiter123 (recruiter3@affiniks.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 4: +919876543218 / recruiter123 (recruiter4@affiniks.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 5: +919876543219 / recruiter123 (recruiter5@affiniks.com)`,
-  );
-  console.log(`📄 Documentation: +919876543220 / docs123 (docs@affiniks.com)`);
-  console.log(
-    `⚙️ Processing: +919876543221 / processing123 (processing@affiniks.com)`,
-  );
-  console.log(
-    `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@affiniks.com)`,
-  );
+  console.log('\n🔑 Test Users Created:');
+  console.log(`👑 CEO: admin@affiniks.com / ${adminPassword}`);
+  console.log(`👔 Director: director@affiniks.com / director123`);
+  console.log(`📊 Manager: manager@affiniks.com / manager123`);
+  console.log(`👥 Team Head: teamhead@affiniks.com / teamhead123`);
+  console.log(`🎯 Team Lead: teamlead@affiniks.com / teamlead123`);
+  console.log(`🔍 Recruiter: recruiter@affiniks.com / recruiter123`);
+  console.log(`📄 Documentation: docs@affiniks.com / docs123`);
+  console.log(`⚙️ Processing: processing@affiniks.com / processing123`);
   console.log('\n🎯 Each user has their respective role permissions!');
-  console.log(
-    '👥 Only eligible roles (Team Lead, Recruiter, Documentation Executive, Processing Executive) are assigned to the Default Team!',
-  );
-  console.log(
-    '🔒 Higher roles (CEO, Director, Manager, Team Head, System Admin) are not team members and can manage teams!',
-  );
 }
 main()
   .catch((e) => {
