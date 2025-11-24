@@ -958,15 +958,9 @@ export default function CandidateDocumentVerificationPage() {
                                           Rejected
                                         </Badge>
                                       )}
-                                      {displayedStatus === "pending" && (
-                                        <Badge variant="outline" className="text-xs">
-                                          <Clock className="h-3 w-3 mr-1" />
-                                          Pending
-                                        </Badge>
-                                      )}
                                     </div>
                                   </>
-                                ) : (
+                                ) : ( 
                                   <div className="flex items-center gap-2">
                                     <Button
                                       variant="outline"

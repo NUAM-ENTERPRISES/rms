@@ -4,7 +4,6 @@ import { usePermissions } from "@/shared/hooks/usePermissions";
 import { Can } from "@/components/auth/Can";
 import RecruiterCandidatesTab from "./RecruiterCandidatesTab";
 import EligibleCandidatesTab from "./EligibleCandidatesTab";
-import SubmittedCandidatesSection from "./SubmittedCandidatesSection";
 
 interface ProjectDetailTabsProps {
   projectId: string;
@@ -30,14 +29,8 @@ export default function ProjectDetailTabs({
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Section: Fixed Submitted Candidates */}
-        <SubmittedCandidatesSection projectId={projectId} />
-
-        {/* Right Section: Tabs Content */}
-        <div className="lg:col-span-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
           <Can
             roles={[
               "CEO",
@@ -81,9 +74,7 @@ export default function ProjectDetailTabs({
             <RecruiterCandidatesTab projectId={projectId} />
           </TabsContent>
         </Can>
-          </Tabs>
-        </div>
-      </div>
+      </Tabs>
     </div>
   );
 }

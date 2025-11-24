@@ -193,12 +193,24 @@ export default function EditCandidatePage() {
   // Form submission
   const onSubmit = async (data: UpdateCandidateFormData) => {
     try {
+      // Build payload using the backend's preferred fields.
+      // The API rejects a top-level `name` property in updates in newer versions
+      // (it expects `firstName` / `lastName`), so we split the single `name`
+      // form field and send firstName/lastName instead.
       const payload: any = {
-        name: data.name,
         countryCode: data.countryCode,
         mobileNumber: data.mobileNumber,
         source: data.source || "manual",
       };
+
+      // Split the single 'name' field into firstName / lastName
+      // First token becomes firstName, remainder becomes lastName (if any).
+      const fullName = (data.name || "").trim();
+      if (fullName) {
+        const parts = fullName.split(/\s+/);
+        payload.firstName = parts.shift() || "";
+        payload.lastName = parts.length ? parts.join(" ") : undefined;
+      }
 
       // Add optional fields only if they have values
       if (data.email && data.email.trim()) {

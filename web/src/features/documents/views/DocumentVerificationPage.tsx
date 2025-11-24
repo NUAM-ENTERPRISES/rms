@@ -385,6 +385,7 @@ export default function DocumentVerificationPage() {
                   <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
                     Project
                   </TableHead>
+                  
                   {/* Dynamic columns based on selected status */}
                   {statusFilter === "documents_verified" ? (
                     <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">

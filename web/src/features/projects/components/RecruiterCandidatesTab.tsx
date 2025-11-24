@@ -60,7 +60,7 @@ export default function RecruiterCandidatesTab({
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 9; // Changed to 9 to show 3 cards per row (3x3)
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [assignSearchTerm, setAssignSearchTerm] = useState("");
@@ -507,7 +507,9 @@ export default function RecruiterCandidatesTab({
               Available candidates to assign to project
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Changed from md:grid-cols-2 to md:grid-cols-3 for 3 cards per row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {paginatedCandidates.map((candidate: any) => {
                 // Check from both sources: candidate's projects array and projectCandidates query
                 const currentProjectInCandidate = candidate.projects?.find(

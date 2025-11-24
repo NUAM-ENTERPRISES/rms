@@ -40,7 +40,7 @@ export default function EligibleCandidatesTab({
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 9; // Changed to 9 to show 3 cards per row (3x3)
   
   // Confirmation dialog states
   const [verifyConfirm, setVerifyConfirm] = useState<{
@@ -229,7 +229,9 @@ export default function EligibleCandidatesTab({
               Candidates matching project requirements with match scores
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Changed from md:grid-cols-2 to md:grid-cols-3 for 3 cards per row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {paginatedCandidates.map((candidate: any) => {
               // Check from both sources: candidate's projects array and projectCandidates query
               const currentProjectInCandidate = candidate.projects?.find(
