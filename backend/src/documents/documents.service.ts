@@ -978,110 +978,127 @@ async getVerificationCandidates(query: any) {
   /**
    * Get project document requirements and verification status for a candidate
    */
-  async getCandidateProjectRequirements(
-    candidateId: string,
-    projectId: string,
-  ): Promise<any> {
-    // Get candidate project mapping
-    const candidateProject = await this.prisma.candidateProjects.findFirst({
-      where: {
-        candidateId,
-        projectId,
+
+async getCandidateProjectRequirements(
+  candidateId: string,
+  projectId: string,
+): Promise<any> {
+  // Get candidate project mapping
+  const candidateProject = await this.prisma.candidateProjects.findFirst({
+    where: {
+      candidateId,
+      projectId,
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          title: true,
+          deadline: true,
+          createdAt: true,
+        },
       },
+      recruiter: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!candidateProject) {
+    throw new NotFoundException('Candidate project mapping not found');
+  }
+
+  // Get project document requirements
+  const requirements = await this.prisma.documentRequirement.findMany({
+    where: { projectId },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  // GET ALL VERIFICATIONS (full list of uploaded docs for this project)
+  const allVerifications =
+    await this.prisma.candidateProjectDocumentVerification.findMany({
+      where: { candidateProjectMapId: candidateProject.id },
       include: {
-        project: {
+        document: {
           select: {
             id: true,
-            title: true,
-            deadline: true,
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+            status: true,
+            uploadedBy: true,
             createdAt: true,
           },
         },
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
       },
     });
 
-    if (!candidateProject) {
-      throw new NotFoundException('Candidate project mapping not found');
+  // 🔥 PICK ONLY THE LATEST DOCUMENT PER DOCTYPE
+  const latestVerificationsMap = new Map<string, any>();
+
+  for (const v of allVerifications) {
+    const type = v.document.docType;
+
+    if (
+      !latestVerificationsMap.has(type) ||
+      new Date(v.document.createdAt) >
+        new Date(latestVerificationsMap.get(type).document.createdAt)
+    ) {
+      latestVerificationsMap.set(type, v);
     }
-
-    // Get project document requirements
-    const requirements = await this.prisma.documentRequirement.findMany({
-      where: { projectId },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    // Get candidate's documents for this project
-    const verifications =
-      await this.prisma.candidateProjectDocumentVerification.findMany({
-        where: { candidateProjectMapId: candidateProject.id },
-        include: {
-          document: {
-            select: {
-              id: true,
-              docType: true,
-              fileName: true,
-              fileUrl: true,
-              status: true,
-              uploadedBy: true,
-              createdAt: true,
-            },
-          },
-        },
-      });
-
-    // Get all candidate documents (for reuse functionality)
-    const allCandidateDocuments = await this.prisma.document.findMany({
-      where: { candidateId },
-      select: {
-        id: true,
-        docType: true,
-        fileName: true,
-        fileUrl: true,
-        status: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // Calculate verification status
-    const totalRequired = requirements.length;
-    const totalSubmitted = verifications.length;
-    const totalVerified = verifications.filter(
-      (v) => v.status === 'verified',
-    ).length;
-    const totalRejected = verifications.filter(
-      (v) => v.status === 'rejected',
-    ).length;
-    const totalPending = verifications.filter(
-      (v) => v.status === 'pending',
-    ).length;
-
-    const allDocumentsVerified =
-      totalVerified === totalRequired && totalRequired > 0;
-
-    return {
-      candidateProject,
-      requirements,
-      verifications,
-      allCandidateDocuments,
-      summary: {
-        totalRequired,
-        totalSubmitted,
-        totalVerified,
-        totalRejected,
-        totalPending,
-        allDocumentsVerified,
-        canApproveCandidate: allDocumentsVerified,
-      },
-    };
   }
+
+  // Latest verification results (only 1 per docType)
+  const verifications = Array.from(latestVerificationsMap.values());
+
+  // GET ALL candidate documents (global history)
+  const allCandidateDocuments = await this.prisma.document.findMany({
+    where: { candidateId },
+    select: {
+      id: true,
+      docType: true,
+      fileName: true,
+      fileUrl: true,
+      status: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Calculate summary
+  const totalRequired = requirements.length;
+  const totalSubmitted = verifications.length;
+  const totalVerified = verifications.filter((v) => v.status === 'verified')
+    .length;
+  const totalRejected = verifications.filter((v) => v.status === 'rejected')
+    .length;
+  const totalPending = verifications.filter((v) => v.status === 'pending')
+    .length;
+
+  const allDocumentsVerified =
+    totalVerified === totalRequired && totalRequired > 0;
+
+  return {
+    candidateProject,
+    requirements,
+    verifications, // ONLY LATEST DOCUMENT PER DOCTYPE
+    allCandidateDocuments, // FULL HISTORY
+    summary: {
+      totalRequired,
+      totalSubmitted,
+      totalVerified,
+      totalRejected,
+      totalPending,
+      allDocumentsVerified,
+      canApproveCandidate: allDocumentsVerified,
+    },
+  };
+}
+
 
   /**
    * Reuse an existing document for a new project

@@ -1047,6 +1047,23 @@ async getNominatedCandidates(
       // Recruiter who nominated
       recruiter: assignment.recruiter,
 
+      // Project info (include rolesNeeded summary)
+      project: assignment.project
+        ? {
+            id: assignment.project.id,
+            title: assignment.project.title,
+            status: assignment.project.status,
+            rolesNeeded: assignment.project.rolesNeeded
+              ? assignment.project.rolesNeeded.map((r) => ({
+                  id: r.id,
+                  designation: r.designation,
+                  quantity: r.quantity,
+                  skills: this.parseJsonField(r.skills),
+                }))
+              : [],
+          }
+        : null,
+
       // Metadata
       nominatedAt: assignment.createdAt,
       assignedAt: assignment.assignedAt,
