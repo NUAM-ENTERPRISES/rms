@@ -368,4 +368,48 @@ export class MockInterviewsService {
         completed > 0 ? ((approved / completed) * 100).toFixed(2) : '0',
     };
   }
+
+  /**
+   * Retrieve candidate-project assignments that are marked as 'mock_interview_assigned'.
+   * Useful for coordinators or recruiters to list candidates they need to schedule.
+   */
+  async getAssignedCandidateProjects(query: any) {
+    const { page = 1, limit = 10, projectId, candidateId, recruiterId } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      subStatus: { is: { name: 'mock_interview_assigned' } },
+    };
+
+    if (projectId) where.projectId = projectId;
+    if (candidateId) where.candidateId = candidateId;
+    if (recruiterId) where.recruiterId = recruiterId;
+
+    const [items, total] = await Promise.all([
+      this.prisma.candidateProjects.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+          project: { select: { id: true, title: true } },
+          roleNeeded: { select: { id: true, designation: true } },
+          recruiter: { select: { id: true, name: true, email: true } },
+          mainStatus: true,
+          subStatus: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.candidateProjects.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        items,
+        pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      },
+      message: 'Assigned candidate-projects for mock interviews retrieved',
+    };
+  }
 }

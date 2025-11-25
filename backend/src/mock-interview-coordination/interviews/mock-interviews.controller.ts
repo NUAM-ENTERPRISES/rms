@@ -23,6 +23,7 @@ import { CreateMockInterviewDto } from './dto/create-mock-interview.dto';
 import { UpdateMockInterviewDto } from './dto/update-mock-interview.dto';
 import { CompleteMockInterviewDto } from './dto/complete-mock-interview.dto';
 import { QueryMockInterviewsDto } from './dto/query-mock-interviews.dto';
+import { QueryAssignedMockInterviewsDto } from './dto/query-assigned-mock-interviews.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 
 @ApiTags('Mock Interviews')
@@ -67,6 +68,17 @@ export class MockInterviewsController {
   })
   findAll(@Query() query: QueryMockInterviewsDto) {
     return this.mockInterviewsService.findAll(query);
+  }
+
+  @Get('assigned')
+  @Permissions('read:mock_interviews')
+  @ApiOperation({
+    summary: 'Get assignments marked as mock_interview_assigned',
+    description: 'List candidate-project assignments that are assigned for mock interviews (not yet scheduled)',
+  })
+  @ApiResponse({ status: 200, description: 'Assigned candidate-projects retrieved' })
+  getAssigned(@Query() query: QueryAssignedMockInterviewsDto) {
+    return this.mockInterviewsService.getAssignedCandidateProjects(query);
   }
 
   @Get('coordinator/:coordinatorId/stats')
