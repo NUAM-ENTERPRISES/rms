@@ -70,17 +70,6 @@ export class MockInterviewsController {
     return this.mockInterviewsService.findAll(query);
   }
 
-  @Get('assigned')
-  @Permissions('read:mock_interviews')
-  @ApiOperation({
-    summary: 'Get assignments marked as mock_interview_assigned',
-    description: 'List candidate-project assignments that are assigned for mock interviews (not yet scheduled)',
-  })
-  @ApiResponse({ status: 200, description: 'Assigned candidate-projects retrieved' })
-  getAssigned(@Query() query: QueryAssignedMockInterviewsDto) {
-    return this.mockInterviewsService.getAssignedCandidateProjects(query);
-  }
-
   @Get('coordinator/:coordinatorId/stats')
   @Permissions('read:mock_interviews')
   @ApiOperation({
@@ -98,6 +87,17 @@ export class MockInterviewsController {
   })
   getCoordinatorStats(@Param('coordinatorId') coordinatorId: string) {
     return this.mockInterviewsService.getCoordinatorStats(coordinatorId);
+  }
+
+  @Get('assigned-mock-interviews')
+  @Permissions('read:mock_interviews')
+  @ApiOperation({
+    summary: 'List candidate-project assignments with sub-status mock_interview_assigned ordered by latest assignment',
+    description: 'Return candidate-projects that have been assigned to mock interviews (latest assignments first). Supports pagination and optional filters.',
+  })
+  @ApiResponse({ status: 200, description: 'Assigned mock interview candidate-projects retrieved' })
+  getAssignedMock(@Query() query: QueryAssignedMockInterviewsDto) {
+    return this.mockInterviewsService.getAssignedCandidateProjects(query);
   }
 
   @Get(':id')

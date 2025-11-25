@@ -370,46 +370,60 @@ export class MockInterviewsService {
   }
 
   /**
-   * Retrieve candidate-project assignments that are marked as 'mock_interview_assigned'.
-   * Useful for coordinators or recruiters to list candidates they need to schedule.
+   * Return candidate-project assignments that were set to 'mock_interview_assigned',
+   * ordered by the most recent history entry (statusChangedAt) for that sub-status.
+   * This ensures the "latest assignment" appears first.
    */
   async getAssignedCandidateProjects(query: any) {
     const { page = 1, limit = 10, projectId, candidateId, recruiterId } = query;
-    const skip = (page - 1) * limit;
 
-    const where: any = {
+    const historyWhere: any = {
       subStatus: { is: { name: 'mock_interview_assigned' } },
     };
 
-    if (projectId) where.projectId = projectId;
-    if (candidateId) where.candidateId = candidateId;
-    if (recruiterId) where.recruiterId = recruiterId;
+    if (projectId) historyWhere.candidateProjectMap = { is: { projectId } };
+    if (candidateId) historyWhere.candidateProjectMap = { ...(historyWhere.candidateProjectMap?.is ?? {}), candidateId };
+    if (recruiterId) historyWhere.candidateProjectMap = { ...(historyWhere.candidateProjectMap?.is ?? {}), recruiterId };
 
-    const [items, total] = await Promise.all([
-      this.prisma.candidateProjects.findMany({
-        where,
-        skip,
-        take: limit,
-        include: {
-          candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
-          project: { select: { id: true, title: true } },
-          roleNeeded: { select: { id: true, designation: true } },
-          recruiter: { select: { id: true, name: true, email: true } },
-          mainStatus: true,
-          subStatus: true,
+    const histories = await this.prisma.candidateProjectStatusHistory.findMany({
+      where: historyWhere,
+      orderBy: { statusChangedAt: 'desc' },
+      include: {
+        candidateProjectMap: {
+          include: {
+            candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+            project: { select: { id: true, title: true } },
+            roleNeeded: { select: { id: true, designation: true } },
+            recruiter: { select: { id: true, name: true, email: true } },
+            mainStatus: true,
+            subStatus: true,
+          },
         },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.candidateProjects.count({ where }),
-    ]);
+      },
+    });
+
+    // unique preserve order
+    const seen = new Set<string>();
+    const ordered: any[] = [];
+    for (const h of histories) {
+      const id = h.candidateProjectMapId;
+      if (!seen.has(id)) {
+        seen.add(id);
+        ordered.push({ map: h.candidateProjectMap, assignedAt: h.statusChangedAt });
+      }
+    }
+
+    const total = ordered.length;
+    const start = (page - 1) * limit;
+    const paged = ordered.slice(start, start + limit);
 
     return {
       success: true,
       data: {
-        items,
+        items: paged.map((p) => p.map),
         pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
       },
-      message: 'Assigned candidate-projects for mock interviews retrieved',
+      message: 'Assigned candidate-projects for mock interviews (latest first)',
     };
   }
 }
