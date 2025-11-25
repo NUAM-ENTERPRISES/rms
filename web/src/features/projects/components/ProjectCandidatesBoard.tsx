@@ -214,39 +214,36 @@ const ProjectCandidatesBoard = ({
     ? (eligibleResponse.data as CandidateRecord[])
     : [];
 
-  const recruiterCandidatesData = (
-    recruiterCandidatesQuery.data as unknown as
-      | { data?: CandidateRecord[] }
-      | undefined
-  )?.data;
-  const recruiterCandidates: CandidateRecord[] = Array.isArray(
-    recruiterCandidatesData
-  )
-    ? recruiterCandidatesData
-    : Array.isArray(recruiterCandidatesQuery.data)
-    ? (recruiterCandidatesQuery.data as CandidateRecord[])
-    : [];
+  // Extract candidates data - matching original RecruiterCandidatesTab pattern
+  const recruiterCandidatesData =
+    isRecruiter && !isManager ? recruiterCandidatesQuery.data : undefined;
 
-  const allCandidatesData = (
-    allCandidatesQuery.data as unknown as
-      | {
-          data?: { candidates?: CandidateRecord[] } | CandidateRecord[];
-        }
-      | undefined
-  )?.data;
-  const allCandidatesPool: CandidateRecord[] = Array.isArray(
-    (allCandidatesData as { candidates?: CandidateRecord[] } | undefined)
-      ?.candidates
-  )
-    ? ((allCandidatesData as { candidates?: CandidateRecord[] }).candidates as
-        | CandidateRecord[]
-        | undefined) ?? []
-    : Array.isArray(allCandidatesData)
-    ? (allCandidatesData as CandidateRecord[])
-    : [];
+  const allCandidatesData =
+    !isRecruiter || isManager ? allCandidatesQuery.data : undefined;
 
-  const allCandidates: CandidateRecord[] =
-    isRecruiter && !isManager ? recruiterCandidates : allCandidatesPool;
+  // Determine which data to use (matching original pattern)
+  const candidatesData =
+    isRecruiter && !isManager
+      ? (recruiterCandidatesData as { data?: CandidateRecord[] } | undefined)
+          ?.data
+      : allCandidatesData;
+
+  // Extract candidates array - handle both direct array and nested structure
+  const allCandidates: CandidateRecord[] = Array.isArray(candidatesData)
+    ? candidatesData
+    : candidatesData &&
+      typeof candidatesData === "object" &&
+      "candidates" in candidatesData &&
+      Array.isArray(
+        (candidatesData as { candidates?: CandidateRecord[] }).candidates
+      )
+    ? (candidatesData as { candidates: CandidateRecord[] }).candidates
+    : candidatesData &&
+      typeof candidatesData === "object" &&
+      "data" in candidatesData &&
+      Array.isArray((candidatesData as { data?: CandidateRecord[] }).data)
+    ? (candidatesData as { data: CandidateRecord[] }).data
+    : [];
 
   const managerAssignmentsSource = managerAssignmentsData as unknown;
   const managerAssignmentsPayload = hasAssignmentData(managerAssignmentsSource)

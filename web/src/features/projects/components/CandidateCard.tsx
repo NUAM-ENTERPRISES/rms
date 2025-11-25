@@ -319,10 +319,10 @@ const CandidateCard = memo(function CandidateCard({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-slate-500"
+                        className="h-5 w-5 p-0 text-slate-500"
                         aria-label="More actions"
                       >
-                        <MoreVertical className="h-3.5 w-3.5" />
+                        <MoreVertical className="h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -413,13 +413,13 @@ const CandidateCard = memo(function CandidateCard({
             <Button
               variant="default"
               size="sm"
-              className="h-8 text-xs bg-blue-600 hover:bg-blue-700 px-3"
+              className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
               onClick={(event) => {
                 event.stopPropagation();
                 onVerify(candidateId);
               }}
             >
-              <Send className="h-3 w-3 mr-1" aria-hidden="true" />
+              <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
               Send for Verification
             </Button>
           </div>
