@@ -57,11 +57,7 @@ export default function EditProjectPage() {
   const { getCountryName } = useCountryValidation();
 
   // Fetch selected client data for preview
-  const selectedClientId = watch("clientId");
-  const { data: selectedClientData } = useGetClientQuery(
-    selectedClientId || "",
-    { skip: !selectedClientId }
-  );
+  // NOTE: `watch` is declared later (below) as part of useForm; we'll initialize selected client data after the form is created.
 
   // Helper function to get qualification name by ID
   const getQualificationName = (qualificationId: string) => {
@@ -86,6 +82,13 @@ export default function EditProjectPage() {
     defaultValues: defaultProjectValues,
   });
 
+  // Fetch selected client data for preview (watch is available after useForm)
+  const selectedClientId = watch("clientId");
+  const { data: selectedClientData } = useGetClientQuery(
+    selectedClientId || "",
+    { skip: !selectedClientId }
+  );
+
   const watchedRoles = watch("rolesNeeded");
 
   // State for preview modal
@@ -107,11 +110,19 @@ export default function EditProjectPage() {
           "medium",
         rolesNeeded: project.rolesNeeded.map((role) => ({
           designation: role.designation,
-          quantity: role.quantity,
+          // Ensure quantity is numeric and fallback to 1 if null/invalid
+          quantity: typeof role.quantity === "number" ? role.quantity : 1,
           priority:
             (role.priority as "low" | "medium" | "high" | "urgent") ?? "medium",
-          minExperience: role.minExperience,
-          maxExperience: role.maxExperience,
+          // Normalize numeric experience fields (null -> undefined)
+          minExperience:
+            role.minExperience !== null && role.minExperience !== undefined
+              ? role.minExperience
+              : undefined,
+          maxExperience:
+            role.maxExperience !== null && role.maxExperience !== undefined
+              ? role.maxExperience
+              : undefined,
           specificExperience: Array.isArray(role.specificExperience)
             ? role.specificExperience.join(", ")
             : role.specificExperience || undefined,
@@ -140,12 +151,18 @@ export default function EditProjectPage() {
           benefits: role.benefits || undefined,
           backgroundCheckRequired: role.backgroundCheckRequired,
           drugScreeningRequired: role.drugScreeningRequired,
-          shiftType: role.shiftType as
-            | "day"
-            | "night"
-            | "rotating"
-            | "flexible"
-            | undefined,
+          // Normalize shiftType to only allow expected enum values or undefined
+          shiftType:
+            role.shiftType === "day" ||
+            role.shiftType === "night" ||
+            role.shiftType === "rotating" ||
+            role.shiftType === "flexible"
+              ? (role.shiftType as
+                  | "day"
+                  | "night"
+                  | "rotating"
+                  | "flexible")
+              : undefined,
           onCallRequired: role.onCallRequired,
           physicalDemands: role.physicalDemands || undefined,
           relocationAssistance: role.relocationAssistance,
@@ -248,10 +265,16 @@ export default function EditProjectPage() {
           designation: "",
           quantity: 1,
           priority: "medium",
+          technicalSkills: undefined,
           backgroundCheckRequired: true,
           drugScreeningRequired: true,
           onCallRequired: false,
           relocationAssistance: false,
+          visaType: "contract",
+          genderRequirement: "all",
+          requiredSkills: [],
+          candidateStates: [],
+          candidateReligions: [],
         },
       ],
       { shouldValidate: true, shouldDirty: true }

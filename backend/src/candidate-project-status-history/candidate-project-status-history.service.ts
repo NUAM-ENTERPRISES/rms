@@ -64,12 +64,6 @@ export class CandidateProjectStatusHistoryService {
             interviews: true,
           }
         },
-        currentProjectStatus: {
-          select: {
-            id: true,
-            statusName: true,
-          }
-        },
       },
     });
     if (!mapping) {
@@ -110,11 +104,10 @@ export class CandidateProjectStatusHistoryService {
       data: {
         candidate: mapping.candidate,
         project: mapping.project,
-        currentProjectStatus: mapping.currentProjectStatus,
         history,
         totalEntries: history.length,
       },
-      message: 'Status history retrieved successfully',
+      message: 'Project Pipeline retrieved successfully',
     };
   }
 }

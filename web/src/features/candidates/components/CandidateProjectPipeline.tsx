@@ -26,7 +26,7 @@ interface PipelineProps {
     currentStatus?: any;
 }
 
-export default function CandidateProjectPipeline({ history = [], currentStatus }: PipelineProps) {
+export default function CandidateProjectPipeline({ history = [] }: PipelineProps) {
     // Status icons mapping
     const getStatusIcon = (statusName: string) => {
         const icons: Record<string, any> = {
@@ -86,26 +86,81 @@ export default function CandidateProjectPipeline({ history = [], currentStatus }
         });
     };
 
-    // Calculate progress
-    const calculateProgress = () => {
-        if (history.length === 0) return 0;
-        
-        const totalStatuses = 12; // Total non-terminal statuses
-        const currentStatusName = history[0]?.statusNameSnapshot;
-        
-        const statusOrder = [
+        // Helper: normalize incoming API status strings to canonical keys used by the UI
+        const normalizeStatusName = (entry: any) => {
+            // Try sub-status name first, then subStatusSnapshot, then main status entries
+            const candidates = [
+                entry?.subStatus?.name,
+                typeof entry?.subStatusSnapshot === 'string' ? entry.subStatusSnapshot : undefined,
+                entry?.mainStatus?.name,
+                typeof entry?.mainStatusSnapshot === 'string' ? entry.mainStatusSnapshot : undefined
+            ].filter(Boolean).map((v: string) => String(v).toLowerCase());
+
+            // canonical internal status keys (same as other components)
+            const statusOrder = [
             'nominated', 'pending_documents', 'documents_submitted', 
             'verification_in_progress', 'documents_verified', 'approved',
             'interview_scheduled', 'interview_completed', 'interview_passed',
             'selected', 'processing', 'hired'
         ];
-        
-        const currentIndex = statusOrder.indexOf(currentStatusName);
-        return currentIndex >= 0 ? Math.round(((currentIndex + 1) / totalStatuses) * 100) : 0;
-    };
+
+            // Try to match any candidate value to one of our known canonical keys
+            for (const cand of candidates) {
+                for (const key of statusOrder) {
+                    // match exact or partial (e.g. 'verification_in_progress_document' -> 'verification_in_progress')
+                    if (cand === key || cand.includes(key)) return key;
+                    // also map human-friendly snapshots like 'verified documents' -> 'documents_verified'
+                    if (cand.replace(/\s+/g, '_').includes(key)) return key;
+                }
+            }
+
+            // Fallback: try to use first candidate string (converted to underscore) if no match
+            if (candidates.length > 0) return candidates[0].replace(/\s+/g, '_');
+            return undefined;
+        };
+
+
+        // Pick the most recent history entry (by statusChangedAt) and return it
+        const getMostRecentEntry = () => {
+            if (!history || history.length === 0) return undefined;
+            let latest = history[0];
+            for (const entry of history) {
+                if (new Date(entry.statusChangedAt).getTime() > new Date(latest.statusChangedAt).getTime()) {
+                    latest = entry;
+                }
+            }
+            return latest;
+        };
+
+        // Calculate progress using normalized status name found on the most recent history entry
+        const calculateProgress = () => {
+            if (history.length === 0) return 0;
+
+            const totalStatuses = 12; // total non-terminal statuses
+            const latestEntry = getMostRecentEntry();
+            const rawCurrent = latestEntry ? normalizeStatusName(latestEntry) : undefined;
+
+            const statusOrder = [
+                'nominated', 'pending_documents', 'documents_submitted',
+                'verification_in_progress', 'documents_verified', 'approved',
+                'interview_scheduled', 'interview_completed', 'interview_passed',
+                'selected', 'processing', 'hired'
+            ];
+
+            const currentIndex = rawCurrent ? statusOrder.indexOf(rawCurrent) : -1;
+            return currentIndex >= 0 ? Math.round(((currentIndex + 1) / totalStatuses) * 100) : 0;
+        };
 
     const progress = calculateProgress();
-    const latestStatus = history[0];
+    const latestStatus = getMostRecentEntry();
+
+    // Get a human-friendly label for display using sub-status label/snapshot then main
+    const getStatusLabelFor = (entry: any) => {
+        return entry?.subStatus?.label || entry?.subStatusSnapshot || entry?.mainStatus?.label || entry?.mainStatusSnapshot || undefined;
+    };
+
+    // get a normalized status key for colors/icons
+    const getStatusKeyFor = (entry: any) => normalizeStatusName(entry) || '';
 
     return (
         <div className="space-y-6">
@@ -116,10 +171,10 @@ export default function CandidateProjectPipeline({ history = [], currentStatus }
                         <div>
                             <h3 className="font-semibold text-gray-900 text-lg">Application Progress</h3>
                             <p className="text-gray-600 text-sm mt-1">
-                                Current Status: <span className="font-medium">{latestStatus?.projectStatus?.label || 'N/A'}</span>
+                                Current Status: <span className="font-medium">{getStatusLabelFor(latestStatus) || 'N/A'}</span>
                             </p>
                         </div>
-                        <Badge className={`${getStatusColor(latestStatus?.statusNameSnapshot || '').bg} ${getStatusColor(latestStatus?.statusNameSnapshot || '').text} border ${getStatusColor(latestStatus?.statusNameSnapshot || '').border}`}>
+                        <Badge className={`${getStatusColor(getStatusKeyFor(latestStatus)).bg} ${getStatusColor(getStatusKeyFor(latestStatus)).text} border ${getStatusColor(getStatusKeyFor(latestStatus)).border}`}>
                             {progress}% Complete
                         </Badge>
                     </div>
@@ -145,9 +200,12 @@ export default function CandidateProjectPipeline({ history = [], currentStatus }
 
                             {/* Timeline items */}
                             <div className="space-y-6">
-                                {history.map((item, index) => {
-                                    const colors = getStatusColor(item.statusNameSnapshot);
-                                    const isFirst = index === 0;
+                                { /* display most recent first */
+                                    [...history]
+                                        .sort((a, b) => new Date(b.statusChangedAt).getTime() - new Date(a.statusChangedAt).getTime())
+                                        .map((item, idx) => {
+                                            const colors = getStatusColor(getStatusKeyFor(item));
+                                            const isFirst = idx === 0;
                                     
                                     return (
                                         <div key={item.id} className="relative pl-12">
@@ -163,11 +221,11 @@ export default function CandidateProjectPipeline({ history = [], currentStatus }
                                                 <div className="flex items-start justify-between mb-2">
                                                     <div className="flex items-center gap-2">
                                                         <div className={`p-1.5 rounded-lg ${colors.bg} border ${colors.border}`}>
-                                                            {getStatusIcon(item.statusNameSnapshot)}
+                                                            {getStatusIcon(getStatusKeyFor(item))}
                                                         </div>
                                                         <div>
                                                             <h4 className={`font-semibold ${colors.text}`}>
-                                                                {item.projectStatus?.label || item.statusNameSnapshot}
+                                                                {getStatusLabelFor(item) || getStatusKeyFor(item)}
                                                             </h4>
                                                             <p className="text-xs text-gray-500 mt-0.5">
                                                                 {formatDate(item.statusChangedAt)}

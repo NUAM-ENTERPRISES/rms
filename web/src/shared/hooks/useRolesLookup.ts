@@ -150,10 +150,11 @@ export function useRoleDetails(roleId: string) {
 }
 
 export function useRoleRecommendations(roleId: string, countryCode?: string) {
-  const { data, isLoading, error } = useGetRecommendedQualificationsQuery({
-    roleId,
-    countryCode,
-  });
+  // Don't call the recommendations endpoint when roleId is empty/undefined
+  const { data, isLoading, error } = useGetRecommendedQualificationsQuery(
+    { roleId, countryCode },
+    { skip: !roleId }
+  );
 
   return {
     recommendations: data?.data || [],

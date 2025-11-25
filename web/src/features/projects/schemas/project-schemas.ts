@@ -17,7 +17,8 @@ export const projectFormSchema = z.object({
       z.object({
         designation: z.string().min(1, "Designation is required"),
         quantity: z.number().min(1, "Quantity must be at least 1"),
-        // Removed priority from requirement criteria
+        // Role-level priority (optional) — some UI still uses per-role priority
+        priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
         minExperience: z.union([z.number().min(0), z.undefined()]).optional(),
         maxExperience: z.union([z.number().min(0), z.undefined()]).optional(),
         specificExperience: z.string().nullable().optional(),
@@ -32,7 +33,8 @@ export const projectFormSchema = z.object({
         requiredCertifications: z.string().nullable().optional(),
         institutionRequirements: z.string().nullable().optional(),
         skills: z.string().nullable().optional(),
-        // Removed technicalSkills
+        // Optional technical skills string (comma-separated)
+        technicalSkills: z.string().nullable().optional(),
         languageRequirements: z.string().nullable().optional(),
         licenseRequirements: z.string().nullable().optional(),
         salaryRange: z.string().nullable().optional(),
@@ -43,9 +45,11 @@ export const projectFormSchema = z.object({
         shiftType: z
           .enum(["day", "night", "rotating", "flexible"])
           .optional(),
-        // onCallRequired: z.boolean(),
+        onCallRequired: z.boolean().optional(),
         physicalDemands: z.string().nullable().optional(),
-        // relocationAssistance: z.boolean(),
+        relocationAssistance: z.boolean().optional(),
+        backgroundCheckRequired: z.boolean().optional(),
+        drugScreeningRequired: z.boolean().optional(),
         additionalRequirements: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
         // Changed from employmentType to visaType
@@ -90,6 +94,12 @@ export const defaultProjectValues = {
     {
       designation: "",
       quantity: 1,
+      priority: "medium" as const,
+      technicalSkills: undefined,
+      backgroundCheckRequired: true,
+      drugScreeningRequired: true,
+      onCallRequired: false,
+      relocationAssistance: false,
       visaType: "contract" as const,
       genderRequirement: "all" as const,
       requiredSkills: [],

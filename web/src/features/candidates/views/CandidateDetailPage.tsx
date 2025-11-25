@@ -350,7 +350,7 @@ export default function CandidateDetailPage() {
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          {/* <TabsTrigger value="pipeline">Pipeline</TabsTrigger> */}
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>

@@ -97,12 +97,20 @@ export default function MultiStepEditProjectPage() {
         resumeEditable: (project as any).resumeEditable ?? true,
         groomingRequired: (project as any).groomingRequired ?? "formal",
         hideContactInfo: (project as any).hideContactInfo ?? true,
-        rolesNeeded:
+            rolesNeeded:
           project.rolesNeeded?.map((role: any) => ({
             designation: role.designation,
-            quantity: role.quantity,
-            minExperience: role.minExperience,
-            maxExperience: role.maxExperience,
+            // Ensure quantity is a number (fallback to 1 if null/undefined)
+            quantity: typeof role.quantity === "number" ? role.quantity : 1,
+            // Normalize numeric fields: convert null -> undefined so zod accepts them
+            minExperience:
+              role.minExperience !== null && role.minExperience !== undefined
+                ? role.minExperience
+                : undefined,
+            maxExperience:
+              role.maxExperience !== null && role.maxExperience !== undefined
+                ? role.maxExperience
+                : undefined,
             specificExperience: Array.isArray(role.specificExperience)
               ? role.specificExperience.join(", ")
               : role.specificExperience,
@@ -123,10 +131,30 @@ export default function MultiStepEditProjectPage() {
             additionalRequirements: role.additionalRequirements,
             notes: role.notes,
             employmentType: role.employmentType,
-            contractDurationYears: role.contractDurationYears,
-            genderRequirement: role.genderRequirement,
-            shiftType: role.shiftType,
-            visaType: (role as any).visaType ?? "contract",
+            contractDurationYears:
+              role.contractDurationYears !== null &&
+              role.contractDurationYears !== undefined
+                ? role.contractDurationYears
+                : undefined,
+            // Normalize enum-like fields to valid values or undefined/default
+            genderRequirement:
+              role.genderRequirement === "female" ||
+              role.genderRequirement === "male" ||
+              role.genderRequirement === "all"
+                ? role.genderRequirement
+                : "all",
+            shiftType:
+              role.shiftType === "day" ||
+              role.shiftType === "night" ||
+              role.shiftType === "rotating" ||
+              role.shiftType === "flexible"
+                ? role.shiftType
+                : undefined,
+            visaType:
+              (role as any).visaType === "contract" ||
+              (role as any).visaType === "permanent"
+                ? (role as any).visaType
+                : "contract",
             requiredSkills: Array.isArray((role as any).requiredSkills)
               ? (role as any).requiredSkills
               : (role as any).requiredSkills
@@ -142,10 +170,26 @@ export default function MultiStepEditProjectPage() {
               : (role as any).candidateReligions
               ? JSON.parse((role as any).candidateReligions)
               : [],
-            minHeight: (role as any).minHeight,
-            maxHeight: (role as any).maxHeight,
-            minWeight: (role as any).minWeight,
-            maxWeight: (role as any).maxWeight,
+            minHeight:
+              (role as any).minHeight !== null &&
+              (role as any).minHeight !== undefined
+                ? (role as any).minHeight
+                : undefined,
+            maxHeight:
+              (role as any).maxHeight !== null &&
+              (role as any).maxHeight !== undefined
+                ? (role as any).maxHeight
+                : undefined,
+            minWeight:
+              (role as any).minWeight !== null &&
+              (role as any).minWeight !== undefined
+                ? (role as any).minWeight
+                : undefined,
+            maxWeight:
+              (role as any).maxWeight !== null &&
+              (role as any).maxWeight !== undefined
+                ? (role as any).maxWeight
+                : undefined,
           })) || [],
         documentRequirements:
           project.documentRequirements?.map((doc: any) => ({
@@ -474,24 +518,33 @@ export default function MultiStepEditProjectPage() {
               </Button>
             ) : (
               <Button
-                type="button"
-                onClick={async () => {
-                  console.log("Update Project button clicked");
-                  console.log("Form errors:", errors);
-                  console.log("isUpdating:", isUpdating);
-                  console.log("Current form values:", watch());
+                  type="button"
+                  onClick={handleSubmit(
+                    async (data) => {
+                      // Valid submission
+                      console.log("Update Project button clicked");
+                      console.log("Form data about to submit:", data);
 
-                  // Try to trigger validation first
-                  const isValid = await trigger();
-                  console.log("Form is valid:", isValid);
+                      await onSubmit(data);
+                    },
+                    (submitErrors) => {
+                      // When validation fails react-hook-form will call the `onInvalid` handler
+                      console.warn("Update blocked by validation errors:", submitErrors);
+                      toast.error("Please fix validation errors before updating the project");
 
-                  if (isValid) {
-                    console.log("Calling onSubmit...");
-                    await onSubmit(watch());
-                  } else {
-                    console.log("Form validation failed, not submitting");
-                  }
-                }}
+                      // Jump to the first step containing errors so user can fix them quickly
+                      if (submitErrors.title || submitErrors.deadline || submitErrors.priority || submitErrors.projectType) {
+                        setCurrentStep(0);
+                      } else if (submitErrors.rolesNeeded) {
+                        setCurrentStep(1);
+                      } else if (submitErrors.documentRequirements) {
+                        setCurrentStep(3);
+                      } else {
+                        // Default to the preview step if we can't detect a specific step
+                        setCurrentStep(STEPS.length - 1);
+                      }
+                    }
+                  )}
                 disabled={isUpdating}
                 className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 h-11 px-8"
               >

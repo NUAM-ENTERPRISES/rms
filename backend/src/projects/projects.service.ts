@@ -77,15 +77,25 @@ export class ProjectsService {
       }
     }
 
-    // Validate country code if provided
-    if (createProjectDto.countryCode) {
-      const isValidCountry = await this.countriesService.validateCountryCode(
-        createProjectDto.countryCode,
-      );
-      if (!isValidCountry) {
-        throw new BadRequestException(
-          `Invalid or inactive country code: ${createProjectDto.countryCode}`,
+    // Validate / normalize country code if provided
+    // Treat empty string (""/"   ") as intent to clear the field and store null
+    if (createProjectDto.countryCode !== undefined && createProjectDto.countryCode !== null) {
+      const trimmed = String(createProjectDto.countryCode).trim();
+      if (trimmed === '') {
+        // user supplied an empty string -> clear the value
+        createProjectDto.countryCode = null as any;
+      } else {
+        const upper = trimmed.toUpperCase();
+        const isValidCountry = await this.countriesService.validateCountryCode(
+          upper,
         );
+        if (!isValidCountry) {
+          throw new BadRequestException(
+            `Invalid or inactive country code: ${createProjectDto.countryCode}`,
+          );
+        }
+        // normalize to uppercase for storage
+        createProjectDto.countryCode = upper as any;
       }
     }
 
@@ -127,7 +137,7 @@ export class ProjectsService {
           priority: createProjectDto.priority || 'medium',
           createdBy: userId,
           teamId: createProjectDto.teamId,
-          countryCode: createProjectDto.countryCode?.toUpperCase(),
+          countryCode: createProjectDto.countryCode ?? null,
           // New project-level fields
           projectType: createProjectDto.projectType || 'private',
           resumeEditable: createProjectDto.resumeEditable ?? true,
@@ -514,15 +524,26 @@ export class ProjectsService {
 
     // Note: No deadline validation for updates - existing projects can have past deadlines
 
-    // Validate country code if updating
-    if (updateProjectDto.countryCode) {
-      const isValidCountry = await this.countriesService.validateCountryCode(
-        updateProjectDto.countryCode,
-      );
-      if (!isValidCountry) {
-        throw new BadRequestException(
-          `Invalid or inactive country code: ${updateProjectDto.countryCode}`,
+    // Validate / normalize country code if updating
+    // If caller provided countryCode explicitly, accept null or empty-string as "clear value".
+    if (updateProjectDto.countryCode !== undefined) {
+      if (
+        updateProjectDto.countryCode === null ||
+        String(updateProjectDto.countryCode).trim() === ''
+      ) {
+        // will clear the countryCode (set to null)
+      } else {
+        const upper = String(updateProjectDto.countryCode).trim().toUpperCase();
+        const isValidCountry = await this.countriesService.validateCountryCode(
+          upper,
         );
+        if (!isValidCountry) {
+          throw new BadRequestException(
+            `Invalid or inactive country code: ${updateProjectDto.countryCode}`,
+          );
+        }
+        // assign the normalized value back so the updateData assignment below is consistent
+        updateProjectDto.countryCode = upper as any;
       }
     }
 
@@ -540,8 +561,18 @@ export class ProjectsService {
       updateData.clientId = updateProjectDto.clientId;
     if (updateProjectDto.teamId !== undefined)
       updateData.teamId = updateProjectDto.teamId;
-    if (updateProjectDto.countryCode !== undefined)
-      updateData.countryCode = updateProjectDto.countryCode?.toUpperCase();
+    if (updateProjectDto.countryCode !== undefined) {
+      // If caller explicitly passed null or an empty string, clear the field
+      if (
+        updateProjectDto.countryCode === null ||
+        String(updateProjectDto.countryCode).trim() === ''
+      ) {
+        updateData.countryCode = null;
+      } else {
+        // updateProjectDto.countryCode was normalized to uppercase above
+        updateData.countryCode = String(updateProjectDto.countryCode).toUpperCase();
+      }
+    }
     // New project-level fields
     if (updateProjectDto.projectType !== undefined)
       updateData.projectType = updateProjectDto.projectType;
