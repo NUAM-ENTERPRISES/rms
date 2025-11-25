@@ -420,7 +420,8 @@ export class MockInterviewsService {
     return {
       success: true,
       data: {
-        items: paged.map((p) => p.map),
+        // include assignedAt (from status history) so frontend can show the exact assignment timestamp
+        items: paged.map((p) => ({ ...p.map, assignedAt: p.assignedAt })),
         pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
       },
       message: 'Assigned candidate-projects for mock interviews (latest first)',
