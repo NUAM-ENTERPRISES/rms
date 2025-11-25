@@ -425,19 +425,19 @@ export class DocumentsService {
     await this.updateCandidateProjectStatus(verifyDto.candidateProjectMapId);
 
     // Check if all documents are now verified and publish event
-    if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
-      const summary = await this.getDocumentSummary(
-        verifyDto.candidateProjectMapId,
-      );
+    // if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
+    //   const summary = await this.getDocumentSummary(
+    //     verifyDto.candidateProjectMapId,
+    //   );
 
-      if (summary.allDocumentsVerified) {
-        // Publish event to notify recruiter that all documents are verified
-        await this.outboxService.publishCandidateDocumentsVerified(
-          verifyDto.candidateProjectMapId,
-          verifierId,
-        );
-      }
-    }
+    //   if (summary.allDocumentsVerified) {
+    //     // Publish event to notify recruiter that all documents are verified
+    //     await this.outboxService.publishCandidateDocumentsVerified(
+    //       verifyDto.candidateProjectMapId,
+    //       verifierId,
+    //     );
+    //   }
+    // }
 
     return verification;
   }
@@ -1242,6 +1242,15 @@ async getCandidateProjectRequirements(
         reason: 'Document verification completed',
       },
     });
+
+      if (!updated.recruiterId) {
+        throw new BadRequestException('Recruiter ID is missing for this candidate project');
+      }
+    // 8. Publish event to notify recruiter
+      await this.outboxService.publishCandidateDocumentsVerified(
+        candidateProjectMapId,
+        updated.recruiterId,
+      );
 
     return updated;
   }

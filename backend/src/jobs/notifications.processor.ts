@@ -193,7 +193,7 @@ export class NotificationsProcessor extends WorkerHost {
         type: 'candidate_documents_verified',
         title: 'Candidate Documents Verified',
         message: `Documents for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} have been verified for project ${candidateProjectMap.project.title}. You can now proceed with project allocation.`,
-        link: `/projects/${candidateProjectMap.project.id}/candidates/${candidateProjectMap.candidate.id}`,
+        link: `/candidate-project/${candidateProjectMap.candidate.id}/projects/${candidateProjectMap.project.id}`,
         meta: {
           candidateProjectMapId,
           candidateId: candidateProjectMap.candidate.id,
