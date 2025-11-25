@@ -113,7 +113,8 @@ export default function ProjectDetailPage() {
     });
 
   const [sendForVerification] = useSendForVerificationMutation();
-  const [assignToProject, { isLoading: isAssigning }] = useAssignToProjectMutation();
+  const [assignToProject, { isLoading: isAssigning }] =
+    useAssignToProjectMutation();
 
   // Local state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -177,7 +178,10 @@ export default function ProjectDetailPage() {
   };
 
   // Handle assignment
-  const showAssignConfirmation = (candidateId: string, candidateName: string) => {
+  const showAssignConfirmation = (
+    candidateId: string,
+    candidateName: string
+  ) => {
     setAssignConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
   };
 
@@ -221,16 +225,16 @@ export default function ProjectDetailPage() {
   const projectCandidates = projectCandidatesData?.data?.candidates || [];
   const pagination = projectCandidatesData?.data?.pagination;
   const totalPages = pagination?.totalPages || 1;
-  
+
   // Get project statuses with proper fallback
   const projectStatuses = Array.isArray(statusesData?.data?.statuses)
     ? statusesData.data.statuses
     : [];
 
   // Debug logging to check what statuses we're getting
-  console.log('Project Statuses:', projectStatuses);
-  console.log('Selected Status:', selectedStatus);
-  console.log('Filtered Candidates:', projectCandidates);
+  console.log("Project Statuses:", projectStatuses);
+  console.log("Selected Status:", selectedStatus);
+  console.log("Filtered Candidates:", projectCandidates);
 
   // Loading state
   if (isLoading) {
@@ -346,11 +350,209 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Candidate Tables */}
+          <div className="space-y-6 lg:col-span-8">
+            {/* Nominated Candidates Section */}
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-xl font-bold text-slate-900">
+                      Nominated Candidates
+                    </CardTitle>
+                    <CardDescription className="text-slate-600">
+                      Candidates submitted for this project
+                      {pagination && ` (${pagination.total} total)`}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-64">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        placeholder="Search candidates..."
+                        value={searchTerm}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={handleStatusChange}
+                    >
+                      <SelectTrigger className="w-full sm:w-[200px]">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4" />
+                          <SelectValue placeholder="Filter by status" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        {projectStatuses.map((status) => (
+                          <SelectItem
+                            key={status.id}
+                            value={status.id.toString()}
+                          >
+                            {status.label || status.statusName || status.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingCandidates ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="h-64 bg-slate-200 rounded-lg animate-pulse"
+                      />
+                    ))}
+                  </div>
+                ) : projectCandidates.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p className="text-lg font-medium">No candidates found</p>
+                    <p className="text-sm mt-1">
+                      {searchTerm || selectedStatus !== "all"
+                        ? "Try adjusting your filters"
+                        : "No candidates have been nominated yet"}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {projectCandidates.map((candidate: any) => {
+                        if (!candidate) return null;
 
-          <div className="xl:col-span-2 space-y-6">
+                        // Get the actual status to display - prefer subStatus label, then name, then fallbacks
+                        const projectStatus =
+                          candidate.projectSubStatus?.label ||
+                          candidate.projectSubStatus?.name ||
+                          candidate.currentProjectStatus?.statusName ||
+                          candidate.projectStatus?.statusName ||
+                          "nominated";
 
+                        const actualCandidateId =
+                          candidate.candidateId || candidate.id;
+                        const matchScore = candidate.matchScore;
+
+                        // Check if candidate has a project (is already assigned to this project)
+                        const hasProject = !!candidate.project;
+
+                        // Get subStatus name from the backend response
+                        const subStatusName = candidate.projectSubStatus?.name;
+
+                        // Check if verification is in progress - don't show assign to project button
+                        const isVerificationInProgress =
+                          subStatusName === "verification_in_progress_document";
+
+                        // ONLY show send for verification button when subStatus is "nominated_initial"
+                        const showSendForVerificationBtn =
+                          subStatusName === "nominated_initial";
+
+                        // Show assign to project button only if candidate has no project AND verification is not in progress
+                        const showAssignToProjectBtn =
+                          !hasProject && !isVerificationInProgress;
+
+                        const actions = [];
+
+                        // Add assign to project action if conditions met
+                        if (showAssignToProjectBtn) {
+                          actions.push({
+                            label: "Assign to Project",
+                            action: "assign",
+                            variant: "default" as const,
+                            icon: UserPlus,
+                          });
+                        }
+
+                        return (
+                          <CandidateCard
+                            key={candidate.id}
+                            candidate={candidate}
+                            onView={() =>
+                              handleViewCandidate(actualCandidateId)
+                            }
+                            onAction={(candidateId, action) => {
+                              if (action === "assign") {
+                                // Handle assign to project action
+                                showAssignConfirmation(
+                                  candidateId,
+                                  `${candidate.firstName} ${candidate.lastName}`
+                                );
+                              }
+                            }}
+                            actions={actions}
+                            projectStatus={projectStatus}
+                            showMatchScore={
+                              matchScore !== undefined && matchScore !== null
+                            }
+                            matchScore={matchScore}
+                            showVerifyButton={showSendForVerificationBtn}
+                            onVerify={() =>
+                              showVerifyConfirmation(
+                                actualCandidateId,
+                                `${candidate.firstName} ${candidate.lastName}`
+                              )
+                            }
+                            isAlreadyInProject={hasProject}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {/* Pagination */}
+                    {pagination && pagination.totalPages > 1 && (
+                      <div className="mt-6 flex items-center justify-between border-t pt-4">
+                        <div className="text-sm text-gray-600">
+                          Page {currentPage} of {pagination.totalPages} (
+                          {pagination.total} candidates)
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentPage((prev) => Math.max(1, prev - 1))
+                            }
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentPage((prev) =>
+                                Math.min(totalPages, prev + 1)
+                              )
+                            }
+                            disabled={currentPage === totalPages}
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Tabs for Other Candidates */}
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardContent className="px-4">
+                <ProjectDetailTabs projectId={projectId!} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Project Info + Supporting Cards */}
+          <div className="space-y-4 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2">
             {/* Compact Project Overview */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardContent className="space-y-3">
@@ -390,25 +592,37 @@ export default function ProjectDetailPage() {
                 </div>
 
                 {/* Project Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-blue-500" />
-                    <span className="text-slate-600">Deadline:</span>
-                    <span className="font-medium text-slate-800">
+                <div className="space-y-2.5 border-t border-slate-200 pt-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <Calendar className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Deadline
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-900 truncate text-right">
                       {formatDateTime(project.deadline)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3 text-green-500" />
-                    <span className="text-slate-600">Created:</span>
-                    <span className="font-medium text-slate-800">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <Clock className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Created
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-900 truncate text-right">
                       {formatDate(project.createdAt)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3 w-3 text-purple-500" />
-                    <span className="text-slate-600">Country:</span>
-                    <div className="font-medium text-slate-800">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <MapPin className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Country
+                      </span>
+                    </div>
+                    <div className="flex-shrink-0">
                       <ProjectCountryCell
                         countryCode={project.countryCode}
                         size="sm"
@@ -416,40 +630,60 @@ export default function ProjectDetailPage() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-3 w-3 text-emerald-500" />
-                    <span className="text-slate-600">Status:</span>
-                    <Badge variant="outline" className="text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <UserCheck className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Status
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
                       {project.status}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-3 w-3 text-indigo-500" />
-                    <span className="text-slate-600">Created By:</span>
-                    <span className="font-medium text-slate-800">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <User className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Created By
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-900 truncate text-right">
                       {project.creator.name}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-3 w-3 text-orange-500" />
-                    <span className="text-slate-600">Project Type:</span>
-                    <Badge variant="outline" className="text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <Building2 className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Project Type
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
                       {project.projectType === "ministry"
                         ? "Ministry/Government"
                         : "Private Sector"}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-3 w-3 text-cyan-500" />
-                    <span className="text-slate-600">Resume:</span>
-                    <Badge variant="outline" className="text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <FileText className="h-3.5 w-3.5 text-cyan-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Resume
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
                       {project.resumeEditable ? "Editable" : "Fixed"}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-3 w-3 text-pink-500" />
-                    <span className="text-slate-600">Grooming:</span>
-                    <Badge variant="outline" className="text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <User className="h-3.5 w-3.5 text-pink-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Grooming
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
                       {project.groomingRequired === "formal"
                         ? "Formal"
                         : project.groomingRequired === "casual"
@@ -457,15 +691,15 @@ export default function ProjectDetailPage() {
                         : "Not Specified"}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Target className="h-3 w-3 text-red-500" />
-                    <span className="text-slate-600">
-                      Candidate mobile and email:
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                      {project.hideContactInfo
-                        ? "Should not be visible"
-                        : "Visible/Optional"}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                      <Target className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Contact Info
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                      {project.hideContactInfo ? "Hidden" : "Visible"}
                     </Badge>
                   </div>
                 </div>
@@ -479,195 +713,6 @@ export default function ProjectDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Nominated Candidates Section */}
-<Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-  <CardHeader>
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <CardTitle className="text-xl font-bold text-slate-900">
-          Nominated Candidates
-        </CardTitle>
-        <CardDescription className="text-slate-600">
-          Candidates submitted for this project
-          {pagination && ` (${pagination.total} total)`}
-        </CardDescription>
-      </div>
-      <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-        <div className="relative flex-1 md:w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search candidates..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={selectedStatus} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <SelectValue placeholder="Filter by status" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {projectStatuses.map((status) => (
-              <SelectItem key={status.id} value={status.id.toString()}>
-                {status.label || status.statusName || status.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  </CardHeader>
-  <CardContent>
-    {isLoadingCandidates ? (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="h-64 bg-slate-200 rounded-lg animate-pulse"
-          />
-        ))}
-      </div>
-    ) : projectCandidates.length === 0 ? (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-lg font-medium">No candidates found</p>
-        <p className="text-sm mt-1">
-          {searchTerm || selectedStatus !== "all"
-            ? "Try adjusting your filters"
-            : "No candidates have been nominated yet"}
-        </p>
-      </div>
-    ) : (
-      <>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {projectCandidates.map((candidate: any) => {
-            if (!candidate) return null;
-
-            // Get the actual status to display - prefer subStatus label, then name, then fallbacks
-            const projectStatus = 
-              candidate.projectSubStatus?.label || 
-              candidate.projectSubStatus?.name ||
-              candidate.currentProjectStatus?.statusName ||
-              candidate.projectStatus?.statusName ||
-              "nominated";
-
-            const actualCandidateId = candidate.candidateId || candidate.id;
-            const matchScore = candidate.matchScore;
-
-            // Check if candidate has a project (is already assigned to this project)
-            const hasProject = !!candidate.project;
-            
-            // Get subStatus name from the backend response
-            const subStatusName = candidate.projectSubStatus?.name;
-            
-            // Check if verification is in progress - don't show assign to project button
-            const isVerificationInProgress = subStatusName === "verification_in_progress_document";
-            
-            // ONLY show send for verification button when subStatus is "nominated_initial"
-            const showSendForVerificationBtn = subStatusName === "nominated_initial";
-            
-            // Show assign to project button only if candidate has no project AND verification is not in progress
-            const showAssignToProjectBtn = !hasProject && !isVerificationInProgress;
-
-            const actions = [];
-
-            // Add assign to project action if conditions met
-            if (showAssignToProjectBtn) {
-              actions.push({
-                label: "Assign to Project",
-                action: "assign",
-                variant: "default" as const,
-                icon: UserPlus,
-              });
-            }
-
-            return (
-              <CandidateCard
-                key={candidate.id}
-                candidate={candidate}
-                onView={() => handleViewCandidate(actualCandidateId)}
-                onAction={(candidateId, action) => {
-                  if (action === "assign") {
-                    // Handle assign to project action
-                    showAssignConfirmation(
-                      candidateId,
-                      `${candidate.firstName} ${candidate.lastName}`
-                    );
-                  }
-                }}
-                actions={actions}
-                projectStatus={projectStatus}
-                showMatchScore={
-                  matchScore !== undefined && matchScore !== null
-                }
-                matchScore={matchScore}
-                showVerifyButton={showSendForVerificationBtn}
-                onVerify={() =>
-                  showVerifyConfirmation(
-                    actualCandidateId,
-                    `${candidate.firstName} ${candidate.lastName}`
-                  )
-                }
-                isAlreadyInProject={hasProject}
-              />
-            );
-          })}
-        </div>
-
-        {/* Pagination */}
-        {pagination && pagination.totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t pt-4">
-            <div className="text-sm text-gray-600">
-              Page {currentPage} of {pagination.totalPages} (
-              {pagination.total} candidates)
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.max(1, prev - 1))
-                }
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) =>
-                    Math.min(totalPages, prev + 1)
-                  )
-                }
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </>
-    )}
-  </CardContent>
-</Card>
-
-            {/* Tabs for Other Candidates */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardContent className="px-4">
-                <ProjectDetailTabs projectId={projectId!} />
-              </CardContent>
-            </Card>
-            
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
             {/* Document Requirements */}
             {project.documentRequirements &&
               project.documentRequirements.length > 0 && (
@@ -688,7 +733,9 @@ export default function ProjectDetailPage() {
                           >
                             {req.docType
                               .replace(/_/g, " ")
-                              .replace(/\b\w/g, (l) => l.toUpperCase())}
+                              .replace(/\b\w/g, (char: string) =>
+                                char.toUpperCase()
+                              )}
                             {req.mandatory && " (Required)"}
                           </span>
                         )
@@ -770,7 +817,6 @@ export default function ProjectDetailPage() {
               </CardContent>
             </Card>
           </div>
-          
         </div>
       </div>
 
@@ -815,7 +861,10 @@ export default function ProjectDetailPage() {
                 placeholder="Add any notes for the verification team..."
                 value={verifyConfirm.notes}
                 onChange={(e) =>
-                  setVerifyConfirm((prev) => ({ ...prev, notes: e.target.value }))
+                  setVerifyConfirm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
                 }
                 rows={3}
                 className="w-full"
@@ -850,7 +899,8 @@ export default function ProjectDetailPage() {
         description={
           <div className="space-y-4">
             <p>
-              Are you sure you want to assign {assignConfirm.candidateName} to this project?
+              Are you sure you want to assign {assignConfirm.candidateName} to
+              this project?
             </p>
             <div className="space-y-2">
               <label
@@ -864,7 +914,10 @@ export default function ProjectDetailPage() {
                 placeholder="Add any notes about this assignment..."
                 value={assignConfirm.notes}
                 onChange={(e) =>
-                  setAssignConfirm((prev) => ({ ...prev, notes: e.target.value }))
+                  setAssignConfirm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
                 }
                 rows={3}
                 className="w-full"

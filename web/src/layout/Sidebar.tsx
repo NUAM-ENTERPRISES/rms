@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   ChevronRight as ChevronRightIcon,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -225,24 +223,118 @@ export default function Sidebar({
 }: SidebarProps) {
   const navItems = useNav();
 
+  // Hover-to-open state management
+  const [isHoverOpen, setIsHoverOpen] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+
+  // Calculate effective collapsed state (collapsed unless hovered)
+  const effectiveCollapsed = isCollapsed && !isHoverOpen;
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      if (leaveTimeoutRef.current) {
+        clearTimeout(leaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle mouse enter - open sidebar on hover (only when collapsed)
+  const handleMouseEnter = () => {
+    // Clear any pending leave timeout
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+
+    // Only open on hover if sidebar is collapsed
+    if (isCollapsed) {
+      // Small delay to prevent flicker on rapid movements
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoverOpen(true);
+      }, 150);
+    }
+  };
+
+  // Handle mouse leave - close sidebar (only if it was hover-opened)
+  const handleMouseLeave = () => {
+    // Clear any pending hover timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
+    // Only close if it was opened by hover (not by click)
+    if (isCollapsed && isHoverOpen) {
+      // Check if focus is inside sidebar - if so, delay closing
+      const activeElement = document.activeElement;
+      const sidebarElement = sidebarRef.current;
+
+      if (
+        sidebarElement &&
+        activeElement &&
+        sidebarElement.contains(activeElement)
+      ) {
+        // Focus is inside sidebar - wait a bit longer before closing
+        leaveTimeoutRef.current = setTimeout(() => {
+          setIsHoverOpen(false);
+        }, 300);
+      } else {
+        // No focus inside - close immediately
+        leaveTimeoutRef.current = setTimeout(() => {
+          setIsHoverOpen(false);
+        }, 100);
+      }
+    }
+  };
+
+  // Handle click toggle - clear hover state and toggle persistent state
+  const handleToggleClick = () => {
+    // Clear any pending hover/leave timeouts
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+    // Clear hover state
+    setIsHoverOpen(false);
+    // Toggle persistent state (existing behavior)
+    onToggleCollapse();
+  };
+
+  // Update aria-expanded based on effective state
+  const ariaExpanded = !effectiveCollapsed;
+
   return (
     <aside
+      ref={sidebarRef}
       className={cn(
-        "flex flex-col bg-white/80 backdrop-blur-xl border-r border-slate-200/60 transition-all duration-500 ease-out shadow-2xl rounded-2xl",
+        "flex flex-col bg-white/80 backdrop-blur-xl border-r border-slate-200/60 transition-[width,opacity] duration-300 ease-in-out shadow-2xl rounded-2xl",
         "supports-[backdrop-filter]:bg-white/60",
-        isCollapsed ? "w-20" : "w-72"
+        effectiveCollapsed ? "w-20" : "w-72"
       )}
       style={{
         borderTopRightRadius: "1rem",
         borderBottomRightRadius: "1rem",
       }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      aria-expanded={ariaExpanded}
     >
       {/* Premium Sidebar Header */}
       <div className="relative flex h-16 items-center justify-between border-b border-slate-200/60 px-4 bg-gradient-to-r from-slate-50/50 to-white/50">
         {/* Background pattern - moved to not interfere with buttons */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.03)_1px,transparent_0)] bg-[size:20px_20px] pointer-events-none" />
 
-        {!isCollapsed ? (
+        {!effectiveCollapsed ? (
           <div className="flex items-center space-x-3 relative z-20">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
               <Sparkles className="h-5 w-5 text-white" />
@@ -259,22 +351,26 @@ export default function Sidebar({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onToggleCollapse}
+              onClick={handleToggleClick}
               className="h-12 w-12 rounded-xl hover:bg-slate-100 hover:shadow-md transition-all duration-200 bg-white/90 border border-slate-200/60 shadow-md hover:scale-105"
               aria-label="Expand sidebar"
+              aria-expanded={ariaExpanded}
+              aria-controls="sidebar-navigation"
             >
               <ChevronRight className="h-6 w-6 text-slate-700" />
             </Button>
           </div>
         )}
 
-        {!isCollapsed && (
+        {!effectiveCollapsed && (
           <Button
             variant="ghost"
             size="icon"
-            onClick={onToggleCollapse}
+            onClick={handleToggleClick}
             className="h-10 w-10 rounded-xl hover:bg-slate-100 hover:shadow-md transition-all duration-200 relative z-20"
             aria-label="Collapse sidebar"
+            aria-expanded={ariaExpanded}
+            aria-controls="sidebar-navigation"
           >
             <ChevronLeft className="h-5 w-5 text-slate-600" />
           </Button>
@@ -282,18 +378,21 @@ export default function Sidebar({
       </div>
 
       {/* Navigation Items with Premium Styling */}
-      <nav className="flex-1 space-y-2 p-4 overflow-y-auto">
+      <nav
+        id="sidebar-navigation"
+        className="flex-1 space-y-2 p-4 overflow-y-auto"
+      >
         {navItems.map((item) => (
           <NavItemComponent
             key={item.id}
             item={item}
-            isCollapsed={isCollapsed}
+            isCollapsed={effectiveCollapsed}
           />
         ))}
       </nav>
 
       {/* Premium Footer */}
-      {!isCollapsed && (
+      {!effectiveCollapsed && (
         <div className="p-4 border-t border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white/50">
           <div className="text-center">
             <div className="w-8 h-8 mx-auto mb-2 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
