@@ -31,6 +31,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleTransferRequested(job);
         case 'CandidateDocumentsVerified':
           return await this.handleCandidateDocumentsVerified(job);
+        case 'CandidateDocumentsRejected':
+          return await this.handleCandidateDocumentsRejected(job);
         case 'CandidateSentForVerification':
           return await this.handleCandidateSentForVerification(job);
         case 'CandidateAssignedToRecruiter':
@@ -192,7 +194,7 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
-      const idemKey = `${eventId}:${recruiter.id}:candidate_documents_verified`;
+      const idemKey = `${eventId}:${recruiter.id}:candidate_documents_rejected`;
 
       await this.notificationsService.createNotification({
         userId: recruiter.id,
@@ -215,6 +217,103 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error(
         `Failed to process candidate documents verified: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleCandidateDocumentsRejected(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate documents rejected event: ${eventId}`,
+    );
+
+    try {
+      const { candidateProjectMapId, verifiedBy } = payload as {
+        candidateProjectMapId: string;
+        verifiedBy: string;
+      };
+
+      // Load candidate project mapping with candidate and project details
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            candidate: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                countryCode: true,
+                mobileNumber: true,
+                email: true,
+              },
+            },
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.warn(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      // Check if recruiter exists
+      if (!candidateProjectMap.recruiterId) {
+        this.logger.warn(
+          `No recruiter assigned to candidate project mapping ${candidateProjectMapId}`,
+        );
+        return;
+      }
+
+      // Get the recruiter who nominated this candidate
+      const recruiter = await this.prisma.user.findUnique({
+        where: { id: candidateProjectMap.recruiterId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+
+      if (!recruiter) {
+        this.logger.warn(
+          `Recruiter ${candidateProjectMap.recruiterId} not found`,
+        );
+        return;
+      }
+
+      const idemKey = `${eventId}:${recruiter.id}:candidate_documents_verified`;
+
+      await this.notificationsService.createNotification({
+        userId: recruiter.id,
+        type: 'candidate_documents_rejected',
+        title: 'Candidate Documents Rejected',
+        message: `Documents for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} have been rejected for project ${candidateProjectMap.project.title}. Please review and take necessary action.`,
+         link: `/candidate-project/${candidateProjectMap.candidate.id}/projects/${candidateProjectMap.project.id}`,
+        meta: {
+          candidateProjectMapId,
+          candidateId: candidateProjectMap.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          verifiedBy,
+        },
+        idemKey,
+      });
+
+      this.logger.log(
+        `Candidate documents rejected notification created for recruiter ${recruiter.id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate documents rejected: ${error.message}`,
         error.stack,
       );
       throw error;

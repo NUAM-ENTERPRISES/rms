@@ -1314,6 +1314,15 @@ async rejectVerification(
     },
   });
 
+    if (!updated.recruiterId) {
+        throw new BadRequestException('Recruiter ID is missing for this candidate project');
+      }
+    // 8. Publish event to notify recruiter
+      await this.outboxService.publishCandidateDocumentsRejected(
+        candidateProjectMapId,
+        updated.recruiterId,
+      );
+
   return updated;
 }
 

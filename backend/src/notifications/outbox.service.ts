@@ -32,6 +32,21 @@ export class OutboxService {
     }
   }
 
+
+  /**
+   * Publish candidate documents verified event
+   */
+  async publishCandidateDocumentsRejected(
+    candidateProjectMapId: string,
+    verifiedBy: string,
+  ): Promise<void> {
+    await this.publishEvent('CandidateDocumentsRejected', {
+      candidateProjectMapId,
+      verifiedBy,
+    });
+  }
+
+
   /**
    * Publish candidate documents verified event
    */
