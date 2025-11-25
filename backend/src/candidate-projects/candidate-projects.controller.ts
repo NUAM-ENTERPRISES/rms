@@ -23,6 +23,7 @@ import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
 import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
+import { SendForInterviewDto } from './dto/send-for-interview.dto';
 import { SendToMockInterviewDto } from './dto/send-to-mock-interview.dto';
 import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -373,6 +374,28 @@ export class CandidateProjectsController {
       success: true,
       data,
       message: 'Candidate approved for client interview',
+    };
+  }
+
+  @Post('send-for-interview')
+  @Permissions('manage:candidates', 'schedule:interviews')
+  @ApiOperation({
+    summary: 'Send candidate for interview (mock or client)',
+    description:
+      "Creates/updates candidate-project assignment, sets main stage to 'interview' and sub-status to either 'interview_assigned' or 'mock_interview_assigned' depending on type",
+  })
+  @ApiResponse({ status: 201, description: 'Candidate sent for interview successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  async sendForInterview(@Body() dto: SendForInterviewDto, @Request() req: any) {
+    const data = await this.candidateProjectsService.sendForInterview(
+      dto,
+      req.user.sub,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Candidate sent for interview successfully',
     };
   }
 }

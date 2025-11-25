@@ -11,6 +11,7 @@ import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
 import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
+import { SendForInterviewDto } from './dto/send-for-interview.dto';
 import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
 
 @Injectable()
@@ -1345,5 +1346,102 @@ export class CandidateProjectsService {
       success: true,
       message: 'Candidate approved for client interview',
     };
+  }
+
+  /**
+   * Send candidate for interview (either mock or client interview assignment)
+   * - Sets main stage to 'interview'
+   * - Sets sub-status to either 'interview_assigned' or 'mock_interview_assigned'
+   * - Creates or updates candidate-project assignment and adds a status history entry
+   */
+  async sendForInterview(dto: SendForInterviewDto, userId: string) {
+    const { projectId, candidateId, type, recruiterId: providedRecruiterId, notes } = dto as any;
+
+    // Validate candidate & project
+    const candidate = await this.prisma.candidate.findUnique({ where: { id: candidateId } });
+    if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
+
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    // Resolve recruiter (optional)
+    let recruiterId = providedRecruiterId ?? userId;
+    if (recruiterId) {
+      const recruiter = await this.prisma.user.findUnique({ where: { id: recruiterId } });
+      if (!recruiter) throw new NotFoundException(`Recruiter ${recruiterId} not found`);
+    }
+
+    // Find main 'interview' status and sub-status name based on type
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({ where: { name: 'interview' } });
+    const subName = type === 'interview_assigned' ? 'interview_assigned' : 'mock_interview_assigned';
+    const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({ where: { name: subName } });
+
+    if (!mainStatus || !subStatus) {
+      throw new BadRequestException('Interview statuses missing. Please seed the DB.');
+    }
+
+    // Get user snapshot
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+
+    // Check existing assignment for candidate & project
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
+
+    const candidateProject = await this.prisma.$transaction(async (tx) => {
+      let assignment;
+
+      if (existingAssignment) {
+        // Update status and optionally recruiter / notes
+        const data: any = {
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+        };
+        if (providedRecruiterId) data.recruiterId = recruiterId;
+        if (notes !== undefined) data.notes = notes ?? existingAssignment.notes;
+
+        assignment = await tx.candidateProjects.update({
+          where: { id: existingAssignment.id },
+          data,
+          include: { candidate: true, project: true, mainStatus: true, subStatus: true, recruiter: true },
+        });
+      } else {
+        // Create new assignment
+        assignment = await tx.candidateProjects.create({
+          data: {
+            candidateId,
+            projectId,
+            recruiterId: recruiterId || null,
+            assignedAt: new Date(),
+            notes: notes || null,
+            mainStatusId: mainStatus.id,
+            subStatusId: subStatus.id,
+          },
+          include: { candidate: true, project: true, mainStatus: true, subStatus: true, recruiter: true },
+        });
+      }
+
+      // Create status history entry
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId: assignment.id,
+          changedById: userId,
+          changedByName: user?.name || null,
+
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+
+          mainStatusSnapshot: mainStatus.label,
+          subStatusSnapshot: subStatus.label,
+
+          reason: `Sent for interview (${subName})`,
+          notes: notes || null,
+        },
+      });
+
+      return assignment;
+    });
+
+    // Optionally we could publish an outbox event here if needed
+
+    return candidateProject;
   }
 }
