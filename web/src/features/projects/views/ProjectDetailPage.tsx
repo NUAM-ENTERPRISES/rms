@@ -11,15 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog, ConfirmationDialog } from "@/components/ui";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Edit,
   Trash2,
@@ -31,11 +23,7 @@ import {
   UserCheck,
   User,
   FileText,
-  Search,
-  Filter,
   Send,
-  ChevronLeft,
-  ChevronRight,
   UserPlus,
 } from "lucide-react";
 import {
@@ -46,8 +34,7 @@ import {
   useGetCandidateProjectStatusesQuery,
   useAssignToProjectMutation,
 } from "@/features/projects";
-import ProjectDetailTabs from "@/features/projects/components/ProjectDetailTabs";
-import CandidateCard from "@/features/projects/components/CandidateCard";
+import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
@@ -93,13 +80,11 @@ export default function ProjectDetailPage() {
   } = useGetProjectQuery(projectId!);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
-  // Submitted Candidates State
-  const [currentPage, setCurrentPage] = useState(1);
+  // Board filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const itemsPerPage = 3; // 3 cards per page
 
-  // Get project statuses first to ensure we have the status data
+  // Get project statuses for filter options
   const { data: statusesData } = useGetCandidateProjectStatusesQuery();
 
   // Get nominated candidates with proper status filtering
@@ -108,8 +93,8 @@ export default function ProjectDetailPage() {
       projectId: projectId!,
       search: searchTerm || undefined,
       statusId: selectedStatus !== "all" ? selectedStatus : undefined,
-      page: currentPage,
-      limit: itemsPerPage,
+      page: 1,
+      limit: 100,
     });
 
   const [sendForVerification] = useSendForVerificationMutation();
@@ -211,30 +196,25 @@ export default function ProjectDetailPage() {
     navigate(`/candidates/${candidateId}`);
   };
 
-  const handleSearchChange = (value: string) => {
+  const handleBoardSearchChange = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1);
   };
 
-  const handleStatusChange = (value: string) => {
+  const handleBoardStatusChange = (value: string) => {
     setSelectedStatus(value);
-    setCurrentPage(1);
   };
 
   // Get data
-  const projectCandidates = projectCandidatesData?.data?.candidates || [];
+  const projectCandidates = Array.isArray(
+    projectCandidatesData?.data?.candidates
+  )
+    ? projectCandidatesData?.data?.candidates
+    : [];
   const pagination = projectCandidatesData?.data?.pagination;
-  const totalPages = pagination?.totalPages || 1;
 
-  // Get project statuses with proper fallback
   const projectStatuses = Array.isArray(statusesData?.data?.statuses)
     ? statusesData.data.statuses
     : [];
-
-  // Debug logging to check what statuses we're getting
-  console.log("Project Statuses:", projectStatuses);
-  console.log("Selected Status:", selectedStatus);
-  console.log("Filtered Candidates:", projectCandidates);
 
   // Loading state
   if (isLoading) {
@@ -286,6 +266,18 @@ export default function ProjectDetailPage() {
   }
 
   const project = projectData.data;
+  const projectResumeEditable =
+    "resumeEditable" in project
+      ? Boolean((project as { resumeEditable?: boolean }).resumeEditable)
+      : false;
+  const projectGroomingRequirement =
+    "groomingRequired" in project
+      ? (project as { groomingRequired?: string | null }).groomingRequired
+      : undefined;
+  const projectHideContactInfo =
+    "hideContactInfo" in project
+      ? Boolean((project as { hideContactInfo?: boolean }).hideContactInfo)
+      : false;
 
   // Access control
   if (!canReadProjects) {
@@ -351,204 +343,26 @@ export default function ProjectDetailPage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Candidate Tables */}
-          <div className="space-y-6 lg:col-span-8">
-            {/* Nominated Candidates Section */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-xl font-bold text-slate-900">
-                      Nominated Candidates
-                    </CardTitle>
-                    <CardDescription className="text-slate-600">
-                      Candidates submitted for this project
-                      {pagination && ` (${pagination.total} total)`}
-                    </CardDescription>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        placeholder="Search candidates..."
-                        value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <Select
-                      value={selectedStatus}
-                      onValueChange={handleStatusChange}
-                    >
-                      <SelectTrigger className="w-full sm:w-[200px]">
-                        <div className="flex items-center gap-2">
-                          <Filter className="h-4 w-4" />
-                          <SelectValue placeholder="Filter by status" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        {projectStatuses.map((status) => (
-                          <SelectItem
-                            key={status.id}
-                            value={status.id.toString()}
-                          >
-                            {status.label || status.statusName || status.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoadingCandidates ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="h-64 bg-slate-200 rounded-lg animate-pulse"
-                      />
-                    ))}
-                  </div>
-                ) : projectCandidates.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <p className="text-lg font-medium">No candidates found</p>
-                    <p className="text-sm mt-1">
-                      {searchTerm || selectedStatus !== "all"
-                        ? "Try adjusting your filters"
-                        : "No candidates have been nominated yet"}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {projectCandidates.map((candidate: any) => {
-                        if (!candidate) return null;
-
-                        // Get the actual status to display - prefer subStatus label, then name, then fallbacks
-                        const projectStatus =
-                          candidate.projectSubStatus?.label ||
-                          candidate.projectSubStatus?.name ||
-                          candidate.currentProjectStatus?.statusName ||
-                          candidate.projectStatus?.statusName ||
-                          "nominated";
-
-                        const actualCandidateId =
-                          candidate.candidateId || candidate.id;
-                        const matchScore = candidate.matchScore;
-
-                        // Check if candidate has a project (is already assigned to this project)
-                        const hasProject = !!candidate.project;
-
-                        // Get subStatus name from the backend response
-                        const subStatusName = candidate.projectSubStatus?.name;
-
-                        // Check if verification is in progress - don't show assign to project button
-                        const isVerificationInProgress =
-                          subStatusName === "verification_in_progress_document";
-
-                        // ONLY show send for verification button when subStatus is "nominated_initial"
-                        const showSendForVerificationBtn =
-                          subStatusName === "nominated_initial";
-
-                        // Show assign to project button only if candidate has no project AND verification is not in progress
-                        const showAssignToProjectBtn =
-                          !hasProject && !isVerificationInProgress;
-
-                        const actions = [];
-
-                        // Add assign to project action if conditions met
-                        if (showAssignToProjectBtn) {
-                          actions.push({
-                            label: "Assign to Project",
-                            action: "assign",
-                            variant: "default" as const,
-                            icon: UserPlus,
-                          });
-                        }
-
-                        return (
-                          <CandidateCard
-                            key={candidate.id}
-                            candidate={candidate}
-                            onView={() =>
-                              handleViewCandidate(actualCandidateId)
-                            }
-                            onAction={(candidateId, action) => {
-                              if (action === "assign") {
-                                // Handle assign to project action
-                                showAssignConfirmation(
-                                  candidateId,
-                                  `${candidate.firstName} ${candidate.lastName}`
-                                );
-                              }
-                            }}
-                            actions={actions}
-                            projectStatus={projectStatus}
-                            showMatchScore={
-                              matchScore !== undefined && matchScore !== null
-                            }
-                            matchScore={matchScore}
-                            showVerifyButton={showSendForVerificationBtn}
-                            onVerify={() =>
-                              showVerifyConfirmation(
-                                actualCandidateId,
-                                `${candidate.firstName} ${candidate.lastName}`
-                              )
-                            }
-                            isAlreadyInProject={hasProject}
-                          />
-                        );
-                      })}
-                    </div>
-
-                    {/* Pagination */}
-                    {pagination && pagination.totalPages > 1 && (
-                      <div className="mt-6 flex items-center justify-between border-t pt-4">
-                        <div className="text-sm text-gray-600">
-                          Page {currentPage} of {pagination.totalPages} (
-                          {pagination.total} candidates)
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setCurrentPage((prev) => Math.max(1, prev - 1))
-                            }
-                            disabled={currentPage === 1}
-                          >
-                            <ChevronLeft className="h-4 w-4 mr-1" />
-                            Previous
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setCurrentPage((prev) =>
-                                Math.min(totalPages, prev + 1)
-                              )
-                            }
-                            disabled={currentPage === totalPages}
-                          >
-                            Next
-                            <ChevronRight className="h-4 w-4 ml-1" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Tabs for Other Candidates */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardContent className="px-4">
-                <ProjectDetailTabs projectId={projectId!} />
-              </CardContent>
-            </Card>
+          {/* Left Column: Candidates Board */}
+          <div className="lg:col-span-8">
+            <ProjectCandidatesBoard
+              projectId={projectId!}
+              nominatedCandidates={projectCandidates}
+              isLoadingNominated={isLoadingCandidates}
+              searchTerm={searchTerm}
+              selectedStatus={selectedStatus}
+              onSearchChange={handleBoardSearchChange}
+              onStatusChange={handleBoardStatusChange}
+              statuses={projectStatuses}
+              onViewCandidate={handleViewCandidate}
+              onAssignCandidate={(candidateId, candidateName) =>
+                showAssignConfirmation(candidateId, candidateName)
+              }
+              onVerifyCandidate={(candidateId, candidateName) =>
+                showVerifyConfirmation(candidateId, candidateName)
+              }
+              hideContactInfo={projectHideContactInfo}
+            />
           </div>
 
           {/* Right Column: Project Info + Supporting Cards */}
@@ -673,7 +487,7 @@ export default function ProjectDetailPage() {
                       </span>
                     </div>
                     <Badge variant="outline" className="text-xs flex-shrink-0">
-                      {project.resumeEditable ? "Editable" : "Fixed"}
+                      {projectResumeEditable ? "Editable" : "Fixed"}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between gap-3">
@@ -684,9 +498,9 @@ export default function ProjectDetailPage() {
                       </span>
                     </div>
                     <Badge variant="outline" className="text-xs flex-shrink-0">
-                      {project.groomingRequired === "formal"
+                      {projectGroomingRequirement === "formal"
                         ? "Formal"
-                        : project.groomingRequired === "casual"
+                        : projectGroomingRequirement === "casual"
                         ? "Casual"
                         : "Not Specified"}
                     </Badge>
@@ -699,7 +513,7 @@ export default function ProjectDetailPage() {
                       </span>
                     </div>
                     <Badge variant="outline" className="text-xs flex-shrink-0">
-                      {project.hideContactInfo ? "Hidden" : "Visible"}
+                      {projectHideContactInfo ? "Hidden" : "Visible"}
                     </Badge>
                   </div>
                 </div>

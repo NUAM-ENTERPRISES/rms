@@ -4,11 +4,12 @@ import {
   DollarSign,
   BarChart3,
   Building2 as Building,
-  MoreHorizontal,
+  MoreVertical,
   Send,
   CheckCircle2,
 } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { memo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,8 +21,42 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+type StatusReference = {
+  name?: string;
+  label?: string;
+  statusName?: string;
+};
+
+type CandidateProjectLink = {
+  projectId?: string;
+  subStatus?: StatusReference;
+  currentProjectStatus?: { statusName?: string };
+  mainStatus?: { name?: string };
+};
+
+export interface CandidateRecord {
+  id?: string;
+  candidateId?: string;
+  firstName?: string;
+  lastName?: string;
+  profileImage?: string;
+  email?: string;
+  mobileNumber?: string;
+  contact?: string;
+  countryCode?: string;
+  currentStatus?: StatusReference | string;
+  projectSubStatus?: StatusReference;
+  currentProjectStatus?: { statusName?: string };
+  projectStatus?: { statusName?: string };
+  currentEmployer?: string;
+  expectedSalary?: number;
+  matchScore?: number;
+  projects?: CandidateProjectLink[];
+  project?: { id?: string } | null;
+}
+
 interface CandidateCardProps {
-  candidate: any;
+  candidate: CandidateRecord;
   onView?: (candidateId: string) => void;
   onAction?: (candidateId: string, action: string) => void;
   actions?: Array<{
@@ -39,7 +74,7 @@ interface CandidateCardProps {
   className?: string;
 }
 
-export default function CandidateCard({
+const CandidateCard = memo(function CandidateCard({
   candidate,
   onView,
   onAction,
@@ -189,12 +224,18 @@ export default function CandidateCard({
   };
 
   const statusConfig = getStatusConfig(
-    projectStatus || candidate?.currentStatus?.statusName || candidate?.currentStatus || ""
+    projectStatus ||
+      (typeof candidate.currentStatus === "string"
+        ? candidate.currentStatus
+        : candidate.currentStatus?.statusName || "") ||
+      ""
   );
 
   // Get initials for avatar
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.charAt(0) || ""}${
+      lastName?.charAt(0) || ""
+    }`.toUpperCase();
   };
 
   // Format salary
@@ -207,163 +248,178 @@ export default function CandidateCard({
     }).format(salary);
   };
 
+  const candidateId = candidate.candidateId || candidate.id || "";
+  const fullName = `${candidate.firstName || ""} ${
+    candidate.lastName || ""
+  }`.trim();
+  const contactValue =
+    candidate.countryCode && candidate.mobileNumber
+      ? `${candidate.countryCode} ${candidate.mobileNumber}`
+      : candidate.contact;
+  const displayMatchScore =
+    matchScore ??
+    (typeof candidate.matchScore === "number"
+      ? candidate.matchScore
+      : undefined);
+
   return (
     <Card
       className={cn(
-        "group hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer h-full flex flex-col",
+        "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200 bg-white/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-within:border-blue-300 focus-within:shadow-md py-2",
         className
       )}
-      onClick={() => onView?.(candidate.id)}
+      onClick={() => onView?.(candidateId)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onView?.(candidateId);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View candidate ${fullName}`}
     >
-      <CardHeader className="pb-2 space-y-2">
-        {/* Avatar, Match Score, In Project Badge, and Menu Row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-10 w-10 border-2 border-gray-100">
-              <AvatarImage
-                src={candidate.profileImage}
-                alt={`${candidate.firstName} ${candidate.lastName}`}
-              />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
-                {getInitials(candidate.firstName, candidate.lastName)}
-              </AvatarFallback>
-            </Avatar>
-            {isAlreadyInProject && (
-              <Badge
-                variant="outline"
-                className="bg-green-50 text-green-700 border-green-200 text-xs flex items-center gap-1"
-              >
-                <CheckCircle2 className="h-3 w-3" />
-                In Project
-              </Badge>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* Three-dot menu */}
-            {actions && actions.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                  {actions.map((action, index) => {
-                    const Icon = action.icon;
-                    return (
-                      <DropdownMenuItem
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAction?.(candidate.id, action.action);
-                        }}
+      <div
+        className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500"
+        aria-hidden="true"
+      />
+      <CardContent className="pl-3 pr-3 py-0 space-y-2">
+        {/* Header row */}
+        <div className="flex items-center gap-3">
+          <Avatar className="h-9 w-9 border border-white shadow-sm flex-shrink-0">
+            <AvatarImage src={candidate.profileImage} alt={fullName} />
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-semibold">
+              {getInitials(candidate.firstName, candidate.lastName)}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
+                  {fullName || "Unnamed Candidate"}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {isAlreadyInProject && (
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-2 py-0 h-5 rounded-full flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                    In Project
+                  </Badge>
+                )}
+                {actions && actions.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      asChild
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-slate-500"
+                        aria-label="More actions"
                       >
-                        {Icon && <Icon className="h-4 w-4 mr-2" />}
-                        {action.label}
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {actions.map((action, index) => {
+                        const Icon = action.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={index}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onAction?.(candidateId, action.action);
+                            }}
+                          >
+                            {Icon && <Icon className="h-4 w-4 mr-2" />}
+                            {action.label}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Name */}
-        <div>
-          <h3 className="text-base font-semibold text-gray-900 truncate mb-0.5">
-            {candidate.firstName} {candidate.lastName}
-          </h3>
-
-          {/* Status Badges */}
-          <div className="flex flex-col gap-1.5">
-            {/*
-              If candidate is part of a project we prefer showing the project's
-              (sub-)status on the card — otherwise fall back to the candidate's overall status.
-            */}
-            {projectStatus ? (
-              <Badge
-                variant="outline"
-                className={`${statusConfig.color} border text-xs w-fit`}
-              >
-                {statusConfig.label}
-              </Badge>
-            ) : (
-              <Badge
-                variant="outline"
-                className={`${getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").color} border text-xs w-fit`}
-              >
-                {getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").label}
-              </Badge>
-            )}
-
-            {/* Show match score badge below statuses */}
-            {showMatchScore && matchScore !== undefined && (
-              <Badge
-                variant="outline"
-                className={`${getMatchScoreColor(matchScore)} border text-xs w-fit`}
-              >
-                <BarChart3 className="h-3 w-3 mr-1" />
-                {matchScore}%
-              </Badge>
-            )}
-          </div>
+        {/* Status row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            variant="outline"
+            className={`${statusConfig.color} border text-[10px] px-2 py-0.5 rounded-full`}
+          >
+            {statusConfig.label}
+          </Badge>
+          {showMatchScore && displayMatchScore !== undefined && (
+            <Badge
+              variant="outline"
+              className={`${getMatchScoreColor(
+                displayMatchScore
+              )} border text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1`}
+            >
+              <BarChart3 className="h-2.5 w-2.5" aria-hidden="true" />
+              Match {displayMatchScore}%
+            </Badge>
+          )}
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-2 flex-1 flex flex-col">
-        {/* Contact Information */}
-        <div className="space-y-1">
+        {/* Detail pills */}
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
           {candidate.email && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-              <span className="truncate">{candidate.email}</span>
-            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+              <Mail className="h-3 w-3 text-slate-400" aria-hidden="true" />
+              <span className="truncate max-w-[140px]">{candidate.email}</span>
+            </span>
           )}
-          {(candidate.mobileNumber || candidate.contact) && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Phone className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-              <span className="truncate">
-                {candidate.countryCode && candidate.mobileNumber
-                  ? `${candidate.countryCode} ${candidate.mobileNumber}`
-                  : candidate.contact}
+          {contactValue && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+              <Phone className="h-3 w-3 text-slate-400" aria-hidden="true" />
+              <span className="truncate max-w-[120px]">{contactValue}</span>
+            </span>
+          )}
+          {candidate.currentEmployer && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+              <Building className="h-3 w-3 text-slate-400" aria-hidden="true" />
+              <span className="truncate max-w-[140px]">
+                {candidate.currentEmployer}
               </span>
-            </div>
+            </span>
+          )}
+          {candidate.expectedSalary && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+              <DollarSign
+                className="h-3 w-3 text-slate-400"
+                aria-hidden="true"
+              />
+              <span className="truncate max-w-[120px]">
+                {formatSalary(candidate.expectedSalary)}
+              </span>
+            </span>
           )}
         </div>
 
-        {/* Current Employer and Salary */}
-        {(candidate.currentEmployer || candidate.expectedSalary) && (
-          <div className="space-y-1.5 text-sm">
-            {candidate.currentEmployer && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <Building className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                <span className="truncate">{candidate.currentEmployer}</span>
-              </div>
-            )}
-            {candidate.expectedSalary && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <DollarSign className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                <span className="truncate">Expected: {formatSalary(candidate.expectedSalary)}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Send for Verification Button */}
         {showVerifyButton && onVerify && (
-          <div className="pt-2 border-t mt-auto">
+          <div className="flex items-center justify-end border-t border-slate-100 pt-2">
             <Button
               variant="default"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onVerify(candidate.id);
+              className="h-8 text-xs bg-blue-600 hover:bg-blue-700 px-3"
+              onClick={(event) => {
+                event.stopPropagation();
+                onVerify(candidateId);
               }}
-              className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              <Send className="h-3.5 w-3.5 mr-1.5" />
+              <Send className="h-3 w-3 mr-1" aria-hidden="true" />
               Send for Verification
             </Button>
           </div>
@@ -371,4 +427,6 @@ export default function CandidateCard({
       </CardContent>
     </Card>
   );
-}
+});
+
+export default CandidateCard;
