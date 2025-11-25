@@ -23,6 +23,8 @@ import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
 import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
+import { SendToMockInterviewDto } from './dto/send-to-mock-interview.dto';
+import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Candidate Projects')
@@ -37,7 +39,8 @@ export class CandidateProjectsController {
   @Permissions('manage:projects', 'manage:candidates')
   @ApiOperation({
     summary: 'Assign candidate to project',
-    description: 'Create a new candidate-project assignment with nominated status',
+    description:
+      'Create a new candidate-project assignment with nominated status',
   })
   @ApiResponse({
     status: 201,
@@ -70,7 +73,8 @@ export class CandidateProjectsController {
   @Permissions('manage:projects', 'manage:candidates')
   @ApiOperation({
     summary: 'Send candidate for document verification',
-    description: 'Creates candidate-project assignment (if not exists) and updates status to verification_in_progress',
+    description:
+      'Creates candidate-project assignment (if not exists) and updates status to verification_in_progress',
   })
   @ApiResponse({
     status: 201,
@@ -99,7 +103,8 @@ export class CandidateProjectsController {
   @Permissions('view:projects', 'view:candidates')
   @ApiOperation({
     summary: 'Get all candidate-project assignments',
-    description: 'Retrieve paginated list of candidate-project assignments with filters',
+    description:
+      'Retrieve paginated list of candidate-project assignments with filters',
   })
   @ApiResponse({
     status: 200,
@@ -190,7 +195,8 @@ export class CandidateProjectsController {
   @Permissions('view:projects', 'view:candidates')
   @ApiOperation({
     summary: 'Get status change history',
-    description: 'Retrieve the complete status change history for an assignment',
+    description:
+      'Retrieve the complete status change history for an assignment',
   })
   @ApiParam({ name: 'id', description: 'Assignment ID' })
   @ApiResponse({
@@ -294,6 +300,79 @@ export class CandidateProjectsController {
     return {
       success: true,
       message: result.message,
+    };
+  }
+
+  @Post(':id/send-to-mock-interview')
+  @Permissions('manage:candidates', 'schedule:mock_interviews')
+  @ApiOperation({
+    summary: 'Send candidate to mock interview',
+    description:
+      'Assigns a candidate to mock interview with a selected Interview Coordinator. Creates a mock interview record and notifies the coordinator.',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate-Project Map ID' })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate sent to mock interview successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input or status' })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate-project or coordinator not found',
+  })
+  async sendToMockInterview(
+    @Param('id') id: string,
+    @Body() dto: SendToMockInterviewDto,
+    @Request() req: any,
+  ) {
+    const data = await this.candidateProjectsService.sendToMockInterview(
+      id,
+      dto.coordinatorId,
+      req.user.userId,
+      dto.scheduledTime,
+      dto.meetingLink,
+    );
+    return {
+      success: true,
+      data,
+      message: 'Candidate sent to mock interview successfully',
+    };
+  }
+
+  @Post(':id/approve-for-client-interview')
+  @Permissions('approve:candidates')
+  @ApiOperation({
+    summary: 'Approve candidate for client interview (skip mock interview)',
+    description:
+      'Directly approve a candidate for client interview without conducting a mock interview. Can only be done from documents_verified status.',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate-Project Map ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate approved for client interview',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status transition',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate-project not found',
+  })
+  async approveForClientInterview(
+    @Param('id') id: string,
+    @Body() dto: ApproveForClientInterviewDto,
+    @Request() req: any,
+  ) {
+    const data = await this.candidateProjectsService.approveForClientInterview(
+      id,
+      req.user.userId,
+      dto.notes,
+    );
+    return {
+      success: true,
+      data,
+      message: 'Candidate approved for client interview',
     };
   }
 }

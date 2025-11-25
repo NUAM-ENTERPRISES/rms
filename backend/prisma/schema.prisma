@@ -382,6 +382,10 @@ model CandidateProjects {
   processing            Processing?
   projectStatusHistory  CandidateProjectStatusHistory[]
 
+  // Mock Interview & Training Relations
+  mockInterviews      MockInterview[]
+  trainingAssignments TrainingAssignment[]
+
   @@unique([candidateId, projectId, roleNeededId])
   @@index([currentProjectStatusId])
   @@index([mainStatusId])
@@ -447,6 +451,157 @@ model Interview {
   @@index([projectId])
   @@index([scheduledTime])
   @@map("interviews")
+}
+
+/// Mock Interview Coordination Feature Models
+/// Added: January 2025
+
+/// Mock Interview - Conducted by Interview Coordinators before client interviews
+model MockInterview {
+  id                    String @id @default(cuid())
+  candidateProjectMapId String
+  coordinatorId         String // Interview Coordinator who conducts the interview
+
+  // Scheduling
+  scheduledTime DateTime?
+  duration      Int       @default(60) // in minutes
+  meetingLink   String?
+  mode          String    @default("video") // video, phone, in-person
+
+  // Assessment
+  conductedAt        DateTime?
+  overallRating      Int? // 1-5 scale
+  decision           String? // approved, needs_training, rejected
+  remarks            String?   @db.Text
+  strengths          String?   @db.Text
+  areasOfImprovement String?   @db.Text
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  candidateProjectMap CandidateProjects            @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  checklistItems      MockInterviewChecklistItem[]
+  trainingAssignments TrainingAssignment[]
+
+  @@index([candidateProjectMapId])
+  @@index([coordinatorId])
+  @@index([scheduledTime])
+  @@index([decision])
+  @@map("mock_interviews")
+}
+
+/// Checklist items for each mock interview (filled during/after interview)
+model MockInterviewChecklistItem {
+  id              String @id @default(cuid())
+  mockInterviewId String
+
+  category  String // technical_skills, communication, professionalism, role_specific
+  criterion String // What was evaluated
+  passed    Boolean @default(false)
+  rating    Int? // 1-5 scale
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mockInterview MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
+
+  @@index([mockInterviewId])
+  @@index([category])
+  @@map("mock_interview_checklist_items")
+}
+
+/// Checklist templates for different roles (managed by Interview Coordinators)
+model MockInterviewChecklistTemplate {
+  id String @id @default(cuid())
+
+  // ✅ Reference to RoleCatalog (not hardcoded)
+  roleId String
+  role   RoleCatalog @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  category  String // technical_skills, communication, professionalism, role_specific
+  criterion String // What to evaluate
+  order     Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roleId, criterion])
+  @@index([roleId])
+  @@index([isActive])
+  @@map("mock_interview_checklist_templates")
+}
+
+/// Training/Screening assignments for candidates who need improvement
+model TrainingAssignment {
+  id                    String  @id @default(cuid())
+  candidateProjectMapId String
+  mockInterviewId       String? // Which mock interview triggered this
+  assignedBy            String // Coordinator who assigned training
+
+  // Training details
+  trainingType String // interview_skills, technical, communication, role_specific
+  focusAreas   String[] // Areas to improve
+  priority     String   @default("medium") // high, medium, low
+  status       String   @default("assigned") // assigned, in_progress, completed, cancelled
+
+  // Dates
+  assignedAt           DateTime  @default(now())
+  startedAt            DateTime?
+  completedAt          DateTime?
+  targetCompletionDate DateTime?
+
+  // Assessment after training
+  notes            String? @db.Text
+  improvementNotes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  mockInterview       MockInterview?    @relation(fields: [mockInterviewId], references: [id])
+  trainingSessions    TrainingSession[]
+
+  @@index([candidateProjectMapId])
+  @@index([mockInterviewId])
+  @@index([assignedBy])
+  @@index([status])
+  @@map("training_assignments")
+}
+
+/// Individual training sessions within a training assignment
+model TrainingSession {
+  id                   String @id @default(cuid())
+  trainingAssignmentId String
+
+  // Session details
+  sessionDate       DateTime
+  sessionType       String   @default("video") // video, phone, in_person
+  duration          Int      @default(60) // in minutes
+  topicsCovered     Json?    @db.Json // Array of topics
+  plannedActivities String?  @db.Text
+  trainer           String? // Who conducted the session
+
+  // Completion & Assessment
+  completedAt       DateTime?
+  performanceRating String? // excellent, good, satisfactory, needs_improvement
+  notes             String?   @db.Text
+  feedback          String?   @db.Text // Feedback for candidate
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  trainingAssignment TrainingAssignment @relation(fields: [trainingAssignmentId], references: [id], onDelete: Cascade)
+
+  @@index([trainingAssignmentId])
+  @@index([sessionDate])
+  @@index([completedAt])
+  @@map("training_sessions")
 }
 
 model Processing {
@@ -686,6 +841,9 @@ model RoleCatalog {
   createdAt                 DateTime                       @default(now())
   updatedAt                 DateTime                       @updatedAt
   recommendedQualifications RoleRecommendedQualification[]
+
+  // Mock Interview Template Relations
+  mockInterviewTemplates MockInterviewChecklistTemplate[]
 
   @@index([category])
   @@index([isClinical])

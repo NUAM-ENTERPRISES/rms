@@ -40,6 +40,7 @@ import { SystemConfigModule } from './system-config/system-config.module';
 import { ProjectRoleCatalogModule } from './project-role-catalog/project-role-catalog.module';
 import { CandidateProjectStatusModule } from './candidate-project-status/candidate-project-status.module';
 import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
+import { MockInterviewCoordinationModule } from './mock-interview-coordination/mock-interview-coordination.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { CandidateProjectsModule } from './candidate-projects/candidate-projects
     CandidateProjectStatusModule,
     CandidateProjectsModule,
     CandidateProjectStatusHistoryModule,
+    MockInterviewCoordinationModule,
   ],
   controllers: [AppController],
   providers: [

@@ -12,6 +12,8 @@ import {
   Bell,
   User,
   Briefcase,
+  ClipboardCheck,
+  BookOpen,
 } from "lucide-react";
 
 export interface NavItem {
@@ -55,7 +57,14 @@ export const navigationConfig: NavItem[] = [
     label: "Projects",
     path: "/projects",
     icon: Building2,
-    roles: ["CEO", "Director", "Manager", "Recruiter", "Documentation Executive", "System Admin"],
+    roles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "Recruiter",
+      "Documentation Executive",
+      "System Admin",
+    ],
     // Hidden from CRE - they only manage candidates
   },
   {
@@ -86,8 +95,47 @@ export const navigationConfig: NavItem[] = [
     label: "Interviews",
     path: "/interviews",
     icon: Calendar,
-    roles: ["CEO", "Director", "Manager", "Recruiter", "Documentation Executive", "System Admin"],
+    roles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "Recruiter",
+      "Documentation Executive",
+      "System Admin",
+    ],
     // Hidden from CRE - they focus on RNR candidates
+  },
+  {
+    id: "mock-interviews",
+    label: "Mock Interviews",
+    icon: ClipboardCheck,
+    permissions: ["read:mock_interviews"],
+    children: [
+      {
+        id: "mock-interviews-dashboard",
+        label: "Dashboard",
+        path: "/mock-interviews",
+        permissions: ["read:mock_interviews"],
+      },
+      {
+        id: "mock-interviews-list",
+        label: "My Interviews",
+        path: "/mock-interviews/list",
+        permissions: ["read:mock_interviews"],
+      },
+      {
+        id: "mock-interviews-training",
+        label: "Training",
+        path: "/mock-interviews/training",
+        permissions: ["read:training"],
+      },
+      {
+        id: "mock-interviews-templates",
+        label: "Templates",
+        path: "/mock-interviews/templates",
+        permissions: ["read:interview_templates"],
+      },
+    ],
   },
   {
     id: "documents",
