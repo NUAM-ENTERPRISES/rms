@@ -103,6 +103,10 @@ const roles = [
       'schedule:interviews',
       'read:interviews',
       'write:interviews',
+      'read:mock_interviews',
+      'read:interview_templates',
+      'read:training',
+      'manage:training',
     ],
   },
   {
@@ -172,6 +176,28 @@ const roles = [
     ],
   },
   {
+    name: 'Interview Coordinator',
+    description:
+      'Interview Coordinator - Conducts mock interviews and assigns training',
+    permissions: [
+      'read:candidates',
+      'write:candidates',
+      'read:projects',
+      'read:mock_interviews',
+      'write:mock_interviews',
+      'manage:mock_interviews',
+      'conduct:mock_interviews',
+      'read:interview_templates',
+      'write:interview_templates',
+      'manage:interview_templates',
+      'read:training',
+      'write:training',
+      'manage:training',
+      'assign:training',
+      'read:documents',
+    ],
+  },
+  {
     name: 'System Admin',
     description:
       'System Administrator - Full system access and user management',
@@ -222,6 +248,17 @@ const allPermissions = [
   'write:interviews',
   'manage:interviews',
   'schedule:interviews',
+  'read:mock_interviews',
+  'write:mock_interviews',
+  'manage:mock_interviews',
+  'conduct:mock_interviews',
+  'read:interview_templates',
+  'write:interview_templates',
+  'manage:interview_templates',
+  'read:training',
+  'write:training',
+  'manage:training',
+  'assign:training',
   'read:analytics',
   'write:analytics',
   'manage:analytics',
@@ -461,6 +498,151 @@ async function seedRoleRecommendedQualifications() {
     throw error;
   }
 }
+async function seedMockInterviewTemplates() {
+  console.log('📋 Seeding mock interview checklist templates...');
+  try {
+    // Get sample roles to create templates for
+    const registeredNurse = await prisma.roleCatalog.findFirst({
+      where: { slug: 'registered-nurse' },
+    });
+    const doctor = await prisma.roleCatalog.findFirst({
+      where: { slug: { contains: 'doctor' } },
+    });
+
+    if (!registeredNurse && !doctor) {
+      console.log('⚠️  No roles found, skipping template seeding');
+      return;
+    }
+
+    const templates = [];
+
+    // Registered Nurse Templates
+    if (registeredNurse) {
+      templates.push(
+        // Technical Skills
+        {
+          roleId: registeredNurse.id,
+          category: 'technical_skills',
+          criterion: 'Medication Administration Knowledge',
+          order: 1,
+        },
+        {
+          roleId: registeredNurse.id,
+          category: 'technical_skills',
+          criterion: 'Vital Signs Monitoring',
+          order: 2,
+        },
+        {
+          roleId: registeredNurse.id,
+          category: 'technical_skills',
+          criterion: 'IV Line Management',
+          order: 3,
+        },
+        {
+          roleId: registeredNurse.id,
+          category: 'technical_skills',
+          criterion: 'Wound Care Procedures',
+          order: 4,
+        },
+        // Communication
+        {
+          roleId: registeredNurse.id,
+          category: 'communication',
+          criterion: 'Patient Communication Skills',
+          order: 5,
+        },
+        {
+          roleId: registeredNurse.id,
+          category: 'communication',
+          criterion: 'Team Collaboration',
+          order: 6,
+        },
+        {
+          roleId: registeredNurse.id,
+          category: 'communication',
+          criterion: 'Documentation Skills',
+          order: 7,
+        },
+        // Professionalism
+        {
+          roleId: registeredNurse.id,
+          category: 'professionalism',
+          criterion: 'Professional Appearance',
+          order: 8,
+        },
+        {
+          roleId: registeredNurse.id,
+          category: 'professionalism',
+          criterion: 'Punctuality and Reliability',
+          order: 9,
+        },
+        {
+          roleId: registeredNurse.id,
+          category: 'professionalism',
+          criterion: 'Ethical Decision Making',
+          order: 10,
+        },
+      );
+    }
+
+    // Doctor Templates (if exists)
+    if (doctor) {
+      templates.push(
+        {
+          roleId: doctor.id,
+          category: 'technical_skills',
+          criterion: 'Diagnostic Skills',
+          order: 1,
+        },
+        {
+          roleId: doctor.id,
+          category: 'technical_skills',
+          criterion: 'Treatment Planning',
+          order: 2,
+        },
+        {
+          roleId: doctor.id,
+          category: 'communication',
+          criterion: 'Patient Consultation Skills',
+          order: 3,
+        },
+        {
+          roleId: doctor.id,
+          category: 'professionalism',
+          criterion: 'Medical Ethics',
+          order: 4,
+        },
+      );
+    }
+
+    // Upsert templates
+    let createdCount = 0;
+    for (const template of templates) {
+      await prisma.mockInterviewChecklistTemplate.upsert({
+        where: {
+          roleId_criterion: {
+            roleId: template.roleId,
+            criterion: template.criterion,
+          },
+        },
+        update: {
+          category: template.category,
+          order: template.order,
+          isActive: true,
+        },
+        create: template,
+      });
+      createdCount++;
+    }
+
+    console.log(
+      `✅ Mock interview templates seeded: ${createdCount} templates created/updated`,
+    );
+  } catch (error) {
+    console.error('❌ Error seeding mock interview templates:', error);
+    throw error;
+  }
+}
 async function main() {
   console.log('🌱 Starting database seeding...');
   await seedCountries();
@@ -468,6 +650,7 @@ async function main() {
   await seedQualifications();
   await seedQualificationAliases();
   await seedRoleRecommendedQualifications();
+  await seedMockInterviewTemplates();
   console.log('📝 Creating permissions...');
   for (const permissionKey of allPermissions) {
     await prisma.permission.upsert({
@@ -662,6 +845,14 @@ async function main() {
       countryCode: '+91',
       phone: '9876543221',
       role: 'Processing Executive',
+    },
+    {
+      email: 'coordinator@affiniks.com',
+      name: 'Rachel Interview Coordinator',
+      password: 'coordinator123',
+      countryCode: '+91',
+      phone: '9876543223',
+      role: 'Interview Coordinator',
     },
     {
       email: 'sysadmin@affiniks.com',
@@ -878,6 +1069,9 @@ async function main() {
   console.log(`📄 Documentation: +919876543220 / docs123 (docs@affiniks.com)`);
   console.log(
     `⚙️ Processing: +919876543221 / processing123 (processing@affiniks.com)`,
+  );
+  console.log(
+    `🎤 Interview Coordinator: +919876543223 / coordinator123 (coordinator@affiniks.com)`,
   );
   console.log(
     `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@affiniks.com)`,

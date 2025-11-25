@@ -76,4 +76,64 @@ export class OutboxService {
       requestedBy,
     });
   }
+
+  /**
+   * Publish candidate sent to mock interview event
+   * Notifies the selected Interview Coordinator
+   */
+  async publishCandidateSentToMockInterview(
+    candidateProjectMapId: string,
+    mockInterviewId: string,
+    coordinatorId: string,
+    recruiterId: string,
+  ): Promise<void> {
+    await this.publishEvent('CandidateSentToMockInterview', {
+      candidateProjectMapId,
+      mockInterviewId,
+      coordinatorId,
+      recruiterId,
+    });
+  }
+
+  /**
+   * Publish candidate approved for client interview event
+   * Notifies recruiter and team head after passing mock interview
+   */
+  async publishCandidateApprovedForClientInterview(
+    candidateProjectMapId: string,
+    mockInterviewId: string,
+    coordinatorId: string,
+    recruiterId: string,
+    teamHeadId?: string,
+  ): Promise<void> {
+    await this.publishEvent('CandidateApprovedForClientInterview', {
+      candidateProjectMapId,
+      mockInterviewId,
+      coordinatorId,
+      recruiterId,
+      teamHeadId,
+    });
+  }
+
+  /**
+   * Publish candidate failed mock interview event
+   * Notifies recruiter and team head when candidate fails mock interview
+   */
+  async publishCandidateFailedMockInterview(
+    candidateProjectMapId: string,
+    mockInterviewId: string,
+    coordinatorId: string,
+    recruiterId: string,
+    decision: string,
+    teamHeadId?: string,
+  ): Promise<void> {
+    await this.publishEvent('CandidateFailedMockInterview', {
+      candidateProjectMapId,
+      mockInterviewId,
+      coordinatorId,
+      recruiterId,
+      decision,
+      teamHeadId,
+    });
+  }
 }

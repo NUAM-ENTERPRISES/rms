@@ -35,6 +35,12 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateSentForVerification(job);
         case 'CandidateAssignedToRecruiter':
           return await this.handleCandidateAssignedToRecruiter(job);
+        case 'CandidateSentToMockInterview':
+          return await this.handleCandidateSentToMockInterview(job);
+        case 'CandidateApprovedForClientInterview':
+          return await this.handleCandidateApprovedForClientInterview(job);
+        case 'CandidateFailedMockInterview':
+          return await this.handleCandidateFailedMockInterview(job);
         default:
           this.logger.warn(`Unknown notification type: ${type}`);
           return { success: false, message: `Unknown type: ${type}` };
@@ -384,6 +390,342 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error(
         `Failed to process candidate assigned to recruiter: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Handle candidate sent to mock interview notification
+   * Notifies the selected Interview Coordinator
+   */
+  async handleCandidateSentToMockInterview(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate sent to mock interview event: ${eventId}`,
+    );
+
+    try {
+      const {
+        candidateProjectMapId,
+        mockInterviewId,
+        coordinatorId,
+        recruiterId,
+      } = payload as {
+        candidateProjectMapId: string;
+        mockInterviewId: string;
+        coordinatorId: string;
+        recruiterId: string;
+      };
+
+      // Load candidate project mapping with details
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            candidate: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+            roleNeeded: {
+              select: {
+                designation: true,
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.warn(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      // Create notification for the selected Interview Coordinator
+      const idemKey = `${eventId}:${coordinatorId}:mock_interview_assigned`;
+
+      const roleDesignation =
+        candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
+
+      await this.notificationsService.createNotification({
+        userId: coordinatorId,
+        type: 'mock_interview_assigned',
+        title: 'New Mock Interview Assigned',
+        message: `You have been assigned to conduct a mock interview for ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} - ${candidateProjectMap.project.title} (${roleDesignation}). Please schedule and conduct the interview.`,
+        link: `/mock-interviews/${mockInterviewId}`,
+        meta: {
+          candidateProjectMapId,
+          mockInterviewId,
+          candidateId: candidateProjectMap.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          recruiterId,
+        },
+        idemKey,
+      });
+
+      this.logger.log(
+        `Mock interview notification created for coordinator ${coordinatorId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate sent to mock interview: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Handle candidate approved for client interview notification
+   * Notifies recruiter and team head after passing mock interview
+   */
+  async handleCandidateApprovedForClientInterview(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate approved for client interview event: ${eventId}`,
+    );
+
+    try {
+      const {
+        candidateProjectMapId,
+        mockInterviewId,
+        coordinatorId,
+        recruiterId,
+        teamHeadId,
+      } = payload as {
+        candidateProjectMapId: string;
+        mockInterviewId: string;
+        coordinatorId: string;
+        recruiterId: string;
+        teamHeadId?: string;
+      };
+
+      // Load candidate project mapping with details
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            candidate: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+            roleNeeded: {
+              select: {
+                designation: true,
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.warn(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      const roleDesignation =
+        candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
+
+      // Notify recruiter
+      if (recruiterId) {
+        const idemKeyRecruiter = `${eventId}:${recruiterId}:mock_interview_passed`;
+
+        await this.notificationsService.createNotification({
+          userId: recruiterId,
+          type: 'mock_interview_passed',
+          title: 'Candidate Approved for Client Interview',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}). You can now schedule the client interview.`,
+          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          meta: {
+            candidateProjectMapId,
+            mockInterviewId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+            coordinatorId,
+          },
+          idemKey: idemKeyRecruiter,
+        });
+
+        this.logger.log(
+          `Mock interview passed notification created for recruiter ${recruiterId}`,
+        );
+      }
+
+      // Notify team head if present
+      if (teamHeadId) {
+        const idemKeyTeamHead = `${eventId}:${teamHeadId}:mock_interview_passed`;
+
+        await this.notificationsService.createNotification({
+          userId: teamHeadId,
+          type: 'mock_interview_passed',
+          title: 'Candidate Ready for Client Interview',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has passed the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}) and is ready for client interview.`,
+          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          meta: {
+            candidateProjectMapId,
+            mockInterviewId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+            coordinatorId,
+          },
+          idemKey: idemKeyTeamHead,
+        });
+
+        this.logger.log(
+          `Mock interview passed notification created for team head ${teamHeadId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate approved for client interview: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Handle candidate failed mock interview notification
+   * Notifies recruiter and team head when candidate fails mock interview
+   */
+  async handleCandidateFailedMockInterview(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate failed mock interview event: ${eventId}`,
+    );
+
+    try {
+      const {
+        candidateProjectMapId,
+        mockInterviewId,
+        coordinatorId,
+        recruiterId,
+        decision,
+        teamHeadId,
+      } = payload as {
+        candidateProjectMapId: string;
+        mockInterviewId: string;
+        coordinatorId: string;
+        recruiterId: string;
+        decision: string;
+        teamHeadId?: string;
+      };
+
+      // Load candidate project mapping with details
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            candidate: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+            roleNeeded: {
+              select: {
+                designation: true,
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.warn(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      const roleDesignation =
+        candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
+      const decisionText = decision.replace('_', ' ');
+      const notificationVariant = 'warning';
+
+      // Notify recruiter
+      if (recruiterId) {
+        const idemKeyRecruiter = `${eventId}:${recruiterId}:mock_interview_failed`;
+
+        await this.notificationsService.createNotification({
+          userId: recruiterId,
+          type: 'mock_interview_failed',
+          title: 'Mock Interview Result - Action Required',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}. Please review and take appropriate action.`,
+          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          meta: {
+            candidateProjectMapId,
+            mockInterviewId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+            coordinatorId,
+            decision,
+          },
+          idemKey: idemKeyRecruiter,
+        });
+
+        this.logger.log(
+          `Mock interview failed notification created for recruiter ${recruiterId}`,
+        );
+      }
+
+      // Notify team head if present
+      if (teamHeadId) {
+        const idemKeyTeamHead = `${eventId}:${teamHeadId}:mock_interview_failed`;
+
+        await this.notificationsService.createNotification({
+          userId: teamHeadId,
+          type: 'mock_interview_failed',
+          title: 'Mock Interview Result - Review Needed',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}.`,
+          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          meta: {
+            candidateProjectMapId,
+            mockInterviewId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+            coordinatorId,
+            decision,
+          },
+          idemKey: idemKeyTeamHead,
+        });
+
+        this.logger.log(
+          `Mock interview failed notification created for team head ${teamHeadId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate failed mock interview: ${error.message}`,
         error.stack,
       );
       throw error;

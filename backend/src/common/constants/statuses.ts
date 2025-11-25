@@ -23,10 +23,22 @@ export const CANDIDATE_PROJECT_STATUS = {
   VERIFICATION_IN_PROGRESS: 'verification_in_progress',
   DOCUMENTS_VERIFIED: 'documents_verified',
 
+  // === Mock Interview Stage (Optional) ===
+  MOCK_INTERVIEW_SCHEDULED: 'mock_interview_scheduled',
+  MOCK_INTERVIEW_COMPLETED: 'mock_interview_completed',
+  MOCK_INTERVIEW_PASSED: 'mock_interview_passed',
+  MOCK_INTERVIEW_FAILED: 'mock_interview_failed',
+
+  // === Training/Screening Stage ===
+  TRAINING_ASSIGNED: 'training_assigned',
+  TRAINING_IN_PROGRESS: 'training_in_progress',
+  TRAINING_COMPLETED: 'training_completed',
+  READY_FOR_REASSESSMENT: 'ready_for_reassessment',
+
   // === Approval Stage ===
   APPROVED: 'approved',
 
-  // === Interview Stage ===
+  // === Client Interview Stage ===
   INTERVIEW_SCHEDULED: 'interview_scheduled',
   INTERVIEW_COMPLETED: 'interview_completed',
   INTERVIEW_PASSED: 'interview_passed',
@@ -79,9 +91,46 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
     CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS, // Resubmission needed
   ],
   [CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED]: [
-    CANDIDATE_PROJECT_STATUS.APPROVED,
+    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED, // Optional: Send to mock interview
+    CANDIDATE_PROJECT_STATUS.APPROVED, // Direct path: Skip mock interview
     CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
   ],
+  // === Mock Interview Workflow (Optional) ===
+  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED]: [
+    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_COMPLETED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
+  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_COMPLETED]: [
+    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_PASSED,
+    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_FAILED,
+    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED, // Reschedule
+  ],
+  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_PASSED]: [
+    CANDIDATE_PROJECT_STATUS.APPROVED, // Proceed to approval
+    CANDIDATE_PROJECT_STATUS.ON_HOLD,
+  ],
+  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_FAILED]: [
+    CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED, // Assign training
+    CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW, // Reject candidate
+  ],
+  // === Training Workflow ===
+  [CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED]: [
+    CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
+  [CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS]: [
+    CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
+  [CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED]: [
+    CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT,
+  ],
+  [CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT]: [
+    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED, // Retry mock interview
+    CANDIDATE_PROJECT_STATUS.APPROVED, // Direct approval
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
+  // === Approval & Client Interview ===
   [CANDIDATE_PROJECT_STATUS.APPROVED]: [
     CANDIDATE_PROJECT_STATUS.INTERVIEW_SCHEDULED,
     CANDIDATE_PROJECT_STATUS.WITHDRAWN,
@@ -214,6 +263,97 @@ export const JOINING_STATUS = {
 
 export type JoiningStatus =
   (typeof JOINING_STATUS)[keyof typeof JOINING_STATUS];
+
+// ==================== MOCK INTERVIEW CONSTANTS ====================
+
+/**
+ * Mock Interview Decision Constants
+ */
+export const MOCK_INTERVIEW_DECISION = {
+  APPROVED: 'approved',
+  NEEDS_TRAINING: 'needs_training',
+  REJECTED: 'rejected',
+} as const;
+
+export type MockInterviewDecision =
+  (typeof MOCK_INTERVIEW_DECISION)[keyof typeof MOCK_INTERVIEW_DECISION];
+
+/**
+ * Mock Interview Mode Constants
+ */
+export const MOCK_INTERVIEW_MODE = {
+  VIDEO: 'video',
+  PHONE: 'phone',
+  IN_PERSON: 'in_person',
+} as const;
+
+export type MockInterviewMode =
+  (typeof MOCK_INTERVIEW_MODE)[keyof typeof MOCK_INTERVIEW_MODE];
+
+/**
+ * Mock Interview Checklist Category Constants
+ */
+export const MOCK_INTERVIEW_CATEGORY = {
+  TECHNICAL_SKILLS: 'technical_skills',
+  COMMUNICATION: 'communication',
+  PROFESSIONALISM: 'professionalism',
+  ROLE_SPECIFIC: 'role_specific',
+} as const;
+
+export type MockInterviewCategory =
+  (typeof MOCK_INTERVIEW_CATEGORY)[keyof typeof MOCK_INTERVIEW_CATEGORY];
+
+// ==================== TRAINING CONSTANTS ====================
+
+/**
+ * Training Status Constants
+ */
+export const TRAINING_STATUS = {
+  ASSIGNED: 'assigned',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+} as const;
+
+export type TrainingStatus =
+  (typeof TRAINING_STATUS)[keyof typeof TRAINING_STATUS];
+
+/**
+ * Training Type Constants
+ */
+export const TRAINING_TYPE = {
+  INTERVIEW_SKILLS: 'interview_skills',
+  TECHNICAL: 'technical',
+  COMMUNICATION: 'communication',
+  ROLE_SPECIFIC: 'role_specific',
+} as const;
+
+export type TrainingType = (typeof TRAINING_TYPE)[keyof typeof TRAINING_TYPE];
+
+/**
+ * Training Priority Constants
+ */
+export const TRAINING_PRIORITY = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
+} as const;
+
+export type TrainingPriority =
+  (typeof TRAINING_PRIORITY)[keyof typeof TRAINING_PRIORITY];
+
+/**
+ * Training Session Performance Constants
+ */
+export const TRAINING_PERFORMANCE = {
+  POOR: 'poor',
+  FAIR: 'fair',
+  GOOD: 'good',
+  EXCELLENT: 'excellent',
+} as const;
+
+export type TrainingPerformance =
+  (typeof TRAINING_PERFORMANCE)[keyof typeof TRAINING_PERFORMANCE];
 
 // ==================== CANDIDATE GLOBAL STATUSES ====================
 
@@ -443,6 +583,17 @@ export function getStatusStage(status: CandidateProjectStatus): string {
     documents_submitted: 'documents',
     verification_in_progress: 'documents',
     documents_verified: 'documents',
+    // Mock Interview Stage
+    mock_interview_scheduled: 'mock_interview',
+    mock_interview_completed: 'mock_interview',
+    mock_interview_passed: 'mock_interview',
+    mock_interview_failed: 'mock_interview',
+    // Training Stage
+    training_assigned: 'training',
+    training_in_progress: 'training',
+    training_completed: 'training',
+    ready_for_reassessment: 'training',
+    // Approval & Client Interview
     approved: 'approval',
     interview_scheduled: 'interview',
     interview_completed: 'interview',

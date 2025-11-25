@@ -73,6 +73,44 @@ const InterviewsPage = lazy(
   () => import("@/features/interviews/views/InterviewsPage")
 );
 
+// Mock Interview Coordination
+const MockInterviewsDashboardPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/interviews/views/MockInterviewsDashboardPage"
+    )
+);
+const MockInterviewsListPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/interviews/views/MockInterviewsListPage"
+    )
+);
+const TemplatesPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/templates/views/TemplatesPage"
+    )
+);
+const TrainingListPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/training/views/TrainingListPage"
+    )
+);
+const TrainingDetailPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/training/views/TrainingDetailPage"
+    )
+);
+const ConductMockInterviewPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/interviews/views/ConductMockInterviewPage"
+    )
+);
+
 const DocumentUploadPage = lazy(
   () => import("@/features/documents/views/DocumentUploadPage")
 );
@@ -138,569 +176,653 @@ function App() {
             <div className="min-h-screen bg-background">
               <Suspense fallback={<LoadingScreen />}>
                 <Routes>
-                {/* Public routes */}
-                <Route
-                  path="/login"
-                  element={
-                    <RouteErrorBoundary>
-                      <LoginPage />
-                    </RouteErrorBoundary>
-                  }
-                />
+                  {/* Public routes */}
+                  <Route
+                    path="/login"
+                    element={
+                      <RouteErrorBoundary>
+                        <LoginPage />
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                {/* Protected routes with AppLayout */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
-                        <AppLayout>
-                          <DashboardPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  {/* Protected routes with AppLayout */}
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
+                          <AppLayout>
+                            <DashboardPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                {/* CRE Dashboard */}
-                <Route
-                  path="/cre-dashboard"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute roles={["CRE"]}>
-                        <AppLayout>
-                          <CREDashboardPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  {/* CRE Dashboard */}
+                  <Route
+                    path="/cre-dashboard"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={["CRE"]}>
+                          <AppLayout>
+                            <CREDashboardPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/projects"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <ProjectsPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/projects"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <ProjectsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/projects/create"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:projects"]}>
-                        <AppLayout>
-                          <CreateProjectPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/projects/create"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["manage:projects"]}>
+                          <AppLayout>
+                            <CreateProjectPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/projects/:projectId/edit"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:projects"]}>
-                        <AppLayout>
-                          <EditProjectPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/projects/:projectId/edit"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["manage:projects"]}>
+                          <AppLayout>
+                            <EditProjectPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/projects/:projectId"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <ProjectDetailPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/projects/:projectId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <ProjectDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/candidates"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <CandidatesPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/candidates"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <CandidatesPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/candidates/create"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["write:candidates"]}>
-                        <AppLayout>
-                          <CreateCandidatePage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/candidates/create"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["write:candidates"]}>
+                          <AppLayout>
+                            <CreateCandidatePage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/candidates/:id/edit"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["write:candidates"]}>
-                        <AppLayout>
-                          <EditCandidatePage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/candidates/:id/edit"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["write:candidates"]}>
+                          <AppLayout>
+                            <EditCandidatePage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/candidates/:id"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <CandidateDetailPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/candidates/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <CandidateDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/candidate-project/:candidateId/projects/:projectId"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <CandidateProjectDetailsPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/candidate-project/:candidateId/projects/:projectId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <CandidateProjectDetailsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/teams"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <TeamsPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/teams"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <TeamsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/teams/create"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:teams"]}>
-                        <AppLayout>
-                          <CreateTeamPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/teams/create"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["manage:teams"]}>
+                          <AppLayout>
+                            <CreateTeamPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/teams/:teamId"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <TeamDetailPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/teams/:teamId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <TeamDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/teams/:teamId/edit"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:teams"]}>
-                        <AppLayout>
-                          <EditTeamPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/teams/:teamId/edit"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["manage:teams"]}>
+                          <AppLayout>
+                            <EditTeamPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/interviews"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <InterviewsPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/interviews"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <InterviewsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/notifications"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <div className="p-8">
-                            <h1 className="text-2xl font-bold">
-                              Notifications
-                            </h1>
-                            <p className="text-muted-foreground">
-                              Stay updated on important updates and assignments
-                            </p>
-                          </div>
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  {/* Mock Interview Coordination Routes */}
+                  <Route
+                    path="/mock-interviews"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                          <AppLayout>
+                            <MockInterviewsDashboardPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/profile"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <ProfilePage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/mock-interviews/list"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                          <AppLayout>
+                            <MockInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/clients"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <ClientsPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/mock-interviews/templates"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          permissions={["read:interview_templates"]}
+                        >
+                          <AppLayout>
+                            <TemplatesPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/clients/create"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:clients"]}>
-                        <AppLayout>
-                          <CreateClientPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/mock-interviews/training"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:training"]}>
+                          <AppLayout>
+                            <TrainingListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/clients/:id/edit"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["manage:clients"]}>
-                        <AppLayout>
-                          <EditClientPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/mock-interviews/training/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:training"]}>
+                          <AppLayout>
+                            <TrainingDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/clients/:id"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <ClientDetailPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/mock-interviews/:interviewId/conduct"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          permissions={["conduct:mock_interviews"]}
+                        >
+                          <AppLayout>
+                            <ConductMockInterviewPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/documents/upload"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["write:documents"]}>
-                        <AppLayout>
-                          <DocumentUploadPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/notifications"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <div className="p-8">
+                              <h1 className="text-2xl font-bold">
+                                Notifications
+                              </h1>
+                              <p className="text-muted-foreground">
+                                Stay updated on important updates and
+                                assignments
+                              </p>
+                            </div>
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/documents/verification"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["read:documents"]}>
-                        <AppLayout>
-                          <DocumentVerificationPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/candidates/:candidateId/documents/:projectId"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["verify:documents"]}>
-                        <AppLayout>
-                          <CandidateDocumentVerificationPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/profile"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <ProfilePage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/projects/:projectId/nominate"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["nominate:candidates"]}>
-                        <AppLayout>
-                          <CandidateNominationPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/clients"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <ClientsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/projects/:projectId/candidates"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <ProjectEligibleCandidatesPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/clients/create"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["manage:clients"]}>
+                          <AppLayout>
+                            <CreateClientPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/analytics"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["read:analytics"]}>
-                        <AppLayout>
-                          <div className="p-8">
-                            <h1 className="text-2xl font-bold">Analytics</h1>
-                            <p className="text-muted-foreground">
-                              Analytics and reporting page
-                            </p>
-                          </div>
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/clients/:id/edit"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["manage:clients"]}>
+                          <AppLayout>
+                            <EditClientPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/settings"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute permissions={["read:settings"]}>
-                        <AppLayout>
-                          <div className="p-8">
-                            <h1 className="text-2xl font-bold">Settings</h1>
-                            <p className="text-muted-foreground">
-                              Application settings page
-                            </p>
-                          </div>
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/clients/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <ClientDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                {/* Admin routes */}
-                <Route
-                  path="/admin/users"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute
-                        roles={["CEO", "Director", "Manager"]}
-                        permissions={["read:users"]}
-                      >
-                        <AppLayout>
-                          <UsersPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/documents/upload"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["write:documents"]}>
+                          <AppLayout>
+                            <DocumentUploadPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/admin/users/create"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute
-                        roles={["CEO", "Director", "Manager"]}
-                        permissions={["manage:users"]}
-                      >
-                        <AppLayout>
-                          <CreateUserPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/documents/verification"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:documents"]}>
+                          <AppLayout>
+                            <DocumentVerificationPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/candidates/:candidateId/documents/:projectId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["verify:documents"]}>
+                          <AppLayout>
+                            <CandidateDocumentVerificationPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/admin/users/:id"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute
-                        roles={["CEO", "Director", "Manager"]}
-                        permissions={["read:users"]}
-                      >
-                        <AppLayout>
-                          <UserDetailPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/projects/:projectId/nominate"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["nominate:candidates"]}>
+                          <AppLayout>
+                            <CandidateNominationPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/admin/users/:id/edit"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute
-                        roles={["CEO", "Director", "Manager"]}
-                        permissions={["manage:users"]}
-                      >
-                        <AppLayout>
-                          <EditUserPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/projects/:projectId/candidates"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <ProjectEligibleCandidatesPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/notifications"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <AppLayout>
-                          <NotificationsPage />
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/analytics"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:analytics"]}>
+                          <AppLayout>
+                            <div className="p-8">
+                              <h1 className="text-2xl font-bold">Analytics</h1>
+                              <p className="text-muted-foreground">
+                                Analytics and reporting page
+                              </p>
+                            </div>
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/admin/roles"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute
-                        roles={["CEO", "Director", "Manager"]}
-                        permissions={["read:roles"]}
-                      >
-                        <AppLayout>
-                          <div className="p-8">
-                            <h1 className="text-2xl font-bold">
-                              Roles & Permissions
-                            </h1>
-                            <p className="text-muted-foreground">
-                              Role and permission management
-                            </p>
-                          </div>
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/settings"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:settings"]}>
+                          <AppLayout>
+                            <div className="p-8">
+                              <h1 className="text-2xl font-bold">Settings</h1>
+                              <p className="text-muted-foreground">
+                                Application settings page
+                              </p>
+                            </div>
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                <Route
-                  path="/admin/teams"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute
-                        roles={["CEO", "Director", "Manager"]}
-                        permissions={["read:teams"]}
-                      >
-                        <AppLayout>
-                          <div className="p-8">
-                            <h1 className="text-2xl font-bold">
-                              Team Management
-                            </h1>
-                            <p className="text-muted-foreground">
-                              Advanced team management
-                            </p>
-                          </div>
-                        </AppLayout>
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  {/* Admin routes */}
+                  <Route
+                    path="/admin/users"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager"]}
+                          permissions={["read:users"]}
+                        >
+                          <AppLayout>
+                            <UsersPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                {/* Default redirect */}
-                <Route
-                  path="/"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <RoleBasedRedirect />
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
+                  <Route
+                    path="/admin/users/create"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager"]}
+                          permissions={["manage:users"]}
+                        >
+                          <AppLayout>
+                            <CreateUserPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-                {/* 404 route */}
-                <Route
-                  path="*"
-                  element={
-                    <RouteErrorBoundary>
-                      <ProtectedRoute>
-                        <RoleBasedRedirect />
-                      </ProtectedRoute>
-                    </RouteErrorBoundary>
-                  }
-                />
-              </Routes>
-            </Suspense>
+                  <Route
+                    path="/admin/users/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager"]}
+                          permissions={["read:users"]}
+                        >
+                          <AppLayout>
+                            <UserDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
 
-            {/* Global toast notifications */}
-            <Toaster
-              position="top-right"
-              closeButton
-              richColors
-              duration={3000}
-            />
-          </div>
+                  <Route
+                    path="/admin/users/:id/edit"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager"]}
+                          permissions={["manage:users"]}
+                        >
+                          <AppLayout>
+                            <EditUserPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/notifications"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <NotificationsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/roles"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager"]}
+                          permissions={["read:roles"]}
+                        >
+                          <AppLayout>
+                            <div className="p-8">
+                              <h1 className="text-2xl font-bold">
+                                Roles & Permissions
+                              </h1>
+                              <p className="text-muted-foreground">
+                                Role and permission management
+                              </p>
+                            </div>
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/teams"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager"]}
+                          permissions={["read:teams"]}
+                        >
+                          <AppLayout>
+                            <div className="p-8">
+                              <h1 className="text-2xl font-bold">
+                                Team Management
+                              </h1>
+                              <p className="text-muted-foreground">
+                                Advanced team management
+                              </p>
+                            </div>
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  {/* Default redirect */}
+                  <Route
+                    path="/"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <RoleBasedRedirect />
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  {/* 404 route */}
+                  <Route
+                    path="*"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <RoleBasedRedirect />
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+
+              {/* Global toast notifications */}
+              <Toaster
+                position="top-right"
+                closeButton
+                richColors
+                duration={3000}
+              />
+            </div>
           </RNRReminderProvider>
         </NotificationsSocketProvider>
       </AuthProvider>
