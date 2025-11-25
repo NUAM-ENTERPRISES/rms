@@ -358,11 +358,11 @@ export default function ProjectDetailPage() {
               <CardHeader>
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div>
-                    <CardTitle className="text-xl font-bold text-slate-900">
+                    <CardTitle className="text-lg font-bold text-slate-900">
                       Nominated Candidates
                     </CardTitle>
-                    <CardDescription className="text-slate-600">
-                      Candidates submitted for this project
+                    <CardDescription className="text-xs text-slate-600">
+                      Resumes submitted for this project
                       {pagination && ` (${pagination.total} total)`}
                     </CardDescription>
                   </div>

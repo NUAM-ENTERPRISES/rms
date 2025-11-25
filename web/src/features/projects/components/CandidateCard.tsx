@@ -189,12 +189,17 @@ export default function CandidateCard({
   };
 
   const statusConfig = getStatusConfig(
-    projectStatus || candidate?.currentStatus?.statusName || candidate?.currentStatus || ""
+    projectStatus ||
+      candidate?.currentStatus?.statusName ||
+      candidate?.currentStatus ||
+      ""
   );
 
   // Get initials for avatar
   const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
+    return `${firstName?.charAt(0) || ""}${
+      lastName?.charAt(0) || ""
+    }`.toUpperCase();
   };
 
   // Format salary
@@ -238,17 +243,23 @@ export default function CandidateCard({
               </Badge>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* Three-dot menu */}
             {actions && actions.length > 0 && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuTrigger
+                  asChild
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuContent
+                  align="end"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {actions.map((action, index) => {
                     const Icon = action.icon;
                     return (
@@ -292,9 +303,21 @@ export default function CandidateCard({
             ) : (
               <Badge
                 variant="outline"
-                className={`${getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").color} border text-xs w-fit`}
+                className={`${
+                  getStatusConfig(
+                    candidate?.currentStatus?.statusName ||
+                      candidate?.currentStatus ||
+                      ""
+                  ).color
+                } border text-xs w-fit`}
               >
-                {getStatusConfig(candidate?.currentStatus?.statusName || candidate?.currentStatus || "").label}
+                {
+                  getStatusConfig(
+                    candidate?.currentStatus?.statusName ||
+                      candidate?.currentStatus ||
+                      ""
+                  ).label
+                }
               </Badge>
             )}
 
@@ -302,7 +325,9 @@ export default function CandidateCard({
             {showMatchScore && matchScore !== undefined && (
               <Badge
                 variant="outline"
-                className={`${getMatchScoreColor(matchScore)} border text-xs w-fit`}
+                className={`${getMatchScoreColor(
+                  matchScore
+                )} border text-xs w-fit`}
               >
                 <BarChart3 className="h-3 w-3 mr-1" />
                 {matchScore}%
@@ -345,7 +370,9 @@ export default function CandidateCard({
             {candidate.expectedSalary && (
               <div className="flex items-center gap-2 text-gray-600">
                 <DollarSign className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                <span className="truncate">Expected: {formatSalary(candidate.expectedSalary)}</span>
+                <span className="truncate">
+                  Expected: {formatSalary(candidate.expectedSalary)}
+                </span>
               </div>
             )}
           </div>
