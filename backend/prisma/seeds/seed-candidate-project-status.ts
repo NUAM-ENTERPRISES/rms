@@ -40,9 +40,19 @@ export async function seedCandidateProjectWorkflow() {
     { name: "interview_completed", label: "Interview Completed", order: 3, main: "interview" },
     { name: "interview_passed", label: "Interview Passed", order: 4, main: "interview" },
     { name: "interview_failed", label: "Interview Failed", order: 5, main: "interview" },
+    // MOCK INTERVIEW (interview categories)
+    { name: "mock_interview_scheduled", label: "Mock Interview Scheduled", order: 6, main: "interview" },
+    { name: "mock_interview_completed", label: "Mock Interview Completed", order: 7, main: "interview" },
+    { name: "mock_interview_passed", label: "Mock Interview Passed", order: 8, main: "interview" },
+    { name: "mock_interview_failed", label: "Mock Interview Failed", order: 9, main: "interview" },
+    // TRAINING (interview categories)
+    { name: "training_assigned", label: "Training Assigned", order: 10, main: "interview" },
+    { name: "training_in_progress", label: "Training In Progress", order: 11, main: "interview" },
+    { name: "training_completed", label: "Training Completed", order: 12, main: "interview" },
+    { name: "ready_for_reassessment", label: "Ready For Reassessment", order: 13, main: "interview" },
+    { name: "interview_selected", label: "Interview Selected", order: 1, main: "interview" },
 
-    // SELECTION
-    { name: "selected", label: "Selected", order: 1, main: "selection" },
+
 
     // PROCESSING
     { name: "processing_started", label: "Processing Started", order: 1, main: "processing" },
