@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
+import { motion } from "framer-motion";
 const loginSchema = z.object({
   countryCode: z
     .string()
@@ -99,20 +99,67 @@ function RmsRightPanel({
         {/* Content Container */}
         <div className="relative z-10 pt-12 px-10 pb-10 h-full flex flex-col mt-8">
           {/* Logo & Brand Label */}
-          <div className="flex items-center space-x-3 mb-6">
-            {logoSrc ? (
-              <img src={logoSrc} alt="Affiniks logo" className="h-16 w-auto" />
-            ) : (
-              <div className="h-6 w-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
-                <span className="text-white text-xs font-bold">A</span>
-              </div>
-            )}
-          </div>
-          <div className="mt-2 mb-8">
-            <span className="text-xs text-gray-400 tracking-widest font-medium drop-shadow-2xl drop-shadow-amber-200">
+          <motion.div
+  initial={{ opacity: 0, y: -30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.8, ease: "easeOut" }}
+  className="flex flex-col items-center mb-10"
+>
+  {/* Logo Container with Glass + Glow */}
+  <div className="relative group mb-6">
+    {/* Outer Glow */}
+    <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition duration-1000" />
+
+    {/* Logo Card */}
+    <div className="relative p-6 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl">
+      {logoSrc ? (
+        <motion.img
+          whileHover={{ scale: 1.05 }}
+          src={logoSrc}
+          alt="Affiniks logo"
+          className="h-20 w-auto drop-shadow-2xl"
+        />
+      ) : (
+        <motion.div
+          whileHover={{ scale: 1.1, rotate: 360 }}
+          transition={{ duration: 0.6 }}
+          className="h-20 w-20 bg-gradient-to-br from-blue-500 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-2xl"
+        >
+          <span className="text-white text-4xl font-black tracking-tighter">A</span>
+        </motion.div>
+      )}
+    </div>
+
+    {/* Floating Particles Effect (Optional Magic) */}
+    <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute top-0 left-10 w-2 h-2 bg-blue-400/60 rounded-full animate-ping" />
+      <div className="absolute bottom-2 right-8 w-1.5 h-1.5 bg-purple-400/60 rounded-full animate-ping delay-300" />
+      <div className="absolute top-8 right-4 w-1 h-1 bg-pink-400/60 rounded-full animate-ping delay-700" />
+    </div>
+  </div>
+
+  {/* Brand Name - Premium Typography */}
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay: 0.5, duration: 1 }}
+    className="mt-4"
+  >
+   <span className="text-xs text-gray-400 tracking-widest font-medium drop-shadow-2xl drop-shadow-amber-200">
               AFFINIKS
-            </span>
-          </div>
+    </span>
+  </motion.div>
+
+  {/* Subtle Tagline (Optional) */}
+  {/* <motion.p
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay: 0.8 }}
+    className="mt-4 text-sm font-medium text-gray-400 tracking-widest"
+  >
+    Excellence in Every Connection
+  </motion.p> */}
+</motion.div>
           {/* Main Heading */}
           <h2 className="text-3xl md:text-4xl font-semibold text-white tracking-widest mt-2 leading-tight drop-shadow-2xl drop-shadow-amber-200">
             {headline}
@@ -250,6 +297,9 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(139,92,246,0.12),transparent_60%)] pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,rgba(217,70,239,0.12),transparent_60%)] pointer-events-none" />
+              <div className="absolute inset-0 opacity-30 bg-[linear-gradient(45deg,rgba(139,92,246,0.02)_1px,transparent_1px),linear-gradient(-45deg,rgba(139,92,246,0.02)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
               {/* Header inside card */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-slate-900 mb-2">

@@ -41,6 +41,13 @@ import {
   UserCheck,
   Upload,
   ArrowLeft,
+  ChevronDown,
+  Flag,
+  FileIcon,
+  Check,
+  X,
+  FileX,
+  CheckCircle2,
 } from "lucide-react";
 import { CANDIDATE_PROJECT_STATUS } from "@/constants/statuses";
 import {
@@ -62,7 +69,9 @@ import { EligibilityRequirements } from "@/components/molecules/EligibilityRequi
 import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
 import { FlagIcon } from "@/shared/components/FlagIcon";
-
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { Link2 } from "lucide-react";
 export default function CandidateDocumentVerificationPage() {
   const { candidateId, projectId: routeProjectId } = useParams<{
     candidateId: string;
@@ -592,473 +601,323 @@ export default function CandidateDocumentVerificationPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="container mx-auto px-1 pb-4 space-y-6">
         {/* Candidate & Project Info */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              {/* Candidate Info */}
-              {selectedProject && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 capitalize">
-                          {selectedProject.candidate?.firstName}{" "}
-                          {selectedProject.candidate?.lastName}
-                        </h3>
-                        <p className="text-sm text-slate-600 capitalize">
-                          {selectedProject.roleNeeded?.designation}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 justify-end">
-                          <FlagIcon
-                            countryCode={selectedProject.project?.countryCode}
-                            size="3xl"
-                            className="rounded"
-                          />
-                          <p className="text-sm font-medium">
-                            {selectedProject.project?.title}
-                          </p>
-                        </div>
-                      </div>
+      <motion.div
+  initial={{ opacity: 0, y: 12 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, ease: "easeOut" }}
+  className="relative overflow-hidden rounded-xl border border-white/25 bg-white/85 backdrop-blur-xl shadow-xl"
+>
+  {/* Minimal glow */}
+  <div className="absolute inset-0 bg-gradient-to-br from-blue-400/6 to-purple-400/4 pointer-events-none" />
 
-                      {/* Verify / Reject All Documents Buttons */}
-                      {canVerifyDocuments && (
-                        <div className="flex items-center gap-2">
-                          {summary.totalSubmitted > 0 &&
-                            summary.totalVerified < summary.totalSubmitted && (
-                              <Button
-                                onClick={() => {
-                                  setBulkAction("verify");
-                                  setIsBulkConfirmationOpen(true);
-                                }}
-                                disabled={isVerifyingAll}
-                                variant="outline"
-                                className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                              >
-                                {isVerifyingAll ? (
-                                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                ) : (
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                )}
-                                Verify
-                              </Button>
-                            )}
+  <div className="p-4"> {/* Tiny padding */}
+    {selectedProject && (
+      <div className="space-y-3"> {/* Minimal spacing */}
 
-                          {summary.totalSubmitted > 0 &&
-                            (summary.totalRejected || 0) < (summary.totalSubmitted || 0) && (
-                              <Button
-                                onClick={() => {
-                                  setBulkAction("reject");
-                                  setIsBulkConfirmationOpen(true);
-                                }}
-                                disabled={isRejectingAll}
-                                variant="outline"
-                                className="text-red-600 border-red-600 hover:bg-red-50"
-                              >
-                                {isRejectingAll ? (
-                                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                )}
-                                Reject
-                              </Button>
-                            )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Project Selector */}
-                  <div>
-                    <Label className="text-sm font-medium">
-                      Switch Project
-                    </Label>
-                    <Select
-                      value={selectedProjectId}
-                      onValueChange={setSelectedProjectId}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose a project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projectsData.data.map((project: any) => (
-                          <SelectItem
-                            key={project.project.id}
-                            value={project.project.id}
-                          >
-                            {project.project.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Project Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-slate-500" />
-                      <div>
-                        <p className="text-xs text-slate-500">Created</p>
-                        <p className="text-sm font-medium">
-                          {new Date(
-                            selectedProject.project.createdAt
-                          ).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="h-4 w-4 text-slate-500" />
-                      <div>
-                        <p className="text-xs text-slate-500">Recruiter</p>
-                        <p className="text-sm font-medium">
-                          {selectedProject.recruiter?.name || "Unassigned"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-slate-500" />
-                      <div>
-                        <p className="text-xs text-slate-500">Deadline</p>
-                        <p className="text-sm font-medium">
-                          {new Date(
-                            selectedProject.project.deadline
-                          ).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+        {/* Header - Super Compact */}
+        <div className="flex items-center justify-between gap-3">
+          {/* Left: Avatar + Name */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-blue-600 p-0.5 shadow-md flex-shrink-0">
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                <User className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-slate-900 truncate">
+                {selectedProject.candidate?.firstName} {selectedProject.candidate?.lastName}
+              </h3>
+              <p className="text-xs text-blue-600 font-medium truncate">
+                {selectedProject.roleNeeded?.designation}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Flag + Title + Actions */}
+          <div className="flex items-center gap-2">
+            <Flag
+              code={selectedProject.project?.countryCode || "UN"}
+              className="w-7 h-7 rounded shadow-sm ring-1 ring-white/70 flex-shrink-0"
+            />
+            <p className="text-sm font-semibold text-slate-800 max-w-[120px] truncate">
+              {selectedProject.project?.title}
+            </p>
+
+            {/* Tiny Action Buttons */}
+            {canVerifyDocuments && (
+              <div className="flex gap-1.5">
+                {summary.totalSubmitted > 0 && summary.totalVerified < summary.totalSubmitted && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setBulkAction("verify");
+                      setIsBulkConfirmationOpen(true);
+                    }}
+                    disabled={isVerifyingAll}
+                    className="h-8 px-3 text-xs font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow"
+                  >
+                    {isVerifyingAll ? (
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Check className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+                {summary.totalSubmitted > 0 && (summary.totalRejected || 0) < (summary.totalSubmitted || 0) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setBulkAction("reject");
+                      setIsBulkConfirmationOpen(true);
+                    }}
+                    disabled={isRejectingAll}
+                    className="h-8 px-3 text-xs border-red-400/40 bg-red-500/10 text-red-600 hover:bg-red-500/20 rounded-lg"
+                  >
+                    {isRejectingAll ? (
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <X className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Project Switcher - Tiny */}
+        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+          <SelectTrigger className="h-9 text-xs rounded-lg border-white/30 bg-white/70 backdrop-blur shadow-sm">
+            <SelectValue placeholder="Switch" />
+          </SelectTrigger>
+          <SelectContent className="rounded-lg">
+            {projectsData.data.map((project: any) => (
+              <SelectItem key={project.project.id} value={project.project.id} className="text-xs">
+                {project.project.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Meta Pills - Ultra Compact */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            {
+              icon: Calendar,
+              value: new Date(selectedProject.project.createdAt).toLocaleDateString("en-GB", {
+                month: "short",
+                day: "numeric",
+              }),
+            },
+            {
+              icon: UserCheck,
+              value: selectedProject.recruiter?.name?.split(" ")[0] || "—",
+            },
+            {
+              icon: Clock,
+              value: new Date(selectedProject.project.deadline).toLocaleDateString("en-GB", {
+                month: "short",
+                day: "numeric",
+              }),
+              urgent: new Date(selectedProject.project.deadline) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+          ].map((item) => (
+            <div
+              key={item.value}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium backdrop-blur",
+                item.urgent
+                  ? "bg-red-100/80 text-red-700"
+                  : "bg-blue-100/70 text-blue-700"
+              )}
+            >
+              <item.icon className="h-3.5 w-3.5" />
+              <span>{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</motion.div>
 
         {/* Document Requirements */}
-        {selectedProjectId && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                Document Requirements & Verification
-              </CardTitle>
-              <div className="flex items-center gap-4 text-sm text-slate-600">
-                <span>Required: {summary.totalRequired || 0}</span>
-                <span>Submitted: {summary.totalSubmitted || 0}</span>
-                <span>Verified: {summary.totalVerified || 0}</span>
-                <span>Pending: {summary.totalPending || 0}</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {requirementsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  <span>Loading requirements...</span>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Document Requirements Table */}
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Document Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Submitted Document</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {requirements.map((requirement: any) => {
-                        const verification = verifications.find(
-                          (v: any) => v.document.docType === requirement.docType
-                        );
-                        const displayedStatus = verification
-                          ? localStatuses[verification.id] ?? verification.status
-                          : undefined;
+       {selectedProjectId && (
+  <motion.div
+    initial={{ opacity: 0, y: 40 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.7 }}
+    className="rounded-2xl bg-white/95 backdrop-blur-2xl border border-white/30 shadow-2xl overflow-hidden"
+  >
+    {/* Header */}
+    <div className="p-6 lg:p-8 border-b border-white/20 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 rounded-xl bg-blue-500/10">
+            <FileText className="h-7 w-7 text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800">Document Requirements & Verification</h2>
+        </div>
 
-                        return (
-                          <TableRow key={requirement.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">
-                                  {requirement.docType}
-                                </span>
-                                {requirement.mandatory && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-xs"
-                                  >
-                                    Required
-                                  </Badge>
-                                )}
-                              </div>
-                              {requirement.description && (
-                                <p className="text-xs text-slate-500 mt-1">
-                                  {requirement.description}
-                                </p>
+        <div className="flex gap-5">
+          {[
+            { label: "Required", value: summary.totalRequired || 0, color: "blue" },
+            { label: "Submitted", value: summary.totalSubmitted || 0, color: "emerald" },
+            { label: "Verified", value: summary.totalVerified || 0, color: "green" },
+            { label: "Pending", value: summary.totalPending || 0, color: "amber" },
+          ].map((item) => (
+            <div key={item.label} className="text-center px-6 py-4 bg-white/80 rounded-2xl border border-white/40 shadow-lg">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">{item.label}</p>
+              <p className={`text-3xl font-extrabold mt-2 text-${item.color}-600`}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="p-6 lg:p-8">
+      {requirementsLoading ? (
+        <div className="text-center py-20">
+          <RefreshCw className="inline-block h-8 w-8 animate-spin text-blue-600 mb-3" />
+          <p className="text-lg text-slate-600">Loading document requirements...</p>
+        </div>
+      ) : (
+        <>
+          {/* Your Full Table – 100% Logic Preserved */}
+          <div className="rounded-2xl overflow-hidden border border-white/30 bg-white/50 backdrop-blur">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50">
+                  <TableHead className="font-bold text-slate-700">Document Type</TableHead>
+                  <TableHead className="font-bold text-slate-700">Status</TableHead>
+                  <TableHead className="font-bold text-slate-700">Submitted Document</TableHead>
+                  <TableHead className="font-bold text-slate-700">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {requirements.map((requirement: any) => {
+                  const verification = verifications.find((v: any) => v.document.docType === requirement.docType);
+                  const displayedStatus = verification ? localStatuses[verification.id] ?? verification.status : undefined;
+
+                  return (
+                    <TableRow key={requirement.id} className="hover:bg-white/70 transition">
+                      <TableCell className="py-5">
+                        <div className="flex items-center gap-3">
+                          <FileIcon className="h-6 w-6 text-slate-500" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800">{requirement.docType}</span>
+                              {requirement.mandatory && (
+                                <Badge className="bg-red-500/20 text-red-700 text-xs font-bold">REQUIRED</Badge>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              {verification ? (
-                                getStatusBadge(displayedStatus as string)
-                              ) : (
-                                <Badge variant="outline">Not Submitted</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {verification ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm">
-                                    {verification.document.fileName}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleOpenPDF(
-                                        verification.document.fileUrl,
-                                        verification.document.fileName
-                                      )
-                                    }
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <Eye className="h-3 w-3" />
+                            </div>
+                            {requirement.description && (
+                              <p className="text-sm text-slate-500 mt-1">{requirement.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>{verification ? getStatusBadge(displayedStatus as string) : <Badge variant="outline">Not Submitted</Badge>}</TableCell>
+
+                      <TableCell>
+                        {verification ? (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-slate-700 truncate max-w-xs">
+                              {verification.document.fileName}
+                            </span>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
+                                <Eye className="h-5 w-5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setUploadDocType(verification.document.docType); setShowUploadDialog(true); setUploadFile(null); }}>
+                                <Upload className="h-5 w-5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 italic">No document</span>
+                        )}
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {verification ? (
+                            <>
+                              {canVerifyDocuments && displayedStatus === "pending" && (
+                                <>
+                                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
+                                    <CheckCircle className="h-4 w-4 mr-2" /> Verify
                                   </Button>
-                                  {/* Small upload icon next to the preview button so users can replace the file */}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setUploadDocType(verification.document.docType);
-                                      setShowUploadDialog(true);
-                                      setUploadFile(null);
-                                    }}
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <Upload className="h-3 w-3" />
+                                  <Button size="sm" variant="outline" className="border-red-600 text-red-600 hover:bg-red-50" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
+                                    <XCircle className="h-4 w-4 mr-2" /> Reject
                                   </Button>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-slate-500">
-                                  No document
-                                </span>
+                                </>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {verification ? (
-                                  <>
-                                    {/* Show verification buttons if document exists and user can verify */}
-                                    {/* When a document is submitted we allow reuploading it. Verification actions
-                                        (Verify / Reject) should only be shown for pending docs. Reupload is available
-                                        whenever a document exists so the user can replace it. */}
-
-                                    {verification.document && (
-                                      <div className="flex items-center gap-2">
-                                        {/*
-                                          Action buttons:
-                                          - pending -> show both Verify + Reject
-                                          - verified -> show single Reject button (so reviewer can change their mind)
-                                          - rejected -> show single Re-verify button (so reviewer can re-accept)
-                                        */}
-                                        {canVerifyDocuments && (
-                                          displayedStatus === "pending" ? (
-                                            <>
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                  setSelectedVerification(verification);
-                                                  setConfirmationAction("verify");
-                                                  setIsConfirmationOpen(true);
-                                                }}
-                                                className="h-8 text-green-600 border-green-600 hover:text-green-700 hover:bg-green-50"
-                                              >
-                                                <CheckCircle className="h-4 w-4 mr-1" />
-                                                Verify
-                                              </Button>
-
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                  setSelectedVerification(verification);
-                                                  setConfirmationAction("reject");
-                                                  setIsConfirmationOpen(true);
-                                                }}
-                                                className="h-8 text-red-600 border-red-600 hover:text-red-700 hover:bg-red-50"
-                                              >
-                                                <XCircle className="h-4 w-4 mr-1" />
-                                                Reject
-                                              </Button>
-                                            </>
-                                          ) : displayedStatus === "verified" ? (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => {
-                                                setSelectedVerification(verification);
-                                                setConfirmationAction("reject");
-                                                setIsConfirmationOpen(true);
-                                              }}
-                                              className="h-8 text-red-600 border-red-600 hover:text-red-700 hover:bg-red-50"
-                                            >
-                                              <XCircle className="h-4 w-4 mr-1" />
-                                              Reject
-                                            </Button>
-                                          ) : displayedStatus === "rejected" ? (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => {
-                                                setSelectedVerification(verification);
-                                                setConfirmationAction("verify");
-                                                setIsConfirmationOpen(true);
-                                              }}
-                                              className="h-8 text-green-600 border-green-600 hover:text-green-700 hover:bg-green-50"
-                                            >
-                                              <CheckCircle className="h-4 w-4 mr-1" />
-                                              Re-verify
-                                            </Button>
-                                          ) : null
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* Show status badge */}
-                                    <div className="flex items-center gap-2">
-                                      {displayedStatus === "verified" && (
-                                        <Badge
-                                          variant="default"
-                                          className="text-xs bg-green-100 text-green-800 border-green-200"
-                                        >
-                                          <CheckCircle className="h-3 w-3 mr-1" />
-                                          Verified
-                                        </Badge>
-                                      )}
-                                      {displayedStatus === "rejected" && (
-                                        <Badge
-                                          variant="destructive"
-                                          className="text-xs"
-                                        >
-                                          <XCircle className="h-3 w-3 mr-1" />
-                                          Rejected
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </>
-                                ) : ( 
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setShowReuseDialog(true)}
-                                      className="h-8"
-                                    >
-                                      Link Existing
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setShowUploadDialog(true)}
-                                      className="h-8"
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Upload
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-
-                  {/* Complete Verification Button */}
-                  {(summary.allDocumentsVerified || allRejected) && canVerifyDocuments && (
-                    <div className="flex justify-end pt-4 border-t">
-                      {summary.allDocumentsVerified && (
-                        // Show complete button. If the candidate-project is already in
-                        // DOCUMENTS_VERIFIED status we disable it and show a tooltip.
-                        <span
-                          title={
-                            selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED
-                              ? "Already completed verification"
-                              : undefined
-                          }
-                          className="inline-block"
-                        >
-                          <Button
-                            onClick={() => {
-                              setCompletionAction("complete");
-                              setIsCompletionConfirmationOpen(true);
-                            }}
-                            // Disable if currently completing or the project status already shows documents verified
-                            disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                          {isCompleting ? (
-                            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                              {canVerifyDocuments && displayedStatus === "verified" && (
+                                <Button size="sm" variant="outline" className="border-red-600 text-red-600 hover:bg-red-50" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
+                                  <XCircle className="h-4 w-4 mr-2" /> Reject
+                                </Button>
+                              )}
+                              {canVerifyDocuments && displayedStatus === "rejected" && (
+                                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
+                                  <CheckCircle className="h-4 w-4 mr-2" /> Re-verify
+                                </Button>
+                              )}
+                            </>
                           ) : (
-                            <CheckCircle className="h-4 w-4 mr-2" />
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => setShowReuseDialog(true)}>Link Existing</Button>
+                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowUploadDialog(true)}>
+                                <Upload className="h-4 w-4 mr-2" /> Upload
+                              </Button>
+                            </div>
                           )}
-                          Complete Verification
-                        </Button>
-                        </span>
-                      )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
 
-                      {allRejected && (
-                        // Show reject-complete button. If the candidate-project is already in
-                        // REJECTED_DOCUMENTS status we disable it and show a tooltip.
-                        <span
-                          title={
-                            selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS
-                              ? "Already rejected verification"
-                              : undefined
-                          }
-                          className="inline-block ml-2"
-                        >
-                          <Button
-                            onClick={() => {
-                              setCompletionAction("reject");
-                              setIsCompletionConfirmationOpen(true);
-                            }}
-                            // Disable while request is in progress or when project already marked as rejected
-                            disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
-                            variant="destructive"
-                            className="ml-2 bg-red-600 hover:bg-red-700"
-                          >
-                          {isRejectingComplete ? (
-                            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <XCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Reject Verification
-                        </Button>
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+          {/* Final Complete/Reject Buttons */}
+          {(summary.allDocumentsVerified || allRejected) && canVerifyDocuments && (
+            <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
+              {summary.allDocumentsVerified && (
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-lg px-10 py-7 shadow-2xl hover:scale-105 transition"
+                  onClick={() => { setCompletionAction("complete"); setIsCompletionConfirmationOpen(true); }}
+                  disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
+                >
+                  {isCompleting ? <RefreshCw className="h-6 w-6 animate-spin mr-3" /> : <CheckCircle className="h-6 w-6 mr-3" />}
+                  Complete Verification
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        )}
+              {allRejected && (
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 font-bold text-lg px-10 py-7 shadow-2xl hover:scale-105 transition"
+                  onClick={() => { setCompletionAction("reject"); setIsCompletionConfirmationOpen(true); }}
+                  disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
+                >
+                  {isRejectingComplete ? <RefreshCw className="h-6 w-6 animate-spin mr-3" /> : <XCircle className="h-6 w-6 mr-3" />}
+                  Reject All Documents
+                </Button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+
+    <div className="h-1.5 bg-gradient-to-r from-blue-500 via-emerald-500 to-purple-600" />
+  </motion.div>
+)}
 
         {/* Eligibility Requirements */}
         {selectedProjectId && eligibilityData?.data && (
@@ -1077,60 +936,103 @@ export default function CandidateDocumentVerificationPage() {
         )}
 
         {/* Document Reuse Dialog */}
-        <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Link Existing Document</DialogTitle>
-              <DialogDescription>
-                Select an existing document to link to this project.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">
-                  Available Documents
-                </Label>
-                <Select
-                  value={selectedDocumentType}
-                  onValueChange={setSelectedDocumentType}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a document" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allCandidateDocuments.map((doc: any) => (
-                      <SelectItem key={doc.id} value={doc.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{doc.docType}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {doc.fileName}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowReuseDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleReuseDocument}
-                disabled={!selectedDocumentType || isReusing}
-              >
-                {isReusing ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Link Document
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+       <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
+  <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
+    {/* Elegant Header */}
+    <DialogHeader className="p-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white">
+      <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+        <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl">
+          <Link2 className="w-6 h-6" />
+        </div>
+        Link Existing Document
+      </DialogTitle>
+      <DialogDescription className="text-white/90 mt-2 text-base">
+        Select an existing document to link to this project.
+      </DialogDescription>
+    </DialogHeader>
+
+    {/* Body - Clean & Modern */}
+    <div className="p-6 pt-2 bg-white/95 backdrop-blur-xl">
+      <div className="space-y-5">
+        <div>
+          <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4 text-violet-600" />
+            Available Documents
+          </Label>
+
+          <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
+            <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-white/70 shadow-sm focus:ring-4 focus:ring-violet-500/30 transition-all">
+              <SelectValue placeholder="Choose a document" />
+            </SelectTrigger>
+
+            <SelectContent className="rounded-xl border border-slate-200 bg-white/95 backdrop-blur-md shadow-xl">
+              {allCandidateDocuments.length === 0 ? (
+                <div className="py-8 text-center">
+                  <FileX className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                  <p className="text-sm text-slate-500">No documents available</p>
+                </div>
+              ) : (
+                allCandidateDocuments.map((doc: any) => (
+                  <SelectItem key={doc.id} value={doc.id} className="py-3 cursor-pointer">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 p-2 bg-gradient-to-br from-violet-100 to-purple-100 rounded-lg">
+                        <FileText className="w-4 h-4 text-violet-700" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-800">{doc.docType}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Optional: Visual confirmation when selected */}
+        {selectedDocumentType && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-2 text-sm font-medium text-emerald-700 bg-emerald-50/80 px-4 py-2.5 rounded-lg border border-emerald-200/50"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Document selected and ready to link
+          </motion.div>
+        )}
+      </div>
+    </div>
+
+    {/* Footer - Clean & Balanced */}
+    <DialogFooter className="p-6 pt-4 bg-gradient-to-t from-slate-50 to-transparent border-t border-slate-200/60">
+      <Button
+        variant="outline"
+        onClick={() => setShowReuseDialog(false)}
+        className="h-11 px-6 rounded-xl font-medium border-slate-300 hover:bg-slate-50"
+      >
+        Cancel
+      </Button>
+      <Button
+        onClick={handleReuseDocument}
+        disabled={!selectedDocumentType || isReusing}
+        className="h-11 px-6 rounded-xl font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-purple-500/30 disabled:opacity-60 transition-all"
+      >
+        {isReusing ? (
+          <>
+            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+            Linking...
+          </>
+        ) : (
+          <>
+            <Link2 className="h-4 w-4 mr-2" />
+            Link Document
+          </>
+        )}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
         {/* Document Upload Dialog */}
         <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>

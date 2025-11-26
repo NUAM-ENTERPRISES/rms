@@ -1,18 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronRight as ChevronRightIcon,
-  Sparkles,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useState, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { ChevronLeft, Sparkles } from "lucide-react";
 import { useNav } from "@/hooks/useNav";
 import { NavItem } from "@/config/nav";
 import { cn } from "@/lib/utils";
@@ -22,384 +10,171 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-interface NavItemProps {
-  item: NavItem;
-  isCollapsed: boolean;
-  depth?: number;
-}
-
-function NavItemComponent({ item, isCollapsed, depth = 0 }: NavItemProps) {
+function NavItemComponent({ item, isCollapsed, depth = 0 }: { item: NavItem; isCollapsed: boolean; depth?: number }) {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasChildren = item.children && item.children.length > 0;
   const isActive = location.pathname === item.path;
-  const isChildActive =
-    hasChildren &&
-    item.children?.some((child) => location.pathname === child.path);
+  const isChildActive = hasChildren && item.children?.some(child => child.path && location.pathname.startsWith(child.path));
+  const isCurrentlyActive = isActive || isChildActive;
 
   const handleClick = () => {
-    if (hasChildren) {
-      setIsExpanded(!isExpanded);
-    }
+    if (hasChildren) setIsExpanded(prev => !prev);
   };
 
   const content = (
-    <div
-      className={cn(
-        "flex items-center transition-all duration-200",
-        isCollapsed ? "justify-center w-full" : "justify-between w-full"
-      )}
-    >
-      <div
-        className={cn(
-          "flex items-center transition-all duration-200",
-          isCollapsed ? "justify-center" : "space-x-3"
-        )}
-      >
+    <div className={cn(
+      "flex items-center group relative rounded-2xl transition-all duration-300 cursor-pointer",
+      isCollapsed ? "justify-center py-3.5" : "justify-between py-3.5 px-5",
+      isCurrentlyActive
+        ? "bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 shadow-lg shadow-purple-600/30"
+        : "hover:bg-white/10"
+    )}>
+      <div className="flex items-center gap-3.5">
+        {/* Clean Circular Icon */}
         {item.icon && (
-          <div
-            className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200",
-              // Enhanced visibility for collapsed state
-              isCollapsed && (isActive || isChildActive)
-                ? "bg-gradient-to-br from-primary/30 to-primary/50 shadow-lg ring-2 ring-primary/20"
-                : "bg-gradient-to-br from-slate-100 to-slate-200",
-              !isCollapsed &&
-                "group-hover:from-primary/10 group-hover:to-primary/20",
-              !isCollapsed &&
-                (isActive || isChildActive) &&
-                "from-primary/20 to-primary/30"
-            )}
-          >
-            <item.icon
-              className={cn(
-                "h-4 w-4 transition-all duration-200",
-                "text-slate-600 group-hover:text-primary",
-                (isActive || isChildActive) && "text-primary",
-                // Enhanced visibility for collapsed state
-                isCollapsed &&
-                  (isActive || isChildActive) &&
-                  "text-primary drop-shadow-sm"
-              )}
-            />
+          <div className={cn(
+            "flex items-center justify-center rounded-full transition-all duration-300 shadow-md",
+            isCurrentlyActive
+              ? "w-11 h-11 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 text-white ring-4 ring-violet-500/30"
+              : "w-10 h-10 bg-white/12 text-violet-300 group-hover:bg-white/20 group-hover:text-violet-100"
+          )}>
+            <item.icon className="w-5 h-5" />
           </div>
         )}
+
         {!isCollapsed && (
-          <span
-            className={cn(
-              "text-sm font-medium transition-colors duration-200",
-              "text-slate-700 group-hover:text-slate-900",
-              (isActive || isChildActive) && "text-primary font-semibold"
-            )}
-          >
+          <span className={cn(
+            "text-sm font-semibold transition-all duration-300",
+            isCurrentlyActive
+              ? "text-transparent bg-clip-text bg-gradient-to-r from-violet-200 to-fuchsia-200 font-bold"
+              : "text-gray-300 group-hover:text-white"
+          )}>
             {item.label}
           </span>
         )}
       </div>
+
       {!isCollapsed && hasChildren && (
-        <ChevronRightIcon
+        <ChevronLeft
           className={cn(
-            "h-4 w-4 transition-all duration-300 text-slate-400",
-            "group-hover:text-slate-600",
-            isExpanded && "rotate-90 text-primary"
+            "w-4 h-4 transition-transform duration-300",
+            isExpanded ? "rotate-[-90deg] text-violet-200" : "text-violet-400 group-hover:text-violet-200"
           )}
         />
       )}
     </div>
   );
 
-  const navItem = (
-    <div
-      className={cn(
-        "group relative flex items-center text-sm rounded-xl transition-all duration-300 cursor-pointer",
-        // Adjust padding based on collapsed state
-        isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
-        "hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 hover:shadow-sm",
-        // Simplified active state for collapsed mode
-        (isActive || isChildActive) &&
-          !isCollapsed &&
-          "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent text-primary shadow-md scale-[1.02] -translate-y-0.5",
-        (isActive || isChildActive) &&
-          isCollapsed &&
-          "bg-gradient-to-r from-primary/20 to-primary/30 text-primary shadow-md",
-        depth > 0 && "ml-6",
-        "border border-transparent hover:border-slate-200",
-        // Only show border in expanded state
-        (isActive || isChildActive) && !isCollapsed && "border-primary/20",
-        // Remove hover glow in collapsed state for cleaner look
-        !isCollapsed && "hover:scale-[1.02] hover:-translate-y-0.5"
-      )}
-      onClick={handleClick}
-    >
-      {/* Active indicator - simplified for collapsed state */}
-      {(isActive || isChildActive) && (
-        <div
-          className={cn(
-            "absolute top-1/2 -translate-y-1/2 bg-gradient-to-b from-primary to-primary/60 rounded-r-full transition-all duration-300",
-            isCollapsed ? "left-1 w-1 h-6" : "left-0 w-1 h-8"
-          )}
-        />
-      )}
-
-      {/* Hover glow effect - only in expanded state */}
-      {!isCollapsed && (
-        <div
-          className={cn(
-            "absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300",
-            "bg-gradient-to-r from-primary/5 to-transparent",
-            "group-hover:opacity-100"
-          )}
-        />
-      )}
-
-      {content}
-    </div>
+  const navItem = hasChildren ? (
+    <div onClick={handleClick}>{content}</div>
+  ) : item.path ? (
+    <Link to={item.path}>{content}</Link>
+  ) : (
+    content
   );
 
-  if (hasChildren) {
-    return (
-      <div>
-        {isCollapsed ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>{navItem}</TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="bg-slate-900 text-white border-0 shadow-xl"
-              >
-                <p className="font-medium">{item.label}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          navItem
-        )}
+  return (
+    <div className={cn(depth > 0 && "ml-8")}>
+      {navItem}
 
-        {isExpanded && !isCollapsed && (
-          <div className="mt-2 space-y-1 ml-2 pl-4 border-l border-slate-200">
-            {item.children?.map((child) => (
-              <NavItemComponent
-                key={child.id}
-                item={child}
-                isCollapsed={isCollapsed}
-                depth={depth + 1}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (item.path) {
-    return (
-      <Link to={item.path}>
-        {isCollapsed ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>{navItem}</TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="bg-slate-900 text-white border-0 shadow-xl"
-              >
-                <p className="font-medium">{item.label}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          navItem
-        )}
-      </Link>
-    );
-  }
-
-  return navItem;
+      {isExpanded && !isCollapsed && hasChildren && (
+        <div className="mt-2 space-y-1 ml-6 pl-6 border-l-2 border-violet-500/30">
+          {item.children?.map(child => (
+            <NavItemComponent key={child.id} item={child} isCollapsed={isCollapsed} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default function Sidebar({
-  isCollapsed,
-  onToggleCollapse,
-}: SidebarProps) {
+export default function Sidebar({ isCollapsed, onToggleCollapse }: SidebarProps) {
   const navItems = useNav();
-
-  // Hover-to-open state management
   const [isHoverOpen, setIsHoverOpen] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const sidebarRef = useRef<HTMLElement | null>(null);
 
-  // Calculate effective collapsed state (collapsed unless hovered)
-  const effectiveCollapsed = isCollapsed && !isHoverOpen;
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-      if (leaveTimeoutRef.current) {
-        clearTimeout(leaveTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Handle mouse enter - open sidebar on hover (only when collapsed)
   const handleMouseEnter = () => {
-    // Clear any pending leave timeout
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-      leaveTimeoutRef.current = null;
-    }
-
-    // Only open on hover if sidebar is collapsed
     if (isCollapsed) {
-      // Small delay to prevent flicker on rapid movements
-      hoverTimeoutRef.current = setTimeout(() => {
-        setIsHoverOpen(true);
-      }, 150);
+      hoverTimeoutRef.current = setTimeout(() => setIsHoverOpen(true), 200);
     }
   };
 
-  // Handle mouse leave - close sidebar (only if it was hover-opened)
   const handleMouseLeave = () => {
-    // Clear any pending hover timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-
-    // Only close if it was opened by hover (not by click)
-    if (isCollapsed && isHoverOpen) {
-      // Check if focus is inside sidebar - if so, delay closing
-      const activeElement = document.activeElement;
-      const sidebarElement = sidebarRef.current;
-
-      if (
-        sidebarElement &&
-        activeElement &&
-        sidebarElement.contains(activeElement)
-      ) {
-        // Focus is inside sidebar - wait a bit longer before closing
-        leaveTimeoutRef.current = setTimeout(() => {
-          setIsHoverOpen(false);
-        }, 300);
-      } else {
-        // No focus inside - close immediately
-        leaveTimeoutRef.current = setTimeout(() => {
-          setIsHoverOpen(false);
-        }, 100);
-      }
-    }
-  };
-
-  // Handle click toggle - clear hover state and toggle persistent state
-  const handleToggleClick = () => {
-    // Clear any pending hover/leave timeouts
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-      leaveTimeoutRef.current = null;
-    }
-    // Clear hover state
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setIsHoverOpen(false);
-    // Toggle persistent state (existing behavior)
-    onToggleCollapse();
   };
 
-  // Update aria-expanded based on effective state
-  const ariaExpanded = !effectiveCollapsed;
+  const effectiveCollapsed = isCollapsed && !isHoverOpen;
 
   return (
     <aside
-      ref={sidebarRef}
-      className={cn(
-        "flex flex-col bg-white/80 backdrop-blur-xl border-r border-slate-200/60 transition-[width,opacity] duration-300 ease-in-out shadow-2xl rounded-2xl",
-        "supports-[backdrop-filter]:bg-white/60",
-        effectiveCollapsed ? "w-20" : "w-72"
-      )}
-      style={{
-        borderTopRightRadius: "1rem",
-        borderBottomRightRadius: "1rem",
-      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      aria-expanded={ariaExpanded}
+      className={cn(
+        "relative flex flex-col h-screen bg-[#0a0e1a] border-r border-violet-500/20 transition-all duration-500 ease-out shadow-2xl backdrop-blur-xl rounded-r-2xl overflow-hidden mt-[-20px]",
+        effectiveCollapsed ? "w-20" : "w-80"
+      )}
     >
-      {/* Premium Sidebar Header */}
-      <div className="relative flex h-16 items-center justify-between border-b border-slate-200/60 px-4 bg-gradient-to-r from-slate-50/50 to-white/50">
-        {/* Background pattern - moved to not interfere with buttons */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.03)_1px,transparent_0)] bg-[size:20px_20px] pointer-events-none" />
+      {/* Subtle background glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(139,92,246,0.12),transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(217,70,239,0.12),transparent_70%)] pointer-events-none" />
 
+      {/* Header */}
+      <div className="relative flex items-center justify-between h-24 px-6 bg-gradient-to-r from-white/6 via-violet-500/12 to-purple-500/12 border-b border-violet-500/20 backdrop-blur-2xl z-10">
         {!effectiveCollapsed ? (
-          <div className="flex items-center space-x-3 relative z-20">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-              <Sparkles className="h-5 w-5 text-white" />
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-2xl shadow-2xl ring-4 ring-violet-500/30">
+              <Sparkles className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Affiniks
-              </h2>
-              <p className="text-xs text-slate-500 font-medium">RMS</p>
+              <h1 className="text-2xl font-black text-white">Affiniks</h1>
+              <p className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 uppercase tracking-widest">
+                RMS Platform
+              </p>
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center w-full relative z-20">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleClick}
-              className="h-12 w-12 rounded-xl hover:bg-slate-100 hover:shadow-md transition-all duration-200 bg-white/90 border border-slate-200/60 shadow-md hover:scale-105"
-              aria-label="Expand sidebar"
-              aria-expanded={ariaExpanded}
-              aria-controls="sidebar-navigation"
-            >
-              <ChevronRight className="h-6 w-6 text-slate-700" />
-            </Button>
+          <div className="flex justify-center w-full">
+            <div className="p-3 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-2xl shadow-xl ring-4 ring-violet-500/30">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
           </div>
         )}
 
         {!effectiveCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleToggleClick}
-            className="h-10 w-10 rounded-xl hover:bg-slate-100 hover:shadow-md transition-all duration-200 relative z-20"
-            aria-label="Collapse sidebar"
-            aria-expanded={ariaExpanded}
-            aria-controls="sidebar-navigation"
+          <button
+            onClick={onToggleCollapse}
+            className="h-11 w-11 rounded-xl bg-white/12 hover:bg-white/20 backdrop-blur-md border border-violet-500/40 hover:border-violet-400 transition-all duration-300 hover:scale-110 shadow-lg flex items-center justify-center"
           >
-            <ChevronLeft className="h-5 w-5 text-slate-600" />
-          </Button>
+            <ChevronLeft className="w-5 h-5 text-violet-300" />
+          </button>
         )}
       </div>
 
-      {/* Navigation Items with Premium Styling */}
-      <nav
-        id="sidebar-navigation"
-        className="flex-1 space-y-2 p-4 overflow-y-auto"
-      >
-        {navItems.map((item) => (
-          <NavItemComponent
-            key={item.id}
-            item={item}
-            isCollapsed={effectiveCollapsed}
-          />
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-violet-500/30">
+        {navItems.map(item => (
+          <NavItemComponent key={item.id} item={item} isCollapsed={effectiveCollapsed} />
         ))}
       </nav>
 
-      {/* Premium Footer */}
+      {/* Footer */}
       {!effectiveCollapsed && (
-        <div className="p-4 border-t border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white/50">
-          <div className="text-center">
-            <div className="w-8 h-8 mx-auto mb-2 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-slate-600" />
+        <div className="p-6 border-t border-violet-500/20 bg-gradient-to-r from-white/6 via-violet-500/12 to-purple-500/12 backdrop-blur-2xl">
+          <div className="p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-violet-500/30 shadow-2xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-xl">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
+                  Affiniks RMS
+                </p>
+                <p className="text-xs text-violet-300">Version 2.0.0</p>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 font-medium">Affiniks RMS</p>
-            <p className="text-xs text-slate-400">v2.0.0</p>
           </div>
         </div>
       )}

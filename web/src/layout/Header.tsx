@@ -10,7 +10,7 @@ interface HeaderProps {
 
 export default function Header({ onMobileMenuToggle }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-[#051027] overflow-hidden py-1">
+<header className="sticky top-0 z-50 w-full border-b border-violet-500/20 overflow-hidden py-1 bg-[#0a0e1a]">
       {/* Background Texture & Vignette */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"></div>
       <div
@@ -40,6 +40,9 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
       {/* Diagonal Streaks */}
       <div className="absolute top-3 right-6 w-8 h-0.5 bg-gradient-to-r from-[#6EE7F9] to-[#A78BFA] opacity-15 blur-sm transform rotate-45"></div>
       <div className="absolute top-5 right-4 w-6 h-0.5 bg-gradient-to-r from-[#6EE7F9] to-[#A78BFA] opacity-20 blur-sm transform rotate-45"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(139,92,246,0.12),transparent_60%)] pointer-events-none" />
+<div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,rgba(217,70,239,0.12),transparent_60%)] pointer-events-none" />
+<div className="absolute inset-0 opacity-30 bg-[linear-gradient(45deg,rgba(139,92,246,0.02)_1px,transparent_1px),linear-gradient(-45deg,rgba(139,92,246,0.02)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
       {/* Star Specks */}
       <div className="absolute top-2 right-8 w-0.5 h-0.5 bg-white opacity-4 rounded-full"></div>
