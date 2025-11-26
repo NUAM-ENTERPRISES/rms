@@ -7,6 +7,17 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
 }));
 
+// mock user lookup hook so we don't require RTK store for users in tests
+vi.mock("@/shared/hooks/useUsersLookup", () => ({
+  useUsersLookup: () => ({ users: [], getUsersByRole: () => [] }),
+}));
+
+// mock the templates hooks so RTK store is not required in tests
+vi.mock("@/features/mock-interview-coordination/templates/data", () => ({
+  useGetTemplatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+  useGetTemplatesByRoleQuery: () => ({ data: { data: [] }, isLoading: false }),
+}));
+
 // Mock the scheduled mock interviews hook to return empty list
 vi.mock("../data", () => ({
   useGetMockInterviewsQuery: () => ({ data: { data: [] }, isLoading: false }),
@@ -30,6 +41,7 @@ vi.mock("../data", () => ({
     },
     isLoading: false,
   }),
+  useCreateMockInterviewMutation: () => [() => Promise.resolve({}), { isLoading: false }],
 }));
 
 describe("MockInterviewsDashboardPage — assigned upcoming list", () => {
@@ -40,5 +52,7 @@ describe("MockInterviewsDashboardPage — assigned upcoming list", () => {
     expect(await screen.findByText(/Amina Khan/)).toBeInTheDocument();
     // Role should be visible
     expect(screen.getByText(/Registered Nurse/)).toBeInTheDocument();
+    // Should display a schedule action for assigned items
+    expect(screen.getByRole('button', { name: /Schedule Mock Interview/i })).toBeInTheDocument();
   });
 });
