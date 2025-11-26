@@ -92,6 +92,12 @@ const TemplatesPage = lazy(
       "@/features/mock-interview-coordination/templates/views/TemplatesPage"
     )
 );
+const TemplateDetailPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/templates/views/TemplateDetailPage"
+    )
+);
 const TrainingListPage = lazy(
   () =>
     import(
@@ -432,6 +438,21 @@ function App() {
                         >
                           <AppLayout>
                             <TemplatesPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/mock-interviews/templates/:templateId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          permissions={["read:interview_templates"]}
+                        >
+                          <AppLayout>
+                            <TemplateDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

@@ -22,6 +22,8 @@ import { MockInterviewTemplatesService } from './mock-interview-templates.servic
 import { CreateMockInterviewTemplateDto } from './dto/create-template.dto';
 import { UpdateMockInterviewTemplateDto } from './dto/update-template.dto';
 import { QueryMockInterviewTemplatesDto } from './dto/query-templates.dto';
+import { CreateTemplateItemDto } from './dto/create-template-item.dto';
+import { UpdateTemplateItemDto } from './dto/update-template-item.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 
 @ApiTags('Mock Interview Templates')
@@ -81,8 +83,13 @@ export class MockInterviewTemplatesController {
     status: 200,
     description: 'Templates retrieved successfully',
   })
-  findAll(@Query() query: QueryMockInterviewTemplatesDto) {
-    return this.templatesService.findAll(query);
+  async findAll(@Query() query: QueryMockInterviewTemplatesDto) {
+    const templates = await this.templatesService.findAll(query);
+    return {
+      success: true,
+      data: templates,
+      message: 'Templates retrieved successfully',
+    };
   }
 
   @Get('role/:roleId')
@@ -104,8 +111,13 @@ export class MockInterviewTemplatesController {
     status: 404,
     description: 'Role not found',
   })
-  findByRole(@Param('roleId') roleId: string) {
-    return this.templatesService.findByRole(roleId);
+  async findByRole(@Param('roleId') roleId: string) {
+    const templates = await this.templatesService.findByRole(roleId);
+    return {
+      success: true,
+      data: templates,
+      message: 'Templates retrieved successfully',
+    };
   }
 
   @Get(':id')
@@ -126,8 +138,13 @@ export class MockInterviewTemplatesController {
     status: 404,
     description: 'Template not found',
   })
-  findOne(@Param('id') id: string) {
-    return this.templatesService.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const template = await this.templatesService.findOne(id);
+    return {
+      success: true,
+      data: template,
+      message: 'Template retrieved successfully',
+    };
   }
 
   @Patch(':id')
@@ -184,29 +201,90 @@ export class MockInterviewTemplatesController {
     return this.templatesService.remove(id);
   }
 
-  @Post('bulk/:roleId')
+  @Post(':id/items')
   @Permissions('write:interview_templates')
   @ApiOperation({
-    summary: 'Bulk create/update templates for a role',
+    summary: 'Add an item to a template',
     description:
-      'Create or update multiple templates for a specific role at once. Interview Coordinators only.',
+      'Add a new question/item to an existing template. Interview Coordinators only.',
   })
   @ApiParam({
-    name: 'roleId',
-    description: 'Role ID from RoleCatalog',
+    name: 'id',
+    description: 'Template ID',
   })
   @ApiResponse({
     status: 201,
-    description: 'Templates created/updated successfully',
+    description: 'Item added successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Role not found',
+    description: 'Template not found',
   })
-  bulkCreate(
-    @Param('roleId') roleId: string,
-    @Body() templates: Omit<CreateMockInterviewTemplateDto, 'roleId'>[],
+  @ApiResponse({
+    status: 409,
+    description: 'Category or criterion already exists',
+  })
+  addItem(
+    @Param('id') templateId: string,
+    @Body() createItemDto: CreateTemplateItemDto,
   ) {
-    return this.templatesService.bulkCreate(roleId, templates);
+    return this.templatesService.addItem(templateId, createItemDto);
+  }
+
+  @Patch(':id/items/:itemId')
+  @Permissions('write:interview_templates')
+  @ApiOperation({
+    summary: 'Update a template item',
+    description: 'Update an existing question/item in a template.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Template ID',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'Template item ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Item updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Template or item not found',
+  })
+  updateItem(
+    @Param('id') templateId: string,
+    @Param('itemId') itemId: string,
+    @Body() updateItemDto: UpdateTemplateItemDto,
+  ) {
+    return this.templatesService.updateItem(templateId, itemId, updateItemDto);
+  }
+
+  @Delete(':id/items/:itemId')
+  @Permissions('write:interview_templates')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Remove an item from a template',
+    description: 'Delete a question/item from a template.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Template ID',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'Template item ID',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Item deleted successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Template or item not found',
+  })
+  removeItem(@Param('id') templateId: string, @Param('itemId') itemId: string) {
+    return this.templatesService.removeItem(templateId, itemId);
   }
 }

@@ -33,6 +33,14 @@ export class ChecklistItemDto {
   criterion: string;
 
   @ApiProperty({
+    description: 'Template item ID if this answer came from a template',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  templateItemId?: string;
+
+  @ApiProperty({
     description: 'Whether the criterion passed',
     example: true,
   })
@@ -61,6 +69,14 @@ export class ChecklistItemDto {
 }
 
 export class CreateMockInterviewDto {
+  @ApiProperty({
+    description: 'Template ID to use for this interview',
+    example: 'ckx7r1234abcd',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  templateId?: string;
   @ApiProperty({
     description: 'Candidate-Project map ID',
     example: 'ckx7r1234abcd',

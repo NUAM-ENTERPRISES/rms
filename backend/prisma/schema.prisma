@@ -461,6 +461,7 @@ model MockInterview {
   id                    String @id @default(cuid())
   candidateProjectMapId String
   coordinatorId         String // Interview Coordinator who conducts the interview
+  templateId            String? // Selected template for this interview
 
   // Scheduling
   scheduledTime DateTime?
@@ -482,20 +483,24 @@ model MockInterview {
 
   // Relations
   candidateProjectMap CandidateProjects            @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  template            MockInterviewTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
   checklistItems      MockInterviewChecklistItem[]
   trainingAssignments TrainingAssignment[]
 
   @@index([candidateProjectMapId])
   @@index([coordinatorId])
+  @@index([templateId])
   @@index([scheduledTime])
   @@index([decision])
   @@map("mock_interviews")
 }
 
 /// Checklist items for each mock interview (filled during/after interview)
+/// Links to template item if answer came from a template, otherwise custom question
 model MockInterviewChecklistItem {
   id              String @id @default(cuid())
   mockInterviewId String
+  templateItemId  String? // Optional: Link to template item if from template
 
   category  String // technical_skills, communication, professionalism, role_specific
   criterion String // What was evaluated
@@ -507,32 +512,59 @@ model MockInterviewChecklistItem {
   updatedAt DateTime @updatedAt
 
   mockInterview MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
+  templateItem  MockInterviewTemplateItem? @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
 
   @@index([mockInterviewId])
+  @@index([templateItemId])
   @@index([category])
   @@map("mock_interview_checklist_items")
 }
 
-/// Checklist templates for different roles (managed by Interview Coordinators)
-model MockInterviewChecklistTemplate {
-  id String @id @default(cuid())
+/// Mock Interview Template - A named collection of questions for a role
+/// Interview Coordinators can create multiple templates per role
+/// Each template contains questions organized by categories
+model MockInterviewTemplate {
+  id          String   @id @default(cuid())
+  roleId      String
+  role        RoleCatalog @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  // ✅ Reference to RoleCatalog (not hardcoded)
-  roleId String
-  role   RoleCatalog @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  name        String   // e.g., "Standard RN Interview Template"
+  description String?  // Optional description
+  isActive    Boolean  @default(true)
 
-  category  String // technical_skills, communication, professionalism, role_specific
-  criterion String // What to evaluate
-  order     Int     @default(0)
-  isActive  Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  items       MockInterviewTemplateItem[]
+  mockInterviews MockInterview[]
 
-  @@unique([roleId, criterion])
+  @@unique([roleId, name]) // Prevent duplicate template names for same role
   @@index([roleId])
   @@index([isActive])
-  @@map("mock_interview_checklist_templates")
+  @@map("mock_interview_templates")
+}
+
+/// Questions/Criteria within a template, organized by category
+/// Each template can have multiple categories, each category can have multiple questions
+/// No duplicate categories within a single template (enforced by application logic)
+model MockInterviewTemplateItem {
+  id         String   @id @default(cuid())
+  templateId String
+  template   MockInterviewTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  category   String   // technical_skills, communication, professionalism, role_specific
+  criterion  String   // The question/criterion to evaluate
+  order      Int      @default(0) // Order within category
+
+  createdAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  checklistItems MockInterviewChecklistItem[] // Answers that used this template item
+
+  @@unique([templateId, category, criterion]) // Prevent duplicate criteria in same category
+  @@index([templateId])
+  @@index([category])
+  @@map("mock_interview_template_items")
 }
 
 /// Training/Screening assignments for candidates who need improvement
@@ -843,7 +875,7 @@ model RoleCatalog {
   recommendedQualifications RoleRecommendedQualification[]
 
   // Mock Interview Template Relations
-  mockInterviewTemplates MockInterviewChecklistTemplate[]
+  mockInterviewTemplates MockInterviewTemplate[]
 
   @@index([category])
   @@index([isClinical])

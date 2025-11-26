@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsBoolean } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { MOCK_INTERVIEW_CATEGORY } from '../../../common/constants/statuses';
 
 export class QueryMockInterviewTemplatesDto {
   @ApiProperty({
@@ -12,15 +11,6 @@ export class QueryMockInterviewTemplatesDto {
   @IsOptional()
   @IsString()
   roleId?: string;
-
-  @ApiProperty({
-    description: 'Filter by category',
-    enum: MOCK_INTERVIEW_CATEGORY,
-    required: false,
-  })
-  @IsOptional()
-  @IsEnum(MOCK_INTERVIEW_CATEGORY)
-  category?: string;
 
   @ApiProperty({
     description: 'Filter by active status',

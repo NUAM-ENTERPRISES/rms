@@ -39,6 +39,63 @@ This document provides a comprehensive plan for implementing the **Mock Intervie
 
 ## 📊 Current System Analysis
 
+### Role Entity Architecture
+
+**Important Distinction**: The system uses two separate role entities:
+
+1. **RoleNeeded** (`project_roles` table):
+
+   - Project-specific role requirements
+   - Contains: `designation`, `quantity`, `skills`, `salaryRange`, etc.
+   - Used for: `CandidateProjects.roleNeededId`
+   - Represents what a project needs
+
+2. **RoleCatalog** (`role_catalog` table):
+   - Normalized catalog of healthcare roles
+   - Contains: `name`, `slug`, `category`, `isClinical`, etc.
+   - Used for: `MockInterviewChecklistTemplate.roleId`
+   - Represents standardized role definitions
+
+**Key Point**: There is NO direct foreign key relationship between `RoleNeeded` and `RoleCatalog`. They are separate entities serving different purposes.
+
+**Current Implementation**: When fetching mock interview data, the backend:
+
+1. Retrieves `roleNeeded.designation` from the candidate-project mapping
+2. Matches it to `roleCatalog.name` using case-insensitive comparison
+3. Includes the matched `roleCatalog` in the response
+4. Frontend uses `roleCatalog.id` to fetch templates (not `roleNeeded.id`)
+
+This mapping happens in `MockInterviewsService.findOne()` method:
+
+```typescript
+// Find matching RoleCatalog by matching roleNeeded.designation to roleCatalog.name
+let roleCatalog = null;
+if (interview.candidateProjectMap?.roleNeeded?.designation) {
+  roleCatalog = await this.prisma.roleCatalog.findFirst({
+    where: {
+      name: {
+        equals: interview.candidateProjectMap.roleNeeded.designation,
+        mode: "insensitive",
+      },
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      category: true,
+    },
+  });
+}
+```
+
+**Why This Design**:
+
+- `RoleNeeded` is flexible and project-specific (can have custom designations)
+- `RoleCatalog` is standardized and reusable (used for templates, qualifications, etc.)
+- Templates are linked to `RoleCatalog` to ensure consistency across projects
+- The mapping allows projects to use custom role names while still accessing standardized templates
+
 ### Current Interview System
 
 **Existing Interview Model** (`backend/prisma/schema.prisma` lines 428-450):
@@ -151,6 +208,154 @@ model CandidateProjectSubStatus {
 - ❌ No "Interview Coordinator" role
 - ❌ No mock interview specific permissions
 - ❌ No training management permissions
+
+---
+
+## 🔧 Current Implementation Details
+
+### How the System Currently Works
+
+The Mock Interview Coordination feature has been implemented with the following architecture:
+
+#### 1. Role Mapping System
+
+**Problem Solved**: `RoleNeeded` (project-specific) and `RoleCatalog` (standardized) are separate entities with no direct relationship.
+
+**Solution**: Dynamic mapping at runtime:
+
+1. **Backend** (`MockInterviewsService.findOne()`):
+
+   - When fetching a mock interview, retrieves `roleNeeded.designation`
+   - Performs case-insensitive lookup in `RoleCatalog` table matching `name` to `designation`
+   - Includes matched `roleCatalog` in the response
+   - Returns `null` if no match found (graceful degradation)
+
+2. **Frontend** (`ConductMockInterviewPage.tsx`):
+   - Uses `roleCatalog.id` (not `roleNeeded.id`) to fetch templates
+   - Skips template fetch if `roleCatalog` is `null`
+   - Templates are always linked to `RoleCatalog` for consistency
+
+**Code Reference**:
+
+```typescript
+// Backend: backend/src/mock-interview-coordination/interviews/mock-interviews.service.ts
+async findOne(id: string) {
+  const interview = await this.prisma.mockInterview.findUnique({...});
+
+  // Find matching RoleCatalog by matching roleNeeded.designation to roleCatalog.name
+  let roleCatalog = null;
+  if (interview.candidateProjectMap?.roleNeeded?.designation) {
+    roleCatalog = await this.prisma.roleCatalog.findFirst({
+      where: {
+        name: { equals: interview.candidateProjectMap.roleNeeded.designation, mode: 'insensitive' },
+        isActive: true,
+      },
+      select: { id: true, name: true, slug: true, category: true },
+    });
+  }
+
+  return { ...interview, candidateProjectMap: { ...interview.candidateProjectMap, roleCatalog } };
+}
+```
+
+```typescript
+// Frontend: web/src/features/mock-interview-coordination/interviews/views/ConductMockInterviewPage.tsx
+const { data: templatesData } = useGetTemplatesByRoleQuery(
+  {
+    roleId: interview?.candidateProjectMap?.roleCatalog?.id || "",
+    isActive: true,
+  },
+  { skip: !interview?.candidateProjectMap?.roleCatalog?.id }
+);
+```
+
+#### 2. Template System
+
+**Location**: `backend/src/mock-interview-coordination/templates/`
+
+**Key Features**:
+
+- Templates are stored in `MockInterviewChecklistTemplate` table
+- Linked to `RoleCatalog` via `roleId` foreign key
+- Interview Coordinators can create/edit/delete templates via UI
+- Templates are fetched by `roleCatalog.id` (not `roleNeeded.id`)
+
+**API Endpoints**:
+
+- `GET /api/mock-interview-templates` - List all templates
+- `GET /api/mock-interview-templates/role/:roleId` - Get templates for a role
+- `POST /api/mock-interview-templates` - Create template
+- `PATCH /api/mock-interview-templates/:id` - Update template
+- `DELETE /api/mock-interview-templates/:id` - Delete template
+
+#### 3. Mock Interview Flow
+
+**Current Workflow**:
+
+1. **Scheduling**: Recruiter or Coordinator schedules mock interview
+2. **Conducting**: Coordinator opens interview page
+3. **Template Loading**:
+   - System fetches `roleCatalog` via designation matching
+   - Frontend uses `roleCatalog.id` to fetch templates
+   - Templates populate checklist form
+4. **Assessment**: Coordinator fills checklist, ratings, feedback
+5. **Completion**: System updates status and creates checklist items
+
+**Status Transitions**:
+
+- `documents_verified` → `mock_interview_scheduled`
+- `mock_interview_scheduled` → `mock_interview_completed`
+- `mock_interview_completed` → `mock_interview_passed` OR `mock_interview_failed`
+- `mock_interview_passed` → `approved` → `interview_scheduled` (client interview)
+- `mock_interview_failed` → `training_assigned` → `training_in_progress` → `training_completed`
+
+#### 4. Data Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MOCK INTERVIEW DATA FLOW                    │
+└─────────────────────────────────────────────────────────────┘
+
+1. GET /api/mock-interviews/:id
+   └─> Backend: MockInterviewsService.findOne()
+       ├─> Fetch MockInterview with roleNeeded
+       ├─> Match roleNeeded.designation → roleCatalog.name
+       └─> Return interview with roleCatalog included
+
+2. Frontend receives interview data
+   └─> interview.candidateProjectMap.roleCatalog.id
+
+3. GET /api/mock-interview-templates/role/:roleId
+   └─> Backend: MockInterviewTemplatesService.findByRole(roleCatalog.id)
+       └─> Returns templates linked to RoleCatalog
+
+4. Frontend displays templates in checklist form
+   └─> Coordinator fills assessment
+       └─> POST /api/mock-interviews/:id/complete
+           └─> Creates checklist items and updates status
+```
+
+#### 5. Key Design Decisions
+
+**Why Role Mapping Instead of Foreign Key?**
+
+- `RoleNeeded` is project-specific and flexible (custom designations allowed)
+- `RoleCatalog` is standardized and reusable (used across system)
+- Mapping allows projects to use custom names while accessing standard templates
+- No schema changes required - works with existing data structure
+
+**Why Templates Linked to RoleCatalog?**
+
+- Ensures consistency across projects
+- Templates can be reused for multiple projects with same role
+- Easier to maintain and update templates centrally
+- Supports role-based qualification recommendations
+
+**Graceful Degradation**:
+
+- If `roleCatalog` is `null` (no match found), templates won't load
+- Coordinator can still complete interview manually
+- System doesn't break - just operates without template assistance
 
 ---
 
