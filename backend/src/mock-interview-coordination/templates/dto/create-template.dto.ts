@@ -1,12 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
-  IsInt,
   IsBoolean,
   IsOptional,
-  IsEnum,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
-import { MOCK_INTERVIEW_CATEGORY } from '../../../common/constants/statuses';
+import { Type } from 'class-transformer';
+import { CreateTemplateItemDto } from './create-template-item.dto';
 
 export class CreateMockInterviewTemplateDto {
   @ApiProperty({
@@ -17,28 +18,20 @@ export class CreateMockInterviewTemplateDto {
   roleId: string;
 
   @ApiProperty({
-    description: 'Category of the checklist item',
-    enum: MOCK_INTERVIEW_CATEGORY,
-    example: 'technical_skills',
-  })
-  @IsEnum(MOCK_INTERVIEW_CATEGORY)
-  category: string;
-
-  @ApiProperty({
-    description: 'Criterion to evaluate',
-    example: 'Medication Administration Knowledge',
+    description: 'Template name',
+    example: 'Standard RN Interview Template',
   })
   @IsString()
-  criterion: string;
+  name: string;
 
   @ApiProperty({
-    description: 'Display order',
-    example: 1,
+    description: 'Template description',
+    example: 'Comprehensive assessment for Registered Nurse candidates',
     required: false,
   })
   @IsOptional()
-  @IsInt()
-  order?: number;
+  @IsString()
+  description?: string;
 
   @ApiProperty({
     description: 'Whether the template is active',
@@ -48,4 +41,15 @@ export class CreateMockInterviewTemplateDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiProperty({
+    description: 'Template items (questions)',
+    type: [CreateTemplateItemDto],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateTemplateItemDto)
+  items?: CreateTemplateItemDto[];
 }

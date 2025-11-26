@@ -1,8 +1,11 @@
 import { baseApi } from "@/app/api/baseApi";
 import type {
-  MockInterviewChecklistTemplate,
+  MockInterviewTemplate,
+  MockInterviewTemplateItem,
   CreateTemplateRequest,
   UpdateTemplateRequest,
+  CreateTemplateItemRequest,
+  UpdateTemplateItemRequest,
   QueryTemplatesRequest,
   ApiResponse,
 } from "../../types";
@@ -13,7 +16,7 @@ export const mockInterviewTemplatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get all templates
     getTemplates: builder.query<
-      ApiResponse<MockInterviewChecklistTemplate[]>,
+      ApiResponse<MockInterviewTemplate[]>,
       QueryTemplatesRequest | void
     >({
       query: (params) => ({
@@ -33,10 +36,7 @@ export const mockInterviewTemplatesApi = baseApi.injectEndpoints({
     }),
 
     // Get a single template by ID
-    getTemplate: builder.query<
-      ApiResponse<MockInterviewChecklistTemplate>,
-      string
-    >({
+    getTemplate: builder.query<ApiResponse<MockInterviewTemplate>, string>({
       query: (id) => `/mock-interview-templates/${id}`,
       providesTags: (result, error, id) => [
         { type: "MockInterviewTemplate", id },
@@ -45,7 +45,7 @@ export const mockInterviewTemplatesApi = baseApi.injectEndpoints({
 
     // Get templates by role ID
     getTemplatesByRole: builder.query<
-      ApiResponse<MockInterviewChecklistTemplate[]>,
+      ApiResponse<MockInterviewTemplate[]>,
       { roleId: string; isActive?: boolean }
     >({
       query: ({ roleId, isActive }) => ({
@@ -54,12 +54,13 @@ export const mockInterviewTemplatesApi = baseApi.injectEndpoints({
       }),
       providesTags: (result, error, { roleId }) => [
         { type: "MockInterviewTemplate", id: `ROLE-${roleId}` },
+        { type: "MockInterviewTemplate", id: "LIST" },
       ],
     }),
 
     // Create a new template
     createTemplate: builder.mutation<
-      ApiResponse<MockInterviewChecklistTemplate>,
+      ApiResponse<MockInterviewTemplate>,
       CreateTemplateRequest
     >({
       query: (body) => ({
@@ -72,7 +73,7 @@ export const mockInterviewTemplatesApi = baseApi.injectEndpoints({
 
     // Update an existing template
     updateTemplate: builder.mutation<
-      ApiResponse<MockInterviewChecklistTemplate>,
+      ApiResponse<MockInterviewTemplate>,
       { id: string; data: UpdateTemplateRequest }
     >({
       query: ({ id, data }) => ({
@@ -98,19 +99,50 @@ export const mockInterviewTemplatesApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // Bulk create or update templates
-    bulkUpsertTemplates: builder.mutation<
-      ApiResponse<any>,
-      { roleId: string; templates: CreateTemplateRequest[] }
+    // Add item to template
+    addTemplateItem: builder.mutation<
+      ApiResponse<MockInterviewTemplateItem>,
+      { templateId: string; data: CreateTemplateItemRequest }
     >({
-      query: ({ roleId, templates }) => ({
-        url: `/mock-interview-templates/bulk/${roleId}`,
+      query: ({ templateId, data }) => ({
+        url: `/mock-interview-templates/${templateId}/items`,
         method: "POST",
-        body: templates,
+        body: data,
       }),
-      invalidatesTags: (result, error, { roleId }) => [
+      invalidatesTags: (result, error, { templateId }) => [
+        { type: "MockInterviewTemplate", id: templateId },
         { type: "MockInterviewTemplate", id: "LIST" },
-        { type: "MockInterviewTemplate", id: `ROLE-${roleId}` },
+      ],
+    }),
+
+    // Update template item
+    updateTemplateItem: builder.mutation<
+      ApiResponse<MockInterviewTemplateItem>,
+      { templateId: string; itemId: string; data: UpdateTemplateItemRequest }
+    >({
+      query: ({ templateId, itemId, data }) => ({
+        url: `/mock-interview-templates/${templateId}/items/${itemId}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (result, error, { templateId }) => [
+        { type: "MockInterviewTemplate", id: templateId },
+        { type: "MockInterviewTemplate", id: "LIST" },
+      ],
+    }),
+
+    // Delete template item
+    deleteTemplateItem: builder.mutation<
+      ApiResponse<{ message: string }>,
+      { templateId: string; itemId: string }
+    >({
+      query: ({ templateId, itemId }) => ({
+        url: `/mock-interview-templates/${templateId}/items/${itemId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, { templateId }) => [
+        { type: "MockInterviewTemplate", id: templateId },
+        { type: "MockInterviewTemplate", id: "LIST" },
       ],
     }),
   }),
@@ -125,5 +157,7 @@ export const {
   useCreateTemplateMutation,
   useUpdateTemplateMutation,
   useDeleteTemplateMutation,
-  useBulkUpsertTemplatesMutation,
+  useAddTemplateItemMutation,
+  useUpdateTemplateItemMutation,
+  useDeleteTemplateItemMutation,
 } = mockInterviewTemplatesApi;

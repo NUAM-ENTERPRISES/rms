@@ -75,10 +75,40 @@ export class MockInterviewsService {
       );
     }
 
+    // Verify template exists if provided
+    if (dto.templateId) {
+      const template = await this.prisma.mockInterviewTemplate.findUnique({
+        where: { id: dto.templateId },
+      });
+      if (!template) {
+        throw new NotFoundException(
+          `Template with ID "${dto.templateId}" not found`,
+        );
+      }
+      // Verify template is for the same role as candidate's roleNeeded
+      if (candidateProject.roleNeeded) {
+        // Get roleCatalog from roleNeeded.designation
+        const roleCatalog = await this.prisma.roleCatalog.findFirst({
+          where: {
+            name: {
+              equals: candidateProject.roleNeeded.designation,
+              mode: 'insensitive',
+            },
+          },
+        });
+        if (roleCatalog && template.roleId !== roleCatalog.id) {
+          throw new BadRequestException(
+            'Template role does not match candidate role',
+          );
+        }
+      }
+    }
+
     return this.prisma.mockInterview.create({
       data: {
         candidateProjectMapId: dto.candidateProjectMapId,
         coordinatorId: dto.coordinatorId,
+        templateId: dto.templateId,
         scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,
         duration: dto.duration ?? 60,
         meetingLink: dto.meetingLink,
@@ -157,6 +187,13 @@ export class MockInterviewsService {
             roleNeeded: { select: { id: true, designation: true } },
           },
         },
+        template: {
+          include: {
+            items: {
+              orderBy: [{ category: 'asc' }, { order: 'asc' }],
+            },
+          },
+        },
         checklistItems: {
           orderBy: { category: 'asc' },
         },
@@ -173,7 +210,12 @@ export class MockInterviewsService {
     }
 
     // Find matching RoleCatalog by matching roleNeeded.designation to roleCatalog.name
-    let roleCatalog = null;
+    let roleCatalog: {
+      id: string;
+      name: string;
+      slug: string;
+      category: string;
+    } | null = null;
     if (interview.candidateProjectMap?.roleNeeded?.designation) {
       roleCatalog = await this.prisma.roleCatalog.findFirst({
         where: {
@@ -272,6 +314,7 @@ export class MockInterviewsService {
         await tx.mockInterviewChecklistItem.createMany({
           data: dto.checklistItems.map((item) => ({
             mockInterviewId: id,
+            templateItemId: item.templateItemId, // Link to template item if from template
             category: item.category,
             criterion: item.criterion,
             passed: item.passed,

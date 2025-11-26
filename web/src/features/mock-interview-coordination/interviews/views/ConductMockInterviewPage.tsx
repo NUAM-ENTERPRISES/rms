@@ -88,6 +88,9 @@ export default function ConductMockInterviewPage() {
   const [checklistState, setChecklistState] = useState<
     Record<string, { passed: boolean; rating?: number; notes?: string }>
   >({});
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null
+  );
 
   // Fetch interview details
   const {
@@ -98,8 +101,11 @@ export default function ConductMockInterviewPage() {
 
   const interview = interviewData?.data;
 
-  // Fetch checklist template for the candidate's role
-  // Use roleCatalog.id (not roleNeeded.id) since templates are linked to RoleCatalog
+  // Use template from interview if available, otherwise use selectedTemplateId
+  const activeTemplateId = interview?.templateId || selectedTemplateId;
+  const activeTemplate = interview?.template;
+
+  // Fetch available templates for role selection (if no template selected)
   const {
     data: templatesData,
     isLoading: isLoadingTemplates,
@@ -109,25 +115,35 @@ export default function ConductMockInterviewPage() {
       roleId: interview?.candidateProjectMap?.roleCatalog?.id || "",
       isActive: true,
     },
-    { skip: !interview?.candidateProjectMap?.roleCatalog?.id }
+    {
+      skip:
+        !interview?.candidateProjectMap?.roleCatalog?.id || !!activeTemplateId,
+    }
   );
 
   const [completeMockInterview, { isLoading: isSubmitting }] =
     useCompleteMockInterviewMutation();
 
-  const templates = templatesData?.data || [];
+  const availableTemplates = templatesData?.data || [];
 
-  // Group templates by category
-  const templatesByCategory = useMemo(() => {
-    const grouped: Record<string, typeof templates> = {};
-    templates.forEach((template) => {
-      if (!grouped[template.category]) {
-        grouped[template.category] = [];
+  // Get template items from the active template
+  const templateItems = activeTemplate?.items || [];
+
+  // Group template items by category
+  const itemsByCategory = useMemo(() => {
+    const grouped: Record<string, typeof templateItems> = {};
+    templateItems.forEach((item) => {
+      if (!grouped[item.category]) {
+        grouped[item.category] = [];
       }
-      grouped[template.category].push(template);
+      grouped[item.category].push(item);
+    });
+    // Sort items within each category by order
+    Object.keys(grouped).forEach((category) => {
+      grouped[category].sort((a, b) => a.order - b.order);
     });
     return grouped;
-  }, [templates]);
+  }, [templateItems]);
 
   const form = useForm<CompletionFormValues>({
     resolver: zodResolver(completionSchema),
@@ -141,12 +157,12 @@ export default function ConductMockInterviewPage() {
     },
   });
 
-  // Initialize checklist state from templates
+  // Initialize checklist state from template items
   useEffect(() => {
-    if (templates.length > 0) {
+    if (templateItems.length > 0) {
       const initialState: typeof checklistState = {};
-      templates.forEach((template) => {
-        initialState[template.id] = {
+      templateItems.forEach((item) => {
+        initialState[item.id] = {
           passed: false,
           rating: undefined,
           notes: "",
@@ -154,7 +170,7 @@ export default function ConductMockInterviewPage() {
       });
       setChecklistState(initialState);
     }
-  }, [templates]);
+  }, [templateItems]);
 
   const handleChecklistChange = (
     templateId: string,
@@ -172,14 +188,20 @@ export default function ConductMockInterviewPage() {
 
   const onSubmit = async (data: CompletionFormValues) => {
     try {
-      // Build checklist items from state
-      const checklistItems: ChecklistItemInput[] = templates.map(
-        (template) => ({
-          category: template.category,
-          criterion: template.criterion,
-          passed: checklistState[template.id]?.passed || false,
-          rating: checklistState[template.id]?.rating,
-          notes: checklistState[template.id]?.notes,
+      if (!activeTemplateId) {
+        toast.error("Please select a template first");
+        return;
+      }
+
+      // Build checklist items from template items state
+      const checklistItems: ChecklistItemInput[] = templateItems.map(
+        (item) => ({
+          category: item.category,
+          criterion: item.criterion,
+          templateItemId: item.id, // Link to template item
+          passed: checklistState[item.id]?.passed || false,
+          rating: checklistState[item.id]?.rating,
+          notes: checklistState[item.id]?.notes,
         })
       );
 
@@ -207,7 +229,7 @@ export default function ConductMockInterviewPage() {
   const passedCount = Object.values(checklistState).filter(
     (item) => item.passed
   ).length;
-  const totalCount = templates.length;
+  const totalCount = templateItems.length;
   const passPercentage =
     totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0;
 
@@ -407,25 +429,62 @@ export default function ConductMockInterviewPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {templates.length === 0 ? (
+              {!activeTemplateId ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="mb-4">
+                    Please select an evaluation template to continue.
+                  </AlertDescription>
+                  {availableTemplates.length > 0 ? (
+                    <div className="space-y-2">
+                      <Select
+                        value={selectedTemplateId || ""}
+                        onValueChange={(value) => {
+                          setSelectedTemplateId(value);
+                          // Reload interview to get template with items
+                          window.location.reload();
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a template..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTemplates.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                              {template.description &&
+                                ` - ${template.description}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <AlertDescription>
+                      No templates available for this role. Please create a
+                      template first.
+                    </AlertDescription>
+                  )}
+                </Alert>
+              ) : templateItems.length === 0 ? (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    No evaluation template found for this role. Please create a
-                    template first.
+                    The selected template has no questions. Please add questions
+                    to the template first.
                   </AlertDescription>
                 </Alert>
               ) : (
-                Object.entries(templatesByCategory).map(
-                  ([category, categoryTemplates]) => (
+                Object.entries(itemsByCategory).map(
+                  ([category, categoryItems]) => (
                     <div key={category}>
                       <h3 className="font-semibold text-lg mb-3">
                         {categoryLabels[category] || category}
                       </h3>
                       <div className="space-y-4">
-                        {categoryTemplates.map((template) => (
+                        {categoryItems.map((item) => (
                           <Card
-                            key={template.id}
+                            key={item.id}
                             className="border-l-4 border-l-primary/20"
                           >
                             <CardContent className="pt-4">
@@ -433,17 +492,16 @@ export default function ConductMockInterviewPage() {
                                 <div className="flex items-start justify-between gap-4">
                                   <div className="flex-1">
                                     <div className="font-medium">
-                                      {template.criterion}
+                                      {item.criterion}
                                     </div>
                                   </div>
                                   <Switch
                                     checked={
-                                      checklistState[template.id]?.passed ||
-                                      false
+                                      checklistState[item.id]?.passed || false
                                     }
                                     onCheckedChange={(checked) =>
                                       handleChecklistChange(
-                                        template.id,
+                                        item.id,
                                         "passed",
                                         checked
                                       )
@@ -461,12 +519,11 @@ export default function ConductMockInterviewPage() {
                                       min="1"
                                       max="5"
                                       value={
-                                        checklistState[template.id]?.rating ||
-                                        ""
+                                        checklistState[item.id]?.rating || ""
                                       }
                                       onChange={(e) =>
                                         handleChecklistChange(
-                                          template.id,
+                                          item.id,
                                           "rating",
                                           parseInt(e.target.value) || undefined
                                         )
@@ -482,12 +539,10 @@ export default function ConductMockInterviewPage() {
                                   </label>
                                   <Textarea
                                     placeholder="Optional notes for this criterion..."
-                                    value={
-                                      checklistState[template.id]?.notes || ""
-                                    }
+                                    value={checklistState[item.id]?.notes || ""}
                                     onChange={(e) =>
                                       handleChecklistChange(
-                                        template.id,
+                                        item.id,
                                         "notes",
                                         e.target.value
                                       )
@@ -500,8 +555,8 @@ export default function ConductMockInterviewPage() {
                           </Card>
                         ))}
                       </div>
-                      {Object.keys(templatesByCategory).indexOf(category) <
-                        Object.keys(templatesByCategory).length - 1 && (
+                      {Object.keys(itemsByCategory).indexOf(category) <
+                        Object.keys(itemsByCategory).length - 1 && (
                         <Separator className="mt-6" />
                       )}
                     </div>
@@ -653,7 +708,9 @@ export default function ConductMockInterviewPage() {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || templates.length === 0}
+              disabled={
+                isSubmitting || !activeTemplateId || templateItems.length === 0
+              }
               className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transition-all min-w-[180px]"
             >
               {isSubmitting && <LoadingSpinner className="mr-2 h-4 w-4" />}

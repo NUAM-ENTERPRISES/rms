@@ -1,13 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  FileText,
-  Plus,
-  Search,
-  Loader2,
-  AlertCircle,
-  Upload,
-  X,
-} from "lucide-react";
+import { FileText, Plus, Search, Loader2, AlertCircle, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -35,11 +27,7 @@ import {
 import { useCan } from "@/hooks/useCan";
 import { TemplateCard } from "../components/TemplateCard";
 import { TemplateFormDialog } from "../components/TemplateFormDialog";
-import { BulkTemplateDialog } from "../components/BulkTemplateDialog";
-import {
-  MockInterviewChecklistTemplate,
-  MOCK_INTERVIEW_CATEGORY,
-} from "../../types";
+import { MockInterviewTemplate } from "../../types";
 
 export default function TemplatesPage() {
   const canWrite = useCan("write:interview_templates");
@@ -47,23 +35,18 @@ export default function TemplatesPage() {
 
   const [filters, setFilters] = useState({
     roleId: "all",
-    category: "all",
     isActive: "all",
     search: "",
   });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<
-    MockInterviewChecklistTemplate | undefined
+    MockInterviewTemplate | undefined
   >();
 
   const queryParams = useMemo(() => {
     const params: any = {};
     if (filters.roleId && filters.roleId !== "all") {
       params.roleId = filters.roleId;
-    }
-    if (filters.category && filters.category !== "all") {
-      params.category = filters.category;
     }
     if (filters.isActive && filters.isActive !== "all") {
       params.isActive = filters.isActive === "true";
@@ -91,7 +74,8 @@ export default function TemplatesPage() {
     const searchLower = filters.search.toLowerCase();
     return templates.filter(
       (t) =>
-        t.criterion.toLowerCase().includes(searchLower) ||
+        t.name.toLowerCase().includes(searchLower) ||
+        t.description?.toLowerCase().includes(searchLower) ||
         t.role?.name.toLowerCase().includes(searchLower)
     );
   }, [templates, filters.search]);
@@ -107,7 +91,10 @@ export default function TemplatesPage() {
       grouped[roleKey].push(template);
     });
     Object.keys(grouped).forEach((key) => {
-      grouped[key].sort((a, b) => a.order - b.order);
+      grouped[key].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
     });
     return grouped;
   }, [filteredTemplates]);
@@ -117,7 +104,7 @@ export default function TemplatesPage() {
     setDialogOpen(true);
   };
 
-  const handleEdit = (template: MockInterviewChecklistTemplate) => {
+  const handleEdit = (template: MockInterviewTemplate) => {
     setSelectedTemplate(template);
     setDialogOpen(true);
   };
@@ -137,20 +124,6 @@ export default function TemplatesPage() {
     setDialogOpen(false);
     setSelectedTemplate(undefined);
   };
-
-  const categoryOptions = [
-    { value: "all", label: "All Categories" },
-    {
-      value: MOCK_INTERVIEW_CATEGORY.TECHNICAL_SKILLS,
-      label: "Technical Skills",
-    },
-    { value: MOCK_INTERVIEW_CATEGORY.COMMUNICATION, label: "Communication" },
-    {
-      value: MOCK_INTERVIEW_CATEGORY.PROFESSIONALISM,
-      label: "Professionalism",
-    },
-    { value: MOCK_INTERVIEW_CATEGORY.ROLE_SPECIFIC, label: "Role Specific" },
-  ];
 
   if (isLoading) {
     return (
@@ -187,23 +160,13 @@ export default function TemplatesPage() {
             </h1>
           </div>
           {canWrite && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setBulkDialogOpen(true)}
-                className="gap-2 hover:bg-accent/50"
-              >
-                <Upload className="h-4 w-4" />
-                Bulk Manage
-              </Button>
-              <Button
-                onClick={handleCreate}
-                className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-              >
-                <Plus className="h-4 w-4" />
-                New Template
-              </Button>
-            </div>
+            <Button
+              onClick={handleCreate}
+              className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+            >
+              <Plus className="h-4 w-4" />
+              New Template
+            </Button>
           )}
         </div>
       </div>
@@ -215,7 +178,7 @@ export default function TemplatesPage() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search templates by criterion or role..."
+                placeholder="Search templates by name, description, or role..."
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -244,24 +207,6 @@ export default function TemplatesPage() {
             </Select>
 
             <Select
-              value={filters.category}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, category: value }))
-              }
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
               value={filters.isActive}
               onValueChange={(value) =>
                 setFilters((prev) => ({ ...prev, isActive: value }))
@@ -279,7 +224,6 @@ export default function TemplatesPage() {
 
             {(filters.search ||
               filters.roleId !== "all" ||
-              filters.category !== "all" ||
               filters.isActive !== "all") && (
               <Button
                 variant="ghost"
@@ -287,7 +231,6 @@ export default function TemplatesPage() {
                 onClick={() =>
                   setFilters({
                     roleId: "all",
-                    category: "all",
                     isActive: "all",
                     search: "",
                   })
@@ -311,14 +254,14 @@ export default function TemplatesPage() {
               <p className="text-sm mb-4">
                 {filters.search ||
                 filters.roleId !== "all" ||
-                filters.category !== "all"
+                filters.isActive !== "all"
                   ? "Try adjusting your filters"
                   : "Get started by creating your first template"}
               </p>
               {canWrite &&
                 !filters.search &&
                 filters.roleId === "all" &&
-                filters.category === "all" && (
+                filters.isActive === "all" && (
                   <Button onClick={handleCreate} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Create Template
@@ -375,13 +318,6 @@ export default function TemplatesPage() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         template={selectedTemplate}
-        roles={roles}
-      />
-
-      {/* Bulk Template Dialog */}
-      <BulkTemplateDialog
-        open={bulkDialogOpen}
-        onOpenChange={setBulkDialogOpen}
         roles={roles}
       />
     </div>

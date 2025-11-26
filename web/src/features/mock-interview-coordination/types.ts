@@ -3,12 +3,21 @@
 
 // ==================== MOCK INTERVIEW TEMPLATE TYPES ====================
 
-export interface MockInterviewChecklistTemplate {
+export interface MockInterviewTemplateItem {
   id: string;
-  roleId: string;
+  templateId: string;
   category: string;
   criterion: string;
   order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MockInterviewTemplate {
+  id: string;
+  roleId: string;
+  name: string;
+  description?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -17,27 +26,41 @@ export interface MockInterviewChecklistTemplate {
     name: string;
     slug: string;
   };
+  items?: MockInterviewTemplateItem[];
+  _count?: {
+    items: number;
+    mockInterviews: number;
+  };
+}
+
+export interface CreateTemplateItemRequest {
+  category: string;
+  criterion: string;
+  order?: number;
+}
+
+export interface UpdateTemplateItemRequest {
+  category?: string;
+  criterion?: string;
+  order?: number;
 }
 
 export interface CreateTemplateRequest {
   roleId: string;
-  category: string;
-  criterion: string;
-  order?: number;
+  name: string;
+  description?: string;
   isActive?: boolean;
+  items?: CreateTemplateItemRequest[];
 }
 
 export interface UpdateTemplateRequest {
-  roleId?: string;
-  category?: string;
-  criterion?: string;
-  order?: number;
+  name?: string;
+  description?: string;
   isActive?: boolean;
 }
 
 export interface QueryTemplatesRequest {
   roleId?: string;
-  category?: string;
   isActive?: boolean;
 }
 
@@ -95,6 +118,8 @@ export interface MockInterview {
     name: string;
     email: string;
   };
+  templateId?: string;
+  template?: MockInterviewTemplate; // Selected template with items
   checklistItems?: MockInterviewChecklistItem[];
   trainingAssignment?: TrainingAssignment;
 }
@@ -102,6 +127,7 @@ export interface MockInterview {
 export interface MockInterviewChecklistItem {
   id: string;
   mockInterviewId: string;
+  templateItemId?: string; // Link to template item if from template
   category: string;
   criterion: string;
   passed: boolean;
@@ -114,6 +140,7 @@ export interface MockInterviewChecklistItem {
 export interface CreateMockInterviewRequest {
   candidateProjectMapId: string;
   coordinatorId: string;
+  templateId?: string; // Selected template for this interview
   scheduledTime?: string;
   duration?: number;
   meetingLink?: string;
@@ -132,6 +159,7 @@ export interface UpdateMockInterviewRequest {
 export interface ChecklistItemInput {
   category: string;
   criterion: string;
+  templateItemId?: string; // Link to template item if from template
   passed: boolean;
   rating?: number;
   notes?: string;
