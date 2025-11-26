@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardCheck,
@@ -16,10 +16,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useGetMockInterviewsQuery, useGetAssignedMockInterviewsQuery } from "../data";
-import { MockInterview, MOCK_INTERVIEW_DECISION } from "../../types";
+import {
+  useGetMockInterviewsQuery,
+  useGetAssignedMockInterviewsQuery,
+  useCreateMockInterviewMutation,
+} from "../data";
+import { MOCK_INTERVIEW_DECISION } from "../../types";
 import { startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+// note: using native <select> for simplicity in modal
+import { Button as UiButton } from "@/components/ui/button";
+import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { useGetTemplatesByRoleQuery, useGetTemplatesQuery } from "@/features/mock-interview-coordination/templates/data";
 
 export default function MockInterviewsDashboardPage() {
   const navigate = useNavigate();
@@ -30,12 +51,18 @@ export default function MockInterviewsDashboardPage() {
   // from scheduled MockInterview resources). We'll fetch these and merge
   // into the upcoming list so coordinators can see assignments that haven't
   // been scheduled into an interview yet.
-  const { data: assignedData } = useGetAssignedMockInterviewsQuery({
+  const { data: assignedData, refetch: refetchAssigned } = useGetAssignedMockInterviewsQuery({
     page: 1,
     limit: 10,
   });
 
   const assignedItems = assignedData?.data?.items || [];
+
+  // UI state for scheduling modal
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
+  const [createMockInterview, createState] = useCreateMockInterviewMutation();
+  const { users, getUsersByRole } = useUsersLookup();
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -115,6 +142,8 @@ export default function MockInterviewsDashboardPage() {
         // use subStatus label (e.g. "Mock Interview Assigned") or fall back
         // to a simple Assigned tag
         mode: it.subStatus?.label || it.subStatus?.name || "Assigned",
+        // keep subStatus name available so callers can show the schedule button
+        subStatusName: it.subStatus?.name,
       }))
       .slice(0, 10);
 
@@ -122,6 +151,109 @@ export default function MockInterviewsDashboardPage() {
       .sort((a, b) => new Date(a.scheduledTime!).getTime() - new Date(b.scheduledTime!).getTime())
       .slice(0, 5);
   }, [interviews]);
+
+  // Open schedule modal for an assigned candidate-project
+  const openScheduleModal = (assignment: any) => {
+    setSelectedAssignment(assignment);
+    setIsScheduleOpen(true);
+  };
+
+  // Zod schema for schedule form
+  const scheduleSchema = z.object({
+    candidateProjectMapId: z.string().min(1, "Candidate selection is required"),
+    coordinatorId: z.string().min(1, "Coordinator is required"),
+    templateId: z.string().optional(),
+    scheduledTime: z
+      .string()
+      .optional()
+      .refine((v) => !v || !Number.isNaN(Date.parse(v)), {
+        message: "Invalid date/time",
+      }),
+    duration: z.number().min(15).max(240).optional(),
+    meetingLink: z.string().optional(),
+    mode: z.enum(["video", "phone", "in_person"]).optional(),
+  });
+
+  type ScheduleFormValues = z.infer<typeof scheduleSchema>;
+
+  // form state for the schedule modal
+  const form = useForm<ScheduleFormValues>({
+    resolver: zodResolver(scheduleSchema),
+    mode: "onChange",
+    defaultValues: {
+      candidateProjectMapId: selectedAssignment?.candidateProjectMap?.id || "",
+      coordinatorId: "",
+      templateId: undefined,
+      scheduledTime: "",
+      duration: 60,
+      meetingLink: "",
+      mode: "video",
+    },
+  });
+
+  // reset/initialize form whenever selected assignment changes
+  useEffect(() => {
+    if (!selectedAssignment) return;
+    const initialScheduled = selectedAssignment?.scheduledTime
+      ? (() => {
+          const iso = new Date(selectedAssignment.scheduledTime);
+          // convert to local 'YYYY-MM-DDTHH:mm' suitable for datetime-local input
+          const tzOffset = iso.getTimezoneOffset();
+          const local = new Date(iso.getTime() - tzOffset * 60000);
+          return local.toISOString().slice(0, 16);
+        })()
+      : "";
+
+    form.reset({
+      candidateProjectMapId: selectedAssignment?.candidateProjectMap?.id || "",
+      coordinatorId: "",
+      templateId: undefined,
+      scheduledTime: initialScheduled,
+      duration: 60,
+      meetingLink: "",
+      mode: "video",
+    });
+  }, [selectedAssignment]);
+
+  // fetch templates and coordinator list so users can select
+  const roleId = selectedAssignment?.candidateProjectMap?.roleNeeded?.id;
+  const { data: templatesByRole } = useGetTemplatesByRoleQuery(
+    { roleId: roleId || "", isActive: true },
+    { skip: !roleId }
+  );
+  const { data: allTemplates } = useGetTemplatesQuery(undefined, { skip: !isScheduleOpen });
+  const templateOptions = (roleId ? templatesByRole?.data : allTemplates?.data) || [];
+  const coordinators = getUsersByRole("coordinator").length
+    ? getUsersByRole("coordinator")
+    : users || [];
+
+  const onSubmitSchedule = async (values: ScheduleFormValues) => {
+    try {
+      // convert scheduledTime to ISO if present
+      const payload: any = { ...values };
+      if (values.scheduledTime) {
+        payload.scheduledTime = new Date(values.scheduledTime).toISOString();
+      }
+
+      await createMockInterview(payload).unwrap();
+      toast.success("Mock interview scheduled");
+      setIsScheduleOpen(false);
+      form.reset();
+      // ensure assigned list refreshes so UI shows update
+      refetchAssigned?.();
+    } catch (err: any) {
+      // RTK Query error object often has status
+      const status = err?.status;
+      if (status === 409) {
+        toast.error("Conflict: mock interview already exists for this assignment.");
+      } else if (status === 404) {
+        toast.error("Resource not found. Please try again.");
+      } else {
+        toast.error("Failed to schedule interview. Please try again.");
+      }
+    }
+  };
+
 
   // Get recent completed
   const recentCompletedInterviews = useMemo(() => {
@@ -292,7 +424,7 @@ export default function MockInterviewsDashboardPage() {
                 <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
                   <Clock className="h-4 w-4 text-primary" />
                 </div>
-                Upcoming Interviews
+                Assigned Interviews
               </CardTitle>
               <Button
                 variant="ghost"
@@ -319,12 +451,21 @@ export default function MockInterviewsDashboardPage() {
                   const role = interview.candidateProjectMap?.roleNeeded;
 
                   return (
-                    <button
+                    <div
                       key={interview.id}
-                      onClick={() =>
-                        navigate(`/mock-interviews/${interview.id}/conduct`)
-                      }
-                      className="w-full p-4 rounded-lg border hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 text-left group hover:shadow-sm"
+                      className="relative w-full p-4 rounded-lg border hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 text-left group hover:shadow-sm"
+                      onClick={() => {
+                        // If this is an assigned candidate-project (not an actual mock interview)
+                        // and it has the mock_interview_assigned substatus, open the schedule modal
+                        if (
+                          (interview?.id || "").toString().startsWith("assignment-") ||
+                          (typeof interview === "object" && "subStatusName" in interview && (interview as any).subStatusName === "mock_interview_assigned")
+                        ) {
+                          openScheduleModal(interview);
+                          return;
+                        }
+                        navigate(`/mock-interviews/${interview.id}/conduct`);
+                      }}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
@@ -337,9 +478,9 @@ export default function MockInterviewsDashboardPage() {
                             {role?.designation || "Unknown Role"}
                           </p>
                         </div>
-                        <Badge variant="outline" className="ml-2">
-                          {interview.mode}
-                        </Badge>
+                        <div className="flex items-center gap-2 ml-2">
+                              <Badge variant="outline">{interview.mode}</Badge>
+                            </div>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="h-3.5 w-3.5" />
@@ -352,7 +493,22 @@ export default function MockInterviewsDashboardPage() {
                             : "Not scheduled"}
                         </span>
                       </div>
-                    </button>
+                      {/* floating action on assignment cards */}
+                      {(typeof interview === "object" && "subStatusName" in interview && (interview as any).subStatusName === "mock_interview_assigned") && (
+                        <div className="absolute bottom-3 right-3">
+                          <UiButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openScheduleModal(interview);
+                            }}
+                            size="sm"
+                            className="h-8 px-3 text-sm bg-primary text-white hover:bg-primary/90 shadow-sm rounded-full"
+                          >
+                            Schedule Mock Interview
+                          </UiButton>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -441,6 +597,180 @@ export default function MockInterviewsDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Schedule modal */}
+      <Dialog
+        open={isScheduleOpen}
+        onOpenChange={(open) => {
+          setIsScheduleOpen(open);
+          if (!open) setSelectedAssignment(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-3">
+              <Clock className="h-5 w-5 text-primary" />
+              Schedule Mock Interview
+            </DialogTitle>
+            <DialogDescription>
+              Set a date/time, coordinator and optional template for the mock
+              interview.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={form.handleSubmit(onSubmitSchedule)}
+            className="space-y-4 pt-4"
+          >
+            {/* Candidate / Project (read-only) */}
+            <div>
+              <Label className="text-sm font-medium">Candidate</Label>
+              <Input
+                disabled
+                value={
+                  selectedAssignment &&
+                  selectedAssignment.candidateProjectMap?.candidate
+                    ? `${selectedAssignment.candidateProjectMap.candidate.firstName} ${selectedAssignment.candidateProjectMap.candidate.lastName} — ${selectedAssignment.candidateProjectMap.project?.title}`
+                    : ""
+                }
+                className="h-11 mt-1 bg-muted/40"
+              />
+            </div>
+
+            {/* Coordinator select */}
+            <div>
+              <Label htmlFor="coordinatorId" className="text-sm font-medium">
+                Coordinator *
+              </Label>
+              <select
+                id="coordinatorId"
+                {...form.register("coordinatorId")}
+                className="w-full mt-1 h-11 rounded-md border px-3"
+              >
+                <option value="">Select coordinator</option>
+                {coordinators.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.email ? `— ${c.email}` : ""}
+                  </option>
+                ))}
+              </select>
+              {form.formState.errors.coordinatorId && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.coordinatorId.message}
+                </p>
+              )}
+            </div>
+
+            {/* Template select (optional) */}
+            <div>
+              <Label htmlFor="templateId" className="text-sm font-medium">
+                Template (optional)
+              </Label>
+              <select
+                id="templateId"
+                {...form.register("templateId")}
+                className="w-full mt-1 h-11 rounded-md border px-3"
+              >
+                <option value="">No template</option>
+                {templateOptions.map((t: any) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="scheduledTime" className="text-sm font-medium">
+                  Date & time
+                </Label>
+                <Input
+                  id="scheduledTime"
+                  type="datetime-local"
+                  {...form.register("scheduledTime")}
+                  className="mt-1 h-11"
+                />
+                {form.formState.errors.scheduledTime && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.scheduledTime.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="duration" className="text-sm font-medium">
+                  Duration (minutes)
+                </Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  {...form.register("duration", { valueAsNumber: true })}
+                  min={15}
+                  max={240}
+                  className="mt-1 h-11"
+                />
+                {form.formState.errors.duration && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.duration.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="meetingLink" className="text-sm font-medium">
+                Meeting link (optional)
+              </Label>
+              <Input
+                id="meetingLink"
+                {...form.register("meetingLink")}
+                placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                className="mt-1 h-11"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="mode" className="text-sm font-medium">
+                Mode
+              </Label>
+              <select
+                id="mode"
+                {...form.register("mode")}
+                className="w-full mt-1 h-11 rounded-md border px-3"
+              >
+                <option value="video">Video</option>
+                <option value="phone">Phone</option>
+                <option value="in_person">In-person</option>
+              </select>
+            </div>
+
+            <DialogFooter>
+              <div className="flex gap-3 w-full pt-2">
+                <UiButton
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsScheduleOpen(false);
+                    setSelectedAssignment(null);
+                  }}
+                  className="flex-1"
+                  disabled={createState.isLoading}
+                >
+                  Cancel
+                </UiButton>
+                <UiButton
+                  type="submit"
+                  className="flex-1"
+                  disabled={createState.isLoading || !form.formState.isValid}
+                >
+                  {createState.isLoading ? "Scheduling..." : "Schedule Interview"}
+                </UiButton>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Actions */}
       <Card className="mt-6 shadow-sm hover:shadow-md transition-shadow duration-300">
