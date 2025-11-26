@@ -12,12 +12,12 @@ export async function seedCandidateProjectWorkflow() {
     { name: "nominated", label: "Nominated", color: "blue", order: 1 },
     { name: "documents", label: "Documents", color: "yellow", order: 2 },
     { name: "interview", label: "Interview", color: "purple", order: 3 },
-    { name: "selection", label: "Selection", color: "green", order: 4 },
-    { name: "processing", label: "Processing", color: "orange", order: 5 },
-    { name: "final", label: "Final", color: "green", order: 6 },
-    { name: "rejected", label: "Rejected", color: "red", order: 7 },
-    { name: "withdrawn", label: "Withdrawn", color: "gray", order: 8 },
-    { name: "on_hold", label: "On Hold", color: "yellow", order: 9 },
+    // { name: "selection", label: "Selection", color: "green", order: 4 },
+    { name: "processing", label: "Processing", color: "orange", order: 4 },
+    { name: "final", label: "Final", color: "green", order: 5 },
+    { name: "rejected", label: "Rejected", color: "red", order: 6 },
+    { name: "withdrawn", label: "Withdrawn", color: "gray", order: 7 },
+    { name: "on_hold", label: "On Hold", color: "yellow", order: 8 },
   ];
 
   // -----------------------------
@@ -35,22 +35,24 @@ export async function seedCandidateProjectWorkflow() {
     { name: "rejected_documents", label: "Rejected Documents", order: 5, main: "documents" },
 
     // INTERVIEW
-    { name: "interview_scheduled", label: "Interview Scheduled", order: 1, main: "interview" },
-    { name: "interview_rescheduled", label: "Interview Rescheduled", order: 2, main: "interview" },
-    { name: "interview_completed", label: "Interview Completed", order: 3, main: "interview" },
-    { name: "interview_passed", label: "Interview Passed", order: 4, main: "interview" },
-    { name: "interview_failed", label: "Interview Failed", order: 5, main: "interview" },
+    {name: "interview_assigned", label: "Interview Assigned", order: 1, main: "interview" },
+    { name: "interview_scheduled", label: "Interview Scheduled", order: 2, main: "interview" },
+    { name: "interview_rescheduled", label: "Interview Rescheduled", order: 3, main: "interview" },
+    { name: "interview_completed", label: "Interview Completed", order: 4, main: "interview" },
+    { name: "interview_passed", label: "Interview Passed", order: 5, main: "interview" },
+    { name: "interview_failed", label: "Interview Failed", order: 6, main: "interview" },
     // MOCK INTERVIEW (interview categories)
-    { name: "mock_interview_scheduled", label: "Mock Interview Scheduled", order: 6, main: "interview" },
-    { name: "mock_interview_completed", label: "Mock Interview Completed", order: 7, main: "interview" },
-    { name: "mock_interview_passed", label: "Mock Interview Passed", order: 8, main: "interview" },
-    { name: "mock_interview_failed", label: "Mock Interview Failed", order: 9, main: "interview" },
+    {name: "mock_interview_assigned", label: "Mock Interview Assigned", order: 7, main: "interview" },
+    { name: "mock_interview_scheduled", label: "Mock Interview Scheduled", order: 8, main: "interview" },
+    { name: "mock_interview_completed", label: "Mock Interview Completed", order: 9, main: "interview" },
+    { name: "mock_interview_passed", label: "Mock Interview Passed", order: 10, main: "interview" },
+    { name: "mock_interview_failed", label: "Mock Interview Failed", order: 11, main: "interview" },
     // TRAINING (interview categories)
-    { name: "training_assigned", label: "Training Assigned", order: 10, main: "interview" },
-    { name: "training_in_progress", label: "Training In Progress", order: 11, main: "interview" },
-    { name: "training_completed", label: "Training Completed", order: 12, main: "interview" },
-    { name: "ready_for_reassessment", label: "Ready For Reassessment", order: 13, main: "interview" },
-    { name: "interview_selected", label: "Interview Selected", order: 1, main: "interview" },
+    { name: "training_assigned", label: "Training Assigned", order: 12, main: "interview" },
+    { name: "training_in_progress", label: "Training In Progress", order: 13, main: "interview" },
+    { name: "training_completed", label: "Training Completed", order: 14, main: "interview" },
+    { name: "ready_for_reassessment", label: "Ready For Reassessment", order: 14, main: "interview" },
+    { name: "interview_selected", label: "Interview Selected", order: 15, main: "interview" },
 
 
 

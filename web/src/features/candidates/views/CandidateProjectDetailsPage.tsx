@@ -31,6 +31,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 
 import { useGetCandidateProjectPipelineQuery } from "@/features/candidates/api";
+import { calculateProgress as calculateProgressUtil, getMostRecentEntry as getMostRecentEntryUtil, normalizeStatusName as normalizeStatusNameUtil, PROGRESS_ORDER, getNextProgressStatus, mapToProgressKey } from "@/features/candidates/utils/progress";
 
 export default function CandidateProjectDetailsPage() {
 
@@ -55,6 +56,10 @@ export default function CandidateProjectDetailsPage() {
             verification_in_progress: <Search className="h-4 w-4" />,
             documents_verified: <ShieldCheck className="h-4 w-4" />,
             approved: <ThumbsUp className="h-4 w-4" />,
+            interview_assigned: <Calendar className="h-4 w-4" />,
+            interview_rescheduled: <Calendar className="h-4 w-4" />,
+            interview_selected: <CheckCircle2 className="h-4 w-4" />,
+            interview_failed: <XCircle className="h-4 w-4" />,
             interview_scheduled: <Calendar className="h-4 w-4" />,
             interview_completed: <MessageCircle className="h-4 w-4" />,
             interview_passed: <Award className="h-4 w-4" />,
@@ -80,6 +85,10 @@ export default function CandidateProjectDetailsPage() {
             documents_verified: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             approved: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            interview_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            interview_rescheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
@@ -129,68 +138,33 @@ export default function CandidateProjectDetailsPage() {
         });
     };
 
-    // Normalize status from API entry: prefer subStatus name/ snapshot, then mainStatus
-    const normalizeStatusName = (entry?: any) => {
-        if (!entry) return undefined;
-        const candidates = [
-            entry?.subStatus?.name,
-            typeof entry?.subStatusSnapshot === 'string' ? entry.subStatusSnapshot : undefined,
-            entry?.mainStatus?.name,
-            typeof entry?.mainStatusSnapshot === 'string' ? entry.mainStatusSnapshot : undefined,
-            entry?.projectStatus?.statusName // old shape fallback
-        ].filter(Boolean).map((v: string) => String(v).toLowerCase());
-
-        const statusOrder = [
-            'nominated', 'pending_documents', 'documents_submitted',
-            'verification_in_progress', 'documents_verified', 'approved',
-            'interview_scheduled', 'interview_completed', 'interview_passed',
-            'selected', 'processing', 'hired'
-        ];
-
-        for (const cand of candidates) {
-            for (const key of statusOrder) {
-                if (cand === key || cand.includes(key)) return key;
-                if (cand.replace(/\s+/g, '_').includes(key)) return key;
-            }
-        }
-
-        return candidates.length ? candidates[0].replace(/\s+/g, '_') : undefined;
-    };
+    // use the shared normalization helper
 
     // Returns the most recent project status name from history (normalized)
     const getLatestProjectStatusName = (): string | undefined => {
         const history = pipelineResponse?.data?.history;
         if (!history || history.length === 0) return undefined;
-        // pick the most recent entry by statusChangedAt
-        let latest = history[0];
-        for (const entry of history) {
-            if (new Date(entry.statusChangedAt).getTime() > new Date(latest.statusChangedAt).getTime()) {
-                latest = entry;
-            }
-        }
-        return normalizeStatusName(latest) || undefined;
+        const latest = getMostRecentEntryUtil(history);
+        // normalize -> then map to canonical progress key so UI comparisons are stable
+        const raw = normalizeStatusNameUtil(latest);
+        return raw ? mapToProgressKey(raw) : undefined;
     };
 
-    // Calculate progress based on the candidate-project's latest project status
+    // Calculate progress using the shared helper (includes all interview sub-statuses)
     const calculateProgress = () => {
-        const currentStatusName = getLatestProjectStatusName();
-        if (!currentStatusName) return 0;
-        const totalStatuses = 12;
-        const statusOrder = [
-            'nominated', 'pending_documents', 'documents_submitted',
-            'verification_in_progress', 'documents_verified', 'approved',
-            'interview_scheduled', 'interview_completed', 'interview_passed',
-            'selected', 'processing', 'hired'
-        ];
-        const currentIndex = statusOrder.indexOf(currentStatusName);
-        return currentIndex >= 0 ? Math.round(((currentIndex + 1) / totalStatuses) * 100) : 0;
+        const history = pipelineResponse?.data?.history || [];
+        const { progress } = calculateProgressUtil(history);
+        return progress;
     };
 
     // Calculate data for rendering
     const history = pipelineResponse?.data?.history || [];
+    // most-recent raw entry (used for display label) — keep canonical progress separate
+    const latestEntry = getMostRecentEntryUtil(history);
     const projectDeadline = pipelineResponse?.data?.project?.deadline;
     const progress = calculateProgress();
     const latestProjectStatusName = getLatestProjectStatusName();
+    const latestDisplayLabel = latestEntry?.subStatus?.label || latestEntry?.subStatusSnapshot || latestEntry?.mainStatus?.label || latestEntry?.mainStatusSnapshot || latestEntry?.projectStatus?.statusName || undefined;
     const sortedHistory = [...history].reverse();
 
     // Play lottie animation when progress changes
@@ -278,7 +252,7 @@ export default function CandidateProjectDetailsPage() {
                                             <div>
                                                 <p className="text-xs text-gray-600 font-medium uppercase tracking-wide">Current Status</p>
                                                 <p className={`${getStatusColor(latestProjectStatusName || '').text} font-bold text-lg mt-0.5`}>
-                                                    {latestProjectStatusName ? getStatusLabel(latestProjectStatusName) : 'N/A'}
+                                                    {latestDisplayLabel ? latestDisplayLabel : (latestProjectStatusName ? getStatusLabel(latestProjectStatusName) : 'N/A')}
                                                 </p>
                                             </div>
                                         </div>
@@ -350,18 +324,22 @@ export default function CandidateProjectDetailsPage() {
                                     {[
                                         { name: 'Nomination', statuses: ['nominated'], icon: Users },
                                         { name: 'Documents', statuses: ['pending_documents', 'documents_submitted', 'verification_in_progress', 'documents_verified'], icon: FileText },
-                                        { name: 'Interview', statuses: ['approved', 'interview_scheduled', 'interview_completed', 'interview_passed'], icon: MessageCircle },
+                                        { name: 'Interview', statuses: [
+                                            'approved', 'interview_assigned', 'interview_scheduled', 'interview_rescheduled', 'interview_completed', 'interview_selected', 'interview_passed', 'interview_failed',
+                                            // mock / training categories (also part of interview flow)
+                                            'mock_interview_assigned','mock_interview_scheduled','mock_interview_completed','mock_interview_passed','mock_interview_failed',
+                                            'training_assigned','training_in_progress','training_completed','ready_for_reassessment'
+                                        ], icon: MessageCircle },
                                         { name: 'Final', statuses: ['selected', 'processing', 'hired'], icon: CheckCircle2 }
                                     ].map((stage) => {
-                                        const isActive = stage.statuses.includes(latestProjectStatusName || '');
-                                        const isPassed = stage.statuses.some(s => {
-                                            const statusOrder = [
-                                                'nominated', 'pending_documents', 'documents_submitted',
-                                                'verification_in_progress', 'documents_verified', 'approved',
-                                                'interview_scheduled', 'interview_completed', 'interview_passed',
-                                                'selected', 'processing', 'hired'
-                                            ];
-                                            return statusOrder.indexOf(s) < statusOrder.indexOf(latestProjectStatusName || '');
+                                        // compare stage membership using canonical mapping so fine-grained sub-statuses map correctly
+                                        const canonicalLatest = latestProjectStatusName;
+                                        const canonicalStageKeys = stage.statuses.map(s => mapToProgressKey(s)).filter(Boolean) as string[];
+                                        const isActive = canonicalStageKeys.includes(canonicalLatest || '');
+                                        const isPassed = canonicalStageKeys.some(sKey => {
+                                            const a = PROGRESS_ORDER.indexOf(sKey);
+                                            const b = PROGRESS_ORDER.indexOf(canonicalLatest || '');
+                                            return a >= 0 && b >= 0 ? a < b : false;
                                         });
                                         const StageIcon = stage.icon;
 
@@ -444,14 +422,8 @@ export default function CandidateProjectDetailsPage() {
                                                 <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Next Step</p>
                                                 <p className="text-sm font-semibold text-blue-900 mt-0.5">
                                                     {(() => {
-                                                        const statusOrder = [
-                                                            'nominated', 'pending_documents',
-                                                            'verification_in_progress', 'documents_verified',
-                                                            'interview_scheduled', 'interview_completed', 'interview_passed',
-                                                            'selected', 'processing', 'hired'
-                                                        ];
-                                                        const currentIndex = statusOrder.indexOf(latestProjectStatusName);
-                                                        const nextStatus = statusOrder[currentIndex + 1];
+                                                        // Use canonical progress order for next step
+                                                        const nextStatus = getNextProgressStatus(latestProjectStatusName);
                                                         return nextStatus ? getStatusLabel(nextStatus) : 'Completion';
                                                     })()}
                                                 </p>
@@ -501,7 +473,7 @@ export default function CandidateProjectDetailsPage() {
                                         <div className="space-y-6">
                                             {sortedHistory.map((item, index) => {
                                                 // get normalized key and human label
-                                                const statusKey = normalizeStatusName(item) || '';
+                                                const statusKey = normalizeStatusNameUtil(item) || '';
                                                 const it: any = item;
                                                 const statusLabel = it?.subStatus?.label || it?.subStatusSnapshot || it?.mainStatus?.label || it?.mainStatusSnapshot || it?.projectStatus?.statusName;
                                                 const colors = getStatusColor(statusKey);

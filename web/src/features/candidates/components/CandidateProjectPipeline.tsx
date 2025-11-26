@@ -19,6 +19,7 @@ import {
     PauseCircle,
     Calendar
 } from "lucide-react";
+import { calculateProgress as calculateProgressUtil, getMostRecentEntry as getMostRecentEntryUtil, normalizeStatusName as normalizeStatusNameUtil } from "../utils/progress";
 
 // Props interface
 interface PipelineProps {
@@ -36,6 +37,10 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
             verification_in_progress: <Search className="h-4 w-4" />,
             documents_verified: <ShieldCheck className="h-4 w-4" />,
             approved: <ThumbsUp className="h-4 w-4" />,
+            interview_assigned: <Calendar className="h-4 w-4" />,
+            interview_rescheduled: <Calendar className="h-4 w-4" />,
+            interview_selected: <CheckCircle2 className="h-4 w-4" />,
+            interview_failed: <XCircle className="h-4 w-4" />,
             interview_scheduled: <Calendar className="h-4 w-4" />,
             interview_completed: <MessageCircle className="h-4 w-4" />,
             interview_passed: <Award className="h-4 w-4" />,
@@ -61,6 +66,10 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
             documents_verified: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             approved: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            interview_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            interview_rescheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
@@ -86,73 +95,11 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
         });
     };
 
-        // Helper: normalize incoming API status strings to canonical keys used by the UI
-        const normalizeStatusName = (entry: any) => {
-            // Try sub-status name first, then subStatusSnapshot, then main status entries
-            const candidates = [
-                entry?.subStatus?.name,
-                typeof entry?.subStatusSnapshot === 'string' ? entry.subStatusSnapshot : undefined,
-                entry?.mainStatus?.name,
-                typeof entry?.mainStatusSnapshot === 'string' ? entry.mainStatusSnapshot : undefined
-            ].filter(Boolean).map((v: string) => String(v).toLowerCase());
-
-            // canonical internal status keys (same as other components)
-            const statusOrder = [
-            'nominated', 'pending_documents', 'documents_submitted', 
-            'verification_in_progress', 'documents_verified', 'approved',
-            'interview_scheduled', 'interview_completed', 'interview_passed',
-            'selected', 'processing', 'hired'
-        ];
-
-            // Try to match any candidate value to one of our known canonical keys
-            for (const cand of candidates) {
-                for (const key of statusOrder) {
-                    // match exact or partial (e.g. 'verification_in_progress_document' -> 'verification_in_progress')
-                    if (cand === key || cand.includes(key)) return key;
-                    // also map human-friendly snapshots like 'verified documents' -> 'documents_verified'
-                    if (cand.replace(/\s+/g, '_').includes(key)) return key;
-                }
-            }
-
-            // Fallback: try to use first candidate string (converted to underscore) if no match
-            if (candidates.length > 0) return candidates[0].replace(/\s+/g, '_');
-            return undefined;
-        };
 
 
-        // Pick the most recent history entry (by statusChangedAt) and return it
-        const getMostRecentEntry = () => {
-            if (!history || history.length === 0) return undefined;
-            let latest = history[0];
-            for (const entry of history) {
-                if (new Date(entry.statusChangedAt).getTime() > new Date(latest.statusChangedAt).getTime()) {
-                    latest = entry;
-                }
-            }
-            return latest;
-        };
-
-        // Calculate progress using normalized status name found on the most recent history entry
-        const calculateProgress = () => {
-            if (history.length === 0) return 0;
-
-            const totalStatuses = 12; // total non-terminal statuses
-            const latestEntry = getMostRecentEntry();
-            const rawCurrent = latestEntry ? normalizeStatusName(latestEntry) : undefined;
-
-            const statusOrder = [
-                'nominated', 'pending_documents', 'documents_submitted',
-                'verification_in_progress', 'documents_verified', 'approved',
-                'interview_scheduled', 'interview_completed', 'interview_passed',
-                'selected', 'processing', 'hired'
-            ];
-
-            const currentIndex = rawCurrent ? statusOrder.indexOf(rawCurrent) : -1;
-            return currentIndex >= 0 ? Math.round(((currentIndex + 1) / totalStatuses) * 100) : 0;
-        };
-
-    const progress = calculateProgress();
-    const latestStatus = getMostRecentEntry();
+    // Use shared helpers to calculate progress and most recent entry
+    const { progress } = calculateProgressUtil(history);
+    const latestStatus = getMostRecentEntryUtil(history);
 
     // Get a human-friendly label for display using sub-status label/snapshot then main
     const getStatusLabelFor = (entry: any) => {
@@ -160,7 +107,7 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
     };
 
     // get a normalized status key for colors/icons
-    const getStatusKeyFor = (entry: any) => normalizeStatusName(entry) || '';
+    const getStatusKeyFor = (entry: any) => normalizeStatusNameUtil(entry) || '';
 
     return (
         <div className="space-y-6">

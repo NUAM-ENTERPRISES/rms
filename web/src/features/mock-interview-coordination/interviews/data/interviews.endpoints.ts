@@ -5,6 +5,9 @@ import type {
   UpdateMockInterviewRequest,
   CompleteMockInterviewRequest,
   QueryMockInterviewsRequest,
+  QueryAssignedMockInterviewsRequest,
+  AssignedMockInterviewItem,
+  PaginatedResponse,
   ApiResponse,
 } from "../../types";
 
@@ -103,6 +106,27 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
         { type: "MockInterview", id: "LIST" },
       ],
     }),
+
+    // Get assigned candidate-projects for mock interviews (paginated, latest first)
+    getAssignedMockInterviews: builder.query<
+      PaginatedResponse<AssignedMockInterviewItem>,
+      QueryAssignedMockInterviewsRequest | void
+    >({
+      query: (params) => ({
+        url: "/mock-interviews/assigned-mock-interviews",
+        params,
+      }),
+      providesTags: (result) =>
+        result?.data && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: "MockInterview" as const,
+                id,
+              })),
+              { type: "MockInterview", id: "LIST" },
+            ]
+          : [{ type: "MockInterview", id: "LIST" }],
+    }),
   }),
 });
 
@@ -115,4 +139,5 @@ export const {
   useUpdateMockInterviewMutation,
   useCompleteMockInterviewMutation,
   useDeleteMockInterviewMutation,
+  useGetAssignedMockInterviewsQuery,
 } = mockInterviewsApi;

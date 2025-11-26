@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useGetMockInterviewsQuery } from "../data";
+import { useGetMockInterviewsQuery, useGetAssignedMockInterviewsQuery } from "../data";
 import { MockInterview, MOCK_INTERVIEW_DECISION } from "../../types";
 import { startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,17 @@ export default function MockInterviewsDashboardPage() {
   const navigate = useNavigate();
   const { data, isLoading, error } = useGetMockInterviewsQuery();
   const interviews = data?.data || [];
+
+  // Assigned candidate-projects for mock interviews (these are different
+  // from scheduled MockInterview resources). We'll fetch these and merge
+  // into the upcoming list so coordinators can see assignments that haven't
+  // been scheduled into an interview yet.
+  const { data: assignedData } = useGetAssignedMockInterviewsQuery({
+    page: 1,
+    limit: 10,
+  });
+
+  const assignedItems = assignedData?.data?.items || [];
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -72,17 +83,43 @@ export default function MockInterviewsDashboardPage() {
       totalScheduled: interviews.filter((i) => !i.conductedAt).length,
       totalCompleted: completedInterviews.length,
     };
-  }, [interviews]);
+  }, [interviews, assignedItems]);
 
   // Get upcoming interviews
   const upcomingInterviews = useMemo(() => {
-    return interviews
+    // normalize scheduled mock interviews (MockInterview[]) and assigned
+    // candidate-project items so the UI can display them uniformly.
+    const scheduled = interviews
       .filter((i) => i.scheduledTime && !i.conductedAt)
       .sort(
         (a, b) =>
           new Date(a.scheduledTime!).getTime() -
           new Date(b.scheduledTime!).getTime()
       )
+      .slice(0, 5);
+
+    const assignedNormalized = assignedItems
+      .filter((it) => it.assignedAt)
+      .map((it) => ({
+        // map assigned item into a shape the UI expects for display
+        id: `assignment-${it.id}`,
+        scheduledTime: it.assignedAt,
+        // put information where existing code looks for it
+        candidateProjectMap: {
+          id: it.id,
+          candidate: it.candidate,
+          project: it.project,
+          roleNeeded: it.roleNeeded,
+          recruiter: it.recruiter,
+        },
+        // use subStatus label (e.g. "Mock Interview Assigned") or fall back
+        // to a simple Assigned tag
+        mode: it.subStatus?.label || it.subStatus?.name || "Assigned",
+      }))
+      .slice(0, 10);
+
+    return [...scheduled, ...assignedNormalized]
+      .sort((a, b) => new Date(a.scheduledTime!).getTime() - new Date(b.scheduledTime!).getTime())
       .slice(0, 5);
   }, [interviews]);
 
@@ -98,7 +135,7 @@ export default function MockInterviewsDashboardPage() {
       .slice(0, 5);
   }, [interviews]);
 
-  const getDecisionBadge = (decision: string | null) => {
+  const getDecisionBadge = (decision: string | null | undefined) => {
     if (!decision) return null;
     switch (decision) {
       case MOCK_INTERVIEW_DECISION.APPROVED:

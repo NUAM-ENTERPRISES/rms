@@ -13,6 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog, ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Edit,
   Trash2,
   Calendar,
@@ -31,6 +38,7 @@ import {
   useDeleteProjectMutation,
   useGetNominatedCandidatesQuery,
   useSendForVerificationMutation,
+  useSendForInterviewMutation,
   useGetCandidateProjectStatusesQuery,
   useAssignToProjectMutation,
 } from "@/features/projects";
@@ -46,7 +54,7 @@ const formatDate = (dateString?: string) => {
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
-    year: "numeric",
+    year: "numeric",                                                                       
   });
 };
 
@@ -98,6 +106,7 @@ export default function ProjectDetailPage() {
     });
 
   const [sendForVerification] = useSendForVerificationMutation();
+  const [sendForInterview, { isLoading: isSendingInterview }] = useSendForInterviewMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
 
@@ -109,6 +118,14 @@ export default function ProjectDetailPage() {
     candidateName: string;
     notes: string;
   }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+
+  const [interviewConfirm, setInterviewConfirm] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    type: "mock" | "interview";
+    notes: string;
+  }>({ isOpen: false, candidateId: "", candidateName: "", type: "interview", notes: "" });
 
   const [assignConfirm, setAssignConfirm] = useState<{
     isOpen: boolean;
@@ -140,6 +157,19 @@ export default function ProjectDetailPage() {
     setVerifyConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
   };
 
+  const showInterviewConfirmation = (
+    candidateId: string,
+    candidateName: string
+  ) => {
+    setInterviewConfirm({
+      isOpen: true,
+      candidateId,
+      candidateName,
+      type: "interview",
+      notes: "",
+    });
+  };
+
   const handleSendForVerification = async () => {
     try {
       await sendForVerification({
@@ -159,6 +189,36 @@ export default function ProjectDetailPage() {
       toast.error(
         error?.data?.message || "Failed to send candidate for verification"
       );
+    }
+  };
+
+  const handleSendForInterview = async () => {
+    try {
+      if (!projectId) return;
+
+      const mappedType =
+        interviewConfirm.type === "mock"
+          ? "mock_interview_assigned"
+          : "interview_assigned";
+
+      await sendForInterview({
+        projectId: projectId!,
+        candidateId: interviewConfirm.candidateId,
+        type: mappedType as "mock_interview_assigned" | "interview_assigned",
+        recruiterId: user?.id,
+        notes: interviewConfirm.notes || undefined,
+      }).unwrap();
+
+      toast.success("Candidate sent for interview successfully");
+      setInterviewConfirm({
+        isOpen: false,
+        candidateId: "",
+        candidateName: "",
+        type: "interview",
+        notes: "",
+      });
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to send candidate for interview");
     }
   };
 
@@ -360,6 +420,9 @@ export default function ProjectDetailPage() {
               }
               onVerifyCandidate={(candidateId, candidateName) =>
                 showVerifyConfirmation(candidateId, candidateName)
+              }
+              onSendForInterview={(candidateId, candidateName) =>
+                showInterviewConfirmation(candidateId, candidateName)
               }
               hideContactInfo={projectHideContactInfo}
             />
@@ -693,6 +756,76 @@ export default function ProjectDetailPage() {
         icon={
           <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
             <Send className="h-5 w-5 text-blue-600" />
+          </div>
+        }
+      />
+
+      {/* Interview Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={interviewConfirm.isOpen}
+        onClose={() =>
+          setInterviewConfirm({
+            isOpen: false,
+            candidateId: "",
+            candidateName: "",
+            type: "interview",
+            notes: "",
+          })
+        }
+        onConfirm={handleSendForInterview}
+        title="Send for Interview"
+        description={
+          <div className="space-y-4">
+            <p>
+              Are you sure you want to send {interviewConfirm.candidateName} for
+              an interview? Please select the type and optionally add notes.
+            </p>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="interview-type"
+                className="text-sm font-medium text-gray-700"
+              >
+                Type
+              </label>
+              <Select
+                value={interviewConfirm.type}
+                onValueChange={(value) =>
+                  setInterviewConfirm((prev) => ({ ...prev, type: value as any }))
+                }
+              >
+                <SelectTrigger id="interview-type" className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mock">Mock Interview</SelectItem>
+                  <SelectItem value="interview">Interview</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <label htmlFor="interview-notes" className="text-sm font-medium text-gray-700">
+                Notes (Optional)
+              </label>
+              <Textarea
+                id="interview-notes"
+                placeholder="Add any notes for the interview team..."
+                value={interviewConfirm.notes}
+                onChange={(e) =>
+                  setInterviewConfirm((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                rows={3}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Send for Interview"
+        cancelText="Cancel"
+        isLoading={isSendingInterview}
+        variant="default"
+        icon={
+          <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+            <Send className="h-5 w-5 text-purple-600" />
           </div>
         }
       />

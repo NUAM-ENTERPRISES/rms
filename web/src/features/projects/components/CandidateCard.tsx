@@ -70,6 +70,12 @@ interface CandidateCardProps {
   projectStatus?: string;
   showVerifyButton?: boolean;
   onVerify?: (candidateId: string) => void;
+  /**
+   * Show a 'Send for Interview' button and handler. The handler gets called
+   * with candidate id when the button is clicked.
+   */
+  showInterviewButton?: boolean;
+  onSendForInterview?: (candidateId: string) => void;
   isAlreadyInProject?: boolean;
   className?: string;
 }
@@ -83,7 +89,9 @@ const CandidateCard = memo(function CandidateCard({
   matchScore,
   projectStatus,
   showVerifyButton = false,
+  showInterviewButton = false,
   onVerify,
+  onSendForInterview,
   isAlreadyInProject = false,
   className,
 }: CandidateCardProps) {
@@ -262,6 +270,9 @@ const CandidateCard = memo(function CandidateCard({
       ? candidate.matchScore
       : undefined);
 
+  // DEBUG: In tests, help verify whether interview button is expected to render
+  
+
   return (
     <Card
       className={cn(
@@ -421,6 +432,23 @@ const CandidateCard = memo(function CandidateCard({
             >
               <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
               Send for Verification
+            </Button>
+          </div>
+        )}
+
+        {showInterviewButton && onSendForInterview && (
+          <div className="flex items-center justify-end border-t border-slate-100 pt-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="ml-2 h-7 text-[11px] bg-purple-600 hover:bg-purple-700 px-2.5"
+              onClick={(event) => {
+                event.stopPropagation();
+                onSendForInterview(candidateId);
+              }}
+            >
+              <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+              Send for Interview
             </Button>
           </div>
         )}

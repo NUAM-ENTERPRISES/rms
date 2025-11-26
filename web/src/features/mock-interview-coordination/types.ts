@@ -149,6 +149,29 @@ export interface QueryMockInterviewsRequest {
   conductedDate?: string;
 }
 
+// Query params for assigned mock interviews list
+export interface QueryAssignedMockInterviewsRequest {
+  page?: number;
+  limit?: number;
+  projectId?: string;
+  candidateId?: string;
+  recruiterId?: string;
+}
+
+// Item returned by the assigned-mock-interviews endpoint
+export interface AssignedMockInterviewItem {
+  id: string; // candidateProject id
+  candidate: { id: string; firstName: string; lastName: string; email?: string };
+  project: { id: string; title: string };
+  roleNeeded?: { id: string; designation?: string };
+  recruiter?: { id: string; name?: string; email?: string };
+  mainStatus?: { id?: string; name?: string; label?: string; color?: string };
+  subStatus?: { id?: string; name?: string; label?: string; color?: string };
+  assignedAt?: string; // ISO timestamp
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // ==================== TRAINING TYPES ====================
 
 export interface TrainingAssignment {

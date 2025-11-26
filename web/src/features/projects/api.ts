@@ -387,6 +387,31 @@ export const projectsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Send candidate for interview (either mock or real interview)
+    sendForInterview: builder.mutation<
+      ApiResponse<any>,
+      {
+        projectId: string;
+        candidateId: string;
+        /** Either 'mock_interview_assigned' or 'interview_assigned' */
+        type: "mock_interview_assigned" | "interview_assigned";
+        recruiterId?: string;
+        notes?: string;
+      }
+    >({
+      query: ({ projectId, candidateId, type, recruiterId, notes }) => ({
+        url: `/candidate-projects/send-for-interview`,
+        method: "POST",
+        body: { candidateId, projectId, type, recruiterId, notes },
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+        "Interview",
+        "Candidate",
+      ],
+    }),
+
     // Get nominated candidates for a project
     getNominatedCandidates: builder.query<
       ApiResponse<{
@@ -489,6 +514,7 @@ export const {
   useGetProjectCandidatesByRoleQuery,
   useGetDocumentVerificationCandidatesQuery,
   useSendForVerificationMutation,
+  useSendForInterviewMutation,
   useGetNominatedCandidatesQuery,
   useGetCandidateProjectStatusesQuery,
   useGetProjectRoleCatalogQuery,

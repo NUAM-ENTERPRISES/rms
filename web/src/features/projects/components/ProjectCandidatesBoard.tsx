@@ -70,6 +70,7 @@ interface ProjectCandidatesBoardProps {
   onViewCandidate: (candidateId: string) => void;
   onAssignCandidate: (candidateId: string, candidateName: string) => void;
   onVerifyCandidate: (candidateId: string, candidateName: string) => void;
+  onSendForInterview?: (candidateId: string, candidateName: string) => void;
   hideContactInfo?: boolean;
 }
 
@@ -184,6 +185,7 @@ const ProjectCandidatesBoard = ({
   onViewCandidate,
   onAssignCandidate,
   onVerifyCandidate,
+  onSendForInterview,
   hideContactInfo = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
@@ -275,6 +277,7 @@ const ProjectCandidatesBoard = ({
     [nominatedCandidates, hideContactInfo]
   );
 
+
   const filteredEligible = useMemo(
     () =>
       eligibleCandidates.filter(
@@ -284,6 +287,7 @@ const ProjectCandidatesBoard = ({
     [eligibleCandidates, searchTerm]
   );
 
+
   const filteredAllCandidates = useMemo(
     () =>
       allCandidates.filter(
@@ -292,6 +296,7 @@ const ProjectCandidatesBoard = ({
       ),
     [allCandidates, searchTerm]
   );
+
 
   const renderNominatedColumn = () => {
     if (isLoadingNominated) {
@@ -326,6 +331,7 @@ const ProjectCandidatesBoard = ({
       const isVerificationInProgress =
         subStatusName === "verification_in_progress_document";
       const showVerifyButton = subStatusName === "nominated_initial";
+      const showInterviewButton = subStatusName === "documents_verified";
       const hasProject = Boolean(candidate.project);
 
       const actions =
@@ -372,6 +378,8 @@ const ProjectCandidatesBoard = ({
               `${candidate.firstName} ${candidate.lastName}`
             )
           }
+          showInterviewButton={showInterviewButton}
+          onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
           isAlreadyInProject={hasProject}
         />
       );
@@ -423,6 +431,21 @@ const ProjectCandidatesBoard = ({
 
       const showVerifyButton =
         !assignmentInfo.isAssigned || assignmentInfo.isNominated;
+      // Show the interview button for candidates whose project sub-status
+      // is documents_verified even if they're not yet assigned to the project.
+      const showInterviewButton =
+        candidate.projectSubStatus?.name === "documents_verified" ||
+        candidate.projectSubStatus?.statusName === "documents_verified";
+
+      
+
+      // DEBUG: log candidate substatus in tests to help identify why
+      // the interview button might not be rendering in some cases.
+      /* istanbul ignore next */
+      if (process.env.NODE_ENV === "test") {
+        // eslint-disable-next-line no-console
+        console.log("DBG: all-candidates candidate.projectSubStatus", candidate.projectSubStatus, "showInterviewButton", showInterviewButton);
+      }
 
       return (
         <CandidateCard
@@ -447,6 +470,10 @@ const ProjectCandidatesBoard = ({
               assignmentInfo.candidateId,
               `${candidate.firstName} ${candidate.lastName}`
             )
+          }
+          showInterviewButton={showInterviewButton}
+          onSendForInterview={(id) =>
+            onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
           }
           isAlreadyInProject={assignmentInfo.isAssigned}
         />
@@ -503,6 +530,11 @@ const ProjectCandidatesBoard = ({
         !assignmentInfo.isAssigned ||
         (assignmentInfo.isNominated &&
           !assignmentInfo.isVerificationInProgress);
+      // Show the interview button for candidates whose project sub-status
+      // is documents_verified even if they're not yet assigned to the project.
+      const showInterviewButton =
+        candidate.projectSubStatus?.name === "documents_verified" ||
+        candidate.projectSubStatus?.statusName === "documents_verified";
 
       return (
         <CandidateCard
@@ -525,6 +557,10 @@ const ProjectCandidatesBoard = ({
               assignmentInfo.candidateId,
               `${candidate.firstName} ${candidate.lastName}`
             )
+          }
+          showInterviewButton={showInterviewButton}
+          onSendForInterview={(id) =>
+            onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
           }
           isAlreadyInProject={assignmentInfo.isAssigned}
         />

@@ -375,6 +375,7 @@ export class MockInterviewsService {
    * This ensures the "latest assignment" appears first.
    */
   async getAssignedCandidateProjects(query: any) {
+    
     const { page = 1, limit = 10, projectId, candidateId, recruiterId } = query;
 
     const historyWhere: any = {
