@@ -14,7 +14,7 @@ export interface MockInterviewChecklistTemplate {
   updatedAt: string;
   role?: {
     id: string;
-    designation: string;
+    name: string;
     slug: string;
   };
 }
@@ -78,6 +78,12 @@ export interface MockInterview {
       id: string;
       designation: string;
     };
+    roleCatalog?: {
+      id: string;
+      name: string;
+      slug: string;
+      category: string;
+    } | null;
     recruiter?: {
       id: string;
       name: string;

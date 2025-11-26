@@ -99,16 +99,17 @@ export default function ConductMockInterviewPage() {
   const interview = interviewData?.data;
 
   // Fetch checklist template for the candidate's role
+  // Use roleCatalog.id (not roleNeeded.id) since templates are linked to RoleCatalog
   const {
     data: templatesData,
     isLoading: isLoadingTemplates,
     error: templatesError,
   } = useGetTemplatesByRoleQuery(
     {
-      roleId: interview?.candidateProjectMap?.roleNeeded?.id || "",
+      roleId: interview?.candidateProjectMap?.roleCatalog?.id || "",
       isActive: true,
     },
-    { skip: !interview?.candidateProjectMap?.roleNeeded?.id }
+    { skip: !interview?.candidateProjectMap?.roleCatalog?.id }
   );
 
   const [completeMockInterview, { isLoading: isSubmitting }] =

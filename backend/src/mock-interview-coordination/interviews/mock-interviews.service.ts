@@ -172,7 +172,34 @@ export class MockInterviewsService {
       throw new NotFoundException(`Mock Interview with ID "${id}" not found`);
     }
 
-    return interview;
+    // Find matching RoleCatalog by matching roleNeeded.designation to roleCatalog.name
+    let roleCatalog = null;
+    if (interview.candidateProjectMap?.roleNeeded?.designation) {
+      roleCatalog = await this.prisma.roleCatalog.findFirst({
+        where: {
+          name: {
+            equals: interview.candidateProjectMap.roleNeeded.designation,
+            mode: 'insensitive',
+          },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          category: true,
+        },
+      });
+    }
+
+    // Add roleCatalog to the response
+    return {
+      ...interview,
+      candidateProjectMap: {
+        ...interview.candidateProjectMap,
+        roleCatalog,
+      },
+    };
   }
 
   /**

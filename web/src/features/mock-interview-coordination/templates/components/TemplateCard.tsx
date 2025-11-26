@@ -57,7 +57,7 @@ export function TemplateCard({
             </CardTitle>
             {template.role && (
               <CardDescription className="text-xs mt-1">
-                {template.role.designation}
+                {template.role.name}
               </CardDescription>
             )}
           </div>

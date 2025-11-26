@@ -81,8 +81,13 @@ export class MockInterviewTemplatesController {
     status: 200,
     description: 'Templates retrieved successfully',
   })
-  findAll(@Query() query: QueryMockInterviewTemplatesDto) {
-    return this.templatesService.findAll(query);
+  async findAll(@Query() query: QueryMockInterviewTemplatesDto) {
+    const templates = await this.templatesService.findAll(query);
+    return {
+      success: true,
+      data: templates,
+      message: 'Templates retrieved successfully',
+    };
   }
 
   @Get('role/:roleId')

@@ -7,7 +7,6 @@ import {
   AlertCircle,
   Upload,
   X,
-  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -27,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   useGetTemplatesQuery,
@@ -42,7 +40,6 @@ import {
   MockInterviewChecklistTemplate,
   MOCK_INTERVIEW_CATEGORY,
 } from "../../types";
-import { cn } from "@/lib/utils";
 
 export default function TemplatesPage() {
   const canWrite = useCan("write:interview_templates");
@@ -95,7 +92,7 @@ export default function TemplatesPage() {
     return templates.filter(
       (t) =>
         t.criterion.toLowerCase().includes(searchLower) ||
-        t.role?.designation.toLowerCase().includes(searchLower)
+        t.role?.name.toLowerCase().includes(searchLower)
     );
   }, [templates, filters.search]);
 
@@ -103,7 +100,7 @@ export default function TemplatesPage() {
   const templatesByRole = useMemo(() => {
     const grouped: Record<string, typeof filteredTemplates> = {};
     filteredTemplates.forEach((template) => {
-      const roleKey = template.role?.designation || "Unknown Role";
+      const roleKey = template.role?.name || "Unknown Role";
       if (!grouped[roleKey]) {
         grouped[roleKey] = [];
       }

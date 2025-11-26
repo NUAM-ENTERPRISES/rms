@@ -32,7 +32,7 @@ interface TemplateItem extends Omit<CreateTemplateRequest, "roleId"> {
 interface BulkTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  roles: Array<{ id: string; designation: string }>;
+  roles: Array<{ id: string; name: string }>;
 }
 
 export function BulkTemplateDialog({
@@ -164,7 +164,7 @@ export function BulkTemplateDialog({
               <SelectContent className="max-h-[200px]">
                 {roles.map((role) => (
                   <SelectItem key={role.id} value={role.id}>
-                    {role.designation}
+                    {role.name}
                   </SelectItem>
                 ))}
               </SelectContent>

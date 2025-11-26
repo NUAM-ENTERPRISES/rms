@@ -51,7 +51,7 @@ interface TemplateFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   template?: MockInterviewChecklistTemplate;
-  roles: Array<{ id: string; designation: string }>;
+  roles: Array<{ id: string; name: string }>;
 }
 
 export function TemplateFormDialog({
@@ -173,7 +173,7 @@ export function TemplateFormDialog({
                     <SelectContent className="max-h-[200px]">
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
-                          {role.designation}
+                          {role.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
