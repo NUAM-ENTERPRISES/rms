@@ -65,7 +65,7 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
+// import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
 import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
 import { FlagIcon } from "@/shared/components/FlagIcon";
@@ -888,30 +888,28 @@ export default function CandidateDocumentVerificationPage() {
        <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
   {summary.allDocumentsVerified && (
     <Button
-      size="md"
+      size="sm"
       className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
       onClick={() => { setCompletionAction("complete"); setIsCompletionConfirmationOpen(true); }}
       disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
     >
       {isCompleting ? <RefreshCw className="h-6 w-6 animate-spin" /> : <CheckCircle className="h-6 w-6" />}
-      <span>Verify</span>
+      <span>Complete Verification</span>
     </Button>
   )}
   {allRejected && (
     <Button
-      size="md"
+      size="sm"
       variant="destructive"
       className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
       onClick={() => { setCompletionAction("reject"); setIsCompletionConfirmationOpen(true); }}
       disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
     >
       {isRejectingComplete ? <RefreshCw className="h-6 w-6 animate-spin" /> : <XCircle className="h-6 w-6" />}
-      <span>Reject</span>
+      <span>Reject Verification</span>
     </Button>
   )}
 </div>
-
-
           )}
         </>
       )}
@@ -922,12 +920,12 @@ export default function CandidateDocumentVerificationPage() {
 )}
 
         {/* Eligibility Requirements */}
-        {selectedProjectId && eligibilityData?.data && (
+        {/* {selectedProjectId && eligibilityData?.data && (
           <EligibilityRequirements
             eligibilityData={eligibilityData.data}
             className="mt-6"
           />
-        )}
+        )} */}
 
         {/* Matchmaking Process */}
         {selectedProjectId && matchmakingData?.data && (

@@ -419,14 +419,14 @@ export default function DocumentVerificationPage() {
       <TableBody>
         {candidateProjects.map((candidateProject: any, index: number) => {
           const status = candidateProject?.subStatus?.label || "";
-          const statusConfig = {
-            documents_verified: { Icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
-            rejected_documents: { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-            verification_in_progress: { Icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-            documents_submitted: { Icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-            verification_in_progress_document: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
-          }[status] || { Icon: AlertCircle, color: "text-gray-500", bg: "bg-gray-50" };
-          const { Icon } = statusConfig;
+          // const statusConfig = {
+          //   documents_verified: { Icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+          //   rejected_documents: { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
+          //   verification_in_progress: { Icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+          //   documents_submitted: { Icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
+          //   verification_in_progress_document: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
+          // }[status] || { Icon: AlertCircle, color: "text-gray-500", bg: "bg-gray-50" };
+          // const { Icon } = statusConfig;
 
           return (
             <motion.tr

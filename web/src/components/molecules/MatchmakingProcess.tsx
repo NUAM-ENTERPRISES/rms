@@ -156,10 +156,10 @@ export function MatchmakingProcess({
       </defs>
     </svg>
     <div className="absolute inset-0 flex flex-col items-center justify-center">
-      <span className="text-2xl font-black text-slate-900"> {/* smaller font */}
+      <span className="text-1xl font-black text-slate-900"> {/* smaller font */}
         {Math.round(overallScore)}%
       </span>
-      <span className="text-xs text-slate-600 uppercase tracking-widest"> {/* smaller font */}
+      <span className="text-[10px] font-bold text-slate-900 uppercase tracking-widest"> {/* smaller font */}
         Match
       </span>
     </div>
@@ -180,7 +180,7 @@ export function MatchmakingProcess({
   {/* Score + Badge in one tight row */}
   <div className="flex items-center justify-center gap-4">
     {/* Big Score */}
-    <div className="text-4xl font-black text-slate-900 tabular-nums">
+    <div className="text-3xl font-black text-slate-900 tabular-nums">
       {Math.round(overallScore)}%
     </div>
 
@@ -286,10 +286,10 @@ export function MatchmakingProcess({
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={cn("text-4xl font-black", getScoreColor(step.score))}>
+                      <div className={cn("text-3xl font-black", getScoreColor(step.score))}>
                         {Math.round(step.score)}%
                       </div>
-                      <div className="text-sm text-slate-500">Match Score</div>
+                      <div className="text-[14px] text-slate-500">Match Score</div>
                     </div>
                   </div>
 
@@ -377,7 +377,7 @@ export function MatchmakingProcess({
       className={cn("flex items-center gap-5 p-6 rounded-2xl shadow-xl border border-white/50 backdrop-blur", `bg-${item.color}-50/80`)}
     >
       <div className={cn("p-4 rounded-2xl shadow-lg", `bg-gradient-to-br from-${item.color}-500 to-${item.color}-600`)}>
-        <item.icon className="w-8 h-8 text-white" />
+        <item.icon className="w-5 h-5 text-white" />
       </div>
       <div>
         <div className="text-lg font-bold text-slate-900">{item.title}</div> {/* text-sm for smaller text */}

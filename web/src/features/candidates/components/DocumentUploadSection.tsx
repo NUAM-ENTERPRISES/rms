@@ -269,241 +269,275 @@ export function DocumentUploadSection({
   const documents = documentsData?.data?.documents || [];
 
   return (
-    <div className="space-y-6">
-      {/* Upload Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Upload Document
-          </CardTitle>
-          <CardDescription>
-            Upload required documents for this candidate. Only PDF files are
-            accepted.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="docType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Document Type *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select document type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {DOCUMENT_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              <div className="flex items-center gap-2">
-                                <span>{type.label}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {type.category}
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    <div className="space-y-8">
 
-                <FormField
-                  control={form.control}
-                  name="documentNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Document Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., A12345678" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+  {/* ===== UPLOAD DOCUMENT CARD ===== */}
+  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden">
+    <CardHeader className="bg-gradient-to-r">
+      <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
+        <div className="p-2 bg-indigo-100 rounded-xl">
+          <Upload className="h-6 w-6 text-indigo-600" />
+        </div>
+        Upload Document
+      </CardTitle>
+      <CardDescription className="text-slate-600 mt-1">
+        Upload required documents (PDF only) for verification and compliance
+      </CardDescription>
+    </CardHeader>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="expiryDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expiry Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div>
-                  <FormLabel>File *</FormLabel>
-                  <Input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileSelect}
-                    className="mt-1"
-                  />
-                  {selectedFile && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      Selected: {selectedFile.name} (
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
+    <CardContent className="pt-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Document Type */}
+            <FormField
+              control={form.control}
+              name="docType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold">Document Type <span className="text-red-500">*</span></FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <Input
-                        placeholder="Additional notes about this document"
-                        {...field}
-                      />
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Choose document type" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <SelectContent>
+                      {DOCUMENT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-medium">{type.label}</span>
+                            <Badge variant="secondary" className="ml-3 text-xs">
+                              {type.category}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <Button
-                type="submit"
-                disabled={isUploading || !selectedFile}
-                className="w-full"
-              >
-                {isUploading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Document
-                  </>
-                )}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+            {/* Document Number */}
+            <FormField
+              control={form.control}
+              name="documentNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold">Document Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., A12345678, PP987654" className="h-11" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-      {/* Documents List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Uploaded Documents
-          </CardTitle>
-          <CardDescription>
-            All documents uploaded for this candidate
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Expiry Date */}
+            <FormField
+              control={form.control}
+              name="expiryDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold">Expiry Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" className="h-11" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <FormLabel className="font-semibold">PDF File <span className="text-red-500">*</span></FormLabel>
+              <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-indigo-400 transition-colors bg-slate-50/50">
+                <Input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="pdf-upload"
+                />
+                <label htmlFor="pdf-upload" className="cursor-pointer">
+                  <Upload className="h-10 w-10 text-indigo-500 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-slate-700">Click to upload PDF</p>
+                  <p className="text-xs text-slate-500 mt-1">Max size: 10MB</p>
+                </label>
+              </div>
+              {selectedFile && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <FileText className="h-5 w-5 text-green-600" />
+                  <div className="flex-1 text-sm">
+                    <p className="font-medium text-green-800">{selectedFile.name}</p>
+                    <p className="text-xs text-green-700">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : documents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>No documents uploaded yet</p>
+          </div>
+
+          {/* Notes */}
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold">Notes (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g., Renewed version, verified by HR..."
+                    className="h-11"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button
+            type="submit"
+            disabled={isUploading || !selectedFile}
+            className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-400 shadow-lg"
+          >
+            {isUploading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
+                Uploading Document...
+              </>
+            ) : (
+              <>
+                <Upload className="h-5 w-5 mr-2" />
+                Upload Document
+              </>
+            )}
+          </Button>
+        </form>
+      </Form>
+    </CardContent>
+  </Card>
+
+  {/* ===== UPLOADED DOCUMENTS LIST ===== */}
+  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden">
+    <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-slate-100">
+      <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
+        <div className="p-2 bg-gray-100 rounded-xl">
+          <FileText className="h-6 w-6 text-gray-700" />
+        </div>
+        Uploaded Documents
+      </CardTitle>
+      <CardDescription className="text-slate-600">
+        All candidate documents • Click to view or download
+      </CardDescription>
+    </CardHeader>
+
+    <CardContent className="p-0">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600" />
+        </div>
+      ) : documents.length === 0 ? (
+        /* Beautiful Empty State */
+        <div className="py-20 text-center">
+          <div className="max-w-sm mx-auto space-y-6">
+            <div className="w-28 h-28 mx-auto bg-gradient-to-br from-gray-100 to-slate-100 rounded-full flex items-center justify-center shadow-inner">
+              <FileText className="h-14 w-14 text-gray-400" />
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Document</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Uploaded</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.map((document: any) => (
-                  <TableRow key={document.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="font-medium">{document.fileName}</p>
-                          {document.documentNumber && (
-                            <p className="text-sm text-gray-500">
-                              #{document.documentNumber}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {DOCUMENT_TYPES.find(
-                          (t) => t.value === document.docType
-                        )?.label || document.docType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(document.status)}
-                        {getStatusBadge(document.status)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="h-4 w-4" />
-                        {DateUtils.formatDateTime(document.createdAt)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            window.open(document.fileUrl, "_blank")
-                          }
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const link = document.createElement("a");
-                            link.href = document.fileUrl;
-                            link.download = document.fileName;
-                            link.click();
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">No Documents Uploaded</h3>
+              <p className="text-slate-600 mt-2">
+                Start by uploading the candidate's resume, ID, certificates, or other required files.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50/70">
+              <TableHead className="font-semibold text-slate-700">Document</TableHead>
+              <TableHead className="font-semibold text-slate-700">Type</TableHead>
+              <TableHead className="font-semibold text-slate-700">Status</TableHead>
+              <TableHead className="font-semibold text-slate-700">Uploaded</TableHead>
+              <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {documents.map((document: any) => (
+              <TableRow key={document.id} className="hover:bg-indigo-50/30 transition-colors">
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <FileText className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{document.fileName}</p>
+                      {document.documentNumber && (
+                        <p className="text-sm text-slate-600">#{document.documentNumber}</p>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <Badge variant="outline" className="font-medium">
+                    {DOCUMENT_TYPES.find(t => t.value === document.docType)?.label || document.docType}
+                  </Badge>
+                </TableCell>
+
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(document.status)}
+                    {getStatusBadge(document.status)}
+                  </div>
+                </TableCell>
+
+                <TableCell className="text-slate-700">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-slate-500" />
+                    {DateUtils.formatDateTime(document.createdAt)}
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(document.fileUrl, "_blank")}
+                      className="hover:bg-indigo-100 hover:text-indigo-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const link = document.createElement("a");
+                        link.href = document.fileUrl;
+                        link.download = document.fileName;
+                        link.click();
+                      }}
+                      className="hover:bg-green-100 hover:text-green-700"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </CardContent>
+  </Card>
+</div>
   );
 }

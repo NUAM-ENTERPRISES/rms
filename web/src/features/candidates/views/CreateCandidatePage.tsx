@@ -365,113 +365,119 @@ export default function CreateCandidatePage() {
   };
 
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <div className="container w-full mx-auto space-y-6">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <UserPlus className="h-8 w-8 text-blue-600" />
-              Create New Candidate
-            </h1>
-            <p className="text-slate-600 mt-2">
-              Follow the steps to add a new candidate to the system. After creation, you can nominate them for projects.
-            </p>
-          </div>
+  <>
+  <div className="min-h-screen bg-slate-100">
+    <div className="mx-auto w-full max-w-6xl px-6 py-10 space-y-10">
 
-          {/* Progress Stepper */}
-          <div className="mb-8">
-            <CandidateCreationStepper
-              currentStep={currentStep}
-              steps={STEPS}
-              completedSteps={completedSteps}
-            />
-          </div>
-
-          {/* Current Step Content */}
-          <div className="space-y-6">
-            {renderCurrentStep()}
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200">
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/candidates")}
-                disabled={isLoading || uploadingImage}
-                className="min-w-[120px]"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-              
-              {currentStep > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePreviousStep}
-                  disabled={isLoading || uploadingImage}
-                  className="min-w-[120px]"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              {currentStep < STEPS.length && (
-                <Button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={isLoading || uploadingImage}
-                  className="min-w-[120px] bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  Continue
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              )}
-              
-              {currentStep === STEPS.length && (
-                <Button
-                  type="button"
-                  onClick={handleFinish}
-                  disabled={isLoading || uploadingImage}
-                  className="min-w-[120px] bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Preview & Create
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Header */}
+      <div className="pb-4">
+        <h1 className="text-4xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+          <UserPlus className="h-9 w-9 text-blue-600" />
+          Create New Candidate
+        </h1>
+        <p className="text-slate-600 mt-2 text-lg">
+          Follow the guided steps to add a new candidate.
+        </p>
       </div>
 
-      {/* Preview Component */}
-      {showPreview && (
-        <CandidatePreview
-          candidateData={{
-            firstName: form.getValues("firstName"),
-            lastName: form.getValues("lastName"),
-            contact: `${form.getValues("countryCode")}${form.getValues("mobileNumber")}`,
-            email: form.getValues("email"),
-            source: form.getValues("source"),
-            dateOfBirth: form.getValues("dateOfBirth"),
-            highestEducation: form.getValues("highestEducation"),
-            university: form.getValues("university"),
-            graduationYear: form.getValues("graduationYear"),
-            gpa: form.getValues("gpa"),
-            qualifications,
-            workExperiences,
-          }}
-          onConfirm={handlePreviewConfirm}
-          onCancel={handlePreviewCancel}
-          isLoading={isLoading || uploadingImage}
+      {/* Stepper in Card */}
+      <div className="rounded-lg bg-white shadow-sm border border-slate-200 p-6">
+        <CandidateCreationStepper
+          currentStep={currentStep}
+          steps={STEPS}
+          completedSteps={completedSteps}
         />
-      )}
-    </>
+      </div>
+
+      {/* Step Content (No card) */}
+      <div className="pt-2">
+        {renderCurrentStep()}
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="flex items-center justify-between pt-8">
+
+        {/* Left Buttons */}
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/candidates")}
+            disabled={isLoading || uploadingImage}
+            className="min-w-[120px] border-slate-300"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Cancel
+          </Button>
+
+          {currentStep > 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePreviousStep}
+              disabled={isLoading || uploadingImage}
+              className="min-w-[120px] border-slate-300"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+          )}
+        </div>
+
+        {/* Right Buttons */}
+        <div className="flex gap-3">
+          {currentStep < STEPS.length && (
+            <Button
+              type="button"
+              onClick={handleNextStep}
+              disabled={isLoading || uploadingImage}
+              className="min-w-[140px] bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            >
+              Continue
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+
+          {currentStep === STEPS.length && (
+            <Button
+              type="button"
+              onClick={handleFinish}
+              disabled={isLoading || uploadingImage}
+              className="min-w-[160px] bg-green-600 hover:bg-green-700 text-white shadow-sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Preview & Create
+            </Button>
+          )}
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {/* Preview */}
+  {showPreview && (
+    <CandidatePreview
+      candidateData={{
+        firstName: form.getValues("firstName"),
+        lastName: form.getValues("lastName"),
+        contact: `${form.getValues("countryCode")}${form.getValues("mobileNumber")}`,
+        email: form.getValues("email"),
+        source: form.getValues("source"),
+        dateOfBirth: form.getValues("dateOfBirth"),
+        highestEducation: form.getValues("highestEducation"),
+        university: form.getValues("university"),
+        graduationYear: form.getValues("graduationYear"),
+        gpa: form.getValues("gpa"),
+        qualifications,
+        workExperiences,
+      }}
+      onConfirm={handlePreviewConfirm}
+      onCancel={handlePreviewCancel}
+      isLoading={isLoading || uploadingImage}
+    />
+  )}
+</>
+
   );
 }
