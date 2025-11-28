@@ -14,8 +14,7 @@ export class CreateCandidateProjectDto {
 
   @ApiPropertyOptional({ description: 'Role needed ID (must belong to the specified project)' })
   @IsString()
-  @IsOptional()
-  roleNeededId?: string;
+  roleNeededId: string;
 
   @ApiPropertyOptional({ description: 'Recruiter ID (user must have Recruiter role)' })
   @IsString()

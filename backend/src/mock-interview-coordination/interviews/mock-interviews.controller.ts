@@ -24,6 +24,7 @@ import { UpdateMockInterviewDto } from './dto/update-mock-interview.dto';
 import { CompleteMockInterviewDto } from './dto/complete-mock-interview.dto';
 import { QueryMockInterviewsDto } from './dto/query-mock-interviews.dto';
 import { QueryAssignedMockInterviewsDto } from './dto/query-assigned-mock-interviews.dto';
+import { QueryUpcomingMockInterviewsDto } from './dto/query-upcoming-mock-interviews.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 
 @ApiTags('Mock Interviews')
@@ -51,8 +52,8 @@ export class MockInterviewsController {
     status: 409,
     description: 'Candidate already has a pending mock interview',
   })
-  create(@Body() createDto: CreateMockInterviewDto) {
-    return this.mockInterviewsService.create(createDto);
+  create(@Body() createDto: CreateMockInterviewDto, @Request() req: any) {
+    return this.mockInterviewsService.create(createDto, req.user?.userId ?? null);
   }
 
   @Get()
@@ -98,6 +99,18 @@ export class MockInterviewsController {
   @ApiResponse({ status: 200, description: 'Assigned mock interview candidate-projects retrieved' })
   getAssignedMock(@Query() query: QueryAssignedMockInterviewsDto) {
     return this.mockInterviewsService.getAssignedCandidateProjects(query);
+  }
+
+  @Get('upcoming')
+  @Permissions('read:mock_interviews')
+  @ApiOperation({
+    summary: 'List upcoming mock interviews (scheduled)',
+    description:
+      'Return mock interviews that are scheduled and upcoming. Ordered by scheduledTime (soonest first). Supports pagination and filters.',
+  })
+  @ApiResponse({ status: 200, description: 'Upcoming mock interviews retrieved' })
+  getUpcoming(@Query() query: QueryUpcomingMockInterviewsDto) {
+    return this.mockInterviewsService.getUpcoming(query);
   }
 
   @Get(':id')

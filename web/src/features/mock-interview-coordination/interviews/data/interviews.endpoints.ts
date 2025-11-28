@@ -127,6 +127,28 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
             ]
           : [{ type: "MockInterview", id: "LIST" }],
     }),
+    // Get upcoming mock interviews (paginated) - new endpoint
+    getUpcomingMockInterviews: builder.query<
+      PaginatedResponse<MockInterview>,
+      Record<string, any> | void
+    >({
+      query: (params) => ({
+        url: "/mock-interviews/upcoming",
+        // Provide safe defaults so callers that omit page/limit do not cause
+        // backend validation errors (page must be >= 1, limit must be >= 1).
+        params: { page: 1, limit: 5, ...(params || {}) },
+      }),
+      providesTags: (result) =>
+        result?.data && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: "MockInterview" as const,
+                id,
+              })),
+              { type: "MockInterview", id: "LIST" },
+            ]
+          : [{ type: "MockInterview", id: "LIST" }],
+    }),
   }),
 });
 
@@ -140,4 +162,5 @@ export const {
   useCompleteMockInterviewMutation,
   useDeleteMockInterviewMutation,
   useGetAssignedMockInterviewsQuery,
+  useGetUpcomingMockInterviewsQuery,
 } = mockInterviewsApi;

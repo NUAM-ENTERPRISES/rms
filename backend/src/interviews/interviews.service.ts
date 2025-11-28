@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
@@ -88,12 +89,23 @@ export class InterviewsService {
       );
     }
 
-    const interview = await this.prisma.interview.create({
-      data: {
-        ...createInterviewDto,
-        interviewer: scheduledBy,
-      },
-      include: {
+    // Resolve scheduler name for human-friendly history entries (if provided)
+    let schedulerName: string | null = null;
+    if (scheduledBy) {
+      const scheduler = await this.prisma.user.findUnique({ where: { id: scheduledBy } });
+      schedulerName = scheduler?.name ?? null;
+    }
+
+    // If this interview is tied to a candidateProjectMap we should update
+    // the candidate's subStatus and also write history records. Do these
+    // operations in a transaction so data stays consistent.
+    const interview = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.interview.create({
+        data: {
+          ...createInterviewDto,
+          interviewer: scheduledBy,
+        },
+        include: {
         candidateProjectMap: {
           include: {
             candidate: {
@@ -118,7 +130,43 @@ export class InterviewsService {
             title: true,
           },
         },
-      },
+        },
+      });
+
+      // If candidateProjectMapId present - update candidate project status + history
+      if (createInterviewDto.candidateProjectMapId) {
+        await tx.candidateProjects.update({
+          where: { id: createInterviewDto.candidateProjectMapId },
+          data: {
+            subStatus: { connect: { name: CANDIDATE_PROJECT_STATUS.INTERVIEW_SCHEDULED } },
+          },
+        });
+
+        await tx.candidateProjectStatusHistory.create({
+          data: {
+            candidateProjectMapId: createInterviewDto.candidateProjectMapId,
+            subStatusSnapshot: CANDIDATE_PROJECT_STATUS.INTERVIEW_SCHEDULED,
+            changedById: scheduledBy ?? null,
+            changedByName: schedulerName ?? null,
+            reason: `Interview scheduled${schedulerName ? ` by ${schedulerName}` : scheduledBy ? ` by ${scheduledBy}` : ''}`,
+          },
+        });
+
+        // record interview history event
+        await tx.interviewStatusHistory.create({
+          data: {
+            interviewId: created.id,
+            interviewType: 'client',
+            status: 'scheduled',
+            statusSnapshot: 'scheduled',
+            changedById: scheduledBy ?? null,
+            changedByName: schedulerName ?? null,
+            reason: `Client interview scheduled${schedulerName ? ` by ${schedulerName}` : scheduledBy ? ` by ${scheduledBy}` : ''}`,
+          },
+        });
+      }
+
+      return created;
     });
 
     return interview;

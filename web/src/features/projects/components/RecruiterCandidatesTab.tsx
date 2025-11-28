@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
@@ -39,6 +39,13 @@ import {
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui";
 import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   useGetProjectCandidatesByRoleQuery,
   useSendForVerificationMutation,
   useGetProjectQuery,
@@ -70,15 +77,18 @@ export default function RecruiterCandidatesTab({
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
+    roleNeededId?: string;
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+  }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
   
   const [assignConfirm, setAssignConfirm] = useState<{
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
+    roleNeededId?: string;
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+  }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
+  const [assignDialogRoleNeededId, setAssignDialogRoleNeededId] = useState<string | undefined>(undefined);
 
   // Get current user to filter candidates based on role
   const { user } = useAppSelector((state) => state.auth);
@@ -117,6 +127,14 @@ export default function RecruiterCandidatesTab({
 
   // Get project details for comparison
   const { data: projectData } = useGetProjectQuery(projectId);
+
+  useEffect(() => {
+    if (isAssignDialogOpen) {
+      setAssignDialogRoleNeededId(projectData?.data?.rolesNeeded?.[0]?.id);
+    } else {
+      setAssignDialogRoleNeededId(undefined);
+    }
+  }, [isAssignDialogOpen, projectData]);
 
   const [sendForVerification] = useSendForVerificationMutation();
 
@@ -169,7 +187,7 @@ export default function RecruiterCandidatesTab({
   );
 
   const showVerifyConfirmation = (candidateId: string, candidateName: string) => {
-    setVerifyConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
+    setVerifyConfirm({ isOpen: true, candidateId, candidateName, roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id, notes: "" });
   };
 
   // Get candidate by ID for comparison
@@ -182,11 +200,12 @@ export default function RecruiterCandidatesTab({
       await sendForVerification({ 
         projectId, 
         candidateId: verifyConfirm.candidateId,
+        roleNeededId: verifyConfirm.roleNeededId,
         recruiterId: user?.id,
         notes: verifyConfirm.notes || undefined
       }).unwrap();
       toast.success("Candidate sent for verification successfully");
-      setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+      setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
     } catch (error: any) {
       toast.error(
         error?.data?.message || "Failed to send candidate for verification"
@@ -199,7 +218,7 @@ export default function RecruiterCandidatesTab({
   };
 
   const showAssignConfirmation = (candidateId: string, candidateName: string) => {
-    setAssignConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
+    setAssignConfirm({ isOpen: true, candidateId, candidateName, roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id, notes: "" });
   };
 
   const handleAssignSingleCandidate = async () => {
@@ -207,13 +226,14 @@ export default function RecruiterCandidatesTab({
       const result = await assignToProject({
         candidateId: assignConfirm.candidateId,
         projectId,
+        roleNeededId: assignConfirm.roleNeededId,
         recruiterId: user?.id,
         notes: assignConfirm.notes || `Assigned by recruiter to project`,
       }).unwrap();
       toast.success(
         result.message || "Candidate assigned to project successfully"
       );
-      setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+      setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
     } catch (error: any) {
       toast.error(
         error?.data?.message || "Failed to assign candidate to project"
@@ -243,6 +263,7 @@ export default function RecruiterCandidatesTab({
         assignToProject({
           candidateId,
           projectId,
+          roleNeededId: assignDialogRoleNeededId,
           recruiterId: user?.id,
           notes: `Bulk assigned by recruiter to project`,
         }).unwrap()
@@ -333,6 +354,19 @@ export default function RecruiterCandidatesTab({
 
             <div className="flex-1 overflow-hidden flex flex-col">
               <div className="flex gap-4 mb-4">
+                <div className="w-48">
+                  <label className="text-xs text-gray-600">Role</label>
+                  <Select value={assignDialogRoleNeededId} onValueChange={(v) => setAssignDialogRoleNeededId(v)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projectData?.data?.rolesNeeded?.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>{r.designation}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
@@ -659,12 +693,26 @@ export default function RecruiterCandidatesTab({
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
-        onClose={() => setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" })}
+        onClose={() => setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" })}
         onConfirm={handleSendForVerification}
         title="Send for Verification"
         description={
           <div className="space-y-4">
             <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select value={verifyConfirm.roleNeededId} onValueChange={(v) => setVerifyConfirm(prev => ({ ...prev, roleNeededId: v }))}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectData?.data?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.designation}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             {/* Candidate-Project Comparison */}
             {verifyConfirm.candidateId && projectData && (() => {
@@ -751,7 +799,7 @@ export default function RecruiterCandidatesTab({
       {/* Assignment Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={assignConfirm.isOpen}
-        onClose={() => setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" })}
+        onClose={() => setAssignConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" })}
         onConfirm={handleAssignSingleCandidate}
         // make the confirmation dialog wider so Candidate vs Project comparison doesn't break layout
         className="w-full max-w-3xl sm:max-w-4xl p-6 max-h-[90vh] overflow-y-auto"
@@ -759,6 +807,20 @@ export default function RecruiterCandidatesTab({
         description={
           <div className="space-y-4">
             <p>Are you sure you want to assign {assignConfirm.candidateName} to this project?</p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select value={assignConfirm.roleNeededId} onValueChange={(v) => setAssignConfirm(prev => ({ ...prev, roleNeededId: v }))}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectData?.data?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.designation}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             {/* Candidate-Project Comparison */}
             {assignConfirm.candidateId && projectData && (() => {

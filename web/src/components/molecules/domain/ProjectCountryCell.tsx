@@ -11,7 +11,7 @@ export interface ProjectCountryCellProps {
   /** Country code (ISO-2) */
   countryCode?: string | null;
   /** Size variant */
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
   /** Layout direction */
   layout?: "horizontal" | "vertical";
   /** Show country code in parentheses */

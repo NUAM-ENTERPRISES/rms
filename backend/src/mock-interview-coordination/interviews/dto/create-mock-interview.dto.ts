@@ -10,7 +10,6 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import {
   MOCK_INTERVIEW_MODE,
   MOCK_INTERVIEW_CATEGORY,
@@ -129,4 +128,5 @@ export class CreateMockInterviewDto {
   @IsOptional()
   @IsEnum(MOCK_INTERVIEW_MODE)
   mode?: string;
+
 }

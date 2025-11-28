@@ -18,6 +18,7 @@ import {
   useGetNominatedCandidatesQuery,
   useSendForVerificationMutation,
   useGetCandidateProjectStatusesQuery,
+  useGetProjectQuery,
 } from "@/features/projects";
 import CandidateCard from "./CandidateCard";
 
@@ -42,8 +43,11 @@ export default function SubmittedCandidatesSection({
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
+    roleNeededId?: string;
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+  }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
+
+  const { data: projectData } = useGetProjectQuery(projectId);
 
   // Get candidates already assigned to this project
   const { data: projectCandidatesData, isLoading } =
@@ -70,7 +74,13 @@ export default function SubmittedCandidatesSection({
     candidateId: string,
     candidateName: string
   ) => {
-    setVerifyConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
+    setVerifyConfirm({
+      isOpen: true,
+      candidateId,
+      candidateName,
+      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      notes: "",
+    });
   };
 
   const handleSendForVerification = async () => {
@@ -78,11 +88,12 @@ export default function SubmittedCandidatesSection({
       await sendForVerification({
         projectId,
         candidateId: verifyConfirm.candidateId,
+        roleNeededId: verifyConfirm.roleNeededId,
         recruiterId: user?.id,
         notes: verifyConfirm.notes || undefined
       }).unwrap();
       toast.success("Candidate sent for verification successfully");
-      setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+      setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
     } catch (error: any) {
       toast.error(
         error?.data?.message || "Failed to send candidate for verification"
@@ -250,13 +261,30 @@ export default function SubmittedCandidatesSection({
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
         onClose={() =>
-          setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", notes: "" })
+          setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" })
         }
         onConfirm={handleSendForVerification}
         title="Send for Verification"
         description={
           <div className="space-y-4">
             <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select
+                value={verifyConfirm.roleNeededId}
+                onValueChange={(v) => setVerifyConfirm((prev) => ({ ...prev, roleNeededId: v }))}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectData?.data?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.designation}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
             <div className="space-y-2">
               <label htmlFor="verify-notes" className="text-sm font-medium text-gray-700">
                 Notes (Optional)
@@ -269,6 +297,7 @@ export default function SubmittedCandidatesSection({
                 rows={3}
                 className="w-full"
               />
+            </div>
             </div>
           </div>
         }

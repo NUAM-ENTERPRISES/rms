@@ -53,6 +53,7 @@ model User {
   statusChanges               CandidateStatusHistory[]        @relation("UserToHistory")
   rnrReminders                RNRReminder[]                   @relation("RecruiterRNRReminders")
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
+  interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
 
   @@unique([countryCode, mobileNumber])
@@ -396,32 +397,32 @@ model CandidateProjects {
 }
 
 model Document {
-  id              String                                 @id @default(cuid())
-  candidateId     String
-  docType         String
-  fileName        String
-  fileUrl         String
-  uploadedBy      String
-  verifiedBy      String?
+  id          String  @id @default(cuid())
+  candidateId String
+  docType     String
+  fileName    String
+  fileUrl     String
+  uploadedBy  String
+  verifiedBy  String?
 
-status          String   @default("pending") // "pending", "verified", "rejected"
+  status String @default("pending") // "pending", "verified", "rejected"
 
-  notes           String?
-  createdAt       DateTime                               @default(now())
-  updatedAt       DateTime                               @updatedAt
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  documentNumber  String?
-  expiryDate      DateTime?
-  fileSize        Int?
-  mimeType        String?
+  documentNumber String?
+  expiryDate     DateTime?
+  fileSize       Int?
+  mimeType       String?
 
   rejectedAt      DateTime?
   rejectedBy      String?
   rejectionReason String?
   verifiedAt      DateTime?
 
-  verifications   CandidateProjectDocumentVerification[]
-  candidate       Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  verifications CandidateProjectDocumentVerification[]
+  candidate     Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
   @@index([candidateId])
   @@index([docType])
@@ -446,6 +447,7 @@ model Interview {
   mode                  String?            @default("video")
   candidateProjectMap   CandidateProjects? @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   project               Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)
 
   @@index([candidateProjectMapId])
   @@index([projectId])
@@ -458,10 +460,12 @@ model Interview {
 
 /// Mock Interview - Conducted by Interview Coordinators before client interviews
 model MockInterview {
-  id                    String @id @default(cuid())
+  id                    String  @id @default(cuid())
   candidateProjectMapId String
   coordinatorId         String // Interview Coordinator who conducts the interview
   templateId            String? // Selected template for this interview
+
+  status                String @default("scheduled")
 
   // Scheduling
   scheduledTime DateTime?
@@ -486,6 +490,7 @@ model MockInterview {
   template            MockInterviewTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
   checklistItems      MockInterviewChecklistItem[]
   trainingAssignments TrainingAssignment[]
+  // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)
 
   @@index([candidateProjectMapId])
   @@index([coordinatorId])
@@ -498,7 +503,7 @@ model MockInterview {
 /// Checklist items for each mock interview (filled during/after interview)
 /// Links to template item if answer came from a template, otherwise custom question
 model MockInterviewChecklistItem {
-  id              String @id @default(cuid())
+  id              String  @id @default(cuid())
   mockInterviewId String
   templateItemId  String? // Optional: Link to template item if from template
 
@@ -511,7 +516,7 @@ model MockInterviewChecklistItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  mockInterview MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
+  mockInterview MockInterview              @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
   templateItem  MockInterviewTemplateItem? @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
 
   @@index([mockInterviewId])
@@ -524,18 +529,18 @@ model MockInterviewChecklistItem {
 /// Interview Coordinators can create multiple templates per role
 /// Each template contains questions organized by categories
 model MockInterviewTemplate {
-  id          String   @id @default(cuid())
-  roleId      String
-  role        RoleCatalog @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  id     String      @id @default(cuid())
+  roleId String
+  role   RoleCatalog @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  name        String   // e.g., "Standard RN Interview Template"
-  description String?  // Optional description
-  isActive    Boolean  @default(true)
+  name        String // e.g., "Standard RN Interview Template"
+  description String? // Optional description
+  isActive    Boolean @default(true)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  items       MockInterviewTemplateItem[]
+  items          MockInterviewTemplateItem[]
   mockInterviews MockInterview[]
 
   @@unique([roleId, name]) // Prevent duplicate template names for same role
@@ -548,15 +553,15 @@ model MockInterviewTemplate {
 /// Each template can have multiple categories, each category can have multiple questions
 /// No duplicate categories within a single template (enforced by application logic)
 model MockInterviewTemplateItem {
-  id         String   @id @default(cuid())
+  id         String                @id @default(cuid())
   templateId String
   template   MockInterviewTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-  category   String   // technical_skills, communication, professionalism, role_specific
-  criterion  String   // The question/criterion to evaluate
-  order      Int      @default(0) // Order within category
+  category  String // technical_skills, communication, professionalism, role_specific
+  criterion String // The question/criterion to evaluate
+  order     Int    @default(0) // Order within category
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   checklistItems MockInterviewChecklistItem[] // Answers that used this template item
@@ -565,6 +570,44 @@ model MockInterviewTemplateItem {
   @@index([templateId])
   @@index([category])
   @@map("mock_interview_template_items")
+}
+
+/// InterviewStatusHistory
+/// Stores history events for both MockInterview and Interview (client/main) entities.
+model InterviewStatusHistory {
+  id String @id @default(cuid())
+
+  // Type of interview (e.g. 'mock' | 'client') and the corresponding interview id
+  interviewType String
+  interviewId   String?
+
+  // Link to the candidate-project map (optional)
+  candidateProjectMapId String?
+
+  // Previous status code (nullable) and the new status code
+  previousStatus String?
+  status         String
+  statusSnapshot String? @db.Text
+
+  // When the status/event occurred
+  statusAt DateTime @default(now())
+
+  // Who caused the change (snapshot)
+  changedById   String?
+  changedBy     User?   @relation("UserToInterviewStatusHistory", fields: [changedById], references: [id])
+  changedByName String?
+
+  // Reason / short text
+  reason String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([interviewType, interviewId])
+  @@index([candidateProjectMapId])
+  @@index([changedById])
+  @@index([statusAt])
+  @@map("interview_status_history")
 }
 
 /// Training/Screening assignments for candidates who need improvement
@@ -787,26 +830,25 @@ model DocumentRequirement {
 /// * Tracks verification status of each document for each project
 /// * Multiple projects can reference the same document (e.g., same passport for multiple projects)
 model CandidateProjectDocumentVerification {
-
-  id                    String                        @id @default(cuid())
+  id                    String @id @default(cuid())
   candidateProjectMapId String
   documentId            String
 
   // Document status inside this project
-  status                String   @default("pending") 
+  status String @default("pending")
   // "pending" | "verified" | "rejected" | "resubmission_requested"
-  
+
   notes                 String?
   rejectionReason       String?
-  resubmissionRequested Boolean                       @default(false)
+  resubmissionRequested Boolean @default(false)
 
-  createdAt             DateTime                      @default(now())
-  updatedAt             DateTime                      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  candidateProjectMap   CandidateProjects             @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  document              Document                      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  document            Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  verificationHistory   DocumentVerificationHistory[]
+  verificationHistory DocumentVerificationHistory[]
 
   @@unique([candidateProjectMapId, documentId])
   @@index([candidateProjectMapId])
@@ -820,20 +862,20 @@ model CandidateProjectDocumentVerification {
 /// * Tracks all verification actions on documents
 /// * Records who performed the action, when, and why
 model DocumentVerificationHistory {
-  id              String                               @id @default(cuid())
-  verificationId  String
+  id             String @id @default(cuid())
+  verificationId String
 
-  action          String // "verified", "rejected", "resubmission_requested", "pending"
+  action String // "verified", "rejected", "resubmission_requested", "pending"
 
   performedBy     String
   performedByName String?
-  
-  notes           String?
-  reason          String?
-  performedAt     DateTime                             @default(now())
-  
-  verification    CandidateProjectDocumentVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
-  performer       User                                 @relation("DocumentVerificationPerformer", fields: [performedBy], references: [id])
+
+  notes       String?
+  reason      String?
+  performedAt DateTime @default(now())
+
+  verification CandidateProjectDocumentVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  performer    User                                 @relation("DocumentVerificationPerformer", fields: [performedBy], references: [id])
 
   @@index([verificationId])
   @@index([performedBy])

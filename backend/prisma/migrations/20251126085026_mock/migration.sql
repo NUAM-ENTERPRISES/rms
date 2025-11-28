@@ -5,7 +5,7 @@
 
 */
 -- DropForeignKey
-ALTER TABLE "public"."mock_interview_checklist_templates" DROP CONSTRAINT "mock_interview_checklist_templates_roleId_fkey";
+ALTER TABLE IF EXISTS "public"."mock_interview_checklist_templates" DROP CONSTRAINT IF EXISTS "mock_interview_checklist_templates_roleId_fkey";
 
 -- DropTable
-DROP TABLE "public"."mock_interview_checklist_templates";
+DROP TABLE IF EXISTS "public"."mock_interview_checklist_templates";

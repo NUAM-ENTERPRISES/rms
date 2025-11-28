@@ -62,4 +62,27 @@ describe('CandidateProjectDetailsPage interview flow', () => {
     const matches = await screen.findAllByText('Interview Assigned');
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('shows correct label for mock_interview_scheduled in current status and timeline', async () => {
+    const now = new Date().toISOString();
+    const pipelineResponse = {
+      success: true,
+      data: {
+        history: [
+          { id: '1', subStatus: { name: 'nominated_initial', label: 'Nominated' }, statusChangedAt: new Date(Date.now() - 20000).toISOString() },
+          { id: '2', subStatus: { name: 'mock_interview_scheduled', label: 'Mock Interview Scheduled' }, statusChangedAt: now }
+        ],
+        candidate: { firstName: 'Jane', lastName: 'Mock' },
+        project: { title: 'Mock Project' }
+      }
+    };
+
+    (useGetCandidateProjectPipelineQuery as any).mockReturnValue({ data: pipelineResponse, isLoading: false, error: undefined });
+
+    render(<CandidateProjectDetailsPage />);
+
+    // There should be multiple occurrences (header + timeline) of the label
+    const matches = await screen.findAllByText('Mock Interview Scheduled');
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
 });

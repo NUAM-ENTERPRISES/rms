@@ -116,8 +116,9 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
+    roleNeededId?: string;
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+  }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
 
   const [interviewConfirm, setInterviewConfirm] = useState<{
     isOpen: boolean;
@@ -131,8 +132,9 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
+    roleNeededId?: string;
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", notes: "" });
+  }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
 
   // Handle project deletion
   const handleDeleteProjectConfirm = async () => {
@@ -154,7 +156,13 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
-    setVerifyConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
+    setVerifyConfirm({
+      isOpen: true,
+      candidateId,
+      candidateName,
+      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      notes: "",
+    });
   };
 
   const showInterviewConfirmation = (
@@ -176,6 +184,7 @@ export default function ProjectDetailPage() {
         projectId: projectId!,
         candidateId: verifyConfirm.candidateId,
         recruiterId: user?.id,
+        roleNeededId: verifyConfirm.roleNeededId,
         notes: verifyConfirm.notes || undefined,
       }).unwrap();
       toast.success("Candidate sent for verification successfully");
@@ -183,6 +192,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
+        roleNeededId: undefined,
         notes: "",
       });
     } catch (error: any) {
@@ -227,7 +237,13 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
-    setAssignConfirm({ isOpen: true, candidateId, candidateName, notes: "" });
+    setAssignConfirm({
+      isOpen: true,
+      candidateId,
+      candidateName,
+      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      notes: "",
+    });
   };
 
   const handleAssignToProject = async () => {
@@ -236,6 +252,7 @@ export default function ProjectDetailPage() {
         candidateId: assignConfirm.candidateId,
         projectId: projectId!,
         recruiterId: user?.id,
+        roleNeededId: assignConfirm.roleNeededId,
         notes: assignConfirm.notes || `Assigned by recruiter to project`,
       }).unwrap();
       toast.success("Candidate assigned to project successfully");
@@ -243,6 +260,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
+        roleNeededId: undefined,
         notes: "",
       });
     } catch (error: any) {
@@ -373,7 +391,7 @@ export default function ProjectDetailPage() {
                   </h1>
                   <ProjectCountryCell
                     countryCode={project.countryCode}
-                    size="3xl"
+                    size="2xl"
                     fallbackText="Not specified"
                   />
                 </div>
@@ -715,6 +733,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
+            roleNeededId: undefined,
             notes: "",
           })
         }
@@ -726,7 +745,26 @@ export default function ProjectDetailPage() {
               Are you sure you want to send {verifyConfirm.candidateName} for
               verification? This will notify the verification team.
             </p>
+
             <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select
+                value={verifyConfirm.roleNeededId}
+                onValueChange={(v) =>
+                  setVerifyConfirm((prev) => ({ ...prev, roleNeededId: v }))
+                }
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {project?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.designation}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <label
                 htmlFor="verify-notes"
                 className="text-sm font-medium text-gray-700"
@@ -834,13 +872,14 @@ export default function ProjectDetailPage() {
       <ConfirmationDialog
         isOpen={assignConfirm.isOpen}
         onClose={() =>
-          setAssignConfirm({
-            isOpen: false,
-            candidateId: "",
-            candidateName: "",
-            notes: "",
-          })
-        }
+            setAssignConfirm({
+              isOpen: false,
+              candidateId: "",
+              candidateName: "",
+              roleNeededId: undefined,
+              notes: "",
+            })
+          }
         onConfirm={handleAssignToProject}
         title="Assign to Project"
         description={
@@ -849,7 +888,27 @@ export default function ProjectDetailPage() {
               Are you sure you want to assign {assignConfirm.candidateName} to
               this project?
             </p>
+
             <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select
+                value={assignConfirm.roleNeededId}
+                onValueChange={(v) =>
+                  setAssignConfirm((prev) => ({ ...prev, roleNeededId: v }))
+                }
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {project?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.designation}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <label
                 htmlFor="assign-notes"
                 className="text-sm font-medium text-gray-700"

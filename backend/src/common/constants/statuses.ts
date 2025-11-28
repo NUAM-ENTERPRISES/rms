@@ -7,6 +7,8 @@
  * @module common/constants/statuses
  */
 
+import { CANCELLED } from "dns";
+
 // ==================== CANDIDATE PROJECT MAP STATUSES ====================
 
 /**
@@ -265,6 +267,20 @@ export type JoiningStatus =
   (typeof JOINING_STATUS)[keyof typeof JOINING_STATUS];
 
 // ==================== MOCK INTERVIEW CONSTANTS ====================
+
+export const MOCK_INTERVIEW_STATUS = {
+  SCHEDULED: 'scheduled',
+  RESHEDULED: 'rescheduled',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  PASSED: 'passed',
+  FAILED: 'failed',
+  MISSED: 'missed',
+  CANCELLED: 'cancelled',
+} as const;
+
+export type MockInterviewStatus =
+  (typeof MOCK_INTERVIEW_STATUS)[keyof typeof MOCK_INTERVIEW_STATUS];
 
 /**
  * Mock Interview Decision Constants

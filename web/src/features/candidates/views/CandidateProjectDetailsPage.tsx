@@ -56,13 +56,30 @@ export default function CandidateProjectDetailsPage() {
             verification_in_progress: <Search className="h-4 w-4" />,
             documents_verified: <ShieldCheck className="h-4 w-4" />,
             approved: <ThumbsUp className="h-4 w-4" />,
+
+            // Interview flow
             interview_assigned: <Calendar className="h-4 w-4" />,
-            interview_rescheduled: <Calendar className="h-4 w-4" />,
-            interview_selected: <CheckCircle2 className="h-4 w-4" />,
-            interview_failed: <XCircle className="h-4 w-4" />,
             interview_scheduled: <Calendar className="h-4 w-4" />,
+            interview_rescheduled: <Calendar className="h-4 w-4" />,
             interview_completed: <MessageCircle className="h-4 w-4" />,
             interview_passed: <Award className="h-4 w-4" />,
+            interview_failed: <XCircle className="h-4 w-4" />,
+            interview_selected: <CheckCircle2 className="h-4 w-4" />,
+
+            // Mock interviews
+            mock_interview_assigned: <Calendar className="h-4 w-4" />,
+            mock_interview_scheduled: <Calendar className="h-4 w-4" />,
+            mock_interview_completed: <MessageCircle className="h-4 w-4" />,
+            mock_interview_passed: <Award className="h-4 w-4" />,
+            mock_interview_failed: <XCircle className="h-4 w-4" />,
+
+            // Training
+            training_assigned: <Users className="h-4 w-4" />,
+            training_in_progress: <ClipboardList className="h-4 w-4" />,
+            training_completed: <CheckCircle2 className="h-4 w-4" />,
+            ready_for_reassessment: <Clock className="h-4 w-4" />,
+
+            // Final/other
             selected: <CheckCircle2 className="h-4 w-4" />,
             processing: <ClipboardList className="h-4 w-4" />,
             hired: <Luggage className="h-4 w-4" />,
@@ -84,13 +101,28 @@ export default function CandidateProjectDetailsPage() {
             verification_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
             documents_verified: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             approved: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+
+            // Interview flow
             interview_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_rescheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+            interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+
+            // Mock interviews
+            mock_interview_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            mock_interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            mock_interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            mock_interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            mock_interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+
+            // Training
+            training_assigned: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+            training_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+            training_completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            ready_for_reassessment: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
             selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             processing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
             hired: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
@@ -112,9 +144,22 @@ export default function CandidateProjectDetailsPage() {
             verification_in_progress: 'Verification In Progress',
             documents_verified: 'Documents Verified',
             approved: 'Approved',
+            interview_assigned: 'Interview Assigned',
             interview_scheduled: 'Interview Scheduled',
+            interview_rescheduled: 'Interview Rescheduled',
             interview_completed: 'Interview Completed',
             interview_passed: 'Interview Passed',
+            interview_failed: 'Interview Failed',
+            mock_interview_assigned: 'Mock Interview Assigned',
+            mock_interview_scheduled: 'Mock Interview Scheduled',
+            mock_interview_completed: 'Mock Interview Completed',
+            mock_interview_passed: 'Mock Interview Passed',
+            mock_interview_failed: 'Mock Interview Failed',
+            training_assigned: 'Training Assigned',
+            training_in_progress: 'Training In Progress',
+            training_completed: 'Training Completed',
+            ready_for_reassessment: 'Ready For Reassessment',
+            interview_selected: 'Interview Selected',
             selected: 'Selected',
             processing: 'Processing',
             hired: 'Hired',
@@ -164,7 +209,18 @@ export default function CandidateProjectDetailsPage() {
     const projectDeadline = pipelineResponse?.data?.project?.deadline;
     const progress = calculateProgress();
     const latestProjectStatusName = getLatestProjectStatusName();
-    const latestDisplayLabel = latestEntry?.subStatus?.label || latestEntry?.subStatusSnapshot || latestEntry?.mainStatus?.label || latestEntry?.mainStatusSnapshot || latestEntry?.projectStatus?.statusName || undefined;
+    const latestDisplayLabel = (() => {
+        // Prefer explicit human-friendly labels from API
+        if (latestEntry?.subStatus?.label) return latestEntry.subStatus.label;
+        if (latestEntry?.mainStatus?.label) return latestEntry.mainStatus.label;
+
+        // If labels not provided, normalize the entry and map to a friendly label
+        const normalized = normalizeStatusNameUtil(latestEntry);
+        if (normalized) return getStatusLabel(normalized);
+
+        // Fallback to any raw snapshot or project status name
+        return latestEntry?.subStatusSnapshot || latestEntry?.mainStatusSnapshot || latestEntry?.projectStatus?.statusName || undefined;
+    })();
     const sortedHistory = [...history].reverse();
 
     // Play lottie animation when progress changes
@@ -475,7 +531,13 @@ export default function CandidateProjectDetailsPage() {
                                                 // get normalized key and human label
                                                 const statusKey = normalizeStatusNameUtil(item) || '';
                                                 const it: any = item;
-                                                const statusLabel = it?.subStatus?.label || it?.subStatusSnapshot || it?.mainStatus?.label || it?.mainStatusSnapshot || it?.projectStatus?.statusName;
+                                                // Choose a human friendly label when possible. Prefer API-provided labels, then normalize
+                                                const explicitLabel = it?.subStatus?.label || it?.mainStatus?.label;
+                                                let statusLabel = explicitLabel;
+                                                if (!statusLabel) {
+                                                    const normalized = normalizeStatusNameUtil(it) || it?.subStatusSnapshot || it?.mainStatusSnapshot || it?.projectStatus?.statusName;
+                                                    statusLabel = normalized ? getStatusLabel(String(normalized)) : (it?.subStatusSnapshot || it?.mainStatusSnapshot || it?.projectStatus?.statusName);
+                                                }
                                                 const colors = getStatusColor(statusKey);
                                                 const isFirst = index === 0;
                                                 return (

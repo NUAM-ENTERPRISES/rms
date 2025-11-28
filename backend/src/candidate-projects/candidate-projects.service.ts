@@ -63,15 +63,15 @@ export class CandidateProjectsService {
     // -------------------------------
     // AUTO-MATCH ROLE
     // -------------------------------
-    if (!roleNeededId && project.rolesNeeded.length > 0) {
-      const matchedRoleId = await this.autoMatchCandidateToRole(
-        candidate,
-        project.rolesNeeded,
-      );
-      if (matchedRoleId) {
-        roleNeededId = matchedRoleId;
-      }
-    }
+    // if (!roleNeededId && project.rolesNeeded.length > 0) {
+    //   const matchedRoleId = await this.autoMatchCandidateToRole(
+    //     candidate,
+    //     project.rolesNeeded,
+    //   );
+    //   if (matchedRoleId) {
+    //     roleNeededId = matchedRoleId;
+    //   }
+    // }
 
     // -------------------------------
     // VERIFY role if provided
@@ -1228,6 +1228,7 @@ export class CandidateProjectsService {
           scheduledTime: scheduledTime ? new Date(scheduledTime) : null,
           meetingLink,
           mode: 'video',
+          status: 'scheduled',
         },
       });
 
@@ -1249,6 +1250,22 @@ export class CandidateProjectsService {
           candidateProjectMapId,
           subStatusSnapshot: CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED,
           changedById: userId,
+          reason: `Sent to mock interview with coordinator ${coordinator.name}`,
+        },
+      });
+
+      // Also create an interview status history record for auditing (mock interview event)
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'mock',
+          interviewId: mockInterview.id,
+          candidateProjectMapId: candidateProjectMapId,
+          previousStatus: null,
+          status: 'scheduled',
+          statusSnapshot: 'Mock Interview Scheduled',
+          statusAt: new Date(),
+          changedById: userId,
+          changedByName: coordinator.name,
           reason: `Sent to mock interview with coordinator ${coordinator.name}`,
         },
       });

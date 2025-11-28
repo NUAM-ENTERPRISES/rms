@@ -165,12 +165,12 @@ export const candidatesApi = baseApi.injectEndpoints({
     }),
     assignToProject: builder.mutation<
       { success: boolean; data: any; message: string },
-      { candidateId: string; projectId: string; notes?: string }
+      { candidateId: string; projectId: string; roleNeededId?: string; recruiterId?: string; notes?: string }
     >({
-      query: ({ candidateId, projectId, notes }) => ({
+      query: ({ candidateId, projectId, roleNeededId, recruiterId, notes }) => ({
         url: `/candidates/${candidateId}/assign-project`,
         method: "POST",
-        body: { projectId, notes },
+        body: { projectId, roleNeededId, recruiterId, notes },
       }),
       invalidatesTags: ["Candidate"],
     }),

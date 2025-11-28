@@ -86,6 +86,15 @@ const MockInterviewsListPage = lazy(
       "@/features/mock-interview-coordination/interviews/views/MockInterviewsListPage"
     )
 );
+const UpcomingInterviewsListPage = lazy(
+  () => import("@/features/mock-interview-coordination/interviews/views/UpcomingInterviewsListPage")
+);
+const AssignedInterviewsListPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/interviews/views/AssignedInterviewsListPage"
+    )
+);
 const TemplatesPage = lazy(
   () =>
     import(
@@ -423,6 +432,32 @@ function App() {
                         <ProtectedRoute permissions={["read:mock_interviews"]}>
                           <AppLayout>
                             <MockInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/mock-interviews/assigned"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                          <AppLayout>
+                            <AssignedInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/mock-interviews/upcoming"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                          <AppLayout>
+                            <UpcomingInterviewsListPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
