@@ -885,31 +885,33 @@ export default function CandidateDocumentVerificationPage() {
 
           {/* Final Complete/Reject Buttons */}
           {(summary.allDocumentsVerified || allRejected) && canVerifyDocuments && (
-            <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
-              {summary.allDocumentsVerified && (
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-lg px-10 py-7 shadow-2xl hover:scale-105 transition"
-                  onClick={() => { setCompletionAction("complete"); setIsCompletionConfirmationOpen(true); }}
-                  disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
-                >
-                  {isCompleting ? <RefreshCw className="h-6 w-6 animate-spin mr-3" /> : <CheckCircle className="h-6 w-6 mr-3" />}
-                  Complete Verification
-                </Button>
-              )}
-              {allRejected && (
-                <Button
-                  size="lg"
-                  variant="destructive"
-                  className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 font-bold text-lg px-10 py-7 shadow-2xl hover:scale-105 transition"
-                  onClick={() => { setCompletionAction("reject"); setIsCompletionConfirmationOpen(true); }}
-                  disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
-                >
-                  {isRejectingComplete ? <RefreshCw className="h-6 w-6 animate-spin mr-3" /> : <XCircle className="h-6 w-6 mr-3" />}
-                  Reject All Documents
-                </Button>
-              )}
-            </div>
+       <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
+  {summary.allDocumentsVerified && (
+    <Button
+      size="md"
+      className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
+      onClick={() => { setCompletionAction("complete"); setIsCompletionConfirmationOpen(true); }}
+      disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
+    >
+      {isCompleting ? <RefreshCw className="h-6 w-6 animate-spin" /> : <CheckCircle className="h-6 w-6" />}
+      <span>Verify</span>
+    </Button>
+  )}
+  {allRejected && (
+    <Button
+      size="md"
+      variant="destructive"
+      className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
+      onClick={() => { setCompletionAction("reject"); setIsCompletionConfirmationOpen(true); }}
+      disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
+    >
+      {isRejectingComplete ? <RefreshCw className="h-6 w-6 animate-spin" /> : <XCircle className="h-6 w-6" />}
+      <span>Reject</span>
+    </Button>
+  )}
+</div>
+
+
           )}
         </>
       )}

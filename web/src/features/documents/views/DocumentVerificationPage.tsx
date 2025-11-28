@@ -320,257 +320,255 @@ export default function DocumentVerificationPage() {
         </div>
 
         {/* Compact Documents Table */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          {/* Header */}
-          <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-gray-900 p-2.5">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {(() => {
-                      switch (statusFilter) {
-                        case "documents_verified":
-                          return "Verified Candidates";
-                        case "verification_in_progress_document":
-                          return "In-progress Candidates";
-                        case "rejected_documents":
-                          return "Rejected Candidates";
-                        default:
-                          return "Candidates for Verification";
-                      }
-                    })()}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    <span className="font-semibold text-gray-900">{candidateProjects.length}</span>{' '}
-                    {(() => {
-                      return candidateProjects.length === 1 ? 'candidate' : 'candidates';
-                    })()} {statusFilter === 'all' ? 'to review' : ''}
-                  </p>
-                </div>
-              </div>
-              {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
-            </div>
-          </div>
-
-          {/* Loading */}
-          {isLoading && (
-            <div className="py-24 text-center">
-              <RefreshCw className="mx-auto h-8 w-8 animate-spin text-gray-400" />
-              <p className="mt-3 text-sm text-gray-500">Loading candidates...</p>
-            </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="py-24 text-center">
-              <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
-              <p className="mt-4 text-sm font-medium text-gray-900">Failed to load candidates</p>
-              <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-4">
-                Try Again
-              </Button>
-            </div>
-          )}
-
-          {/* Table */}
-          {!isLoading && !error && candidateProjects.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                    Candidate
-                  </TableHead>
-                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                    Project
-                  </TableHead>
-                  
-                  {/* Dynamic columns based on selected status */}
-                  {statusFilter === "documents_verified" ? (
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                      Verified
-                    </TableHead>
-                  ) : statusFilter === "verification_in_progress_document" ? (
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                      Pending / Submitted
-                    </TableHead>
-                  ) : statusFilter === "rejected_documents" ? (
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                      Rejected
-                    </TableHead>
-                  ) : (
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                      Status
-                    </TableHead>
-                  )}
-
-                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                    Documents
-                  </TableHead>
-                  <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                    Recruiter
-                  </TableHead>
-                  <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {candidateProjects.map((candidateProject: any, index: number) => {
-                  const status = candidateProject?.subStatus?.label || "";
-                  const statusConfig = {
-                    documents_verified: { Icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
-                    rejected_documents: { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-                    verification_in_progress: { Icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-                    documents_submitted: { Icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-                    verification_in_progress_document: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
-                  }[status] || { Icon: AlertCircle, color: "text-gray-500", bg: "bg-gray-50" };
-                  const { Icon } = statusConfig;
-
-                  return (
-                    <motion.tr
-                      key={candidateProject.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: index * 0.03 }}
-                      className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors"
-                    >
-                      {/* Candidate */}
-                      <TableCell className="px-6 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-medium text-white">
-                            {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
-                          </div>
-                          <div>
-                            <button
-                              onClick={() =>
-                                navigate(
-                                  `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
-                                )
-                              }
-                              className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
-                            >
-                              {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
-                            </button>
-                            <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* Project */}
-                      <TableCell className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-lg bg-gray-100 p-2">
-                            <Building2 className="h-4 w-4 text-gray-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {candidateProject.project.title}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {candidateProject.project.client?.name || "—"}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* Dynamic status/summary column */}
-                      <TableCell className="px-6 py-5">
-                        {(() => {
-                          const docs = candidateProject.documentVerifications || [];
-                          const totalDocs = docs.length;
-                          const verifiedCount = docs.filter((d: any) => d.status === "verified").length;
-                          const pendingCount = docs.filter((d: any) => d.status === "pending").length;
-                          const rejectedCount = docs.filter((d: any) => d.status === "rejected").length;
-
-                          if (statusFilter === "documents_verified") {
-                            const lastVerified = docs
-                              .filter((d: any) => d.status === "verified")
-                              .map((d: any) => d.verifiedAt)
-                              .filter(Boolean)
-                              .sort()
-                              .reverse()[0];
-
-                            return (
-                              <div className="text-sm text-gray-700">
-                                <div className="font-medium">{verifiedCount} / {totalDocs} verified</div>
-                                {lastVerified ? (
-                                  <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
-                                ) : null}
-                              </div>
-                            );
-                          }
-
-                          if (statusFilter === "verification_in_progress_document") {
-                            return (
-                              <div className="text-sm text-gray-700">
-                                <div className="font-medium">Pending: {pendingCount}</div>
-                                <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
-                              </div>
-                            );
-                          }
-
-                          if (statusFilter === "rejected_documents") {
-                            const lastRejected = docs
-                              .filter((d: any) => d.status === "rejected")
-                              .map((d: any) => ({at: d.rejectedAt, reason: d.rejectionReason}))
-                              .filter((x: any) => x.at)
-                              .sort((a: any, b: any) => (a.at > b.at ? -1 : 1))[0];
-
-                            return (
-                              <div className="text-sm text-gray-700">
-                                <div className="font-medium">Rejected: {rejectedCount}</div>
-                                {lastRejected?.reason ? (
-                                  <div className="text-xs text-gray-500 truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
-                                ) : null}
-                              </div>
-                            );
-                          }
-
-                          // default / 'all' view
-                          return <div className="text-sm text-gray-700">{status}</div>;
-                        })()}
-                      </TableCell>
-
-                      {/* Documents */}
-                      <TableCell className="px-6 py-5 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          {candidateProject.documentVerifications?.length || 0}
-                        </div>
-                      </TableCell>
-
-                      {/* Recruiter */}
-                      <TableCell className="px-6 py-5 text-sm text-gray-600">
-                        {candidateProject.recruiter?.name || "Unassigned"}
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell className="px-6 py-5 text-right">
-                        <VerificationActionsMenu
-                          candidateProject={candidateProject}
-                          onReject={handleRejectCandidate}
-                        />
-                      </TableCell>
-                    </motion.tr>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && !error && candidateProjects.length === 0 && (
-            <div className="py-24 text-center">
-              <div className="mx-auto h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
-                <User className="h-6 w-6 text-gray-400" />
-              </div>
-              <p className="mt-4 text-sm text-gray-500">No candidates found</p>
-            </div>
-          )}
+       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+  {/* Header */}
+  <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+       <div className="rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-lg shadow-purple-500/20">
+          <User className="h-5 w-5 text-white" />
         </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {(() => {
+              switch (statusFilter) {
+                case "documents_verified":
+                  return "Verified Candidates";
+                case "verification_in_progress_document":
+                  return "In-progress Candidates";
+                case "rejected_documents":
+                  return "Rejected Candidates";
+                default:
+                  return "Candidates for Verification";
+              }
+            })()}
+          </h3>
+          <p className="text-sm text-gray-500">
+            <span className="font-semibold text-gray-900">{candidateProjects.length}</span>{' '}
+            {(() => {
+              return candidateProjects.length === 1 ? 'candidate' : 'candidates';
+            })()} {statusFilter === 'all' ? 'to review' : ''}
+          </p>
+        </div>
+      </div>
+      {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
+    </div>
+  </div>
+
+  {/* Loading */}
+  {isLoading && (
+    <div className="py-24 text-center">
+      <RefreshCw className="mx-auto h-8 w-8 animate-spin text-gray-400" />
+      <p className="mt-3 text-sm text-gray-500">Loading candidates...</p>
+    </div>
+  )}
+
+  {/* Error */}
+  {error && (
+    <div className="py-24 text-center">
+      <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
+      <p className="mt-4 text-sm font-medium text-gray-900">Failed to load candidates</p>
+      <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-4">
+        Try Again
+      </Button>
+    </div>
+  )}
+
+  {/* Table */}
+  {!isLoading && !error && candidateProjects.length > 0 && (
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            Candidate
+          </TableHead>
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            Project
+          </TableHead>
+          
+          {statusFilter === "documents_verified" ? (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+              Verified
+            </TableHead>
+          ) : statusFilter === "verification_in_progress_document" ? (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+              Pending / Submitted
+            </TableHead>
+          ) : statusFilter === "rejected_documents" ? (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+              Rejected
+            </TableHead>
+          ) : (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+              Status
+            </TableHead>
+          )}
+
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            Documents
+          </TableHead>
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            Recruiter
+          </TableHead>
+          <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+            Actions
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+
+      <TableBody>
+        {candidateProjects.map((candidateProject: any, index: number) => {
+          const status = candidateProject?.subStatus?.label || "";
+          const statusConfig = {
+            documents_verified: { Icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+            rejected_documents: { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
+            verification_in_progress: { Icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+            documents_submitted: { Icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
+            verification_in_progress_document: { Icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
+          }[status] || { Icon: AlertCircle, color: "text-gray-500", bg: "bg-gray-50" };
+          const { Icon } = statusConfig;
+
+          return (
+            <motion.tr
+              key={candidateProject.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: index * 0.03 }}
+              className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors"
+            >
+              {/* Candidate — ONLY THIS ICON BACKGROUND CHANGED */}
+              <TableCell className="px-6 py-5">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/20 text-sm font-medium text-white">
+                    {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
+                  </div>
+                  <div>
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
+                        )
+                      }
+                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                    >
+                      {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
+                    </button>
+                    <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
+                  </div>
+                </div>
+              </TableCell>
+
+              {/* Project — Unchanged */}
+              <TableCell className="px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-gray-100 p-2">
+                    <Building2 className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {candidateProject.project.title}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {candidateProject.project.client?.name || "—"}
+                    </p>
+                  </div>
+                </div>
+              </TableCell>
+
+              {/* Dynamic status/summary column */}
+              <TableCell className="px-6 py-5">
+                {(() => {
+                  const docs = candidateProject.documentVerifications || [];
+                  const totalDocs = docs.length;
+                  const verifiedCount = docs.filter((d: any) => d.status === "verified").length;
+                  const pendingCount = docs.filter((d: any) => d.status === "pending").length;
+                  const rejectedCount = docs.filter((d: any) => d.status === "rejected").length;
+
+                  if (statusFilter === "documents_verified") {
+                    const lastVerified = docs
+                      .filter((d: any) => d.status === "verified")
+                      .map((d: any) => d.verifiedAt)
+                      .filter(Boolean)
+                      .sort()
+                      .reverse()[0];
+
+                    return (
+                      <div className="text-sm text-gray-700">
+                        <div className="font-medium">{verifiedCount} / {totalDocs} verified</div>
+                        {lastVerified ? (
+                          <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+
+                  if (statusFilter === "verification_in_progress_document") {
+                    return (
+                      <div className="text-sm text-gray-700">
+                        <div className="font-medium">Pending: {pendingCount}</div>
+                        <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
+                      </div>
+                    );
+                  }
+
+                  if (statusFilter === "rejected_documents") {
+                    const lastRejected = docs
+                      .filter((d: any) => d.status === "rejected")
+                      .map((d: any) => ({at: d.rejectedAt, reason: d.rejectionReason}))
+                      .filter((x: any) => x.at)
+                      .sort((a: any, b: any) => (a.at > b.at ? -1 : 1))[0];
+
+                    return (
+                      <div className="text-sm text-gray-700">
+                        <div className="font-medium">Rejected: {rejectedCount}</div>
+                        {lastRejected?.reason ? (
+                          <div className="text-xs text-gray-500 truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+
+                  return <div className="text-sm text-gray-700">{status}</div>;
+                })()}
+              </TableCell>
+
+              {/* Documents */}
+              <TableCell className="px-6 py-5 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-400" />
+                  {candidateProject.documentVerifications?.length || 0}
+                </div>
+              </TableCell>
+
+              {/* Recruiter */}
+              <TableCell className="px-6 py-5 text-sm text-gray-600">
+                {candidateProject.recruiter?.name || "Unassigned"}
+              </TableCell>
+
+              {/* Actions */}
+              <TableCell className="px-6 py-5 text-right">
+                <VerificationActionsMenu
+                  candidateProject={candidateProject}
+                  onReject={handleRejectCandidate}
+                />
+              </TableCell>
+            </motion.tr>
+          );
+        })}
+      </TableBody>
+    </Table>
+  )}
+
+  {/* Empty State */}
+  {!isLoading && !error && candidateProjects.length === 0 && (
+    <div className="py-24 text-center">
+      <div className="mx-auto h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
+        <User className="h-6 w-6 text-gray-400" />
+      </div>
+      <p className="mt-4 text-sm text-gray-500">No candidates found</p>
+    </div>
+  )}
+</div>
 
         {/* Compact Verification Dialog */}
         <Dialog open={verificationDialog} onOpenChange={setVerificationDialog}>
