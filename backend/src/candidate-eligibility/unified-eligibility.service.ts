@@ -989,183 +989,195 @@ export class UnifiedEligibilityService {
   }
 
   private analyzeExperienceMatch(candidate: any, role: any) {
-    // Calculate experience from work experiences if direct fields are not available
-    let candidateExp = candidate.totalExperience || candidate.experience || 0;
+  let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
 
-    // If no direct experience, calculate from work experiences
-    if (
-      candidateExp === 0 &&
-      candidate.workExperiences &&
-      candidate.workExperiences.length > 0
-    ) {
-      candidateExp = this.calculateExperienceFromWorkHistory(
-        candidate.workExperiences,
-      );
-    }
+  if (
+    candidateExp === 0 &&
+    Array.isArray(candidate.workExperiences) &&
+    candidate.workExperiences.length > 0
+  ) {
+    candidateExp = this.calculateExperienceFromWorkHistory(candidate.workExperiences);
+  }
 
-    const minExp = role.minExperience || 0;
-    const maxExp = role.maxExperience || 100;
+  const minExp = role.minExperience ?? 0;
+  const maxExp = role.maxExperience ?? 100;
 
-    let score = 0;
-    let isEligible = true;
-    let details = '';
-
-    if (candidateExp < minExp) {
-      isEligible = false;
-      score = Math.max(0, 100 - Math.abs(candidateExp - minExp) * 10);
-      details = `Insufficient experience: ${candidateExp} years (required: ${minExp}+)`;
-    } else if (candidateExp > maxExp) {
-      isEligible = false;
-      score = Math.max(0, 100 - Math.abs(candidateExp - maxExp) * 5);
-      details = `Overqualified: ${candidateExp} years (max: ${maxExp})`;
-    } else {
-      // Calculate score based on how close to optimal range
-      const optimalMin = minExp;
-      const optimalMax = Math.min(maxExp, minExp + 5); // Optimal range is min to min+5 years
-
-      if (candidateExp >= optimalMin && candidateExp <= optimalMax) {
-        score = 100;
-        details = `Perfect experience match: ${candidateExp} years`;
-      } else if (candidateExp >= minExp && candidateExp <= maxExp) {
-        score = 80;
-        details = `Good experience match: ${candidateExp} years`;
-      } else {
-        score = 60;
-        details = `Acceptable experience: ${candidateExp} years`;
-      }
-    }
-
+  // Add this check to enforce default score = 0 if no experience
+  if (candidateExp === 0) {
     return {
       category: 'Experience',
-      score,
-      isEligible,
-      details,
+      score: 0,
+      isEligible: false,
+      details: `No experience information provided`,
       candidateExperience: candidateExp,
       requiredExperience: { min: minExp, max: maxExp },
     };
   }
 
+  let score = 0;
+  let isEligible = true;
+  let details = '';
+
+  if (candidateExp < minExp) {
+    isEligible = false;
+    score = Math.max(0, 100 - Math.abs(candidateExp - minExp) * 10);
+    details = `Insufficient experience: ${candidateExp} years (required: ${minExp}+)`;
+  } else if (candidateExp > maxExp) {
+    isEligible = false;
+    score = Math.max(0, 100 - Math.abs(candidateExp - maxExp) * 5);
+    details = `Overqualified: ${candidateExp} years (max: ${maxExp})`;
+  } else {
+    const optimalMin = minExp;
+    const optimalMax = Math.min(maxExp, minExp + 5);
+
+    if (candidateExp >= optimalMin && candidateExp <= optimalMax) {
+      score = 100;
+      details = `Perfect experience match: ${candidateExp} years`;
+    } else if (candidateExp <= maxExp) {
+      score = 80;
+      details = `Good experience match: ${candidateExp} years`;
+    } else {
+      score = 60;
+      details = `Acceptable experience: ${candidateExp} years`;
+    }
+  }
+
+  return {
+    category: 'Experience',
+    score,
+    isEligible,
+    details,
+    candidateExperience: candidateExp,
+    requiredExperience: { min: minExp, max: maxExp },
+  };
+}
+
+
   private analyzeSkillsMatch(candidate: any, role: any) {
-    const candidateSkills = (candidate.skills as string[]) || [];
-    const roleSkills = (role.skills as string[]) || [];
-    const technicalSkills = (role.technicalSkills as string[]) || [];
+  const candidateSkills = (candidate.skills as string[]) || [];
+  const roleSkills = (role.skills as string[]) || [];
+  const technicalSkills = (role.technicalSkills as string[]) || [];
 
-    const allRequiredSkills = [...roleSkills, ...technicalSkills];
+  const allRequiredSkills = [...roleSkills, ...technicalSkills];
 
-    // If no skills required, pass with default score
-    if (allRequiredSkills.length === 0) {
-      return {
-        category: 'Skills',
-        score: 50,
-        isEligible: true,
-        details: 'No specific skills requirements',
-        candidateSkills: candidateSkills,
-        requiredSkills: [],
-      };
-    }
-
-    const matchingSkills: string[] = [];
-    const missingSkills: string[] = [];
-    let totalScore = 0;
-
-    for (const requiredSkill of allRequiredSkills) {
-      let bestMatch = 0;
-
-      for (const candidateSkill of candidateSkills) {
-        const matchScore = this.calculateSkillMatch(
-          candidateSkill,
-          requiredSkill,
-        );
-        bestMatch = Math.max(bestMatch, matchScore);
-      }
-
-      if (bestMatch >= 60) {
-        // Liberal threshold
-        matchingSkills.push(requiredSkill);
-        totalScore += bestMatch;
-      } else {
-        missingSkills.push(requiredSkill);
-      }
-    }
-
-    const score =
-      allRequiredSkills.length > 0
-        ? Math.round(totalScore / allRequiredSkills.length)
-        : 50;
-
-    const isEligible = true; // Skills are not mandatory
-    const details =
-      matchingSkills.length > 0
-        ? `Matching skills: ${matchingSkills.join(', ')}`
-        : `Missing skills: ${missingSkills.join(', ')}`;
-
+  // If no skills required, pass with default score 0 (changed from 50)
+  if (allRequiredSkills.length === 0) {
     return {
       category: 'Skills',
-      score,
-      isEligible,
-      details,
+      score: 0,  // default zero
+      isEligible: false,
+      details: 'No specific skills requirements',
       candidateSkills: candidateSkills,
-      requiredSkills: allRequiredSkills,
+      requiredSkills: [],
     };
   }
+
+  const matchingSkills: string[] = [];
+  const missingSkills: string[] = [];
+  let totalScore = 0;
+
+  for (const requiredSkill of allRequiredSkills) {
+    let bestMatch = 0;
+
+    for (const candidateSkill of candidateSkills) {
+      const matchScore = this.calculateSkillMatch(candidateSkill, requiredSkill);
+      bestMatch = Math.max(bestMatch, matchScore);
+    }
+
+    if (bestMatch >= 60) {
+      // Liberal threshold
+      matchingSkills.push(requiredSkill);
+      totalScore += bestMatch;
+    } else {
+      missingSkills.push(requiredSkill);
+    }
+  }
+
+  // If no required skills, score is 0; else average total score
+  const score = allRequiredSkills.length > 0 ? Math.round(totalScore / allRequiredSkills.length) : 0;
+
+  const isEligible = true; // Skills are not mandatory
+  const details =
+    matchingSkills.length > 0
+      ? `Matching skills: ${matchingSkills.join(', ')}`
+      : `Missing skills: ${missingSkills.join(', ')}`;
+
+  return {
+    category: 'Skills',
+    score,
+    isEligible,
+    details,
+    candidateSkills,
+    requiredSkills: allRequiredSkills,
+  };
+}
 
   private analyzeCertificationsMatch(candidate: any, role: any) {
-    const candidateCertifications = candidate.certifications || [];
-    const requiredCertifications = role.certifications || [];
+  const candidateCertifications = candidate.certifications || [];
+  const requiredCertifications = role.certifications || [];
 
-    // If no certifications required, pass with default score
-    if (requiredCertifications.length === 0) {
-      return {
-        category: 'Certifications',
-        score: 50,
-        isEligible: true,
-        details: 'No specific certification requirements',
-        candidateCertifications: candidateCertifications,
-        requiredCertifications: [],
-      };
-    }
-
-    const matchingCertifications: string[] = [];
-    const missingCertifications: string[] = [];
-    let totalScore = 0;
-
-    for (const requiredCert of requiredCertifications) {
-      let bestMatch = 0;
-
-      for (const candidateCert of candidateCertifications) {
-        const matchScore = this.calculateSkillMatch(
-          candidateCert,
-          requiredCert,
-        );
-        bestMatch = Math.max(bestMatch, matchScore);
-      }
-
-      if (bestMatch >= 60) {
-        matchingCertifications.push(requiredCert);
-        totalScore += bestMatch;
-      } else {
-        missingCertifications.push(requiredCert);
-      }
-    }
-
-    const score =
-      requiredCertifications.length > 0
-        ? Math.round(totalScore / requiredCertifications.length)
-        : 50;
-
-    const isEligible = true; // Certifications are not mandatory
-    const details =
-      matchingCertifications.length > 0
-        ? `Matching certifications: ${matchingCertifications.join(', ')}`
-        : `Missing certifications: ${missingCertifications.join(', ')}`;
-
+  // If no certifications at all on candidate, return default score zero
+  if (candidateCertifications.length === 0) {
     return {
       category: 'Certifications',
-      score,
-      isEligible,
-      details,
-      candidateCertifications: candidateCertifications,
-      requiredCertifications: requiredCertifications,
+      score: 0,
+      isEligible: false,
+      details: 'No certifications provided',
+      candidateCertifications,
+      requiredCertifications,
     };
   }
+
+  // If no certifications required, pass with default score 50
+  if (requiredCertifications.length === 0) {
+    return {
+      category: 'Certifications',
+      score: 50,
+      isEligible: true,
+      details: 'No specific certification requirements',
+      candidateCertifications,
+      requiredCertifications: [],
+    };
+  }
+
+  const matchingCertifications: string[] = [];
+  const missingCertifications: string[] = [];
+  let totalScore = 0;
+
+  for (const requiredCert of requiredCertifications) {
+    let bestMatch = 0;
+
+    for (const candidateCert of candidateCertifications) {
+      const matchScore = this.calculateSkillMatch(candidateCert, requiredCert);
+      bestMatch = Math.max(bestMatch, matchScore);
+    }
+
+    if (bestMatch >= 60) {
+      matchingCertifications.push(requiredCert);
+      totalScore += bestMatch;
+    } else {
+      missingCertifications.push(requiredCert);
+    }
+  }
+
+  const score =
+    requiredCertifications.length > 0
+      ? Math.round(totalScore / requiredCertifications.length)
+      : 50;
+
+  const isEligible = true; // Certifications are not mandatory
+  const details =
+    matchingCertifications.length > 0
+      ? `Matching certifications: ${matchingCertifications.join(', ')}`
+      : `Missing certifications: ${missingCertifications.join(', ')}`;
+
+  return {
+    category: 'Certifications',
+    score,
+    isEligible,
+    details,
+    candidateCertifications,
+    requiredCertifications,
+  };
+}
 }
