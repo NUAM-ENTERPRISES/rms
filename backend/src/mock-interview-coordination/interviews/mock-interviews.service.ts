@@ -282,6 +282,8 @@ export class MockInterviewsService {
                   firstName: true,
                   lastName: true,
                   email: true,
+                  countryCode: true,
+                  mobileNumber: true,
                 },
               },
               project: { select: { id: true, title: true } },
@@ -338,11 +340,31 @@ export class MockInterviewsService {
       });
     }
 
-    // Add roleCatalog to the response
+    // Build combined contact string for candidate (countryCode + mobileNumber)
+    const candidateWithContact = interview.candidateProjectMap?.candidate
+      ? {
+          ...interview.candidateProjectMap.candidate,
+          phone: `${interview.candidateProjectMap.candidate.countryCode ?? ''} ${interview.candidateProjectMap.candidate.mobileNumber ?? ''}`,
+        }
+      : null;
+
+    // Fetch coordinator details and return as an object { id, name }
+    let coordinator: { id: string; name: string | null } | null = null;
+    if (interview.coordinatorId) {
+      const coordUser = await this.prisma.user.findUnique({
+        where: { id: interview.coordinatorId },
+        select: { id: true, name: true },
+      });
+      coordinator = coordUser ? { id: coordUser.id, name: coordUser.name ?? null } : { id: interview.coordinatorId, name: null };
+    }
+
+    // Add roleCatalog, coordinator object, and candidate contact to the response
     return {
       ...interview,
+      coordinator,
       candidateProjectMap: {
         ...interview.candidateProjectMap,
+        candidate: candidateWithContact,
         roleCatalog,
       },
     };

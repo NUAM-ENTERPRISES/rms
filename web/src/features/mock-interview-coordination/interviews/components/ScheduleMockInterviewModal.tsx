@@ -16,12 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Button as UiButton } from "@/components/ui/button";
 import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
 import { useCreateMockInterviewMutation } from "../data";
-import { useGetTemplatesByRoleQuery, useGetTemplatesQuery } from "../../templates/data";
 
 const scheduleSchema = z.object({
   candidateProjectMapId: z.string().min(1, "Candidate selection is required"),
   coordinatorId: z.string().min(1, "Coordinator is required"),
-  templateId: z.string().optional(),
   scheduledTime: z
     .string()
     .optional()
@@ -48,6 +46,9 @@ export default function ScheduleMockInterviewModal({
   selectedAssignment,
   refetchAssigned,
 }: Props) {
+  // selectedAssignment may be the candidateProjectMap itself or an object that contains it
+  const candidateProjectMap = selectedAssignment?.candidateProjectMap || selectedAssignment;
+
   const [createMockInterview, createState] = useCreateMockInterviewMutation();
   const { users, getUsersByRole } = useUsersLookup();
 
@@ -55,9 +56,9 @@ export default function ScheduleMockInterviewModal({
     resolver: zodResolver(scheduleSchema),
     mode: "onChange",
     defaultValues: {
-      candidateProjectMapId: selectedAssignment?.candidateProjectMap?.id || "",
+      candidateProjectMapId: candidateProjectMap?.id || "",
       coordinatorId: "",
-      templateId: undefined,
+      // templateId: undefined,
       scheduledTime: "",
       duration: 60,
       meetingLink: "",
@@ -67,10 +68,11 @@ export default function ScheduleMockInterviewModal({
 
   useEffect(() => {
     if (!selectedAssignment) return;
-
-    const initialScheduled = selectedAssignment?.scheduledTime
+    // support both scheduledTime (used on scheduled items) or assignedAt (on assigned-but-not-scheduled items)
+    const dateVal = selectedAssignment?.scheduledTime || selectedAssignment?.assignedAt;
+    const initialScheduled = dateVal
       ? (() => {
-          const iso = new Date(selectedAssignment.scheduledTime);
+          const iso = new Date(dateVal);
           const tzOffset = iso.getTimezoneOffset();
           const local = new Date(iso.getTime() - tzOffset * 60000);
           return local.toISOString().slice(0, 16);
@@ -78,9 +80,9 @@ export default function ScheduleMockInterviewModal({
       : "";
 
     form.reset({
-      candidateProjectMapId: selectedAssignment?.candidateProjectMap?.id || "",
+      candidateProjectMapId: candidateProjectMap?.id || "",
       coordinatorId: "",
-      templateId: undefined,
+      // templateId: undefined,
       scheduledTime: initialScheduled,
       duration: 60,
       meetingLink: "",
@@ -88,14 +90,6 @@ export default function ScheduleMockInterviewModal({
     });
   }, [selectedAssignment]);
 
-  const roleId = selectedAssignment?.candidateProjectMap?.roleNeeded?.id;
-  const { data: templatesByRole } = useGetTemplatesByRoleQuery(
-    { roleId: roleId || "", isActive: true },
-    { skip: !roleId }
-  );
-  const { data: allTemplates } = useGetTemplatesQuery(undefined, { skip: !open });
-
-  const templateOptions = (roleId ? templatesByRole?.data : allTemplates?.data) || [];
   const coordinators = getUsersByRole("coordinator").length ? getUsersByRole("coordinator") : users || [];
 
   const onSubmitSchedule = async (values: ScheduleFormValues) => {
@@ -143,8 +137,10 @@ export default function ScheduleMockInterviewModal({
             <Input
               disabled
               value={
-                selectedAssignment && selectedAssignment.candidateProjectMap?.candidate
-                  ? `${selectedAssignment.candidateProjectMap.candidate.firstName} ${selectedAssignment.candidateProjectMap.candidate.lastName} — ${selectedAssignment.candidateProjectMap.project?.title}`
+                candidateProjectMap && (candidateProjectMap.candidate || candidateProjectMap?.candidate)
+                  ? `${(candidateProjectMap.candidate || candidateProjectMap?.candidate).firstName} ${
+                      (candidateProjectMap.candidate || candidateProjectMap?.candidate).lastName
+                    } — ${(candidateProjectMap.project || candidateProjectMap?.project)?.title}`
                   : ""
               }
               className="h-11 mt-1 bg-muted/40 text-black"
@@ -166,16 +162,7 @@ export default function ScheduleMockInterviewModal({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="templateId" className="text-sm font-medium">Template (optional)</Label>
-            <select id="templateId" {...form.register("templateId")} className="w-full mt-1 h-11 rounded-md border px-3">
-              <option value="">No template</option>
-              {templateOptions.map((t: any) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-
+    
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label htmlFor="scheduledTime" className="text-sm font-medium">Date & time</Label>

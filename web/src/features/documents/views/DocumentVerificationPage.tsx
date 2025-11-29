@@ -134,7 +134,7 @@ export default function DocumentVerificationPage() {
   // Calculate status counts from API data (prefer server-supplied counts when available)
   const getStatusCounts = () => {
     // API can return a counts object like: { pending: 1, verified: 2, rejected: 1 }
-    const apiCounts = verificationData?.data?.counts;
+    const apiCounts = (verificationData?.data as any)?.counts;
 
     if (apiCounts) {
       // Map API count keys to our internal canonical keys

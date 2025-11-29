@@ -272,4 +272,39 @@ describe('MockInterviewsService', () => {
     expect(foundPast.isExpired).toBe(true);
     expect(foundFuture.isExpired).toBe(false);
   });
+
+  it('findOne returns candidate with combined phone (countryCode + mobileNumber) and coordinator object', async () => {
+    const interviewId = 'mi-find1';
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id: interviewId,
+      coordinatorId: 'coord1',
+      candidateProjectMap: {
+        id: 'map-c1',
+        candidate: {
+          id: 'c1',
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john@example.com',
+          countryCode: '+91',
+          mobileNumber: '9876543210',
+        },
+      },
+    });
+
+    // Make user.findUnique return coordinator name
+    (prisma.user.findUnique as any).mockResolvedValueOnce({ id: 'coord1', name: 'Coordinator Name' });
+
+    const res: any = await service.findOne(interviewId);
+
+    expect(prisma.mockInterview.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: interviewId } }),
+    );
+
+    expect(res.candidateProjectMap).toBeDefined();
+    expect(res.candidateProjectMap.candidate).toBeDefined();
+    // Expect phone field with a space between country code and number
+    expect(res.candidateProjectMap.candidate.phone).toBe('+91 9876543210');
+    // Expect coordinator object is returned
+    expect(res.coordinator).toEqual({ id: 'coord1', name: 'Coordinator Name' });
+  });
 });

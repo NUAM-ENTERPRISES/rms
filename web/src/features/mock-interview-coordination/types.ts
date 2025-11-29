@@ -75,6 +75,7 @@ export interface MockInterview {
   meetingLink?: string;
   mode: string;
   conductedAt?: string;
+  status: string;
   overallRating?: number;
   overallScore?: number;
   decision?: string;
