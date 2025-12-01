@@ -4,20 +4,15 @@ import {
   Plus,
   Search,
   Users,
-  Building2,
-  UserPlus,
-  Settings,
-  TrendingUp,
-  Calendar,
-  MapPin,
-  Phone,
-  Mail,
-  Crown,
-  Shield,
-  Star,
   MoreHorizontal,
   Download,
-  Filter,
+  Calendar,
+  UserCheck,
+  Briefcase,
+  Shield,
+  Sparkles,
+  Crown,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,339 +24,280 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
-import { cn } from "@/lib/utils";
 import { useGetTeamsQuery, useDeleteTeamMutation } from "@/features/teams";
 
 interface Team {
   id: string;
   name: string;
   description?: string;
-  leadId?: string;
-  headId?: string;
-  managerId?: string;
   memberCount: number;
   activeProjects: number;
   createdAt: string;
-  updatedAt: string;
-  members?: TeamMember[];
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatar?: string;
+  members?: { id: string; name: string; email: string; role: string }[];
 }
 
 export default function TeamsPage() {
   const navigate = useNavigate();
-  const canManageTeams = useCan("manage:teams");
   const canWriteTeams = useCan("write:teams");
   const canReadTeams = useCan("read:teams");
 
-  // State for filters and pagination
-  const [filters, setFilters] = useState({
-    search: "",
-    page: 1,
-    limit: 12,
-  });
+  const [filters, setFilters] = useState({ search: "" });
 
-  // API calls
-  const {
-    data: teamsData,
-    isLoading,
-    error,
-  } = useGetTeamsQuery({
-    page: filters.page,
-    limit: filters.limit,
+  const { data: teamsData, isLoading } = useGetTeamsQuery({
     search: filters.search || undefined,
+    limit: 50,
   });
 
-  const [deleteTeam, { isLoading: isDeleting }] = useDeleteTeamMutation();
-
-  // Use real data if available, otherwise fallback to mock data
+  const [deleteTeam] = useDeleteTeamMutation();
   const teams = teamsData?.data?.teams || [];
 
-  // Handle search
-  const handleSearch = (value: string) => {
-    setFilters((prev) => ({ ...prev, search: value, page: 1 }));
-  };
-
-  // Handle delete team
-  const handleDeleteTeam = async (teamId: string) => {
-    try {
-      await deleteTeam(teamId).unwrap();
-      toast.success("Team deleted successfully");
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to delete team");
-    }
-  };
-
-  // Filter teams based on search (only for mock data, real API handles filtering)
   const filteredTeams = useMemo(() => {
-    if (teamsData?.data?.teams) {
-      // Real API data is already filtered by backend
-      return teams;
-    }
-
     if (!filters.search) return teams;
+    const lower = filters.search.toLowerCase();
     return teams.filter(
-      (team) =>
-        team.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        team.description?.toLowerCase().includes(filters.search.toLowerCase())
+      (t) =>
+        t.name.toLowerCase().includes(lower) ||
+        t.description?.toLowerCase().includes(lower)
     );
-  }, [teams, filters.search, teamsData]);
+  }, [teams, filters.search]);
 
-  // Format date - following FE guidelines: DD MMM YYYY
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("en-GB", {
+      day: "numeric",
       month: "short",
       year: "numeric",
     });
-  };
 
-  // Get role badge variant
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role.toLowerCase()) {
-      case "team lead":
-        return "default";
-      case "senior recruiter":
-        return "secondary";
-      case "recruiter":
-        return "outline";
-      default:
-        return "outline";
-    }
+  const getRoleBadge = (role: string) => {
+    const map: Record<string, { icon: React.ReactNode; color: string }> = {
+      "team lead": { icon: <Crown className="h-3 w-3" />, color: "bg-amber-100 text-amber-800 border-amber-200" },
+      "senior recruiter": { icon: <Star className="h-3 w-3" />, color: "bg-purple-100 text-purple-800 border-purple-200" },
+      "recruiter": { icon: <UserCheck className="h-3 w-3" />, color: "bg-blue-100 text-blue-800 border-blue-200" },
+    };
+    return map[role.toLowerCase()] || { icon: <Users className="h-3 w-3" />, color: "bg-gray-100 text-gray-700 border-gray-200" };
   };
 
   if (!canReadTeams) {
     return (
-      <div className="min-h-screen   p-6">
-        <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                Access Denied
-              </CardTitle>
-              <CardDescription className="text-slate-600">
-                You don't have permission to view teams.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+        <Card className="max-w-md border-0 shadow-lg">
+          <CardContent className="pt-10 text-center space-y-4">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto" />
+            <h2 className="text-2xl font-semibold text-gray-900">Access Restricted</h2>
+            <p className="text-gray-600">You don't have permission to view teams.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen  ">
-      <div className="w-full mx-auto space-y-6">
-        {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardContent>
-            <div className="space-y-6">
-              {/* Premium Search Bar with Enhanced Styling */}
-              <div className="relative group">
-                <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
-                  }`}
-                >
-                  <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      filters.search ? "scale-110" : "scale-100"
-                    }`}
-                  />
-                </div>
-                <Input
-                  placeholder="Search teams by name or description..."
-                  value={filters.search}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-                <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    filters.search ? "ring-2 ring-blue-500/20" : ""
-                  }`}
-                />
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-              {/* Action Buttons Row */}
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Add New Team Button */}
-                {canWriteTeams && (
-                  <Button
-                    onClick={() => navigate("/teams/create")}
-                    className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Create New Team
-                  </Button>
-                )}
-
-                {/* Export Button */}
-                <Button
-                  variant="outline"
-                  className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
-                >
-                  <Download className="h-3 w-3" />
-                  Export
-                </Button>
-              </div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-100 rounded-xl">
+              <Users className="h-8 w-8 text-blue-600" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Teams</h1>
+              <p className="text-gray-600 mt-1">Organize and manage recruiter teams</p>
+            </div>
+          </div>
 
-        {/* Teams Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredTeams.map((team) => (
-            <Card
-              key={team.id}
-              className="group border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
-              onClick={() => navigate(`/teams/${team.id}`)}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 border border-blue-300/50">
-                      <Users className="h-6 w-6 text-blue-700" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-xl font-bold text-slate-800 truncate">
-                        {team.name}
-                      </CardTitle>
-                      <CardDescription className="text-slate-600 mt-1 line-clamp-2">
-                        {team.description || "No description available"}
-                      </CardDescription>
-                    </div>
-                  </div>
-
-                  {canWriteTeams && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Team Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="text-2xl font-bold text-slate-800">
-                      {team.memberCount}
-                    </div>
-                    <div className="text-xs text-slate-600">Members</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="text-2xl font-bold text-slate-800">
-                      {team.activeProjects}
-                    </div>
-                    <div className="text-xs text-slate-600">
-                      Active Projects
-                    </div>
-                  </div>
-                </div>
-
-                {/* Team Members Preview */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-slate-700">
-                      Team Members
-                    </h4>
-                    <Badge variant="outline" className="text-xs">
-                      {team.members?.length || 0} members
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-2">
-                    {team.members?.slice(0, 3).map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center gap-3 p-2 rounded-lg bg-slate-50/50 border border-slate-200/50"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white text-sm font-semibold">
-                          {member.name.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-800 truncate">
-                            {member.name}
-                          </div>
-                          <div className="text-xs text-slate-500 truncate">
-                            {member.email}
-                          </div>
-                        </div>
-                        <Badge
-                          variant={getRoleBadgeVariant(member.role)}
-                          className="text-xs"
-                        >
-                          {member.role}
-                        </Badge>
-                      </div>
-                    ))}
-
-                    {team.members && team.members.length > 3 && (
-                      <div className="text-center p-2 text-xs text-slate-500">
-                        +{team.members.length - 3} more members
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Created date */}
-                <div className="flex items-center gap-2 text-sm text-slate-500 pt-2 border-t border-slate-200">
-                  <Calendar className="h-4 w-4 text-slate-400" />
-                  <span>Created {formatDate(team.createdAt)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="lg">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            {canWriteTeams && (
+              <Button
+                size="lg"
+                onClick={() => navigate("/teams/create")}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                New Team
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* Search */}
+        <div className="max-w-2xl">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              placeholder="Search teams by name or description..."
+              value={filters.search}
+              onChange={(e) => setFilters({ search: e.target.value })}
+              className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+            />
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gray-200 rounded-xl" />
+                    <div className="space-y-2">
+                      <div className="h-6 bg-gray-200 rounded w-48" />
+                      <div className="h-4 bg-gray-200 rounded w-32" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="h-20 bg-gray-100 rounded-lg" />
+                    <div className="h-20 bg-gray-100 rounded-lg" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
         {/* Empty State */}
-        {filteredTeams.length === 0 && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardContent className="pt-12 pb-12 text-center">
-              <Users className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-600 mb-2">
-                No teams found
-              </h3>
-              <p className="text-slate-500 mb-6">
-                {filters.search
-                  ? "Try adjusting your search criteria."
-                  : "Get started by creating your first team."}
-              </p>
-              {!filters.search && canWriteTeams && (
-                <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Team
+        {!isLoading && filteredTeams.length === 0 && (
+          <Card className="border-dashed border-2">
+            <CardContent className="py-20 text-center space-y-6">
+              <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto flex items-center justify-center">
+                <Users className="h-10 w-10 text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {filters.search ? "No teams match your search" : "No teams yet"}
+                </h3>
+                <p className="text-gray-600 mt-2">
+                  {filters.search ? "Try different keywords" : "Create your first team to get started"}
+                </p>
+              </div>
+              {canWriteTeams && !filters.search && (
+                <Button size="lg" onClick={() => navigate("/teams/create")}>
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create Team
                 </Button>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* Results Count - Bottom */}
-        {filteredTeams.length > 0 && (
-          <div className="flex items-center justify-center pt-6 border-t border-slate-200">
-            <p className="text-slate-600">
-              Showing {filteredTeams.length} of {teams.length} teams
-            </p>
+        {/* Teams Grid */}
+        {!isLoading && filteredTeams.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredTeams.map((team) => {
+              // Safely get first member
+              const firstMember = team.members?.[0];
+              const roleInfo = firstMember ? getRoleBadge(firstMember.role) : null;
+
+              return (
+                <Card
+                  key={team.id}
+                  className="hover:shadow-xl transition-all duration-200 border-gray-200 hover:border-gray-300 cursor-pointer group"
+                  onClick={() => navigate(`/teams/${team.id}`)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200/50">
+                          <Users className="h-7 w-7 text-blue-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl font-semibold text-gray-900">
+                            {team.name}
+                          </CardTitle>
+                          {team.description && (
+                            <CardDescription className="mt-1 line-clamp-2 text-gray-600">
+                              {team.description}
+                            </CardDescription>
+                          )}
+                        </div>
+                      </div>
+
+                      {canWriteTeams && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-5 w-5" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-6">
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200/30">
+                        <Users className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                        <div className="text-2xl font-bold text-gray-900">{team.memberCount}</div>
+                        <div className="text-sm text-gray-600">Members</div>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-100 rounded-xl border border-emerald-200/30">
+                        <Briefcase className="h-6 w-6 text-emerald-600 mx-auto mb-2" />
+                        <div className="text-2xl font-bold text-gray-900">{team.activeProjects}</div>
+                        <div className="text-sm text-gray-600">Projects</div>
+                      </div>
+                    </div>
+
+                    {/* Top Member Preview - Now 100% Safe */}
+                    {firstMember && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-500" />
+                            Key Member
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {team.members!.length} total
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                            {firstMember.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{firstMember.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{firstMember.email}</p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs font-medium border ${roleInfo?.color}`}
+                          >
+                            {roleInfo!.icon}
+                            <span className="ml-1">{firstMember.role}</span>
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-4 border-t text-sm">
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        {formatDate(team.createdAt)}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Results Count */}
+        {!isLoading && filteredTeams.length > 0 && (
+          <div className="text-center text-gray-600">
+            Showing <span className="font-medium text-gray-900">{filteredTeams.length}</span> team{filteredTeams.length !== 1 ? "s" : ""}
           </div>
         )}
       </div>
