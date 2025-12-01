@@ -50,9 +50,7 @@ export function StatusHistoryTable({ candidateId }: StatusHistoryTableProps) {
     return (
       <div className="text-center py-12">
         <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">
-          Failed to load status history
-        </p>
+        <p className="text-muted-foreground">Failed to load status history</p>
       </div>
     );
   }
@@ -77,10 +75,10 @@ export function StatusHistoryTable({ candidateId }: StatusHistoryTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Status Name</TableHead>
+          <TableHead>Status</TableHead>
           <TableHead>Changed By</TableHead>
-          <TableHead>Status Updated At</TableHead>
-          <TableHead>Reason</TableHead>
+          <TableHead>Last Updated</TableHead>
+          <TableHead>Remarks / Reason</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
