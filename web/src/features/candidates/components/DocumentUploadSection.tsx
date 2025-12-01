@@ -247,19 +247,19 @@ export function DocumentUploadSection({
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "VERIFIED":
+      case "verified":
         return (
           <Badge variant="default" className="bg-green-100 text-green-800">
             Verified
           </Badge>
         );
-      case "PENDING":
+      case "pending":
         return (
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
             Pending
           </Badge>
         );
-      case "REJECTED":
+      case "rejected":
         return <Badge variant="destructive">Rejected</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;

@@ -974,7 +974,7 @@ export default function CandidateDetailPage() {
                 </TableCell>
 
                 <TableCell>
-                  <StatusBadge status={projectMap.currentProjectStatus.statusName} />
+                  <StatusBadge status={projectMap.subStatus.label} />
                 </TableCell>
 
                 <TableCell>

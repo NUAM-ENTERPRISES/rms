@@ -235,6 +235,11 @@ export interface CandidateProjectMap {
     id: number;
     statusName: string;
   }
+  subStatus: {
+    id: number;
+    label: string;
+  };
+ 
   project: {
     id: string;
     title: string;

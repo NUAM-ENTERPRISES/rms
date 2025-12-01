@@ -687,6 +687,11 @@ export class CandidatesService {
                 statusName: true,
               },
             },
+            subStatus: {
+            select: {
+              label: true,  // <---- Include subStatus label here
+            },
+          },
           },
         },
         workExperiences: true,
