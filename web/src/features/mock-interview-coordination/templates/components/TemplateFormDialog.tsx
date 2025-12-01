@@ -86,6 +86,10 @@ export function TemplateFormDialog({
     useUpdateTemplateMutation();
 
   const [items, setItems] = useState<CreateTemplateItemRequest[]>([]);
+  // state for quick-add category selector
+  const [categoryToAdd, setCategoryToAdd] = useState<string>(
+    Object.keys(categoryLabels)[0] ?? ""
+  );
 
   const form = useForm<TemplateFormValues>({
     resolver: zodResolver(templateFormSchema),
@@ -136,11 +140,11 @@ export function TemplateFormDialog({
     return grouped;
   }, [items]);
 
-  const addItem = () => {
+  const addItem = (category?: string) => {
     setItems([
       ...items,
       {
-        category: "",
+        category: category ?? "",
         criterion: "",
         order: items.length,
       },
@@ -336,24 +340,45 @@ export function TemplateFormDialog({
                       questions to each category.
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addItem}
-                    disabled={isCreating || isUpdating}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Question
-                  </Button>
+
+                  {/* Quick add: choose category then add a question into it */}
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={categoryToAdd}
+                      onValueChange={(v) => setCategoryToAdd(v)}
+                      disabled={isCreating || isUpdating}
+                    >
+                      <SelectTrigger className="w-44">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(categoryLabels).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addItem(categoryToAdd)}
+                      disabled={isCreating || isUpdating}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add to category
+                    </Button>
+                  </div>
                 </div>
 
                 {items.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground border rounded-lg">
                     <p>No questions added yet.</p>
                     <p className="text-sm mt-1">
-                      Click "Add Question" to get started.
+                      Select a category above then click "Add to category" to get started.
                     </p>
                   </div>
                 ) : (
@@ -361,112 +386,76 @@ export function TemplateFormDialog({
                     {Object.entries(itemsByCategory).map(
                       ([category, categoryItems], categoryIndex) => (
                         <div key={category}>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Badge variant="outline" className="font-semibold">
-                              {categoryLabels[category] || category}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {categoryItems.length}{" "}
-                              {categoryItems.length === 1
-                                ? "question"
-                                : "questions"}
-                            </span>
-                          </div>
-                          <div className="space-y-3">
-                            {categoryItems.map(({ index, ...item }) => (
-                              <Card
-                                key={index}
-                                className="border-l-4 border-l-primary/20"
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="font-semibold">
+                                {categoryLabels[category] || category}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {categoryItems.length}{" "}
+                                {categoryItems.length === 1 ? "question" : "questions"}
+                              </span>
+                            </div>
+
+                            {/* Add a question directly into the current category */}
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm text-muted-foreground mr-2 hidden md:block">
+                                Add question to this category
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => addItem(category)}
+                                disabled={isCreating || isUpdating}
+                                className="gap-2"
                               >
-                                <CardContent className="pt-4">
-                                  <div className="space-y-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="flex-1 space-y-3">
-                                        <div>
-                                          <label className="text-xs font-medium text-muted-foreground block mb-1">
-                                            Category *
-                                          </label>
-                                          <Select
-                                            value={item.category}
-                                            onValueChange={(value) =>
-                                              updateItem(
-                                                index,
-                                                "category",
-                                                value
-                                              )
-                                            }
-                                            disabled={isCreating || isUpdating}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select category..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {Object.entries(
-                                                categoryLabels
-                                              ).map(([value, label]) => {
-                                                const itemCount = items.filter(
-                                                  (i) => i.category === value
-                                                ).length;
-                                                return (
-                                                  <SelectItem
-                                                    key={value}
-                                                    value={value}
-                                                  >
-                                                    {label}
-                                                    {itemCount > 0 &&
-                                                      ` (${itemCount} question${
-                                                        itemCount !== 1
-                                                          ? "s"
-                                                          : ""
-                                                      })`}
-                                                  </SelectItem>
-                                                );
-                                              })}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-muted-foreground block mb-1">
-                                            Question/Criterion *
-                                          </label>
-                                          <Textarea
-                                            placeholder="e.g., Ability to explain complex technical concepts clearly"
-                                            value={item.criterion}
-                                            onChange={(e) =>
-                                              updateItem(
-                                                index,
-                                                "criterion",
-                                                e.target.value
-                                              )
-                                            }
-                                            disabled={isCreating || isUpdating}
-                                            rows={2}
-                                            className="resize-none"
-                                          />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                          <div>
-                                            <label className="text-xs font-medium text-muted-foreground block mb-1">
-                                              Order
-                                            </label>
-                                            <Input
-                                              type="number"
-                                              min="0"
-                                              value={item.order}
-                                              onChange={(e) =>
-                                                updateItem(
-                                                  index,
-                                                  "order",
-                                                  parseInt(e.target.value) || 0
-                                                )
-                                              }
-                                              disabled={
-                                                isCreating || isUpdating
-                                              }
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
+                                <Plus className="h-4 w-4" />
+                                Add
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3">
+                            {/* Column headers */}
+                            <div className="grid grid-cols-[1fr_80px_40px] gap-3 items-center bg-muted/10 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground">
+                              <div>Question / Criterion</div>
+                              <div>Order</div>
+                              <div className="text-right">Actions</div>
+                            </div>
+
+                            {categoryItems.map(({ index, ...item }) => (
+                              <Card key={index} className="border">
+                                <CardContent className="pt-3 pb-3">
+                                  <div className="grid grid-cols-[1fr_80px_40px] gap-3 items-start">
+                                    <div>
+                                      <Textarea
+                                        placeholder="e.g., Ability to explain complex technical concepts clearly"
+                                        value={item.criterion}
+                                        onChange={(e) =>
+                                          updateItem(index, "criterion", e.target.value)
+                                        }
+                                        disabled={isCreating || isUpdating}
+                                        rows={2}
+                                        className="resize-none"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={item.order}
+                                        onChange={(e) =>
+                                          updateItem(
+                                            index,
+                                            "order",
+                                            parseInt(e.target.value) || 0
+                                          )
+                                        }
+                                        disabled={isCreating || isUpdating}
+                                      />
+                                    </div>
+                                    <div className="flex items-start justify-end">
                                       <Button
                                         type="button"
                                         variant="ghost"

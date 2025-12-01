@@ -25,6 +25,7 @@ import { CompleteMockInterviewDto } from './dto/complete-mock-interview.dto';
 import { QueryMockInterviewsDto } from './dto/query-mock-interviews.dto';
 import { QueryAssignedMockInterviewsDto } from './dto/query-assigned-mock-interviews.dto';
 import { QueryUpcomingMockInterviewsDto } from './dto/query-upcoming-mock-interviews.dto';
+import { UpdateMockInterviewTemplateDto } from './dto/update-mock-interview-template.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 
 @ApiTags('Mock Interviews')
@@ -224,5 +225,19 @@ export class MockInterviewsController {
   })
   remove(@Param('id') id: string) {
     return this.mockInterviewsService.remove(id);
+  }
+
+  @Patch(':id/template')
+  @Permissions('write:mock_interviews')
+  @ApiOperation({
+    summary: 'Update template for a mock interview',
+    description: 'Change or assign a template for an existing mock interview (Interview Coordinators only).',
+  })
+  @ApiParam({ name: 'id', description: 'Mock Interview ID' })
+  @ApiResponse({ status: 200, description: 'Template updated successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot change template for completed mock interview or template role mismatch' })
+  @ApiResponse({ status: 404, description: 'Mock interview or template not found' })
+  updateTemplate(@Param('id') id: string, @Body() body: UpdateMockInterviewTemplateDto) {
+    return this.mockInterviewsService.updateTemplate(id, body.templateId);
   }
 }

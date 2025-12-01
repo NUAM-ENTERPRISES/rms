@@ -23,6 +23,7 @@ describe('MockInterviewsService', () => {
       count: jest.fn(),
     },
     user: { findFirst: jest.fn(), findUnique: jest.fn() },
+    roleCatalog: { findFirst: jest.fn().mockResolvedValue(null) },
     mockInterviewTemplate: { findUnique: jest.fn() },
     candidateProjectStatusHistory: { create: jest.fn(), findMany: jest.fn() },
     interviewStatusHistory: { create: jest.fn() },
@@ -42,7 +43,8 @@ describe('MockInterviewsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    // Reset mocks between tests to avoid persistent mock implementations
+    jest.resetAllMocks();
   });
 
   it('schedules a mock interview and updates subStatus to mock_interview_scheduled', async () => {
@@ -152,6 +154,92 @@ describe('MockInterviewsService', () => {
     );
   });
 
+  it('complete persists checklist items including numeric score', async () => {
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id: 'mi-score',
+      conductedAt: null,
+      candidateProjectMapId: 'map-score',
+    });
+    // subsequent findOne after complete() will call findUnique again to fetch the enriched interview
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id: 'mi-score',
+      conductedAt: new Date(),
+      template: { id: 'tpl-score' },
+      candidateProjectMap: { id: 'map-score' },
+    });
+
+    const dto = {
+      overallRating: 5,
+      decision: 'approved',
+      checklistItems: [
+        { category: 'technical_skills', criterion: 'Test 1', passed: true, rating: 5, score: 95.5, notes: 'Nice' },
+      ],
+      remarks: 'Great',
+      strengths: 'Good',
+      areasOfImprovement: 'None',
+    } as any;
+
+    // stub $transaction and tx methods
+    const tx = {
+      mockInterview: { update: jest.fn().mockResolvedValue({ id: 'mi-score' }) },
+      mockInterviewChecklistItem: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map-score', subStatus: { id: 's-pass', name: 'mock_interview_passed' } }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist1' }) },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'h-int' }) },
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'u1', name: 'User One' }) },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    await service.complete('mi-score', dto, 'userX');
+
+    expect(tx.mockInterviewChecklistItem.createMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.arrayContaining([
+        expect.objectContaining({ score: 95.5 }),
+      ]),
+    }));
+  });
+
+  it('complete handles missing userId without calling user.findUnique', async () => {
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id: 'mi-nouser',
+      conductedAt: null,
+      candidateProjectMapId: 'map-nouser',
+    });
+    // final findOne after complete
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id: 'mi-nouser',
+      conductedAt: new Date(),
+      candidateProjectMap: { id: 'map-nouser' },
+    });
+
+    const dto = {
+      overallRating: 2,
+      decision: 'needs_training',
+      checklistItems: [],
+      remarks: 'Missing user',
+      strengths: 'N/A',
+      areasOfImprovement: 'Practice',
+    } as any;
+
+    const tx = {
+      mockInterview: { update: jest.fn().mockResolvedValue({ id: 'mi-nouser' }) },
+      mockInterviewChecklistItem: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map-nouser', subStatus: { id: 's-fail', name: 'mock_interview_failed' } }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist' }) },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist2' }) },
+      user: { findUnique: jest.fn() },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    // Call complete with undefined userId -- should not call tx.user.findUnique and should succeed
+    await service.complete('mi-nouser', dto, undefined as any);
+
+    expect(tx.user.findUnique).not.toHaveBeenCalled();
+    expect(tx.interviewStatusHistory.create).toHaveBeenCalled();
+  });
+
   it('findAll includes current map statuses (mainStatus/subStatus)', async () => {
     const query = { page: 1 } as any;
     // stub response
@@ -245,17 +333,20 @@ describe('MockInterviewsService', () => {
     const query = { page: 1, limit: 10 } as any;
 
     // Create two mock interviews: one in past, one in future
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
     const past = {
       id: 'past1',
       status: 'scheduled',
-      scheduledTime: new Date('2025-11-27T10:58:00.000Z'),
+      scheduledTime: new Date(pastDate),
       candidateProjectMap: { id: 'map-past' },
     } as any;
 
     const future = {
       id: 'future1',
       status: 'scheduled',
-      scheduledTime: new Date('2025-11-29T10:58:00.000Z'),
+      scheduledTime: new Date(futureDate),
       candidateProjectMap: { id: 'map-future' },
     } as any;
 
@@ -306,5 +397,67 @@ describe('MockInterviewsService', () => {
     expect(res.candidateProjectMap.candidate.phone).toBe('+91 9876543210');
     // Expect coordinator object is returned
     expect(res.coordinator).toEqual({ id: 'coord1', name: 'Coordinator Name' });
+  });
+
+  it('updateTemplate successfully updates the interview templateId', async () => {
+    const interviewId = 'mi-t1';
+    // findOne (initial) returns existing interview not completed
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id: interviewId,
+      conductedAt: null,
+      candidateProjectMapId: 'map1',
+      candidateProjectMap: { id: 'map1', roleNeeded: { designation: 'RN' } },
+    });
+
+    // template exists and matches role
+    (prisma.mockInterviewTemplate.findUnique as any).mockResolvedValueOnce({ id: 'tpl1', roleId: 'rc1' });
+    (prisma.roleCatalog.findFirst as any).mockResolvedValue({ id: 'rc1' });
+
+    // update should succeed
+    (prisma.mockInterview.update as any).mockResolvedValue({ id: interviewId, templateId: 'tpl1' });
+
+    // final findOne returns enriched interview including template
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id: interviewId,
+      conductedAt: null,
+      template: { id: 'tpl1' },
+      candidateProjectMap: { id: 'map1', roleNeeded: { designation: 'RN' } },
+    });
+
+    const res = await service.updateTemplate(interviewId, 'tpl1');
+
+    expect(prisma.mockInterview.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: interviewId }, data: { templateId: 'tpl1' } }));
+    expect(res).toBeDefined();
+    expect(res.template).toBeDefined();
+    expect((res as any).template.id).toBe('tpl1');
+  });
+
+  it('updateTemplate throws when interview already completed', async () => {
+    const interviewId = 'mi-completed';
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({ id: interviewId, conductedAt: new Date() });
+
+    await expect(service.updateTemplate(interviewId, 'tplX')).rejects.toThrow('Cannot change template for a completed mock interview');
+  });
+
+  it('updateTemplate throws NotFound if template does not exist', async () => {
+    const interviewId = 'mi-t2';
+    // Ensure findOne resolves for this interview (use persistent mock for this case)
+    (prisma.mockInterview.findUnique as any).mockResolvedValue({ id: interviewId, conductedAt: null, candidateProjectMap: { roleNeeded: { designation: 'RN' } } });
+    // ensure findOne later calls (if any) won't accidentally return undefined
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({ id: interviewId, conductedAt: null, candidateProjectMap: { roleNeeded: { designation: 'RN' } } });
+    (prisma.mockInterviewTemplate.findUnique as any).mockResolvedValueOnce(null);
+
+    await expect(service.updateTemplate(interviewId, 'missing-tpl')).rejects.toThrow('Template with ID "missing-tpl" not found');
+  });
+
+  it('updateTemplate throws when template role does not match candidate role', async () => {
+    const interviewId = 'mi-t3';
+    // Stub service.findOne directly so test is focused on template/role validation
+    (service as any).findOne = jest.fn().mockResolvedValueOnce({ id: interviewId, conductedAt: null, candidateProjectMap: { roleNeeded: { designation: 'RN' } } } as any);
+    (prisma.mockInterviewTemplate.findUnique as any).mockResolvedValue({ id: 'tpl2', roleId: 'rc-mismatch' });
+    // Return a role id that doesn't match template.roleId so we trigger role mismatch
+    (prisma.roleCatalog.findFirst as any).mockResolvedValue({ id: 'rc-different' });
+
+    await expect(service.updateTemplate(interviewId, 'tpl2')).rejects.toThrow('Template role does not match candidate role');
   });
 });

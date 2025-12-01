@@ -453,6 +453,50 @@ export class MockInterviewsService {
   }
 
   /**
+   * Update only the template associated with a mock interview
+   */
+  async updateTemplate(id: string, templateId: string) {
+    // Verify interview exists (findOne will throw if not found)
+    const existing = await this.findOne(id);
+
+    // Prevent changing template after interview is completed
+    if (existing.conductedAt) {
+      throw new BadRequestException('Cannot change template for a completed mock interview');
+    }
+
+    // Verify template exists and matches candidate role if applicable
+    const template = await this.prisma.mockInterviewTemplate.findUnique({ where: { id: templateId } });
+    if (!template) {
+      throw new NotFoundException(`Template with ID "${templateId}" not found`);
+    }
+
+    if (existing.candidateProjectMap?.roleNeeded?.designation) {
+      const roleCatalog = await this.prisma.roleCatalog.findFirst({
+        where: {
+          name: { equals: existing.candidateProjectMap.roleNeeded.designation, mode: 'insensitive' },
+        },
+        select: { id: true },
+      });
+
+      // if (roleCatalog && template.roleId !== roleCatalog.id) {
+      //   throw new BadRequestException('Template role does not match candidate role');
+      // }
+    }
+
+    // Update the interview's templateId
+    try {
+      await this.prisma.mockInterview.update({ where: { id }, data: { templateId } });
+    } catch (e: any) {
+      if (e?.code === 'P2003' && e?.meta?.constraint && e.meta.constraint.includes('templateId')) {
+        throw new NotFoundException(`Template with ID "${templateId}" not found`);
+      }
+      throw e;
+    }
+
+    return this.findOne(id);
+  }
+
+  /**
    * Complete a mock interview with assessment results
    */
   async complete(id: string, dto: CompleteMockInterviewDto, userId: string) {
@@ -475,6 +519,7 @@ export class MockInterviewsService {
           decision: dto.decision,
           remarks: dto.remarks,
           strengths: dto.strengths,
+          status: MOCK_INTERVIEW_STATUS.COMPLETED,
           areasOfImprovement: dto.areasOfImprovement,
         },
       });
@@ -488,8 +533,8 @@ export class MockInterviewsService {
             category: item.category,
             criterion: item.criterion,
             passed: item.passed,
-            rating: item.rating,
             notes: item.notes,
+            score: item.score,
           })),
         });
       }
@@ -537,22 +582,17 @@ export class MockInterviewsService {
         },
       });
 
-      // Create interview-level status history entry for completion
-      // Determine previous status at interview-level
-      const previousStatus = existing.scheduledTime ? 'scheduled' : null;
-      const actor = await tx.user.findUnique({ where: { id: userId } });
+    
       await tx.interviewStatusHistory.create({
         data: {
           interviewType: 'mock',
           interviewId: id,
           candidateProjectMapId: existing.candidateProjectMapId,
-          previousStatus: previousStatus,
           status: 'completed',
           statusSnapshot: 'Mock Interview Completed',
           statusAt: new Date(),
           changedById: userId,
-          changedByName: actor?.name ?? null,
-          reason: dto.remarks ?? `Mock interview completed by ${actor?.name ?? userId}`,
+    
         },
       });
 

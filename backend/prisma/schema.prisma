@@ -511,6 +511,7 @@ model MockInterviewChecklistItem {
   criterion String // What was evaluated
   passed    Boolean @default(false)
   rating    Int? // 1-5 scale
+  score     Float? // numeric score (e.g., percentage or points)
   notes     String?
 
   createdAt DateTime @default(now())

@@ -46,16 +46,9 @@ export class MockInterviewTemplatesService {
       );
     }
 
-    // Validate no duplicate categories in items
-    if (dto.items && dto.items.length > 0) {
-      const categories = dto.items.map((item) => item.category);
-      const uniqueCategories = new Set(categories);
-      if (categories.length !== uniqueCategories.size) {
-        throw new BadRequestException(
-          'Template cannot have duplicate categories. Each category can only appear once.',
-        );
-      }
-    }
+    // NOTE: we allow multiple items to share the same category in a single
+    // create request. The database and per-item endpoints enforce uniqueness
+    // only for (templateId, category, criterion) where appropriate.
 
     // Create template with items in transaction
     return this.prisma.$transaction(async (tx) => {

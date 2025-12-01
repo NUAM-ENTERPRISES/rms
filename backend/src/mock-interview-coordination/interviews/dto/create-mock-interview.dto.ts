@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
+  IsNumber,
+  IsBoolean,
   IsInt,
   IsEnum,
   IsOptional,
@@ -43,20 +45,8 @@ export class ChecklistItemDto {
     description: 'Whether the criterion passed',
     example: true,
   })
+  @IsBoolean()
   passed: boolean;
-
-  @ApiProperty({
-    description: 'Rating (1-5 scale)',
-    example: 4,
-    required: false,
-    minimum: 1,
-    maximum: 5,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  rating?: number;
 
   @ApiProperty({
     description: 'Notes for this criterion',
@@ -65,6 +55,13 @@ export class ChecklistItemDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({
+    description: 'Numeric score for this checklist item (e.g. percentage or points)',
+    example: 86.5,
+  })
+  @IsNumber()
+  score: number;
 }
 
 export class CreateMockInterviewDto {

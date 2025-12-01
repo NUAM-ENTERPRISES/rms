@@ -18,11 +18,11 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
     // Get all mock interviews
     getMockInterviews: builder.query<
       ApiResponse<MockInterview[]>,
-      QueryMockInterviewsRequest | void
+      QueryMockInterviewsRequest | undefined
     >({
-      query: (params) => ({
+      query: (params: QueryMockInterviewsRequest | undefined) => ({
         url: "/mock-interviews",
-        params,
+        params: params as Record<string, any> | undefined,
       }),
       providesTags: (result) =>
         result?.data && Array.isArray(result.data)
@@ -39,7 +39,7 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
     // Get a single mock interview by ID
     getMockInterview: builder.query<ApiResponse<MockInterview>, string>({
       query: (id) => `/mock-interviews/${id}`,
-      providesTags: (result, error, id) => [{ type: "MockInterview", id }],
+      providesTags: (_result, _error, id) => [{ type: "MockInterview", id }],
     }),
 
     // Create a new mock interview (schedule)
@@ -68,7 +68,23 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "MockInterview", id },
+        { type: "MockInterview", id: "LIST" },
+      ],
+    }),
+
+    // Assign a template to an interview
+    assignTemplateToInterview: builder.mutation<
+      ApiResponse<MockInterview>,
+      { id: string; templateId: string }
+    >({
+      query: ({ id, templateId }) => ({
+        url: `/mock-interviews/${id}/template`,
+        method: "PATCH",
+        body: { templateId },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
         { type: "MockInterview", id },
         { type: "MockInterview", id: "LIST" },
       ],
@@ -84,7 +100,7 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: "MockInterview", id },
         { type: "MockInterview", id: "LIST" },
         { type: "Candidate", id: "LIST" },
@@ -101,7 +117,7 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
         url: `/mock-interviews/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: (result, error, id) => [
+      invalidatesTags: (_result, _error, id) => [
         { type: "MockInterview", id },
         { type: "MockInterview", id: "LIST" },
       ],
@@ -110,11 +126,11 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
     // Get assigned candidate-projects for mock interviews (paginated, latest first)
     getAssignedMockInterviews: builder.query<
       PaginatedResponse<AssignedMockInterviewItem>,
-      QueryAssignedMockInterviewsRequest | void
+      QueryAssignedMockInterviewsRequest | undefined
     >({
-      query: (params) => ({
+      query: (params: QueryAssignedMockInterviewsRequest | undefined) => ({
         url: "/mock-interviews/assigned-mock-interviews",
-        params,
+        params: params as Record<string, any> | undefined,
       }),
       providesTags: (result) =>
         result?.data && Array.isArray(result.data.items)
@@ -130,9 +146,9 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
     // Get upcoming mock interviews (paginated) - new endpoint
     getUpcomingMockInterviews: builder.query<
       PaginatedResponse<MockInterview>,
-      Record<string, any> | void
+      Record<string, any> | undefined
     >({
-      query: (params) => ({
+      query: (params: Record<string, any> | undefined) => ({
         url: "/mock-interviews/upcoming",
         // Provide safe defaults so callers that omit page/limit do not cause
         // backend validation errors (page must be >= 1, limit must be >= 1).
@@ -159,6 +175,7 @@ export const {
   useLazyGetMockInterviewQuery,
   useCreateMockInterviewMutation,
   useUpdateMockInterviewMutation,
+  useAssignTemplateToInterviewMutation,
   useCompleteMockInterviewMutation,
   useDeleteMockInterviewMutation,
   useGetAssignedMockInterviewsQuery,

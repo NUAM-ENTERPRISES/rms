@@ -39,7 +39,7 @@ export class MockInterviewTemplatesController {
   @ApiOperation({
     summary: 'Create a new mock interview template',
     description:
-      'Create a new checklist template for a specific role. Interview Coordinators only.',
+      'Create a new checklist template for a specific role. Interview Coordinators only. The request may include an items array — multiple items in the same category are allowed.',
   })
   @ApiResponse({
     status: 201,
@@ -51,7 +51,7 @@ export class MockInterviewTemplatesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Template with same criterion already exists for this role',
+    description: 'Template with the same name already exists for this role',
   })
   create(@Body() createDto: CreateMockInterviewTemplateDto) {
     return this.templatesService.create(createDto);

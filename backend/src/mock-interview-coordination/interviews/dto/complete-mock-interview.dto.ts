@@ -15,16 +15,15 @@ import { ChecklistItemDto } from './create-mock-interview.dto';
 
 export class CompleteMockInterviewDto {
   @ApiProperty({
-    description: 'Overall rating (1-5 scale)',
-    example: 4,
-    minimum: 1,
-    maximum: 5,
+    description: 'Overall score (percentage out of 100)',
+    example: 86,
+    minimum: 0,
+    maximum: 100,
   })
   @IsInt()
-  @Min(1)
-  @Max(5)
+  @Min(0)
+  @Max(100)
   overallRating: number;
-
   @ApiProperty({
     description: 'Interview decision',
     enum: MOCK_INTERVIEW_DECISION,

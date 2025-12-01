@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { useAppSelector } from "@/app/hooks";
 import {
   ClipboardCheck,
   Search,
@@ -14,6 +16,7 @@ import {
   Users,
   ChevronRight,
   X,
+  UserPlus,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,11 +33,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetMockInterviewsQuery } from "../data";
+import { useCreateTrainingAssignmentMutation } from "../../training/data";
 import { MOCK_INTERVIEW_MODE, MOCK_INTERVIEW_DECISION } from "../../types";
 import { cn } from "@/lib/utils";
+import { AssignToTrainerDialog } from "../../training/components/AssignToTrainerDialog";
 
 export default function MockInterviewsListPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const currentUser = useAppSelector((state) => state.auth.user);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -46,9 +53,33 @@ export default function MockInterviewsListPage() {
   const [selectedInterviewId, setSelectedInterviewId] = useState<string | null>(
     null
   );
+  const [assignToTrainerOpen, setAssignToTrainerOpen] = useState(false);
+  const [selectedInterviewForTraining, setSelectedInterviewForTraining] = useState<any>(null);
 
-  const { data, isLoading, error } = useGetMockInterviewsQuery();
-  const interviews = data?.data || [];
+  // Build query params from URL (coordinatorId, candidateProjectMapId, decision, etc.)
+  const rawParams = {
+    coordinatorId: searchParams.get("coordinatorId") || undefined,
+    candidateProjectMapId: searchParams.get("candidateProjectMapId") || undefined,
+    decision: searchParams.get("decision") || undefined,
+    mode: searchParams.get("mode") || undefined,
+    scheduledDate: searchParams.get("scheduledDate") || undefined,
+    conductedDate: searchParams.get("conductedDate") || undefined,
+  };
+  // Remove undefined fields so we don't send empty keys
+  const apiParams = Object.fromEntries(
+    Object.entries(rawParams).filter(([, v]) => v != null)
+  );
+
+  const { data, isLoading, error } = useGetMockInterviewsQuery(
+    Object.keys(apiParams).length ? (apiParams as any) : undefined
+  );
+  const [createTrainingAssignment, { isLoading: isCreatingTraining }] = useCreateTrainingAssignmentMutation();
+  // Backend returns array directly or wrapped in { data: [...] }
+  const interviews = Array.isArray(data?.data) 
+    ? data.data 
+    : Array.isArray(data) 
+    ? data 
+    : [];
 
   // Filter interviews
   const { upcomingInterviews, completedInterviews, allInterviews } =
@@ -124,14 +155,14 @@ export default function MockInterviewsListPage() {
   }, [displayedInterviews, selectedInterviewId]);
 
   const stats = useMemo(() => {
-    const upcoming = interviews.filter(
-      (i) => i.scheduledTime && !i.conductedAt
+    const needsTraining = interviews.filter(
+      (i) => i.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING
     ).length;
     const completed = interviews.filter((i) => i.conductedAt).length;
     const approved = interviews.filter(
       (i) => i.decision === MOCK_INTERVIEW_DECISION.APPROVED
     ).length;
-    return { upcoming, completed, approved };
+    return { needsTraining, completed, approved };
   }, [interviews]);
 
   const getModeIcon = (mode: string) => {
@@ -174,12 +205,7 @@ export default function MockInterviewsListPage() {
     }
   };
 
-  const modeOptions = [
-    { value: "all", label: "All Modes" },
-    { value: MOCK_INTERVIEW_MODE.VIDEO, label: "Video" },
-    { value: MOCK_INTERVIEW_MODE.PHONE, label: "Phone" },
-    { value: MOCK_INTERVIEW_MODE.IN_PERSON, label: "In Person" },
-  ];
+  // Mode filter options (UI for mode filter not currently rendered)
 
   const decisionOptions = [
     { value: "all", label: "All Decisions" },
@@ -188,11 +214,39 @@ export default function MockInterviewsListPage() {
     { value: MOCK_INTERVIEW_DECISION.REJECTED, label: "Rejected" },
   ];
 
-  const statusOptions = [
-    { value: "all", label: "All Interviews" },
-    { value: "upcoming", label: "Upcoming" },
-    { value: "completed", label: "Completed" },
-  ];
+  // Status filter options (UI for status filter not currently rendered)
+
+  const handleAssignToTrainer = (interview: any) => {
+    setSelectedInterviewForTraining(interview);
+    setAssignToTrainerOpen(true);
+  };
+  const handleSubmitTraining = async (formData: any) => {
+    if (!selectedInterviewForTraining) return;
+
+    if (!currentUser?.id) {
+      toast.error("User not authenticated");
+      return;
+    }
+
+    try {
+      await createTrainingAssignment({
+        candidateProjectMapId: selectedInterviewForTraining.candidateProjectMapId,
+        mockInterviewId: selectedInterviewForTraining.id,
+        assignedBy: currentUser.id,
+        trainingType: formData.trainingType,
+        focusAreas: formData.focusAreas,
+        priority: formData.priority,
+        targetCompletionDate: formData.targetCompletionDate || undefined,
+        notes: formData.notes,
+      }).unwrap();
+      
+      toast.success("Training assigned successfully!");
+      setAssignToTrainerOpen(false);
+      setSelectedInterviewForTraining(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to assign training");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -238,10 +292,10 @@ export default function MockInterviewsListPage() {
             {/* Stats */}
             <div className="flex items-center gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {stats.upcoming}
+                <div className="text-2xl font-bold text-orange-600">
+                  {stats.needsTraining}
                 </div>
-                <div className="text-xs text-muted-foreground">Upcoming</div>
+                <div className="text-xs text-muted-foreground">Needs Training</div>
               </div>
               <Separator orientation="vertical" className="h-10" />
               <div className="text-center">
@@ -271,42 +325,6 @@ export default function MockInterviewsListPage() {
                 className="pl-10"
               />
             </div>
-
-            <Select
-              value={filters.status}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, status: value }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filters.mode}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, mode: value }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {modeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
             <Select
               value={filters.decision}
@@ -347,6 +365,7 @@ export default function MockInterviewsListPage() {
               </Button>
             )}
           </div>
+          
         </div>
       </div>
 
@@ -404,12 +423,29 @@ export default function MockInterviewsListPage() {
                             {role?.designation || "Unknown Role"}
                           </p>
                         </div>
-                        <ChevronRight
-                          className={cn(
-                            "h-4 w-4 flex-shrink-0 transition-transform",
-                            isSelected && "text-primary"
+                        <div className="flex items-center gap-1">
+                          {(interview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING || 
+                            interview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAssignToTrainer(interview);
+                              }}
+                              title="Assign to Trainer"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                            </Button>
                           )}
-                        />
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 flex-shrink-0 transition-transform",
+                              isSelected && "text-primary"
+                            )}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2 mb-2">
@@ -470,17 +506,29 @@ export default function MockInterviewsListPage() {
                     </p>
                   </div>
 
-                  {!selectedInterview.conductedAt && (
-                    <Button
-                      onClick={() =>
-                        navigate(
-                          `/mock-interviews/${selectedInterview.id}/conduct`
-                        )
-                      }
-                    >
-                      Conduct Interview
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {!selectedInterview.conductedAt && (
+                      <Button
+                        onClick={() =>
+                          navigate(
+                            `/mock-interviews/${selectedInterview.id}/conduct`
+                          )
+                        }
+                      >
+                        Conduct Interview
+                      </Button>
+                    )}
+                    {(selectedInterview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING || 
+                      selectedInterview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
+                      <Button
+                        onClick={() => handleAssignToTrainer(selectedInterview)}
+                        variant="outline"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Assign to Trainer
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -608,13 +656,13 @@ export default function MockInterviewsListPage() {
                               {getDecisionBadge(selectedInterview.decision)}
                             </div>
                           </div>
-                          {selectedInterview.overallScore != null && (
+                          {selectedInterview.overallRating != null && (
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">
                                 Overall Score
                               </p>
                               <p className="font-medium text-lg">
-                                {selectedInterview.overallScore}%
+                                {selectedInterview.overallRating}%
                               </p>
                             </div>
                           )}
@@ -630,6 +678,53 @@ export default function MockInterviewsListPage() {
                         <p className="text-sm whitespace-pre-wrap">
                           {selectedInterview.notes}
                         </p>
+                      </div>
+                    )}
+
+                    {/* Checklist Items */}
+                    {Array.isArray(selectedInterview.checklistItems) && selectedInterview.checklistItems.length > 0 && (
+                      <div className="mt-6 pt-6 border-t">
+                        <h3 className="font-semibold mb-3">Checklist Evaluation</h3>
+                        {/* Group by category */}
+                        {(() => {
+                          type ChecklistItem = NonNullable<typeof selectedInterview.checklistItems>[number];
+                          const grouped = selectedInterview.checklistItems.reduce((acc: Record<string, ChecklistItem[]>, item: ChecklistItem) => {
+                            const key = item.category || "misc";
+                            (acc[key] ||= []).push(item);
+                            return acc;
+                          }, {});
+                          
+                          return (Object.entries(grouped) as [string, ChecklistItem[]][])
+                            .map(([category, items]) => (
+                              <div key={category} className="mb-4">
+                                <div className="text-sm font-medium text-primary mb-2 capitalize">{category.replace(/_/g, " ")}</div>
+                                <div className="space-y-2">
+                                  {items.map((ci: ChecklistItem) => (
+                                  <div key={ci.id} className="flex items-start justify-between rounded border p-3 bg-card">
+                                    <div className="pr-3">
+                                      <div className="text-sm font-medium">{ci.criterion}</div>
+                                      {ci.notes ? (
+                                        <div className="text-xs text-muted-foreground mt-1">{ci.notes}</div>
+                                      ) : null}
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm">
+                                      <div className="text-right">
+                                        <div className="font-semibold">{ci.score != null ? `${ci.score}%` : "—"}</div>
+                                        <div className="text-xs text-muted-foreground">Score</div>
+                                      </div>
+                          
+                                      <div>
+                                        <Badge variant={ci.passed ? "secondary" : "destructive"} className="text-xs">
+                                          {ci.passed ? "Passed" : "Failed"}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                </div>
+                              </div>
+                            ));
+                        })()}
                       </div>
                     )}
                   </CardContent>
@@ -649,6 +744,20 @@ export default function MockInterviewsListPage() {
           )}
         </div>
       </div>
+
+      {/* Assign to Trainer Dialog */}
+      <AssignToTrainerDialog
+        open={assignToTrainerOpen}
+        onOpenChange={setAssignToTrainerOpen}
+        onSubmit={handleSubmitTraining}
+        isLoading={isCreatingTraining}
+        candidateName={
+          selectedInterviewForTraining?.candidateProjectMap?.candidate
+            ? `${selectedInterviewForTraining.candidateProjectMap.candidate.firstName} ${selectedInterviewForTraining.candidateProjectMap.candidate.lastName}`
+            : undefined
+        }
+        mockInterviewId={selectedInterviewForTraining?.id}
+      />
     </div>
   );
 }

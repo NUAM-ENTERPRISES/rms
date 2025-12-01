@@ -42,6 +42,17 @@ export class TrainingService {
       );
     }
 
+    // Verify assignedBy user exists
+    const assignedByUser = await this.prisma.user.findUnique({
+      where: { id: dto.assignedBy },
+    });
+
+    if (!assignedByUser) {
+      throw new NotFoundException(
+        `User with ID "${dto.assignedBy}" not found`,
+      );
+    }
+
     // If mock interview ID provided, verify it exists
     if (dto.mockInterviewId) {
       const mockInterview = await this.prisma.mockInterview.findUnique({
@@ -229,6 +240,17 @@ export class TrainingService {
       );
     }
 
+    // Verify user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `User with ID "${userId}" not found`,
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.trainingAssignment.update({
         where: { id },
@@ -272,6 +294,17 @@ export class TrainingService {
 
     if (assignment.status === TRAINING_STATUS.COMPLETED) {
       throw new BadRequestException('Training is already completed');
+    }
+
+    // Verify user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `User with ID "${userId}" not found`,
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -321,6 +354,17 @@ export class TrainingService {
     if (assignment.status !== TRAINING_STATUS.COMPLETED) {
       throw new BadRequestException(
         'Training must be completed before marking ready for reassessment',
+      );
+    }
+
+    // Verify user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `User with ID "${userId}" not found`,
       );
     }
 

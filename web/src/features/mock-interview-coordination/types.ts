@@ -133,6 +133,7 @@ export interface MockInterviewChecklistItem {
   criterion: string;
   passed: boolean;
   rating?: number;
+  score?: number;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -163,6 +164,7 @@ export interface ChecklistItemInput {
   templateItemId?: string; // Link to template item if from template
   passed: boolean;
   rating?: number;
+  score?: number;
   notes?: string;
 }
 
