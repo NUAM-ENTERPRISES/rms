@@ -18,7 +18,13 @@ import {
   X,
   UserPlus,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,12 +60,14 @@ export default function MockInterviewsListPage() {
     null
   );
   const [assignToTrainerOpen, setAssignToTrainerOpen] = useState(false);
-  const [selectedInterviewForTraining, setSelectedInterviewForTraining] = useState<any>(null);
+  const [selectedInterviewForTraining, setSelectedInterviewForTraining] =
+    useState<any>(null);
 
   // Build query params from URL (coordinatorId, candidateProjectMapId, decision, etc.)
   const rawParams = {
     coordinatorId: searchParams.get("coordinatorId") || undefined,
-    candidateProjectMapId: searchParams.get("candidateProjectMapId") || undefined,
+    candidateProjectMapId:
+      searchParams.get("candidateProjectMapId") || undefined,
     decision: searchParams.get("decision") || undefined,
     mode: searchParams.get("mode") || undefined,
     scheduledDate: searchParams.get("scheduledDate") || undefined,
@@ -73,12 +81,13 @@ export default function MockInterviewsListPage() {
   const { data, isLoading, error } = useGetMockInterviewsQuery(
     Object.keys(apiParams).length ? (apiParams as any) : undefined
   );
-  const [createTrainingAssignment, { isLoading: isCreatingTraining }] = useCreateTrainingAssignmentMutation();
+  const [createTrainingAssignment, { isLoading: isCreatingTraining }] =
+    useCreateTrainingAssignmentMutation();
   // Backend returns array directly or wrapped in { data: [...] }
-  const interviews = Array.isArray(data?.data) 
-    ? data.data 
-    : Array.isArray(data) 
-    ? data 
+  const interviews = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data)
+    ? data
     : [];
 
   // Filter interviews
@@ -230,7 +239,8 @@ export default function MockInterviewsListPage() {
 
     try {
       await createTrainingAssignment({
-        candidateProjectMapId: selectedInterviewForTraining.candidateProjectMapId,
+        candidateProjectMapId:
+          selectedInterviewForTraining.candidateProjectMapId,
         mockInterviewId: selectedInterviewForTraining.id,
         assignedBy: currentUser.id,
         trainingType: formData.trainingType,
@@ -239,7 +249,7 @@ export default function MockInterviewsListPage() {
         targetCompletionDate: formData.targetCompletionDate || undefined,
         notes: formData.notes,
       }).unwrap();
-      
+
       toast.success("Training assigned successfully!");
       setAssignToTrainerOpen(false);
       setSelectedInterviewForTraining(null);
@@ -269,234 +279,272 @@ export default function MockInterviewsListPage() {
     );
   }
 
+  const handleSearch = (value: string) => {
+    setFilters((prev) => ({ ...prev, search: value }));
+  };
+
   return (
     <div className="h-screen flex flex-col">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <ClipboardCheck className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  Mock Interviews
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Conduct and manage candidate mock interviews
-                </p>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {stats.needsTraining}
+      {/* Search & Filters Section */}
+      <div className="w-full mx-auto px-4 pt-2 pb-4">
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardContent>
+            <div className="space-y-6">
+              {/* Premium Search Bar with Enhanced Styling */}
+              <div className="relative group">
+                <div
+                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
+                    filters.search ? "text-blue-600" : "text-gray-400"
+                  }`}
+                >
+                  <Search
+                    className={`h-5 w-5 transition-transform duration-300 ${
+                      filters.search ? "scale-110" : "scale-100"
+                    }`}
+                  />
                 </div>
-                <div className="text-xs text-muted-foreground">Needs Training</div>
+                <Input
+                  placeholder="Search candidates, projects, roles..."
+                  value={filters.search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+                />
+                <div
+                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
+                    filters.search ? "ring-2 ring-blue-500/20" : ""
+                  }`}
+                />
               </div>
-              <Separator orientation="vertical" className="h-10" />
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {stats.approved}
+
+              {/* Filters Row */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Decision Filter */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
+                      Decision
+                    </span>
+                  </div>
+                  <Select
+                    value={filters.decision}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({ ...prev, decision: value }))
+                    }
+                  >
+                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
+                      <SelectValue placeholder="All Decisions" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+                      {decisionOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="rounded-lg hover:bg-blue-50"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="text-xs text-muted-foreground">Approved</div>
-              </div>
-              <Separator orientation="vertical" className="h-10" />
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.completed}</div>
-                <div className="text-xs text-muted-foreground">Completed</div>
+
+                {/* Clear Filters Button */}
+                {(filters.search ||
+                  filters.mode !== "all" ||
+                  filters.decision !== "all" ||
+                  filters.status !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setFilters({
+                        search: "",
+                        mode: "all",
+                        decision: "all",
+                        status: "all",
+                      })
+                    }
+                    className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear
+                  </Button>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* Filters */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search candidates, projects, roles..."
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, search: e.target.value }))
-                }
-                className="pl-10"
-              />
-            </div>
-
-            <Select
-              value={filters.decision}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, decision: value }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {decisionOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {(filters.search ||
-              filters.mode !== "all" ||
-              filters.decision !== "all" ||
-              filters.status !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setFilters({
-                    search: "",
-                    mode: "all",
-                    decision: "all",
-                    status: "all",
-                  })
-                }
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear
-              </Button>
-            )}
-          </div>
-          
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Master-Detail Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Interview List */}
-        <div className="w-96 border-r bg-muted/20">
-          <ScrollArea className="h-full">
-            {displayedInterviews.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm font-medium mb-1">No interviews found</p>
-                <p className="text-xs">
-                  {filters.search ||
-                  filters.mode !== "all" ||
-                  filters.decision !== "all" ||
-                  filters.status !== "all"
-                    ? "Try adjusting your filters"
-                    : "Interviews will appear here once scheduled"}
-                </p>
+        <Card className="w-96 border-r border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-none">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-slate-800">
+                  Mock Interviews
+                </CardTitle>
+                <CardDescription>
+                  {displayedInterviews.length} interview
+                  {displayedInterviews.length !== 1 ? "s" : ""} found
+                </CardDescription>
               </div>
-            ) : (
-              <div className="p-2 space-y-1">
-                {displayedInterviews.map((interview) => {
-                  const candidate = interview.candidateProjectMap?.candidate;
-                  const role = interview.candidateProjectMap?.roleNeeded;
-                  const ModeIcon = getModeIcon(interview.mode);
-                  const isSelected =
-                    interview.id ===
-                    (selectedInterview?.id || displayedInterviews[0]?.id);
-                  const isCompleted = !!interview.conductedAt;
+              {/* Compact Stats */}
+              <div className="flex items-center gap-2">
+                <div className="text-center">
+                  <div className="text-base font-bold text-orange-600">
+                    {stats.needsTraining}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Training</div>
+                </div>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="text-center">
+                  <div className="text-base font-bold text-green-600">
+                    {stats.approved}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Approved</div>
+                </div>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="text-center">
+                  <div className="text-base font-bold">{stats.completed}</div>
+                  <div className="text-xs text-muted-foreground">Done</div>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-full">
+              {displayedInterviews.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm font-medium mb-1">
+                    No interviews found
+                  </p>
+                  <p className="text-xs">
+                    {filters.search ||
+                    filters.mode !== "all" ||
+                    filters.decision !== "all" ||
+                    filters.status !== "all"
+                      ? "Try adjusting your filters"
+                      : "Interviews will appear here once scheduled"}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {displayedInterviews.map((interview) => {
+                    const candidate = interview.candidateProjectMap?.candidate;
+                    const role = interview.candidateProjectMap?.roleNeeded;
+                    const ModeIcon = getModeIcon(interview.mode);
+                    const isSelected =
+                      interview.id ===
+                      (selectedInterview?.id || displayedInterviews[0]?.id);
+                    const isCompleted = !!interview.conductedAt;
 
-                  return (
-                    <button
-                      key={interview.id}
-                      onClick={() => setSelectedInterviewId(interview.id)}
-                      className={cn(
-                        "w-full text-left p-3 rounded-lg border transition-all",
-                        "hover:bg-accent/50",
-                        isSelected
-                          ? "bg-accent border-primary shadow-sm"
-                          : "bg-card border-transparent"
-                      )}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm truncate">
-                              {candidate
-                                ? `${candidate.firstName} ${candidate.lastName}`
-                                : "Unknown Candidate"}
+                    return (
+                      <button
+                        key={interview.id}
+                        onClick={() => setSelectedInterviewId(interview.id)}
+                        className={cn(
+                          "w-full text-left p-2.5 rounded-lg border transition-all",
+                          "hover:bg-accent/50",
+                          isSelected
+                            ? "bg-accent border-primary shadow-sm"
+                            : "bg-card border-transparent"
+                        )}
+                      >
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm truncate">
+                                {candidate
+                                  ? `${candidate.firstName} ${candidate.lastName}`
+                                  : "Unknown Candidate"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {role?.designation || "Unknown Role"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {(interview.decision ===
+                              MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                              interview.decision ===
+                                MOCK_INTERVIEW_DECISION.REJECTED) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAssignToTrainer(interview);
+                                }}
+                                title="Assign to Trainer"
+                              >
+                                <UserPlus className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            <ChevronRight
+                              className={cn(
+                                "h-4 w-4 flex-shrink-0 transition-transform",
+                                isSelected && "text-primary"
+                              )}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs",
+                              isCompleted
+                                ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300"
+                                : "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                            )}
+                          >
+                            <ModeIcon className="h-3 w-3" />
+                            <span className="capitalize">
+                              {interview.mode.replace("_", " ")}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {role?.designation || "Unknown Role"}
-                          </p>
+                          {interview.decision &&
+                            getDecisionBadge(interview.decision)}
                         </div>
-                        <div className="flex items-center gap-1">
-                          {(interview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING || 
-                            interview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAssignToTrainer(interview);
-                              }}
-                              title="Assign to Trainer"
-                            >
-                              <UserPlus className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <ChevronRight
-                            className={cn(
-                              "h-4 w-4 flex-shrink-0 transition-transform",
-                              isSelected && "text-primary"
-                            )}
-                          />
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 mb-2">
-                        <div
-                          className={cn(
-                            "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs",
-                            isCompleted
-                              ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300"
-                              : "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                          )}
-                        >
-                          <ModeIcon className="h-3 w-3" />
-                          <span className="capitalize">
-                            {interview.mode.replace("_", " ")}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {interview.scheduledTime
+                              ? format(
+                                  new Date(interview.scheduledTime),
+                                  "MMM d, yyyy"
+                                )
+                              : "Not scheduled"}
                           </span>
                         </div>
-                        {interview.decision &&
-                          getDecisionBadge(interview.decision)}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          {interview.scheduledTime
-                            ? format(
-                                new Date(interview.scheduledTime),
-                                "MMM d, yyyy"
-                              )
-                            : "Not scheduled"}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
 
         {/* Right Panel - Interview Details */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden bg-muted/20">
           {selectedInterview ? (
             <ScrollArea className="h-full">
-              <div className="p-6 max-w-4xl mx-auto space-y-6">
+              <div className="p-4 max-w-4xl mx-auto space-y-4">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <h2 className="text-2xl font-semibold">
+                    <h2 className="text-xl font-semibold">
                       Mock Interview Details
                     </h2>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {selectedInterview.scheduledTime
                         ? `Scheduled for ${format(
                             new Date(selectedInterview.scheduledTime),
@@ -509,6 +557,7 @@ export default function MockInterviewsListPage() {
                   <div className="flex items-center gap-2">
                     {!selectedInterview.conductedAt && (
                       <Button
+                        size="sm"
                         onClick={() =>
                           navigate(
                             `/mock-interviews/${selectedInterview.id}/conduct`
@@ -518,9 +567,12 @@ export default function MockInterviewsListPage() {
                         Conduct Interview
                       </Button>
                     )}
-                    {(selectedInterview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING || 
-                      selectedInterview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
+                    {(selectedInterview.decision ===
+                      MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                      selectedInterview.decision ===
+                        MOCK_INTERVIEW_DECISION.REJECTED) && (
                       <Button
+                        size="sm"
                         onClick={() => handleAssignToTrainer(selectedInterview)}
                         variant="outline"
                       >
@@ -531,15 +583,15 @@ export default function MockInterviewsListPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Candidate Info */}
                   <Card>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2">
-                        <User className="h-5 w-5 text-primary" />
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                        <User className="h-4 w-4 text-primary" />
                         Candidate Information
                       </h3>
-                      <div className="space-y-3 text-sm">
+                      <div className="space-y-2.5 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">
                             Name
@@ -589,12 +641,12 @@ export default function MockInterviewsListPage() {
 
                   {/* Project & Role */}
                   <Card>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2">
-                        <Briefcase className="h-5 w-5 text-primary" />
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                        <Briefcase className="h-4 w-4 text-primary" />
                         Project & Role
                       </h3>
-                      <div className="space-y-3 text-sm">
+                      <div className="space-y-2.5 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">
                             Project
@@ -624,9 +676,11 @@ export default function MockInterviewsListPage() {
 
                 {/* Interview Details */}
                 <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold mb-4">Interview Details</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3 text-sm">
+                      Interview Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">
                           Mode
@@ -671,7 +725,7 @@ export default function MockInterviewsListPage() {
                     </div>
 
                     {selectedInterview.notes && (
-                      <div className="mt-4 pt-4 border-t">
+                      <div className="mt-3 pt-3 border-t">
                         <p className="text-xs text-muted-foreground mb-2">
                           Notes
                         </p>
@@ -682,51 +736,89 @@ export default function MockInterviewsListPage() {
                     )}
 
                     {/* Checklist Items */}
-                    {Array.isArray(selectedInterview.checklistItems) && selectedInterview.checklistItems.length > 0 && (
-                      <div className="mt-6 pt-6 border-t">
-                        <h3 className="font-semibold mb-3">Checklist Evaluation</h3>
-                        {/* Group by category */}
-                        {(() => {
-                          type ChecklistItem = NonNullable<typeof selectedInterview.checklistItems>[number];
-                          const grouped = selectedInterview.checklistItems.reduce((acc: Record<string, ChecklistItem[]>, item: ChecklistItem) => {
-                            const key = item.category || "misc";
-                            (acc[key] ||= []).push(item);
-                            return acc;
-                          }, {});
-                          
-                          return (Object.entries(grouped) as [string, ChecklistItem[]][])
-                            .map(([category, items]) => (
-                              <div key={category} className="mb-4">
-                                <div className="text-sm font-medium text-primary mb-2 capitalize">{category.replace(/_/g, " ")}</div>
-                                <div className="space-y-2">
+                    {Array.isArray(selectedInterview.checklistItems) &&
+                      selectedInterview.checklistItems.length > 0 && (
+                        <div className="mt-4 pt-4 border-t">
+                          <h3 className="font-semibold mb-2 text-sm">
+                            Checklist Evaluation
+                          </h3>
+                          {/* Group by category */}
+                          {(() => {
+                            type ChecklistItem = NonNullable<
+                              typeof selectedInterview.checklistItems
+                            >[number];
+                            const grouped =
+                              selectedInterview.checklistItems.reduce(
+                                (
+                                  acc: Record<string, ChecklistItem[]>,
+                                  item: ChecklistItem
+                                ) => {
+                                  const key = item.category || "misc";
+                                  (acc[key] ||= []).push(item);
+                                  return acc;
+                                },
+                                {}
+                              );
+
+                            return (
+                              Object.entries(grouped) as [
+                                string,
+                                ChecklistItem[]
+                              ][]
+                            ).map(([category, items]) => (
+                              <div key={category} className="mb-3">
+                                <div className="text-xs font-medium text-primary mb-2 capitalize">
+                                  {category.replace(/_/g, " ")}
+                                </div>
+                                <div className="space-y-1.5">
                                   {items.map((ci: ChecklistItem) => (
-                                  <div key={ci.id} className="flex items-start justify-between rounded border p-3 bg-card">
-                                    <div className="pr-3">
-                                      <div className="text-sm font-medium">{ci.criterion}</div>
-                                      {ci.notes ? (
-                                        <div className="text-xs text-muted-foreground mt-1">{ci.notes}</div>
-                                      ) : null}
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm">
-                                      <div className="text-right">
-                                        <div className="font-semibold">{ci.score != null ? `${ci.score}%` : "—"}</div>
-                                        <div className="text-xs text-muted-foreground">Score</div>
+                                    <div
+                                      key={ci.id}
+                                      className="flex items-start justify-between rounded border p-2.5 bg-card"
+                                    >
+                                      <div className="pr-2 flex-1">
+                                        <div className="text-xs font-medium">
+                                          {ci.criterion}
+                                        </div>
+                                        {ci.notes ? (
+                                          <div className="text-xs text-muted-foreground mt-1">
+                                            {ci.notes}
+                                          </div>
+                                        ) : null}
                                       </div>
-                          
-                                      <div>
-                                        <Badge variant={ci.passed ? "secondary" : "destructive"} className="text-xs">
-                                          {ci.passed ? "Passed" : "Failed"}
-                                        </Badge>
+                                      <div className="flex items-center gap-3 text-xs">
+                                        <div className="text-right">
+                                          <div className="font-semibold">
+                                            {ci.score != null
+                                              ? `${ci.score}%`
+                                              : "—"}
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            Score
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <Badge
+                                            variant={
+                                              ci.passed
+                                                ? "secondary"
+                                                : "destructive"
+                                            }
+                                            className="text-xs"
+                                          >
+                                            {ci.passed ? "Passed" : "Failed"}
+                                          </Badge>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  ))}
                                 </div>
                               </div>
                             ));
-                        })()}
-                      </div>
-                    )}
+                          })()}
+                        </div>
+                      )}
                   </CardContent>
                 </Card>
               </div>
