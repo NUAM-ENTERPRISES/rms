@@ -206,7 +206,7 @@ export default function TrainingDetailPage() {
           className="mb-4 hover:bg-emerald-500/5 hover:text-emerald-600"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Training Programs
+          Back to Training Program
         </Button>
 
         <div className="relative">
