@@ -27,7 +27,12 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
-import { ProjectWithRelations, PaginatedProjects, ProjectStats } from './types';
+import {
+  ProjectWithRelations,
+  PaginatedProjects,
+  ProjectStats,
+  RecruiterAnalytics,
+} from './types';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -292,6 +297,33 @@ export class ProjectsController {
     };
   }
 
+  @Get('recruiter/analytics')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get recruiter-focused analytics snapshot',
+    description:
+      'Returns urgent projects and pipeline insights scoped to the authenticated recruiter.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Recruiter analytics retrieved successfully',
+  })
+  async getRecruiterAnalytics(@Request() req): Promise<{
+    success: boolean;
+    data: RecruiterAnalytics;
+    message: string;
+  }> {
+    const analytics = await this.projectsService.getRecruiterAnalytics(
+      req.user.id,
+      req.user.roles ?? [],
+    );
+    return {
+      success: true,
+      data: analytics,
+      message: 'Recruiter analytics retrieved successfully',
+    };
+  }
+
   @Get(':id')
   @Permissions('read:projects')
   @ApiOperation({
@@ -460,7 +492,8 @@ export class ProjectsController {
   @Permissions('read:projects')
   @ApiOperation({
     summary: 'Get nominated candidates for a project',
-    description: 'Retrieve candidates added to a project (nominated = in candidate_projects table) with match scores, search, pagination, and status filtering. Recruiters see only their nominated candidates, other roles see all.',
+    description:
+      'Retrieve candidates added to a project (nominated = in candidate_projects table) with match scores, search, pagination, and status filtering. Recruiters see only their nominated candidates, other roles see all.',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
   @ApiQuery({
@@ -574,8 +607,6 @@ export class ProjectsController {
       },
     },
   })
-
-  
   @ApiResponse({ status: 404, description: 'Not Found - Project not found' })
   @ApiResponse({
     status: 403,
@@ -607,7 +638,8 @@ export class ProjectsController {
   @Permissions('read:projects')
   @ApiOperation({
     summary: 'Get all project candidates',
-    description: 'Retrieve all candidates assigned to a specific project (all statuses).',
+    description:
+      'Retrieve all candidates assigned to a specific project (all statuses).',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
   @ApiResponse({
@@ -761,10 +793,7 @@ export class ProjectsController {
     status: 404,
     description: 'Project not found',
   })
-  async getEligibleCandidates(
-    @Param('id') id: string,
-    @Request() req,
-  ) {
+  async getEligibleCandidates(@Param('id') id: string, @Request() req) {
     const candidates = await this.projectsService.getEligibleCandidates(
       id,
       req.user.id,

@@ -78,6 +78,13 @@ const getIconColor = (itemId: string) => {
       hover:
         "group-hover:bg-orange-500/15 dark:group-hover:bg-orange-500/25 group-hover:text-orange-700 dark:group-hover:text-orange-300",
     },
+    processing: {
+      bg: "bg-fuchsia-500/10 dark:bg-fuchsia-500/20",
+      text: "text-fuchsia-600 dark:text-fuchsia-400",
+      border: "border-fuchsia-500/30 dark:border-fuchsia-500/40",
+      hover:
+        "group-hover:bg-fuchsia-500/15 dark:group-hover:bg-fuchsia-500/25 group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-300",
+    },
     admin: {
       bg: "bg-red-500/10 dark:bg-red-500/20",
       text: "text-red-600 dark:text-red-400",

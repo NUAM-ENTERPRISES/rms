@@ -1,11 +1,4 @@
-import React from "react";
-import {
-  Building2,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Users,
-} from "lucide-react";
+import { Clock, CheckCircle2, AlertTriangle, Users } from "lucide-react";
 import { ProjectStats as ProjectStatsType } from "@/features/projects";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -61,8 +54,8 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
   ];
 
   return (
-    <div className={cn("space-y-8", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div className={cn("space-y-4", className)}>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat, i) => {
           const Icon = stat.icon;
 
@@ -75,30 +68,32 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
             >
               <Card
                 className={cn(
-                  "relative overflow-hidden border-0 shadow-lg bg-gradient-to-br",
+                  "relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br",
                   stat.lightBg,
-                  "backdrop-blur-sm hover:shadow-xl transition-all duration-300 group cursor-default"
+                  "hover:shadow-md transition-all duration-300 group cursor-default"
                 )}
               >
-                {/* Subtle hover glow */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
+                <CardContent className="px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium text-slate-600 mb-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
                         {stat.label}
                       </p>
-                      <h3 className={cn("text-3xl font-bold", stat.textColor)}>
+                      <h3
+                        className={cn(
+                          "text-xl font-bold leading-tight",
+                          stat.textColor
+                        )}
+                      >
                         {stat.value}
                       </h3>
-                      <p className="text-xs text-slate-500 mt-2">
+                      <p className="text-[10px] text-slate-500 mt-1">
                         {stat.subtitle}
                       </p>
                     </div>
 
-                    <div className={cn("p-3 rounded-full", stat.iconBg)}>
-                      <Icon className={cn("h-6 w-6", stat.textColor)} />
+                    <div className={cn("p-2 rounded-xl", stat.iconBg)}>
+                      <Icon className={cn("h-4 w-4", stat.textColor)} />
                     </div>
                   </div>
                 </CardContent>

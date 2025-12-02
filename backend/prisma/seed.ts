@@ -117,6 +117,7 @@ const roles = [
       'read:processing',
       'write:processing',
       'manage:processing',
+      'read:projects',
       'read:candidates',
       'write:candidates',
       'read:interviews',
@@ -132,6 +133,7 @@ const roles = [
       'read:candidates',
       'write:candidates',
       'read:projects',
+      'read:interviews',
       'read:mock_interviews',
       'write:mock_interviews',
       'manage:mock_interviews',
@@ -950,11 +952,14 @@ async function seedMockInterviewTemplates() {
     let createdItemCount = 0;
 
     // group items by roleId
-    const itemsByRole = templates.reduce((acc: Record<string, typeof templates>, t) => {
-      acc[t.roleId] = acc[t.roleId] || [];
-      acc[t.roleId].push(t);
-      return acc;
-    }, {} as Record<string, typeof templates>);
+    const itemsByRole = templates.reduce(
+      (acc: Record<string, typeof templates>, t) => {
+        acc[t.roleId] = acc[t.roleId] || [];
+        acc[t.roleId].push(t);
+        return acc;
+      },
+      {} as Record<string, typeof templates>,
+    );
 
     for (const roleId of Object.keys(itemsByRole)) {
       const role = roleId === registeredNurse?.id ? registeredNurse : doctor;
@@ -962,8 +967,16 @@ async function seedMockInterviewTemplates() {
 
       const templateRecord = await prisma.mockInterviewTemplate.upsert({
         where: { roleId_name: { roleId, name } },
-        update: { isActive: true, description: `Auto-generated default template for ${role?.name ?? roleId}` },
-        create: { roleId, name, description: `Auto-generated default template for ${role?.name ?? roleId}`, isActive: true },
+        update: {
+          isActive: true,
+          description: `Auto-generated default template for ${role?.name ?? roleId}`,
+        },
+        create: {
+          roleId,
+          name,
+          description: `Auto-generated default template for ${role?.name ?? roleId}`,
+          isActive: true,
+        },
       });
 
       // upsert items for this template
@@ -977,14 +990,21 @@ async function seedMockInterviewTemplates() {
             },
           },
           update: { order: item.order },
-          create: { templateId: templateRecord.id, category: item.category, criterion: item.criterion, order: item.order },
+          create: {
+            templateId: templateRecord.id,
+            category: item.category,
+            criterion: item.criterion,
+            order: item.order,
+          },
         });
 
         createdItemCount++;
       }
     }
 
-    console.log(`✅ Mock interview templates seeded: ${createdItemCount} template items created/updated`);
+    console.log(
+      `✅ Mock interview templates seeded: ${createdItemCount} template items created/updated`,
+    );
   } catch (error) {
     console.error('❌ Error seeding mock interview templates:', error);
     throw error;

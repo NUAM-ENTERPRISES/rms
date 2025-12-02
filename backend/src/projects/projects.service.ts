@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { RoundRobinService } from '../round-robin/round-robin.service';
 import { PrismaService } from '../database/prisma.service';
@@ -15,7 +16,16 @@ import {
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
-import { ProjectWithRelations, PaginatedProjects, ProjectStats } from './types';
+import {
+  ProjectWithRelations,
+  PaginatedProjects,
+  ProjectStats,
+  RecruiterAnalytics,
+} from './types';
+import {
+  CANDIDATE_PROJECT_STATUS,
+  CANDIDATE_STATUS,
+} from '../common/constants/statuses';
 
 @Injectable()
 export class ProjectsService {
@@ -79,16 +89,18 @@ export class ProjectsService {
 
     // Validate / normalize country code if provided
     // Treat empty string (""/"   ") as intent to clear the field and store null
-    if (createProjectDto.countryCode !== undefined && createProjectDto.countryCode !== null) {
+    if (
+      createProjectDto.countryCode !== undefined &&
+      createProjectDto.countryCode !== null
+    ) {
       const trimmed = String(createProjectDto.countryCode).trim();
       if (trimmed === '') {
         // user supplied an empty string -> clear the value
         createProjectDto.countryCode = null as any;
       } else {
         const upper = trimmed.toUpperCase();
-        const isValidCountry = await this.countriesService.validateCountryCode(
-          upper,
-        );
+        const isValidCountry =
+          await this.countriesService.validateCountryCode(upper);
         if (!isValidCountry) {
           throw new BadRequestException(
             `Invalid or inactive country code: ${createProjectDto.countryCode}`,
@@ -534,9 +546,8 @@ export class ProjectsService {
         // will clear the countryCode (set to null)
       } else {
         const upper = String(updateProjectDto.countryCode).trim().toUpperCase();
-        const isValidCountry = await this.countriesService.validateCountryCode(
-          upper,
-        );
+        const isValidCountry =
+          await this.countriesService.validateCountryCode(upper);
         if (!isValidCountry) {
           throw new BadRequestException(
             `Invalid or inactive country code: ${updateProjectDto.countryCode}`,
@@ -570,7 +581,9 @@ export class ProjectsService {
         updateData.countryCode = null;
       } else {
         // updateProjectDto.countryCode was normalized to uppercase above
-        updateData.countryCode = String(updateProjectDto.countryCode).toUpperCase();
+        updateData.countryCode = String(
+          updateProjectDto.countryCode,
+        ).toUpperCase();
       }
     }
     // New project-level fields
@@ -1283,6 +1296,200 @@ export class ProjectsService {
       projectsByStatus,
       projectsByClient,
       upcomingDeadlines,
+    };
+  }
+
+  async getRecruiterAnalytics(
+    recruiterId: string,
+    roles: string[] = [],
+  ): Promise<RecruiterAnalytics> {
+    if (!roles?.includes('Recruiter')) {
+      throw new ForbiddenException(
+        'Recruiter analytics are only available to Recruiter role',
+      );
+    }
+
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    const upcomingWindow = new Date(now);
+    upcomingWindow.setDate(upcomingWindow.getDate() + 14);
+    const terminalProjectStatuses = [
+      CANDIDATE_PROJECT_STATUS.HIRED,
+      CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
+      CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW,
+      CANDIDATE_PROJECT_STATUS.REJECTED_SELECTION,
+      CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+    ];
+    const excludedProjectStatuses = ['completed', 'cancelled', 'archived'];
+    const untouchedCandidateWhere = {
+      currentStatus: {
+        statusName: CANDIDATE_STATUS.UNTOUCHED,
+      },
+      recruiterAssignments: {
+        some: {
+          recruiterId,
+          isActive: true,
+        },
+      },
+    };
+
+    const urgentProjectRecord = await this.prisma.project.findFirst({
+      where: {
+        priority: { in: ['high', 'urgent'] },
+        deadline: { not: null, gte: now },
+        status: {
+          notIn: excludedProjectStatuses,
+        },
+      },
+      orderBy: { deadline: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        deadline: true,
+        priority: true,
+        client: { select: { name: true } },
+      },
+    });
+
+    const overdueProjectRecords = await this.prisma.project.findMany({
+      where: {
+        deadline: { not: null, lt: startOfToday },
+        status: {
+          notIn: excludedProjectStatuses,
+        },
+      },
+      orderBy: { deadline: 'asc' },
+      take: 6,
+      select: {
+        id: true,
+        title: true,
+        deadline: true,
+        client: { select: { name: true } },
+      },
+    });
+
+    const [
+      hiredOrSelectedCount,
+      activeCandidateCount,
+      upcomingInterviewsCount,
+      assignedProjects,
+      untouchedCandidatesCount,
+      untouchedCandidateRows,
+    ] = await this.prisma.$transaction([
+      this.prisma.candidateProjects.count({
+        where: {
+          recruiterId,
+          currentProjectStatus: {
+            statusName: { in: ['selected', 'hired'] },
+          },
+        },
+      }),
+      this.prisma.candidateProjects.count({
+        where: {
+          recruiterId,
+          currentProjectStatus: {
+            statusName: { notIn: ['selected', 'hired'] },
+          },
+        },
+      }),
+      this.prisma.interview.count({
+        where: {
+          candidateProjectMap: { recruiterId },
+          scheduledTime: {
+            gte: now,
+            lte: upcomingWindow,
+          },
+        },
+      }),
+      this.prisma.candidateProjects.groupBy({
+        by: ['projectId'],
+        where: { recruiterId },
+        orderBy: {
+          projectId: 'asc',
+        },
+      }),
+      this.prisma.candidate.count({
+        where: untouchedCandidateWhere,
+      }),
+      this.prisma.candidate.findMany({
+        where: untouchedCandidateWhere,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          countryCode: true,
+          currentRole: true,
+          projects: {
+            where: { recruiterId },
+            select: {
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 6,
+      }),
+    ]);
+
+    const urgentProject = urgentProjectRecord
+      ? {
+          id: urgentProjectRecord.id,
+          title: urgentProjectRecord.title,
+          priority: urgentProjectRecord.priority,
+          deadline: urgentProjectRecord.deadline,
+          clientName: urgentProjectRecord.client?.name ?? null,
+          daysUntilDeadline: urgentProjectRecord.deadline
+            ? Math.max(
+                0,
+                Math.ceil(
+                  (urgentProjectRecord.deadline.getTime() - now.getTime()) /
+                    (1000 * 60 * 60 * 24),
+                ),
+              )
+            : null,
+        }
+      : null;
+
+    return {
+      urgentProject,
+      overdueProjects: overdueProjectRecords.map((project) => ({
+        id: project.id,
+        title: project.title,
+        clientName: project.client?.name ?? null,
+        overdueDays: project.deadline
+          ? Math.max(
+              1,
+              Math.ceil(
+                (now.getTime() - project.deadline.getTime()) /
+                  (1000 * 60 * 60 * 24),
+              ),
+            )
+          : null,
+      })),
+      hiredOrSelectedCount,
+      activeCandidateCount,
+      upcomingInterviewsCount,
+      assignedProjectCount: assignedProjects.length,
+      untouchedCandidatesCount,
+      untouchedCandidates: untouchedCandidateRows.map((candidate) => {
+        const latestProject = candidate.projects?.[0]?.project;
+        return {
+          id: candidate.id,
+          name: `${candidate.firstName} ${candidate.lastName}`.trim(),
+          countryCode: candidate.countryCode ?? null,
+          currentRole: candidate.currentRole ?? null,
+          assignedProjectId: latestProject?.id ?? null,
+          assignedProjectTitle: latestProject?.title ?? null,
+        };
+      }),
     };
   }
 

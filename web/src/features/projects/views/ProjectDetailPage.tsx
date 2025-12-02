@@ -45,6 +45,7 @@ import {
   useAssignToProjectMutation,
 } from "@/features/projects";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
+import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
@@ -56,7 +57,7 @@ const formatDate = (dateString?: string) => {
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
-    year: "numeric",                                                                       
+    year: "numeric",
   });
 };
 
@@ -81,6 +82,8 @@ export default function ProjectDetailPage() {
   // Permissions
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
+  const isProcessingExecutive =
+    user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
 
   // RTK Query hooks
   const {
@@ -98,17 +101,22 @@ export default function ProjectDetailPage() {
   const { data: statusesData } = useGetCandidateProjectStatusesQuery();
 
   // Get nominated candidates with proper status filtering
+  const shouldLoadNominated = !isProcessingExecutive;
   const { data: projectCandidatesData, isLoading: isLoadingCandidates } =
-    useGetNominatedCandidatesQuery({
-      projectId: projectId!,
-      search: searchTerm || undefined,
-      statusId: selectedStatus !== "all" ? selectedStatus : undefined,
-      page: 1,
-      limit: 100,
-    });
+    useGetNominatedCandidatesQuery(
+      {
+        projectId: projectId!,
+        search: searchTerm || undefined,
+        statusId: selectedStatus !== "all" ? selectedStatus : undefined,
+        page: 1,
+        limit: 100,
+      },
+      { skip: !shouldLoadNominated }
+    );
 
   const [sendForVerification] = useSendForVerificationMutation();
-  const [sendForInterview, { isLoading: isSendingInterview }] = useSendForInterviewMutation();
+  const [sendForInterview, { isLoading: isSendingInterview }] =
+    useSendForInterviewMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
 
@@ -120,7 +128,13 @@ export default function ProjectDetailPage() {
     candidateName: string;
     roleNeededId?: string;
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
+  }>({
+    isOpen: false,
+    candidateId: "",
+    candidateName: "",
+    roleNeededId: undefined,
+    notes: "",
+  });
 
   const [interviewConfirm, setInterviewConfirm] = useState<{
     isOpen: boolean;
@@ -128,7 +142,13 @@ export default function ProjectDetailPage() {
     candidateName: string;
     type: "mock" | "interview";
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", type: "interview", notes: "" });
+  }>({
+    isOpen: false,
+    candidateId: "",
+    candidateName: "",
+    type: "interview",
+    notes: "",
+  });
 
   const [assignConfirm, setAssignConfirm] = useState<{
     isOpen: boolean;
@@ -136,7 +156,13 @@ export default function ProjectDetailPage() {
     candidateName: string;
     roleNeededId?: string;
     notes: string;
-  }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
+  }>({
+    isOpen: false,
+    candidateId: "",
+    candidateName: "",
+    roleNeededId: undefined,
+    notes: "",
+  });
 
   // Handle project deletion
   const handleDeleteProjectConfirm = async () => {
@@ -230,7 +256,9 @@ export default function ProjectDetailPage() {
         notes: "",
       });
     } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to send candidate for interview");
+      toast.error(
+        error?.data?.message || "Failed to send candidate for interview"
+      );
     }
   };
 
@@ -383,247 +411,338 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
-      <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
-  <CardContent className="p-6 lg:p-8">
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
+          <CardContent className="p-6 lg:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              {/* Left Side — Title (Black) + Country */}
+              <div className="flex items-center gap-5 flex-1 min-w-0">
+                <div className="flex-1">
+                  {/* Title — Strong Black Text */}
+                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
+                    {project.title}
+                  </h1>
 
-      {/* Left Side — Title (Black) + Country */}
-      <div className="flex items-center gap-5 flex-1 min-w-0">
-        <div className="flex-1">
-          {/* Title — Strong Black Text */}
-          <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
-            {project.title}
-          </h1>
+                  {/* Optional Subtitle (Client Name) */}
+                  {project.client && (
+                    <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-slate-500" />
+                      {project.client.name}
+                    </p>
+                  )}
+                </div>
 
-          {/* Optional Subtitle (Client Name) */}
-          {project.client && (
-            <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-slate-500" />
-              {project.client.name}
-            </p>
-          )}
-        </div>
+                {/* Country Flag — Clean & Elevated */}
+                <div className="flex-shrink-0">
+                  <ProjectCountryCell
+                    countryCode={project.countryCode}
+                    size="4xl"
+                    fallbackText="Not specified"
+                    className="shadow-lg ring-4 ring-white/90 rounded-full"
+                  />
+                </div>
+              </div>
 
-        {/* Country Flag — Clean & Elevated */}
-        <div className="flex-shrink-0">
-          <ProjectCountryCell
-            countryCode={project.countryCode}
-            size="4xl"
-            fallbackText="Not specified"
-            className="shadow-lg ring-4 ring-white/90 rounded-full"
-          />
-        </div>
-      </div>
+              {/* Right Side — Action Buttons */}
+              <div className="flex items-center gap-3">
+                {canManageProjects && !isProcessingExecutive && (
+                  <>
+                    {/* Edit Button — Clean & Professional */}
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => navigate(`/projects/${project.id}/edit`)}
+                      className="font-semibold border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-md transition-all duration-200"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Project
+                    </Button>
 
-      {/* Right Side — Action Buttons */}
-      <div className="flex items-center gap-3">
-        {canManageProjects && (
-          <>
-            {/* Edit Button — Clean & Professional */}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => navigate(`/projects/${project.id}/edit`)}
-              className="font-semibold border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-md transition-all duration-200"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Project
-            </Button>
+                    {/* Delete Button — Strong but Clean */}
+                    <Button
+                      variant="destructive"
+                      size="lg"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
 
-            {/* Delete Button — Strong but Clean */}
-            <Button
-              variant="destructive"
-              size="lg"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
-
-    {/* Clean Bottom Accent Line */}
-    <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70"></div>
-  </CardContent>
-</Card>
+            {/* Clean Bottom Accent Line */}
+            <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70"></div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Candidates Board */}
+          {/* Left Column: Candidates */}
           <div className="lg:col-span-8">
-            <ProjectCandidatesBoard
-              projectId={projectId!}
-              nominatedCandidates={projectCandidates}
-              isLoadingNominated={isLoadingCandidates}
-              searchTerm={searchTerm}
-              selectedStatus={selectedStatus}
-              onSearchChange={handleBoardSearchChange}
-              onStatusChange={handleBoardStatusChange}
-              statuses={projectStatuses}
-              onViewCandidate={handleViewCandidate}
-              onAssignCandidate={(candidateId, candidateName) =>
-                showAssignConfirmation(candidateId, candidateName)
-              }
-              onVerifyCandidate={(candidateId, candidateName) =>
-                showVerifyConfirmation(candidateId, candidateName)
-              }
-              onSendForInterview={(candidateId, candidateName) =>
-                showInterviewConfirmation(candidateId, candidateName)
-              }
-              hideContactInfo={projectHideContactInfo}
-            />
+            {isProcessingExecutive ? (
+              <ProcessingCandidatesTab projectId={projectId!} />
+            ) : (
+              <ProjectCandidatesBoard
+                projectId={projectId!}
+                nominatedCandidates={projectCandidates}
+                isLoadingNominated={isLoadingCandidates}
+                searchTerm={searchTerm}
+                selectedStatus={selectedStatus}
+                onSearchChange={handleBoardSearchChange}
+                onStatusChange={handleBoardStatusChange}
+                statuses={projectStatuses}
+                onViewCandidate={handleViewCandidate}
+                onAssignCandidate={(candidateId, candidateName) =>
+                  showAssignConfirmation(candidateId, candidateName)
+                }
+                onVerifyCandidate={(candidateId, candidateName) =>
+                  showVerifyConfirmation(candidateId, candidateName)
+                }
+                onSendForInterview={(candidateId, candidateName) =>
+                  showInterviewConfirmation(candidateId, candidateName)
+                }
+                hideContactInfo={projectHideContactInfo}
+              />
+            )}
           </div>
 
           {/* Right Column: Project Info + Supporting Cards */}
-        <div className="space-y-4 text-sm lg:space-y-5 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2 px-3 pb-6 lg:px-0">
-  {/* Project Overview Card */}
-  <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-    <CardContent className="p-3 lg:p-4 space-y-4">
+          <div className="space-y-4 text-sm lg:space-y-5 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2 px-3 pb-6 lg:px-0">
+            {/* Project Overview Card */}
+            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
+              <CardContent className="p-3 lg:p-4 space-y-4">
+                {/* 4 Stats — Fully Responsive & No Cutoff */}
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+                  {/* Positions */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-lg border border-blue-200/30">
+                    <Briefcase className="h-5 w-5 text-blue-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-blue-700">
+                      {project.rolesNeeded.reduce((s, r) => s + r.quantity, 0)}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5">
+                      Positions
+                    </div>
+                  </div>
 
-      {/* 4 Stats — Fully Responsive & No Cutoff */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        {/* Positions */}
-        <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-lg border border-blue-200/30">
-          <Briefcase className="h-5 w-5 text-blue-600 mb-1" />
-          <div className="text-xl lg:text-2xl font-bold text-blue-700">
-            {project.rolesNeeded.reduce((s, r) => s + r.quantity, 0)}
+                  {/* Nominated — NOW NEVER CUTS OFF */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-emerald-500/5 to-teal-600/10 rounded-lg border border-emerald-200/30">
+                    <UserCheck className="h-5 w-5 text-emerald-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-emerald-700">
+                      {pagination?.total || 0}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
+                      <span className="hidden lg:inline">Nominated</span>
+                      <span className="lg:hidden">Noms</span>
+                    </div>
+                  </div>
+
+                  {/* Roles */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-purple-500/5 to-pink-600/10 rounded-lg border border-purple-200/30">
+                    <Layers className="h-5 w-5 text-purple-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-purple-700">
+                      {project.rolesNeeded.length}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5">
+                      Roles
+                    </div>
+                  </div>
+
+                  {/* Days Left */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-orange-500/5 to-red-600/10 rounded-lg border border-orange-200/30">
+                    <Calendar className="h-5 w-5 text-orange-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-orange-700">
+                      {Math.max(
+                        0,
+                        Math.ceil(
+                          (new Date(project.deadline).getTime() - Date.now()) /
+                            86400000
+                        )
+                      )}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
+                      <span className="hidden sm:inline">Days Left</span>
+                      <span className="sm:hidden">Days</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Compact Details List — No overflow */}
+                <div className="space-y-1.5 border-t border-slate-200 pt-3">
+                  {[
+                    {
+                      icon: Calendar,
+                      color: "text-blue-600",
+                      label: "Deadline",
+                      value: formatDateTime(project.deadline),
+                    },
+                    {
+                      icon: Clock,
+                      color: "text-green-600",
+                      label: "Created",
+                      value: formatDate(project.createdAt),
+                    },
+                    {
+                      icon: MapPin,
+                      color: "text-purple-600",
+                      label: "Country",
+                      value: (
+                        <ProjectCountryCell
+                          countryCode={project.countryCode}
+                          size="sm"
+                          fallbackText="—"
+                        />
+                      ),
+                    },
+                    {
+                      icon: UserCheck,
+                      color: "text-emerald-600",
+                      label: "Status",
+                      value: (
+                        <Badge variant="outline" className="text-xs h-5">
+                          {project.status}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      icon: User,
+                      color: "text-indigo-600",
+                      label: "Creator",
+                      value: project.creator.name,
+                    },
+                    {
+                      icon: Building2,
+                      color: "text-orange-600",
+                      label: "Type",
+                      value:
+                        project.projectType === "ministry" ? "Gov" : "Private",
+                    },
+                    {
+                      icon: FileText,
+                      color: "text-cyan-600",
+                      label: "Resume",
+                      value: projectResumeEditable ? "Edit" : "Fixed",
+                    },
+                    {
+                      icon: User,
+                      color: "text-pink-600",
+                      label: "Grooming",
+                      value:
+                        projectGroomingRequirement?.[0]?.toUpperCase() || "—",
+                    },
+                    {
+                      icon: Target,
+                      color: "text-red-600",
+                      label: "Contact",
+                      value: projectHideContactInfo ? "Hidden" : "Visible",
+                    },
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-2 py-1.5 hover:bg-slate-50 rounded px-1"
+                    >
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <item.icon
+                          className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`}
+                        />
+                        <span className="text-xs font-medium text-slate-600 truncate">
+                          {item.label}
+                        </span>
+                      </div>
+                      <div className="text-xs font-semibold text-slate-900 text-right truncate max-w-[45%]">
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Description — Safe & Compact */}
+                {project.description && (
+                  <p className="text-xs text-slate-600 leading-snug bg-slate-50 p-2.5 rounded-lg border border-slate-200 italic mt-3 line-clamp-3">
+                    {project.description}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Other Cards — Same Compact & Responsive Style */}
+            {project.documentRequirements?.length > 0 && (
+              <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
+                <CardHeader className="pb-2 px-3">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-orange-600" /> Documents
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {project.documentRequirements.map((req: any, i: number) => (
+                      <span
+                        key={i}
+                        className="text-xs px-2 py-1 bg-orange-50 text-orange-700 rounded-md border border-orange-300"
+                      >
+                        {req.docType
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                        {req.mandatory && "*"}
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
+              <CardHeader className="pb-2 px-3">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Target className="h-4 w-4 text-purple-600" /> Roles (
+                  {project.rolesNeeded.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 px-3 pb-3">
+                {project.rolesNeeded.map((role) => (
+                  <div
+                    key={role.id}
+                    className="p-2.5 bg-slate-50 rounded-lg border border-slate-200"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-900 text-xs truncate">
+                        {role.designation}
+                      </span>
+                      <Badge className="text-xs h-5 bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0">
+                        {role.quantity} pos
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 truncate">
+                      {role.minExperience
+                        ? `${role.minExperience}+ yrs`
+                        : "Any"}{" "}
+                      {role.shiftType && `• ${role.shiftType}`}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
+              <CardHeader className="pb-2 px-3">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-teal-600" /> Client
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <div className="p-2.5 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200">
+                  <div className="font-semibold text-slate-900 text-sm truncate">
+                    {project.client?.name || "Not assigned"}
+                  </div>
+                  {project.client && (
+                    <Badge className="text-xs mt-1 bg-teal-700 text-white">
+                      {project.client.type}
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <div className="text-xs text-center text-slate-600 font-medium mt-0.5">Positions</div>
-        </div>
-
-        {/* Nominated — NOW NEVER CUTS OFF */}
-        <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-emerald-500/5 to-teal-600/10 rounded-lg border border-emerald-200/30">
-          <UserCheck className="h-5 w-5 text-emerald-600 mb-1" />
-          <div className="text-xl lg:text-2xl font-bold text-emerald-700">
-            {pagination?.total || 0}
-          </div>
-          <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
-            <span className="hidden lg:inline">Nominated</span>
-            <span className="lg:hidden">Noms</span>
-          </div>
-        </div>
-
-        {/* Roles */}
-        <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-purple-500/5 to-pink-600/10 rounded-lg border border-purple-200/30">
-          <Layers className="h-5 w-5 text-purple-600 mb-1" />
-          <div className="text-xl lg:text-2xl font-bold text-purple-700">
-            {project.rolesNeeded.length}
-          </div>
-          <div className="text-xs text-center text-slate-600 font-medium mt-0.5">Roles</div>
-        </div>
-
-        {/* Days Left */}
-        <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-orange-500/5 to-red-600/10 rounded-lg border border-orange-200/30">
-          <Calendar className="h-5 w-5 text-orange-600 mb-1" />
-          <div className="text-xl lg:text-2xl font-bold text-orange-700">
-            {Math.max(0, Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000))}
-          </div>
-          <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
-            <span className="hidden sm:inline">Days Left</span>
-            <span className="sm:hidden">Days</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Compact Details List — No overflow */}
-      <div className="space-y-1.5 border-t border-slate-200 pt-3">
-        {[
-          { icon: Calendar, color: "text-blue-600", label: "Deadline", value: formatDateTime(project.deadline) },
-          { icon: Clock, color: "text-green-600", label: "Created", value: formatDate(project.createdAt) },
-          { icon: MapPin, color: "text-purple-600", label: "Country", value: <ProjectCountryCell countryCode={project.countryCode} size="sm" fallbackText="—" /> },
-          { icon: UserCheck, color: "text-emerald-600", label: "Status", value: <Badge variant="outline" className="text-xs h-5">{project.status}</Badge> },
-          { icon: User, color: "text-indigo-600", label: "Creator", value: project.creator.name },
-          { icon: Building2, color: "text-orange-600", label: "Type", value: project.projectType === "ministry" ? "Gov" : "Private" },
-          { icon: FileText, color: "text-cyan-600", label: "Resume", value: projectResumeEditable ? "Edit" : "Fixed" },
-          { icon: User, color: "text-pink-600", label: "Grooming", value: projectGroomingRequirement?.[0]?.toUpperCase() || "—" },
-          { icon: Target, color: "text-red-600", label: "Contact", value: projectHideContactInfo ? "Hidden" : "Visible" },
-        ].map((item, i) => (
-          <div key={i} className="flex items-center justify-between gap-2 py-1.5 hover:bg-slate-50 rounded px-1">
-            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
-              <span className="text-xs font-medium text-slate-600 truncate">{item.label}</span>
-            </div>
-            <div className="text-xs font-semibold text-slate-900 text-right truncate max-w-[45%]">
-              {item.value}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Description — Safe & Compact */}
-      {project.description && (
-        <p className="text-xs text-slate-600 leading-snug bg-slate-50 p-2.5 rounded-lg border border-slate-200 italic mt-3 line-clamp-3">
-          {project.description}
-        </p>
-      )}
-    </CardContent>
-  </Card>
-
-  {/* Other Cards — Same Compact & Responsive Style */}
-  {project.documentRequirements?.length > 0 && (
-    <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-      <CardHeader className="pb-2 px-3">
-        <CardTitle className="text-sm font-bold flex items-center gap-2">
-          <FileText className="h-4 w-4 text-orange-600" /> Documents
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-3 pb-3">
-        <div className="flex flex-wrap gap-1.5">
-          {project.documentRequirements.map((req: any, i: number) => (
-            <span key={i} className="text-xs px-2 py-1 bg-orange-50 text-orange-700 rounded-md border border-orange-300">
-              {req.docType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}{req.mandatory && "*"}
-            </span>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )}
-
-  <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-    <CardHeader className="pb-2 px-3">
-      <CardTitle className="text-sm font-bold flex items-center gap-2">
-        <Target className="h-4 w-4 text-purple-600" /> Roles ({project.rolesNeeded.length})
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-2 px-3 pb-3">
-      {project.rolesNeeded.map((role) => (
-        <div key={role.id} className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-semibold text-slate-900 text-xs truncate">{role.designation}</span>
-            <Badge className="text-xs h-5 bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0">
-              {role.quantity} pos
-            </Badge>
-          </div>
-          <p className="text-xs text-slate-600 mt-1 truncate">
-            {role.minExperience ? `${role.minExperience}+ yrs` : "Any"} {role.shiftType && `• ${role.shiftType}`}
-          </p>
-        </div>
-      ))}
-    </CardContent>
-  </Card>
-
-  <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-    <CardHeader className="pb-2 px-3">
-      <CardTitle className="text-sm font-bold flex items-center gap-2">
-        <Building2 className="h-4 w-4 text-teal-600" /> Client
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="px-3 pb-3">
-      <div className="p-2.5 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200">
-        <div className="font-semibold text-slate-900 text-sm truncate">
-          {project.client?.name || "Not assigned"}
-        </div>
-        {project.client && (
-          <Badge className="text-xs mt-1 bg-teal-700 text-white">
-            {project.client.type}
-          </Badge>
-        )}
-      </div>
-    </CardContent>
-  </Card>
-</div>
         </div>
       </div>
 
@@ -741,7 +860,10 @@ export default function ProjectDetailPage() {
               <Select
                 value={interviewConfirm.type}
                 onValueChange={(value) =>
-                  setInterviewConfirm((prev) => ({ ...prev, type: value as any }))
+                  setInterviewConfirm((prev) => ({
+                    ...prev,
+                    type: value as any,
+                  }))
                 }
               >
                 <SelectTrigger id="interview-type" className="w-48">
@@ -753,7 +875,10 @@ export default function ProjectDetailPage() {
                 </SelectContent>
               </Select>
 
-              <label htmlFor="interview-notes" className="text-sm font-medium text-gray-700">
+              <label
+                htmlFor="interview-notes"
+                className="text-sm font-medium text-gray-700"
+              >
                 Notes (Optional)
               </label>
               <Textarea
@@ -761,7 +886,10 @@ export default function ProjectDetailPage() {
                 placeholder="Add any notes for the interview team..."
                 value={interviewConfirm.notes}
                 onChange={(e) =>
-                  setInterviewConfirm((prev) => ({ ...prev, notes: e.target.value }))
+                  setInterviewConfirm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
                 }
                 rows={3}
                 className="w-full"
@@ -784,14 +912,14 @@ export default function ProjectDetailPage() {
       <ConfirmationDialog
         isOpen={assignConfirm.isOpen}
         onClose={() =>
-            setAssignConfirm({
-              isOpen: false,
-              candidateId: "",
-              candidateName: "",
-              roleNeededId: undefined,
-              notes: "",
-            })
-          }
+          setAssignConfirm({
+            isOpen: false,
+            candidateId: "",
+            candidateName: "",
+            roleNeededId: undefined,
+            notes: "",
+          })
+        }
         onConfirm={handleAssignToProject}
         title="Assign to Project"
         description={

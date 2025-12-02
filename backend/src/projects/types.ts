@@ -55,3 +55,33 @@ export interface ProjectStats {
   };
   upcomingDeadlines: ProjectWithRelations[];
 }
+
+export interface RecruiterAnalytics {
+  urgentProject: {
+    id: string;
+    title: string;
+    priority: string;
+    deadline: Date | null;
+    clientName: string | null;
+    daysUntilDeadline: number | null;
+  } | null;
+  overdueProjects: {
+    id: string;
+    title: string;
+    clientName: string | null;
+    overdueDays: number | null;
+  }[];
+  untouchedCandidatesCount: number;
+  untouchedCandidates: {
+    id: string;
+    name: string;
+    countryCode: string | null;
+    currentRole: string | null;
+    assignedProjectId: string | null;
+    assignedProjectTitle: string | null;
+  }[];
+  hiredOrSelectedCount: number;
+  activeCandidateCount: number;
+  upcomingInterviewsCount: number;
+  assignedProjectCount: number;
+}

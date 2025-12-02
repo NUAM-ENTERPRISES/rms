@@ -286,7 +286,7 @@ export default function MockInterviewsListPage() {
   return (
     <div className="h-screen flex flex-col">
       {/* Search & Filters Section */}
-      <div className="w-full mx-auto px-4 pt-2 pb-4">
+      <div className="w-full mx-auto pt-2 pb-4">
         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
           <CardContent>
             <div className="space-y-6">

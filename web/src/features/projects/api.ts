@@ -223,6 +223,36 @@ export interface ProjectStats {
   upcomingDeadlines: Project[];
 }
 
+export interface RecruiterAnalytics {
+  urgentProject: {
+    id: string;
+    title: string;
+    priority: string;
+    deadline: string | null;
+    clientName: string | null;
+    daysUntilDeadline: number | null;
+  } | null;
+  overdueProjects: {
+    id: string;
+    title: string;
+    clientName: string | null;
+    overdueDays: number | null;
+  }[];
+  untouchedCandidatesCount: number;
+  untouchedCandidates: {
+    id: string;
+    name: string;
+    countryCode: string | null;
+    currentRole: string | null;
+    assignedProjectId: string | null;
+    assignedProjectTitle: string | null;
+  }[];
+  hiredOrSelectedCount: number;
+  activeCandidateCount: number;
+  upcomingInterviewsCount: number;
+  assignedProjectCount: number;
+}
+
 // Eligible Candidate with match score
 // API returns candidate data at root level with matchScore property
 export interface EligibleCandidate extends Candidate {
@@ -271,8 +301,17 @@ export const projectsApi = baseApi.injectEndpoints({
       providesTags: ["ProjectStats"],
     }),
 
+    getRecruiterAnalytics: builder.query<ApiResponse<RecruiterAnalytics>, void>(
+      {
+        query: () => "/projects/recruiter/analytics",
+      }
+    ),
+
     // Get eligible candidates for a project
-    getEligibleCandidates: builder.query<ApiResponse<EligibleCandidate[]>, string>({
+    getEligibleCandidates: builder.query<
+      ApiResponse<EligibleCandidate[]>,
+      string
+    >({
       query: (projectId) => `/projects/${projectId}/eligible-candidates`,
       providesTags: ["Candidate"],
     }),
@@ -359,23 +398,29 @@ export const projectsApi = baseApi.injectEndpoints({
     // Send candidate for verification
     sendForVerification: builder.mutation<
       ApiResponse<any>,
-      { 
-        projectId: string; 
-        candidateId: string; 
+      {
+        projectId: string;
+        candidateId: string;
         roleNeededId?: string;
         recruiterId?: string;
-        notes?: string 
+        notes?: string;
       }
     >({
-      query: ({ projectId, candidateId, roleNeededId, recruiterId, notes }) => ({
+      query: ({
+        projectId,
+        candidateId,
+        roleNeededId,
+        recruiterId,
+        notes,
+      }) => ({
         url: `/candidate-projects/send-for-verification`,
         method: "POST",
-        body: { 
-          candidateId, 
-          projectId, 
-          roleNeededId, 
-          recruiterId, 
-          notes 
+        body: {
+          candidateId,
+          projectId,
+          roleNeededId,
+          recruiterId,
+          notes,
         },
       }),
       invalidatesTags: (_, __, { projectId }) => [
@@ -437,7 +482,16 @@ export const projectsApi = baseApi.injectEndpoints({
         limit?: number;
       }
     >({
-      query: ({ projectId, search, status, subStatus, statusId, subStatusId, page = 1, limit = 20 }) => ({
+      query: ({
+        projectId,
+        search,
+        status,
+        subStatus,
+        statusId,
+        subStatusId,
+        page = 1,
+        limit = 20,
+      }) => ({
         url: `/projects/${projectId}/nominated-candidates`,
         // Prefer sending readable status/subStatus names. Fall back to IDs for
         // backward compatibility.
@@ -506,6 +560,7 @@ export const {
   useGetProjectsQuery,
   useGetProjectQuery,
   useGetProjectStatsQuery,
+  useGetRecruiterAnalyticsQuery,
   useGetEligibleCandidatesQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,

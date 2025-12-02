@@ -87,7 +87,10 @@ const MockInterviewsListPage = lazy(
     )
 );
 const UpcomingInterviewsListPage = lazy(
-  () => import("@/features/mock-interview-coordination/interviews/views/UpcomingInterviewsListPage")
+  () =>
+    import(
+      "@/features/mock-interview-coordination/interviews/views/UpcomingInterviewsListPage"
+    )
 );
 const AssignedInterviewsListPage = lazy(
   () =>
@@ -149,6 +152,12 @@ const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
 );
 const ProfilePage = lazy(() => import("@/features/profile/views/ProfilePage"));
+const ProcessingCandidatesPage = lazy(
+  () => import("@/features/processing/views/ProcessingCandidatesPage")
+);
+const ProcessingCandidateDetailPage = lazy(
+  () => import("@/features/processing/views/ProcessingCandidateDetailPage")
+);
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -170,6 +179,15 @@ function RoleBasedRedirect() {
     return (
       <AppLayout>
         <DashboardPage />
+      </AppLayout>
+    );
+  }
+
+  // Interview coordinators should land on the interviews workspace
+  if (user?.roles.includes("Interview Coordinator")) {
+    return (
+      <AppLayout>
+        <InterviewsPage />
       </AppLayout>
     );
   }
@@ -641,6 +659,30 @@ function App() {
                         <ProtectedRoute permissions={["read:documents"]}>
                           <AppLayout>
                             <DocumentVerificationPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/processing/candidates"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:processing"]}>
+                          <AppLayout>
+                            <ProcessingCandidatesPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/processing/candidates/:candidateProjectMapId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:processing"]}>
+                          <AppLayout>
+                            <ProcessingCandidateDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
