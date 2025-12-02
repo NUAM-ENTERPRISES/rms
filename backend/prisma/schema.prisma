@@ -55,6 +55,8 @@ model User {
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
+  processingStepUpdates       ProcessingStep[]                @relation("ProcessingStepUpdatedBy")
+  processingStepHistory       ProcessingStepHistory[]         @relation("ProcessingHistoryActor")
 
   @@unique([countryCode, mobileNumber])
   @@index([email])
@@ -381,6 +383,8 @@ model CandidateProjects {
   roleNeeded            RoleNeeded?                            @relation(fields: [roleNeededId], references: [id])
   interviews            Interview[]
   processing            Processing?
+  processingSteps       ProcessingStep[]
+  processingStepHistory ProcessingStepHistory[]
   projectStatusHistory  CandidateProjectStatusHistory[]
 
   // Mock Interview & Training Relations
@@ -713,6 +717,70 @@ model Processing {
 
   @@index([candidateProjectMapId])
   @@map("processing")
+}
+
+model ProcessingStep {
+  id                    String               @id @default(cuid())
+  candidateProjectMapId String
+  stepKey               ProcessingStepKey
+  status                ProcessingStepStatus @default(PENDING)
+  slaDays               Int
+  dueDate               DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  notes                 String?
+  notApplicableReason   String?
+  lastUpdatedById       String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  lastUpdatedBy       User?             @relation("ProcessingStepUpdatedBy", fields: [lastUpdatedById], references: [id])
+  @@unique([candidateProjectMapId, stepKey])
+  @@index([candidateProjectMapId])
+  @@index([stepKey])
+  @@map("processing_steps")
+}
+
+model ProcessingStepHistory {
+  id                    String               @id @default(cuid())
+  candidateProjectMapId String
+  stepKey               ProcessingStepKey
+  previousStatus        ProcessingStepStatus
+  newStatus             ProcessingStepStatus
+  notes                 String?
+  actorId               String?
+  actorName             String?
+  changedAt             DateTime            @default(now())
+
+  candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  actor               User?             @relation("ProcessingHistoryActor", fields: [actorId], references: [id])
+
+  @@index([candidateProjectMapId])
+  @@index([stepKey])
+  @@map("processing_step_history")
+}
+
+enum ProcessingStepKey {
+  MEDICAL_CERTIFICATE
+  DOCUMENT_COLLECTION
+  HRD_ATTESTATION
+  QVP
+  DATAFLOW
+  PROMETRIC
+  VISA
+  IMMIGRATION
+  TICKETING
+  TRAVEL
+  JOINING
+}
+
+enum ProcessingStepStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  REJECTED
+  NOT_APPLICABLE
 }
 
 model Notification {

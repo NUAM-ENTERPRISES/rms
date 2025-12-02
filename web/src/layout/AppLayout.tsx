@@ -1,5 +1,5 @@
 import { useState, ReactNode } from "react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import Breadcrumbs from "./Breadcrumbs";
@@ -21,13 +21,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background bg-gradient-to-br from-slate-50 to-slate-100">
+    <div
+      className="min-h-screen relative"
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(224, 242, 254, 0.7) 0%, rgba(240, 249, 255, 0.6) 50%, rgba(239, 246, 255, 0.5) 100%)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+      }}
+    >
       {/* Header */}
       <Header onMobileMenuToggle={handleMobileMenuToggle} />
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <div className="hidden md:block mt-4">
+        <div className="hidden md:block">
           <Sidebar
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={handleSidebarToggle}

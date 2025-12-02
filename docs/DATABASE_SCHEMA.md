@@ -905,6 +905,65 @@ Table: processing
 
 ---
 
+#### **8.2 ProcessingStep Model – NEW v2.1**
+
+```sql
+Table: processing_steps
+```
+
+**Purpose:** Stores SLA-aware, auditable micro steps (Medical Certificate → Joining Confirmation) so processing executives can update each task independently.
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | PK, CUID | Unique step record |
+| `candidateProjectMapId` | String | FK, indexed | Ties the step to a specific nomination |
+| `stepKey` | Enum `ProcessingStepKey` | Required | Canonical key (`MEDICAL_CERTIFICATE`, `HRD_ATTESTATION`, etc.) |
+| `status` | Enum `ProcessingStepStatus` | Default `PENDING` | `PENDING`, `IN_PROGRESS`, `DONE`, `REJECTED`, `NOT_APPLICABLE` |
+| `slaDays` | Int | Required | SLA in days (used to auto compute due dates) |
+| `dueDate` | DateTime | Optional | Auto-set to `now + slaDays` whenever the step activates |
+| `startedAt` | DateTime | Optional | When the step moved to `IN_PROGRESS` |
+| `completedAt` | DateTime | Optional | When step reached `DONE/NOT_APPLICABLE` |
+| `notes` | String | Optional | Internal notes |
+| `notApplicableReason` | String | Optional | Required when status = `NOT_APPLICABLE` |
+| `lastUpdatedById` | String | Optional | User who last touched the step |
+| `createdAt` / `updatedAt` | DateTime | Auto timestamps | Audit fields |
+
+**Relationships:**
+
+- `candidateProjectMap` → `CandidateProjectMap` (Many-to-One, cascade delete)
+- `lastUpdatedBy` → `User` (optional; stores processing executive id)
+
+Default seeding creates all 11 steps (Medical Certificate, Document Collection, HRD Attestation, QVP, DataFlow, Prometric, Visa, Immigration, Ticketing, Travel, Joining). The first step is automatically set to `IN_PROGRESS`, giving it an immediate due date.
+
+---
+
+#### **8.3 ProcessingStepHistory Model – NEW v2.1**
+
+```sql
+Table: processing_step_history
+```
+
+**Purpose:** Immutable audit log for every processing step transition so we can show “tracking history” inside the dashboard.
+
+**Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | String | PK |
+| `candidateProjectMapId` | String | FK to nomination |
+| `stepKey` | Enum | The step that changed |
+| `previousStatus` / `newStatus` | Enum | Before/after states |
+| `notes` | String | Optional contextual note |
+| `actorId` / `actorName` | String | Processing executive metadata |
+| `changedAt` | DateTime | Timestamp |
+
+**Relationships:**
+
+- `candidateProjectMap` → `CandidateProjectMap`
+- `actor` → `User` (optional)
+
+---
+
 ### **🔔 9. Notification Models**
 
 #### **9.1 Notification Model**

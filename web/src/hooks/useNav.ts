@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { useAppSelector } from '@/app/hooks';
-import { NavItem, navigationConfig } from '@/config/nav';
+import { useMemo } from "react";
+import { useAppSelector } from "@/app/hooks";
+import { NavItem, navigationConfig } from "@/config/nav";
 
 /**
  * Hook to filter navigation items based on user permissions and roles
@@ -8,51 +8,57 @@ import { NavItem, navigationConfig } from '@/config/nav';
  */
 export function useNav(): NavItem[] {
   const { user } = useAppSelector((state) => state.auth);
-  
+
   return useMemo(() => {
     if (!user) return [];
-    
+
     const filterNavItem = (item: NavItem): NavItem | null => {
       // Check if item is disabled
       if (item.disabled) return null;
-      
+
+      // Check explicit role exclusions
+      if (item.hiddenForRoles?.some((role) => user.roles.includes(role))) {
+        return null;
+      }
+
       // Check role requirements
       if (item.roles && item.roles.length > 0) {
-        const hasRequiredRole = item.roles.some(role => 
+        const hasRequiredRole = item.roles.some((role) =>
           user.roles.includes(role)
         );
         if (!hasRequiredRole) return null;
       }
-      
+
       // Check permission requirements
       if (item.permissions && item.permissions.length > 0) {
-        const hasRequiredPermission = item.permissions.some(permission => 
-          user.permissions.includes(permission) || 
-          user.permissions.includes('*') ||
-          user.permissions.includes('manage:all') ||
-          user.permissions.includes('read:all')
+        const hasRequiredPermission = item.permissions.some(
+          (permission) =>
+            user.permissions.includes(permission) ||
+            user.permissions.includes("*") ||
+            user.permissions.includes("manage:all") ||
+            user.permissions.includes("read:all")
         );
         if (!hasRequiredPermission) return null;
       }
-      
+
       // Filter children recursively
       if (item.children) {
         const filteredChildren = item.children
           .map(filterNavItem)
           .filter((child): child is NavItem => child !== null);
-        
+
         // If no children are accessible, don't show parent
         if (filteredChildren.length === 0) return null;
-        
+
         return {
           ...item,
           children: filteredChildren,
         };
       }
-      
+
       return item;
     };
-    
+
     return navigationConfig
       .map(filterNavItem)
       .filter((item): item is NavItem => item !== null);
@@ -65,7 +71,7 @@ export function useNav(): NavItem[] {
  */
 export function useFlattenedNav(): NavItem[] {
   const navItems = useNav();
-  
+
   return useMemo(() => {
     const flatten = (items: NavItem[]): NavItem[] => {
       return items.reduce((acc, item) => {
@@ -76,7 +82,7 @@ export function useFlattenedNav(): NavItem[] {
         return acc;
       }, [] as NavItem[]);
     };
-    
+
     return flatten(navItems);
   }, [navItems]);
 }

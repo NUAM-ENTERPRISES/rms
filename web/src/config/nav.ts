@@ -22,6 +22,7 @@ export interface NavItem {
   path?: string;
   icon?: LucideIcon;
   roles?: string[];
+  hiddenForRoles?: string[];
   permissions?: string[];
   featureFlag?: string;
   badge?: {
@@ -63,6 +64,7 @@ export const navigationConfig: NavItem[] = [
       "Manager",
       "Recruiter",
       "Documentation Executive",
+      "Processing Executive",
       "System Admin",
     ],
     // Hidden from CRE - they only manage candidates
@@ -72,7 +74,17 @@ export const navigationConfig: NavItem[] = [
     label: "Candidates",
     path: "/candidates",
     icon: UserCheck,
-    // Accessible to all roles including CRE - core business function
+    roles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "Team Head",
+      "Team Lead",
+      "Recruiter",
+      "Documentation Executive",
+      "System Admin",
+      "CRE",
+    ],
   },
   {
     id: "clients",
@@ -101,6 +113,7 @@ export const navigationConfig: NavItem[] = [
       "Manager",
       "Recruiter",
       "Documentation Executive",
+      "Interview Coordinator",
       "System Admin",
     ],
     // Hidden from CRE - they focus on RNR candidates
@@ -143,6 +156,15 @@ export const navigationConfig: NavItem[] = [
     path: "/documents/verification",
     icon: FileText,
     permissions: ["read:documents"],
+    hiddenForRoles: ["Interview Coordinator"],
+  },
+  {
+    id: "processing",
+    label: "In Processing",
+    path: "/processing/candidates",
+    icon: BookOpen,
+    permissions: ["read:processing"],
+    roles: ["Processing Executive"],
   },
   // {
   //   id: "notifications",
@@ -177,20 +199,6 @@ export const navigationConfig: NavItem[] = [
         label: "Users",
         path: "/admin/users",
         permissions: ["read:users"],
-        roles: ["CEO", "Director", "Manager", "System Admin"],
-      },
-      {
-        id: "admin-roles",
-        label: "Roles & Permissions",
-        path: "/admin/roles",
-        permissions: ["read:roles"],
-        roles: ["CEO", "Director", "Manager", "System Admin"],
-      },
-      {
-        id: "admin-teams",
-        label: "Team Management",
-        path: "/admin/teams",
-        permissions: ["read:teams"],
         roles: ["CEO", "Director", "Manager", "System Admin"],
       },
     ],

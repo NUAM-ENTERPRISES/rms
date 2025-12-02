@@ -183,6 +183,7 @@ const roles = [
       'read:candidates',
       'write:candidates',
       'read:projects',
+      'read:interviews',
       'read:mock_interviews',
       'write:mock_interviews',
       'manage:mock_interviews',

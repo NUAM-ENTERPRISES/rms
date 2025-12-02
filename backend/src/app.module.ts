@@ -41,6 +41,7 @@ import { ProjectRoleCatalogModule } from './project-role-catalog/project-role-ca
 import { CandidateProjectStatusModule } from './candidate-project-status/candidate-project-status.module';
 import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
 import { MockInterviewCoordinationModule } from './mock-interview-coordination/mock-interview-coordination.module';
+import { ProcessingModule } from './processing/processing.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { MockInterviewCoordinationModule } from './mock-interview-coordination/m
     CandidateProjectsModule,
     CandidateProjectStatusHistoryModule,
     MockInterviewCoordinationModule,
+    ProcessingModule,
   ],
   controllers: [AppController],
   providers: [
