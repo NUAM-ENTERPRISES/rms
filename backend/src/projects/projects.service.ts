@@ -155,6 +155,7 @@ export class ProjectsService {
           resumeEditable: createProjectDto.resumeEditable ?? true,
           groomingRequired: createProjectDto.groomingRequired || 'formal',
           hideContactInfo: createProjectDto.hideContactInfo ?? true,
+          requiredScreening: createProjectDto.requiredScreening ?? false,
         },
       });
 
@@ -595,6 +596,8 @@ export class ProjectsService {
       updateData.groomingRequired = updateProjectDto.groomingRequired;
     if (updateProjectDto.hideContactInfo !== undefined)
       updateData.hideContactInfo = updateProjectDto.hideContactInfo;
+    if (updateProjectDto.requiredScreening !== undefined)
+      updateData.requiredScreening = updateProjectDto.requiredScreening;
 
     // Handle rolesNeeded updates if provided
     if (updateProjectDto.rolesNeeded !== undefined) {

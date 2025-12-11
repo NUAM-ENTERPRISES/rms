@@ -197,6 +197,8 @@ model Project {
   title                String
   description          String?
   deadline             DateTime?
+  // Whether this project requires additional candidate screening steps
+  requiredScreening    Boolean               @default(false)
   status               String                @default("active")
   createdBy            String
   teamId               String?

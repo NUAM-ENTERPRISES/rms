@@ -1,6 +1,7 @@
 import {
   IsString,
   IsOptional,
+  IsBoolean,
   IsDateString,
   IsArray,
   ValidateNested,
@@ -418,6 +419,15 @@ export class CreateProjectDto {
   @ValidateNested({ each: true })
   @Type(() => CreateRoleNeededDto)
   rolesNeeded?: CreateRoleNeededDto[];
+
+  @ApiPropertyOptional({
+    description: 'Whether additional candidate screening is required for this project',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  requiredScreening?: boolean = false;
 
   @ApiPropertyOptional({
     description: 'Document requirements for this project',
