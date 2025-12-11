@@ -166,6 +166,16 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
                 </span>
               </div>
             </div>
+            
+            {/* Required Screening Badge */}
+            {formData.requiredScreening && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md text-sm font-medium">
+                  <CheckCircle className="h-4 w-4" />
+                  Required Screening Process Enabled
+                </div>
+              </div>
+            )}
           </div>
 
           {formData.description && (

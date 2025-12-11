@@ -12,6 +12,7 @@ export const projectFormSchema = z.object({
   resumeEditable: z.boolean(),
   groomingRequired: z.enum(["formal", "casual", "not_specified"]),
   hideContactInfo: z.boolean(),
+  requiredScreening: z.boolean(),
   rolesNeeded: z
     .array(
       z.object({
@@ -90,6 +91,7 @@ export const defaultProjectValues = {
   resumeEditable: true,
   groomingRequired: "formal" as const,
   hideContactInfo: true, // Default to hide contact info for private projects
+  requiredScreening: false,
   rolesNeeded: [
     {
       designation: "",

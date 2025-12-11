@@ -23,9 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CountrySelect, DatePicker, ClientSelect } from "@/components/molecules";
-import { Building2, Target, CheckCircle } from "lucide-react";
+import { Building2, Target, CheckCircle, Shield } from "lucide-react";
 import { ProjectFormData } from "../../schemas/project-schemas";
 
 interface ProjectDetailsStepProps {
@@ -371,6 +371,36 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 </Select>
               )}
             />
+          </div>
+        </div>
+
+        {/* Required Screening Checkbox */}
+        <div className="pt-4 border-t border-slate-200">
+          <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+            <Controller
+              name="requiredScreening"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="requiredScreening"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="mt-1"
+                />
+              )}
+            />
+            <div className="flex-1">
+              <Label
+                htmlFor="requiredScreening"
+                className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+              >
+                <Shield className="h-4 w-4 text-blue-600" />
+                Required Screening Process
+              </Label>
+              <p className="text-xs text-slate-600 mt-1">
+                Enable this if candidates must complete a mandatory screening process before being considered for this project
+              </p>
+            </div>
           </div>
         </div>
       </CardContent>

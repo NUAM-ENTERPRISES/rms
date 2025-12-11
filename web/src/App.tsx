@@ -128,6 +128,12 @@ const ConductMockInterviewPage = lazy(
       "@/features/mock-interview-coordination/interviews/views/ConductMockInterviewPage"
     )
 );
+const ScreeningPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/screening/views/ScreeningPage"
+    )
+);
 
 const DocumentUploadPage = lazy(
   () => import("@/features/documents/views/DocumentUploadPage")
@@ -532,6 +538,19 @@ function App() {
                         <ProtectedRoute permissions={["read:training"]}>
                           <AppLayout>
                             <TrainingDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/mock-interviews/screening"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                          <AppLayout>
+                            <ScreeningPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

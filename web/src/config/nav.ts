@@ -148,6 +148,12 @@ export const navigationConfig: NavItem[] = [
         path: "/mock-interviews/templates",
         permissions: ["read:interview_templates"],
       },
+      {
+        id: "mock-interviews-screening",
+        label: "Screening",
+        path: "/mock-interviews/screening",
+        permissions: ["read:mock_interviews"],
+      },
     ],
   },
   {

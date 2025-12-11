@@ -97,6 +97,7 @@ export default function MultiStepEditProjectPage() {
         resumeEditable: (project as any).resumeEditable ?? true,
         groomingRequired: (project as any).groomingRequired ?? "formal",
         hideContactInfo: (project as any).hideContactInfo ?? true,
+        requiredScreening: (project as any).requiredScreening ?? false,
             rolesNeeded:
           project.rolesNeeded?.map((role: any) => ({
             designation: role.designation,
