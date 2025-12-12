@@ -72,6 +72,15 @@ const EditClientPage = lazy(
 const InterviewsPage = lazy(
   () => import("@/features/interviews/views/InterviewsPage")
 );
+const MyInterviewsListPage = lazy(
+  () => import("@/features/interviews/views/MyInterviewsListPage")
+);
+const AssignedInterviewsListPage = lazy(
+  () => import("@/features/interviews/views/AssignedInterviewsListPage")
+);
+const UpcomingInterviewsListPage = lazy(
+  () => import("@/features/interviews/views/UpcomingInterviewsListPage")
+);
 
 // Mock Interview Coordination
 const MockInterviewsDashboardPage = lazy(
@@ -86,13 +95,13 @@ const MockInterviewsListPage = lazy(
       "@/features/mock-interview-coordination/interviews/views/MockInterviewsListPage"
     )
 );
-const UpcomingInterviewsListPage = lazy(
+const MockUpcomingInterviewsListPage = lazy(
   () =>
     import(
       "@/features/mock-interview-coordination/interviews/views/UpcomingInterviewsListPage"
     )
 );
-const AssignedInterviewsListPage = lazy(
+const MockAssignedInterviewsListPage = lazy(
   () =>
     import(
       "@/features/mock-interview-coordination/interviews/views/AssignedInterviewsListPage"
@@ -435,6 +444,45 @@ function App() {
                     }
                   />
 
+                  <Route
+                    path="/interviews/list"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <MyInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/interviews/assigned"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <AssignedInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/interviews/upcoming"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <UpcomingInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
                   {/* Mock Interview Coordination Routes */}
                   <Route
                     path="/mock-interviews"
@@ -468,7 +516,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute permissions={["read:mock_interviews"]}>
                           <AppLayout>
-                            <AssignedInterviewsListPage />
+                            <MockAssignedInterviewsListPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
@@ -481,7 +529,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute permissions={["read:mock_interviews"]}>
                           <AppLayout>
-                            <UpcomingInterviewsListPage />
+                            <MockUpcomingInterviewsListPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

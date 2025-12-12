@@ -1,3 +1,4 @@
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,11 +33,15 @@ import { useCreateInterviewMutation } from "../api";
 import { toast } from "sonner";
 
 const scheduleInterviewSchema = z.object({
-  projectId: z.string().min(1, "Please select a project"),
+  candidateProjectMapId: z.string(),
   scheduledTime: z.date({
     message: "Please select a date and time",
   }),
+  duration: z.coerce.number().int().min(1).optional(),
+  type: z.enum(["technical", "hr", "managerial", "final"]).optional(),
   mode: z.enum(["video", "phone", "in-person"]),
+  // meetingLink is optional; if provided, validate as URL, but allow empty string
+  meetingLink: z.preprocess((v) => (v === "" || v === undefined ? undefined : v), z.string().url().optional()),
   notes: z.string().optional(),
 });
 
@@ -45,30 +50,71 @@ type ScheduleInterviewForm = z.infer<typeof scheduleInterviewSchema>;
 interface ScheduleInterviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialCandidateProjectMapId?: string;
+  initialCandidateName?: string;
+  initialProjectName?: string;
 }
 
 export default function ScheduleInterviewDialog({
   open,
   onOpenChange,
+  initialCandidateProjectMapId,
+  initialCandidateName,
+  initialProjectName,
 }: ScheduleInterviewDialogProps) {
-  const { data: projectsData } = useGetProjectsQuery({
-    status: "active",
-    page: 1,
-    limit: 100,
-  });
+  const { data: projectsData } = useGetProjectsQuery(
+    {
+      status: "active",
+      page: 1,
+      limit: 100,
+    },
+    {
+      skip: !!initialCandidateProjectMapId, // Skip fetching projects if we already have a candidateProjectMapId
+    }
+  );
 
   const [createInterview, { isLoading: isCreating }] =
     useCreateInterviewMutation();
 
   const form = useForm<ScheduleInterviewForm>({
-    resolver: zodResolver(scheduleInterviewSchema),
+    mode: "onChange",
+    resolver: zodResolver(scheduleInterviewSchema) as any,
     defaultValues: {
-      projectId: "",
+      candidateProjectMapId: initialCandidateProjectMapId ?? undefined,
       scheduledTime: undefined,
+      duration: 60,
+      type: "technical",
       mode: "video",
+      meetingLink: undefined,
       notes: "",
     },
   });
+
+  const modeValue = form.watch("mode");
+
+  // Clear meetingLink when switching away from video mode to avoid leftover invalid values
+  React.useEffect(() => {
+    if (modeValue !== "video") {
+      form.setValue("meetingLink", undefined, { shouldValidate: true, shouldDirty: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modeValue]);
+
+  // Reset form values when initial props change / dialog opens
+  React.useEffect(() => {
+    if (open) {
+      form.reset({
+        candidateProjectMapId: initialCandidateProjectMapId ?? undefined,
+        scheduledTime: undefined,
+        duration: 60,
+        type: "technical",
+        mode: "video",
+        meetingLink: undefined,
+        notes: "",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialCandidateProjectMapId]);
 
   const handleSubmit = async (data: ScheduleInterviewForm) => {
     if (!data.scheduledTime) {
@@ -77,10 +123,13 @@ export default function ScheduleInterviewDialog({
     }
 
     try {
-      const interviewData = {
-        projectId: data.projectId,
+      const interviewData: any = {
+        candidateProjectMapId: data.candidateProjectMapId,
         scheduledTime: data.scheduledTime.toISOString(),
+        duration: data.duration,
+        type: data.type,
         mode: data.mode,
+        meetingLink: data.meetingLink,
         notes: data.notes,
       };
 
@@ -109,31 +158,52 @@ export default function ScheduleInterviewDialog({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-6"
           >
-            {/* Project Selection */}
-            <FormField
-              control={form.control}
-              name="projectId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+            {/* Candidate & Project Selection */}
+            {initialCandidateProjectMapId ? (
+              <FormField
+                control={form.control}
+                name="candidateProjectMapId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Candidate & Project</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a project" />
-                      </SelectTrigger>
+                      <input
+                        {...field}
+                        disabled
+                        value={`${initialCandidateName || "Candidate"} — ${initialProjectName || "Project"}`}
+                        className="w-full rounded-md border border-input bg-muted/40 px-3 py-2 text-sm cursor-not-allowed"
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {projectsData?.data?.projects?.map((project: any) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormField
+                control={form.control}
+                name="candidateProjectMapId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a project" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {projectsData?.data?.projects?.map((project: any) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Date and Time */}
             <FormField
@@ -193,6 +263,72 @@ export default function ScheduleInterviewDialog({
               )}
             />
 
+            {/* Meeting link (only for video mode) */}
+            {modeValue === "video" && (
+              <FormField
+                control={form.control}
+                name="meetingLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Meeting link (optional)</FormLabel>
+                    <FormControl>
+                      <input
+                        {...field}
+                        placeholder="https://meet.example.com/room"
+                        className="w-full rounded-md border border-input px-3 py-2 text-sm"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Duration */}
+            <FormField
+              control={form.control}
+              name="duration"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duration (minutes)</FormLabel>
+                  <FormControl>
+                    <input
+                      {...field}
+                      type="number"
+                      min={1}
+                      className="w-full rounded-md border border-input px-3 py-2 text-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Type */}
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Interview Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select interview type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="technical">Technical</SelectItem>
+                      <SelectItem value="hr">HR</SelectItem>
+                      <SelectItem value="managerial">Managerial</SelectItem>
+                      <SelectItem value="final">Final</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Notes */}
             <FormField
               control={form.control}
@@ -212,6 +348,8 @@ export default function ScheduleInterviewDialog({
               )}
             />
 
+      
+
             <DialogFooter className="pt-6 border-t border-slate-200">
               <Button
                 type="button"
@@ -223,7 +361,7 @@ export default function ScheduleInterviewDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={isCreating}
+                disabled={!form.formState.isValid || isCreating}
                 className="h-11 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 {isCreating ? (

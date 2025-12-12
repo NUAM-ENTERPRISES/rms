@@ -47,6 +47,11 @@ export class UpdateInterviewDto {
   @IsOptional()
   mode?: string;
 
+  @ApiProperty({ description: 'Meeting link for video interviews (optional; generated automatically for video mode if not provided)', required: false, example: 'https://meet.affiniks.com/abc123' })
+  @IsOptional()
+  @IsString()
+  meetingLink?: string;
+
   @ApiProperty({
     description: 'Interview outcome',
     example: 'passed',

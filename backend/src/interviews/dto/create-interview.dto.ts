@@ -9,23 +9,17 @@ import {
 } from 'class-validator';
 
 export class CreateInterviewDto {
-  @ApiPropertyOptional({
+  @ApiProperty({
     description:
-      'Candidate-project map ID (optional for project-only interviews)',
+      'Candidate-project map ID (required to schedule an interview)',
     example: 'cmgr8ocw90009u5qojv0uqqg2',
   })
   @IsString()
-  @IsOptional()
-  candidateProjectMapId?: string;
+  candidateProjectMapId: string;
 
-  @ApiPropertyOptional({
-    description:
-      'Project ID (required if candidateProjectMapId is not provided)',
-    example: 'project123',
-  })
-  @IsString()
-  @IsOptional()
-  projectId?: string;
+  // Note: projectId has been removed. Scheduling now strictly requires
+  // a valid `candidateProjectMapId` to ensure candidate-specific updates
+  // and history entries.
 
   @ApiProperty({
     description: 'Scheduled interview time',
@@ -62,6 +56,11 @@ export class CreateInterviewDto {
   @IsEnum(['video', 'phone', 'in-person'])
   @IsOptional()
   mode?: string = 'video';
+
+  @ApiPropertyOptional({ description: 'Meeting link (optional; generated automatically for video mode when not provided)', required: false, example: 'https://meet.affiniks.com/abc123' })
+  @IsOptional()
+  @IsString()
+  meetingLink?: string;
 
   @ApiProperty({
     description: 'Additional notes',

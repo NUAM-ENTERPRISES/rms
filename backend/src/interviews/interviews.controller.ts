@@ -23,19 +23,21 @@ import { InterviewsService } from './interviews.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
+import { QueryAssignedInterviewsDto } from './dto/query-assigned-interviews.dto';
+import { QueryUpcomingInterviewsDto } from './dto/query-upcoming-interviews.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Interviews')
 @ApiBearerAuth()
 @Controller('interviews')
 export class InterviewsController {
-  constructor(private readonly interviewsService: InterviewsService) {}
+  constructor(private readonly interviewsService: InterviewsService) { }
 
   @Post()
   @Permissions('schedule:interviews')
   @ApiOperation({
     summary: 'Schedule a new interview',
-    description: 'Schedule an interview for a candidate-project combination.',
+    description: 'Schedule an interview tied to a candidate-project mapping. Requires `candidateProjectMapId` and `scheduledTime`.',
   })
   @ApiResponse({
     status: 201,
@@ -53,6 +55,8 @@ export class InterviewsController {
             type: { type: 'string' },
             mode: { type: 'string' },
             meetingLink: { type: 'string' },
+            // Example value shown when meetingLink is present
+            // (optional; generated automatically for video mode if not provided)
             interviewer: { type: 'string' },
             interviewerEmail: { type: 'string' },
             candidateProjectMapId: { type: 'string' },
@@ -160,8 +164,11 @@ export class InterviewsController {
                   type: { type: 'string' },
                   mode: { type: 'string' },
                   meetingLink: { type: 'string' },
+                  // Example meeting link (optional)
+                  // meetingLink: { type: 'string', example: 'https://meet.affiniks.com/abc123' },
                   interviewer: { type: 'string' },
                   interviewerEmail: { type: 'string' },
+                  expired: { type: 'boolean' },
                   outcome: { type: 'string' },
                   notes: { type: 'string' },
                   candidateProjectMap: {
@@ -217,6 +224,138 @@ export class InterviewsController {
       success: true,
       data: result,
       message: 'Interviews retrieved successfully',
+    };
+  }
+
+  @Get('assigned-interviews')
+  @Permissions('read:interviews')
+  @ApiOperation({
+    summary: 'List candidate-project assignments with sub-status interview_assigned ordered by latest assignment',
+    description: 'Return candidate-projects that have been assigned to client interviews (latest assignments first). Supports pagination and optional filters.',
+  })
+  @ApiResponse({ status: 200, description: 'Assigned interview retrieved successfully' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
+  @ApiQuery({ name: 'projectId', required: false, description: 'Filter by project ID' })
+  @ApiQuery({ name: 'candidateId', required: false, description: 'Filter by candidate ID' })
+  @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter by recruiter/assignee ID' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term: candidate name/email/project title/role designation' })
+  @ApiQuery({ name: 'subStatus', required: false, description: "Sub-status to filter by (defaults to 'interview_assigned')" })
+  @ApiQuery({ name: 'includeScheduled', required: false, description: 'Include sub-status interview_scheduled as well (boolean)', example: false })
+  async getAssigned(@Query() query: QueryAssignedInterviewsDto): Promise<any> {
+    const assignedInterview = await this.interviewsService.getAssignedCandidateProjects(query);
+
+    return {
+      success: true,
+      data: assignedInterview,
+      message: 'Assigned interview retrieved successfully',
+    };
+  }
+
+  @Get('upcoming')
+  @Permissions('read:interviews')
+  @ApiOperation({
+    summary: "Get upcoming client interviews (substatus 'interview_scheduled')",
+    description: 'Return interviews that are scheduled and upcoming (candidate-project subStatus of interview_scheduled). Supports pagination, search, roleNeeded filter, and date range filters.',
+  })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
+  @ApiQuery({ name: 'projectId', required: false, description: 'Filter by project ID' })
+  @ApiQuery({ name: 'candidateId', required: false, description: 'Filter by candidate ID' })
+  @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter by recruiter/assignee ID' })
+  @ApiQuery({ name: 'roleNeeded', required: false, description: 'Filter by role needed designation or id' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term: candidate name/email/project title/role designation' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Start date (inclusive) ISO format to filter scheduledTime' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'End date (inclusive) ISO format to filter scheduledTime' })
+  @ApiResponse({
+    status: 200,
+    description: 'Upcoming interviews retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            interviews: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  scheduledTime: { type: 'string', format: 'date-time' },
+                  duration: { type: 'number' },
+                  type: { type: 'string' },
+                  mode: { type: 'string' },
+                  meetingLink: { type: 'string' },
+                  interviewer: { type: 'string' },
+                  interviewerEmail: { type: 'string' },
+                  outcome: { type: 'string' },
+                  notes: { type: 'string' },
+                  candidateProjectMap: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      candidate: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          firstName: { type: 'string' },
+                          lastName: { type: 'string' },
+                          email: { type: 'string' },
+                        },
+                      },
+                      project: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          title: { type: 'string' },
+                        },
+                      },
+                      roleNeeded: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          designation: { type: 'string' },
+                        },
+                      },
+                      recruiter: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          email: { type: 'string' },
+                        },
+                      },
+                      mainStatus: { type: 'object' },
+                      subStatus: { type: 'object' },
+                    },
+                  },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' },
+              },
+            },
+          },
+        },
+        message: { type: 'string', example: 'Upcoming interviews retrieved successfully' },
+      },
+    },
+  })
+  async getUpcoming(@Query() query: QueryUpcomingInterviewsDto): Promise<any> {
+    const upcoming = await this.interviewsService.getUpcomingInterviews(query);
+
+    return {
+      success: true,
+      data: upcoming,
+      message: "Upcoming interviews retrieved successfully",
     };
   }
 

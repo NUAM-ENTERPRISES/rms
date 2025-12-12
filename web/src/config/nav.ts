@@ -5,11 +5,9 @@ import {
   UserCheck,
   Building2,
   FileText,
-  Settings,
-  BarChart3,
   Shield,
   Calendar,
-  Bell,
+  // Bell removed - not currently used
   User,
   Briefcase,
   ClipboardCheck,
@@ -115,6 +113,37 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "Interview Coordinator",
       "System Admin",
+    ],
+    children: [
+      {
+        id: "interviews-dashboard",
+        label: "Dashboard",
+        path: "/interviews",
+        roles: [
+          "CEO",
+          "Director",
+          "Manager",
+          "Recruiter",
+          "Documentation Executive",
+          "Interview Coordinator",
+          "System Admin",
+        ],
+      },
+      {
+        id: "interviews-list",
+        label: "My Interviews",
+        path: "/interviews/list",
+        roles: [
+          "CEO",
+          "Director",
+          "Manager",
+          "Recruiter",
+          "Documentation Executive",
+          "Interview Coordinator",
+          "System Admin",
+        ],
+      },
+      // Assigned and Upcoming are intentionally omitted from the sidebar
     ],
     // Hidden from CRE - they focus on RNR candidates
   },
