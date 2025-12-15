@@ -211,15 +211,44 @@ export const interviewsApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Interview"],
     }),
+
+    /**
+     * Update interview status (separate endpoint)
+     * PATCH /interviews/:id/status
+     */
+    updateInterviewStatus: builder.mutation<
+      { success: boolean; data: Interview; message?: string },
+      { id: string; data: { interviewStatus?: string; subStatus?: string; reason?: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/interviews/${id}/status`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Interview", id }, "Interview"],
+    }),
+
+    /**
+     * Get interview history: GET /interviews/:id/history
+     */
+    getInterviewHistory: builder.query<
+      { success: boolean; data: any[]; message?: string },
+      string
+    >({
+      query: (id) => ({ url: `/interviews/${id}/history` }),
+      providesTags: (_result, _error, id) => [{ type: "Interview", id }],
+    }),
   }),
 });
 
 export const {
   useGetInterviewsQuery,
   useGetInterviewQuery,
+  useGetInterviewHistoryQuery,
   useCreateInterviewMutation,
   useUpdateInterviewMutation,
   useDeleteInterviewMutation,
+  useUpdateInterviewStatusMutation,
   useGetAssignedInterviewsQuery,
   useGetUpcomingInterviewsQuery,
 } = interviewsApi;

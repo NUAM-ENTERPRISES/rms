@@ -9,6 +9,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetUpcomingInterviewsQuery } from "../api";
+import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
+import InterviewHistory from "@/components/molecules/InterviewHistory";
+import { useGetInterviewHistoryQuery } from "../api";
+import EditInterviewDialog from "../components/EditInterviewDialog";
+import { toast } from "sonner";
+import { useUpdateInterviewStatusMutation } from "../api";
 import { cn } from "@/lib/utils";
 
 export default function UpcomingInterviewsListPage() {
@@ -52,6 +58,30 @@ export default function UpcomingInterviewsListPage() {
     if (selectedId) return displayed.find((i) => i.id === selectedId) || null;
     return displayed[0] || null;
   }, [displayed, selectedId]);
+
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [updateInterviewStatus] = useUpdateInterviewStatusMutation();
+
+  // Fetch history for selected interview
+  const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(selected?.id ?? "", { skip: !selected?.id });
+
+  const handleReviewSubmit = async (payload: { interviewStatus: "passed" | "failed" | "completed"; subStatus?: string; reason?: string }) => {
+    if (!selected) {
+      const err = new Error("No interview selected");
+      toast.error(err.message);
+      throw err;
+    }
+
+    try {
+      await updateInterviewStatus({ id: selected.id, data: payload }).unwrap();
+      toast.success(`Interview status updated: ${payload.interviewStatus}`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.data?.message || "Failed to update interview status");
+      throw err;
+    }
+  };
 
   if (isLoading) return (<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>);
 
@@ -172,7 +202,25 @@ export default function UpcomingInterviewsListPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     {!(selected as any).conductedAt && (
-                      <Button onClick={() => navigate(`/interviews/${selected.id}/conduct`)}>Conduct Interview</Button>
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Button onClick={() => setIsEditOpen(true)} variant="outline" size="sm">Edit</Button>
+                          <Button onClick={() => setIsReviewOpen(true)}>Review Interview</Button>
+                        </div>
+                        <ReviewInterviewModal
+                          isOpen={isReviewOpen}
+                          onClose={() => setIsReviewOpen(false)}
+                          interview={selected}
+                          onSubmit={(status) => handleReviewSubmit(status)}
+                        />
+                        {selected && (
+                          <EditInterviewDialog
+                            open={isEditOpen}
+                            onOpenChange={setIsEditOpen}
+                            interviewId={selected.id}
+                          />
+                        )}
+                      </>
                     )}
                     <div className="flex flex-col items-end gap-2">
                       {selected.candidateProjectMap?.subStatus?.label && (
@@ -242,6 +290,8 @@ export default function UpcomingInterviewsListPage() {
                     )}
                   </CardContent>
                 </Card>
+                {/* Interview history */}
+                <InterviewHistory items={historyResp?.data ?? []} isLoading={isHistoryLoading} />
               </div>
             </ScrollArea>
           ) : (

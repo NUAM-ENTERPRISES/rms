@@ -29,20 +29,22 @@ import {
 import { DatePicker } from "@/components/molecules";
 import { Input } from "@/components/ui/input";
 import { MapPin, Video, PhoneCall, Save } from "lucide-react";
-import { useGetInterviewQuery, useUpdateInterviewMutation } from "../api";
+import { useGetMockInterviewQuery, useUpdateMockInterviewMutation } from "../data";
 import { toast } from "sonner";
 
-const editInterviewSchema = z
+const editMockInterviewSchema = z
   .object({
-    scheduledTime: z.date({
-      message: "Please select a date and time",
-    }),
+    scheduledTime: z.date({ message: "Please select a date and time" }),
     mode: z.enum(["video", "phone", "in-person"]),
-    notes: z.string().optional(),
     meetingLink: z.string().optional(),
+    notes: z.string().optional(),
+    // Allow number inputs (which can come through as strings) and coerce to number or undefined
+    duration: z.preprocess((v) => {
+      if (v === "" || v === undefined || v === null) return undefined;
+      return Number(v);
+    }, z.number().min(0).optional()),
   })
   .superRefine((data, ctx) => {
-    // Meeting link is optional. If provided, validate it's a proper URL.
     if (data.meetingLink && data.meetingLink.trim() !== "") {
       try {
         // eslint-disable-next-line no-new
@@ -57,71 +59,69 @@ const editInterviewSchema = z
     }
   });
 
-type EditInterviewForm = z.infer<typeof editInterviewSchema>;
+type EditMockInterviewForm = z.infer<typeof editMockInterviewSchema>;
 
-interface EditInterviewDialogProps {
+interface EditMockInterviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   interviewId: string;
 }
 
-export default function EditInterviewDialog({
+export default function EditMockInterviewDialog({
   open,
   onOpenChange,
   interviewId,
-}: EditInterviewDialogProps) {
-  const { data: interviewData, isLoading } = useGetInterviewQuery(interviewId);
-  const [updateInterview, { isLoading: isUpdating }] =
-    useUpdateInterviewMutation();
+}: EditMockInterviewDialogProps) {
+  const { data: interviewData, isLoading } = useGetMockInterviewQuery(interviewId);
+  const [updateMockInterview, { isLoading: isUpdating }] = useUpdateMockInterviewMutation();
 
-  const form = useForm<EditInterviewForm>({
-    resolver: zodResolver(editInterviewSchema),
+  const form = useForm<EditMockInterviewForm>({
+    resolver: zodResolver(editMockInterviewSchema),
     defaultValues: {
       scheduledTime: undefined,
       mode: "video",
-      notes: "",
       meetingLink: "",
+      notes: "",
+      duration: undefined,
     },
   });
 
-  // Populate form when interview data loads
   useEffect(() => {
     if (interviewData?.data) {
-      const interview = interviewData.data;
-      const scheduledDate = new Date(interview.scheduledTime);
-
+      const iv = interviewData.data;
       form.reset({
-        scheduledTime: scheduledDate,
-        mode: (interview.mode as "video" | "phone" | "in-person") || "video",
-        notes: interview.notes || "",
-        meetingLink: interview.meetingLink || "",
+        scheduledTime: iv.scheduledTime ? new Date(iv.scheduledTime) : undefined,
+        mode: (iv.mode as "video" | "phone" | "in-person") || "video",
+        meetingLink: iv.meetingLink || "",
+        notes: iv.notes || "",
+        duration: iv.duration || undefined,
       });
     }
   }, [interviewData, form]);
 
-  const handleSubmit = async (data: EditInterviewForm) => {
+  const handleSubmit = async (data: EditMockInterviewForm) => {
     if (!data.scheduledTime) {
       toast.error("Please select date and time");
       return;
     }
 
     try {
-      const interviewData = {
-        scheduledTime: data.scheduledTime.toISOString(),
-        mode: data.mode,
-        notes: data.notes,
-        meetingLink: data.meetingLink?.trim() || undefined,
-      };
-
-      await updateInterview({
+      await updateMockInterview({
         id: interviewId,
-        data: interviewData as any,
+        data: {
+          scheduledTime: data.scheduledTime.toISOString(),
+          mode: data.mode,
+          meetingLink: data.meetingLink?.trim() || undefined,
+          notes: data.notes || undefined,
+          duration: data.duration,
+        },
       }).unwrap();
-      toast.success("Interview updated successfully");
+
+      toast.success("Mock interview updated successfully");
       onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to update interview:", error);
-      toast.error("Failed to update interview");
+    } catch (err) {
+      console.error("Failed to update mock interview:", err);
+      toast.error("Failed to update mock interview");
     }
   };
 
@@ -141,18 +141,12 @@ export default function EditInterviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Interview</DialogTitle>
-          <DialogDescription>
-            Update the interview details and schedule.
-          </DialogDescription>
+          <DialogTitle>Edit Mock Interview</DialogTitle>
+          <DialogDescription>Update the mock interview details and schedule.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-6"
-          >
-            {/* Date and Time */}
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="scheduledTime"
@@ -160,18 +154,13 @@ export default function EditInterviewDialog({
                 <FormItem>
                   <FormLabel>Date & Time *</FormLabel>
                   <FormControl>
-                    <DatePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Select interview date and time"
-                    />
+                    <DatePicker value={field.value} onChange={field.onChange} placeholder="Select interview date and time" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Mode */}
             <FormField
               control={form.control}
               name="mode"
@@ -210,7 +199,6 @@ export default function EditInterviewDialog({
               )}
             />
 
-            {/* Meeting Link - only for video mode (optional) */}
             {form.watch("mode") === "video" && (
               <FormField
                 control={form.control}
@@ -227,7 +215,20 @@ export default function EditInterviewDialog({
               />
             )}
 
-            {/* Notes */}
+            <FormField
+              control={form.control}
+              name="duration"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duration (minutes)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" placeholder="Duration in minutes" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="notes"
@@ -247,19 +248,10 @@ export default function EditInterviewDialog({
             />
 
             <DialogFooter className="pt-6 border-t border-slate-200">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-11 px-6 border-slate-200 hover:border-slate-300">
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isUpdating}
-                className="h-11 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-              >
+              <Button type="submit" disabled={isUpdating} className="h-11 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200">
                 {isUpdating ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -268,7 +260,7 @@ export default function EditInterviewDialog({
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Update Interview
+                    Update Mock Interview
                   </>
                 )}
               </Button>

@@ -377,8 +377,13 @@ export class MockInterviewsService {
     // Verify interview exists
     const existing = await this.findOne(id);
 
-    // Don't allow updates if already completed
-    if (existing.conductedAt) {
+    // Don't allow updates if already completed. Prefer authoritative markers
+    // (status or decision) when determining completion to avoid false
+    // positives from stray `conductedAt` values in historical data.
+    if (
+      existing.status === MOCK_INTERVIEW_STATUS.COMPLETED ||
+      existing.decision != null
+    ) {
       throw new BadRequestException(
         'Cannot update a completed mock interview. Use the complete endpoint instead.',
       );
@@ -459,12 +464,19 @@ export class MockInterviewsService {
     // Verify interview exists (findOne will throw if not found)
     const existing = await this.findOne(id);
 
-    // Prevent changing template after interview is completed
-    if (existing.conductedAt) {
+    // Prevent changing template after interview is completed. Check status to
+    // avoid mis-detection when `conductedAt` is present for other reasons.
+    if (
+      existing.status === MOCK_INTERVIEW_STATUS.COMPLETED ||
+      existing.decision != null
+    ) {
       throw new BadRequestException('Cannot change template for a completed mock interview');
     }
 
-    // Verify template exists and matches candidate role if applicable
+    // Verify template exists and matches candidate role if applicable.
+    // We intentionally validate the interview's completion before fetching
+    // the template so callers receive the more relevant "completed" error
+    // when appropriate.
     const template = await this.prisma.mockInterviewTemplate.findUnique({ where: { id: templateId } });
     if (!template) {
       throw new NotFoundException(`Template with ID "${templateId}" not found`);
@@ -478,9 +490,9 @@ export class MockInterviewsService {
         select: { id: true },
       });
 
-      // if (roleCatalog && template.roleId !== roleCatalog.id) {
-      //   throw new BadRequestException('Template role does not match candidate role');
-      // }
+      if (roleCatalog && template.roleId !== roleCatalog.id) {
+        throw new BadRequestException('Template role does not match candidate role');
+      }
     }
 
     // Update the interview's templateId
@@ -610,8 +622,11 @@ export class MockInterviewsService {
     // Verify interview exists
     const existing = await this.findOne(id);
 
-    // Don't allow deletion if completed
-    if (existing.conductedAt) {
+    // Don't allow deletion if completed. Prefer status check over `conductedAt`.
+    if (
+      existing.status === MOCK_INTERVIEW_STATUS.COMPLETED ||
+      existing.decision != null
+    ) {
       throw new BadRequestException('Cannot delete a completed mock interview');
     }
 
@@ -793,5 +808,165 @@ export class MockInterviewsService {
       },
       message: 'Upcoming mock interviews (scheduled earliest first)',
     };
+  }
+
+  /**
+   * Assign a candidate to a main interview (mirrors candidate-projects sendForInterview)
+   */
+  async assignToMainInterview(dto: any, userId: string) {
+    const { projectId, candidateId, recruiterId: providedRecruiterId, notes } = dto as any;
+
+    // Validate candidate and project
+    const candidate = await this.prisma.candidate.findUnique({ where: { id: candidateId } });
+    if (!candidate) throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new NotFoundException(`Project with ID ${projectId} not found`);
+
+    // Resolve recruiter
+    let recruiterId = providedRecruiterId ?? userId;
+    const recruiter = recruiterId ? await this.prisma.user.findUnique({ where: { id: recruiterId } }) : null;
+    if (recruiterId && !recruiter) throw new NotFoundException(`Recruiter with ID "${recruiterId}" not found`);
+
+    // Determine statuses
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({ where: { name: 'interview' } });
+    const subName  = 'interview_assigned';
+    const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({ where: { name: subName } });
+
+    if (!mainStatus || !subStatus) throw new BadRequestException('Required status not found');
+
+    // Get user snapshot (only fetch when userId provided)
+    const user = userId ? await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }) : null;
+
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
+
+    const candidateProject = await this.prisma.$transaction(async (tx) => {
+      if (existingAssignment) {
+        const updated = await tx.candidateProjects.update({
+          where: { id: existingAssignment.id },
+          data: {
+            recruiterId: recruiterId ?? undefined,
+            assignedAt: new Date(),
+            notes: notes ?? existingAssignment.notes,
+            mainStatusId: mainStatus.id,
+            subStatusId: subStatus.id,
+          },
+          include: {
+            candidate: true,
+            project: true,
+            roleNeeded: true,
+            recruiter: true,
+            currentProjectStatus: true,
+          },
+        });
+
+        await tx.candidateProjectStatusHistory.create({
+          data: {
+            candidateProjectMapId: existingAssignment.id,
+            mainStatusId: mainStatus.id,
+            subStatusId: subStatus.id,
+            subStatusSnapshot: subStatus.name,
+            changedById: userId,
+            changedByName: user?.name ?? null,
+            reason: notes ?? 'Assigned to interview',
+          },
+        });
+        // Update any pending mock interviews for this candidate-project to mark them as
+        // assigned to the main interview flow and write interview-level history.
+        if (tx.mockInterview && tx.interviewStatusHistory) {
+          // If a specific mockInterviewId is provided in the request, update only that
+          // interview (validate it belongs to this candidate-project map). Otherwise
+          // update any pending scheduled mock interviews for the map (existing behavior).
+          const targetMockInterviewId = (dto as any)?.mockInterviewId;
+          if (targetMockInterviewId) {
+            const target = await tx.mockInterview.findUnique({ where: { id: targetMockInterviewId } });
+            if (!target || target.candidateProjectMapId !== existingAssignment.id) {
+              throw new NotFoundException(`Mock interview with ID "${targetMockInterviewId}" not found for this candidate-project`);
+            }
+
+            await tx.mockInterview.update({ where: { id: targetMockInterviewId }, data: { status: MOCK_INTERVIEW_STATUS.ASSIGNED_TO_MAIN_INTERVIEW } });
+            await tx.interviewStatusHistory.create({
+              data: {
+                interviewType: 'mock',
+                interviewId: targetMockInterviewId,
+                candidateProjectMapId: existingAssignment.id,
+                previousStatus: target.status ?? null,
+                status: MOCK_INTERVIEW_STATUS.ASSIGNED_TO_MAIN_INTERVIEW,
+                statusSnapshot: 'Assigned to Main Interview',
+                statusAt: new Date(),
+                changedById: userId ?? null,
+                changedByName: user?.name ?? null,
+                reason: notes ?? 'Assigned to main interview',
+              },
+            });
+          }
+        }
+
+        return updated;
+      }
+
+      const created = await tx.candidateProjects.create({
+        data: {
+          candidateId,
+          projectId,
+          recruiterId: recruiterId ?? null,
+          assignedAt: new Date(),
+          notes: notes ?? null,
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+        },
+        include: {
+          candidate: true,
+          project: true,
+          roleNeeded: true,
+          recruiter: true,
+          currentProjectStatus: true,
+        },
+      });
+
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId: created.id,
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          subStatusSnapshot: subStatus.name,
+          changedById: userId,
+          changedByName: user?.name ?? null,
+          reason: notes ?? 'Assigned to interview',
+        },
+      });
+
+      // Update any pending mock interviews for this newly created candidate-project map
+      // to mark them as assigned to the main interview flow and write interview-level history.
+      if (tx.mockInterview && tx.interviewStatusHistory) {
+        const targetMockInterviewId = (dto as any)?.mockInterviewId;
+        if (targetMockInterviewId) {
+          const target = await tx.mockInterview.findUnique({ where: { id: targetMockInterviewId } });
+          if (!target || target.candidateProjectMapId !== created.id) {
+            throw new NotFoundException(`Mock interview with ID "${targetMockInterviewId}" not found for this candidate-project`);
+          }
+
+          await tx.mockInterview.update({ where: { id: targetMockInterviewId }, data: { status: MOCK_INTERVIEW_STATUS.ASSIGNED_TO_MAIN_INTERVIEW } });
+          await tx.interviewStatusHistory.create({
+            data: {
+              interviewType: 'mock',
+              interviewId: targetMockInterviewId,
+              candidateProjectMapId: created.id,
+              previousStatus: target.status ?? null,
+              status: MOCK_INTERVIEW_STATUS.ASSIGNED_TO_MAIN_INTERVIEW,
+              statusSnapshot: 'Assigned to Main Interview',
+              statusAt: new Date(),
+              changedById: userId ?? null,
+              changedByName: user?.name ?? null,
+              reason: notes ?? 'Assigned to main interview',
+            },
+          });
+        }
+      }
+
+      return created;
+    });
+
+    return candidateProject;
   }
 }

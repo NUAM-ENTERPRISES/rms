@@ -217,6 +217,7 @@ export type DocumentStatus =
 export const INTERVIEW_OUTCOME = {
   PASSED: 'passed',
   FAILED: 'failed',
+  COMPLETED: 'completed',
   RESCHEDULED: 'rescheduled',
   NO_SHOW: 'no_show',
   CANCELLED: 'cancelled',
@@ -269,6 +270,7 @@ export type JoiningStatus =
 // ==================== MOCK INTERVIEW CONSTANTS ====================
 
 export const MOCK_INTERVIEW_STATUS = {
+  ASSIGNED_TO_MAIN_INTERVIEW: 'assigned',
   SCHEDULED: 'scheduled',
   RESHEDULED: 'rescheduled',
   IN_PROGRESS: 'in_progress',

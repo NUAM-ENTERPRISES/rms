@@ -17,6 +17,7 @@ import {
   ChevronRight,
   X,
   UserPlus,
+  Send,
 } from "lucide-react";
 import {
   Card,
@@ -43,6 +44,9 @@ import { useCreateTrainingAssignmentMutation } from "../../training/data";
 import { MOCK_INTERVIEW_MODE, MOCK_INTERVIEW_DECISION } from "../../types";
 import { cn } from "@/lib/utils";
 import { AssignToTrainerDialog } from "../../training/components/AssignToTrainerDialog";
+import { ConfirmationDialog } from "@/components/ui";
+import { Textarea } from "@/components/ui/textarea";
+import { useAssignToMainInterviewMutation } from "../data";
 
 export default function MockInterviewsListPage() {
   const navigate = useNavigate();
@@ -62,6 +66,16 @@ export default function MockInterviewsListPage() {
   const [assignToTrainerOpen, setAssignToTrainerOpen] = useState(false);
   const [selectedInterviewForTraining, setSelectedInterviewForTraining] =
     useState<any>(null);
+  const [sendForInterviewConfirm, setSendForInterviewConfirm] = useState<{
+    isOpen: boolean;
+    candidateId?: string;
+    candidateName?: string;
+    projectId?: string;
+    mockInterviewId?: string;
+    notes?: string;
+  }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, mockInterviewId: undefined, notes: "" });
+
+  const [assignToMainInterview, { isLoading: isAssigningMain }] = useAssignToMainInterviewMutation();
 
   // Build query params from URL (coordinatorId, candidateProjectMapId, decision, etc.)
   const rawParams = {
@@ -78,7 +92,7 @@ export default function MockInterviewsListPage() {
     Object.entries(rawParams).filter(([, v]) => v != null)
   );
 
-  const { data, isLoading, error } = useGetMockInterviewsQuery(
+  const { data, isLoading, error, refetch } = useGetMockInterviewsQuery(
     Object.keys(apiParams).length ? (apiParams as any) : undefined
   );
   const [createTrainingAssignment, { isLoading: isCreatingTraining }] =
@@ -187,6 +201,21 @@ export default function MockInterviewsListPage() {
     }
   };
 
+  const getAssignedTrainerName = (interview: any) => {
+    // Try several possible places where trainer info might be present
+    // depending on API shape: sessions[0].trainer, trainingAssignment.trainer,
+    // trainingAssignment.assignedToUser?.name, fallback to assignedByUser if needed
+    const ta = interview.trainingAssignment;
+    const sessionTrainer = ta?.sessions && ta.sessions.length ? ta.sessions[0].trainer : undefined;
+    const trainerFromAssignment = ta?.trainer || sessionTrainer;
+    const assignedToUserName = (ta as any)?.assignedToUser?.name;
+    const assignedByName = (ta as any)?.assignedByUser?.name;
+
+    return (
+      trainerFromAssignment || assignedToUserName || assignedByName || undefined
+    );
+  };
+
   const getDecisionBadge = (decision: string | null | undefined) => {
     if (!decision) return null;
 
@@ -249,6 +278,14 @@ export default function MockInterviewsListPage() {
         targetCompletionDate: formData.targetCompletionDate || undefined,
         notes: formData.notes,
       }).unwrap();
+
+      // Refresh the interviews list so the UI reflects the new training assignment
+      // (backend will typically update the interview/candidate substatus)
+      try {
+        refetch?.();
+      } catch (e) {
+        // ignore
+      }
 
       toast.success("Training assigned successfully!");
       setAssignToTrainerOpen(false);
@@ -469,23 +506,109 @@ export default function MockInterviewsListPage() {
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
-                            {(interview.decision ===
-                              MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
-                              interview.decision ===
-                                MOCK_INTERVIEW_DECISION.REJECTED) && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAssignToTrainer(interview);
-                                }}
-                                title="Assign to Trainer"
-                              >
-                                <UserPlus className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
+                            {(() => {
+                              const isTrainingAssigned =
+                                interview.candidateProjectMap?.subStatus?.name ===
+                                "training_assigned";
+                              const trainerName = getAssignedTrainerName(interview);
+                              const isMainAssigned =
+                                interview.status === "assigned" ||
+                                !!interview.candidateProjectMap?.mainInterviewId;
+
+                              if (isTrainingAssigned) {
+                                return (
+                                  <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                                    {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
+                                  </Badge>
+                                );
+                              }
+
+                              // If this mock interview has been linked to a main interview,
+                              // show a clear badge and allow assigning to trainer if needed.
+                              if (isMainAssigned) {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                                      Assigned to Main Interview
+                                    </Badge>
+                                    {/* Only allow Assign to Trainer when decision indicates training is needed or when rejected */}
+                                    {(interview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                                      interview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAssignToTrainer(interview);
+                                        }}
+                                        title="Assign to Trainer"
+                                      >
+                                        <UserPlus className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              }
+
+                              // Only show 'Assign Main Interview' when the candidate is ready:
+                              // decision must be APPROVED and interview status should be completed
+                              if (
+                                interview.decision === MOCK_INTERVIEW_DECISION.APPROVED &&
+                                interview.status === "completed"
+                              ) {
+                                return (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSendForInterviewConfirm({
+                                        isOpen: true,
+                                        candidateId:
+                                          interview.candidateProjectMap?.candidate?.id,
+                                        candidateName:
+                                          interview.candidateProjectMap?.candidate?.firstName +
+                                          " " +
+                                          interview.candidateProjectMap?.candidate?.lastName,
+                                        projectId: interview.candidateProjectMap?.project?.id,
+                                        mockInterviewId: interview.id,
+                                        notes: "",
+                                      });
+                                    }}
+                                    title="Assign Main Interview"
+                                  >
+                                    <Send className="h-3.5 w-3.5" />
+                                  </Button>
+                                );
+                              }
+
+                              // Fallback: allow assigning to trainer for needs training / rejected
+                              if (
+                                interview.decision ===
+                                  MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                                interview.decision ===
+                                  MOCK_INTERVIEW_DECISION.REJECTED
+                              ) {
+                                return (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAssignToTrainer(interview);
+                                    }}
+                                    title="Assign to Trainer"
+                                  >
+                                    <UserPlus className="h-3.5 w-3.5" />
+                                  </Button>
+                                );
+                              }
+
+                              return null;
+                            })()}
                             <ChevronRight
                               className={cn(
                                 "h-4 w-4 flex-shrink-0 transition-transform",
@@ -567,19 +690,95 @@ export default function MockInterviewsListPage() {
                         Conduct Interview
                       </Button>
                     )}
-                    {(selectedInterview.decision ===
-                      MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
-                      selectedInterview.decision ===
-                        MOCK_INTERVIEW_DECISION.REJECTED) && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleAssignToTrainer(selectedInterview)}
-                        variant="outline"
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Assign to Trainer
-                      </Button>
-                    )}
+                    {(() => {
+                      const isTrainingAssigned =
+                        selectedInterview.candidateProjectMap?.subStatus?.name ===
+                        "training_assigned";
+                      const trainerName = getAssignedTrainerName(selectedInterview);
+                      const isMainAssigned =
+                        selectedInterview.status === "assigned" ||
+                        !!selectedInterview.candidateProjectMap?.mainInterviewId;
+
+                      if (isTrainingAssigned) {
+                        return (
+                          <Badge className="text-sm bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                            {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
+                          </Badge>
+                        );
+                      }
+
+                      if (isMainAssigned) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Badge className="text-sm bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                              Assigned to Main Interview
+                            </Badge>
+                            {/* Only show Assign to Trainer when decision is NEEDS_TRAINING or REJECTED */}
+                            {(selectedInterview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                              selectedInterview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleAssignToTrainer(selectedInterview)}
+                                variant="outline"
+                              >
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Assign to Trainer
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      if (
+                        selectedInterview.decision === MOCK_INTERVIEW_DECISION.APPROVED &&
+                        selectedInterview.status === "completed"
+                      ) {
+                        return (
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              setSendForInterviewConfirm({
+                                isOpen: true,
+                                candidateId:
+                                  selectedInterview.candidateProjectMap?.candidate?.id,
+                                candidateName:
+                                  selectedInterview.candidateProjectMap?.candidate?.firstName +
+                                  " " +
+                                  selectedInterview.candidateProjectMap?.candidate?.lastName,
+                                projectId:
+                                  selectedInterview.candidateProjectMap?.project?.id,
+                                mockInterviewId: selectedInterview.id,
+                                notes: "",
+                              })
+                            }
+                            variant="outline"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Assign Main Interview
+                          </Button>
+                        );
+                      }
+
+                      if (
+                        selectedInterview.decision ===
+                          MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                        selectedInterview.decision ===
+                          MOCK_INTERVIEW_DECISION.REJECTED
+                      ) {
+                        return (
+                          <Button
+                            size="sm"
+                            onClick={() => handleAssignToTrainer(selectedInterview)}
+                            variant="outline"
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Assign to Trainer
+                          </Button>
+                        );
+                      }
+
+                      return null;
+                    })()}
                   </div>
                 </div>
 
@@ -849,6 +1048,62 @@ export default function MockInterviewsListPage() {
             : undefined
         }
         mockInterviewId={selectedInterviewForTraining?.id}
+      />
+
+      {/* Send For Interview Confirmation (Assign Main Interview) */}
+      <ConfirmationDialog
+        isOpen={sendForInterviewConfirm.isOpen}
+        onClose={() =>
+          setSendForInterviewConfirm((s) => ({ ...s, isOpen: false }))
+        }
+        title={
+          sendForInterviewConfirm.candidateName
+            ? `Assign ${sendForInterviewConfirm.candidateName} to Main Interview`
+            : "Assign to Main Interview"
+        }
+        description={
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Send this candidate for the main interview. You can add notes to
+              include with the assignment.
+            </p>
+            <Textarea
+              value={sendForInterviewConfirm.notes}
+              onChange={(e) =>
+                setSendForInterviewConfirm((s) => ({ ...s, notes: e.target.value }))
+              }
+              placeholder="Notes (optional)"
+              rows={4}
+            />
+          </div>
+        }
+        confirmText={isAssigningMain ? "Sending..." : "Send"}
+        cancelText="Cancel"
+        isLoading={isAssigningMain}
+        onConfirm={async () => {
+          if (!sendForInterviewConfirm.projectId || !sendForInterviewConfirm.candidateId) {
+            toast.error("Missing candidate or project information");
+            return;
+          }
+
+          try {
+            await assignToMainInterview({
+              projectId: sendForInterviewConfirm.projectId!,
+              candidateId: sendForInterviewConfirm.candidateId!,
+              mockInterviewId: sendForInterviewConfirm.mockInterviewId,
+              notes: sendForInterviewConfirm.notes,
+            }).unwrap();
+            toast.success("Candidate sent for main interview");
+            setSendForInterviewConfirm((s) => ({ ...s, isOpen: false }));
+            try {
+              refetch?.();
+            } catch (e) {
+              // ignore
+            }
+          } catch (error: any) {
+            toast.error(error?.data?.message || "Failed to send candidate for interview");
+          }
+        }}
       />
     </div>
   );

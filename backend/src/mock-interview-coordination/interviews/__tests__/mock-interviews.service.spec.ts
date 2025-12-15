@@ -8,8 +8,13 @@ describe('MockInterviewsService', () => {
   let prisma: any; // keep as any for jest mocks of Prisma client methods
 
   const mockPrisma = {
+    candidate: { findUnique: jest.fn() },
+    project: { findUnique: jest.fn() },
+    candidateProjectMainStatus: { findUnique: jest.fn() },
+    candidateProjectSubStatus: { findUnique: jest.fn() },
     candidateProjects: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
       count: jest.fn(),
@@ -399,6 +404,141 @@ describe('MockInterviewsService', () => {
     expect(res.coordinator).toEqual({ id: 'coord1', name: 'Coordinator Name' });
   });
 
+  it('allows updating a scheduled mock interview and records status history when scheduledTime changes', async () => {
+    const id = 'mi-update-1';
+
+    // findOne used by update() should return an existing scheduled interview
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id,
+      conductedAt: null,
+      status: 'scheduled',
+      scheduledTime: null,
+      candidateProjectMapId: 'map-u1',
+    });
+
+    // mock transaction behavior
+    const tx = {
+      mockInterview: { update: jest.fn().mockResolvedValue({ id, scheduledTime: new Date('2025-12-19T03:30:00.000Z') }) },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist-u' }) },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const dto = { scheduledTime: '2025-12-19T03:30:00.000Z', duration: 45, mode: 'video' } as any;
+
+    const res = await service.update(id, dto);
+
+    expect(tx.mockInterview.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id } }));
+    // Since scheduledTime was set, an interview status history entry should have been created
+    expect(tx.interviewStatusHistory.create).toHaveBeenCalled();
+  });
+
+  it('rejects updates for completed mock interviews', async () => {
+    const id = 'mi-completed';
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({
+      id,
+      conductedAt: new Date(),
+      status: 'completed',
+      candidateProjectMapId: 'map-c',
+    });
+
+    await expect(service.update(id, { scheduledTime: '2025-12-19T03:30:00.000Z' } as any)).rejects.toThrow(
+      'Cannot update a completed mock interview. Use the complete endpoint instead.',
+    );
+  });
+
+  it('assignToMainInterview creates a new candidate-project assignment when none exists', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', type: 'interview_assigned', recruiterId: 'r1', notes: 'Please interview' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1' });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'm-interview' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 's-interview', name: 'interview_assigned' });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'user1', name: 'User One' });
+
+    const tx = {
+      candidateProjects: { create: jest.fn().mockResolvedValue({ id: 'map-new', candidate: { id: 'c1' }, project: { id: 'p1' } }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist1' }) },
+    } as any;
+
+    (prisma.candidateProjects.findFirst as any).mockResolvedValue(null);
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const res: any = await service.assignToMainInterview(dto, 'user1');
+
+    expect(prisma.candidate.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'c1' } }));
+    expect(prisma.project.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'p1' } }));
+    expect(tx.candidateProjects.create).toHaveBeenCalled();
+    expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
+    expect(res.id).toBe('map-new');
+  });
+
+  it('assignToMainInterview updates an existing assignment when found', async () => {
+    const dto = { projectId: 'p2', candidateId: 'c2', type: 'interview_assigned', notes: 'Update notes' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c2' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p2' });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'm-interview' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 's-interview', name: 'interview_assigned' });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'userX', name: 'User X' });
+
+    const existing = { id: 'map-exist', notes: 'old' } as any;
+    (prisma.candidateProjects.findFirst as any).mockResolvedValue(existing);
+
+    const tx = {
+      candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map-exist', candidate: { id: 'c2' }, project: { id: 'p2' } }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist2' }) },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const res: any = await service.assignToMainInterview(dto, 'userX');
+
+    expect(tx.candidateProjects.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'map-exist' } }));
+    expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
+    expect(res.id).toBe('map-exist');
+  });
+
+  // Bulk update of scheduled pending mock interviews was removed by design; the
+  // API now only updates a specific `mockInterviewId` when provided. Tests for
+  // single-interview behavior are included separately.
+
+  it('assignToMainInterview with mockInterviewId updates only that interview (even if completed)', async () => {
+    const dto = { projectId: 'pX', candidateId: 'cX', recruiterId: 'rX', mockInterviewId: 'mock-completed', notes: 'Assign this interview' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'cX' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'pX' });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'rX', name: 'Recruiter X' });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'm1', name: 'interview' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 's1', name: 'interview_assigned' });
+
+    // existing assignment exists
+    (prisma.candidateProjects.findFirst as any).mockResolvedValue({ id: 'mapX', notes: null });
+
+    const tx = {
+      candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'mapX' }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist-m' }) },
+      mockInterview: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'mock-completed', status: 'completed', candidateProjectMapId: 'mapX' }),
+        update: jest.fn().mockResolvedValue({ id: 'mock-completed', status: 'assigned' }),
+        findMany: jest.fn(),
+      },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist-int' }) },
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'uX', name: 'User X' }) },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    await service.assignToMainInterview(dto, 'uX');
+
+    // should lookup the specific interview and update only that one
+    expect(tx.mockInterview.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'mock-completed' } }));
+    expect(tx.mockInterview.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'mock-completed' }, data: { status: 'assigned' } }));
+    // ensure bulk findMany is not used in this case
+    expect(tx.mockInterview.findMany).not.toHaveBeenCalled();
+    expect(tx.interviewStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ interviewId: 'mock-completed', status: 'assigned' }) }));
+  });
+
   it('updateTemplate successfully updates the interview templateId', async () => {
     const interviewId = 'mi-t1';
     // findOne (initial) returns existing interview not completed
@@ -434,7 +574,7 @@ describe('MockInterviewsService', () => {
 
   it('updateTemplate throws when interview already completed', async () => {
     const interviewId = 'mi-completed';
-    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({ id: interviewId, conductedAt: new Date() });
+    (prisma.mockInterview.findUnique as any).mockResolvedValueOnce({ id: interviewId, conductedAt: new Date(), status: 'completed' });
 
     await expect(service.updateTemplate(interviewId, 'tplX')).rejects.toThrow('Cannot change template for a completed mock interview');
   });

@@ -165,6 +165,29 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
             ]
           : [{ type: "MockInterview", id: "LIST" }],
     }),
+    // Assign candidate to a MAIN interview (creates/links main interview and
+    // optionally marks the mock interview as assigned)
+    assignToMainInterview: builder.mutation<
+      ApiResponse<any>,
+      {
+        projectId: string;
+        candidateId: string;
+        mockInterviewId?: string;
+        recruiterId?: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/mock-interviews/assign-to-main-interview",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "MockInterview", id: "LIST" },
+        { type: "Candidate", id: "LIST" },
+        { type: "Interview", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -178,6 +201,7 @@ export const {
   useAssignTemplateToInterviewMutation,
   useCompleteMockInterviewMutation,
   useDeleteMockInterviewMutation,
+  useAssignToMainInterviewMutation,
   useGetAssignedMockInterviewsQuery,
   useGetUpcomingMockInterviewsQuery,
 } = mockInterviewsApi;

@@ -85,7 +85,7 @@ export class TrainingService {
           candidateProjectMap: {
             include: {
               candidate: {
-                select: { firstName: true, lastName: true },
+                select: { firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
               },
               project: { select: { title: true } },
             },
@@ -116,7 +116,27 @@ export class TrainingService {
         },
       });
 
-      return assignment;
+      // Add combined phone to candidate contact and attach assignedBy user details if available
+      const candidate = assignment.candidateProjectMap?.candidate
+        ? {
+            ...assignment.candidateProjectMap.candidate,
+            phone: `${assignment.candidateProjectMap.candidate.countryCode ?? ''} ${assignment.candidateProjectMap.candidate.mobileNumber ?? ''}`.trim(),
+          }
+        : null;
+
+      let assigner: any = null;
+      if (dto.assignedBy) {
+        assigner = await tx.user.findUnique({ where: { id: dto.assignedBy }, select: { id: true, name: true, email: true } });
+      }
+
+      return {
+        ...assignment,
+        candidateProjectMap: {
+          ...assignment.candidateProjectMap,
+          candidate,
+        },
+        assignedBy: assigner ?? assignment.assignedBy,
+      };
     });
   }
 
@@ -138,13 +158,13 @@ export class TrainingService {
       where.status = query.status;
     }
 
-    return this.prisma.trainingAssignment.findMany({
+    const items = await this.prisma.trainingAssignment.findMany({
       where,
       include: {
         candidateProjectMap: {
           include: {
             candidate: {
-              select: { id: true, firstName: true, lastName: true },
+              select: { id: true, firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
             },
             project: { select: { id: true, title: true } },
             roleNeeded: { select: { designation: true } },
@@ -156,6 +176,25 @@ export class TrainingService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Add combined phone to candidate contact and batch fetch assigner users and attach their info to assignments
+    const itemsWithCandidateContact = items.map((it) => ({
+      ...(it as any),
+      candidateProjectMap: {
+        ...it.candidateProjectMap,
+        candidate: it.candidateProjectMap?.candidate
+          ? { ...it.candidateProjectMap.candidate, phone: `${it.candidateProjectMap.candidate.countryCode ?? ''} ${it.candidateProjectMap.candidate.mobileNumber ?? ''}`.trim() }
+          : null,
+      },
+    }));
+    // Batch fetch assigner users and attach their info to assignments
+    const assignerIds = Array.from(new Set(items.map((it) => it.assignedBy).filter(Boolean)));
+    let usersById: Record<string, any> = {};
+    if (assignerIds.length > 0) {
+      const users = await this.prisma.user.findMany({ where: { id: { in: assignerIds } }, select: { id: true, name: true, email: true } });
+      usersById = users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {} as Record<string, any>);
+    }
+    return itemsWithCandidateContact.map((it) => ({ ...(it as any), assignedBy: usersById[it.assignedBy] ?? it.assignedBy }));
   }
 
   /**
@@ -189,12 +228,29 @@ export class TrainingService {
     });
 
     if (!assignment) {
-      throw new NotFoundException(
-        `Training Assignment with ID "${id}" not found`,
-      );
+      throw new NotFoundException(`Training Assignment with ID "${id}" not found`);
     }
 
-    return assignment;
+    // Attach assignedBy user details if present and compute candidate phone
+    const candidate = assignment.candidateProjectMap?.candidate
+      ? {
+          ...assignment.candidateProjectMap.candidate,
+          phone: `${(assignment.candidateProjectMap.candidate as any).countryCode ?? ''} ${(assignment.candidateProjectMap.candidate as any).mobileNumber ?? ''}`.trim(),
+        }
+      : null;
+
+    if (!assignment) {
+      throw new NotFoundException(`Training Assignment with ID "${id}" not found`);
+    }
+
+    if (assignment.assignedBy) {
+      const user = await this.prisma.user.findUnique({ where: { id: assignment.assignedBy }, select: { id: true, name: true, email: true } });
+      return user
+        ? { ...assignment, assignedBy: user, candidateProjectMap: { ...assignment.candidateProjectMap, candidate } }
+        : { ...assignment, candidateProjectMap: { ...assignment.candidateProjectMap, candidate } };
+    }
+
+    return { ...assignment, candidateProjectMap: { ...assignment.candidateProjectMap, candidate } };
   }
 
   /**
@@ -219,7 +275,7 @@ export class TrainingService {
         candidateProjectMap: {
           include: {
             candidate: {
-              select: { firstName: true, lastName: true },
+              select: { firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
             },
             project: { select: { title: true } },
           },
@@ -234,9 +290,9 @@ export class TrainingService {
   async startTraining(id: string, userId: string) {
     const assignment = await this.findOneAssignment(id);
 
-    if (assignment.status !== TRAINING_STATUS.ASSIGNED) {
+    if (assignment!.status !== TRAINING_STATUS.ASSIGNED) {
       throw new BadRequestException(
-        `Training cannot be started. Current status: ${assignment.status}`,
+        `Training cannot be started. Current status: ${assignment!.status}`,
       );
     }
 
@@ -262,7 +318,7 @@ export class TrainingService {
 
       // Update candidate-project status
       await tx.candidateProjects.update({
-        where: { id: assignment.candidateProjectMapId },
+        where: { id: assignment!.candidateProjectMapId },
         data: {
           subStatus: {
             connect: {
@@ -275,7 +331,7 @@ export class TrainingService {
       // Create status history
       await tx.candidateProjectStatusHistory.create({
         data: {
-          candidateProjectMapId: assignment.candidateProjectMapId,
+          candidateProjectMapId: assignment!.candidateProjectMapId,
           subStatusSnapshot: CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
           changedById: userId,
           reason: 'Training started',
@@ -292,7 +348,7 @@ export class TrainingService {
   async completeTraining(id: string, dto: CompleteTrainingDto, userId: string) {
     const assignment = await this.findOneAssignment(id);
 
-    if (assignment.status === TRAINING_STATUS.COMPLETED) {
+    if (assignment!.status === TRAINING_STATUS.COMPLETED) {
       throw new BadRequestException('Training is already completed');
     }
 
@@ -313,14 +369,14 @@ export class TrainingService {
         data: {
           status: TRAINING_STATUS.COMPLETED,
           completedAt: new Date(),
-          notes: dto.notes ?? assignment.notes,
+          notes: dto.notes ?? assignment!.notes,
           improvementNotes: dto.improvementNotes,
         },
       });
 
       // Update candidate-project status to training_completed
       await tx.candidateProjects.update({
-        where: { id: assignment.candidateProjectMapId },
+        where: { id: assignment!.candidateProjectMapId },
         data: {
           subStatus: {
             connect: {
@@ -333,7 +389,7 @@ export class TrainingService {
       // Create status history
       await tx.candidateProjectStatusHistory.create({
         data: {
-          candidateProjectMapId: assignment.candidateProjectMapId,
+          candidateProjectMapId: assignment!.candidateProjectMapId,
           subStatusSnapshot: CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
           changedById: userId,
           reason: 'Training completed',
@@ -351,7 +407,7 @@ export class TrainingService {
   async markReadyForReassessment(id: string, userId: string) {
     const assignment = await this.findOneAssignment(id);
 
-    if (assignment.status !== TRAINING_STATUS.COMPLETED) {
+    if (assignment!.status !== TRAINING_STATUS.COMPLETED) {
       throw new BadRequestException(
         'Training must be completed before marking ready for reassessment',
       );
@@ -371,7 +427,7 @@ export class TrainingService {
     return this.prisma.$transaction(async (tx) => {
       // Update candidate-project status
       await tx.candidateProjects.update({
-        where: { id: assignment.candidateProjectMapId },
+        where: { id: assignment!.candidateProjectMapId },
         data: {
           subStatus: {
             connect: {
@@ -384,7 +440,7 @@ export class TrainingService {
       // Create status history
       await tx.candidateProjectStatusHistory.create({
         data: {
-          candidateProjectMapId: assignment.candidateProjectMapId,
+          candidateProjectMapId: assignment!.candidateProjectMapId,
           subStatusSnapshot: CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT,
           changedById: userId,
           reason: 'Candidate ready for mock interview reassessment',

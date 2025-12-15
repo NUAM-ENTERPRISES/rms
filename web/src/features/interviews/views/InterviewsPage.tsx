@@ -20,6 +20,8 @@ export default function InterviewsPage() {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleDialogInitial, setScheduleDialogInitial] = useState<{
     candidateProjectMapId?: string;
+    candidateName?: string;
+    projectName?: string;
   }>({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedInterviewId] = useState<string>("");
@@ -271,7 +273,23 @@ export default function InterviewsPage() {
                               <div className="flex flex-col items-end gap-2">
                                 <Badge className="text-xs capitalize bg-orange-50 text-orange-700 border border-orange-100 px-2 py-0.5 rounded-md">{(interview as any).subStatus?.label || (interview as any).subStatus?.name || 'Assigned'}</Badge>
                                 {/* expired badge shown next to scheduled time */}
-                                <Button size="sm" className="px-2 py-1 text-xs rounded-md bg-orange-500 text-white hover:bg-orange-600" onClick={(e) => { e.stopPropagation(); setScheduleDialogInitial({}); setScheduleDialogOpen(true); }}>
+                                <Button
+                                  size="sm"
+                                  className="px-2 py-1 text-xs rounded-md bg-orange-500 text-white hover:bg-orange-600"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const candidateName = interview.candidate
+                                      ? `${interview.candidate.firstName} ${interview.candidate.lastName}`
+                                      : "Unknown Candidate";
+                                    const projectName = interview.project?.title || "Unknown Project";
+                                    setScheduleDialogInitial({
+                                      candidateProjectMapId: interview.id,
+                                      candidateName,
+                                      projectName,
+                                    });
+                                    setScheduleDialogOpen(true);
+                                  }}
+                                >
                                   Schedule
                                 </Button>
                               </div>
@@ -368,6 +386,8 @@ export default function InterviewsPage() {
           open={scheduleDialogOpen}
           onOpenChange={(open) => setScheduleDialogOpen(open)}
           initialCandidateProjectMapId={scheduleDialogInitial.candidateProjectMapId}
+          initialCandidateName={scheduleDialogInitial.candidateName}
+          initialProjectName={scheduleDialogInitial.projectName}
         />
         <EditInterviewDialog
           open={editDialogOpen}

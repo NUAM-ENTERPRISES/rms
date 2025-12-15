@@ -15,6 +15,7 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiBody,
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
@@ -25,6 +26,7 @@ import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
 import { QueryAssignedInterviewsDto } from './dto/query-assigned-interviews.dto';
 import { QueryUpcomingInterviewsDto } from './dto/query-upcoming-interviews.dto';
+import { UpdateInterviewStatusDto } from './dto/update-interview-status.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Interviews')
@@ -118,8 +120,8 @@ export class InterviewsController {
   @ApiQuery({
     name: 'status',
     required: false,
-    description: 'Filter by interview status',
-    enum: ['scheduled', 'completed', 'cancelled', 'rescheduled'],
+    description: "Filter by interview status — matches the interview's `outcome` column only. Examples: 'pending' (no outcome yet), 'scheduled', 'completed', 'passed', 'failed'",
+    enum: ['pending', 'scheduled', 'completed', 'complete', 'cancelled', 'rescheduled', 'passed', 'failed', 'no-show'],
   })
   @ApiQuery({
     name: 'projectId',
@@ -187,6 +189,13 @@ export class InterviewsController {
                         properties: {
                           id: { type: 'string' },
                           title: { type: 'string' },
+                        },
+                      },
+                      roleNeeded: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          designation: { type: 'string' },
                         },
                       },
                     },
@@ -359,12 +368,39 @@ export class InterviewsController {
     };
   }
 
+  @Patch(':id/status')
+  @Permissions('write:interviews')
+  @ApiOperation({
+    summary: 'Update interview status and candidate-project subStatus',
+    description: 'Update interview outcome, create InterviewStatusHistory and optionally update the candidate-project subStatus and create CandidateProjectStatusHistory.',
+  })
+  @ApiParam({ name: 'id', description: 'Interview ID' })
+  @ApiBody({ type: UpdateInterviewStatusDto })
+  @ApiQuery({ name: 'reason', required: false, description: 'Reason for status change (in body as well)' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 200, description: 'Interview status updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Interview not found' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: UpdateInterviewStatusDto,
+    @Request() req,
+  ): Promise<any> {
+    const updated = await this.interviewsService.updateInterviewStatus(id, body, req.user?.id);
+    return {
+      success: true,
+      data: updated,
+      message: 'Interview status updated successfully',
+    };
+  }
+
   @Get(':id')
   @Permissions('read:interviews')
   @ApiOperation({
     summary: 'Get interview by ID',
     description: 'Retrieve a specific interview with all related data.',
   })
+  @ApiQuery({ name: 'includeHistory', required: false, description: 'If true, include interview history in the response (boolean)' })
   @ApiParam({
     name: 'id',
     description: 'Interview ID',
@@ -375,16 +411,44 @@ export class InterviewsController {
     description: 'Interview retrieved successfully',
   })
   @ApiResponse({ status: 404, description: 'Not Found - Interview not found' })
-  async findOne(@Param('id') id: string): Promise<{
+  async findOne(@Param('id') id: string, @Query('includeHistory') includeHistory?: string): Promise<{
     success: boolean;
     data: any;
     message: string;
   }> {
     const interview = await this.interviewsService.findOne(id);
+    if (includeHistory && includeHistory !== 'false') {
+      const history = await this.interviewsService.getInterviewHistory(id);
+      // attach history to the returned interview object under `history`
+      (interview as any).history = history;
+    }
     return {
       success: true,
       data: interview,
       message: 'Interview retrieved successfully',
+    };
+  }
+
+  @Get(':id/history')
+  @Permissions('read:interviews')
+  @ApiOperation({
+    summary: 'Get interview history',
+    description: 'Retrieve history events for a specific client interview (status changes, reasons, actor, timestamps).',
+  })
+  @ApiParam({ name: 'id', description: 'Interview ID' })
+  @ApiResponse({ status: 200, description: 'Interview history retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Interview not found' })
+  async getHistory(@Param('id') id: string): Promise<{
+    success: boolean;
+    data: any;
+    message: string;
+  }> {
+    const history = await this.interviewsService.getInterviewHistory(id);
+
+    return {
+      success: true,
+      data: history,
+      message: 'Interview history retrieved successfully',
     };
   }
 

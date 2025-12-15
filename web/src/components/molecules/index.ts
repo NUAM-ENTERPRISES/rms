@@ -18,3 +18,4 @@ export { ClientSelect } from "./ClientSelect";
 export { JobTitleSelect } from "./JobTitleSelect";
 export type { UploadedDocument } from "./DocumentUpload";
 export type { CandidateQualification } from "./CandidateQualificationSelect";
+export { default as ReviewInterviewModal } from "./ReviewInterviewModal";

@@ -27,6 +27,7 @@ import { QueryAssignedMockInterviewsDto } from './dto/query-assigned-mock-interv
 import { QueryUpcomingMockInterviewsDto } from './dto/query-upcoming-mock-interviews.dto';
 import { UpdateMockInterviewTemplateDto } from './dto/update-mock-interview-template.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
+import { AssignToMainInterviewDto } from './dto/assign-to-main-interview.dto';
 
 @ApiTags('Mock Interviews')
 @ApiBearerAuth()
@@ -142,7 +143,7 @@ export class MockInterviewsController {
   @ApiOperation({
     summary: 'Update mock interview scheduling details',
     description:
-      'Update scheduling details (time, duration, link, mode) for a pending mock interview. Cannot update completed interviews.',
+      'Update scheduling details (time, duration, link, mode) for a pending mock interview. Cannot update completed interviews (determined by interview status or decision).',
   })
   @ApiParam({
     name: 'id',
@@ -239,5 +240,19 @@ export class MockInterviewsController {
   @ApiResponse({ status: 404, description: 'Mock interview or template not found' })
   updateTemplate(@Param('id') id: string, @Body() body: UpdateMockInterviewTemplateDto) {
     return this.mockInterviewsService.updateTemplate(id, body.templateId);
+  }
+
+  @Post('assign-to-main-interview')
+  @Permissions('manage:candidates', 'schedule:interviews')
+  @ApiOperation({
+    summary: 'Assign candidate to main interview',
+    description:
+      "Assign a candidate to the main interview flow (sets main status to 'interview' and sub-status to 'interview_assigned'). This mirrors the candidate-projects send-for-interview API but is available on the Mock Interviews module.",
+  })
+  @ApiResponse({ status: 201, description: 'Candidate assigned to interview successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Candidate or project not found' })
+  assignToMainInterview(@Body() body: AssignToMainInterviewDto, @Request() req: any) {
+    return this.mockInterviewsService.assignToMainInterview(body, req.user?.sub ?? req.user?.userId ?? null);
   }
 }

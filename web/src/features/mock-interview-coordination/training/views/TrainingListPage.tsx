@@ -10,7 +10,6 @@ import {
   Calendar,
   CheckCircle2,
   Target,
-  Plus,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -31,8 +30,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useGetTrainingAssignmentsQuery } from "../data";
 import { useCan } from "@/hooks/useCan";
-import { SessionCard } from "../components/SessionCard";
-import { SessionFormDialog } from "../components/SessionFormDialog";
 import { useCompleteTrainingMutation } from "../data";
 import { TRAINING_STATUS, TRAINING_PRIORITY } from "../../types";
 import { cn } from "@/lib/utils";
@@ -49,7 +46,7 @@ export default function TrainingListPage() {
   const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(
     null
   );
-  const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
+  // Removed session dialog/state: sessions are not editable from this view
 
   const { data, isLoading, error } = useGetTrainingAssignmentsQuery();
   const [completeTraining, { isLoading: isCompleting }] =
@@ -86,7 +83,11 @@ export default function TrainingListPage() {
       filtered = filtered.filter((t) => t.priority === filters.priority);
     }
 
-    return filtered.sort(
+    // Array.sort mutates the array in-place which can cause errors if the
+    // source array is frozen/immutable (for example, data returned from
+    // some query libraries). Copy the array before sorting to avoid
+    // modifying the original.
+    return [...filtered].sort(
       (a, b) =>
         new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime()
     );
@@ -99,6 +100,28 @@ export default function TrainingListPage() {
     }
     return filteredTrainings[0];
   }, [filteredTrainings, selectedTrainingId]);
+
+  // Normalized sessions (some responses use `sessions`, others `trainingSessions`)
+  const getTrainingSessions = (training: any) =>
+    training?.sessions || training?.trainingSessions || [];
+
+  const formatAssignedBy = (assignedBy: any) => {
+    if (!assignedBy) return "-";
+    if (typeof assignedBy === "string") return assignedBy;
+    // object case: prefer name, then email, then id
+    return assignedBy.name || assignedBy.email || assignedBy.id || JSON.stringify(assignedBy);
+  };
+
+  const trainingCompletedCount = (t: any) =>
+    getTrainingSessions(t).filter((s: any) => s.completedAt).length;
+
+  const trainingTotalCount = (t: any) => getTrainingSessions(t).length;
+
+  const trainingPercent = (t: any) => {
+    const total = trainingTotalCount(t);
+    if (!total) return 0;
+    return Math.round((trainingCompletedCount(t) / total) * 100);
+  };
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -180,8 +203,8 @@ export default function TrainingListPage() {
   const handleCompleteTraining = async () => {
     if (!selectedTraining) return;
 
-    const sessions = selectedTraining.sessions || [];
-    const allSessionsCompleted = sessions.every((s) => s.completedAt);
+    const sessions = getTrainingSessions(selectedTraining);
+    const allSessionsCompleted = sessions.every((s: any) => s.completedAt);
 
     if (!allSessionsCompleted) {
       toast.error(
@@ -383,20 +406,14 @@ export default function TrainingListPage() {
             ) : (
               <div className="p-2 space-y-1">
                 {filteredTrainings.map((training) => {
-                  const candidate =
-                    training.candidateProjectMap?.candidate;
+                  const candidate = training.candidateProjectMap?.candidate;
                   const statusConfig = getStatusConfig(training.status);
                   const isSelected =
                     training.id ===
                     (selectedTraining?.id || filteredTrainings[0]?.id);
-                  const sessions = training.sessions || [];
-                  const completedSessions = sessions.filter(
-                    (s) => s.completedAt
-                  ).length;
-                  const progress =
-                    sessions.length > 0
-                      ? (completedSessions / sessions.length) * 100
-                      : 0;
+                  const sessions = getTrainingSessions(training);
+                  const completedSessions = sessions.filter((s: any) => s.completedAt).length;
+                  const progress = sessions.length > 0 ? (completedSessions / sessions.length) * 100 : 0;
 
                   return (
                     <button
@@ -512,12 +529,10 @@ export default function TrainingListPage() {
                       </p>
                     </div>
 
-                    {canWrite &&
+                      {canWrite &&
                       selectedTraining.status === TRAINING_STATUS.IN_PROGRESS &&
-                      (selectedTraining.sessions || []).every(
-                        (s) => s.completedAt
-                      ) &&
-                      (selectedTraining.sessions || []).length > 0 && (
+                      getTrainingSessions(selectedTraining).length > 0 &&
+                      getTrainingSessions(selectedTraining).every((s: any) => s.completedAt) && (
                         <Button
                           onClick={handleCompleteTraining}
                           disabled={isCompleting}
@@ -539,7 +554,7 @@ export default function TrainingListPage() {
                   </div>
 
                   {/* Progress Card */}
-                  {(selectedTraining.sessions || []).length > 0 && (
+                  {getTrainingSessions(selectedTraining).length > 0 && (
                     <Card>
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -548,161 +563,180 @@ export default function TrainingListPage() {
                             <h3 className="font-semibold">Training Progress</h3>
                           </div>
                           <div className="text-3xl font-bold text-primary">
-                            {(
-                              ((selectedTraining.sessions || []).filter(
-                                (s) => s.completedAt
-                              ).length /
-                                (selectedTraining.sessions || []).length) *
-                              100
-                            ).toFixed(0)}
-                            %
+                            {trainingPercent(selectedTraining)}%
                           </div>
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
                           <div
                             className="h-full bg-primary transition-all duration-500"
-                            style={{
-                              width: `${
-                                ((selectedTraining.sessions || []).filter(
-                                  (s) => s.completedAt
-                                ).length /
-                                  (selectedTraining.sessions || []).length) *
-                                100
-                              }%`,
-                            }}
+                            style={{ width: `${trainingPercent(selectedTraining)}%` }}
                           />
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {
-                            (selectedTraining.sessions || []).filter(
-                              (s) => s.completedAt
-                            ).length
-                          }{" "}
-                          of {(selectedTraining.sessions || []).length} sessions
-                          completed
+                          {trainingCompletedCount(selectedTraining)} of {trainingTotalCount(selectedTraining)} sessions completed
                         </p>
                       </CardContent>
                     </Card>
                   )}
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Main Content */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Sessions */}
-                    <div>
+                  {/* Training Details */}
+                  <Card>
+                    <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-primary" />
-                          Training Sessions
-                        </h3>
-                        {canWrite &&
-                          selectedTraining.status !==
-                            TRAINING_STATUS.COMPLETED &&
-                          selectedTraining.status !==
-                            TRAINING_STATUS.CANCELLED && (
-                            <Button
-                              size="sm"
-                              onClick={() => setSessionDialogOpen(true)}
-                              className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Add Session
-                            </Button>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="h-5 w-5 text-primary" />
+                          <h3 className="font-semibold">Training Details</h3>
+                        </div>
                       </div>
 
-                      {(selectedTraining.sessions || []).length === 0 ? (
-                        <Card>
-                          <CardContent className="py-12">
-                            <div className="text-center text-muted-foreground">
-                              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                              <p className="font-medium mb-2">
-                                No sessions yet
-                              </p>
-                              <p className="text-sm mb-4">
-                                Get started by adding the first training session
-                              </p>
-                              {canWrite &&
-                                selectedTraining.status !==
-                                  TRAINING_STATUS.COMPLETED &&
-                                selectedTraining.status !==
-                                  TRAINING_STATUS.CANCELLED && (
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setSessionDialogOpen(true)}
-                                    className="gap-2"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                    Add Session
-                                  </Button>
-                                )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-3">
-                          {(selectedTraining.sessions || [])
-                            .sort(
-                              (a, b) =>
-                                new Date(a.sessionDate).getTime() -
-                                new Date(b.sessionDate).getTime()
-                            )
-                            .map((session, index) => (
-                              <SessionCard
-                                key={session.id}
-                                session={session}
-                                sessionNumber={index + 1}
-                                canComplete={canWrite}
-                              />
-                            ))}
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Priority
+                            </p>
+                            <div>{getPriorityBadge(selectedTraining.priority)}</div>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Status
+                            </p>
+                            <div
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs",
+                                getStatusConfig(selectedTraining.status).bgColor,
+                                getStatusConfig(selectedTraining.status).borderColor,
+                                "border"
+                              )}
+                            >
+                              <span
+                                className={getStatusConfig(selectedTraining.status).color}
+                              >
+                                {getStatusConfig(selectedTraining.status).label}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Training Type
+                            </p>
+                            <p className="font-medium text-sm">
+                              {selectedTraining.trainingType}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Sessions
+                            </p>
+                            <p className="font-medium text-sm">
+                              {getTrainingSessions(selectedTraining).length}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Target Completion
+                            </p>
+                            <p className="font-medium text-sm">
+                              {selectedTraining.targetCompletionDate
+                                ? format(new Date(selectedTraining.targetCompletionDate), "MMMM d, yyyy")
+                                : "-"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Assigned on
+                            </p>
+                            <p className="font-medium text-sm">
+                              {selectedTraining.assignedAt
+                                ? format(new Date(selectedTraining.assignedAt), "MMMM d, yyyy")
+                                : "-"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Assigned by
+                            </p>
+                            <p className="font-medium text-sm">{formatAssignedBy(selectedTraining.assignedBy)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {selectedTraining.notes && (
+                        <div className="mt-4">
+                          <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+                          <p className="text-sm whitespace-pre-wrap">{selectedTraining.notes}</p>
                         </div>
                       )}
-                    </div>
-                  </div>
 
-                  {/* Sidebar */}
-                  <div className="space-y-6">
-                    {/* Candidate Info */}
-                    <Card>
+                      {selectedTraining.improvementNotes && (
+                        <div className="mt-4">
+                          <p className="text-xs text-muted-foreground mb-0.5">Improvement Notes</p>
+                          <p className="text-sm whitespace-pre-wrap">{selectedTraining.improvementNotes}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Responsive equal-width grid for cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                  {/* Candidate */}
+                  <div>
+                    <Card className="h-full">
                       <CardContent className="p-4">
                         <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                           <User className="h-4 w-4 text-primary" />
                           Candidate
                         </h4>
                         <div className="space-y-2 text-sm">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-0.5">
-                              Name
-                            </p>
-                            <p className="font-medium">
-                              {
-                                selectedTraining.candidateProjectMap?.candidate?.firstName
-                              }{" "}
-                              {
-                                selectedTraining.candidateProjectMap?.candidate?.lastName
-                              }
-                            </p>
-                          </div>
-                          {selectedTraining.candidateProjectMap
-                            ?.candidate?.email && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">
-                                Email
-                              </p>
-                              <p className="font-medium text-xs break-all">
-                                {
-                                  selectedTraining.candidateProjectMap?.candidate?.email
-                                }
-                              </p>
-                            </div>
-                          )}
+                          {(() => {
+                            const candidate = selectedTraining.candidateProjectMap?.candidate as any;
+                            return (
+                              <>
+                                <div>
+                                  <p className="text-xs text-muted-foreground mb-0.5">Name</p>
+                                  <p className="font-medium">
+                                    {candidate?.firstName} {candidate?.lastName}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">ID: {candidate?.id || "-"}</p>
+                                </div>
+
+                                {candidate?.email && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-0.5">Email</p>
+                                    <p className="font-medium text-xs break-all">
+                                      {candidate?.email}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {candidate?.phone && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-0.5">Phone</p>
+                                    <p className="font-medium text-sm">
+                                      {candidate?.phone}
+                                    </p>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </CardContent>
                     </Card>
+                  </div>
 
-                    {/* Project Info */}
-                    <Card>
+                  {/* Project */}
+                  <div>
+                    <Card className="h-full">
                       <CardContent className="p-4">
                         <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                           <Briefcase className="h-4 w-4 text-primary" />
@@ -710,95 +744,89 @@ export default function TrainingListPage() {
                         </h4>
                         <div className="space-y-2 text-sm">
                           <div>
-                            <p className="text-xs text-muted-foreground mb-0.5">
-                              Project
-                            </p>
+                            <p className="text-xs text-muted-foreground mb-0.5">Project</p>
                             <p className="font-medium">
-                              {
-                                selectedTraining.candidateProjectMap?.project?.title
-                              }
+                              {selectedTraining.candidateProjectMap?.project?.title}
                             </p>
+                            <p className="text-xs text-muted-foreground">ID: {selectedTraining.candidateProjectMap?.project?.id || "-"}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground mb-0.5">
-                              Role
-                            </p>
+                            <p className="text-xs text-muted-foreground mb-0.5">Role</p>
                             <p className="font-medium">
-                              {
-                                selectedTraining.candidateProjectMap?.roleNeeded?.designation
-                              }
+                              {selectedTraining.candidateProjectMap?.roleNeeded?.designation}
                             </p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
+                  </div>
 
-                    {/* Focus Areas */}
-                    {selectedTraining.focusAreas && (
-                      <Card>
+                  {/* Focus Areas */}
+                  {selectedTraining.focusAreas && (
+                    <div>
+                      <Card className="h-full">
                         <CardContent className="p-4">
                           <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                             <Target className="h-4 w-4 text-primary" />
                             Focus Areas
                           </h4>
                           <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                            {selectedTraining.focusAreas}
+                            {Array.isArray(selectedTraining.focusAreas)
+                              ? selectedTraining.focusAreas.join("\n")
+                              : selectedTraining.focusAreas}
                           </p>
                         </CardContent>
                       </Card>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Final Assessment */}
-                    {selectedTraining.completedAt &&
-                      selectedTraining.overallPerformance && (
-                        <Card>
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              Final Assessment
-                            </h4>
-                            <div className="space-y-3 text-sm">
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-1">
-                                  Performance
-                                </p>
-                                <Badge
-                                  variant={
-                                    selectedTraining.overallPerformance ===
-                                    "excellent"
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                >
-                                  {selectedTraining.overallPerformance}
-                                </Badge>
-                              </div>
-                              {selectedTraining.recommendations && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-1">
-                                    Recommendations
-                                  </p>
-                                  <p className="text-sm whitespace-pre-wrap">
-                                    {selectedTraining.recommendations}
-                                  </p>
-                                </div>
-                              )}
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-1">
-                                  Completed
-                                </p>
-                                <p className="text-sm">
-                                  {format(
-                                    new Date(selectedTraining.completedAt),
-                                    "MMMM d, yyyy"
-                                  )}
-                                </p>
-                              </div>
+                  {/* Final Assessment */}
+                  {selectedTraining.completedAt && selectedTraining.overallPerformance && (
+                    <div>
+                      <Card className="h-full">
+                        <CardContent className="p-4">
+                          <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            Final Assessment
+                          </h4>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Performance
+                              </p>
+                              <Badge
+                                variant={
+                                  selectedTraining.overallPerformance === "excellent"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
+                                {selectedTraining.overallPerformance}
+                              </Badge>
                             </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                  </div>
+                            {selectedTraining.recommendations && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  Recommendations
+                                </p>
+                                <p className="text-sm whitespace-pre-wrap">
+                                  {selectedTraining.recommendations}
+                                </p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Completed
+                              </p>
+                              <p className="text-sm">
+                                {format(new Date(selectedTraining.completedAt), "MMMM d, yyyy")}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
                 </div>
               </div>
             </ScrollArea>
@@ -816,14 +844,7 @@ export default function TrainingListPage() {
         </div>
       </div>
 
-      {/* Session Form Dialog */}
-      {selectedTraining && (
-        <SessionFormDialog
-          open={sessionDialogOpen}
-          onOpenChange={setSessionDialogOpen}
-          trainingId={selectedTraining.id}
-        />
-      )}
+      {/* Sessions removed: no session dialog rendered in this view */}
     </div>
   );
 }

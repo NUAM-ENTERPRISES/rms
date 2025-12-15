@@ -233,6 +233,7 @@ export interface TrainingAssignment {
   candidateProjectMap?: {
     id: string;
     candidate: {
+      email: ReactNode;
       id: string;
       firstName: string;
       lastName: string;

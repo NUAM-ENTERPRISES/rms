@@ -182,7 +182,17 @@ export class InterviewsService {
     }
 
     if (status) {
-      where.outcome = status;
+      // The status filter should match the interview.outcome column only.
+      // Accept 'complete' as alias for 'completed'. For 'pending' match
+      // outcome = null or outcome = 'pending'.
+      const normalizedStatus = status === 'complete' ? 'completed' : status;
+
+      if (normalizedStatus === 'pending') {
+        // match interviews that have not yet set an outcome or explicitly 'pending'
+        where.OR = [{ outcome: null }, { outcome: 'pending' }];
+      } else {
+        where.outcome = normalizedStatus;
+      }
     }
 
     if (projectId) {
@@ -243,6 +253,12 @@ export class InterviewsService {
                 select: {
                   id: true,
                   title: true,
+                },
+              },
+              roleNeeded: {
+                select: {
+                  id: true,
+                  designation: true,
                 },
               },
             },
@@ -434,6 +450,130 @@ export class InterviewsService {
         totalPages,
       },
     };
+  }
+
+  /**
+   * Get history entries for a given interview (client interviews)
+   */
+  async getInterviewHistory(interviewId: string) {
+    // Ensure interview exists
+    const interview = await this.prisma.interview.findUnique({ where: { id: interviewId } });
+    if (!interview) {
+      throw new NotFoundException('Interview not found');
+    }
+
+    const histories = await this.prisma.interviewStatusHistory.findMany({
+      where: { interviewId, interviewType: 'client' },
+      orderBy: { statusAt: 'desc' },
+      include: {
+        changedBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    return histories;
+  }
+
+  /**
+   * Update interview outcome and optionally update the candidate-project subStatus.
+   * Also creates InterviewStatusHistory and CandidateProjectStatusHistory entries.
+   */
+  async updateInterviewStatus(id: string, dto: { interviewStatus?: string; subStatus?: string; reason?: string }, changedById?: string) {
+    const interview = await this.prisma.interview.findUnique({ where: { id } });
+    if (!interview) {
+      throw new NotFoundException('Interview not found');
+    }
+
+    // Resolve changer's name if provided
+    let changerName: string | null = null;
+    if (changedById) {
+      const user = await this.prisma.user.findUnique({ where: { id: changedById } });
+      changerName = user?.name ?? null;
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // update interview outcome if provided
+      const interviewUpdateData: any = {};
+      if (dto.interviewStatus) interviewUpdateData.outcome = dto.interviewStatus;
+      // if a reason is provided, save it to the interview's notes (append to existing notes)
+      if (dto.reason) {
+        const existingNotes = interview.notes ? `${interview.notes}` : '';
+        interviewUpdateData.notes = existingNotes
+          ? `${existingNotes}\n${dto.reason}`
+          : dto.reason;
+      }
+
+      const updatedInterview = await tx.interview.update({
+        where: { id },
+        data: interviewUpdateData,
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+              project: { select: { id: true, title: true } },
+              roleNeeded: { select: { id: true, designation: true } },
+              recruiter: { select: { id: true, name: true, email: true } },
+              mainStatus: true,
+              subStatus: true,
+            },
+          },
+          project: { select: { id: true, title: true } },
+        },
+      });
+
+      // write interview status history
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewId: id,
+          interviewType: 'client',
+          candidateProjectMapId: interview.candidateProjectMapId ?? null,
+          status: dto.interviewStatus ?? 'updated',
+          statusSnapshot: dto.interviewStatus ?? null,
+          changedById: changedById ?? null,
+          changedByName: changerName ?? null,
+          reason: dto.reason ?? null,
+        },
+      });
+
+      // If we need to update candidate project subStatus
+      if (dto.subStatus && interview.candidateProjectMapId) {
+        const prevAssignment = await tx.candidateProjects.findUnique({
+          where: { id: interview.candidateProjectMapId },
+          include: { mainStatus: true, subStatus: true },
+        });
+
+        const newSub = await tx.candidateProjectSubStatus.findUnique({ where: { name: dto.subStatus } });
+          if (!newSub) {
+            throw new BadRequestException(`Sub-status '${dto.subStatus}' not found`);
+          }
+
+          // update candidate project subStatus
+          // (we already ensured newSub exists)
+          await tx.candidateProjects.update({
+            where: { id: interview.candidateProjectMapId },
+            data: { subStatus: { connect: { id: newSub.id } } },
+          });
+
+          // write candidate project status history
+          await tx.candidateProjectStatusHistory.create({
+            data: {
+              candidateProjectMapId: interview.candidateProjectMapId,
+              changedById: changedById ?? null,
+              changedByName: changerName ?? null,
+              mainStatusId: prevAssignment?.mainStatus?.id ?? null,
+              subStatusId: newSub?.id ?? null,
+              mainStatusSnapshot: prevAssignment?.mainStatus?.label ?? null,
+              subStatusSnapshot: newSub?.label ?? dto.subStatus,
+              reason: dto.reason ?? `Interview status updated${changerName ? ` by ${changerName}` : ''}`,
+            },
+          });
+        }
+
+      return updatedInterview;
+    });
+
+    return updated;
   }
 
   async findOne(id: string) {

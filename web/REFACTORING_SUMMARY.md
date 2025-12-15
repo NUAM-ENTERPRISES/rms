@@ -217,4 +217,9 @@ The codebase now fully complies with FE_GUIDELINES.md. Future development should
 - `web/src/pages/DashboardPage.tsx` (MODIFIED - colors)
 - `web/src/components/molecules/UserMenu.tsx` (MODIFIED - auth)
 
+### Misc additions
+
+- `web/src/components/molecules/InterviewHistory.tsx` (NEW - dummy interview history UI; uses mock data by default)
+ - `GET /interviews/:id/history` added to interviews API and wired into the UI via `useGetInterviewHistoryQuery` (see `src/features/interviews/api.ts` and `src/features/interviews/views/MyInterviewsListPage.tsx`). The UI component will show live history when available.
+
 **Total Impact**: 15+ files modified/created, 100% FE_GUIDELINES.md compliance achieved.

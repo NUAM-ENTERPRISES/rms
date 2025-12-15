@@ -32,8 +32,10 @@ export class QueryInterviewsDto {
   @ApiProperty({
     description: 'Filter by interview status',
     enum: [
+      'pending',
       'scheduled',
       'completed',
+      'complete',
       'cancelled',
       'rescheduled',
       'passed',
@@ -43,8 +45,10 @@ export class QueryInterviewsDto {
     required: false,
   })
   @IsEnum([
+    'pending',
     'scheduled',
     'completed',
+    'complete',
     'cancelled',
     'rescheduled',
     'passed',

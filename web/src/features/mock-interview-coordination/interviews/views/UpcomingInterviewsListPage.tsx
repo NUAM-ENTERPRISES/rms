@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetUpcomingMockInterviewsQuery } from "../data";
+import { EditMockInterviewDialog } from "../components";
 import { cn } from "@/lib/utils";
 
 export default function UpcomingInterviewsListPage() {
@@ -17,6 +18,7 @@ export default function UpcomingInterviewsListPage() {
 
   const [filters, setFilters] = useState({ search: "", status: "all" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   // auto-select id passed via navigation state
   useEffect(() => {
@@ -170,7 +172,14 @@ export default function UpcomingInterviewsListPage() {
                     <p className="text-sm text-muted-foreground">{selected.scheduledTime ? `Scheduled for ${format(new Date(selected.scheduledTime), "MMMM d, yyyy 'at' h:mm a")}` : 'Not scheduled'}</p>
                   </div>
                   {!selected.conductedAt && (
-                    <Button onClick={() => navigate(`/mock-interviews/${selected.id}/conduct`)}>Conduct Interview</Button>
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => navigate(`/mock-interviews/${selected.id}/conduct`)}>Conduct Interview</Button>
+                      <Button variant="outline" onClick={() => setEditOpen(true)}>Edit</Button>
+                    </div>
+                  )}
+                  {/* Edit dialog */}
+                  {selected && (
+                    <EditMockInterviewDialog open={editOpen} onOpenChange={setEditOpen} interviewId={selected.id} />
                   )}
                 </div>
 

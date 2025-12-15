@@ -7,6 +7,11 @@
  * @module constants/statuses
  */
 
+/**
+ * Interview Outcome Constants
+ * (see declaration below)
+ */
+
 // ==================== CANDIDATE PROJECT MAP STATUSES ====================
 
 export const CANDIDATE_PROJECT_STATUS = {
@@ -531,6 +536,7 @@ export const DOCUMENT_STATUS_CONFIG: Record<
 export const INTERVIEW_OUTCOME = {
   PASSED: "passed",
   FAILED: "failed",
+  COMPLETED: "completed",
   RESCHEDULED: "rescheduled",
   NO_SHOW: "no_show",
   CANCELLED: "cancelled",
@@ -625,3 +631,6 @@ export function sortStatusesByWorkflow(
     return orderA - orderB;
   });
 }
+
+
+
