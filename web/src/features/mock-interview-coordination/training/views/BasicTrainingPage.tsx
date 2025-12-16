@@ -53,7 +53,7 @@ import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetTrainingHistoryQuery } from "../data";
 
 export default function BasicTrainingPage() {
-  
+
   const [searchParams] = useSearchParams();
   const currentUser = useAppSelector((state) => state.auth.user);
 
@@ -106,14 +106,14 @@ export default function BasicTrainingPage() {
       const assignedByUser = i.assignedByUser || i.assignedBy || undefined;
       const candidate = i.candidateProjectMap?.candidate
         ? {
-            ...i.candidateProjectMap.candidate,
-            phone:
-              i.candidateProjectMap.candidate?.phone ||
+          ...i.candidateProjectMap.candidate,
+          phone:
+            i.candidateProjectMap.candidate?.phone ||
               i.candidateProjectMap.candidate?.mobileNumber ||
               i.candidateProjectMap.candidate?.countryCode && i.candidateProjectMap.candidate?.mobileNumber
-                ? `${i.candidateProjectMap.candidate.countryCode} ${i.candidateProjectMap.candidate.mobileNumber}`
-                : i.candidateProjectMap.candidate?.phone,
-          }
+              ? `${i.candidateProjectMap.candidate.countryCode} ${i.candidateProjectMap.candidate.mobileNumber}`
+              : i.candidateProjectMap.candidate?.phone,
+        }
         : undefined;
 
       return {
@@ -198,8 +198,8 @@ export default function BasicTrainingPage() {
     filters.status === "upcoming"
       ? upcomingInterviews
       : filters.status === "completed"
-      ? completedInterviews
-      : allInterviews;
+        ? completedInterviews
+        : allInterviews;
 
   // Auto-select first interview
   const selectedInterview = useMemo(() => {
@@ -389,14 +389,12 @@ export default function BasicTrainingPage() {
               {/* Premium Search Bar with Enhanced Styling */}
               <div className="relative group">
                 <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
-                  }`}
+                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${filters.search ? "text-blue-600" : "text-gray-400"
+                    }`}
                 >
                   <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      filters.search ? "scale-110" : "scale-100"
-                    }`}
+                    className={`h-5 w-5 transition-transform duration-300 ${filters.search ? "scale-110" : "scale-100"
+                      }`}
                   />
                 </div>
                 <Input
@@ -406,9 +404,8 @@ export default function BasicTrainingPage() {
                   className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
                 />
                 <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    filters.search ? "ring-2 ring-blue-500/20" : ""
-                  }`}
+                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${filters.search ? "ring-2 ring-blue-500/20" : ""
+                    }`}
                 />
               </div>
 
@@ -532,7 +529,7 @@ export default function BasicTrainingPage() {
                           </div>
                           <div className="flex items-center gap-1">
                             {(() => {
-                             
+
                               // If training already completed or basic training assigned, allow sending for interview
                               if (interview.status === "completed" || interview.status === "basic_training_assigned") {
                                 return (
@@ -618,8 +615,8 @@ export default function BasicTrainingPage() {
                             {interview.sessions && interview.sessions.length && interview.sessions[0].sessionDate
                               ? format(new Date(interview.sessions[0].sessionDate), "MMM d, yyyy")
                               : interview.assignedAt
-                              ? format(new Date(interview.assignedAt), "MMM d, yyyy")
-                              : "Not scheduled"}
+                                ? format(new Date(interview.assignedAt), "MMM d, yyyy")
+                                : "Not scheduled"}
                           </span>
                         </div>
                       </button>
@@ -635,12 +632,18 @@ export default function BasicTrainingPage() {
         <div className="flex-1 overflow-hidden bg-muted/20 min-w-0 min-h-0">
           {selectedInterview ? (
             <ScrollArea className="h-full">
-              <div className="p-4 max-w-3xl mx-auto space-y-4 overflow-x-hidden">
+              {/*
+                Reduced max width to avoid pushing header actions off-screen on
+                narrower viewports and added `min-w-0` / truncation utility
+                classes to allow the left content to wrap/truncate instead of
+                forcing the Send button out of view.
+              */}
+              <div className="p-4 max-w-2xl mx-auto space-y-4 overflow-x-hidden">
                 {/* Header */}
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-semibold">
+                      <h2 className="text-xl font-semibold truncate">
                         Training Session Details
                       </h2>
                       {selectedInterview.status && (
@@ -649,15 +652,15 @@ export default function BasicTrainingPage() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
                       {selectedInterview.sessions && selectedInterview.sessions.length && selectedInterview.sessions[0].sessionDate
                         ? `Scheduled for ${format(new Date(selectedInterview.sessions[0].sessionDate), "MMMM d, yyyy 'at' h:mm a")}`
                         : selectedInterview.assignedAt
-                        ? `Assigned on ${format(new Date(selectedInterview.assignedAt), "MMMM d, yyyy")}`
-                        : "Not scheduled"}
+                          ? `Assigned on ${format(new Date(selectedInterview.assignedAt), "MMMM d, yyyy")}`
+                          : "Not scheduled"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {selectedInterview.status === "basic_training_assigned" && (
                       <Button
                         size="sm"
@@ -704,29 +707,29 @@ export default function BasicTrainingPage() {
                         </div>
                         {selectedInterview.candidateProjectMap?.candidate
                           ?.email && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Email
-                            </p>
-                            <p className="font-medium break-all text-xs">
-                              {
-                                selectedInterview.candidateProjectMap.candidate
-                                  .email
-                              }
-                            </p>
-                          </div>
-                        )}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Email
+                              </p>
+                              <p className="font-medium break-all text-xs">
+                                {
+                                  selectedInterview.candidateProjectMap.candidate
+                                    .email
+                                }
+                              </p>
+                            </div>
+                          )}
                         {(selectedInterview.candidateProjectMap?.candidate as any)
                           ?.phone && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Phone
-                            </p>
-                            <p className="font-medium">
-                              {(selectedInterview.candidateProjectMap?.candidate as any).phone}
-                            </p>
-                          </div>
-                        )}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Phone
+                              </p>
+                              <p className="font-medium">
+                                {(selectedInterview.candidateProjectMap?.candidate as any).phone}
+                              </p>
+                            </div>
+                          )}
                       </div>
                     </CardContent>
                   </Card>
@@ -835,16 +838,9 @@ export default function BasicTrainingPage() {
 
                 {/* Interview History (bottom) */}
                 {selectedInterview?.candidateProjectMap?.id && (
-                  <Card className="min-w-0 w-full max-w-full">
-                    <CardHeader>
-                      <CardTitle className="text-base">Training History</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
-                    </CardContent>
-                  </Card>
+                  <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
                 )}
-              </div>
+              </div> 
             </ScrollArea>
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground">
