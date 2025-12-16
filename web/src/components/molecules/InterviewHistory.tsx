@@ -1,4 +1,4 @@
-import React from "react";
+// React import not directly used (JSX runtime handles it)
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -74,6 +74,30 @@ const statusColor = (s?: string) => {
   return "bg-slate-100 text-slate-700 border-slate-200";
 };
 
+const mapHistoryStatusLabel = (status?: string) => {
+  if (!status) return "Unknown";
+  switch (status) {
+    case "basic_training_assigned":
+      return "Basic Training Assigned";
+    case "mock_interview_assigned":
+      return "Mock Interview Assigned";
+    case "interview_assigned":
+      return "Interview Assigned";
+    case "ready_for_reassessment":
+      return "Ready for Reassessment";
+    case "assigned":
+      return "Assigned";
+    case "in_progress":
+      return "In Progress";
+    case "completed":
+      return "Completed";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+};
+
 type ServerHistoryItem = {
   id: string;
   interviewType?: string;
@@ -132,14 +156,20 @@ export default function InterviewHistory({ items, isLoading }: { items?: (Interv
                 list.map((raw) => {
                   // Normalize server or local mock item
                   const it = (raw as ServerHistoryItem).statusAt
-                    ? {
-                        id: (raw as ServerHistoryItem).id,
-                        date: (raw as ServerHistoryItem).statusAt || (raw as ServerHistoryItem).createdAt,
-                        action: (raw as ServerHistoryItem).statusSnapshot || (raw as ServerHistoryItem).reason || (raw as ServerHistoryItem).status || "Updated",
-                        actor: (raw as ServerHistoryItem).changedByName || (raw as ServerHistoryItem).changedBy?.name || "System",
-                        status: (raw as ServerHistoryItem).status || (raw as ServerHistoryItem).statusSnapshot,
-                        note: (raw as ServerHistoryItem).reason,
-                      }
+                    ? (() => {
+                        const srv = raw as ServerHistoryItem;
+                        const statusRaw = srv.status;
+                        const statusDisplay = srv.statusSnapshot || mapHistoryStatusLabel(statusRaw);
+                        return {
+                          id: srv.id,
+                          date: srv.statusAt || srv.createdAt,
+                          action: srv.statusSnapshot || srv.reason || mapHistoryStatusLabel(statusRaw) || "Updated",
+                          actor: srv.changedByName || srv.changedBy?.name || "System",
+                          statusRaw,
+                          status: statusDisplay,
+                          note: srv.reason,
+                        };
+                      })()
                     : (raw as InterviewHistoryItem);
 
                   return (
@@ -160,9 +190,9 @@ export default function InterviewHistory({ items, isLoading }: { items?: (Interv
                       <TableCell>
                         <div className="space-y-1">
                           <p className="text-sm font-medium">{it.action}</p>
-                          {it.note && (
+                          {/* {it.note && (
                             <p className="text-xs text-muted-foreground">{it.note}</p>
-                          )}
+                          )} */}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -173,10 +203,10 @@ export default function InterviewHistory({ items, isLoading }: { items?: (Interv
                           variant="outline"
                           className={cn(
                             "text-xs capitalize font-medium border",
-                            statusColor(it.status)
+                            statusColor((it as any).statusRaw || (it as any).status)
                           )}
                         >
-                          {it.status || "—"}
+                          {(it as any).status || "—"}
                         </Badge>
                       </TableCell>
                     </TableRow>

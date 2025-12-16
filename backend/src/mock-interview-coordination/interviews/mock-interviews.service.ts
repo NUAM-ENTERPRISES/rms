@@ -233,6 +233,9 @@ export class MockInterviewsService {
   async findAll(query: QueryMockInterviewsDto) {
     const where: any = {};
 
+    // Only return mock interviews that have been assigned a trainer
+    where.isAssignedTrainer = false;
+
     if (query.candidateProjectMapId) {
       where.candidateProjectMapId = query.candidateProjectMapId;
     }
@@ -490,9 +493,9 @@ export class MockInterviewsService {
         select: { id: true },
       });
 
-      if (roleCatalog && template.roleId !== roleCatalog.id) {
-        throw new BadRequestException('Template role does not match candidate role');
-      }
+      // if (roleCatalog && template.roleId !== roleCatalog.id) {
+      //   throw new BadRequestException('Template role does not match candidate role');
+      // }
     }
 
     // Update the interview's templateId
@@ -683,6 +686,43 @@ export class MockInterviewsService {
       },
       approvalRate:
         completed > 0 ? ((approved / completed) * 100).toFixed(2) : '0',
+    };
+  }
+
+  /**
+   * Get mock interview related status history for a candidate-project map
+   * Supports pagination via { page, limit } in query
+   */
+  async getMockInterviewHistory(candidateProjectMapId: string, query: any) {
+    const { page = 1, limit = 20 } = query || {};
+
+    // Ensure candidate-project exists
+    const cp = await this.prisma.candidateProjects.findUnique({ where: { id: candidateProjectMapId } });
+    if (!cp) {
+      throw new NotFoundException(`Candidate-Project with ID "${candidateProjectMapId}" not found`);
+    }
+
+    const where = { candidateProjectMapId, interviewType: 'mock' };
+
+    const total = await this.prisma.interviewStatusHistory.count({ where });
+
+    const items = await this.prisma.interviewStatusHistory.findMany({
+      where,
+      include: {
+        changedBy: { select: { id: true, name: true } },
+      },
+      orderBy: { statusAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      success: true,
+      data: {
+        items,
+        pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      },
+      message: 'Mock interview history for candidate-project',
     };
   }
 

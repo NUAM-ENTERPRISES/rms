@@ -1,6 +1,8 @@
 // ==================== MOCK INTERVIEW COORDINATION FEATURE TYPES ====================
 // Central types for the entire mock-interview-coordination feature
 
+import { ReactNode } from "react";
+
 // ==================== MOCK INTERVIEW TEMPLATE TYPES ====================
 
 export interface MockInterviewTemplateItem {
@@ -314,6 +316,15 @@ export interface CreateTrainingSessionRequest {
   notes?: string;
 }
 
+// Request to send a candidate for interview (training-specific API)
+export interface SendForInterviewRequest {
+  projectId: string;
+  candidateId: string;
+  type: "mock_interview_assigned" | "interview_assigned";
+  recruiterId?: string;
+  notes?: string;
+}
+
 export interface QueryTrainingAssignmentsRequest {
   candidateProjectMapId?: string;
   mockInterviewId?: string;
@@ -371,6 +382,8 @@ export const TRAINING_STATUS = {
   IN_PROGRESS: "in_progress",
   COMPLETED: "completed",
   CANCELLED: "cancelled",
+  MOCK_ASSIGNED: "mock_assigned",
+  INTERVIEW_ASSIGNED: "interview_assigned",
 } as const;
 
 export const TRAINING_TYPE = {

@@ -90,6 +90,7 @@ export default function ProjectDetailPage() {
     data: projectData,
     isLoading,
     error,
+    refetch: refetchProject,
   } = useGetProjectQuery(projectId!);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
@@ -102,7 +103,11 @@ export default function ProjectDetailPage() {
 
   // Get nominated candidates with proper status filtering
   const shouldLoadNominated = !isProcessingExecutive;
-  const { data: projectCandidatesData, isLoading: isLoadingCandidates } =
+  const {
+    data: projectCandidatesData,
+    isLoading: isLoadingCandidates,
+    refetch: refetchNominated,
+  } =
     useGetNominatedCandidatesQuery(
       {
         projectId: projectId!,
@@ -140,7 +145,7 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    type: "mock" | "interview";
+    type: "mock" | "interview" | "training";
     notes: string;
   }>({
     isOpen: false,
@@ -237,17 +242,23 @@ export default function ProjectDetailPage() {
       const mappedType =
         interviewConfirm.type === "mock"
           ? "mock_interview_assigned"
+          : interviewConfirm.type === "training"
+          ? "training_assigned"
           : "interview_assigned";
 
       await sendForInterview({
         projectId: projectId!,
         candidateId: interviewConfirm.candidateId,
-        type: mappedType as "mock_interview_assigned" | "interview_assigned",
+        type: mappedType as any,
         recruiterId: user?.id,
         notes: interviewConfirm.notes || undefined,
       }).unwrap();
 
-      toast.success("Candidate sent for interview successfully");
+      if (interviewConfirm.type === "training") {
+        toast.success("Basic training assigned");
+      } else {
+        toast.success("Candidate sent for interview successfully");
+      }
       setInterviewConfirm({
         isOpen: false,
         candidateId: "",
@@ -255,6 +266,14 @@ export default function ProjectDetailPage() {
         type: "interview",
         notes: "",
       });
+
+      // Refresh project and nominated candidates so UI reflects new subStatus (e.g., training_assigned)
+      try {
+        refetchProject?.();
+        refetchNominated?.();
+      } catch (e) {
+        // ignore - refetch is best-effort
+      }
     } catch (error: any) {
       toast.error(
         error?.data?.message || "Failed to send candidate for interview"
@@ -842,12 +861,19 @@ export default function ProjectDetailPage() {
           })
         }
         onConfirm={handleSendForInterview}
-        title="Send for Interview"
+          title={
+            interviewConfirm.type === "training"
+              ? "Send for Training"
+              : "Send for Interview"
+          }
         description={
           <div className="space-y-4">
             <p>
-              Are you sure you want to send {interviewConfirm.candidateName} for
-              an interview? Please select the type and optionally add notes.
+              {interviewConfirm.type === "training" ? (
+                <>Are you sure you want to send {interviewConfirm.candidateName} for training? You can optionally add notes.</>
+              ) : (
+                <>Are you sure you want to send {interviewConfirm.candidateName} for an interview? Please select the type and optionally add notes.</>
+              )}
             </p>
 
             <div className="space-y-2">
@@ -872,8 +898,16 @@ export default function ProjectDetailPage() {
                 <SelectContent>
                   <SelectItem value="mock">Mock Interview</SelectItem>
                   <SelectItem value="interview">Interview</SelectItem>
+                  <SelectItem value="training">Send for Training</SelectItem>
                 </SelectContent>
               </Select>
+
+              {interviewConfirm.type === "training" && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Assign basic training to candidate (no mock interview
+                  required).
+                </p>
+              )}
 
               <label
                 htmlFor="interview-notes"
@@ -897,7 +931,13 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         }
-        confirmText="Send for Interview"
+        confirmText={
+          interviewConfirm.type === "training"
+            ? "Send for Training"
+            : interviewConfirm.type === "mock"
+            ? "Send for Mock Interview"
+            : "Send for Interview"
+        }
         cancelText="Cancel"
         isLoading={isSendingInterview}
         variant="default"

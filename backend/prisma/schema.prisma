@@ -471,6 +471,9 @@ model MockInterview {
   coordinatorId         String // Interview Coordinator who conducts the interview
   templateId            String? // Selected template for this interview
 
+  // Whether a trainer/coach has been assigned to this mock interview
+  isAssignedTrainer     Boolean @default(false)
+
   status                String @default("scheduled")
 
   // Scheduling
@@ -645,7 +648,7 @@ model TrainingAssignment {
 
   // Relations
   candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  mockInterview       MockInterview?    @relation(fields: [mockInterviewId], references: [id])
+  mockInterview       MockInterview?    @relation(fields: [mockInterviewId], references: [id], onDelete: SetNull)
   trainingSessions    TrainingSession[]
 
   @@index([candidateProjectMapId])

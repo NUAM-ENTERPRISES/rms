@@ -126,4 +126,13 @@ export class CreateMockInterviewDto {
   @IsEnum(MOCK_INTERVIEW_MODE)
   mode?: string;
 
+  @ApiProperty({
+    description: 'Whether a trainer/coach has been assigned to this mock interview',
+    example: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isAssignedTrainer?: boolean;
+
 }

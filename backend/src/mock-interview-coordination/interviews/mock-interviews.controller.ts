@@ -115,6 +115,25 @@ export class MockInterviewsController {
     return this.mockInterviewsService.getUpcoming(query);
   }
 
+  @Get('candidate-project/:candidateProjectMapId/history')
+  @Permissions('read:mock_interviews')
+  @ApiOperation({
+    summary: 'Get mock interview history for a candidate-project',
+    description:
+      'Retrieve interview-level history events for mock interviews linked to a candidate-project. Supports pagination via query params page & limit.',
+  })
+  @ApiParam({ name: 'candidateProjectMapId', description: 'Candidate-Project map ID' })
+  @ApiResponse({ status: 200, description: 'Mock interview history retrieved' })
+  @ApiResponse({ status: 404, description: 'Candidate-project not found' })
+  getMockInterviewHistory(
+    @Param('candidateProjectMapId') candidateProjectMapId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    const q = { page: Number(page), limit: Number(limit) };
+    return this.mockInterviewsService.getMockInterviewHistory(candidateProjectMapId, q);
+  }
+
   @Get(':id')
   @Permissions('read:mock_interviews')
   @ApiOperation({

@@ -344,6 +344,7 @@ export const TRAINING_TYPE = {
   TECHNICAL: 'technical',
   COMMUNICATION: 'communication',
   ROLE_SPECIFIC: 'role_specific',
+  BASIC: 'basic',
 } as const;
 
 export type TrainingType = (typeof TRAINING_TYPE)[keyof typeof TRAINING_TYPE];
@@ -359,6 +360,15 @@ export const TRAINING_PRIORITY = {
 
 export type TrainingPriority =
   (typeof TRAINING_PRIORITY)[keyof typeof TRAINING_PRIORITY];
+
+/**
+ * Training event constants used in interview/status history when a basic training is assigned
+ */
+export const TRAINING_EVENT = {
+  BASIC_ASSIGNED: 'basic_training_assigned',
+} as const;
+
+export type TrainingEvent = (typeof TRAINING_EVENT)[keyof typeof TRAINING_EVENT];
 
 /**
  * Training Session Performance Constants

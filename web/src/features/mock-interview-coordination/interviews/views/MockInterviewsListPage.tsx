@@ -18,6 +18,7 @@ import {
   X,
   UserPlus,
   Send,
+  Clipboard,
 } from "lucide-react";
 import {
   Card,
@@ -47,6 +48,8 @@ import { AssignToTrainerDialog } from "../../training/components/AssignToTrainer
 import { ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssignToMainInterviewMutation } from "../data";
+import InterviewHistory from "@/components/molecules/InterviewHistory";
+import { useGetCandidateProjectHistoryQuery } from "../data";
 
 export default function MockInterviewsListPage() {
   const navigate = useNavigate();
@@ -176,6 +179,14 @@ export default function MockInterviewsListPage() {
     }
     return displayedInterviews[0];
   }, [displayedInterviews, selectedInterviewId]);
+
+  // Load interview history for the selected interview's candidate-project
+  const { data: historyData, isLoading: isLoadingHistory } = useGetCandidateProjectHistoryQuery(
+    selectedInterview?.candidateProjectMap?.id
+      ? { candidateProjectMapId: selectedInterview.candidateProjectMap.id, page: 1, limit: 20 }
+      : undefined,
+    { skip: !selectedInterview?.candidateProjectMap?.id }
+  );
 
   const stats = useMemo(() => {
     const needsTraining = interviews.filter(
@@ -322,8 +333,21 @@ export default function MockInterviewsListPage() {
 
   return (
     <div className="h-screen flex flex-col">
+      {/* Page Title */}
+      <div className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-600 rounded-lg">
+            <Clipboard className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Mock Interviews</h1>
+            <p className="text-sm text-gray-600">Manage and track candidate mock interview sessions</p>
+          </div>
+        </div>
+      </div>
+
       {/* Search & Filters Section */}
-      <div className="w-full mx-auto pt-2 pb-4">
+      <div className="w-full mx-auto pt-2 pb-4 px-4">
         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
           <CardContent>
             <div className="space-y-6">
@@ -415,7 +439,7 @@ export default function MockInterviewsListPage() {
       </div>
 
       {/* Master-Detail Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden px-4">
         {/* Left Panel - Interview List */}
         <Card className="w-96 border-r border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-none">
           <CardHeader className="pb-3">
@@ -1020,6 +1044,18 @@ export default function MockInterviewsListPage() {
                       )}
                   </CardContent>
                 </Card>
+
+                {/* Interview History (bottom) */}
+                {selectedInterview?.candidateProjectMap?.id && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Interview History</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </ScrollArea>
           ) : (

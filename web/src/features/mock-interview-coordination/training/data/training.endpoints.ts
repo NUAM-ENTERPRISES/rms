@@ -6,8 +6,10 @@ import type {
   UpdateTrainingAssignmentRequest,
   CompleteTrainingRequest,
   CreateTrainingSessionRequest,
+  SendForInterviewRequest,
   QueryTrainingAssignmentsRequest,
   ApiResponse,
+  PaginatedResponse,
 } from "../../types";
 
 // ==================== TRAINING API ENDPOINTS ====================
@@ -23,7 +25,7 @@ export const trainingApi = baseApi.injectEndpoints({
     >({
       query: (params) => ({
         url: "/training/assignments",
-        params,
+        params: params ?? undefined,
       }),
       providesTags: (result) =>
         result?.data && Array.isArray(result.data)
@@ -36,6 +38,23 @@ export const trainingApi = baseApi.injectEndpoints({
             ]
           : [{ type: "Training", id: "LIST" }],
     }),
+    // Get basic training assignments (trainingType === "basic" && mockInterviewId IS NULL)
+    getBasicTrainingAssignments: builder.query<
+      PaginatedResponse<TrainingAssignment>,
+      { page?: number; limit?: number; search?: string; assignedBy?: string; status?: string } | void
+    >({
+      query: (params) => ({
+        url: "/training/basic-assignments",
+        params: params ?? undefined,
+      }),
+      providesTags: (result) =>
+        result?.data?.items && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map((item) => ({ type: "Training" as const, id: item.id })),
+              { type: "Training", id: "LIST" },
+            ]
+          : [{ type: "Training", id: "LIST" }],
+    }),
 
     // Get a single training assignment by ID
     getTrainingAssignment: builder.query<
@@ -43,7 +62,7 @@ export const trainingApi = baseApi.injectEndpoints({
       string
     >({
       query: (id) => `/training/assignments/${id}`,
-      providesTags: (result, error, id) => [{ type: "Training", id }],
+      providesTags: (_result, _error, id) => [{ type: "Training", id }],
     }),
 
     // Create a new training assignment
@@ -72,7 +91,7 @@ export const trainingApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: "Training", id },
         { type: "Training", id: "LIST" },
       ],
@@ -84,7 +103,7 @@ export const trainingApi = baseApi.injectEndpoints({
         url: `/training/assignments/${id}/start`,
         method: "POST",
       }),
-      invalidatesTags: (result, error, id) => [
+      invalidatesTags: (_result, _error, id) => [
         { type: "Training", id },
         { type: "Training", id: "LIST" },
         { type: "Candidate", id: "LIST" },
@@ -101,7 +120,7 @@ export const trainingApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: "Training", id },
         { type: "Training", id: "LIST" },
         { type: "Candidate", id: "LIST" },
@@ -117,7 +136,7 @@ export const trainingApi = baseApi.injectEndpoints({
         url: `/training/assignments/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: (result, error, id) => [
+      invalidatesTags: (_result, _error, id) => [
         { type: "Training", id },
         { type: "Training", id: "LIST" },
       ],
@@ -135,7 +154,7 @@ export const trainingApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: (result, error, { trainingAssignmentId }) => [
+      invalidatesTags: (_result, _error, { trainingAssignmentId }) => [
         { type: "Training", id: trainingAssignmentId },
         { type: "Training", id: "LIST" },
       ],
@@ -151,7 +170,7 @@ export const trainingApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (result, error) => [{ type: "Training", id: "LIST" }],
+      invalidatesTags: (_result, _error) => [{ type: "Training", id: "LIST" }],
     }),
 
     // Complete a training session
@@ -181,6 +200,45 @@ export const trainingApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: [{ type: "Training", id: "LIST" }],
     }),
+    // Send candidate for interview (training-specific API)
+    sendForInterview: builder.mutation<ApiResponse<any>, SendForInterviewRequest>({
+      query: (body) => ({
+        // Backend exposes POST /training/send-for-interview
+        // Keep path consistent with controller
+        url: "/training/send-for-interview",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, _body) => [
+        { type: "Training", id: "LIST" },
+        { type: "Training", id: "HISTORY" },
+        { type: "Candidate", id: "LIST" },
+      ],
+    }),
+    // Get training assignment history for a candidateProjectMap
+    getTrainingHistory: builder.query<
+      PaginatedResponse<any>,
+      { candidateProjectMapId: string; page?: number; limit?: number; status?: string } | void
+    >({
+      query: (params) => {
+        const candidateProjectMapId = params?.candidateProjectMapId as string;
+        const page = params?.page ?? 1;
+        const limit = params?.limit ?? 20;
+        const status = params?.status;
+
+        return {
+          url: `/training/assignments/${candidateProjectMapId}/history`,
+          params: { page, limit, status: status || undefined },
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map((item: any) => ({ type: "Training" as const, id: item.id })),
+              { type: "Training", id: "HISTORY" },
+            ]
+          : [{ type: "Training", id: "HISTORY" }],
+    }),
   }),
 });
 
@@ -188,6 +246,8 @@ export const trainingApi = baseApi.injectEndpoints({
 export const {
   useGetTrainingAssignmentsQuery,
   useGetTrainingAssignmentQuery,
+  useGetBasicTrainingAssignmentsQuery,
+  useGetTrainingHistoryQuery,
   useLazyGetTrainingAssignmentQuery,
   useCreateTrainingAssignmentMutation,
   useUpdateTrainingAssignmentMutation,
@@ -198,6 +258,7 @@ export const {
   useUpdateTrainingSessionMutation,
   useCompleteTrainingSessionMutation,
   useDeleteTrainingSessionMutation,
+  useSendForInterviewMutation,
 } = trainingApi;
 
 // Alias exports for convenience

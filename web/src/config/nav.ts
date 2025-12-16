@@ -101,6 +101,13 @@ export const navigationConfig: NavItem[] = [
     // Hidden from CRE - they work independently
   },
   {
+    id: "basic-training",
+    label: "Basic Training",
+    path: "/basic-training",
+    icon: BookOpen,
+    permissions: ["read:training"],
+  },
+  {
     id: "interviews",
     label: "Interviews",
     path: "/interviews",
@@ -167,7 +174,7 @@ export const navigationConfig: NavItem[] = [
       },
       {
         id: "mock-interviews-training",
-        label: "Training",
+        label: "Mock Training",
         path: "/mock-interviews/training",
         permissions: ["read:training"],
       },

@@ -131,6 +131,12 @@ const TrainingDetailPage = lazy(
       "@/features/mock-interview-coordination/training/views/TrainingDetailPage"
     )
 );
+const BasicTrainingPage = lazy(
+  () =>
+    import(
+      "@/features/mock-interview-coordination/training/views/BasicTrainingPage"
+    )
+);
 const ConductMockInterviewPage = lazy(
   () =>
     import(
@@ -614,6 +620,19 @@ function App() {
                         >
                           <AppLayout>
                             <ConductMockInterviewPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/basic-training"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:training"]}>
+                          <AppLayout>
+                            <BasicTrainingPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

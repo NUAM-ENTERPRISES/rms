@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { CandidateProjectsService } from '../../candidate-projects/candidate-projects.service';
 import { CreateTrainingAssignmentDto } from './dto/create-training.dto';
 import { UpdateTrainingAssignmentDto } from './dto/update-training.dto';
 import { CompleteTrainingDto } from './dto/complete-training.dto';
@@ -17,7 +18,10 @@ import {
 
 @Injectable()
 export class TrainingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly candidateProjectsService: CandidateProjectsService,
+  ) {}
 
   // ==================== Training Assignments ====================
 
@@ -93,6 +97,15 @@ export class TrainingService {
         },
       });
 
+      // If a mock interview was provided, mark it as assigned to a trainer
+      if (dto.mockInterviewId) {
+        // Cast to any because generated Prisma types may be out-of-date in some environments
+        await tx.mockInterview.update({
+          where: { id: dto.mockInterviewId },
+          data: { isAssignedTrainer: true } as any,
+        });
+      }
+
       // Update candidate-project status to training_assigned
       await tx.candidateProjects.update({
         where: { id: dto.candidateProjectMapId },
@@ -158,6 +171,10 @@ export class TrainingService {
       where.status = query.status;
     }
 
+    // Exclude basic training entries that are not linked to a mock interview
+    // i.e., trainingType === 'basic' AND mockInterviewId IS NULL should not be returned by default
+    where.NOT = { trainingType: 'basic', mockInterviewId: null };
+
     const items = await this.prisma.trainingAssignment.findMany({
       where,
       include: {
@@ -195,6 +212,86 @@ export class TrainingService {
       usersById = users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {} as Record<string, any>);
     }
     return itemsWithCandidateContact.map((it) => ({ ...(it as any), assignedBy: usersById[it.assignedBy] ?? it.assignedBy }));
+  }
+
+  /**
+   * Find basic training assignments (trainingType === 'basic' and mockInterviewId IS NULL)
+   * Supports pagination and search by candidate name or project title
+   */
+  async findAllBasicTrainings(query: any) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      trainingType: 'basic',
+      mockInterviewId: null,
+    };
+
+    if (query.assignedBy) {
+      where.assignedBy = query.assignedBy;
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    // Search across candidate first/last name and project title
+    if (query.search) {
+      const s = query.search;
+      where.OR = [
+        { candidateProjectMap: { candidate: { firstName: { contains: s, mode: 'insensitive' } } } },
+        { candidateProjectMap: { candidate: { lastName: { contains: s, mode: 'insensitive' } } } },
+        { candidateProjectMap: { project: { title: { contains: s, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.trainingAssignment.findMany({
+        where,
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: { id: true, firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
+              },
+              project: { select: { id: true, title: true } },
+              roleNeeded: { select: { designation: true } },
+            },
+          },
+          trainingSessions: { orderBy: { sessionDate: 'desc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.trainingAssignment.count({ where }),
+    ]);
+
+    // Add candidate phone and attach assignedBy user details (batch)
+    const itemsWithCandidateContact = items.map((it) => ({
+      ...(it as any),
+      candidateProjectMap: {
+        ...it.candidateProjectMap,
+        candidate: it.candidateProjectMap?.candidate
+          ? { ...it.candidateProjectMap.candidate, phone: `${it.candidateProjectMap.candidate.countryCode ?? ''} ${it.candidateProjectMap.candidate.mobileNumber ?? ''}`.trim() }
+          : null,
+      },
+    }));
+
+    const assignerIds = Array.from(new Set(items.map((it) => it.assignedBy).filter(Boolean)));
+    let usersById: Record<string, any> = {};
+    if (assignerIds.length > 0) {
+      const users = await this.prisma.user.findMany({ where: { id: { in: assignerIds } }, select: { id: true, name: true, email: true } });
+      usersById = users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {} as Record<string, any>);
+    }
+
+    return {
+      items: itemsWithCandidateContact.map((it) => ({ ...(it as any), assignedBy: usersById[it.assignedBy] ?? it.assignedBy })),
+      total,
+      page,
+      limit,
+    };
   }
 
   /**
@@ -503,6 +600,37 @@ export class TrainingService {
   }
 
   /**
+   * Get training (interviewType === 'training') history for a candidate-project
+   */
+  async getTrainingHistory(candidateProjectMapId: string, query: any) {
+    // Verify candidate-project exists
+    const cp = await this.prisma.candidateProjects.findUnique({ where: { id: candidateProjectMapId } });
+    if (!cp) throw new NotFoundException(`Candidate-Project with ID "${candidateProjectMapId}" not found`);
+
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    // Include training events (interviewType='training') OR any events that have no interviewId (interviewId IS NULL)
+    // This ensures records where interviewId is null are considered training-related history
+    const where: any = {
+      candidateProjectMapId,
+      OR: [
+        { interviewType: 'training' },
+        { interviewId: null },
+      ],
+    };
+    if (query.status) where.status = query.status;
+
+    const [items, total] = await Promise.all([
+      this.prisma.interviewStatusHistory.findMany({ where, orderBy: { statusAt: 'desc' }, skip, take: limit }),
+      this.prisma.interviewStatusHistory.count({ where }),
+    ]);
+
+    return { items, total, page, limit };
+  }
+
+  /**
    * Update a training session
    */
   async updateSession(
@@ -576,5 +704,34 @@ export class TrainingService {
     });
 
     return { success: true, message: 'Training session deleted successfully' };
+  }
+
+  /**
+   * Send candidate for interview (delegate to CandidateProjectsService)
+   * Mirrors candidate-projects sendForInterview API
+   */
+  async sendForInterview(dto: any, userId: string) {
+    // Delegate to existing CandidateProjectsService implementation
+    const candidateProject = await this.candidateProjectsService.sendForInterview(dto, userId);
+
+    // Update any related training assignments to reflect interview assignment
+    // Map candidate-project send type to training assignment status
+    const trainingStatus = dto.type === 'mock_interview_assigned'
+      ? 'mock_assigned'
+      : dto.type === 'training_assigned'
+      ? 'basic_training_assigned'
+      : 'interview_assigned';
+
+    await this.prisma.trainingAssignment.updateMany({
+      where: {
+        candidateProjectMapId: (candidateProject as any).id,
+        status: { notIn: ['completed', 'cancelled'] },
+      },
+      data: {
+        status: trainingStatus,
+      },
+    });
+
+    return candidateProject;
   }
 }

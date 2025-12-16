@@ -25,6 +25,8 @@ import { CompleteTrainingDto } from './dto/complete-training.dto';
 import { CreateTrainingSessionDto } from './dto/create-session.dto';
 import { CompleteTrainingSessionDto } from './dto/complete-session.dto';
 import { QueryTrainingAssignmentsDto } from './dto/query-training.dto';
+import { QueryBasicTrainingDto } from './dto/query-basic-training.dto';
+import { SendForInterviewDto } from '../../candidate-projects/dto/send-for-interview.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 
 @ApiTags('Training')
@@ -76,6 +78,22 @@ export class TrainingController {
       success: true,
       data,
       message: 'Training assignments retrieved successfully',
+    };
+  }
+
+  @Get('basic-assignments')
+  @Permissions('read:training')
+  @ApiOperation({
+    summary: 'Get all basic training assignments',
+    description: 'Retrieve training assignments where trainingType is "basic" and not linked to a mock interview. Supports pagination and search.',
+  })
+  @ApiResponse({ status: 200, description: 'Basic training assignments retrieved successfully' })
+  async findAllBasicAssignments(@Query() query: QueryBasicTrainingDto) {
+    const data = await this.trainingService.findAllBasicTrainings(query);
+    return {
+      success: true,
+      data,
+      message: 'Basic training assignments retrieved successfully',
     };
   }
 
@@ -193,6 +211,27 @@ export class TrainingController {
     };
   }
 
+  @Post('send-for-interview')
+  @Permissions('manage:candidates', 'schedule:interviews')
+  @ApiOperation({
+    summary: 'Send candidate for interview (mock or client)',
+    description:
+      "Creates/updates candidate-project assignment, sets main stage to 'interview' and sub-status to either 'interview_assigned' or 'mock_interview_assigned' depending on type",
+  })
+  @ApiResponse({ status: 201, description: 'Candidate sent for interview successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  async sendForInterview(
+    @Body() dto: SendForInterviewDto,
+    @Request() req: any,
+  ) {
+    const data = await this.trainingService.sendForInterview(dto, req.user.sub);
+    return {
+      success: true,
+      data,
+      message: 'Candidate sent for interview successfully',
+    };
+  }
+
   @Delete('assignments/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Permissions('manage:training')
@@ -247,6 +286,29 @@ export class TrainingController {
       success: true,
       data,
       message: 'Training sessions retrieved successfully',
+    };
+  }
+
+  @Get('assignments/:candidateProjectMapId/history')
+  @Permissions('read:training')
+  @ApiOperation({
+    summary: 'Get training history for a candidate-project',
+    description: 'Retrieve interviewStatusHistory entries with interviewType = "training" for a candidate-project. Supports pagination and optional status filter.',
+  })
+  @ApiParam({ name: 'candidateProjectMapId', description: 'Candidate-Project map ID' })
+  @ApiResponse({ status: 200, description: 'Training history retrieved successfully' })
+  async getTrainingHistory(
+    @Param('candidateProjectMapId') candidateProjectMapId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('status') status?: string,
+  ) {
+    const q = { page: Number(page), limit: Number(limit), status } as any;
+    const data = await this.trainingService.getTrainingHistory(candidateProjectMapId, q);
+    return {
+      success: true,
+      data,
+      message: 'Training history retrieved successfully',
     };
   }
 

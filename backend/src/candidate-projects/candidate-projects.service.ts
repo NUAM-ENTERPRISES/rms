@@ -12,7 +12,12 @@ import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
-import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
+import {
+  CANDIDATE_PROJECT_STATUS,
+  TRAINING_TYPE,
+  TRAINING_PRIORITY,
+  TRAINING_EVENT,
+} from '../common/constants/statuses';
 
 @Injectable()
 export class CandidateProjectsService {
@@ -1390,7 +1395,12 @@ export class CandidateProjectsService {
 
     // Find main 'interview' status and sub-status name based on type
     const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({ where: { name: 'interview' } });
-    const subName = type === 'interview_assigned' ? 'interview_assigned' : 'mock_interview_assigned';
+    let subName =
+      type === 'interview_assigned'
+        ? 'interview_assigned'
+        : type === 'training_assigned'
+        ? 'training_assigned'
+        : 'mock_interview_assigned';
     const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({ where: { name: subName } });
 
     if (!mainStatus || !subStatus) {
@@ -1436,7 +1446,40 @@ export class CandidateProjectsService {
         });
       }
 
-      // Create status history entry
+      // If this is a training assignment, create a training record and interview history entry
+      if (type === 'training_assigned') {
+        // Create training assignment
+        await tx.trainingAssignment.create({
+          data: {
+            candidateProjectMapId: assignment.id,
+            assignedBy: userId,
+            trainingType: TRAINING_TYPE.BASIC as any,
+            focusAreas: [],
+            priority: TRAINING_PRIORITY.MEDIUM as any,
+            status: TRAINING_EVENT.BASIC_ASSIGNED as any,
+            assignedAt: new Date(),
+            notes: notes || 'basic training assigned',
+          },
+        });
+
+        // Add an interview status history entry to reflect the training assignment
+        await tx.interviewStatusHistory.create({
+          data: {
+            interviewType: 'training',
+            interviewId: null,
+            candidateProjectMapId: assignment.id,
+            previousStatus: null,
+            status: TRAINING_EVENT.BASIC_ASSIGNED,
+            statusSnapshot: 'Basic Training Assigned',
+            statusAt: new Date(),
+            changedById: userId,
+            changedByName: user?.name || null,
+            reason: 'Assigned basic training',
+          },
+        });
+      }
+
+      // Create status history entry (for all types)
       await tx.candidateProjectStatusHistory.create({
         data: {
           candidateProjectMapId: assignment.id,
@@ -1449,10 +1492,45 @@ export class CandidateProjectsService {
           mainStatusSnapshot: mainStatus.label,
           subStatusSnapshot: subStatus.label,
 
-          reason: `Sent for interview (${subName})`,
+          reason: type === 'training_assigned' ? 'Assigned to training' : `Sent for interview (${subName})`,
           notes: notes || null,
         },
       });
+
+      // Also create an interview-level status history record for mock/client interview assignments
+      if (type === 'mock_interview_assigned') {
+        await tx.interviewStatusHistory.create({
+          data: {
+            interviewType: 'mock',
+            interviewId: null,
+            candidateProjectMapId: assignment.id,
+            previousStatus: null,
+            status: 'assigned',
+            statusSnapshot: 'Mock Interview Assigned',
+            statusAt: new Date(),
+            changedById: userId,
+            changedByName: user?.name || null,
+            reason: `Mock interview assigned`,
+          },
+        });
+      }
+
+      if (type === 'interview_assigned') {
+        await tx.interviewStatusHistory.create({
+          data: {
+            interviewType: 'client',
+            interviewId: null,
+            candidateProjectMapId: assignment.id,
+            previousStatus: null,
+            status: 'assigned',
+            statusSnapshot: 'Client Interview Assigned',
+            statusAt: new Date(),
+            changedById: userId,
+            changedByName: user?.name || null,
+            reason: `Client interview assigned`,
+          },
+        });
+      }
 
       return assignment;
     });

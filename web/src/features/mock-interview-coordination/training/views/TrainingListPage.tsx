@@ -12,6 +12,7 @@ import {
   Target,
   X,
   ChevronRight,
+  Send,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,8 +32,14 @@ import { toast } from "sonner";
 import { useGetTrainingAssignmentsQuery } from "../data";
 import { useCan } from "@/hooks/useCan";
 import { useCompleteTrainingMutation } from "../data";
+import { ConfirmationDialog } from "@/components/ui";
+import { Textarea } from "@/components/ui/textarea";
+import { useAppSelector } from "@/app/hooks";
+import { useSendForInterviewMutation } from "../data";
 import { TRAINING_STATUS, TRAINING_PRIORITY } from "../../types";
 import { cn } from "@/lib/utils";
+import InterviewHistory from "@/components/molecules/InterviewHistory";
+import { useGetCandidateProjectHistoryQuery } from "../../interviews/data";
 
 export default function TrainingListPage() {
   const canWrite = useCan("write:training");
@@ -101,6 +108,14 @@ export default function TrainingListPage() {
     return filteredTrainings[0];
   }, [filteredTrainings, selectedTrainingId]);
 
+  // Load interview history for the selected training's candidate-project
+  const { data: historyData, isLoading: isLoadingHistory } = useGetCandidateProjectHistoryQuery(
+    selectedTraining?.candidateProjectMap?.id
+      ? { candidateProjectMapId: selectedTraining.candidateProjectMap.id, page: 1, limit: 20 }
+      : undefined,
+    { skip: !selectedTraining?.candidateProjectMap?.id }
+  );
+
   // Normalized sessions (some responses use `sessions`, others `trainingSessions`)
   const getTrainingSessions = (training: any) =>
     training?.sessions || training?.trainingSessions || [];
@@ -110,6 +125,63 @@ export default function TrainingListPage() {
     if (typeof assignedBy === "string") return assignedBy;
     // object case: prefer name, then email, then id
     return assignedBy.name || assignedBy.email || assignedBy.id || JSON.stringify(assignedBy);
+  };
+
+  const [sendForInterview, { isLoading: isSendingInterview }] =
+    useSendForInterviewMutation();
+  const { user } = useAppSelector((state) => state.auth);
+
+  const [interviewConfirm, setInterviewConfirm] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    projectId?: string;
+    type: "mock" | "interview";
+    notes: string;
+  }>({
+    isOpen: false,
+    candidateId: "",
+    candidateName: "",
+    projectId: undefined,
+    type: "interview",
+    notes: "",
+  });
+
+  const showInterviewConfirmation = (
+    candidateId?: string,
+    candidateName?: string,
+    projectId?: string
+  ) => {
+    setInterviewConfirm({
+      isOpen: true,
+      candidateId: candidateId || "",
+      candidateName: candidateName || "",
+      projectId,
+      type: "interview",
+      notes: "",
+    });
+  };
+
+  const handleSendForInterview = async () => {
+    try {
+      if (!interviewConfirm.projectId || !interviewConfirm.candidateId) return;
+
+      const mappedType =
+        interviewConfirm.type === "mock" ? "mock_interview_assigned" : "interview_assigned";
+
+      await sendForInterview({
+        projectId: interviewConfirm.projectId,
+        candidateId: interviewConfirm.candidateId,
+        type: mappedType as "mock_interview_assigned" | "interview_assigned",
+        recruiterId: user?.id,
+        notes: interviewConfirm.notes || undefined,
+      }).unwrap();
+
+      toast.success("Candidate sent for interview successfully");
+      setInterviewConfirm({ isOpen: false, candidateId: "", candidateName: "", projectId: undefined, type: "interview", notes: "" });
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to send candidate for interview");
+    }
   };
 
   const trainingCompletedCount = (t: any) =>
@@ -164,6 +236,20 @@ export default function TrainingListPage() {
           color: "text-red-600 dark:text-red-400",
           bgColor: "bg-red-50 dark:bg-red-950",
           borderColor: "border-red-300 dark:border-red-700",
+        };
+      case TRAINING_STATUS.MOCK_ASSIGNED:
+        return {
+          label: "Mock Interview Assigned",
+          color: "text-green-600 dark:text-green-400",
+          bgColor: "bg-green-50 dark:bg-green-950",
+          borderColor: "border-green-300 dark:border-green-700",
+        };
+      case TRAINING_STATUS.INTERVIEW_ASSIGNED:
+        return {
+          label: "Interview Assigned",
+          color: "text-green-600 dark:text-green-400",
+          bgColor: "bg-green-50 dark:bg-green-950",
+          borderColor: "border-green-300 dark:border-green-700",
         };
       default:
         return {
@@ -285,7 +371,7 @@ export default function TrainingListPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">
-                  Training Programs
+                  Mock Training Programs
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   Manage candidate training and development
@@ -437,17 +523,44 @@ export default function TrainingListPage() {
                             </span>
                             {training.priority &&
                               getPriorityBadge(training.priority)}
+
+                            {(training.status === TRAINING_STATUS.MOCK_ASSIGNED || training.status === TRAINING_STATUS.INTERVIEW_ASSIGNED) && (
+                              <Badge className="text-xs bg-green-100 text-green-700">
+                                {training.status === TRAINING_STATUS.MOCK_ASSIGNED ? "Mock Interview Assigned" : "Interview Assigned"}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">
                             {training.trainingType}
                           </p>
                         </div>
-                        <ChevronRight
-                          className={cn(
-                            "h-4 w-4 flex-shrink-0 transition-transform",
-                            isSelected && "text-primary"
+                        <div className="flex items-center gap-2">
+                          {candidate && training.candidateProjectMap?.project?.id && canWrite &&
+                            training.status !== TRAINING_STATUS.MOCK_ASSIGNED &&
+                            training.status !== TRAINING_STATUS.INTERVIEW_ASSIGNED && (
+                              <button
+                                title="Send for Interview"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  showInterviewConfirmation(
+                                    candidate.id,
+                                    `${candidate.firstName} ${candidate.lastName}`,
+                                    training.candidateProjectMap?.project?.id
+                                  );
+                                }}
+                                className="p-1 rounded hover:bg-accent/40"
+                              >
+                                <Send className="h-4 w-4 text-muted-foreground" />
+                              </button>
                           )}
-                        />
+
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 flex-shrink-0 transition-transform",
+                              isSelected && "text-primary"
+                            )}
+                          />
+                        </div>
                       </div>
 
                       <div
@@ -529,28 +642,59 @@ export default function TrainingListPage() {
                       </p>
                     </div>
 
-                      {canWrite &&
-                      selectedTraining.status === TRAINING_STATUS.IN_PROGRESS &&
-                      getTrainingSessions(selectedTraining).length > 0 &&
-                      getTrainingSessions(selectedTraining).every((s: any) => s.completedAt) && (
-                        <Button
-                          onClick={handleCompleteTraining}
-                          disabled={isCompleting}
-                          className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                        >
-                          {isCompleting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Completing...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="h-4 w-4" />
-                              Complete Training
-                            </>
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {selectedTraining.status === TRAINING_STATUS.MOCK_ASSIGNED ? (
+                          <Badge className="text-sm bg-green-100 text-green-700">
+                            Mock Interview Assigned
+                          </Badge>
+                        ) : selectedTraining.status === TRAINING_STATUS.INTERVIEW_ASSIGNED ? (
+                          <Badge className="text-sm bg-green-100 text-green-700">
+                            Interview Assigned
+                          </Badge>
+                        ) : (
+                          canWrite && selectedTraining.candidateProjectMap?.candidate && selectedTraining.candidateProjectMap?.project?.id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                showInterviewConfirmation(
+                                  selectedTraining.candidateProjectMap?.candidate?.id,
+                                  `${selectedTraining.candidateProjectMap?.candidate?.firstName} ${selectedTraining.candidateProjectMap?.candidate?.lastName}`,
+                                  selectedTraining.candidateProjectMap?.project?.id
+                                )
+                              }
+                              disabled={isSendingInterview}
+                              className="gap-2"
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Send for Interview
+                            </Button>
+                          )
+                        )}
+
+                        {canWrite &&
+                        selectedTraining.status === TRAINING_STATUS.IN_PROGRESS &&
+                        getTrainingSessions(selectedTraining).length > 0 &&
+                        getTrainingSessions(selectedTraining).every((s: any) => s.completedAt) && (
+                          <Button
+                            onClick={handleCompleteTraining}
+                            disabled={isCompleting}
+                            className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                          >
+                            {isCompleting ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Completing...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="h-4 w-4" />
+                                Complete Training
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
                   </div>
 
                   {/* Progress Card */}
@@ -828,7 +972,13 @@ export default function TrainingListPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Interview History */}
+                {selectedTraining?.candidateProjectMap?.id && (
+                      <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
+                )}
               </div>
+              
             </ScrollArea>
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -845,6 +995,79 @@ export default function TrainingListPage() {
       </div>
 
       {/* Sessions removed: no session dialog rendered in this view */}
+      {/* Send for Interview Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={interviewConfirm.isOpen}
+        onClose={() =>
+          setInterviewConfirm({
+            isOpen: false,
+            candidateId: "",
+            candidateName: "",
+            projectId: undefined,
+            type: "interview",
+            notes: "",
+          })
+        }
+        onConfirm={handleSendForInterview}
+        title="Send for Interview"
+        description={
+          <div className="space-y-4">
+            <p>
+              Are you sure you want to send {interviewConfirm.candidateName} for
+              an interview? Please select the type and optionally add notes.
+            </p>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="interview-type"
+                className="text-sm font-medium text-gray-700"
+              >
+                Type
+              </label>
+              <Select
+                value={interviewConfirm.type}
+                onValueChange={(value) =>
+                  setInterviewConfirm((prev) => ({ ...prev, type: value as any }))
+                }
+              >
+                <SelectTrigger id="interview-type" className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mock">Mock Interview</SelectItem>
+                  <SelectItem value="interview">Interview</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <label
+                htmlFor="interview-notes"
+                className="text-sm font-medium text-gray-700"
+              >
+                Notes (Optional)
+              </label>
+              <Textarea
+                id="interview-notes"
+                placeholder="Add any notes for the interview team..."
+                value={interviewConfirm.notes}
+                onChange={(e) =>
+                  setInterviewConfirm((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                rows={3}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Send for Interview"
+        cancelText="Cancel"
+        isLoading={isSendingInterview}
+        variant="default"
+        icon={
+          <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+            <Send className="h-5 w-5 text-purple-600" />
+          </div>
+        }
+      />
     </div>
   );
 }

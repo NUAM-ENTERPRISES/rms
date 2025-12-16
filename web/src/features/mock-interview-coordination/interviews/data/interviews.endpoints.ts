@@ -188,6 +188,18 @@ export const mockInterviewsApi = baseApi.injectEndpoints({
         { type: "Interview", id: "LIST" },
       ],
     }),
+    // Get history for a candidate-project (mock interview related events)
+    getCandidateProjectHistory: builder.query<
+      PaginatedResponse<any>,
+      { candidateProjectMapId: string; page?: number; limit?: number } | undefined
+    >({
+      query: (params) => ({
+        url: `/mock-interviews/candidate-project/${params?.candidateProjectMapId}/history`,
+        params: { page: params?.page ?? 1, limit: params?.limit ?? 20 },
+      }),
+      providesTags: (_result, _error, _arg) =>
+        _arg ? [{ type: "MockInterview", id: _arg.candidateProjectMapId }] : [{ type: "MockInterview", id: "LIST" }],
+    }),
   }),
 });
 
@@ -204,4 +216,5 @@ export const {
   useAssignToMainInterviewMutation,
   useGetAssignedMockInterviewsQuery,
   useGetUpcomingMockInterviewsQuery,
+  useGetCandidateProjectHistoryQuery,
 } = mockInterviewsApi;
