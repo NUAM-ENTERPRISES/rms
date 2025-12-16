@@ -61,6 +61,10 @@ import {
   useVerifyDocumentMutation,
   useCreateDocumentMutation,
 } from "@/features/documents";
+import {
+  useGetProjectQuery,
+  useGetNominatedCandidatesQuery,
+} from "@/features/projects";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
@@ -169,6 +173,22 @@ export default function CandidateDocumentVerificationPage() {
     useUploadDocumentMutation();
   const [createDocument, { isLoading: isCreating }] =
     useCreateDocumentMutation();
+
+    // Project-related refetch helpers so we can trigger live updates elsewhere
+    const { refetch: refetchProject } = useGetProjectQuery(selectedProject?.project?.id || "", {
+      skip: !selectedProject?.project?.id,
+    });
+
+    const { refetch: refetchNominated } = useGetNominatedCandidatesQuery(
+      {
+        projectId: selectedProject?.project?.id || "",
+        search: undefined,
+        statusId: undefined,
+        page: 1,
+        limit: 100,
+      },
+      { skip: !selectedProject?.project?.id }
+    );
 
   // Auto-select first project
   useEffect(() => {
@@ -434,6 +454,20 @@ export default function CandidateDocumentVerificationPage() {
       navigate("/documents/verification");
       // Ensure UI updates immediately
       refetchRequirements();
+
+      // Trigger project and nominated candidates refetch so other pages (e.g., ProjectDetail)
+      // pick up the updated status immediately
+      try {
+        await refetchProject?.();
+      } catch (e) {
+        // best-effort
+      }
+
+      try {
+        await refetchNominated?.();
+      } catch (e) {
+        // best-effort
+      }
     } catch (error) {
       toast.error("Failed to complete verification");
     }
@@ -455,6 +489,20 @@ export default function CandidateDocumentVerificationPage() {
       navigate("/documents/verification");
       // Ensure UI updates immediately
       refetchRequirements();
+
+      // Trigger project and nominated candidates refetch so other pages (e.g., ProjectDetail)
+      // pick up the updated status immediately
+      try {
+        await refetchProject?.();
+      } catch (e) {
+        // best-effort
+      }
+
+      try {
+        await refetchNominated?.();
+      } catch (e) {
+        // best-effort
+      }
     } catch (error) {
       toast.error("Failed to complete rejection");
     }
