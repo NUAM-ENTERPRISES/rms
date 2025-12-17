@@ -55,7 +55,7 @@ The `NotificationsSocketProvider` handles real-time notifications:
 
 - `GET /notifications?status=&limit=&cursor=` - List notifications
 - `GET /notifications/badge` - Get unread count
-- `POST /notifications/:id/read` - Mark as read
+- `PATCH /notifications/:id/read` - Mark as read
 
 ### WebSocket Events
 

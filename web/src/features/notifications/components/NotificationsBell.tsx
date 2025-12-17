@@ -120,7 +120,7 @@ export default function NotificationsBell() {
                       Mark all read
                     </Button>
                   )}
-                  <Button
+                  {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowConfirmDialog(true)}
@@ -128,7 +128,7 @@ export default function NotificationsBell() {
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Clear all
-                  </Button>
+                  </Button> */}
                 </div>
               )}
             </div>
