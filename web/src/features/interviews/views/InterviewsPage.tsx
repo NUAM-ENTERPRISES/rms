@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, CheckCircle2, Clock, TrendingUp, ClipboardCheck } from "lucide-react";
-import { Plus, Calendar, RefreshCw } from "lucide-react";
+import { Calendar, RefreshCw } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
 import { useGetInterviewsQuery, useGetAssignedInterviewsQuery, useGetUpcomingInterviewsQuery, useGetInterviewsDashboardQuery } from "../api";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
@@ -44,11 +44,11 @@ export default function InterviewsPage() {
     []) as InterviewRecord[];
   const totalInterviews = interviewsData?.data?.pagination?.total ?? 0;
 
-  const { data: dashboardData, isLoading: isDashboardLoading, refetch: refetchDashboard } = useGetInterviewsDashboardQuery();
+  const { data: dashboardData, refetch: refetchDashboard } = useGetInterviewsDashboardQuery();
 
   // legacy: status breakdown removed; dashboard uses card-based stats
 
-  const canScheduleInterviews = useCan("schedule:interviews");
+  useCan("schedule:interviews");
 
   // Compute derived values and memoized hooks before any conditional returns to keep hooks order stable
   
@@ -125,6 +125,11 @@ export default function InterviewsPage() {
         return completed === 0 ? 0 : (passed / completed) * 100;
       })();
 
+  // helper counts for display
+  const passedCount = dashboardData?.data?.thisMonth?.passedCount ?? undefined;
+  const completedCount = dashboardData?.data?.thisMonth?.completedCount ?? completedThisMonth;
+  const failedCount = Number.isFinite(completedCount) ? (completedCount - (passedCount ?? 0)) : undefined;
+
   const inTraining = 0;
   const stats = { scheduledThisWeek, completedThisMonth, passRate, inTraining };
 
@@ -195,15 +200,15 @@ export default function InterviewsPage() {
 
                     <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                       <div className="text-center">
-                        <div className="font-semibold">{dashboardData?.data?.thisMonth?.passedCount ?? "-"}</div>
+                        <div className="font-semibold">{passedCount ?? "-"}</div>
                         <div className="text-[11px]">Passed</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-semibold">{(dashboardData?.data?.thisMonth?.completedCount != null && dashboardData?.data?.thisMonth?.passedCount != null) ? dashboardData.data.thisMonth.completedCount - dashboardData.data.thisMonth.passedCount : "-"}</div>
+                        <div className="font-semibold">{failedCount !== undefined ? failedCount : "-"}</div>
                         <div className="text-[11px]">Failed</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-semibold">{dashboardData?.data?.thisMonth?.passRate != null ? Number(dashboardData.data.thisMonth.passRate).toFixed(2) : Number(stats.passRate).toFixed(2)}%</div>
+                        <div className="font-semibold">{Number(passRate ?? stats.passRate).toFixed(2)}%</div>
                         <div className="text-[11px]">Pass Rate</div>
                       </div>
                     </div>
@@ -225,7 +230,7 @@ export default function InterviewsPage() {
                       <p className="text-2xl font-bold bg-gradient-to-br from-green-600 to-green-700 bg-clip-text text-transparent">{Number(passRate ?? stats.passRate).toFixed(2)}%</p>
                       <p className="text-xs text-muted-foreground">Approved</p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">{dashboardData?.data?.thisMonth?.passedCount ?? dashboardData?.data?.thisMonth?.passed ?? "-"} passed • {((dashboardData?.data?.thisMonth?.completedCount ?? completedThisMonth) - (dashboardData?.data?.thisMonth?.passedCount ?? dashboardData?.data?.thisMonth?.passed ?? 0)) ?? "-"} failed</p>
+                    <p className="text-xs text-muted-foreground mt-2">{passedCount ?? "-"} passed • {failedCount !== undefined ? failedCount : "-"} failed</p>
                   </div>
                   <div className="p-2 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
                     <TrendingUp className="h-4 w-4 text-green-600" />
