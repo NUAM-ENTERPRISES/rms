@@ -83,7 +83,7 @@ export class TrainingService {
           targetCompletionDate: dto.targetCompletionDate
             ? new Date(dto.targetCompletionDate)
             : null,
-          notes: dto.notes,
+          // 'notes' is not part of the interviewStatusHistory model; omit it
         },
         include: {
           candidateProjectMap: {
@@ -125,7 +125,22 @@ export class TrainingService {
           subStatusSnapshot: CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
           changedById: dto.assignedBy,
           reason: 'Training assigned after mock interview',
-          notes: dto.notes,
+        },
+      });
+
+      // Create an interview-level status history record for training assignment
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'mock',
+          interviewId: null,
+          candidateProjectMapId: dto.candidateProjectMapId,
+          previousStatus: null,
+          status: CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
+          statusSnapshot: 'Training Assigned',
+          statusAt: new Date(),
+          changedById: dto.assignedBy,
+          changedByName: assignedByUser?.name ?? null,
+          reason: 'Training assigned after mock interview',
         },
       });
 
@@ -732,6 +747,31 @@ export class TrainingService {
       },
     });
 
-    return candidateProject;
+    // Ensure interview-level history exists for this candidate-project and attach it to the returned object
+    const historyCount = await this.prisma.interviewStatusHistory.count({ where: { candidateProjectMapId: (candidateProject as any).id } });
+    if (historyCount === 0) {
+      // Map dto.type to interviewType/statusSnapshot
+      const historyType = dto.type === 'mock_interview_assigned' ? 'mock' : dto.type === 'training_assigned' ? 'training' : 'client';
+      const statusSnapshot = dto.type === 'mock_interview_assigned' ? 'Mock Interview Assigned' : dto.type === 'training_assigned' ? 'Basic Training Assigned' : 'Client Interview Assigned';
+
+      await this.prisma.interviewStatusHistory.create({
+        data: {
+          interviewType: historyType,
+          interviewId: null,
+          candidateProjectMapId: (candidateProject as any).id,
+          previousStatus: null,
+          status: 'assigned',
+          statusSnapshot,
+          statusAt: new Date(),
+          changedById: userId,
+          changedByName: null,
+          reason: `${statusSnapshot}`,
+        },
+      });
+    }
+
+    const history = await this.prisma.interviewStatusHistory.findMany({ where: { candidateProjectMapId: (candidateProject as any).id }, orderBy: { statusAt: 'desc' } });
+
+    return { ...(candidateProject as any), history };
   }
 }

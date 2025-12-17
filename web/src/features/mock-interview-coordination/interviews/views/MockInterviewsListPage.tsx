@@ -681,14 +681,14 @@ export default function MockInterviewsListPage() {
         </Card>
 
         {/* Right Panel - Interview Details */}
-        <div className="flex-1 overflow-hidden bg-muted/20">
+        <div className="flex-1 overflow-hidden bg-muted/20 min-w-0 min-h-0">
           {selectedInterview ? (
             <ScrollArea className="h-full">
-              <div className="p-4 max-w-4xl mx-auto space-y-4">
+              <div className="p-4 max-w-2xl mx-auto space-y-4 min-w-0">
                 {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <h2 className="text-xl font-semibold">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1 min-w-0">
+                    <h2 className="text-xl font-semibold truncate">
                       Mock Interview Details
                     </h2>
                     <p className="text-xs text-muted-foreground">
@@ -701,7 +701,7 @@ export default function MockInterviewsListPage() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {!selectedInterview.conductedAt && (
                       <Button
                         size="sm"
@@ -808,7 +808,7 @@ export default function MockInterviewsListPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Candidate Info */}
-                  <Card>
+                  <Card className="min-w-0">
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
                         <User className="h-4 w-4 text-primary" />
@@ -863,7 +863,7 @@ export default function MockInterviewsListPage() {
                   </Card>
 
                   {/* Project & Role */}
-                  <Card>
+                  <Card className="min-w-0">
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
                         <Briefcase className="h-4 w-4 text-primary" />
@@ -1047,14 +1047,7 @@ export default function MockInterviewsListPage() {
 
                 {/* Interview History (bottom) */}
                 {selectedInterview?.candidateProjectMap?.id && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Interview History</CardTitle>
-                    </CardHeader>
-                    <CardContent>
                       <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
-                    </CardContent>
-                  </Card>
                 )}
               </div>
             </ScrollArea>

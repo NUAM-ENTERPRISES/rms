@@ -84,6 +84,7 @@ describe('TrainingService', () => {
       trainingAssignment: { create: jest.fn().mockResolvedValue({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } }) },
       candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map1' }) },
       candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist1' }) },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'ih1' }) },
       user: { findUnique: jest.fn().mockResolvedValue({ id: 'u1', name: 'Assigner' }) },
     } as any;
 
@@ -93,13 +94,14 @@ describe('TrainingService', () => {
     (prisma.trainingAssignment.findUnique as any).mockResolvedValueOnce({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } });
 
     const res = await service.createAssignment(dto);
-
     expect(tx.trainingAssignment.create).toHaveBeenCalled();
     expect(res).toBeDefined();
     expect(res.candidateProjectMap).toBeDefined();
     expect(res.candidateProjectMap.candidate).toBeDefined();
     expect(res.candidateProjectMap.candidate!.email).toBe('john@example.com');
     expect(res.candidateProjectMap.candidate!.phone).toBe('+91 9876543210');
+    // Ensure we created an interview status history record for the training assignment
+    expect(tx.interviewStatusHistory.create).toHaveBeenCalled();
   });
 
   it('findAllAssignments includes assignedBy object', async () => {

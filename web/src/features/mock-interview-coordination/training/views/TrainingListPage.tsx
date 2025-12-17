@@ -622,15 +622,15 @@ export default function TrainingListPage() {
         </div>
 
         {/* Right Panel - Training Details */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-w-0 min-h-0 bg-muted/20">
           {selectedTraining ? (
             <ScrollArea className="h-full">
-              <div className="p-6 max-w-5xl mx-auto space-y-6">
+              <div className="p-6 max-w-3xl mx-auto space-y-6 min-w-0">
                 {/* Header Section */}
                 <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <h2 className="text-2xl font-semibold">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 min-w-0">
+                      <h2 className="text-2xl font-semibold truncate">
                         {selectedTraining.trainingType}
                       </h2>
                       <p className="text-sm text-muted-foreground">
@@ -642,7 +642,7 @@ export default function TrainingListPage() {
                       </p>
                     </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {selectedTraining.status === TRAINING_STATUS.MOCK_ASSIGNED ? (
                           <Badge className="text-sm bg-green-100 text-green-700">
                             Mock Interview Assigned
@@ -830,11 +830,11 @@ export default function TrainingListPage() {
                   </Card>
                 </div>
 
-                {/* Responsive equal-width grid for cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                  {/* Responsive equal-width grid for cards: Candidate & Project side-by-side on md+, Focus Areas full-width under them */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   {/* Candidate */}
                   <div>
-                    <Card className="h-full">
+                    <Card className="h-full min-w-0">
                       <CardContent className="p-4">
                         <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                           <User className="h-4 w-4 text-primary" />
@@ -880,7 +880,7 @@ export default function TrainingListPage() {
 
                   {/* Project */}
                   <div>
-                    <Card className="h-full">
+                    <Card className="h-full min-w-0">
                       <CardContent className="p-4">
                         <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                           <Briefcase className="h-4 w-4 text-primary" />
@@ -907,8 +907,8 @@ export default function TrainingListPage() {
 
                   {/* Focus Areas */}
                   {selectedTraining.focusAreas && (
-                    <div>
-                      <Card className="h-full">
+                    <div className="md:col-span-2">
+                      <Card className="h-full min-w-0">
                         <CardContent className="p-4">
                           <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                             <Target className="h-4 w-4 text-primary" />
@@ -927,7 +927,7 @@ export default function TrainingListPage() {
                   {/* Final Assessment */}
                   {selectedTraining.completedAt && selectedTraining.overallPerformance && (
                     <div>
-                      <Card className="h-full">
+                      <Card className="h-full min-w-0">
                         <CardContent className="p-4">
                           <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-600" />

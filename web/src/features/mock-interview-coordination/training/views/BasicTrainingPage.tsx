@@ -441,7 +441,7 @@ export default function BasicTrainingPage() {
       {/* Master-Detail Layout */}
       <div className="flex-1 flex overflow-hidden px-4 min-h-0">
         {/* Left Panel - Interview List */}
-        <Card className="w-96 border-r border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-none min-w-0 min-h-0">
+        <Card className="w-96 border-r border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-none min-w-0 min-h-0 h-full flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -476,7 +476,7 @@ export default function BasicTrainingPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               {displayedInterviews.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">

@@ -623,14 +623,6 @@ export default function ConductMockInterviewPage() {
                 >
                   Update Template
                 </Button>
-                <Button 
-                  onClick={handleCompleteInterview}
-                  variant="default"
-                  size="sm"
-                  disabled={hasValidationErrors}
-                >
-                  Complete Interview
-                </Button>
               </div>
             </div>
           </CardHeader>
@@ -751,6 +743,19 @@ export default function ConductMockInterviewPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Complete Interview button placed after all questions */}
+                  <div className="mt-6 flex justify-end">
+                    <Button
+                      onClick={handleCompleteInterview}
+                      variant="default"
+                      size="sm"
+                      disabled={hasValidationErrors}
+                      className="w-full sm:w-auto"
+                    >
+                      Complete Interview
+                    </Button>
+                  </div>
                 </div>
               );
             })() : (
