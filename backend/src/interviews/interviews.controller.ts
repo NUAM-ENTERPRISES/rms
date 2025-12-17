@@ -368,6 +368,20 @@ export class InterviewsController {
     };
   }
 
+  @Get('dashboard')
+  @Permissions('read:interviews')
+  @ApiOperation({ summary: 'Get interview dashboard metrics (counts only)', description: "Return counts for this week's scheduled interviews and this month's completed interviews and pass rate." })
+  @ApiResponse({ status: 200, description: 'Dashboard metrics retrieved successfully' })
+  async getDashboard(): Promise<any> {
+    const dashboard = await this.interviewsService.getDashboard();
+
+    return {
+      success: true,
+      data: dashboard,
+      message: 'Dashboard metrics retrieved successfully',
+    };
+  }
+
   @Patch(':id/status')
   @Permissions('write:interviews')
   @ApiOperation({

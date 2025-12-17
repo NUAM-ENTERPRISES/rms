@@ -238,6 +238,18 @@ export const interviewsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/interviews/${id}/history` }),
       providesTags: (_result, _error, id) => [{ type: "Interview", id }],
     }),
+
+    /**
+     * Dashboard data for interview overview
+     * GET /interviews/dashboard
+     */
+    getInterviewsDashboard: builder.query<
+      { success: true; data: { thisWeek: { count: number }; thisMonth: { completedCount: number; passedCount: number; passRate: number } }; message: string },
+      void
+    >({
+      query: () => ({ url: "/interviews/dashboard" }),
+      providesTags: ["Interview"],
+    }),
   }),
 });
 
@@ -251,4 +263,5 @@ export const {
   useUpdateInterviewStatusMutation,
   useGetAssignedInterviewsQuery,
   useGetUpcomingInterviewsQuery,
+  useGetInterviewsDashboardQuery,
 } = interviewsApi;

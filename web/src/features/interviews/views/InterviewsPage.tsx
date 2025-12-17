@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, CheckCircle2, Clock, TrendingUp, ClipboardCheck } from "lucide-react";
 import { Plus, Calendar, RefreshCw } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { useGetInterviewsQuery, useGetAssignedInterviewsQuery, useGetUpcomingInterviewsQuery } from "../api";
+import { useGetInterviewsQuery, useGetAssignedInterviewsQuery, useGetUpcomingInterviewsQuery, useGetInterviewsDashboardQuery } from "../api";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
 import EditInterviewDialog from "../components/EditInterviewDialog";
 
@@ -35,14 +35,16 @@ export default function InterviewsPage() {
     page: 1,
     limit: 50,
   });
-  const { data: assignedData } = useGetAssignedInterviewsQuery({ page: 1, limit: 5 });
+  const { data: assignedData, refetch: refetchAssigned } = useGetAssignedInterviewsQuery({ page: 1, limit: 5 });
   // Ensure upcoming hook is called unconditionally (avoid hooks ordering changes)
-  const { data: upcomingData } = useGetUpcomingInterviewsQuery({ page: 1, limit: 5 });
+  const { data: upcomingData, refetch: refetchUpcoming } = useGetUpcomingInterviewsQuery({ page: 1, limit: 5 });
 
   type InterviewRecord = Record<string, any>;
   const interviews = (interviewsData?.data?.interviews ??
     []) as InterviewRecord[];
   const totalInterviews = interviewsData?.data?.pagination?.total ?? 0;
+
+  const { data: dashboardData, isLoading: isDashboardLoading, refetch: refetchDashboard } = useGetInterviewsDashboardQuery();
 
   // legacy: status breakdown removed; dashboard uses card-based stats
 
@@ -73,9 +75,18 @@ export default function InterviewsPage() {
             <p className="text-lg font-semibold text-slate-900">
               Failed to load
             </p>
-            <Button size="sm" onClick={() => refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Retry
-            </Button>
+            <Button size="sm" onClick={() => {
+                try {
+                  refetch?.();
+                  refetchAssigned?.();
+                  refetchUpcoming?.();
+                  refetchDashboard?.();
+                } catch (e) {
+                  // ignore
+                }
+              }}>
+                <RefreshCw className="mr-2 h-4 w-4" /> Retry
+              </Button>
           </CardContent>
         </Card>
       </div>
@@ -84,7 +95,14 @@ export default function InterviewsPage() {
 
   const now = new Date();
 
-  const scheduledThisWeek = interviews.filter((iv) => {
+  
+
+  const upcomingInterviews = upcomingData?.data?.interviews ?? [];
+
+  const assignedInterviews = assignedData?.data?.items ?? [];
+
+  // Build stats using server-provided dashboard data when available, otherwise fall back to local calculations
+  const scheduledThisWeek = dashboardData?.data?.thisWeek?.count ?? interviews.filter((iv) => {
     if (!iv.scheduledTime) return false;
     const d = new Date(iv.scheduledTime);
     const weekAgo = new Date();
@@ -92,21 +110,23 @@ export default function InterviewsPage() {
     return d >= weekAgo && d <= now && !iv.conductedAt;
   }).length;
 
-  const completedThisMonth = interviews.filter((iv) => {
+  // API no longer provides per-day or previous totals; keep simple count only
+
+  const completedThisMonth = dashboardData?.data?.thisMonth?.completedCount ?? interviews.filter((iv) => {
     if (!iv.conductedAt) return false;
     const d = new Date(iv.conductedAt);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
+  const passRate = dashboardData?.data?.thisMonth?.passRate !== undefined
+    ? dashboardData.data.thisMonth.passRate
+    : (() => {
+        const completed = interviews.filter((iv) => iv.conductedAt).length;
+        const passed = interviews.filter((iv) => (iv.status || "").toLowerCase() === "passed").length;
+        return completed === 0 ? 0 : (passed / completed) * 100;
+      })();
 
-  const completed = interviews.filter((iv) => iv.conductedAt).length;
-  const passed = interviews.filter((iv) => (iv.status || "").toLowerCase() === "passed").length;
-  const passRate = completed === 0 ? 0 : Math.round((passed / completed) * 100);
   const inTraining = 0;
   const stats = { scheduledThisWeek, completedThisMonth, passRate, inTraining };
-
-  const upcomingInterviews = upcomingData?.data?.interviews ?? [];
-
-  const assignedInterviews = assignedData?.data?.items ?? [];
 
   // Dashboard layout similar to mock interviews
   return (
@@ -128,16 +148,19 @@ export default function InterviewsPage() {
               </div>
             </div>
               <div className="flex flex-wrap items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <Button variant="outline" size="sm" onClick={() => {
+                try {
+                  refetch?.();
+                  refetchAssigned?.();
+                  refetchUpcoming?.();
+                  refetchDashboard?.();
+                } catch (e) {
+                  // ignore
+                }
+              }}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
-              {canScheduleInterviews && (
-                <Button size="sm" onClick={() => { setScheduleDialogInitial({}); setScheduleDialogOpen(true); }}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Schedule
-                </Button>
-              )}
             </div>
           </div>
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -145,10 +168,12 @@ export default function InterviewsPage() {
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600" />
               <div className="p-4">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">This Week</p>
-                    <p className="text-2xl font-bold bg-gradient-to-br from-blue-600 to-blue-700 bg-clip-text text-transparent">{stats.scheduledThisWeek}</p>
-                    <p className="text-xs text-muted-foreground">Scheduled</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground">Scheduled (7d)</p>
+                    <div className="flex items-baseline gap-3">
+                      <p className="text-2xl font-extrabold text-slate-900">{stats.scheduledThisWeek}</p>
+                      <p className="text-xs text-muted-foreground">in the last 7 days</p>
+                    </div>
                   </div>
                   <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
                     <Calendar className="h-4 w-4 text-blue-600" />
@@ -161,10 +186,27 @@ export default function InterviewsPage() {
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-purple-600" />
               <div className="p-4">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-medium text-muted-foreground">This Month</p>
-                    <p className="text-2xl font-bold bg-gradient-to-br from-purple-600 to-purple-700 bg-clip-text text-transparent">{stats.completedThisMonth}</p>
-                    <p className="text-xs text-muted-foreground">Completed</p>
+                    <div className="flex items-baseline gap-3">
+                      <p className="text-2xl font-bold bg-gradient-to-br from-purple-600 to-purple-700 bg-clip-text text-transparent">{stats.completedThisMonth}</p>
+                      <p className="text-xs text-muted-foreground">completed</p>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                      <div className="text-center">
+                        <div className="font-semibold">{dashboardData?.data?.thisMonth?.passedCount ?? "-"}</div>
+                        <div className="text-[11px]">Passed</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold">{(dashboardData?.data?.thisMonth?.completedCount != null && dashboardData?.data?.thisMonth?.passedCount != null) ? dashboardData.data.thisMonth.completedCount - dashboardData.data.thisMonth.passedCount : "-"}</div>
+                        <div className="text-[11px]">Failed</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold">{dashboardData?.data?.thisMonth?.passRate != null ? Number(dashboardData.data.thisMonth.passRate).toFixed(2) : Number(stats.passRate).toFixed(2)}%</div>
+                        <div className="text-[11px]">Pass Rate</div>
+                      </div>
+                    </div>
                   </div>
                   <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20">
                     <ClipboardCheck className="h-4 w-4 text-purple-600" />
@@ -177,10 +219,13 @@ export default function InterviewsPage() {
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600" />
               <div className="p-4">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-medium text-muted-foreground">Pass Rate</p>
-                    <p className="text-2xl font-bold bg-gradient-to-br from-green-600 to-green-700 bg-clip-text text-transparent">{stats.passRate}%</p>
-                    <p className="text-xs text-muted-foreground">Approved</p>
+                    <div className="flex items-baseline gap-3">
+                      <p className="text-2xl font-bold bg-gradient-to-br from-green-600 to-green-700 bg-clip-text text-transparent">{Number(passRate ?? stats.passRate).toFixed(2)}%</p>
+                      <p className="text-xs text-muted-foreground">Approved</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">{dashboardData?.data?.thisMonth?.passedCount ?? dashboardData?.data?.thisMonth?.passed ?? "-"} passed • {((dashboardData?.data?.thisMonth?.completedCount ?? completedThisMonth) - (dashboardData?.data?.thisMonth?.passedCount ?? dashboardData?.data?.thisMonth?.passed ?? 0)) ?? "-"} failed</p>
                   </div>
                   <div className="p-2 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
                     <TrendingUp className="h-4 w-4 text-green-600" />

@@ -453,6 +453,57 @@ export class InterviewsService {
   }
 
   /**
+   * Dashboard metrics:
+   * - thisWeek: count of interviews scheduled within the current calendar week and a small list
+   * - thisMonth: completed interview count and pass rate (percentage of passed among completed)
+   */
+  async getDashboard() {
+    const now = new Date();
+
+    // compute start/end of current week (week starts on Monday)
+    const day = now.getDay(); // 0 = Sun, 1 = Mon, ...
+    const daysSinceMonday = (day + 6) % 7;
+    const startOfWeek = new Date(now);
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(now.getDate() - daysSinceMonday);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // compute start/end of current month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Fetch counts only (no lists) for the week and month
+    const [scheduledThisWeekCount, thisMonthCompletedCount, thisMonthPassedCount] = await Promise.all([
+      this.prisma.interview.count({ where: { scheduledTime: { gte: startOfWeek, lte: endOfWeek } } }),
+      // Completed: outcome is not null and not 'pending'
+      this.prisma.interview.count({
+        where: {
+          scheduledTime: { gte: startOfMonth, lte: endOfMonth },
+          outcome: { not: null, notIn: ['pending'] },
+        },
+      }),
+      // Passed count
+      this.prisma.interview.count({ where: { scheduledTime: { gte: startOfMonth, lte: endOfMonth }, outcome: 'passed' } }),
+    ]);
+
+    const passRate = thisMonthCompletedCount === 0 ? 0 : Number(((thisMonthPassedCount / thisMonthCompletedCount) * 100).toFixed(2));
+
+    return {
+      thisWeek: {
+        count: scheduledThisWeekCount,
+      },
+      thisMonth: {
+        completedCount: thisMonthCompletedCount,
+        passedCount: thisMonthPassedCount,
+        passRate,
+      },
+    };
+  }
+
+  /**
    * Get history entries for a given interview (client interviews)
    */
   async getInterviewHistory(interviewId: string) {
