@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
@@ -84,12 +85,35 @@ export class DocumentsController {
     status: 200,
     description: 'Verification candidates retrieved successfully',
   })
+  @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
   async getVerificationCandidates(@Query() query: any) {
     const result = await this.documentsService.getVerificationCandidates(query);
     return {
       success: true,
       data: result,
       message: 'Verification candidates retrieved successfully',
+    };
+  }
+
+  @Get('verified-rejected-documents')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get verified/rejected document verifications',
+    description:
+      "Retrieve paginated list of document verifications with status 'verified' or 'rejected'. Supports search, recruiter filter, pagination and returns counts for both statuses.",
+  })
+  @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'both'. Defaults to 'verified' if omitted." })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name, project title or document file name' })
+  @ApiQuery({ name: 'recruiterId', required: false, description: 'Optional recruiter id to scope results' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  async getVerifiedRejectedDocuments(@Query() query: any) {
+    const result = await this.documentsService.getVerifiedRejectedDocuments(query);
+
+    return {
+      success: true,
+      data: result,
+      message: 'Verified/rejected document verifications retrieved successfully',
     };
   }
 

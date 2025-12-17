@@ -7,7 +7,8 @@ ALTER TABLE "training_assignments" ALTER COLUMN "mockInterviewId" DROP NOT NULL;
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'training_assignments_mockInterviewId_fkey') THEN
-    ALTER TABLE "training_assignments" DROP CONSTRAINT training_assignments_mockInterviewId_fkey;
+    -- Use quoted name and IF EXISTS to avoid errors with case-sensitive constraint names
+    ALTER TABLE "training_assignments" DROP CONSTRAINT IF EXISTS "training_assignments_mockInterviewId_fkey";
   END IF;
 END$$;
 

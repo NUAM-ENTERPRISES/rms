@@ -38,8 +38,10 @@ import {
   Briefcase,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useGetVerificationCandidatesQuery } from "@/features/documents";
+import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
 import { useCan } from "@/hooks/useCan";
+import { useAppSelector } from "@/app/hooks";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Can } from "@/components/auth/Can";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -48,6 +50,10 @@ import VerificationActionsMenu from "../components/VerificationActionsMenu";
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
   const canReadDocuments = useCan("read:documents");
+  const { isRecruiter } = usePermissions();
+  const user = useAppSelector((s) => s.auth.user);
+  // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
+  const isStrictRecruiter = (user?.roles || []).includes("Recruiter");
 
   // State
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,20 +69,78 @@ export default function DocumentVerificationPage() {
   const [verificationNotes, setVerificationNotes] = useState("");
 
   // API calls
-  const {
-    data: verificationData,
-    isLoading,
-    error,
-    refetch,
-  } = useGetVerificationCandidatesQuery({
-    status: statusFilter === "all" ? undefined : statusFilter,
-    search: searchTerm || undefined,
-    page: 1,
-    limit: 50,
-  });
+  // Pending (verification candidates) query — only call when viewing pending / in-progress
+  const verificationCandidatesQuery = useGetVerificationCandidatesQuery(
+    {
+      status: statusFilter === "all" ? undefined : statusFilter,
+      search: searchTerm || undefined,
+      page: 1,
+      limit: 50,
+      recruiterId: isStrictRecruiter ? user?.id : undefined,
+    },
+    { skip: statusFilter !== "verification_in_progress_document" }
+  );
 
-  const candidateProjects = verificationData?.data?.candidateProjects || [];
-  const totalCandidates = verificationData?.data?.pagination?.total || 0;
+  // Verified / Rejected documents query — only call when viewing verified or rejected lists
+  const verifiedRejectedQuery = useGetVerifiedRejectedDocumentsQuery(
+    {
+      status: statusFilter === "documents_verified" ? "verified" : statusFilter === "rejected_documents" ? "rejected" : undefined,
+      search: searchTerm || undefined,
+      page: 1,
+      limit: 50,
+      recruiterId: isStrictRecruiter ? user?.id : undefined,
+    },
+    { skip: statusFilter === "verification_in_progress_document" }
+  );
+
+  // Normalize data for table rendering
+  const verificationData = verificationCandidatesQuery.data;
+  const verifiedRejectedData = verifiedRejectedQuery.data;
+  const isLoading = verificationCandidatesQuery.isLoading || verifiedRejectedQuery.isLoading;
+  const error = verificationCandidatesQuery.error || verifiedRejectedQuery.error;
+  const refetch = () => {
+    if (statusFilter === "verification_in_progress_document") verificationCandidatesQuery.refetch();
+    else verifiedRejectedQuery.refetch();
+  };
+
+  let candidateProjects: any[] = [];
+  let totalCandidates = 0;
+
+  if (statusFilter === "verification_in_progress_document") {
+    candidateProjects = verificationData?.data?.candidateProjects || [];
+    totalCandidates = verificationData?.data?.pagination?.total || candidateProjects.length;
+  } else {
+    // Map verified/rejected items into candidateProject-like rows grouped by candidateProjectMap.id
+    const items = verifiedRejectedData?.data?.items || [];
+    const map = new Map<string, any>();
+    items.forEach((it: any) => {
+      const cpm = it.candidateProjectMap;
+      if (!cpm) return;
+      const id = cpm.id;
+      const existing = map.get(id) || {
+        id,
+        candidate: cpm.candidate,
+        project: cpm.project,
+        documentVerifications: [],
+        recruiter: it.recruiter || cpm.recruiter,
+      };
+
+      existing.documentVerifications.push({
+        id: it.id,
+        status: it.status,
+        notes: it.notes,
+        rejectionReason: it.rejectionReason,
+        verifiedAt: it.status === "verified" ? it.updatedAt || it.createdAt : undefined,
+        rejectedAt: it.status === "rejected" ? it.updatedAt || it.createdAt : undefined,
+        document: it.document,
+      });
+
+      map.set(id, existing);
+    });
+
+    candidateProjects = Array.from(map.values());
+    totalCandidates = verifiedRejectedData?.data?.pagination?.total || candidateProjects.length;
+  }
 
   // Permission check
   if (!canReadDocuments) {
@@ -134,7 +198,7 @@ export default function DocumentVerificationPage() {
   // Calculate status counts from API data (prefer server-supplied counts when available)
   const getStatusCounts = () => {
     // API can return a counts object like: { pending: 1, verified: 2, rejected: 1 }
-    const apiCounts = (verificationData?.data as any)?.counts;
+    const apiCounts = (verificationData?.data as any)?.counts || (verifiedRejectedData?.data as any)?.counts;
 
     if (apiCounts) {
       // Map API count keys to our internal canonical keys

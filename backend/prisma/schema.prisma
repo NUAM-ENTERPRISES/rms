@@ -937,7 +937,7 @@ model CandidateProjectDocumentVerification {
 /// * Records who performed the action, when, and why
 model DocumentVerificationHistory {
   id             String @id @default(cuid())
-  verificationId String
+  verificationId String?
 
   action String // "verified", "rejected", "resubmission_requested", "pending"
 
@@ -948,7 +948,7 @@ model DocumentVerificationHistory {
   reason      String?
   performedAt DateTime @default(now())
 
-  verification CandidateProjectDocumentVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  verification CandidateProjectDocumentVerification? @relation(fields: [verificationId], references: [id], onDelete: Cascade)
   performer    User                                 @relation("DocumentVerificationPerformer", fields: [performedBy], references: [id])
 
   @@index([verificationId])

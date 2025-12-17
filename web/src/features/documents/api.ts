@@ -277,13 +277,37 @@ export const documentsApi = baseApi.injectEndpoints({
         };
         message: string;
       },
-      { page?: number; limit?: number; status?: string; search?: string }
+      { page?: number; limit?: number; status?: string; search?: string; recruiterId?: string }
     >({
       query: (params = {}) => ({
         url: "/documents/verification-candidates",
         params,
       }),
       providesTags: ["VerificationCandidates"],
+    }),
+
+    getVerifiedRejectedDocuments: builder.query<
+      {
+        success: boolean;
+        data: {
+          items: any[];
+          pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+          };
+          counts?: { verified?: number; rejected?: number };
+        };
+        message: string;
+      },
+      { page?: number; limit?: number; status?: "verified" | "rejected" | "both"; search?: string; recruiterId?: string }
+    >({
+      query: (params = {}) => ({
+        url: "/documents/verified-rejected-documents",
+        params,
+      }),
+      providesTags: ["DocumentVerification"],
     }),
 
     // Enhanced Document Verification APIs
@@ -372,6 +396,7 @@ export const {
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,
   useGetVerificationCandidatesQuery,
+  useGetVerifiedRejectedDocumentsQuery,
   useGetCandidateProjectsQuery,
   useGetCandidateProjectRequirementsQuery,
   useGetCandidateEligibilityQuery,

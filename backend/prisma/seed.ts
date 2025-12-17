@@ -77,7 +77,8 @@ const roles = [
   },
   {
     name: 'Recruiter',
-    description: 'Recruiter - Candidate handling',
+    description:
+      'Recruiter - Candidate handling, document verification and basic document management',
     permissions: [
       'read:candidates',
       'read:assigned_candidates',
@@ -85,8 +86,15 @@ const roles = [
       'manage:candidates',
       'nominate:candidates',
       'read:projects',
+      // Document-related permissions (expanded so recruiters can verify/manage docs)
       'read:documents',
       'write:documents',
+      'verify:documents',
+      'manage:documents',
+      'request:resubmission',
+      // Candidate decision permissions relevant to document flow
+      'approve:candidates',
+      'reject:candidates',
       'read:interviews',
       'schedule:interviews',
       'write:interviews',

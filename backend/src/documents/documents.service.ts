@@ -748,28 +748,13 @@ export class DocumentsService {
    * Returns candidates who are in document verification stages
    */
   async getVerificationCandidates(query: any) {
-    const { page = 1, limit = 20, search, status } = query;
+    // Note: `status` query is intentionally not supported — this endpoint
+    // always returns candidate-projects in the document verification
+    // sub-status `verification_in_progress_document`.
+    const { page = 1, limit = 20, search, recruiterId } = query;
     const skip = (page - 1) * limit;
-
     // ------------------------------------------------------
-    // 🔥 1. Resolve sub-status based on ?status=
-    // ------------------------------------------------------
-    let subStatusFilter: string | undefined = undefined;
-
-    if (status) {
-      const sub = await this.prisma.candidateProjectSubStatus.findFirst({
-        where: { name: status },
-      });
-
-      if (!sub) {
-        throw new BadRequestException(`Invalid status filter: ${status}`);
-      }
-
-      subStatusFilter = sub.id;
-    }
-
-    // ------------------------------------------------------
-    // 🔥 2. Default = pending (verification_in_progress_document)
+    // 🔥 1. Default = pending (verification_in_progress_document)
     // ------------------------------------------------------
     const defaultPending = await this.prisma.candidateProjectSubStatus.findFirst({
       where: { name: 'verification_in_progress_document' },
@@ -780,7 +765,9 @@ export class DocumentsService {
     }
 
     const where: any = {
-      subStatusId: subStatusFilter ?? defaultPending.id,
+      subStatusId: defaultPending.id,
+      // Optional filter to restrict results to a specific recruiter
+      ...(recruiterId ? { recruiterId } : {}),
     };
 
     // 🔍 Search support
@@ -848,25 +835,29 @@ export class DocumentsService {
     // 🔥 4. ADD THE 3 COUNTS (no change to structure)
     // ------------------------------------------------------
 
-    const [
-      pendingCount,
-      verifiedCount,
-      rejectedCount,
-    ] = await Promise.all([
+    // Make counts respect the optional recruiter filter so that a recruiter
+    // sees counts only for their candidates when `recruiterId` is provided.
+    const countBase: any = {};
+    if (recruiterId) countBase.recruiterId = recruiterId;
+
+    const [pendingCount, verifiedCount, rejectedCount] = await Promise.all([
       this.prisma.candidateProjects.count({
         where: {
+          ...countBase,
           subStatus: { name: 'verification_in_progress_document' },
         },
       }),
 
       this.prisma.candidateProjects.count({
         where: {
+          ...countBase,
           subStatus: { name: 'documents_verified' },
         },
       }),
 
       this.prisma.candidateProjects.count({
         where: {
+          ...countBase,
           subStatus: { name: 'rejected_documents' },
         },
       }),
@@ -1385,5 +1376,99 @@ async getVerifiedOrRejectedList() {
     },
   });
 }
+
+  /**
+   * Get paginated list of document verifications filtered by verified/rejected
+   * Supports search, optional recruiterId filter, pagination and returns counts
+   */
+  async getVerifiedRejectedDocuments(query: any) {
+    // Default changed to 'verified' (previously 'both') — pass status='both' to include both
+    const { page = 1, limit = 20, search, status = 'verified', recruiterId } = query as any;
+    const skip = (page - 1) * limit;
+
+    const statuses =
+      status === 'verified'
+        ? ['verified']
+        : status === 'rejected'
+        ? ['rejected']
+        : ['verified', 'rejected'];
+
+    // Base where clause applied to counts and list
+    const baseWhere: any = {
+      status: { in: statuses },
+    };
+
+    if (recruiterId) {
+      // recruiter is stored on candidateProjects as recruiterId
+      baseWhere.candidateProjectMap = { is: { recruiterId } };
+    }
+
+    // Search across candidate name, project title and document file name
+    if (search) {
+      baseWhere.OR = [
+        { candidateProjectMap: { is: { candidate: { firstName: { contains: search, mode: 'insensitive' } } } } },
+        { candidateProjectMap: { is: { candidate: { lastName: { contains: search, mode: 'insensitive' } } } } },
+        { candidateProjectMap: { is: { project: { title: { contains: search, mode: 'insensitive' } } } } },
+        { document: { fileName: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [items, total, verifiedCount, rejectedCount] = await Promise.all([
+      this.prisma.candidateProjectDocumentVerification.findMany({
+        where: baseWhere,
+        include: {
+          document: {
+            select: {
+              id: true,
+              docType: true,
+              fileName: true,
+              fileUrl: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: { id: true, firstName: true, lastName: true, email: true, mobileNumber: true },
+              },
+              project: {
+                select: { id: true, title: true, client: { select: { name: true } } },
+              },
+              recruiter: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          verificationHistory: {
+            where: { action: { in: statuses } },
+            orderBy: { performedAt: 'desc' },
+            take: 1,
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: Number(limit),
+      }),
+      this.prisma.candidateProjectDocumentVerification.count({ where: baseWhere }),
+      // counts respect recruiter/search filters
+      this.prisma.candidateProjectDocumentVerification.count({ where: { ...baseWhere, status: 'verified' } }),
+      this.prisma.candidateProjectDocumentVerification.count({ where: { ...baseWhere, status: 'rejected' } }),
+    ]);
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      counts: {
+        verified: verifiedCount,
+        rejected: rejectedCount,
+      },
+    };
+  }
 
 }

@@ -113,8 +113,8 @@ export default function CandidatesPage() {
     isRecruiter && !isManager
       ? recruiterCandidatesData?.data || []
       : Array.isArray(allCandidatesData)
-      ? allCandidatesData
-      : [];
+        ? allCandidatesData
+        : [];
 
   const isLoading = isLoadingRecruiter || isLoadingAll;
   const error = errorRecruiter || errorAll;
@@ -370,31 +370,31 @@ export default function CandidatesPage() {
 
   const qualifiedToday = Array.isArray(filteredCandidates)
     ? filteredCandidates.filter(
-        (c: any) =>
-          (c?.currentStatus?.statusName || "").toLowerCase() === "qualified" &&
-          isSameDay(c?.updatedAt)
-      ).length
+      (c: any) =>
+        (c?.currentStatus?.statusName || "").toLowerCase() === "qualified" &&
+        isSameDay(c?.updatedAt)
+    ).length
     : 0;
 
   const inProgressCount = Array.isArray(filteredCandidates)
     ? filteredCandidates.filter((c: any) => {
-        const s = (c?.currentStatus?.statusName || "").toLowerCase();
-        return [
-          "interviewing",
-          "in progress",
-          "verification_in_progress",
-          "screening",
-          "interview scheduled",
-          "interview",
-        ].includes(s);
-      }).length
+      const s = (c?.currentStatus?.statusName || "").toLowerCase();
+      return [
+        "interviewing",
+        "in progress",
+        "verification_in_progress",
+        "screening",
+        "interview scheduled",
+        "interview",
+      ].includes(s);
+    }).length
     : 0;
 
   const placedCount = Array.isArray(filteredCandidates)
     ? filteredCandidates.filter((c: any) => {
-        const s = (c?.currentStatus?.statusName || "").toLowerCase();
-        return ["placed", "hired", "joined"].includes(s);
-      }).length
+      const s = (c?.currentStatus?.statusName || "").toLowerCase();
+      return ["placed", "hired", "joined"].includes(s);
+    }).length
     : 0;
 
   const hiringRate =
@@ -441,14 +441,12 @@ export default function CandidatesPage() {
               {/* Premium Search Bar with Enhanced Styling */}
               <div className="relative group">
                 <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
-                  }`}
+                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${filters.search ? "text-blue-600" : "text-gray-400"
+                    }`}
                 >
                   <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      filters.search ? "scale-110" : "scale-100"
-                    }`}
+                    className={`h-5 w-5 transition-transform duration-300 ${filters.search ? "scale-110" : "scale-100"
+                      }`}
                   />
                 </div>
                 <Input
@@ -458,9 +456,8 @@ export default function CandidatesPage() {
                   className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
                 />
                 <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    filters.search ? "ring-2 ring-blue-500/20" : ""
-                  }`}
+                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${filters.search ? "ring-2 ring-blue-500/20" : ""
+                    }`}
                 />
               </div>
 
@@ -803,7 +800,7 @@ export default function CandidatesPage() {
                               <div className="flex items-center gap-2">
                                 <Phone className="h-3.5 w-3.5 text-gray-400" />
                                 <span className="text-gray-700">
-                                  {candidate.contact || "—"}
+                                  {candidate.countryCode} {candidate.mobileNumber} 
                                 </span>
                               </div>
                             </div>
@@ -906,8 +903,8 @@ export default function CandidatesPage() {
                     </h3>
                     <p className="text-slate-500 mb-6">
                       {filters.search ||
-                      filters.status !== "all" ||
-                      filters.experience !== "all"
+                        filters.status !== "all" ||
+                        filters.experience !== "all"
                         ? "Try adjusting your search criteria or filters."
                         : "Get started by adding your first candidate."}
                     </p>
@@ -995,11 +992,10 @@ export default function CandidatesPage() {
                                         page: pageNum,
                                       }))
                                     }
-                                    className={`h-9 w-9 p-0 ${
-                                      filters.page === pageNum
-                                        ? "bg-blue-600 hover:bg-blue-700"
-                                        : ""
-                                    }`}
+                                    className={`h-9 w-9 p-0 ${filters.page === pageNum
+                                      ? "bg-blue-600 hover:bg-blue-700"
+                                      : ""
+                                      }`}
                                   >
                                     {pageNum}
                                   </Button>
