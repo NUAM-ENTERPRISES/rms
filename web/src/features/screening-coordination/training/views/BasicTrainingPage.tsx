@@ -77,7 +77,7 @@ export default function BasicTrainingPage() {
     projectId?: string;
     screeningId?: string;
     notes?: string;
-    type?: "screening" | "interview";
+    type?: "screening" | "mock" | "interview";
   }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, screeningId: undefined, notes: "", type: "screening" });
 
   const [sendForInterview, { isLoading: isSendingInterview }] = useSendForInterviewMutation();
@@ -277,7 +277,7 @@ export default function BasicTrainingPage() {
     switch (status) {
       case "basic_training_assigned":
         return "text-xs bg-orange-100 text-orange-800";
-      case "mock_assigned":
+      case "screening_assigned":
       case "interview_assigned":
         return "text-xs bg-green-100 text-green-800";
       case "assigned":
