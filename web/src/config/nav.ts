@@ -184,12 +184,7 @@ export const navigationConfig: NavItem[] = [
         path: "/screenings/templates",
         permissions: ["read:interview_templates"],
       },
-      {
-        id: "screenings-screening",
-        label: "Screening",
-        path: "/screenings/screening",
-        permissions: ["read:screenings"],
-      },
+      
     ],
   },
   {

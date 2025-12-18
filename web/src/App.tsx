@@ -138,12 +138,7 @@ const ConductScreeningPage = lazy(
       "@/features/screening-coordination/interviews/views/ConductScreeningPage"
     )
 );
-const ScreeningPage = lazy(
-  () =>
-    import(
-      "@/features/screening-coordination/screening/views/ScreeningPage"
-    )
-);
+// ScreeningPage removed — not used
 
 const DocumentUploadPage = lazy(
   () => import("@/features/documents/views/DocumentUploadPage")
@@ -593,18 +588,7 @@ function App() {
                     }
                   />
 
-                  <Route
-                    path="/screenings/screening"
-                    element={
-                      <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:screenings"]}>
-                          <AppLayout>
-                            <ScreeningPage />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      </RouteErrorBoundary>
-                    }
-                  />
+                  {/* /screenings/screening route removed */}
 
                   <Route
                     path="/screenings/:interviewId/conduct"

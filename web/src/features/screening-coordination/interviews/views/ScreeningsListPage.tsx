@@ -736,8 +736,8 @@ export default function ScreeningsListPage() {
                               Assigned to Main Interview
                             </Badge>
                             {/* Only show Assign to Trainer when decision is NEEDS_TRAINING or REJECTED */}
-                            {(selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                              selectedInterview.decision === SCREENING_DECISION.REJECTED) && (
+                            {(selectedInterview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                              selectedInterview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
                               <Button
                                 size="sm"
                                 onClick={() => handleAssignToTrainer(selectedInterview)}
@@ -752,7 +752,7 @@ export default function ScreeningsListPage() {
                       }
 
                       if (
-                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                        selectedInterview.decision === MOCK_INTERVIEW_DECISION.APPROVED &&
                         selectedInterview.status === "completed"
                       ) {
                         return (
@@ -782,8 +782,10 @@ export default function ScreeningsListPage() {
                       }
 
                       if (
-                        selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                        selectedInterview.decision === SCREENING_DECISION.REJECTED
+                        selectedInterview.decision ===
+                          MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
+                        selectedInterview.decision ===
+                          MOCK_INTERVIEW_DECISION.REJECTED
                       ) {
                         return (
                           <Button
