@@ -896,7 +896,7 @@ export default function ProjectDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="mock">Mock Interview</SelectItem>
+                  <SelectItem value="mock">Screening</SelectItem>
                   <SelectItem value="interview">Interview</SelectItem>
                   <SelectItem value="training">Send for Training</SelectItem>
                 </SelectContent>
@@ -904,7 +904,7 @@ export default function ProjectDetailPage() {
 
               {interviewConfirm.type === "training" && (
                 <p className="text-xs text-slate-500 mt-2">
-                  Assign basic training to candidate (no mock interview
+                  Assign basic training to candidate (no screening
                   required).
                 </p>
               )}
@@ -935,7 +935,7 @@ export default function ProjectDetailPage() {
           interviewConfirm.type === "training"
             ? "Send for Training"
             : interviewConfirm.type === "mock"
-            ? "Send for Mock Interview"
+            ? "Send for Screening"
             : "Send for Interview"
         }
         cancelText="Cancel"

@@ -22,7 +22,7 @@ export type InterviewHistoryItem = {
   note?: string;
 };
 
-export const mockInterviewHistory: InterviewHistoryItem[] = [
+export const screeningHistory: InterviewHistoryItem[] = [
   {
     id: "h1",
     date: new Date().toISOString(),
@@ -35,7 +35,7 @@ export const mockInterviewHistory: InterviewHistoryItem[] = [
     id: "h2",
     date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     actor: "John Smith",
-    action: "Interview scheduled",
+    action: "Screening scheduled",
     status: "scheduled",
   },
   {
@@ -57,7 +57,7 @@ export const mockInterviewHistory: InterviewHistoryItem[] = [
     id: "h5",
     date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
     actor: "System",
-    action: "Interview created",
+    action: "Screening created",
     status: "created",
     note: "Auto-created after candidate applied to project",
   },
@@ -80,7 +80,7 @@ const mapHistoryStatusLabel = (status?: string) => {
     case "basic_training_assigned":
       return "Basic Training Assigned";
     case "mock_interview_assigned":
-      return "Mock Interview Assigned";
+      return "Screening Assigned";
     case "interview_assigned":
       return "Interview Assigned";
     case "ready_for_reassessment":
@@ -114,7 +114,7 @@ type ServerHistoryItem = {
 };
 
 export default function InterviewHistory({ items, isLoading }: { items?: (InterviewHistoryItem | ServerHistoryItem)[]; isLoading?: boolean }) {
-  const list = items && items.length ? items : mockInterviewHistory;
+  const list = items && items.length ? items : screeningHistory;
 
   return (
     <Card>

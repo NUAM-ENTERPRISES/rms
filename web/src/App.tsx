@@ -83,70 +83,65 @@ const UpcomingInterviewsListPage = lazy(
 );
 
 // Mock Interview Coordination
-const MockInterviewsDashboardPage = lazy(
+const ScreeningsDashboardPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/interviews/views/MockInterviewsDashboardPage"
+      "@/features/screening-coordination/interviews/views/ScreeningsDashboardPage"
     )
 );
-const MockInterviewsListPage = lazy(
+
+const ScreeningsListPage = lazy(
+  () => import("@/features/screening-coordination/interviews/views/ScreeningsListPage")
+);
+
+const UpcomingScreeningsListPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/interviews/views/MockInterviewsListPage"
+      "@/features/screening-coordination/interviews/views/UpcomingScreeningsListPage"
     )
 );
-const MockUpcomingInterviewsListPage = lazy(
+
+const AssignedScreeningsListPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/interviews/views/UpcomingInterviewsListPage"
+      "@/features/screening-coordination/interviews/views/AssignedScreeningsListPage"
     )
 );
-const MockAssignedInterviewsListPage = lazy(
-  () =>
-    import(
-      "@/features/mock-interview-coordination/interviews/views/AssignedInterviewsListPage"
-    )
-);
-const TemplatesPage = lazy(
-  () =>
-    import(
-      "@/features/mock-interview-coordination/templates/views/TemplatesPage"
-    )
-);
+const TemplatesPage = lazy(() => import("@/features/screening-coordination/templates/views/TemplatesPage"));
 const TemplateDetailPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/templates/views/TemplateDetailPage"
+      "@/features/screening-coordination/templates/views/TemplateDetailPage"
     )
 );
 const TrainingListPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/training/views/TrainingListPage"
+      "@/features/screening-coordination/training/views/TrainingListPage"
     )
 );
 const TrainingDetailPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/training/views/TrainingDetailPage"
+      "@/features/screening-coordination/training/views/TrainingDetailPage"
     )
 );
 const BasicTrainingPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/training/views/BasicTrainingPage"
+      "@/features/screening-coordination/training/views/BasicTrainingPage"
     )
 );
-const ConductMockInterviewPage = lazy(
+const ConductScreeningPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/interviews/views/ConductMockInterviewPage"
+      "@/features/screening-coordination/interviews/views/ConductScreeningPage"
     )
 );
 const ScreeningPage = lazy(
   () =>
     import(
-      "@/features/mock-interview-coordination/screening/views/ScreeningPage"
+      "@/features/screening-coordination/screening/views/ScreeningPage"
     )
 );
 
@@ -489,14 +484,14 @@ function App() {
                     }
                   />
 
-                  {/* Mock Interview Coordination Routes */}
+                  {/* Screening Coordination Routes */}
                   <Route
-                    path="/mock-interviews"
+                    path="/screenings"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                        <ProtectedRoute permissions={["read:screenings"]}>
                           <AppLayout>
-                            <MockInterviewsDashboardPage />
+                            <ScreeningsDashboardPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
@@ -504,12 +499,12 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/list"
+                    path="/screenings/list"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                        <ProtectedRoute permissions={["read:screenings"]}>
                           <AppLayout>
-                            <MockInterviewsListPage />
+                            <ScreeningsListPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
@@ -517,12 +512,12 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/assigned"
+                    path="/screenings/assigned"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                        <ProtectedRoute permissions={["read:screenings"]}>
                           <AppLayout>
-                            <MockAssignedInterviewsListPage />
+                            <AssignedScreeningsListPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
@@ -530,12 +525,12 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/upcoming"
+                    path="/screenings/upcoming"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                        <ProtectedRoute permissions={["read:screenings"]}>
                           <AppLayout>
-                            <MockUpcomingInterviewsListPage />
+                            <UpcomingScreeningsListPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
@@ -543,7 +538,7 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/templates"
+                    path="/screenings/templates"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
@@ -558,7 +553,7 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/templates/:templateId"
+                    path="/screenings/templates/:templateId"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
@@ -573,7 +568,7 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/training"
+                    path="/screenings/training"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute permissions={["read:training"]}>
@@ -586,7 +581,7 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/training/:id"
+                    path="/screenings/training/:id"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute permissions={["read:training"]}>
@@ -599,10 +594,10 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/screening"
+                    path="/screenings/screening"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:mock_interviews"]}>
+                        <ProtectedRoute permissions={["read:screenings"]}>
                           <AppLayout>
                             <ScreeningPage />
                           </AppLayout>
@@ -612,14 +607,14 @@ function App() {
                   />
 
                   <Route
-                    path="/mock-interviews/:interviewId/conduct"
+                    path="/screenings/:interviewId/conduct"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          permissions={["conduct:mock_interviews"]}
+                          permissions={["conduct:screenings"]}
                         >
                           <AppLayout>
-                            <ConductMockInterviewPage />
+                            <ConductScreeningPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

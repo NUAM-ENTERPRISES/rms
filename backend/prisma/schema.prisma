@@ -389,8 +389,8 @@ model CandidateProjects {
   processingStepHistory ProcessingStepHistory[]
   projectStatusHistory  CandidateProjectStatusHistory[]
 
-  // Mock Interview & Training Relations
-  mockInterviews      MockInterview[]
+  // Screening & Training Relations
+  screenings          Screening[]
   trainingAssignments TrainingAssignment[]
 
   @@unique([candidateId, projectId, roleNeededId])
@@ -461,17 +461,17 @@ model Interview {
   @@map("interviews")
 }
 
-/// Mock Interview Coordination Feature Models
+/// screening Interview Coordination Feature Models
 /// Added: January 2025
 
-/// Mock Interview - Conducted by Interview Coordinators before client interviews
-model MockInterview {
+/// screening Interview - Conducted by Interview Coordinators before client interviews
+model Screening {
   id                    String  @id @default(cuid())
   candidateProjectMapId String
-  coordinatorId         String // Interview Coordinator who conducts the interview
-  templateId            String? // Selected template for this interview
+  coordinatorId         String // Interview Coordinator who conducts the screening
+  templateId            String? // Selected template for this screening
 
-  // Whether a trainer/coach has been assigned to this mock interview
+  // Whether a trainer/coach has been assigned
   isAssignedTrainer     Boolean @default(false)
 
   status                String @default("scheduled")
@@ -496,8 +496,8 @@ model MockInterview {
 
   // Relations
   candidateProjectMap CandidateProjects            @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  template            MockInterviewTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  checklistItems      MockInterviewChecklistItem[]
+  template            ScreeningTemplate?           @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  checklistItems      ScreeningChecklistItem[]
   trainingAssignments TrainingAssignment[]
   // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)
 
@@ -506,14 +506,14 @@ model MockInterview {
   @@index([templateId])
   @@index([scheduledTime])
   @@index([decision])
-  @@map("mock_interviews")
+  @@map("screenings")
 }
 
-/// Checklist items for each mock interview (filled during/after interview)
+/// Checklist items for each screening interview (filled during/after interview)
 /// Links to template item if answer came from a template, otherwise custom question
-model MockInterviewChecklistItem {
-  id              String  @id @default(cuid())
-  mockInterviewId String
+model ScreeningChecklistItem {
+  id           String  @id @default(cuid())
+  screeningId  String
   templateItemId  String? // Optional: Link to template item if from template
 
   category  String // technical_skills, communication, professionalism, role_specific
@@ -526,46 +526,46 @@ model MockInterviewChecklistItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  mockInterview MockInterview              @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
-  templateItem  MockInterviewTemplateItem? @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
+  screening     Screening                    @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+  templateItem  ScreeningTemplateItem?      @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
 
-  @@index([mockInterviewId])
+  @@index([screeningId])
   @@index([templateItemId])
   @@index([category])
-  @@map("mock_interview_checklist_items")
+  @@map("screening_checklist_items")
 }
 
-/// Mock Interview Template - A named collection of questions for a role
+/// Screening Interview Template - A named collection of questions for a role
 /// Interview Coordinators can create multiple templates per role
 /// Each template contains questions organized by categories
-model MockInterviewTemplate {
+model ScreeningTemplate {
   id     String      @id @default(cuid())
   roleId String
   role   RoleCatalog @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  name        String // e.g., "Standard RN Interview Template"
+  name        String // e.g., "Standard RN Screening Template"
   description String? // Optional description
   isActive    Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items          MockInterviewTemplateItem[]
-  mockInterviews MockInterview[]
+  items      ScreeningTemplateItem[]
+  screenings Screening[]
 
   @@unique([roleId, name]) // Prevent duplicate template names for same role
   @@index([roleId])
   @@index([isActive])
-  @@map("mock_interview_templates")
+  @@map("screening_templates")
 }
 
 /// Questions/Criteria within a template, organized by category
 /// Each template can have multiple categories, each category can have multiple questions
 /// No duplicate categories within a single template (enforced by application logic)
-model MockInterviewTemplateItem {
+model ScreeningTemplateItem {
   id         String                @id @default(cuid())
   templateId String
-  template   MockInterviewTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template   ScreeningTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   category  String // technical_skills, communication, professionalism, role_specific
   criterion String // The question/criterion to evaluate
@@ -574,20 +574,20 @@ model MockInterviewTemplateItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  checklistItems MockInterviewChecklistItem[] // Answers that used this template item
+  checklistItems ScreeningChecklistItem[] // Answers that used this template item
 
   @@unique([templateId, category, criterion]) // Prevent duplicate criteria in same category
   @@index([templateId])
   @@index([category])
-  @@map("mock_interview_template_items")
+  @@map("screening_template_items")
 }
 
 /// InterviewStatusHistory
-/// Stores history events for both MockInterview and Interview (client/main) entities.
+/// Stores history events for both Screening and Interview (client/main) entities.
 model InterviewStatusHistory {
   id String @id @default(cuid())
 
-  // Type of interview (e.g. 'mock' | 'client') and the corresponding interview id
+  // Type of interview (e.g. 'screening' | 'client') and the corresponding interview id
   interviewType String
   interviewId   String?
 
@@ -624,7 +624,7 @@ model InterviewStatusHistory {
 model TrainingAssignment {
   id                    String  @id @default(cuid())
   candidateProjectMapId String
-  mockInterviewId       String? // Which mock interview triggered this
+  screeningId           String? // Which screening triggered this
   assignedBy            String // Coordinator who assigned training
 
   // Training details
@@ -648,11 +648,11 @@ model TrainingAssignment {
 
   // Relations
   candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  mockInterview       MockInterview?    @relation(fields: [mockInterviewId], references: [id], onDelete: SetNull)
+  screening           Screening?        @relation(fields: [screeningId], references: [id], onDelete: SetNull)
   trainingSessions    TrainingSession[]
 
   @@index([candidateProjectMapId])
-  @@index([mockInterviewId])
+  @@index([screeningId])
   @@index([assignedBy])
   @@index([status])
   @@map("training_assignments")
@@ -990,8 +990,8 @@ model RoleCatalog {
   updatedAt                 DateTime                       @updatedAt
   recommendedQualifications RoleRecommendedQualification[]
 
-  // Mock Interview Template Relations
-  mockInterviewTemplates MockInterviewTemplate[]
+  // Screening Interview Template Relations
+  screeningTemplates ScreeningTemplate[]
 
   @@index([category])
   @@index([isClinical])

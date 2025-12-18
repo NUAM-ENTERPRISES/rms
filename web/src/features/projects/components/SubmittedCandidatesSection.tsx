@@ -24,15 +24,17 @@ import CandidateCard from "./CandidateCard";
 
 interface SubmittedCandidatesSectionProps {
   projectId: string;
+  initialSelectedStatus?: string;
 }
 
 export default function SubmittedCandidatesSection({
   projectId,
+  initialSelectedStatus,
 }: SubmittedCandidatesSectionProps) {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>(initialSelectedStatus ?? "all");
   const itemsPerPage = 5; // Show 5 candidates per page in sidebar
 
   // Get current user
@@ -49,18 +51,37 @@ export default function SubmittedCandidatesSection({
 
   const { data: projectData } = useGetProjectQuery(projectId);
 
-  // Get candidates already assigned to this project
-  const { data: projectCandidatesData, isLoading } =
-    useGetNominatedCandidatesQuery({
-      projectId,
-      search: searchTerm || undefined,
-      statusId: selectedStatus !== "all" ? parseInt(selectedStatus) : undefined,
-      page: currentPage,
-      limit: itemsPerPage,
-    });
-
   // Fetch project statuses from API
   const { data: statusesData } = useGetCandidateProjectStatusesQuery();
+
+  // Build query params for nominated candidates taking into account whether the selected status
+  // represents a main status or an underscore-style sub-status
+  const queryParams: any = {
+    projectId,
+    search: searchTerm || undefined,
+    page: currentPage,
+    limit: itemsPerPage,
+  };
+
+  if (selectedStatus && selectedStatus !== "all") {
+    // try to resolve selectedStatus as a status id from statusesData
+    const found = statusesData?.data?.statuses?.find((s: any) => String(s.id) === String(selectedStatus));
+    if (found) {
+      if (found.name && found.name.includes("_")) {
+        queryParams.subStatus = found.name;
+      } else {
+        queryParams.status = found.name;
+      }
+    } else {
+      // fallback: if it's a numeric id, pass as statusId; else, pass as status name
+      const idNum = Number(selectedStatus);
+      if (!Number.isNaN(idNum)) queryParams.statusId = idNum;
+      else queryParams.status = selectedStatus;
+    }
+  }
+
+  // Get candidates already assigned to this project
+  const { data: projectCandidatesData, isLoading } = useGetNominatedCandidatesQuery(queryParams);
 
   const [sendForVerification] = useSendForVerificationMutation();
 
@@ -185,9 +206,20 @@ export default function SubmittedCandidatesSection({
             if (!candidate) return null;
 
             // Get the correct project status from the candidate's project data
-            const projectStatus = candidate.currentProjectStatus?.statusName || 
+            let projectStatus = candidate.currentProjectStatus?.statusName || 
                                  candidate.projectStatus?.statusName ||
-                                 "nominated";
+                                 undefined;
+
+            // If a project sub-status is provided (e.g., verification_in_progress_document),
+            // try to normalize it to a canonical project status name for display & logic
+            if (!projectStatus && candidate.projectSubStatus?.name) {
+              const subName = String(candidate.projectSubStatus.name || "").toLowerCase();
+              if (subName.includes("verification_in_progress")) projectStatus = "verification_in_progress";
+              else if (subName.includes("nominated")) projectStatus = "nominated";
+              else projectStatus = subName;
+            }
+
+            if (!projectStatus) projectStatus = "nominated";
 
             // Only show verify button if status is 'nominated'
             const canSendForVerification = projectStatus.toLowerCase() === "nominated";

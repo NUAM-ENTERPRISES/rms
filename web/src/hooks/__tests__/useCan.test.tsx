@@ -19,7 +19,7 @@ const createWrapper =
   ({ children }) =>
     <Provider store={store}>{children}</Provider>;
 
-describe("useCan", () => {
+describe("useCan (any permissions)", () => {
   it("should return true when user has wildcard permission", () => {
     const store = createMockStore({
       user: {
@@ -43,6 +43,31 @@ describe("useCan", () => {
     expect(result.current).toBe(true);
   });
 
+  it("should return false when user lacks required permissions", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Recruiter"],
+        permissions: ["read:candidates"],
+      },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useCan(["manage:users"]), {
+      wrapper: createWrapper(store),
+    });
+
+    expect(result.current).toBe(false);
+  });
+});
+
+describe("useCanAll (all permissions)", () => {
   it("should return true when user has all required permissions", () => {
     const store = createMockStore({
       user: {
@@ -52,6 +77,55 @@ describe("useCan", () => {
         roles: ["Manager"],
         permissions: ["read:users", "write:users"],
       },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useCanAll(["read:users", "write:users"]), {
+      wrapper: createWrapper(store),
+    });
+
+    expect(result.current).toBe(true);
+  });
+
+  it("should return false when user lacks some required permissions", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Recruiter"],
+        permissions: ["read:candidates"],
+      },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useCanAll(["manage:users", "manage:projects"]), {
+      wrapper: createWrapper(store),
+    });
+
+    expect(result.current).toBe(false);
+  });
+});
+
+describe("useHasRole", () => {
+  it("should return true when user has any of the required roles", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Manager"],
+        permissions: ["read:users"],
+      },
+ 
       accessToken: "token",
       refreshToken: null,
       isAuthenticated: true,

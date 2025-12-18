@@ -1,3 +1,5 @@
+// Load environment variables from .env when running ts-node scripts
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
@@ -52,7 +54,7 @@ const roles = [
       'schedule:interviews',
       'read:interviews',
       'write:interviews',
-      'read:mock_interviews',
+      'read:screenings',
       'read:interview_templates',
       'read:training',
       'manage:training',
@@ -136,16 +138,16 @@ const roles = [
   {
     name: 'Interview Coordinator',
     description:
-      'Interview Coordinator - Conducts mock interviews and assigns training',
+      'Interview Coordinator - Conducts screenings and assigns training',
     permissions: [
       'read:candidates',
       'write:candidates',
       'read:projects',
       'read:interviews',
-      'read:mock_interviews',
-      'write:mock_interviews',
-      'manage:mock_interviews',
-      'conduct:mock_interviews',
+      'read:screenings',
+      'write:screenings',
+      'manage:screenings',
+      'conduct:screenings',
       'read:interview_templates',
       'write:interview_templates',
       'manage:interview_templates',
@@ -231,11 +233,11 @@ const allPermissions = [
   'manage:interviews',
   'schedule:interviews',
 
-  // Mock Interview & Training management
-  'read:mock_interviews',
-  'write:mock_interviews',
-  'manage:mock_interviews',
-  'conduct:mock_interviews',
+  // Screening Interview & Training management
+  'read:screenings',
+  'write:screenings',
+  'manage:screenings',
+  'conduct:screenings',
   'read:interview_templates',
   'write:interview_templates',
   'manage:interview_templates',
@@ -832,8 +834,8 @@ async function seedCandidateStatus() {
   );
 }
 
-async function seedMockInterviewTemplates() {
-  console.log('📋 Seeding mock interview checklist templates...');
+async function seedScreeningTemplates() {
+  console.log('📋 Seeding screening checklist templates...');
   try {
     // Get sample roles to create templates for
     const registeredNurse = await prisma.roleCatalog.findFirst({
@@ -955,7 +957,7 @@ async function seedMockInterviewTemplates() {
     }
 
     // Convert the flat list of criteria into a template + items structure
-    // New schema uses MockInterviewTemplate and MockInterviewTemplateItem
+    // New schema uses ScreeningTemplate and ScreeningTemplateItem
     // We create (or upsert) one template per role and then upsert its items
     let createdItemCount = 0;
 
@@ -973,7 +975,7 @@ async function seedMockInterviewTemplates() {
       const role = roleId === registeredNurse?.id ? registeredNurse : doctor;
       const name = `${role?.name ?? 'Default'} Mock Interview Template`;
 
-      const templateRecord = await prisma.mockInterviewTemplate.upsert({
+      const templateRecord = await prisma.screeningTemplate.upsert({
         where: { roleId_name: { roleId, name } },
         update: {
           isActive: true,
@@ -989,7 +991,7 @@ async function seedMockInterviewTemplates() {
 
       // upsert items for this template
       for (const item of itemsByRole[roleId]) {
-        await prisma.mockInterviewTemplateItem.upsert({
+        await prisma.screeningTemplateItem.upsert({
           where: {
             templateId_category_criterion: {
               templateId: templateRecord.id,
@@ -1011,13 +1013,15 @@ async function seedMockInterviewTemplates() {
     }
 
     console.log(
-      `✅ Mock interview templates seeded: ${createdItemCount} template items created/updated`,
+      `✅ Screening templates seeded: ${createdItemCount} template items created/updated`,
     );
   } catch (error) {
-    console.error('❌ Error seeding mock interview templates:', error);
+    console.error('❌ Error seeding screening templates:', error);
     throw error;
   }
 }
+
+// (seedScreeningTemplates is implemented above)
 
 async function main() {
   console.log('🌱 Starting database seeding...');
@@ -1052,8 +1056,8 @@ async function main() {
   // Seed CRE role and permissions
   await seedCRERole();
 
-  // Seed mock interview templates
-  await seedMockInterviewTemplates();
+  // Seed screening interview templates
+  await seedScreeningTemplates();
 
   // Seed candidate project workflow
   await seedCandidateProjectWorkflow();

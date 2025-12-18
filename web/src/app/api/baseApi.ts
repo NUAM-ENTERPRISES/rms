@@ -34,9 +34,9 @@ export const baseApi = createApi({
     "RecruiterAssignment",
     "StatusConfig",
     "RNRReminder",
-    // Mock Interview Coordination
-    "MockInterviewTemplate",
-    "MockInterview",
+    // Screening Coordination
+    "ScreeningTemplate",
+    "Screening",
     "Training",
   ],
   endpoints: () => ({}),

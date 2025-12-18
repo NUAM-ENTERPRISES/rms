@@ -48,7 +48,7 @@ describe("LoginPage", () => {
     ).toBeInTheDocument();
 
     // Check for form fields
-    expect(screen.getByLabelText("Email address")).toBeInTheDocument();
+    expect(screen.getByLabelText("Mobile Number")).toBeInTheDocument();
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
 
     // Check for submit button
@@ -56,10 +56,9 @@ describe("LoginPage", () => {
       screen.getByRole("button", { name: "Sign in to dashboard" })
     ).toBeInTheDocument();
 
-    // Check for additional actions
-    expect(screen.getByText("Forgot password?")).toBeInTheDocument();
+    // Check for additional actions (request access CTA)
     expect(
-      screen.getByRole("button", { name: "Request access" })
+      screen.getByRole("button", { name: /Request access/i })
     ).toBeInTheDocument();
   });
 
@@ -82,31 +81,31 @@ describe("LoginPage", () => {
   it("has proper accessibility attributes", () => {
     render(<LoginPage />, { wrapper: TestWrapper });
 
-    const emailInput = screen.getByLabelText("Email address");
+    const mobileInput = screen.getByLabelText("Mobile Number");
     const passwordInput = screen.getByLabelText("Password");
 
     // Check for proper labels
-    expect(emailInput).toHaveAttribute("id", "email");
+    expect(mobileInput).toHaveAttribute("id", "mobileNumber");
     expect(passwordInput).toHaveAttribute("id", "password");
 
     // Check for proper types
-    expect(emailInput).toHaveAttribute("type", "email");
+    expect(mobileInput).toHaveAttribute("type", "tel");
     expect(passwordInput).toHaveAttribute("type", "password");
 
     // Check for placeholders
-    expect(emailInput).toHaveAttribute("placeholder", "Enter your email");
+    expect(mobileInput).toHaveAttribute("placeholder", "9876543210");
     expect(passwordInput).toHaveAttribute("placeholder", "Enter your password");
   });
 
   it("allows form input", () => {
     render(<LoginPage />, { wrapper: TestWrapper });
 
-    const emailInput = screen.getByLabelText("Email address");
+    const mobileInput = screen.getByLabelText("Mobile Number");
     const passwordInput = screen.getByLabelText("Password");
 
-    // Test email input
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    expect(emailInput).toHaveValue("test@example.com");
+    // Test mobile input
+    fireEvent.change(mobileInput, { target: { value: "9876543210" } });
+    expect(mobileInput).toHaveValue("9876543210");
 
     // Test password input
     fireEvent.change(passwordInput, { target: { value: "password123" } });
@@ -130,10 +129,10 @@ describe("LoginPage", () => {
     const form = document.querySelector("form");
     expect(form).toBeInTheDocument();
 
-    // Check that form has email and password inputs
-    const emailInput = screen.getByLabelText("Email address");
+    // Check that form has mobile and password inputs
+    const mobileInput = screen.getByLabelText("Mobile Number");
     const passwordInput = screen.getByLabelText("Password");
-    expect(form).toContainElement(emailInput);
+    expect(form).toContainElement(mobileInput);
     expect(form).toContainElement(passwordInput);
   });
 });

@@ -70,7 +70,7 @@ describe('CandidateProjectDetailsPage interview flow', () => {
       data: {
         history: [
           { id: '1', subStatus: { name: 'nominated_initial', label: 'Nominated' }, statusChangedAt: new Date(Date.now() - 20000).toISOString() },
-          { id: '2', subStatus: { name: 'mock_interview_scheduled', label: 'Mock Interview Scheduled' }, statusChangedAt: now }
+          { id: '2', subStatus: { name: 'screening_scheduled', label: 'Screening Scheduled' }, statusChangedAt: now }
         ],
         candidate: { firstName: 'Jane', lastName: 'Mock' },
         project: { title: 'Mock Project' }
@@ -82,7 +82,7 @@ describe('CandidateProjectDetailsPage interview flow', () => {
     render(<CandidateProjectDetailsPage />);
 
     // There should be multiple occurrences (header + timeline) of the label
-    const matches = await screen.findAllByText('Mock Interview Scheduled');
+    const matches = await screen.findAllByText('Screening Scheduled');
     expect(matches.length).toBeGreaterThanOrEqual(2);
   });
 });

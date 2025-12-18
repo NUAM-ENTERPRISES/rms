@@ -37,7 +37,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
   afterEach(() => jest.resetAllMocks());
 
   it('creates interviewStatusHistory when assigning mock interview', async () => {
-    const dto = { projectId: 'p1', candidateId: 'c1', type: 'mock_interview_assigned', notes: 'note' } as SendForInterviewDto;
+    const dto = { projectId: 'p1', candidateId: 'c1', type: 'screening_assigned', notes: 'note' } as SendForInterviewDto;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
     (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P' });

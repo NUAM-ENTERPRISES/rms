@@ -66,12 +66,12 @@ export default function CandidateProjectDetailsPage() {
             interview_failed: <XCircle className="h-4 w-4" />,
             interview_selected: <CheckCircle2 className="h-4 w-4" />,
 
-            // Mock interviews
-            mock_interview_assigned: <Calendar className="h-4 w-4" />,
-            mock_interview_scheduled: <Calendar className="h-4 w-4" />,
-            mock_interview_completed: <MessageCircle className="h-4 w-4" />,
-            mock_interview_passed: <Award className="h-4 w-4" />,
-            mock_interview_failed: <XCircle className="h-4 w-4" />,
+            // Screenings
+            screening_assigned: <Calendar className="h-4 w-4" />,
+            screening_scheduled: <Calendar className="h-4 w-4" />,
+            screening_completed: <MessageCircle className="h-4 w-4" />,
+            screening_passed: <Award className="h-4 w-4" />,
+            screening_failed: <XCircle className="h-4 w-4" />,
 
             // Training
             training_assigned: <Users className="h-4 w-4" />,
@@ -111,12 +111,12 @@ export default function CandidateProjectDetailsPage() {
             interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
 
-            // Mock interviews
-            mock_interview_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            mock_interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            mock_interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            mock_interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            mock_interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+            // Screenings
+            screening_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            screening_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            screening_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            screening_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            screening_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
 
             // Training
             training_assigned: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
@@ -150,11 +150,11 @@ export default function CandidateProjectDetailsPage() {
             interview_completed: 'Interview Completed',
             interview_passed: 'Interview Passed',
             interview_failed: 'Interview Failed',
-            mock_interview_assigned: 'Mock Interview Assigned',
-            mock_interview_scheduled: 'Mock Interview Scheduled',
-            mock_interview_completed: 'Mock Interview Completed',
-            mock_interview_passed: 'Mock Interview Passed',
-            mock_interview_failed: 'Mock Interview Failed',
+            screening_assigned: 'Screening Assigned',
+            screening_scheduled: 'Screening Scheduled',
+            screening_completed: 'Screening Completed',
+            screening_passed: 'Screening Passed',
+            screening_failed: 'Screening Failed',
             training_assigned: 'Training Assigned',
             training_in_progress: 'Training In Progress',
             training_completed: 'Training Completed',

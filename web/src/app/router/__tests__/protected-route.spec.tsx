@@ -16,6 +16,10 @@ vi.mock("react-router-dom", async () => {
     ...actual,
     useNavigate: () => mockNavigate,
     useLocation: () => mockLocation,
+    Navigate: ({ to }: any) => {
+      mockNavigate(to);
+      return <div />;
+    },
   };
 });
 
@@ -141,7 +145,7 @@ describe("ProtectedRoute", () => {
       expect(toast.error).toHaveBeenCalledWith(
         "Insufficient permissions to access this page"
       );
-      expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+      expect(mockNavigate).toHaveBeenCalledWith("/projects");
     });
   });
 
@@ -196,7 +200,7 @@ describe("ProtectedRoute", () => {
       expect(toast.error).toHaveBeenCalledWith(
         "Insufficient permissions to access this page"
       );
-      expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+      expect(mockNavigate).toHaveBeenCalledWith("/projects");
     });
   });
 
