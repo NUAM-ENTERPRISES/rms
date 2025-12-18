@@ -36,7 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetBasicTrainingAssignmentsQuery } from "../data";
 import { useCreateTrainingAssignmentMutation } from "../data";
-import { MOCK_INTERVIEW_MODE, TrainingAssignment } from "../../types";
+import { SCREENING_MODE, TrainingAssignment } from "../../types";
 import { cn } from "@/lib/utils";
 import { AssignToTrainerDialog } from "../components/AssignToTrainerDialog";
 import { ConfirmationDialog } from "@/components/ui";
@@ -77,8 +77,8 @@ export default function BasicTrainingPage() {
     projectId?: string;
     screeningId?: string;
     notes?: string;
-    type?: "mock" | "interview";
-  }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, screeningId: undefined, notes: "", type: "interview" });
+    type?: "screening" | "interview";
+  }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, screeningId: undefined, notes: "", type: "screening" });
 
   const [sendForInterview, { isLoading: isSendingInterview }] = useSendForInterviewMutation();
 
@@ -226,11 +226,11 @@ export default function BasicTrainingPage() {
 
   const getModeIcon = (mode: string) => {
     switch (mode) {
-      case MOCK_INTERVIEW_MODE.VIDEO:
+      case SCREENING_MODE.VIDEO:
         return Video;
-      case MOCK_INTERVIEW_MODE.PHONE:
+      case SCREENING_MODE.PHONE:
         return Phone;
-      case MOCK_INTERVIEW_MODE.IN_PERSON:
+      case SCREENING_MODE.IN_PERSON:
         return Users;
       default:
         return ClipboardCheck;
@@ -935,11 +935,13 @@ export default function BasicTrainingPage() {
           }
 
           try {
-            const mappedType = sendForInterviewConfirm.type === "mock" ? "mock_interview_assigned" : "interview_assigned";
+            const mappedType = sendForInterviewConfirm.type === "screening" || sendForInterviewConfirm.type === "mock"
+              ? "screening_assigned"
+              : "interview_assigned";
             await sendForInterview({
               projectId: sendForInterviewConfirm.projectId!,
               candidateId: sendForInterviewConfirm.candidateId!,
-              type: mappedType as "mock_interview_assigned" | "interview_assigned",
+              type: mappedType as "screening_assigned" | "interview_assigned",
               recruiterId: currentUser?.id,
               notes: sendForInterviewConfirm.notes || undefined,
             }).unwrap();

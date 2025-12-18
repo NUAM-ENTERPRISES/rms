@@ -33,7 +33,7 @@ import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import { toast } from "sonner";
 import {
   ScreeningTemplateItem,
-  MOCK_INTERVIEW_CATEGORY,
+  SCREENING_CATEGORY,
 } from "../../types";
 import {
   useAddTemplateItemMutation,
@@ -147,19 +147,19 @@ export function TemplateItemFormDialog({
 
   const categoryOptions = [
     {
-      value: MOCK_INTERVIEW_CATEGORY.TECHNICAL_SKILLS,
+      value: SCREENING_CATEGORY.TECHNICAL_SKILLS,
       label: "Technical Skills",
     },
     {
-      value: MOCK_INTERVIEW_CATEGORY.COMMUNICATION,
+      value: SCREENING_CATEGORY.COMMUNICATION,
       label: "Communication",
     },
     {
-      value: MOCK_INTERVIEW_CATEGORY.PROFESSIONALISM,
+      value: SCREENING_CATEGORY.PROFESSIONALISM,
       label: "Professionalism",
     },
     {
-      value: MOCK_INTERVIEW_CATEGORY.ROLE_SPECIFIC,
+      value: SCREENING_CATEGORY.ROLE_SPECIFIC,
       label: "Role Specific",
     },
   ];

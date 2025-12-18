@@ -63,7 +63,7 @@ describe('CandidateProjectDetailsPage interview flow', () => {
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows correct label for mock_interview_scheduled in current status and timeline', async () => {
+  it('shows correct label for screening_scheduled in current status and timeline', async () => {
     const now = new Date().toISOString();
     const pipelineResponse = {
       success: true,

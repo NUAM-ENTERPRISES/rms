@@ -438,8 +438,8 @@ export const projectsApi = baseApi.injectEndpoints({
       {
         projectId: string;
         candidateId: string;
-        /** Either 'mock_interview_assigned' or 'interview_assigned' */
-        type: "mock_interview_assigned" | "interview_assigned";
+        /** Either 'screening_assigned' or 'interview_assigned' */
+        type: "screening_assigned" | "interview_assigned";
         recruiterId?: string;
         notes?: string;
       }

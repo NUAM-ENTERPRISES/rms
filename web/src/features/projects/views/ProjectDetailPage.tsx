@@ -240,8 +240,8 @@ export default function ProjectDetailPage() {
       if (!projectId) return;
 
       const mappedType =
-        interviewConfirm.type === "mock"
-          ? "mock_interview_assigned"
+        interviewConfirm.type === "screening" || interviewConfirm.type === "mock"
+          ? "screening_assigned"
           : interviewConfirm.type === "training"
           ? "training_assigned"
           : "interview_assigned";

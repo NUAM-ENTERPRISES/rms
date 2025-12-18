@@ -167,12 +167,14 @@ export default function TrainingListPage() {
       if (!interviewConfirm.projectId || !interviewConfirm.candidateId) return;
 
       const mappedType =
-        interviewConfirm.type === "mock" ? "mock_interview_assigned" : "interview_assigned";
+        interviewConfirm.type === "screening" || interviewConfirm.type === "mock"
+          ? "screening_assigned"
+          : "interview_assigned";
 
       await sendForInterview({
         projectId: interviewConfirm.projectId,
         candidateId: interviewConfirm.candidateId,
-        type: mappedType as "mock_interview_assigned" | "interview_assigned",
+        type: mappedType as "screening_assigned" | "interview_assigned",
         recruiterId: user?.id,
         notes: interviewConfirm.notes || undefined,
       }).unwrap();

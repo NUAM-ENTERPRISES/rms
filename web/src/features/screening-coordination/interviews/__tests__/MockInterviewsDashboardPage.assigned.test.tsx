@@ -41,6 +41,7 @@ vi.mock("../data", () => ({
     },
     isLoading: false,
   }),
+  useGetUpcomingScreeningsQuery: () => ({ data: { data: { items: [] } }, isLoading: false }),
   useCreateScreeningMutation: () => [() => Promise.resolve({}), { isLoading: false }],
 }));
 

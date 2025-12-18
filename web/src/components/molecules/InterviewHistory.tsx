@@ -79,7 +79,7 @@ const mapHistoryStatusLabel = (status?: string) => {
   switch (status) {
     case "basic_training_assigned":
       return "Basic Training Assigned";
-    case "mock_interview_assigned":
+    case "screening_assigned":
       return "Screening Assigned";
     case "interview_assigned":
       return "Interview Assigned";

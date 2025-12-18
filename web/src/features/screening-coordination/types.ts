@@ -320,7 +320,7 @@ export interface CreateTrainingSessionRequest {
 export interface SendForInterviewRequest {
   projectId: string;
   candidateId: string;
-  type: "screening_assigned" | "mock_interview_assigned" | "interview_assigned";
+  type: "screening_assigned" | "interview_assigned";
   recruiterId?: string;
   notes?: string;
 }
@@ -358,20 +358,20 @@ export interface PaginatedResponse<T> {
 
 // ==================== CONSTANTS ====================
 
-export const MOCK_INTERVIEW_CATEGORY = {
+export const SCREENING_CATEGORY = {
   TECHNICAL_SKILLS: "technical_skills",
   COMMUNICATION: "communication",
   PROFESSIONALISM: "professionalism",
   ROLE_SPECIFIC: "role_specific",
 } as const;
 
-export const MOCK_INTERVIEW_DECISION = {
+export const SCREENING_DECISION = {
   APPROVED: "approved",
   NEEDS_TRAINING: "needs_training",
   REJECTED: "rejected",
 } as const;
 
-export const MOCK_INTERVIEW_MODE = {
+export const SCREENING_MODE = {
   VIDEO: "video",
   PHONE: "phone",
   IN_PERSON: "in_person",
@@ -408,16 +408,12 @@ export const TRAINING_PERFORMANCE = {
 
 // ==================== TYPE GUARDS ====================
 
-export function isScreeningCategory(
-  value: string
-): value is keyof typeof MOCK_INTERVIEW_CATEGORY {
-  return Object.values(MOCK_INTERVIEW_CATEGORY).includes(value as any);
+export function isScreeningCategory(value: string): value is keyof typeof SCREENING_CATEGORY {
+  return Object.values(SCREENING_CATEGORY).includes(value as any);
 }
 
-export function isScreeningDecision(
-  value: string
-): value is keyof typeof MOCK_INTERVIEW_DECISION {
-  return Object.values(MOCK_INTERVIEW_DECISION).includes(value as any);
+export function isScreeningDecision(value: string): value is keyof typeof SCREENING_DECISION {
+  return Object.values(SCREENING_DECISION).includes(value as any);
 }
 
 export function isTrainingStatus(

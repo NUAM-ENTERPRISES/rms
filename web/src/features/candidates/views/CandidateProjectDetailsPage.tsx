@@ -383,7 +383,7 @@ export default function CandidateProjectDetailsPage() {
                                         { name: 'Interview', statuses: [
                                             'approved', 'interview_assigned', 'interview_scheduled', 'interview_rescheduled', 'interview_completed', 'interview_selected', 'interview_passed', 'interview_failed',
                                             // mock / training categories (also part of interview flow)
-                                            'mock_interview_assigned','mock_interview_scheduled','mock_interview_completed','mock_interview_passed','mock_interview_failed',
+                                            'screening_assigned','screening_scheduled','screening_completed','screening_passed','screening_failed',
                                             'training_assigned','training_in_progress','training_completed','ready_for_reassessment'
                                         ], icon: MessageCircle },
                                         { name: 'Final', statuses: ['selected', 'processing', 'hired'], icon: CheckCircle2 }

@@ -41,7 +41,7 @@ import {
 import { TemplateFormDialog, TemplateItemFormDialog } from "../components";
 import {
   ScreeningTemplateItem,
-  MOCK_INTERVIEW_CATEGORY,
+  SCREENING_CATEGORY,
 } from "../../types";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { cn } from "@/lib/utils";
@@ -59,7 +59,7 @@ const categoryConfig: Record<
     borderLeft: string;
   }
 > = {
-  [MOCK_INTERVIEW_CATEGORY.TECHNICAL_SKILLS]: {
+  [SCREENING_CATEGORY.TECHNICAL_SKILLS]: {
     label: "Technical Skills",
     bg: "bg-blue-50 dark:bg-blue-950/20",
     text: "text-blue-700 dark:text-blue-300",
@@ -68,7 +68,7 @@ const categoryConfig: Record<
     accent: "from-blue-500 to-blue-600",
     borderLeft: "border-l-blue-500",
   },
-  [MOCK_INTERVIEW_CATEGORY.COMMUNICATION]: {
+  [SCREENING_CATEGORY.COMMUNICATION]: {
     label: "Communication",
     bg: "bg-emerald-50 dark:bg-emerald-950/20",
     text: "text-emerald-700 dark:text-emerald-300",
@@ -77,7 +77,7 @@ const categoryConfig: Record<
     accent: "from-emerald-500 to-emerald-600",
     borderLeft: "border-l-emerald-500",
   },
-  [MOCK_INTERVIEW_CATEGORY.PROFESSIONALISM]: {
+  [SCREENING_CATEGORY.PROFESSIONALISM]: {
     label: "Professionalism",
     bg: "bg-purple-50 dark:bg-purple-950/20",
     text: "text-purple-700 dark:text-purple-300",
@@ -86,7 +86,7 @@ const categoryConfig: Record<
     accent: "from-purple-500 to-purple-600",
     borderLeft: "border-l-purple-500",
   },
-  [MOCK_INTERVIEW_CATEGORY.ROLE_SPECIFIC]: {
+  [SCREENING_CATEGORY.ROLE_SPECIFIC]: {
     label: "Role Specific",
     bg: "bg-amber-50 dark:bg-amber-950/20",
     text: "text-amber-700 dark:text-amber-300",
@@ -365,9 +365,9 @@ export default function TemplateDetailPage() {
             ) : (
               <div className="space-y-3">
                 {Object.entries(itemsByCategory).map(([category, items]) => {
-                  const config =
+                    const config =
                     categoryConfig[category] ||
-                    categoryConfig[MOCK_INTERVIEW_CATEGORY.TECHNICAL_SKILLS];
+                    categoryConfig[SCREENING_CATEGORY.TECHNICAL_SKILLS];
                   return (
                     <Card
                       key={category}

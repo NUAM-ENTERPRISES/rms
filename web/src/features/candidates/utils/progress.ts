@@ -16,11 +16,11 @@ export const STATUS_ORDER = [
   'interview_passed',
   'interview_selected',
 
-  'mock_interview_assigned',
-  'mock_interview_scheduled',
-  'mock_interview_completed',
-  'mock_interview_passed',
-  'mock_interview_failed',
+  'screening_assigned',
+  'screening_scheduled',
+  'screening_completed',
+  'screening_passed',
+  'screening_failed',
 
   'training_assigned',
   'training_in_progress',
@@ -95,7 +95,7 @@ export function mapToProgressKey(raw?: string) {
   if (s === 'approved') return 'approved';
 
   // Interview related: map many sub-statuses into the canonical interview keys
-  if (s.includes('interview') || s.startsWith('mock_interview') || s.startsWith('training')) {
+  if (s.includes('interview') || s.startsWith('screening') || s.startsWith('training')) {
     if (s.includes('assigned') || s.includes('scheduled') || s.includes('resched')) return 'interview_scheduled';
     if (s.includes('completed')) return 'interview_completed';
     if (s.includes('pass') || s.includes('selected')) return 'interview_passed';

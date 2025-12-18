@@ -39,7 +39,7 @@ import { Plus, Trash2, X } from "lucide-react";
 import {
   ScreeningTemplate,
   CreateTemplateItemRequest,
-  MOCK_INTERVIEW_CATEGORY,
+  SCREENING_CATEGORY,
 } from "../../types";
 import { useCreateTemplateMutation, useUpdateTemplateMutation } from "../data";
 
@@ -61,10 +61,10 @@ const templateFormSchema = z.object({
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
 const categoryLabels: Record<string, string> = {
-  [MOCK_INTERVIEW_CATEGORY.TECHNICAL_SKILLS]: "Technical Skills",
-  [MOCK_INTERVIEW_CATEGORY.COMMUNICATION]: "Communication",
-  [MOCK_INTERVIEW_CATEGORY.PROFESSIONALISM]: "Professionalism",
-  [MOCK_INTERVIEW_CATEGORY.ROLE_SPECIFIC]: "Role Specific",
+  [SCREENING_CATEGORY.TECHNICAL_SKILLS]: "Technical Skills",
+  [SCREENING_CATEGORY.COMMUNICATION]: "Communication",
+  [SCREENING_CATEGORY.PROFESSIONALISM]: "Professionalism",
+  [SCREENING_CATEGORY.ROLE_SPECIFIC]: "Role Specific",
 };
 
 interface TemplateFormDialogProps {

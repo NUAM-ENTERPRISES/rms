@@ -42,7 +42,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetScreeningsQuery } from "../data";
 import { useCreateTrainingAssignmentMutation } from "../../training/data";
-import { MOCK_INTERVIEW_MODE, MOCK_INTERVIEW_DECISION } from "../../types";
+import { SCREENING_MODE, SCREENING_DECISION } from "../../types";
 import { cn } from "@/lib/utils";
 import { AssignToTrainerDialog } from "../../training/components/AssignToTrainerDialog";
 import { ConfirmationDialog } from "@/components/ui";
@@ -190,22 +190,22 @@ export default function ScreeningsListPage() {
 
   const stats = useMemo(() => {
     const needsTraining = interviews.filter(
-      (i) => i.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING
+      (i) => i.decision === SCREENING_DECISION.NEEDS_TRAINING
     ).length;
     const completed = interviews.filter((i) => i.conductedAt).length;
     const approved = interviews.filter(
-      (i) => i.decision === MOCK_INTERVIEW_DECISION.APPROVED
+      (i) => i.decision === SCREENING_DECISION.APPROVED
     ).length;
     return { needsTraining, completed, approved };
   }, [interviews]);
 
   const getModeIcon = (mode: string) => {
     switch (mode) {
-      case MOCK_INTERVIEW_MODE.VIDEO:
+      case SCREENING_MODE.VIDEO:
         return Video;
-      case MOCK_INTERVIEW_MODE.PHONE:
+      case SCREENING_MODE.PHONE:
         return Phone;
-      case MOCK_INTERVIEW_MODE.IN_PERSON:
+      case SCREENING_MODE.IN_PERSON:
         return Users;
       default:
         return ClipboardCheck;
@@ -231,19 +231,19 @@ export default function ScreeningsListPage() {
     if (!decision) return null;
 
     switch (decision) {
-      case MOCK_INTERVIEW_DECISION.APPROVED:
+      case SCREENING_DECISION.APPROVED:
         return (
           <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
             Approved
           </Badge>
         );
-      case MOCK_INTERVIEW_DECISION.NEEDS_TRAINING:
+      case SCREENING_DECISION.NEEDS_TRAINING:
         return (
           <Badge className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/50 dark:text-orange-300">
             Needs Training
           </Badge>
         );
-      case MOCK_INTERVIEW_DECISION.REJECTED:
+      case SCREENING_DECISION.REJECTED:
         return (
           <Badge variant="destructive" className="text-xs">
             Rejected
@@ -258,9 +258,9 @@ export default function ScreeningsListPage() {
 
   const decisionOptions = [
     { value: "all", label: "All Decisions" },
-    { value: MOCK_INTERVIEW_DECISION.APPROVED, label: "Approved" },
-    { value: MOCK_INTERVIEW_DECISION.NEEDS_TRAINING, label: "Needs Training" },
-    { value: MOCK_INTERVIEW_DECISION.REJECTED, label: "Rejected" },
+    { value: SCREENING_DECISION.APPROVED, label: "Approved" },
+    { value: SCREENING_DECISION.NEEDS_TRAINING, label: "Needs Training" },
+    { value: SCREENING_DECISION.REJECTED, label: "Rejected" },
   ];
 
   // Status filter options (UI for status filter not currently rendered)
@@ -556,8 +556,8 @@ export default function ScreeningsListPage() {
                                       Assigned to Main Interview
                                     </Badge>
                                     {/* Only allow Assign to Trainer when decision indicates training is needed or when rejected */}
-                                    {(interview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
-                                      interview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
+                                    {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                                      interview.decision === SCREENING_DECISION.REJECTED) && (
                                       <Button
                                         size="sm"
                                         variant="ghost"
@@ -578,7 +578,7 @@ export default function ScreeningsListPage() {
                               // Only show 'Assign Main Interview' when the candidate is ready:
                               // decision must be APPROVED and interview status should be completed
                               if (
-                                interview.decision === MOCK_INTERVIEW_DECISION.APPROVED &&
+                                interview.decision === SCREENING_DECISION.APPROVED &&
                                 interview.status === "completed"
                               ) {
                                 return (
@@ -610,10 +610,8 @@ export default function ScreeningsListPage() {
 
                               // Fallback: allow assigning to trainer for needs training / rejected
                               if (
-                                interview.decision ===
-                                  MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
-                                interview.decision ===
-                                  MOCK_INTERVIEW_DECISION.REJECTED
+                                interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                                interview.decision === SCREENING_DECISION.REJECTED
                               ) {
                                 return (
                                   <Button
@@ -738,8 +736,8 @@ export default function ScreeningsListPage() {
                               Assigned to Main Interview
                             </Badge>
                             {/* Only show Assign to Trainer when decision is NEEDS_TRAINING or REJECTED */}
-                            {(selectedInterview.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
-                              selectedInterview.decision === MOCK_INTERVIEW_DECISION.REJECTED) && (
+                            {(selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                              selectedInterview.decision === SCREENING_DECISION.REJECTED) && (
                               <Button
                                 size="sm"
                                 onClick={() => handleAssignToTrainer(selectedInterview)}
@@ -754,7 +752,7 @@ export default function ScreeningsListPage() {
                       }
 
                       if (
-                        selectedInterview.decision === MOCK_INTERVIEW_DECISION.APPROVED &&
+                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
                         selectedInterview.status === "completed"
                       ) {
                         return (
@@ -784,10 +782,8 @@ export default function ScreeningsListPage() {
                       }
 
                       if (
-                        selectedInterview.decision ===
-                          MOCK_INTERVIEW_DECISION.NEEDS_TRAINING ||
-                        selectedInterview.decision ===
-                          MOCK_INTERVIEW_DECISION.REJECTED
+                        selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                        selectedInterview.decision === SCREENING_DECISION.REJECTED
                       ) {
                         return (
                           <Button

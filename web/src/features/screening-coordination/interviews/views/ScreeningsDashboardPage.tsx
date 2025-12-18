@@ -27,7 +27,7 @@ import {
   useGetAssignedScreeningsQuery,
   useGetUpcomingScreeningsQuery,
 } from "../data";
-import { MOCK_INTERVIEW_DECISION } from "../../types";
+import { SCREENING_DECISION } from "../../types";
 import { startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
 // note: using native <select> for simplicity in modal
 import { Button as UiButton } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export default function ScreeningsDashboardPage() {
 
     const completedInterviews = interviews.filter((i) => i.conductedAt);
     const approvedCount = completedInterviews.filter(
-      (i) => i.decision === MOCK_INTERVIEW_DECISION.APPROVED
+      (i) => i.decision === SCREENING_DECISION.APPROVED
     ).length;
     const passRate =
       completedInterviews.length > 0
@@ -90,9 +90,7 @@ export default function ScreeningsDashboardPage() {
         : 0;
 
     const inTraining = interviews.filter(
-      (i) =>
-        i.decision === MOCK_INTERVIEW_DECISION.NEEDS_TRAINING &&
-        i.trainingAssignment
+      (i) => i.decision === SCREENING_DECISION.NEEDS_TRAINING && i.trainingAssignment
     ).length;
 
     return {
@@ -171,19 +169,19 @@ export default function ScreeningsDashboardPage() {
   const getDecisionBadge = (decision: string | null | undefined) => {
     if (!decision) return null;
     switch (decision) {
-      case MOCK_INTERVIEW_DECISION.APPROVED:
+      case SCREENING_DECISION.APPROVED:
         return (
           <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
             Approved
           </Badge>
         );
-      case MOCK_INTERVIEW_DECISION.NEEDS_TRAINING:
+      case SCREENING_DECISION.NEEDS_TRAINING:
         return (
           <Badge className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/50 dark:text-orange-300">
             Training
           </Badge>
         );
-      case MOCK_INTERVIEW_DECISION.REJECTED:
+      case SCREENING_DECISION.REJECTED:
         return (
           <Badge variant="destructive" className="text-xs">
             Rejected
@@ -382,7 +380,7 @@ export default function ScreeningsDashboardPage() {
                         className="relative w-full p-3 rounded-lg border hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 text-left group hover:shadow-sm"
                         onClick={() => {
                           // If this is an assigned candidate-project (not an actual mock interview)
-                          // and it has the mock_interview_assigned substatus, open the schedule modal
+                          // and it has the screening_assigned substatus, open the schedule modal
                           if (
                             (interview?.id || "")
                               .toString()
@@ -390,7 +388,7 @@ export default function ScreeningsDashboardPage() {
                             (typeof interview === "object" &&
                               "subStatusName" in interview &&
                               (interview as any).subStatusName ===
-                                "mock_interview_assigned")
+                                "screening_assigned")
                           ) {
                             // Clicking the small dashboard card should take user to the
                             // full Assigned items page. Only the floating button opens the modal.
