@@ -64,15 +64,19 @@ type EditScreeningForm = z.infer<typeof editScreeningSchema>;
 interface EditScreeningDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  screeningId: string;
+  // Accept either `screeningId` or `interviewId` to be forgiving with prop naming
+  screeningId?: string;
+  interviewId?: string;
 }
 
 export default function EditScreeningDialog({
   open,
   onOpenChange,
   screeningId,
+  interviewId,
 }: EditScreeningDialogProps) {
-  const { data: interviewData, isLoading } = useGetScreeningQuery(screeningId);
+  const id = screeningId || interviewId || "";
+  const { data: interviewData, isLoading } = useGetScreeningQuery(id);
   const [updateScreening, { isLoading: isUpdating }] = useUpdateScreeningMutation();
 
   const form = useForm<EditScreeningForm>({
@@ -106,8 +110,13 @@ export default function EditScreeningDialog({
     }
 
     try {
-      await updateScreening({
-        id: screeningId,
+        if (!id) {
+          toast.error("Screening ID is missing");
+          return;
+        }
+
+        await updateScreening({
+          id,
         data: {
           scheduledTime: data.scheduledTime.toISOString(),
           mode: data.mode,

@@ -85,7 +85,7 @@ export class TrainingController {
   @Permissions('read:training')
   @ApiOperation({
     summary: 'Get all basic training assignments',
-    description: 'Retrieve training assignments where trainingType is "basic" and not linked to a screening. Supports pagination and search.',
+    description: 'Retrieve training assignments where trainingType is "basic" and not linked to a screening. Returns candidate and full project details. Supports pagination and search.',
   })
   @ApiResponse({ status: 200, description: 'Basic training assignments retrieved successfully' })
   async findAllBasicAssignments(@Query() query: QueryBasicTrainingDto) {

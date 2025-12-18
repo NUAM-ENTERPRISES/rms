@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { ClipboardCheck, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -173,13 +174,24 @@ export default function UpcomingInterviewsListPage() {
                   </div>
                       {!selected.conductedAt && (
                     <div className="flex items-center gap-2">
-                      <Button onClick={() => navigate(`/screenings/${selected.id}/conduct`)}>Conduct Screening</Button>
-                      <Button variant="outline" onClick={() => setEditOpen(true)}>Edit</Button>
+                      <Button
+                        onClick={() => {
+                          if (!selected?.id) {
+                            toast.error("Screening ID is missing");
+                            return;
+                          }
+                          navigate(`/screenings/${selected.id}/conduct`);
+                        }}
+                        disabled={!selected?.id}
+                      >
+                        Conduct Screening
+                      </Button>
+                      <Button variant="outline" onClick={() => setEditOpen(true)} disabled={!selected?.id}>Edit</Button>
                     </div>
                   )}
                   {/* Edit dialog */}
                   {selected && (
-                    <EditScreeningDialog open={editOpen} onOpenChange={setEditOpen} interviewId={selected.id} />
+                    <EditScreeningDialog open={editOpen} onOpenChange={setEditOpen} screeningId={selected.id} />
                   )}
                 </div>
 

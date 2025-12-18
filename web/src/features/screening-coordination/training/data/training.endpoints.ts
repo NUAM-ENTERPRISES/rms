@@ -38,7 +38,7 @@ export const trainingApi = baseApi.injectEndpoints({
             ]
           : [{ type: "Training", id: "LIST" }],
     }),
-    // Get basic training assignments (trainingType === "basic" && mockInterviewId IS NULL)
+    // Get basic training assignments (trainingType === "basic" && screeningInterviewId IS NULL)
     getBasicTrainingAssignments: builder.query<
       PaginatedResponse<TrainingAssignment>,
       { page?: number; limit?: number; search?: string; assignedBy?: string; status?: string } | void

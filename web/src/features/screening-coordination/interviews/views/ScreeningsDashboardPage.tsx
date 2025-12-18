@@ -340,7 +340,7 @@ export default function ScreeningsDashboardPage() {
                   </div>
                   <div>
                     <CardTitle className="text-lg font-semibold">
-                      Assigned Interviews
+                      Assigned For Screening
                     </CardTitle>
                     <CardDescription className="text-xs mt-0.5">
                       {upcomingInterviews.length} assigned interview
@@ -485,7 +485,7 @@ export default function ScreeningsDashboardPage() {
                   </div>
                   <div>
                     <CardTitle className="text-lg font-semibold">
-                      Upcoming Interviews
+                      Upcoming Screening
                     </CardTitle>
                     <CardDescription className="text-xs mt-0.5">
                       {upcomingInterviewsFromApi.length} upcoming interview

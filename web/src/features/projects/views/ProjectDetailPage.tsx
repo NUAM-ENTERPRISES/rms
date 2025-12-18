@@ -145,13 +145,14 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    type: "mock" | "interview" | "training";
+    type: "screening" | "interview" | "training" | "";
     notes: string;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    type: "interview",
+    // no default selection
+    type: "",
     notes: "",
   });
 
@@ -206,7 +207,7 @@ export default function ProjectDetailPage() {
       isOpen: true,
       candidateId,
       candidateName,
-      type: "interview",
+      type: "",
       notes: "",
     });
   };
@@ -239,8 +240,13 @@ export default function ProjectDetailPage() {
     try {
       if (!projectId) return;
 
+      if (!interviewConfirm.type) {
+        toast.error("Please select one");
+        return;
+      }
+
       const mappedType =
-        interviewConfirm.type === "screening" || interviewConfirm.type === "mock"
+        interviewConfirm.type === "screening"
           ? "screening_assigned"
           : interviewConfirm.type === "training"
           ? "training_assigned"
@@ -263,7 +269,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        type: "interview",
+        type: "",
         notes: "",
       });
 
@@ -404,6 +410,10 @@ export default function ProjectDetailPage() {
   const projectHideContactInfo =
     "hideContactInfo" in project
       ? Boolean((project as { hideContactInfo?: boolean }).hideContactInfo)
+      : false;
+  const projectRequiredScreening =
+    "requiredScreening" in project
+      ? Boolean((project as { requiredScreening?: boolean }).requiredScreening)
       : false;
 
   // Access control
@@ -856,7 +866,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            type: "interview",
+            type: "",
             notes: "",
           })
         }
@@ -877,30 +887,89 @@ export default function ProjectDetailPage() {
             </p>
 
             <div className="space-y-2">
-              <label
-                htmlFor="interview-type"
-                className="text-sm font-medium text-gray-700"
-              >
-                Type
-              </label>
-              <Select
-                value={interviewConfirm.type}
-                onValueChange={(value) =>
-                  setInterviewConfirm((prev) => ({
-                    ...prev,
-                    type: value as any,
-                  }))
-                }
-              >
-                <SelectTrigger id="interview-type" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mock">Screening</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                  <SelectItem value="training">Send for Training</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium text-gray-700">Type</label>
+              <div className="space-y-2">
+                {[
+                  {
+                    value: "screening",
+                    label: "Screening",
+                    description:
+                      "Quick initial screen to verify basic eligibility and documents.",
+                  },
+                  {
+                    value: "interview",
+                    label: "Interview",
+                    description:
+                      "Full interview with the hiring team to assess skills and fit.",
+                    disabled: projectRequiredScreening,
+                  },
+                  {
+                    value: "training",
+                    label: "Send for Training",
+                    description:
+                      "Assign basic training before interviews when candidates need upskilling.",
+                  },
+                ].map((opt) => {
+                  const selected = interviewConfirm.type === opt.value;
+                  const isDisabled = opt.disabled || false;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex items-start gap-3 p-3 rounded border transition-colors duration-150 ${
+                        isDisabled
+                          ? "cursor-not-allowed opacity-60 bg-slate-50"
+                          : "cursor-pointer"
+                      } ${
+                        selected
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-slate-200 hover:bg-accent/50"
+                      }`}
+                      onClick={(e) => {
+                        if (isDisabled) {
+                          e.preventDefault();
+                          return;
+                        }
+                        e.stopPropagation();
+                        setInterviewConfirm((prev) => ({ ...prev, type: opt.value as any }));
+                      }}
+                      aria-label={opt.label}
+                    >
+                      <input
+                        type="radio"
+                        name="interview-type"
+                        value={opt.value}
+                        checked={selected}
+                        disabled={isDisabled}
+                        onChange={() => setInterviewConfirm((prev) => ({ ...prev, type: opt.value as any }))}
+                        className="accent-primary mt-1"
+                        aria-describedby={`interview-type-desc-${opt.value}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-800">
+                          {opt.label}
+                        </div>
+                        <div
+                          id={`interview-type-desc-${opt.value}`}
+                          className="text-xs text-slate-500 mt-1"
+                        >
+                          {opt.description}
+                        </div>
+                        {isDisabled && opt.value === "interview" && projectRequiredScreening && (
+                          <div className="text-xs text-red-600 mt-1.5 font-medium">
+                            ⚠ Screening is required for this project. Please complete screening before interview.
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+
+                {!interviewConfirm.type && (
+                  <p className="text-sm text-red-600">Please select one</p>
+                )}
+              </div>
 
               {interviewConfirm.type === "training" && (
                 <p className="text-xs text-slate-500 mt-2">
@@ -931,10 +1000,12 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         }
+        className="sm:max-w-xl"
+        confirmDisabled={!interviewConfirm.type}
         confirmText={
           interviewConfirm.type === "training"
             ? "Send for Training"
-            : interviewConfirm.type === "mock"
+            : interviewConfirm.type === "screening"
             ? "Send for Screening"
             : "Send for Interview"
         }

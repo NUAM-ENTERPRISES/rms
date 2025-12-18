@@ -136,14 +136,15 @@ export default function TrainingListPage() {
     candidateId: string;
     candidateName: string;
     projectId?: string;
-    type: "mock" | "interview";
+    type: "screening" | "interview" | "";
     notes: string;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
     projectId: undefined,
-    type: "interview",
+    // Start with no selection (no default)
+    type: "",
     notes: "",
   });
 
@@ -157,17 +158,23 @@ export default function TrainingListPage() {
       candidateId: candidateId || "",
       candidateName: candidateName || "",
       projectId,
-      type: "interview",
+      // no default selection — require user to pick radio
+      type: "",
       notes: "",
     });
   };
 
   const handleSendForInterview = async () => {
     try {
+      if (!interviewConfirm.type) {
+        toast.error("Please select one");
+        return;
+      }
+
       if (!interviewConfirm.projectId || !interviewConfirm.candidateId) return;
 
       const mappedType =
-        interviewConfirm.type === "screening" || interviewConfirm.type === "mock"
+        interviewConfirm.type === "screening"
           ? "screening_assigned"
           : "interview_assigned";
 
@@ -373,7 +380,7 @@ export default function TrainingListPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">
-                  Mock Training Programs
+                  Screening Training Programs
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   Manage candidate training and development
@@ -1006,7 +1013,7 @@ export default function TrainingListPage() {
             candidateId: "",
             candidateName: "",
             projectId: undefined,
-            type: "interview",
+            type: "",
             notes: "",
           })
         }
@@ -1020,26 +1027,36 @@ export default function TrainingListPage() {
             </p>
 
             <div className="space-y-2">
-              <label
-                htmlFor="interview-type"
-                className="text-sm font-medium text-gray-700"
-              >
-                Type
-              </label>
-              <Select
-                value={interviewConfirm.type}
-                onValueChange={(value) =>
-                  setInterviewConfirm((prev) => ({ ...prev, type: value as any }))
-                }
-              >
-                <SelectTrigger id="interview-type" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mock">Screening</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium text-gray-700">Type</label>
+
+              <div className="space-y-2">
+                {[
+                  { value: "screening", label: "Screening" },
+                  { value: "interview", label: "Interview" },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-3 p-2 rounded border hover:bg-accent/50 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="interview-type"
+                      value={opt.value}
+                      checked={interviewConfirm.type === opt.value}
+                      onChange={() =>
+                        setInterviewConfirm((prev) => ({ ...prev, type: opt.value as any }))
+                      }
+                      className="accent-primary"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="flex-1 text-sm">{opt.label}</div>
+                  </label>
+                ))}
+
+                {!interviewConfirm.type && (
+                  <p className="text-sm text-red-600">Please select one</p>
+                )}
+              </div>
 
               <label
                 htmlFor="interview-notes"
@@ -1060,6 +1077,7 @@ export default function TrainingListPage() {
             </div>
           </div>
         }
+        confirmDisabled={!interviewConfirm.type}
         confirmText="Send for Interview"
         cancelText="Cancel"
         isLoading={isSendingInterview}

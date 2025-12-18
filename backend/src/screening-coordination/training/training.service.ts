@@ -199,7 +199,16 @@ export class TrainingService {
             candidate: {
               select: { id: true, firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
             },
-            project: { select: { id: true, title: true } },
+              // Include full project details for basic assignments per request
+              project: {
+                include: {
+                  client: true,
+                  country: true,
+                  creator: { select: { id: true, name: true, email: true } },
+                  team: true,
+                  rolesNeeded: true,
+                },
+              },
             roleNeeded: { select: { designation: true } },
           },
         },
@@ -271,7 +280,16 @@ export class TrainingService {
               candidate: {
                 select: { id: true, firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
               },
-              project: { select: { id: true, title: true } },
+              // Return full project details for basic training assignment listing
+              project: {
+                include: {
+                  client: true,
+                  country: true,
+                  creator: { select: { id: true, name: true, email: true } },
+                  team: true,
+                  rolesNeeded: true,
+                },
+              },
               roleNeeded: { select: { designation: true } },
             },
           },

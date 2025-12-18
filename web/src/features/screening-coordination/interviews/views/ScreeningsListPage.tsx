@@ -76,6 +76,11 @@ export default function ScreeningsListPage() {
     projectId?: string;
     screeningId?: string;
     notes?: string;
+    projectName?: string;
+    projectRole?: string;
+    scheduledTime?: string;
+    overallRating?: number;
+    decision?: string;
   }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, screeningId: undefined, notes: "" });
 
   const [assignToMainScreening, { isLoading: isAssigningMain }] = useAssignToMainScreeningMutation();
@@ -597,6 +602,11 @@ export default function ScreeningsListPage() {
                                           " " +
                                           interview.candidateProjectMap?.candidate?.lastName,
                                         projectId: interview.candidateProjectMap?.project?.id,
+                                        projectName: interview.candidateProjectMap?.project?.title,
+                                        projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
+                                        scheduledTime: interview.scheduledTime,
+                                        overallRating: interview.overallRating,
+                                        decision: interview.decision,
                                         screeningId: interview.id,
                                         notes: "",
                                       });
@@ -769,7 +779,12 @@ export default function ScreeningsListPage() {
                                   selectedInterview.candidateProjectMap?.candidate?.lastName,
                                 projectId:
                                   selectedInterview.candidateProjectMap?.project?.id,
-                                        screeningId: selectedInterview.id,
+                                projectName: selectedInterview.candidateProjectMap?.project?.title,
+                                projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                                scheduledTime: selectedInterview.scheduledTime,
+                                overallRating: selectedInterview.overallRating,
+                                decision: selectedInterview.decision,
+                                screeningId: selectedInterview.id,
                                 notes: "",
                               })
                             }
@@ -1090,18 +1105,60 @@ export default function ScreeningsListPage() {
         }
         description={
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Send this candidate for the main interview. You can add notes to
-              include with the assignment.
-            </p>
-            <Textarea
-              value={sendForInterviewConfirm.notes}
-              onChange={(e) =>
-                setSendForInterviewConfirm((s) => ({ ...s, notes: e.target.value }))
-              }
-              placeholder="Notes (optional)"
-              rows={4}
-            />
+              {sendForInterviewConfirm.projectName && (
+                <div className="space-y-2">
+                  {/* Project Name */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wide text-blue-600 font-medium">Project</div>
+                    <div className="font-semibold text-sm">{sendForInterviewConfirm.projectName}</div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-purple-50 border border-purple-200 rounded-md px-2 py-1.5">
+                      <div className="text-[9px] uppercase text-purple-600 font-medium mb-0.5">Role</div>
+                      <div className="font-semibold text-purple-900">{sendForInterviewConfirm.projectRole || "—"}</div>
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1.5">
+                      <div className="text-[9px] uppercase text-emerald-600 font-medium mb-0.5">Scheduled</div>
+                      <div className="font-semibold text-emerald-900">
+                        {sendForInterviewConfirm.scheduledTime 
+                          ? format(new Date(sendForInterviewConfirm.scheduledTime), "MMM d, h:mm a") 
+                          : 'Not scheduled'}
+                      </div>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+                      <div className="text-[9px] uppercase text-amber-600 font-medium mb-0.5">Result</div>
+                      <div className="font-semibold text-amber-900 flex items-center gap-1 flex-wrap">
+                        {sendForInterviewConfirm.decision && (
+                          <Badge variant={
+                            sendForInterviewConfirm.decision === SCREENING_DECISION.APPROVED ? "default" :
+                            sendForInterviewConfirm.decision === SCREENING_DECISION.NEEDS_TRAINING ? "secondary" :
+                            "destructive"
+                          } className="text-[10px] h-4 px-1">
+                            {sendForInterviewConfirm.decision.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
+                        {sendForInterviewConfirm.overallRating != null && <span className="text-xs">{sendForInterviewConfirm.overallRating}%</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Notes (optional)</label>
+                <Textarea
+                  value={sendForInterviewConfirm.notes}
+                  onChange={(e) =>
+                    setSendForInterviewConfirm((s) => ({ ...s, notes: e.target.value }))
+                  }
+                  placeholder="Add notes for the interviewer..."
+                  rows={3}
+                  className="text-sm"
+                />
+              </div>
           </div>
         }
         confirmText={isAssigningMain ? "Sending..." : "Send"}

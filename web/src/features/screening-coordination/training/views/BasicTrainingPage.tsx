@@ -41,13 +41,7 @@ import { cn } from "@/lib/utils";
 import { AssignToTrainerDialog } from "../components/AssignToTrainerDialog";
 import { ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Select not required here anymore
 import { useSendForInterviewMutation } from "../data";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetTrainingHistoryQuery } from "../data";
@@ -77,12 +71,12 @@ export default function BasicTrainingPage() {
     projectId?: string;
     screeningId?: string;
     notes?: string;
-    type?: "screening" | "mock" | "interview";
-  }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, screeningId: undefined, notes: "", type: "screening" });
+    type?: "screening" | "interview" | "";
+  }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, screeningId: undefined, notes: "", type: "" });
 
   const [sendForInterview, { isLoading: isSendingInterview }] = useSendForInterviewMutation();
 
-  // Query basic training assignments (trainingType === "basic" and mockInterviewId IS NULL)
+  // Query basic training assignments (trainingType === "basic" and screeningInterviewId IS NULL)
   const apiParams = {
     page: 1,
     limit: 20,
@@ -875,7 +869,7 @@ export default function BasicTrainingPage() {
       <ConfirmationDialog
         isOpen={sendForInterviewConfirm.isOpen}
         onClose={() =>
-          setSendForInterviewConfirm((s) => ({ ...s, isOpen: false }))
+          setSendForInterviewConfirm((s) => ({ ...s, isOpen: false, type: "" }))
         }
         title={"Send for Interview"}
         description={
@@ -886,25 +880,100 @@ export default function BasicTrainingPage() {
 
             <div className="space-y-2">
               <label
-                htmlFor="interview-type"
-                className="text-sm font-medium text-gray-700"
-              >
-                Type
-              </label>
-              <Select
-                value={sendForInterviewConfirm.type}
-                onValueChange={(value) =>
-                  setSendForInterviewConfirm((prev) => ({ ...prev, type: value as any }))
-                }
-              >
-                <SelectTrigger id="interview-type" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mock">Screening</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                </SelectContent>
-              </Select>
+                className="text-sm font-medium text-gray-700">Type</label>
+              <div className="space-y-2">
+                {(() => {
+                  // Get the project from selectedInterview to check requiredScreening
+                  const project = selectedInterview?.candidateProjectMap?.project;
+                  const projectRequiredScreening = project?.requiredScreening || false;
+
+                  return [
+                    {
+                      value: "screening",
+                      label: "Screening",
+                      description:
+                        "Quick initial screen to verify basic eligibility and documents.",
+                    },
+                    {
+                      value: "interview",
+                      label: "Interview",
+                      description:
+                        "Full interview with the hiring team to assess skills and fit.",
+                      disabled: projectRequiredScreening,
+                    },
+                  ].map((opt) => {
+                    const selected = sendForInterviewConfirm.type === opt.value;
+                    const isDisabled = opt.disabled || false;
+                    return (
+                      <label
+                        key={opt.value}
+                        className={`flex items-start gap-3 p-3 rounded border transition-colors duration-150 ${
+                          isDisabled
+                            ? "cursor-not-allowed opacity-60 bg-slate-50"
+                            : "cursor-pointer"
+                        } ${
+                          selected
+                            ? "border-primary/40 bg-primary/10"
+                            : "border-slate-200 hover:bg-accent/50"
+                        }`}
+                        onClick={(e) => {
+                          if (isDisabled) {
+                            e.preventDefault();
+                            return;
+                          }
+                          e.stopPropagation();
+                          setSendForInterviewConfirm((prev) => ({
+                            ...prev,
+                            type: opt.value as any,
+                          }));
+                        }}
+                        aria-label={opt.label}
+                      >
+                        <input
+                          type="radio"
+                          name="interview-type"
+                          value={opt.value}
+                          checked={selected}
+                          disabled={isDisabled}
+                          onChange={() =>
+                            setSendForInterviewConfirm((prev) => ({
+                              ...prev,
+                              type: opt.value as any,
+                            }))
+                          }
+                          className="accent-primary mt-1"
+                          aria-describedby={`interview-type-desc-${opt.value}`}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-800">
+                            {opt.label}
+                          </div>
+                          <div
+                            id={`interview-type-desc-${opt.value}`}
+                            className="text-xs text-slate-500 mt-1"
+                          >
+                            {opt.description}
+                          </div>
+                          {isDisabled &&
+                            opt.value === "interview" &&
+                            projectRequiredScreening && (
+                              <div className="text-xs text-red-600 mt-1.5 font-medium">
+                                ⚠ Screening is required for this project. Please
+                                complete screening before interview.
+                              </div>
+                            )}
+                        </div>
+                      </label>
+                    );
+                  });
+                })()}
+
+                {!sendForInterviewConfirm.type && (
+                  <p className="text-sm text-red-600">Please select one</p>
+                )}
+              </div>
 
               <label
                 htmlFor="interview-notes"
@@ -926,16 +995,22 @@ export default function BasicTrainingPage() {
           </div>
         }
         confirmText={isSendingInterview ? "Sending..." : "Send"}
+        confirmDisabled={!sendForInterviewConfirm.type}
         cancelText="Cancel"
         isLoading={isSendingInterview}
         onConfirm={async () => {
+          if (!sendForInterviewConfirm.type) {
+            toast.error("Please select one");
+            return;
+          }
+
           if (!sendForInterviewConfirm.projectId || !sendForInterviewConfirm.candidateId) {
             toast.error("Missing candidate or project information");
             return;
           }
 
           try {
-            const mappedType = sendForInterviewConfirm.type === "screening" || sendForInterviewConfirm.type === "mock"
+            const mappedType = sendForInterviewConfirm.type === "screening"
               ? "screening_assigned"
               : "interview_assigned";
             await sendForInterview({

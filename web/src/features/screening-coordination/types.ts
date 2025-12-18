@@ -243,6 +243,7 @@ export interface TrainingAssignment {
     project: {
       id: string;
       title: string;
+      requiredScreening: boolean;
     };
     roleNeeded: {
       id: string;

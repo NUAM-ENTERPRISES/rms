@@ -31,11 +31,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CompleteScreeningDialog } from "../components/CompleteScreeningDialog";
 
 export default function ConductScreeningPage() {
-  const { screeningId } = useParams<{ screeningId: string }>();
+  const { screeningId, interviewId } = useParams<{ screeningId?: string; interviewId?: string }>();
+  // Support route param named either `screeningId` or `interviewId` (legacy mismatch)
+  const routeId = screeningId || interviewId || "";
   const navigate = useNavigate();
   
-  const { data, isLoading, error } = useGetScreeningQuery(screeningId || "", {
-    skip: !screeningId,
+  const { data, isLoading, error } = useGetScreeningQuery(routeId, {
+    skip: !routeId,
   });
 
   // Extract role id from response early so we can call template hooks before any early returns
@@ -120,13 +122,13 @@ export default function ConductScreeningPage() {
   const handleConfirmTemplate = async () => {
     if (!selectedTemplateId) return;
 
-    if (!screeningId) {
+    if (!routeId) {
       toast.error("Interview ID is missing");
       return;
     }
 
     try {
-      await assignTemplateToScreening({ id: screeningId, templateId: selectedTemplateId }).unwrap();
+      await assignTemplateToScreening({ id: routeId, templateId: selectedTemplateId }).unwrap();
       toast.success("Template assigned successfully");
       setConfirmDialogOpen(false);
       setIsUpdatingTemplate(false);
@@ -180,7 +182,7 @@ export default function ConductScreeningPage() {
     strengths?: string;
     areasOfImprovement?: string;
   }) => {
-    if (!screeningId || !interview) {
+    if (!routeId || !interview) {
       toast.error("Interview data not found");
       return;
     }
@@ -224,7 +226,7 @@ export default function ConductScreeningPage() {
         checklistItems: checklistItemsArray,
       };
 
-      await completeScreening({ id: screeningId, data: payload }).unwrap();
+      await completeScreening({ id: routeId, data: payload }).unwrap();
       toast.success("Interview completed successfully!");
       setCompleteInterviewOpen(false);
       setChecklistItems({});
@@ -257,9 +259,12 @@ export default function ConductScreeningPage() {
             {error ? "Failed to load interview details" : "Interview not found"}
           </AlertDescription>
         </Alert>
-        <div className="text-sm text-muted-foreground bg-muted p-4 rounded">
-          <p className="font-mono">Screening ID: {screeningId}</p>
-          <p className="text-xs mt-2">If you're seeing this error, please check that the interview ID is correct and the interview exists in the system.</p>
+        <div className="text-sm text-muted-foreground bg-muted p-4 rounded space-y-2">
+          <p className="font-mono">Screening ID: {routeId || "(missing)"}</p>
+          <p className="text-xs">If you're seeing this error, please check that the interview ID is correct and the interview exists in the system.</p>
+          <div className="pt-2">
+            <Button variant="ghost" onClick={() => navigate('/screenings')}>Back to Screenings</Button>
+          </div>
         </div>
       </div>
     );
