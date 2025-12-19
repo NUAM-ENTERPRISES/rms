@@ -248,7 +248,7 @@ export class ScreeningsService {
       where.decision = query.decision;
     }
 
-    return this.prisma.screening.findMany({
+    const items = await this.prisma.screening.findMany({
       where,
       include: {
         candidateProjectMap: {
@@ -268,6 +268,62 @@ export class ScreeningsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Attach `isDocumentVerificationRequired` flag per item
+    return this.addDocumentVerificationFlag(items);
+  }
+
+  /**
+   * Helper: attach `isDocumentVerificationRequired` and `isDocumentVerified` to screening items
+   * - isDocumentVerificationRequired: true when candidate-project has NOT been sent for document verification
+   * - isDocumentVerified: true when candidate-project has a history entry with sub-status 'documents_verified'
+   */
+  private async addDocumentVerificationFlag(items: any[]) {
+    if (!items || items.length === 0) return items;
+
+    // collect distinct candidateProjectMapIds
+    const cpIds = Array.from(new Set(items.map((it) => it.candidateProjectMapId).filter(Boolean)));
+    if (cpIds.length === 0) return items.map((it) => ({ ...it, isDocumentVerificationRequired: true, isDocumentVerified: false }));
+
+    // Resolve relevant statuses
+    const [mainStatus, subStatusVerification, subStatusVerified] = await Promise.all([
+      this.prisma.candidateProjectMainStatus.findUnique({ where: { name: 'documents' } }),
+      this.prisma.candidateProjectSubStatus.findUnique({ where: { name: 'verification_in_progress_document' } }),
+      this.prisma.candidateProjectSubStatus.findUnique({ where: { name: 'documents_verified' } }),
+    ]);
+
+    // If none of the status records exist, default to requiring verification and not verified
+    if (!mainStatus && !subStatusVerification && !subStatusVerified) {
+      return items.map((it) => ({ ...it, isDocumentVerificationRequired: true, isDocumentVerified: false }));
+    }
+
+    // Fetch histories for these candidate-project ids
+    const histories = await this.prisma.candidateProjectStatusHistory.findMany({
+      where: {
+        candidateProjectMapId: { in: cpIds },
+        OR: [
+          ...(mainStatus ? [{ mainStatusId: mainStatus.id }] : []),
+          ...(subStatusVerification ? [{ subStatusId: subStatusVerification.id }] : []),
+          ...(subStatusVerified ? [{ subStatusId: subStatusVerified.id }] : []),
+        ],
+      },
+      select: { candidateProjectMapId: true, mainStatusId: true, subStatusId: true },
+    });
+
+    const sentSet = new Set<string>();
+    const verifiedSet = new Set<string>();
+
+    for (const h of histories) {
+      if (mainStatus && h.mainStatusId === mainStatus.id) sentSet.add(h.candidateProjectMapId);
+      if (subStatusVerification && h.subStatusId === subStatusVerification.id) sentSet.add(h.candidateProjectMapId);
+      if (subStatusVerified && h.subStatusId === subStatusVerified.id) verifiedSet.add(h.candidateProjectMapId);
+    }
+
+    return items.map((it) => ({
+      ...it,
+      isDocumentVerificationRequired: !sentSet.has(it.candidateProjectMapId),
+      isDocumentVerified: verifiedSet.has(it.candidateProjectMapId),
+    }));
   }
 
   /**
@@ -361,10 +417,14 @@ export class ScreeningsService {
       coordinator = coordUser ? { id: coordUser.id, name: coordUser.name ?? null } : { id: interview.coordinatorId, name: null };
     }
 
-    // Add roleCatalog, coordinator object, and candidate contact to the response
+    // Attach document flags (re-use helper) and add roleCatalog, coordinator object, and candidate contact
+    const [augmented] = await this.addDocumentVerificationFlag([interview]);
+
     return {
       ...interview,
       coordinator,
+      isDocumentVerificationRequired: augmented?.isDocumentVerificationRequired ?? true,
+      isDocumentVerified: augmented?.isDocumentVerified ?? false,
       candidateProjectMap: {
         ...interview.candidateProjectMap,
         candidate: candidateWithContact,
@@ -819,10 +879,13 @@ export class ScreeningsService {
       isExpired: it.scheduledTime ? new Date(it.scheduledTime) < now : false,
     }));
 
+    // Attach document flags to upcoming items
+    const itemsWithFlags = await this.addDocumentVerificationFlag(itemsWithExpired);
+
     return {
       success: true,
       data: {
-        items: itemsWithExpired,
+        items: itemsWithFlags,
         pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
       },
       message: 'Upcoming screenings (scheduled earliest first)',

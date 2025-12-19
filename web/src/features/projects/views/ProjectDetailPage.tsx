@@ -41,6 +41,7 @@ import {
   useGetNominatedCandidatesQuery,
   useSendForVerificationMutation,
   useSendForInterviewMutation,
+  useSendForScreeningMutation,
   useGetCandidateProjectStatusesQuery,
   useAssignToProjectMutation,
 } from "@/features/projects";
@@ -122,6 +123,8 @@ export default function ProjectDetailPage() {
   const [sendForVerification] = useSendForVerificationMutation();
   const [sendForInterview, { isLoading: isSendingInterview }] =
     useSendForInterviewMutation();
+    const [sendForScreening, { isLoading: isSendingScreening }] =
+      useSendForScreeningMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
 
@@ -157,6 +160,20 @@ export default function ProjectDetailPage() {
   });
 
   const [assignConfirm, setAssignConfirm] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    roleNeededId?: string;
+    notes: string;
+  }>({
+    isOpen: false,
+    candidateId: "",
+    candidateName: "",
+    roleNeededId: undefined,
+    notes: "",
+  });
+
+  const [screeningConfirm, setScreeningConfirm] = useState<{
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
@@ -301,6 +318,19 @@ export default function ProjectDetailPage() {
     });
   };
 
+  const showScreeningConfirmation = (
+    candidateId: string,
+    candidateName: string
+  ) => {
+    setScreeningConfirm({
+      isOpen: true,
+      candidateId,
+      candidateName,
+      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      notes: "",
+    });
+  };
+
   const handleAssignToProject = async () => {
     try {
       await assignToProject({
@@ -322,6 +352,34 @@ export default function ProjectDetailPage() {
       toast.error(
         error?.data?.message || "Failed to assign candidate to project"
       );
+    }
+  };
+
+  const handleSendForScreening = async () => {
+    try {
+      await sendForScreening({
+        candidateId: screeningConfirm.candidateId,
+        projectId: projectId!,
+        roleNeededId: screeningConfirm.roleNeededId || "",
+        recruiterId: user?.id,
+        notes: screeningConfirm.notes || undefined,
+      }).unwrap();
+      toast.success("Candidate sent for screening successfully");
+      setScreeningConfirm({
+        isOpen: false,
+        candidateId: "",
+        candidateName: "",
+        roleNeededId: undefined,
+        notes: "",
+      });
+      try {
+        refetchProject?.();
+        refetchNominated?.();
+      } catch (e) {
+        // best-effort
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to send candidate for screening");
     }
   };
 
@@ -531,6 +589,10 @@ export default function ProjectDetailPage() {
                 onSendForInterview={(candidateId, candidateName) =>
                   showInterviewConfirmation(candidateId, candidateName)
                 }
+                onSendForScreening={(candidateId, candidateName) =>
+                  showScreeningConfirmation(candidateId, candidateName)
+                }
+                requiredScreening={projectRequiredScreening}
                 hideContactInfo={projectHideContactInfo}
               />
             )}
@@ -783,6 +845,86 @@ export default function ProjectDetailPage() {
         title={projectData?.data?.title || ""}
         itemType="project"
         isLoading={isDeleting}
+      />
+
+      {/* Direct Screening Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={screeningConfirm.isOpen}
+        onClose={() =>
+          setScreeningConfirm({
+            isOpen: false,
+            candidateId: "",
+            candidateName: "",
+            roleNeededId: undefined,
+            notes: "",
+          })
+        }
+        onConfirm={handleSendForScreening}
+        title="Send for Direct Screening"
+        description={
+          <div className="space-y-4">
+            <p>
+              Are you sure you want to send {screeningConfirm.candidateName} for
+              direct screening? This will notify the screening team.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select
+                value={screeningConfirm.roleNeededId}
+                onValueChange={(v) =>
+                  setScreeningConfirm((prev) => ({ ...prev, roleNeededId: v }))
+                }
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {project?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.designation}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="text-xs text-red-600 font-medium">
+                This candidate should skip document verification because of
+                direct screening. Once screening is completed you should do
+                document verification.
+              </div>
+
+              <label
+                htmlFor="screening-notes"
+                className="text-sm font-medium text-gray-700"
+              >
+                Notes (Optional)
+              </label>
+              <Textarea
+                id="screening-notes"
+                placeholder="Add any notes for the screening team..."
+                value={screeningConfirm.notes}
+                onChange={(e) =>
+                  setScreeningConfirm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Send for Screening"
+        cancelText="Cancel"
+        isLoading={isSendingScreening}
+        variant="default"
+        icon={
+          <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+            <Send className="h-5 w-5 text-purple-600" />
+          </div>
+        }
       />
 
       {/* Verification Confirmation Dialog */}

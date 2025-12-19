@@ -20,6 +20,7 @@ import {
   Send,
   Clipboard,
 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Card,
   CardContent,
@@ -48,6 +49,7 @@ import { AssignToTrainerDialog } from "../../training/components/AssignToTrainer
 import { ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssignToMainScreeningMutation } from "../data";
+import { useSendForVerificationMutation } from "@/features/projects/api";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetCandidateProjectHistoryQuery } from "../data";
 
@@ -83,7 +85,19 @@ export default function ScreeningsListPage() {
     decision?: string;
   }>({ isOpen: false, candidateId: undefined, candidateName: undefined, projectId: undefined, screeningId: undefined, notes: "" });
 
+  const [sendForVerificationConfirm, setSendForVerificationConfirm] = useState<{
+    isOpen: boolean;
+    candidateId?: string;
+    projectId?: string;
+    screeningId?: string;
+    notes?: string;
+    roleId?: string;
+    projectName?: string;
+    projectRole?: string;
+  }>({ isOpen: false, candidateId: undefined, projectId: undefined, screeningId: undefined, notes: "", roleId: undefined });
+
   const [assignToMainScreening, { isLoading: isAssigningMain }] = useAssignToMainScreeningMutation();
+  const [sendForVerification, { isLoading: isSendingVerification }] = useSendForVerificationMutation();
 
   // Build query params from URL (coordinatorId, candidateProjectMapId, decision, etc.)
   const rawParams = {
@@ -500,10 +514,23 @@ export default function ScreeningsListPage() {
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
-                  {displayedInterviews.map((interview) => {
+                  {displayedInterviews.map((interview: any) => {
                     const candidate = interview.candidateProjectMap?.candidate;
                     const role = interview.candidateProjectMap?.roleNeeded;
                     const ModeIcon = getModeIcon(interview.mode);
+
+                    // Precompute verification flags so we can render status badge at the bottom row
+                    const explicitVerificationRequired =
+                      interview.isDocumentVerificationRequired ||
+                      interview.candidateProjectMap?.isDocumentVerificationRequired;
+
+                    const verificationInProgress =
+                      !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
+                      interview.candidateProjectMap?.mainStatus?.name === "documents";
+
+                    const _docVerified =
+                      !!interview.isDocumentVerified ||
+                      !!interview.candidateProjectMap?.isDocumentVerified;
                     const isSelected =
                       interview.id ===
                       (selectedInterview?.id || displayedInterviews[0]?.id);
@@ -576,6 +603,143 @@ export default function ScreeningsListPage() {
                                         <UserPlus className="h-3.5 w-3.5" />
                                       </Button>
                                     )}
+                                  </div>
+                                );
+                              }
+
+                              // Determine explicit requirement, in-progress state, and verified flag
+                              const explicitVerificationRequired =
+                                interview.isDocumentVerificationRequired ||
+                                interview.candidateProjectMap?.isDocumentVerificationRequired;
+
+                              const verificationInProgress =
+                                !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
+                                interview.candidateProjectMap?.mainStatus?.name === "documents";
+
+                              const _docVerified =
+                                !!interview.isDocumentVerified ||
+                                !!interview.candidateProjectMap?.isDocumentVerified;
+
+                              // If already verified — show a verified badge and allow assigning
+                              if (
+                                _docVerified &&
+                                interview.decision === SCREENING_DECISION.APPROVED &&
+                                interview.status === "completed"
+                              ) {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <Badge className="text-xs bg-green-100 text-green-700">Document Verified</Badge>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-2"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSendForInterviewConfirm({
+                                          isOpen: true,
+                                          candidateId:
+                                            interview.candidateProjectMap?.candidate?.id,
+                                          candidateName:
+                                            interview.candidateProjectMap?.candidate?.firstName +
+                                            " " +
+                                            interview.candidateProjectMap?.candidate?.lastName,
+                                          projectId: interview.candidateProjectMap?.project?.id,
+                                          projectName: interview.candidateProjectMap?.project?.title,
+                                          projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
+                                          scheduledTime: interview.scheduledTime,
+                                          overallRating: interview.overallRating,
+                                          decision: interview.decision,
+                                          screeningId: interview.id,
+                                          notes: "",
+                                        });
+                                      }}
+                                      title="Assign Main Interview"
+                                    >
+                                      <Send className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                );
+                              }
+
+                              // If verification explicitly required but not yet verified, show Send for Verification button
+                              if (
+                                explicitVerificationRequired &&
+                                !_docVerified &&
+                                interview.decision === SCREENING_DECISION.APPROVED &&
+                                interview.status === "completed"
+                              ) {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-2 text-amber-600 hover:bg-amber-50"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSendForVerificationConfirm({
+                                          isOpen: true,
+                                          candidateId:
+                                            interview.candidateProjectMap?.candidate?.id,
+                                          projectId: interview.candidateProjectMap?.project?.id,
+                                          screeningId: interview.id,
+                                          projectName: interview.candidateProjectMap?.project?.title,
+                                          projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
+                                          notes: "",
+                                          roleId: interview.candidateProjectMap?.roleNeededId,
+                                        });
+                                      }}
+                                      title="Send for Verification"
+                                    >
+                                      <ClipboardCheck className="h-3.5 w-3.5" />
+                                    </Button>
+
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="inline-block">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 px-2 opacity-50 cursor-not-allowed"
+                                            disabled
+                                            title="Assign Main Interview (disabled until verification complete)"
+                                          >
+                                            <Send className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                );
+                              }
+
+                              // If verification is in progress, avoid placing the long badge in the compact action
+                              // area (it truncates). Instead show only the disabled Assign control here and render
+                              // the readable badge in the bottom status row to the left of the decision badge.
+                              if (
+                                verificationInProgress &&
+                                !_docVerified &&
+                                interview.decision === SCREENING_DECISION.APPROVED &&
+                                interview.status === "completed"
+                              ) {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="inline-block">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 px-2 opacity-50 cursor-not-allowed"
+                                            disabled
+                                            title="Assign Main Interview (disabled until verification complete)"
+                                          >
+                                            <Send className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
+                                    </Tooltip>
                                   </div>
                                 );
                               }
@@ -664,8 +828,13 @@ export default function ScreeningsListPage() {
                               {interview.mode.replace("_", " ")}
                             </span>
                           </div>
-                          {interview.decision &&
-                            getDecisionBadge(interview.decision)}
+                          {interview.decision && getDecisionBadge(interview.decision)}
+                          {/* Show verification-in-progress badge in the bottom status row to avoid truncation */}
+                          {verificationInProgress && !_docVerified && (
+                            <span className="ml-2">
+                              <Badge className="text-xs bg-amber-100 text-amber-700">Verification in progress</Badge>
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -757,6 +926,141 @@ export default function ScreeningsListPage() {
                                 Assign to Trainer
                               </Button>
                             )}
+                          </div>
+                        );
+                      }
+
+                      const selected_explicitVerificationRequired =
+                        selectedInterview.isDocumentVerificationRequired ||
+                        selectedInterview.candidateProjectMap?.isDocumentVerificationRequired;
+
+                      const selected_verificationInProgress =
+                        !!selectedInterview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
+                        selectedInterview.candidateProjectMap?.mainStatus?.name === "documents";
+
+                      const selected_docVerified =
+                        !!selectedInterview.isDocumentVerified ||
+                        !!selectedInterview.candidateProjectMap?.isDocumentVerified;
+
+                      // Verified -> show badge + enabled Assign
+                      if (
+                        selected_docVerified &&
+                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                        selectedInterview.status === "completed"
+                      ) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Badge className="text-sm bg-green-100 text-green-700">Document Verified</Badge>
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                setSendForInterviewConfirm({
+                                  isOpen: true,
+                                  candidateId:
+                                    selectedInterview.candidateProjectMap?.candidate?.id,
+                                  candidateName:
+                                    selectedInterview.candidateProjectMap?.candidate?.firstName +
+                                    " " +
+                                    selectedInterview.candidateProjectMap?.candidate?.lastName,
+                                  projectId:
+                                    selectedInterview.candidateProjectMap?.project?.id,
+                                  projectName: selectedInterview.candidateProjectMap?.project?.title,
+                                  projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                                  scheduledTime: selectedInterview.scheduledTime,
+                                  overallRating: selectedInterview.overallRating,
+                                  decision: selectedInterview.decision,
+                                  screeningId: selectedInterview.id,
+                                  notes: "",
+                                })
+                              }
+                              className="bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Assign Main Interview
+                            </Button>
+                          </div>
+                        );
+                      }
+
+                      // Explicit requirement -> show Send for Verification button + disabled Assign
+                      if (
+                        selected_explicitVerificationRequired &&
+                        !selected_docVerified &&
+                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                        selectedInterview.status === "completed"
+                      ) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                setSendForVerificationConfirm({
+                                  isOpen: true,
+                                  candidateId:
+                                    selectedInterview.candidateProjectMap?.candidate?.id,
+                                  projectId:
+                                    selectedInterview.candidateProjectMap?.project?.id,
+                                  screeningId: selectedInterview.id,
+                                  projectName: selectedInterview.candidateProjectMap?.project?.title,
+                                  projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                                  notes: "",
+                                  roleId: selectedInterview.candidateProjectMap?.roleNeededId,
+                                })
+                              }
+                              className="bg-amber-500 text-white hover:bg-amber-600"
+                            >
+                              <ClipboardCheck className="h-4 w-4 mr-2" />
+                              Send for Verification
+                            </Button>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="opacity-50 cursor-not-allowed border-amber-200 text-amber-600"
+                                    disabled
+                                    title="Assign Main Interview (disabled until verification complete)"
+                                  >
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Assign Main Interview
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        );
+                      }
+
+                      // Verification in progress -> show in-progress badge + disabled Assign
+                      if (
+                        selected_verificationInProgress &&
+                        !selected_docVerified &&
+                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                        selectedInterview.status === "completed"
+                      ) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Badge className="text-sm bg-amber-100 text-amber-700">Document Verification in progress</Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="opacity-50 cursor-not-allowed border-amber-200 text-amber-600"
+                                    disabled
+                                    title="Assign Main Interview (disabled until verification complete)"
+                                  >
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Assign Main Interview
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
+                            </Tooltip>
                           </div>
                         );
                       }
@@ -1090,6 +1394,102 @@ export default function ScreeningsListPage() {
             : undefined
         }
         screeningId={selectedInterviewForTraining?.id}
+      />
+
+      {/* Send For Verification Confirmation (Document Verification) */}
+      <ConfirmationDialog
+        isOpen={sendForVerificationConfirm.isOpen}
+        onClose={() =>
+          setSendForVerificationConfirm((s) => ({ ...s, isOpen: false }))
+        }
+        title={
+          sendForVerificationConfirm.projectName
+            ? `Send ${sendForVerificationConfirm.projectName} candidate for verification`
+            : "Send for Document Verification"
+        }
+        description={
+          <div className="space-y-3">
+            {sendForVerificationConfirm.projectName && (
+              <div className="space-y-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-blue-600 font-medium">Project</div>
+                  <div className="font-semibold text-sm">{sendForVerificationConfirm.projectName}</div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="bg-purple-50 border border-purple-200 rounded-md px-2 py-1.5">
+                    <div className="text-[9px] uppercase text-purple-600 font-medium mb-0.5">Role</div>
+                    <div className="font-semibold text-purple-900">{sendForVerificationConfirm.projectRole || "—"}</div>
+                  </div>
+                  <div className="col-span-2">
+                    {/* Role selector - defaults to provided role id */}
+                    <div className="text-xs font-medium mb-1.5">Select Role</div>
+                    <Select
+                      value={sendForVerificationConfirm.roleId}
+                      onValueChange={(value) => setSendForVerificationConfirm((s) => ({ ...s, roleId: value }))}
+                    >
+                      <SelectTrigger className="h-10 rounded-md">
+                        <SelectValue placeholder={sendForVerificationConfirm.projectRole || "Select role"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* If role info exists include it as a single option. Expand later when API provides roles list. */}
+                        {sendForVerificationConfirm.roleId && (
+                          <SelectItem value={sendForVerificationConfirm.roleId}>{sendForVerificationConfirm.projectRole || sendForVerificationConfirm.roleId}</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Notes (optional)</label>
+              <Textarea
+                value={sendForVerificationConfirm.notes}
+                onChange={(e) =>
+                  setSendForVerificationConfirm((s) => ({ ...s, notes: e.target.value }))
+                }
+                placeholder="Add notes for verification team..."
+                rows={3}
+                className="text-sm"
+              />
+            </div>
+          </div>
+        }
+        confirmText={isSendingVerification ? "Sending..." : "Send for verification"}
+        cancelText="Cancel"
+        isLoading={isSendingVerification}
+        onConfirm={async () => {
+          if (!sendForVerificationConfirm.projectId || !sendForVerificationConfirm.candidateId) {
+            toast.error("Missing candidate or project information");
+            return;
+          }
+
+          if (!sendForVerificationConfirm.roleId) {
+            toast.error("Please select a role");
+            return;
+          }
+
+          try {
+            await sendForVerification({
+              projectId: sendForVerificationConfirm.projectId!,
+              candidateId: sendForVerificationConfirm.candidateId!,
+              roleNeededId: sendForVerificationConfirm.roleId,
+              recruiterId: currentUser?.id,
+              notes: sendForVerificationConfirm.notes,
+            }).unwrap();
+            toast.success("Candidate sent for document verification");
+            setSendForVerificationConfirm((s) => ({ ...s, isOpen: false }));
+            try {
+              refetch?.();
+            } catch (e) {
+              // ignore
+            }
+          } catch (error: any) {
+            toast.error(error?.data?.message || "Failed to send candidate for verification");
+          }
+        }}
       />
 
       {/* Send For Interview Confirmation (Assign Main Interview) */}

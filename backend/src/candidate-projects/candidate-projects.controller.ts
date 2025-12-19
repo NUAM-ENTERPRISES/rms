@@ -100,6 +100,36 @@ export class CandidateProjectsController {
     };
   }
 
+  @Post('send-for-screening')
+  @Permissions('manage:candidates', 'schedule:screenings')
+  @ApiOperation({
+    summary: 'Send candidate for screening',
+    description:
+      'Creates candidate-project assignment (if not exists) and updates status to interview / screening_assigned',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate sent for screening successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or project not found',
+  })
+  async sendForScreening(
+    @Body() dto: CreateCandidateProjectDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.sendForScreening(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate sent for screening successfully',
+    };
+  }
+
   @Get()
   @Permissions('view:projects', 'view:candidates')
   @ApiOperation({

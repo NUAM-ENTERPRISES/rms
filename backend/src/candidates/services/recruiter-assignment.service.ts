@@ -498,6 +498,39 @@ export class RecruiterAssignmentService {
       },
     });
 
+    // --------------------------
+    // Attach isSendedForDocumentVerification flag to project mappings
+    // Collect all candidateProject map ids and query the
+    // CandidateProjectStatusHistory table for main status 'documents'.
+    // --------------------------
+    const allCandidateProjectIds: string[] = candidates.flatMap((c) =>
+      (c.projects || []).map((p) => p.id),
+    );
+
+    if (allCandidateProjectIds.length > 0) {
+      const docHistories = await this.prisma.candidateProjectStatusHistory.findMany({
+        where: {
+          candidateProjectMapId: { in: allCandidateProjectIds },
+          mainStatus: {
+            name: 'documents',
+          },
+        },
+        select: {
+          candidateProjectMapId: true,
+        },
+      });
+
+      const sentSet = new Set(docHistories.map((h) => h.candidateProjectMapId));
+
+      candidates.forEach((candidate) => {
+        if (!candidate.projects) return;
+        candidate.projects = candidate.projects.map((proj) => ({
+          ...proj,
+          isSendedForDocumentVerification: sentSet.has(proj.id),
+        }));
+      });
+    }
+
     const totalPages = Math.ceil(totalCount / limit);
 
     return {
