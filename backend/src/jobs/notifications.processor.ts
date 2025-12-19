@@ -37,12 +37,12 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateSentForVerification(job);
         case 'CandidateAssignedToRecruiter':
           return await this.handleCandidateAssignedToRecruiter(job);
-        case 'CandidateSentToMockInterview':
-          return await this.handleCandidateSentToMockInterview(job);
+        case 'CandidateSentToScreening':
+          return await this.handleCandidateSentToScreening(job);
         case 'CandidateApprovedForClientInterview':
           return await this.handleCandidateApprovedForClientInterview(job);
-        case 'CandidateFailedMockInterview':
-          return await this.handleCandidateFailedMockInterview(job);
+        case 'CandidateFailedScreening':
+          return await this.handleCandidateFailedScreening(job);
         default:
           this.logger.warn(`Unknown notification type: ${type}`);
           return { success: false, message: `Unknown type: ${type}` };
@@ -495,99 +495,73 @@ export class NotificationsProcessor extends WorkerHost {
     }
   }
 
-  /**
-   * Handle candidate sent to mock interview notification
-   * Notifies the selected Interview Coordinator
-   */
-  async handleCandidateSentToMockInterview(job: Job<NotificationJobData>) {
-    const { eventId, payload } = job.data;
-    this.logger.log(
-      `Processing candidate sent to mock interview event: ${eventId}`,
-    );
+  
+    async handleCandidateSentToScreening(job: Job<NotificationJobData>) {
+      const { eventId, payload } = job.data;
+      this.logger.log(`Processing candidate sent to screening event: ${eventId}`);
 
-    try {
-      const {
-        candidateProjectMapId,
-        mockInterviewId,
-        coordinatorId,
-        recruiterId,
-      } = payload as {
-        candidateProjectMapId: string;
-        mockInterviewId: string;
-        coordinatorId: string;
-        recruiterId: string;
-      };
+      try {
+        const { candidateProjectMapId, screeningId, coordinatorId, recruiterId } = payload as {
+          candidateProjectMapId: string;
+          screeningId: string;
+          coordinatorId: string;
+          recruiterId: string;
+        };
 
-      // Load candidate project mapping with details
-      const candidateProjectMap =
-        await this.prisma.candidateProjects.findUnique({
+        // Load candidate project mapping with candidate and project details
+        const candidateProjectMap = await this.prisma.candidateProjects.findUnique({
           where: { id: candidateProjectMapId },
           include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-            project: {
-              select: {
-                id: true,
-                title: true,
-              },
-            },
-            roleNeeded: {
-              select: {
-                designation: true,
-              },
-            },
+            candidate: { select: { firstName: true, lastName: true, id: true } },
+            project: { select: { id: true, title: true } },
           },
         });
 
-      if (!candidateProjectMap) {
-        this.logger.warn(
-          `Candidate project mapping ${candidateProjectMapId} not found`,
-        );
-        return;
+        if (!candidateProjectMap) {
+          this.logger.warn(`Candidate project mapping ${candidateProjectMapId} not found`);
+          return;
+        }
+
+        // Notify coordinator
+        const coordinator = await this.prisma.user.findUnique({ where: { id: coordinatorId } });
+        if (coordinator) {
+          const idemKey = `${eventId}:${coordinator.id}:candidate_sent_to_screening`;
+
+          await this.notificationsService.createNotification({
+            userId: coordinator.id,
+            type: 'candidate_sent_to_screening',
+            title: 'Candidate assigned to screening',
+            message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been assigned to you for screening for project ${candidateProjectMap.project.title}.`,
+            link: `/screenings/${screeningId}`,
+            meta: { candidateProjectMapId, screeningId },
+            idemKey,
+          });
+        }
+
+        // Notify recruiter
+        if (recruiterId) {
+          const idemKey = `${eventId}:${recruiterId}:candidate_sent_to_screening`;
+          await this.notificationsService.createNotification({
+            userId: recruiterId,
+            type: 'candidate_sent_to_screening',
+            title: 'Candidate assigned to screening',
+            message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been sent to screening.`,
+            link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
+            meta: { candidateProjectMapId, screeningId },
+            idemKey,
+          });
+        }
+
+        this.logger.log(`Notifications created for candidate sent to screening event: ${eventId}`);
+      } catch (error) {
+        this.logger.error(`Failed to process candidate sent to screening: ${error.message}`, error.stack);
+        throw error;
       }
-
-      // Create notification for the selected Interview Coordinator
-      const idemKey = `${eventId}:${coordinatorId}:mock_interview_assigned`;
-
-      const roleDesignation =
-        candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
-
-      await this.notificationsService.createNotification({
-        userId: coordinatorId,
-        type: 'mock_interview_assigned',
-        title: 'New Mock Interview Assigned',
-        message: `You have been assigned to conduct a mock interview for ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} - ${candidateProjectMap.project.title} (${roleDesignation}). Please schedule and conduct the interview.`,
-        link: `/mock-interviews/${mockInterviewId}`,
-        meta: {
-          candidateProjectMapId,
-          mockInterviewId,
-          candidateId: candidateProjectMap.candidate.id,
-          projectId: candidateProjectMap.project.id,
-          recruiterId,
-        },
-        idemKey,
-      });
-
-      this.logger.log(
-        `Mock interview notification created for coordinator ${coordinatorId}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to process candidate sent to mock interview: ${error.message}`,
-        error.stack,
-      );
-      throw error;
     }
-  }
 
   /**
    * Handle candidate approved for client interview notification
-   * Notifies recruiter and team head after passing mock interview
+   * Notifies recruiter and team head after passing screening
    */
   async handleCandidateApprovedForClientInterview(
     job: Job<NotificationJobData>,
@@ -600,13 +574,13 @@ export class NotificationsProcessor extends WorkerHost {
     try {
       const {
         candidateProjectMapId,
-        mockInterviewId,
+        screeningId,
         coordinatorId,
         recruiterId,
         teamHeadId,
       } = payload as {
         candidateProjectMapId: string;
-        mockInterviewId: string;
+        screeningId: string;
         coordinatorId: string;
         recruiterId: string;
         teamHeadId?: string;
@@ -650,17 +624,17 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify recruiter
       if (recruiterId) {
-        const idemKeyRecruiter = `${eventId}:${recruiterId}:mock_interview_passed`;
+        const idemKeyRecruiter = `${eventId}:${recruiterId}:screening_passed`;
 
         await this.notificationsService.createNotification({
           userId: recruiterId,
-          type: 'mock_interview_passed',
+          type: 'screening_passed',
           title: 'Candidate Approved for Client Interview',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}). You can now schedule the client interview.`,
-          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}). You can now schedule the client interview.`,
+          link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
           meta: {
             candidateProjectMapId,
-            mockInterviewId,
+            screeningId,
             candidateId: candidateProjectMap.candidate.id,
             projectId: candidateProjectMap.project.id,
             coordinatorId,
@@ -668,24 +642,22 @@ export class NotificationsProcessor extends WorkerHost {
           idemKey: idemKeyRecruiter,
         });
 
-        this.logger.log(
-          `Mock interview passed notification created for recruiter ${recruiterId}`,
-        );
+        this.logger.log(`Screening passed notification created for recruiter ${recruiterId}`);
       }
 
       // Notify team head if present
       if (teamHeadId) {
-        const idemKeyTeamHead = `${eventId}:${teamHeadId}:mock_interview_passed`;
+        const idemKeyTeamHead = `${eventId}:${teamHeadId}:screening_passed`;
 
         await this.notificationsService.createNotification({
           userId: teamHeadId,
-          type: 'mock_interview_passed',
+          type: 'screening_passed',
           title: 'Candidate Ready for Client Interview',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has passed the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}) and is ready for client interview.`,
-          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}) and is ready for client interview.`,
+          link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
           meta: {
             candidateProjectMapId,
-            mockInterviewId,
+            screeningId,
             candidateId: candidateProjectMap.candidate.id,
             projectId: candidateProjectMap.project.id,
             coordinatorId,
@@ -693,9 +665,7 @@ export class NotificationsProcessor extends WorkerHost {
           idemKey: idemKeyTeamHead,
         });
 
-        this.logger.log(
-          `Mock interview passed notification created for team head ${teamHeadId}`,
-        );
+        this.logger.log(`Screening passed notification created for team head ${teamHeadId}`);
       }
     } catch (error) {
       this.logger.error(
@@ -707,26 +677,24 @@ export class NotificationsProcessor extends WorkerHost {
   }
 
   /**
-   * Handle candidate failed mock interview notification
-   * Notifies recruiter and team head when candidate fails mock interview
+   * Handle candidate failed screening notification
+   * Notifies recruiter and team head when candidate fails screening
    */
-  async handleCandidateFailedMockInterview(job: Job<NotificationJobData>) {
+  async handleCandidateFailedScreening(job: Job<NotificationJobData>) {
     const { eventId, payload } = job.data;
-    this.logger.log(
-      `Processing candidate failed mock interview event: ${eventId}`,
-    );
+    this.logger.log(`Processing candidate failed screening event: ${eventId}`);
 
     try {
       const {
         candidateProjectMapId,
-        mockInterviewId,
+        screeningId,
         coordinatorId,
         recruiterId,
         decision,
         teamHeadId,
       } = payload as {
         candidateProjectMapId: string;
-        mockInterviewId: string;
+        screeningId: string;
         coordinatorId: string;
         recruiterId: string;
         decision: string;
@@ -734,56 +702,36 @@ export class NotificationsProcessor extends WorkerHost {
       };
 
       // Load candidate project mapping with details
-      const candidateProjectMap =
-        await this.prisma.candidateProjects.findUnique({
-          where: { id: candidateProjectMapId },
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-            project: {
-              select: {
-                id: true,
-                title: true,
-              },
-            },
-            roleNeeded: {
-              select: {
-                designation: true,
-              },
-            },
-          },
-        });
+      const candidateProjectMap = await this.prisma.candidateProjects.findUnique({
+        where: { id: candidateProjectMapId },
+        include: {
+          candidate: { select: { id: true, firstName: true, lastName: true } },
+          project: { select: { id: true, title: true } },
+          roleNeeded: { select: { designation: true } },
+        },
+      });
 
       if (!candidateProjectMap) {
-        this.logger.warn(
-          `Candidate project mapping ${candidateProjectMapId} not found`,
-        );
+        this.logger.warn(`Candidate project mapping ${candidateProjectMapId} not found`);
         return;
       }
 
-      const roleDesignation =
-        candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
+      const roleDesignation = candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
       const decisionText = decision.replace('_', ' ');
-      const notificationVariant = 'warning';
 
       // Notify recruiter
       if (recruiterId) {
-        const idemKeyRecruiter = `${eventId}:${recruiterId}:mock_interview_failed`;
+        const idemKeyRecruiter = `${eventId}:${recruiterId}:candidate_failed_screening`;
 
         await this.notificationsService.createNotification({
           userId: recruiterId,
-          type: 'mock_interview_failed',
-          title: 'Mock Interview Result - Action Required',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}. Please review and take appropriate action.`,
-          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          type: 'candidate_failed_screening',
+          title: 'Screening Result - Action Required',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the screening for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}. Please review and take appropriate action.`,
+          link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
           meta: {
             candidateProjectMapId,
-            mockInterviewId,
+            screeningId,
             candidateId: candidateProjectMap.candidate.id,
             projectId: candidateProjectMap.project.id,
             coordinatorId,
@@ -792,24 +740,22 @@ export class NotificationsProcessor extends WorkerHost {
           idemKey: idemKeyRecruiter,
         });
 
-        this.logger.log(
-          `Mock interview failed notification created for recruiter ${recruiterId}`,
-        );
+        this.logger.log(`Screening failed notification created for recruiter ${recruiterId}`);
       }
 
       // Notify team head if present
       if (teamHeadId) {
-        const idemKeyTeamHead = `${eventId}:${teamHeadId}:mock_interview_failed`;
+        const idemKeyTeamHead = `${eventId}:${teamHeadId}:candidate_failed_screening`;
 
         await this.notificationsService.createNotification({
           userId: teamHeadId,
-          type: 'mock_interview_failed',
-          title: 'Mock Interview Result - Review Needed',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the mock interview for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}.`,
-          link: `/candidate-projects/${candidateProjectMapId}/mock-interview/${mockInterviewId}`,
+          type: 'candidate_failed_screening',
+          title: 'Screening Result - Review Needed',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the screening for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}.`,
+          link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
           meta: {
             candidateProjectMapId,
-            mockInterviewId,
+            screeningId,
             candidateId: candidateProjectMap.candidate.id,
             projectId: candidateProjectMap.project.id,
             coordinatorId,
@@ -818,15 +764,10 @@ export class NotificationsProcessor extends WorkerHost {
           idemKey: idemKeyTeamHead,
         });
 
-        this.logger.log(
-          `Mock interview failed notification created for team head ${teamHeadId}`,
-        );
+        this.logger.log(`Screening failed notification created for team head ${teamHeadId}`);
       }
     } catch (error) {
-      this.logger.error(
-        `Failed to process candidate failed mock interview: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`Failed to process candidate failed screening: ${error.message}`, error.stack);
       throw error;
     }
   }

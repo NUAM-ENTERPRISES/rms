@@ -5,7 +5,7 @@ export class ApproveForClientInterviewDto {
   @ApiProperty({
     description:
       'Optional notes for approving the candidate for client interview',
-    example: 'Candidate has strong background, skipping mock interview',
+    example: 'Candidate has strong background, skipping screening interview',
     required: false,
   })
   @IsOptional()

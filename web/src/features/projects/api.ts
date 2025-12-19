@@ -438,8 +438,8 @@ export const projectsApi = baseApi.injectEndpoints({
       {
         projectId: string;
         candidateId: string;
-        /** Either 'mock_interview_assigned' or 'interview_assigned' */
-        type: "mock_interview_assigned" | "interview_assigned";
+        /** Either 'screening_assigned' or 'interview_assigned' */
+        type: "screening_assigned" | "interview_assigned";
         recruiterId?: string;
         notes?: string;
       }
@@ -453,6 +453,30 @@ export const projectsApi = baseApi.injectEndpoints({
         { type: "Project", id: projectId },
         "ProjectCandidates",
         "Interview",
+        "Candidate",
+      ],
+    }),
+
+    // Send candidate for direct screening (new API)
+    sendForScreening: builder.mutation<
+      ApiResponse<any>,
+      {
+        projectId: string;
+        candidateId: string;
+        roleNeededId: string;
+        recruiterId?: string;
+        notes?: string;
+      }
+    >({
+      query: ({ projectId, candidateId, roleNeededId, recruiterId, notes }) => ({
+        url: `/candidate-projects/send-for-screening`,
+        method: "POST",
+        body: { candidateId, projectId, roleNeededId, recruiterId, notes },
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+        "Screening",
         "Candidate",
       ],
     }),
@@ -570,6 +594,7 @@ export const {
   useGetDocumentVerificationCandidatesQuery,
   useSendForVerificationMutation,
   useSendForInterviewMutation,
+  useSendForScreeningMutation,
   useGetNominatedCandidatesQuery,
   useGetCandidateProjectStatusesQuery,
   useGetProjectRoleCatalogQuery,

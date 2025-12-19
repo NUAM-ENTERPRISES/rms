@@ -61,6 +61,7 @@ vi.mock("../api", () => {
 
   return {
     useGetNominatedCandidatesQuery,
+    useGetProjectQuery: () => ({ data: { data: { id: "project-1", title: "Project 1" } } }),
     useGetCandidateProjectStatusesQuery: () => ({ data: { data: { statuses: [] } } }),
     useSendForVerificationMutation: () => [vi.fn(), { isLoading: false }],
   };
@@ -79,24 +80,23 @@ describe("SubmittedCandidatesSection", () => {
     // Candidate name should render
     expect(screen.getByText(/Kenyon Garrett/)).toBeInTheDocument();
 
-    // We expect the project sub-status label to be shown on the card
-    expect(screen.getByText("Nominated")).toBeInTheDocument();
+    // We expect the project sub-status label to be shown on the candidate card
+    const card = screen.getByLabelText("View candidate Kenyon Garrett");
+    expect(within(card).getByText("Nominated")).toBeInTheDocument();
 
-    // The candidate's overall status should not render when project status exists
-    // (the overall status would be 'Untouched' in this mock)
-    expect(screen.queryByText("Untouched")).not.toBeInTheDocument();
+    // The candidate's overall status should not render on the same card when project status exists
+    expect(within(card).queryByText("Untouched")).not.toBeInTheDocument();
   });
 
   it("does not show Send for Verification for candidates in verification in progress", () => {
     render(<SubmittedCandidatesSection projectId="project-1" />);
 
-    // Sub-status label should be visible for the verification candidate
-    expect(screen.getByText("Verification In Progress")).toBeInTheDocument();
+    // Sub-status label should be visible for the verification candidate on its card
+    const verifCard = screen.getByLabelText("View candidate Verif InProgress");
+    expect(within(verifCard).getByText("Verification In Progress")).toBeInTheDocument();
 
     // The verification candidate's card should NOT show the Send for Verification button
-    const verifCard = screen.getByText(/Verif InProgress/).closest(".group");
-    expect(verifCard).toBeTruthy();
-    expect(within(verifCard as Element).queryByText(/Send for Verification/i)).not.toBeInTheDocument();
+    expect(within(verifCard).queryByText(/Send for Verification/i)).not.toBeInTheDocument();
   });
 
   it("sends subStatus name when initialSelectedStatus maps to an underscore-style sub-status name", async () => {

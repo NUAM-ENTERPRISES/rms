@@ -370,8 +370,159 @@ export class CandidateProjectsService {
       return assignment;
     });
 
-    // Notify documentation team (your existing function)
-    await this.notifyDocumentationExecutives(candidateProject, candidate);
+    // Publish outbox event for document verification so downstream services handle notifications
+    await this.outboxService.publishCandidateSentForVerification(
+      candidateProject.id,
+      '', // assignedToExecutive (none selected here)
+    );
+
+    return candidateProject;
+  }
+
+  /**
+   * Send candidate for screening
+   * Creates or updates candidate-project assignment and sets status to interview / screening_assigned
+   * Adds candidate project status history and interview status history entries
+   */
+  async sendForScreening(createDto: CreateCandidateProjectDto, userId: string) {
+    let { candidateId, projectId, roleNeededId, recruiterId } = createDto;
+
+    // -------------------------------
+    // VERIFY candidate
+    // -------------------------------
+    const candidate = await this.prisma.candidate.findUnique({ where: { id: candidateId } });
+    if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
+
+    // -------------------------------
+    // VERIFY project
+    // -------------------------------
+    const project = await this.prisma.project.findUnique({ where: { id: projectId }, include: { rolesNeeded: true } });
+    if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    // -------------------------------
+    // AUTO MATCH ROLE
+    // -------------------------------
+    if (!roleNeededId && project.rolesNeeded.length > 0) {
+      const matchedRoleId = await this.autoMatchCandidateToRole(candidate, project.rolesNeeded);
+      if (matchedRoleId) roleNeededId = matchedRoleId;
+    }
+
+    // -------------------------------
+    // VALIDATE ROLE (IF PROVIDED)
+    // -------------------------------
+    if (roleNeededId) {
+      const role = project.rolesNeeded.find((r) => r.id === roleNeededId);
+      if (!role) throw new BadRequestException(`Role ${roleNeededId} does not belong to project ${projectId}`);
+    }
+
+    // -------------------------------
+    // RECRUITER HANDLING
+    // -------------------------------
+    if (!recruiterId) recruiterId = userId;
+
+    const recruiter = await this.prisma.user.findUnique({ where: { id: recruiterId } });
+    if (!recruiter) throw new NotFoundException(`Recruiter ${recruiterId} not found`);
+
+    // -------------------------------
+    // NEW STATUS SYSTEM: interview / screening_assigned
+    // -------------------------------
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({ where: { name: 'interview' } });
+    const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({ where: { name: 'screening_assigned' } });
+
+    if (!mainStatus || !subStatus) {
+      throw new BadRequestException('Interview statuses missing. Please seed the DB.');
+    }
+
+    // -------------------------------
+    // GET USER (FOR HISTORY SNAPSHOT)
+    // -------------------------------
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+
+    // -------------------------------
+    // CHECK EXISTING ASSIGNMENT
+    // -------------------------------
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId, roleNeededId: roleNeededId || null } });
+
+    // -------------------------------
+    // CREATE OR UPDATE ASSIGNMENT
+    // -------------------------------
+    const candidateProject = await this.prisma.$transaction(async (tx) => {
+      let assignment;
+
+      if (existingAssignment) {
+        // update status and optionally recruiter/notes
+        const data: any = {
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+        };
+        if (recruiterId) data.recruiterId = recruiterId;
+        if (createDto.notes !== undefined) data.notes = createDto.notes ?? existingAssignment.notes;
+
+        assignment = await tx.candidateProjects.update({
+          where: { id: existingAssignment.id },
+          data,
+          include: { candidate: true, project: true, mainStatus: true, subStatus: true, recruiter: true },
+        });
+      } else {
+        assignment = await tx.candidateProjects.create({
+          data: {
+            candidateId,
+            projectId,
+            roleNeededId: roleNeededId || null,
+            recruiterId: recruiterId || null,
+            assignedAt: new Date(),
+            notes: createDto.notes || null,
+            mainStatusId: mainStatus.id,
+            subStatusId: subStatus.id,
+          },
+          include: { candidate: true, project: true, mainStatus: true, subStatus: true, recruiter: true },
+        });
+      }
+
+      // CREATE NEW STATUS HISTORY RECORD
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId: assignment.id,
+          changedById: userId,
+          changedByName: user?.name || null,
+
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+
+          mainStatusSnapshot: mainStatus.label,
+          subStatusSnapshot: subStatus.label,
+
+          reason: 'Sent for screening',
+          notes: createDto.notes || 'Screening assigned',
+        },
+      });
+
+      // CREATE interview status history entry (screening event)
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'screening',
+          interviewId: null,
+          candidateProjectMapId: assignment.id,
+          previousStatus: null,
+          status: 'assigned',
+          statusSnapshot: 'Screening Assigned',
+          statusAt: new Date(),
+          changedById: userId,
+          changedByName: user?.name || null,
+          reason: 'Sent for screening',
+        },
+      });
+
+      return assignment;
+    });
+
+    // Publish an outbox event so downstream services notify coordinators
+    await this.outboxService.publishCandidateSentToScreening(
+      candidateProject.id,
+      '', // screeningId (none for assignment)
+      '', // coordinatorId (not selected yet)
+      recruiterId || userId || '',
+    );
 
     return candidateProject;
   }
@@ -442,6 +593,9 @@ export class CandidateProjectsService {
       // Don't throw error - notifications are not critical
     }
   }
+  // NOTE: Notifications for coordinators and documentation executives are handled via Outbox events
+  // to keep this service focused on business logic and avoid duplication. Helper notification methods
+  // removed in favor of outbox publishes.
 
   async findAll(queryDto: QueryCandidateProjectsDto) {
     const {
@@ -1157,10 +1311,10 @@ export class CandidateProjectsService {
   }
 
   /**
-   * Send candidate to mock interview (recruiter action)
-   * Creates a mock interview record and notifies the selected coordinator
+   * Send candidate to screening (recruiter action)
+   * Creates a screening record and notifies the selected coordinator
    */
-  async sendToMockInterview(
+  async sendToScreening(
     candidateProjectMapId: string,
     coordinatorId: string,
     userId: string,
@@ -1223,10 +1377,10 @@ export class CandidateProjectsService {
       );
     }
 
-    // Create mock interview and update status in a transaction
+    // Create screening and update status in a transaction
     const result = await this.prisma.$transaction(async (tx) => {
-      // Create mock interview record
-      const mockInterview = await tx.mockInterview.create({
+      // Create screening record
+      const screening = await tx.screening.create({
         data: {
           candidateProjectMapId,
           coordinatorId,
@@ -1243,7 +1397,7 @@ export class CandidateProjectsService {
         data: {
           subStatus: {
             connect: {
-              name: CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED,
+              name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
             },
           },
         },
@@ -1253,33 +1407,33 @@ export class CandidateProjectsService {
       await tx.candidateProjectStatusHistory.create({
         data: {
           candidateProjectMapId,
-          subStatusSnapshot: CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED,
+          subStatusSnapshot: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
           changedById: userId,
-          reason: `Sent to mock interview with coordinator ${coordinator.name}`,
+          reason: `Sent to screening with coordinator ${coordinator.name}`,
         },
       });
 
-      // Also create an interview status history record for auditing (mock interview event)
+      // Also create an interview status history record for auditing (screening event)
       await tx.interviewStatusHistory.create({
         data: {
-          interviewType: 'mock',
-          interviewId: mockInterview.id,
+          interviewType: 'screening',
+          interviewId: screening.id,
           candidateProjectMapId: candidateProjectMapId,
           previousStatus: null,
           status: 'scheduled',
-          statusSnapshot: 'Mock Interview Scheduled',
+          statusSnapshot: 'Screening Scheduled',
           statusAt: new Date(),
           changedById: userId,
           changedByName: coordinator.name,
-          reason: `Sent to mock interview with coordinator ${coordinator.name}`,
+          reason: `Sent to screening with coordinator ${coordinator.name}`,
         },
       });
 
-      return mockInterview;
+      return screening;
     });
 
     // Publish notification event
-    await this.outboxService.publishCandidateSentToMockInterview(
+    await this.outboxService.publishCandidateSentToScreening(
       candidateProjectMapId,
       result.id,
       coordinatorId,
@@ -1287,7 +1441,7 @@ export class CandidateProjectsService {
     );
 
     this.logger.log(
-      `Candidate ${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName} sent to mock interview with coordinator ${coordinator.name}`,
+      `Candidate ${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName} sent to screening with coordinator ${coordinator.name}`,
     );
 
     return {
@@ -1298,7 +1452,7 @@ export class CandidateProjectsService {
   }
 
   /**
-   * Approve candidate for client interview (skip mock interview)
+   * Approve candidate for client interview (skip screening interview)
    * Directly moves candidate from documents_verified to approved status
    */
   async approveForClientInterview(
@@ -1354,14 +1508,14 @@ export class CandidateProjectsService {
           candidateProjectMapId,
           subStatusSnapshot: CANDIDATE_PROJECT_STATUS.APPROVED,
           changedById: userId,
-          reason: 'Approved for client interview (skipped mock interview)',
+          reason: 'Approved for client interview (skipped screening)',
           notes,
         },
       });
     });
 
     this.logger.log(
-      `Candidate ${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName} approved for client interview (mock interview skipped)`,
+      `Candidate ${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName} approved for client interview (screening skipped)`,
     );
 
     return {
@@ -1371,9 +1525,9 @@ export class CandidateProjectsService {
   }
 
   /**
-   * Send candidate for interview (either mock or client interview assignment)
+   * Send candidate for interview (either screening or client interview assignment)
    * - Sets main stage to 'interview'
-   * - Sets sub-status to either 'interview_assigned' or 'mock_interview_assigned'
+  * - Sets sub-status to either 'interview_assigned' or 'screening_assigned'
    * - Creates or updates candidate-project assignment and adds a status history entry
    */
   async sendForInterview(dto: SendForInterviewDto, userId: string) {
@@ -1400,7 +1554,7 @@ export class CandidateProjectsService {
         ? 'interview_assigned'
         : type === 'training_assigned'
         ? 'training_assigned'
-        : 'mock_interview_assigned';
+        : 'screening_assigned';
     const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({ where: { name: subName } });
 
     if (!mainStatus || !subStatus) {
@@ -1497,20 +1651,20 @@ export class CandidateProjectsService {
         },
       });
 
-      // Also create an interview-level status history record for mock/client interview assignments
-      if (type === 'mock_interview_assigned') {
+      // Also create an interview-level status history record for screening/client interview assignments
+      if (type === 'screening_assigned') {
         await tx.interviewStatusHistory.create({
           data: {
-            interviewType: 'mock',
+            interviewType: 'screening',
             interviewId: null,
             candidateProjectMapId: assignment.id,
             previousStatus: null,
             status: 'assigned',
-            statusSnapshot: 'Mock Interview Assigned',
+            statusSnapshot: 'Screening Assigned',
             statusAt: new Date(),
             changedById: userId,
             changedByName: user?.name || null,
-            reason: `Mock interview assigned`,
+            reason: `Screening assigned`,
           },
         });
       }

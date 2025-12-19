@@ -37,6 +37,8 @@ export interface ConfirmationDialogProps {
   icon?: React.ReactNode;
   /** Color variant for the confirm button */
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost";
+  /** Disable the confirm button (for external validation) */
+  confirmDisabled?: boolean;
 }
 
 /**
@@ -61,6 +63,7 @@ export function ConfirmationDialog({
   className,
   icon,
   variant = "default",
+  confirmDisabled = false,
 }: ConfirmationDialogProps) {
   const handleConfirm = () => {
     onConfirm();
@@ -110,8 +113,12 @@ export function ConfirmationDialog({
             type="button"
             variant={variant}
             onClick={handleConfirm}
-            disabled={isLoading}
+            disabled={isLoading || !!(confirmDisabled)}
             className="flex-1 sm:flex-none"
+            // NOTE: `confirmDisabled` is used by callers for form validation
+            // but we still keep `isLoading` to indicate async state.
+            // Use `aria-disabled` for better a11y when disabled by validation.
+            aria-disabled={isLoading || !!confirmDisabled}
           >
             {isLoading ? (
               <>

@@ -25,11 +25,11 @@ export const CANDIDATE_PROJECT_STATUS = {
   VERIFICATION_IN_PROGRESS: 'verification_in_progress',
   DOCUMENTS_VERIFIED: 'documents_verified',
 
-  // === Mock Interview Stage (Optional) ===
-  MOCK_INTERVIEW_SCHEDULED: 'mock_interview_scheduled',
-  MOCK_INTERVIEW_COMPLETED: 'mock_interview_completed',
-  MOCK_INTERVIEW_PASSED: 'mock_interview_passed',
-  MOCK_INTERVIEW_FAILED: 'mock_interview_failed',
+  // === Screening Stage (formerly Mock Interview) ===
+  SCREENING_SCHEDULED: 'screening_scheduled',
+  SCREENING_COMPLETED: 'screening_completed',
+  SCREENING_PASSED: 'screening_passed',
+  SCREENING_FAILED: 'screening_failed',
 
   // === Training/Screening Stage ===
   TRAINING_ASSIGNED: 'training_assigned',
@@ -93,25 +93,25 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
     CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS, // Resubmission needed
   ],
   [CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED]: [
-    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED, // Optional: Send to mock interview
-    CANDIDATE_PROJECT_STATUS.APPROVED, // Direct path: Skip mock interview
+    CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED, // Optional: Send to screening
+    CANDIDATE_PROJECT_STATUS.APPROVED, // Direct path: Skip screening
     CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
   ],
-  // === Mock Interview Workflow (Optional) ===
-  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED]: [
-    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_COMPLETED,
+  // === Screening Workflow (formerly Mock Interview) ===
+  [CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED]: [
+    CANDIDATE_PROJECT_STATUS.SCREENING_COMPLETED,
     CANDIDATE_PROJECT_STATUS.WITHDRAWN,
   ],
-  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_COMPLETED]: [
-    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_PASSED,
-    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_FAILED,
-    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED, // Reschedule
+  [CANDIDATE_PROJECT_STATUS.SCREENING_COMPLETED]: [
+    CANDIDATE_PROJECT_STATUS.SCREENING_PASSED,
+    CANDIDATE_PROJECT_STATUS.SCREENING_FAILED,
+    CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED, // Reschedule
   ],
-  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_PASSED]: [
+  [CANDIDATE_PROJECT_STATUS.SCREENING_PASSED]: [
     CANDIDATE_PROJECT_STATUS.APPROVED, // Proceed to approval
     CANDIDATE_PROJECT_STATUS.ON_HOLD,
   ],
-  [CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_FAILED]: [
+  [CANDIDATE_PROJECT_STATUS.SCREENING_FAILED]: [
     CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED, // Assign training
     CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW, // Reject candidate
   ],
@@ -128,7 +128,7 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
     CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT,
   ],
   [CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT]: [
-    CANDIDATE_PROJECT_STATUS.MOCK_INTERVIEW_SCHEDULED, // Retry mock interview
+    CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED, // Retry screening
     CANDIDATE_PROJECT_STATUS.APPROVED, // Direct approval
     CANDIDATE_PROJECT_STATUS.WITHDRAWN,
   ],
@@ -269,7 +269,7 @@ export type JoiningStatus =
 
 // ==================== MOCK INTERVIEW CONSTANTS ====================
 
-export const MOCK_INTERVIEW_STATUS = {
+export const SCREENING_STATUS = {
   ASSIGNED_TO_MAIN_INTERVIEW: 'assigned',
   SCHEDULED: 'scheduled',
   RESHEDULED: 'rescheduled',
@@ -281,45 +281,45 @@ export const MOCK_INTERVIEW_STATUS = {
   CANCELLED: 'cancelled',
 } as const;
 
-export type MockInterviewStatus =
-  (typeof MOCK_INTERVIEW_STATUS)[keyof typeof MOCK_INTERVIEW_STATUS];
+export type ScreeningStatus =
+  (typeof SCREENING_STATUS)[keyof typeof SCREENING_STATUS];
 
 /**
  * Mock Interview Decision Constants
  */
-export const MOCK_INTERVIEW_DECISION = {
+export const SCREENING_DECISION = {
   APPROVED: 'approved',
   NEEDS_TRAINING: 'needs_training',
   REJECTED: 'rejected',
 } as const;
 
-export type MockInterviewDecision =
-  (typeof MOCK_INTERVIEW_DECISION)[keyof typeof MOCK_INTERVIEW_DECISION];
+export type ScreeningDecision =
+  (typeof SCREENING_DECISION)[keyof typeof SCREENING_DECISION];
 
 /**
  * Mock Interview Mode Constants
  */
-export const MOCK_INTERVIEW_MODE = {
+export const SCREENING_MODE = {
   VIDEO: 'video',
   PHONE: 'phone',
   IN_PERSON: 'in_person',
 } as const;
 
-export type MockInterviewMode =
-  (typeof MOCK_INTERVIEW_MODE)[keyof typeof MOCK_INTERVIEW_MODE];
+export type ScreeningMode =
+  (typeof SCREENING_MODE)[keyof typeof SCREENING_MODE];
 
 /**
  * Mock Interview Checklist Category Constants
  */
-export const MOCK_INTERVIEW_CATEGORY = {
+export const SCREENING_CATEGORY = {
   TECHNICAL_SKILLS: 'technical_skills',
   COMMUNICATION: 'communication',
   PROFESSIONALISM: 'professionalism',
   ROLE_SPECIFIC: 'role_specific',
 } as const;
 
-export type MockInterviewCategory =
-  (typeof MOCK_INTERVIEW_CATEGORY)[keyof typeof MOCK_INTERVIEW_CATEGORY];
+export type ScreeningCategory =
+  (typeof SCREENING_CATEGORY)[keyof typeof SCREENING_CATEGORY];
 
 // ==================== TRAINING CONSTANTS ====================
 
@@ -611,11 +611,11 @@ export function getStatusStage(status: CandidateProjectStatus): string {
     documents_submitted: 'documents',
     verification_in_progress: 'documents',
     documents_verified: 'documents',
-    // Mock Interview Stage
-    mock_interview_scheduled: 'mock_interview',
-    mock_interview_completed: 'mock_interview',
-    mock_interview_passed: 'mock_interview',
-    mock_interview_failed: 'mock_interview',
+    // Screening Stage (formerly Mock Interview)
+    screening_scheduled: 'screening',
+    screening_completed: 'screening',
+    screening_passed: 'screening',
+    screening_failed: 'screening',
     // Training Stage
     training_assigned: 'training',
     training_in_progress: 'training',

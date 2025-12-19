@@ -519,6 +519,42 @@ export class CandidatesService {
       },
     });
 
+    // --------------------------
+    // Attach isSendedForDocumentVerification flag to project mappings
+    // For performance, collect all candidateProject map ids and query the
+    // CandidateProjectStatusHistory table to check for any "documents"
+    // main status history entries. If present, that mapping has been
+    // sent for document verification at some point.
+    // --------------------------
+    const allCandidateProjectIds: string[] = candidates.flatMap((c) =>
+      (c.projects || []).map((p) => p.id),
+    );
+
+    if (allCandidateProjectIds.length > 0) {
+      const docHistories = await this.prisma.candidateProjectStatusHistory.findMany({
+        where: {
+          candidateProjectMapId: { in: allCandidateProjectIds },
+          mainStatus: {
+            name: 'documents',
+          },
+        },
+        select: {
+          candidateProjectMapId: true,
+        },
+      });
+
+      const sentSet = new Set(docHistories.map((h) => h.candidateProjectMapId));
+
+      // Mutate the returned candidates array to include the boolean flag
+      candidates.forEach((candidate) => {
+        if (!candidate.projects) return;
+        candidate.projects = candidate.projects.map((proj) => ({
+          ...proj,
+          isSendedForDocumentVerification: sentSet.has(proj.id),
+        }));
+      });
+    }
+
     return {
       candidates,
       pagination: {

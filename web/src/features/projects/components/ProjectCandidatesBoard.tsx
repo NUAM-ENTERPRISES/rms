@@ -15,6 +15,7 @@ import {
   Trophy,
   ShieldCheck,
   Users2,
+  Send,
 } from "lucide-react";
 import {
   useGetEligibleCandidatesQuery,
@@ -71,6 +72,8 @@ interface ProjectCandidatesBoardProps {
   onAssignCandidate: (candidateId: string, candidateName: string) => void;
   onVerifyCandidate: (candidateId: string, candidateName: string) => void;
   onSendForInterview?: (candidateId: string, candidateName: string) => void;
+  onSendForScreening?: (candidateId: string, candidateName: string) => void;
+  requiredScreening?: boolean;
   hideContactInfo?: boolean;
 }
 
@@ -164,12 +167,29 @@ const buildAssignmentInfo = (
         currentProjectStatus?.toLowerCase().includes("verification")
     );
 
+  // New flag: some projects may skip document verification (direct screening).
+  // When a candidate is linked to this project and the backend marks
+  // `isSendedForDocumentVerification: false`, we should hide the
+  // "Send for Verification" button and show an informational icon.
+  // Skip document verification only when the project indicates direct
+  // screening (sub-status or main-status contains 'screening') AND
+  // the backend flag `isSendedForDocumentVerification` is explicitly false.
+  const shouldSkipDocumentVerification = Boolean(
+    assignmentFromCandidate &&
+      assignmentFromCandidate.isSendedForDocumentVerification === false &&
+      (assignmentFromCandidate.subStatus?.name?.toLowerCase().includes("screening") ||
+        assignmentFromCandidate.subStatus?.statusName?.toLowerCase().includes("screening") ||
+        assignmentFromCandidate.mainStatus?.name?.toLowerCase().includes("screening") ||
+        assignmentFromCandidate.currentProjectStatus?.statusName?.toLowerCase().includes("screening"))
+  );
+
   return {
     candidateId,
     isAssigned,
     projectStatus: projectStatusToShow,
     isNominated,
     isVerificationInProgress,
+    shouldSkipDocumentVerification,
   };
 };
 
@@ -187,6 +207,8 @@ const ProjectCandidatesBoard = ({
   onVerifyCandidate,
   onSendForInterview,
   hideContactInfo = false,
+  onSendForScreening,
+  requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
   const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
@@ -426,6 +448,16 @@ const ProjectCandidatesBoard = ({
               variant: "default" as const,
               icon: UserPlus,
             },
+            ...(requiredScreening
+              ? [
+                  {
+                    label: "Send for Direct Screening",
+                    action: "send_for_screening",
+                    variant: "default" as const,
+                    icon: Send,
+                  },
+                ]
+              : []),
           ]
         : [];
 
@@ -455,6 +487,12 @@ const ProjectCandidatesBoard = ({
           onAction={(id, action) => {
             if (action === "assign") {
               onAssignCandidate(
+                id,
+                `${candidate.firstName} ${candidate.lastName}`
+              );
+            }
+            if (action === "send_for_screening") {
+              onSendForScreening?.(
                 id,
                 `${candidate.firstName} ${candidate.lastName}`
               );
@@ -523,6 +561,16 @@ const ProjectCandidatesBoard = ({
               variant: "default" as const,
               icon: UserPlus,
             },
+            ...(requiredScreening
+              ? [
+                  {
+                    label: "Send for Direct Screening",
+                    action: "send_for_screening",
+                    variant: "default" as const,
+                    icon: Send,
+                  },
+                ]
+              : []),
           ]
         : [];
 
@@ -530,6 +578,13 @@ const ProjectCandidatesBoard = ({
         !assignmentInfo.isAssigned ||
         (assignmentInfo.isNominated &&
           !assignmentInfo.isVerificationInProgress);
+
+      // If the candidate is linked to this project and the project indicates
+      // it should skip document verification (direct screening), hide the
+      // verify button and show the tooltip/icon instead.
+      const shouldSkipDocVerification = Boolean(
+        assignmentInfo.shouldSkipDocumentVerification === true
+      );
       // Show the interview button for candidates whose project sub-status
       // is documents_verified even if they're not yet assigned to the project.
       const showInterviewButton =
@@ -548,15 +603,25 @@ const ProjectCandidatesBoard = ({
                 `${candidate.firstName} ${candidate.lastName}`
               );
             }
+            if (action === "send_for_screening") {
+              onSendForScreening?.(
+                id,
+                `${candidate.firstName} ${candidate.lastName}`
+              );
+            }
           }}
           actions={actions}
           projectStatus={assignmentInfo.projectStatus}
-          showVerifyButton={showVerifyButton}
+          showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
           onVerify={() =>
             onVerifyCandidate(
               assignmentInfo.candidateId,
               `${candidate.firstName} ${candidate.lastName}`
             )
+          }
+          showSkipDocumentVerification={shouldSkipDocVerification}
+          skipDocumentVerificationMessage={
+            "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
           }
           showInterviewButton={showInterviewButton}
           onSendForInterview={(id) =>

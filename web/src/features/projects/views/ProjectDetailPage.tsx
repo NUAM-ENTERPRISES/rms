@@ -41,6 +41,7 @@ import {
   useGetNominatedCandidatesQuery,
   useSendForVerificationMutation,
   useSendForInterviewMutation,
+  useSendForScreeningMutation,
   useGetCandidateProjectStatusesQuery,
   useAssignToProjectMutation,
 } from "@/features/projects";
@@ -122,6 +123,8 @@ export default function ProjectDetailPage() {
   const [sendForVerification] = useSendForVerificationMutation();
   const [sendForInterview, { isLoading: isSendingInterview }] =
     useSendForInterviewMutation();
+    const [sendForScreening, { isLoading: isSendingScreening }] =
+      useSendForScreeningMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
 
@@ -145,17 +148,32 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    type: "mock" | "interview" | "training";
+    type: "screening" | "interview" | "training" | "";
     notes: string;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    type: "interview",
+    // no default selection
+    type: "",
     notes: "",
   });
 
   const [assignConfirm, setAssignConfirm] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    roleNeededId?: string;
+    notes: string;
+  }>({
+    isOpen: false,
+    candidateId: "",
+    candidateName: "",
+    roleNeededId: undefined,
+    notes: "",
+  });
+
+  const [screeningConfirm, setScreeningConfirm] = useState<{
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
@@ -206,7 +224,7 @@ export default function ProjectDetailPage() {
       isOpen: true,
       candidateId,
       candidateName,
-      type: "interview",
+      type: "",
       notes: "",
     });
   };
@@ -239,9 +257,14 @@ export default function ProjectDetailPage() {
     try {
       if (!projectId) return;
 
+      if (!interviewConfirm.type) {
+        toast.error("Please select one");
+        return;
+      }
+
       const mappedType =
-        interviewConfirm.type === "mock"
-          ? "mock_interview_assigned"
+        interviewConfirm.type === "screening"
+          ? "screening_assigned"
           : interviewConfirm.type === "training"
           ? "training_assigned"
           : "interview_assigned";
@@ -263,7 +286,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        type: "interview",
+        type: "",
         notes: "",
       });
 
@@ -295,6 +318,19 @@ export default function ProjectDetailPage() {
     });
   };
 
+  const showScreeningConfirmation = (
+    candidateId: string,
+    candidateName: string
+  ) => {
+    setScreeningConfirm({
+      isOpen: true,
+      candidateId,
+      candidateName,
+      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      notes: "",
+    });
+  };
+
   const handleAssignToProject = async () => {
     try {
       await assignToProject({
@@ -316,6 +352,34 @@ export default function ProjectDetailPage() {
       toast.error(
         error?.data?.message || "Failed to assign candidate to project"
       );
+    }
+  };
+
+  const handleSendForScreening = async () => {
+    try {
+      await sendForScreening({
+        candidateId: screeningConfirm.candidateId,
+        projectId: projectId!,
+        roleNeededId: screeningConfirm.roleNeededId || "",
+        recruiterId: user?.id,
+        notes: screeningConfirm.notes || undefined,
+      }).unwrap();
+      toast.success("Candidate sent for screening successfully");
+      setScreeningConfirm({
+        isOpen: false,
+        candidateId: "",
+        candidateName: "",
+        roleNeededId: undefined,
+        notes: "",
+      });
+      try {
+        refetchProject?.();
+        refetchNominated?.();
+      } catch (e) {
+        // best-effort
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to send candidate for screening");
     }
   };
 
@@ -404,6 +468,10 @@ export default function ProjectDetailPage() {
   const projectHideContactInfo =
     "hideContactInfo" in project
       ? Boolean((project as { hideContactInfo?: boolean }).hideContactInfo)
+      : false;
+  const projectRequiredScreening =
+    "requiredScreening" in project
+      ? Boolean((project as { requiredScreening?: boolean }).requiredScreening)
       : false;
 
   // Access control
@@ -521,6 +589,10 @@ export default function ProjectDetailPage() {
                 onSendForInterview={(candidateId, candidateName) =>
                   showInterviewConfirmation(candidateId, candidateName)
                 }
+                onSendForScreening={(candidateId, candidateName) =>
+                  showScreeningConfirmation(candidateId, candidateName)
+                }
+                requiredScreening={projectRequiredScreening}
                 hideContactInfo={projectHideContactInfo}
               />
             )}
@@ -775,6 +847,86 @@ export default function ProjectDetailPage() {
         isLoading={isDeleting}
       />
 
+      {/* Direct Screening Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={screeningConfirm.isOpen}
+        onClose={() =>
+          setScreeningConfirm({
+            isOpen: false,
+            candidateId: "",
+            candidateName: "",
+            roleNeededId: undefined,
+            notes: "",
+          })
+        }
+        onConfirm={handleSendForScreening}
+        title="Send for Direct Screening"
+        description={
+          <div className="space-y-4">
+            <p>
+              Are you sure you want to send {screeningConfirm.candidateName} for
+              direct screening? This will notify the screening team.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select
+                value={screeningConfirm.roleNeededId}
+                onValueChange={(v) =>
+                  setScreeningConfirm((prev) => ({ ...prev, roleNeededId: v }))
+                }
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {project?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.designation}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="text-xs text-red-600 font-medium">
+                This candidate should skip document verification because of
+                direct screening. Once screening is completed you should do
+                document verification.
+              </div>
+
+              <label
+                htmlFor="screening-notes"
+                className="text-sm font-medium text-gray-700"
+              >
+                Notes (Optional)
+              </label>
+              <Textarea
+                id="screening-notes"
+                placeholder="Add any notes for the screening team..."
+                value={screeningConfirm.notes}
+                onChange={(e) =>
+                  setScreeningConfirm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Send for Screening"
+        cancelText="Cancel"
+        isLoading={isSendingScreening}
+        variant="default"
+        icon={
+          <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+            <Send className="h-5 w-5 text-purple-600" />
+          </div>
+        }
+      />
+
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
@@ -856,7 +1008,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            type: "interview",
+            type: "",
             notes: "",
           })
         }
@@ -877,34 +1029,93 @@ export default function ProjectDetailPage() {
             </p>
 
             <div className="space-y-2">
-              <label
-                htmlFor="interview-type"
-                className="text-sm font-medium text-gray-700"
-              >
-                Type
-              </label>
-              <Select
-                value={interviewConfirm.type}
-                onValueChange={(value) =>
-                  setInterviewConfirm((prev) => ({
-                    ...prev,
-                    type: value as any,
-                  }))
-                }
-              >
-                <SelectTrigger id="interview-type" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mock">Mock Interview</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                  <SelectItem value="training">Send for Training</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium text-gray-700">Type</label>
+              <div className="space-y-2">
+                {[
+                  {
+                    value: "screening",
+                    label: "Screening",
+                    description:
+                      "Quick initial screen to verify basic eligibility and documents.",
+                  },
+                  {
+                    value: "interview",
+                    label: "Interview",
+                    description:
+                      "Full interview with the hiring team to assess skills and fit.",
+                    disabled: projectRequiredScreening,
+                  },
+                  {
+                    value: "training",
+                    label: "Send for Training",
+                    description:
+                      "Assign basic training before interviews when candidates need upskilling.",
+                  },
+                ].map((opt) => {
+                  const selected = interviewConfirm.type === opt.value;
+                  const isDisabled = opt.disabled || false;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex items-start gap-3 p-3 rounded border transition-colors duration-150 ${
+                        isDisabled
+                          ? "cursor-not-allowed opacity-60 bg-slate-50"
+                          : "cursor-pointer"
+                      } ${
+                        selected
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-slate-200 hover:bg-accent/50"
+                      }`}
+                      onClick={(e) => {
+                        if (isDisabled) {
+                          e.preventDefault();
+                          return;
+                        }
+                        e.stopPropagation();
+                        setInterviewConfirm((prev) => ({ ...prev, type: opt.value as any }));
+                      }}
+                      aria-label={opt.label}
+                    >
+                      <input
+                        type="radio"
+                        name="interview-type"
+                        value={opt.value}
+                        checked={selected}
+                        disabled={isDisabled}
+                        onChange={() => setInterviewConfirm((prev) => ({ ...prev, type: opt.value as any }))}
+                        className="accent-primary mt-1"
+                        aria-describedby={`interview-type-desc-${opt.value}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-800">
+                          {opt.label}
+                        </div>
+                        <div
+                          id={`interview-type-desc-${opt.value}`}
+                          className="text-xs text-slate-500 mt-1"
+                        >
+                          {opt.description}
+                        </div>
+                        {isDisabled && opt.value === "interview" && projectRequiredScreening && (
+                          <div className="text-xs text-red-600 mt-1.5 font-medium">
+                            ⚠ Screening is required for this project. Please complete screening before interview.
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+
+                {!interviewConfirm.type && (
+                  <p className="text-sm text-red-600">Please select one</p>
+                )}
+              </div>
 
               {interviewConfirm.type === "training" && (
                 <p className="text-xs text-slate-500 mt-2">
-                  Assign basic training to candidate (no mock interview
+                  Assign basic training to candidate (no screening
                   required).
                 </p>
               )}
@@ -931,11 +1142,13 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         }
+        className="sm:max-w-xl"
+        confirmDisabled={!interviewConfirm.type}
         confirmText={
           interviewConfirm.type === "training"
             ? "Send for Training"
-            : interviewConfirm.type === "mock"
-            ? "Send for Mock Interview"
+            : interviewConfirm.type === "screening"
+            ? "Send for Screening"
             : "Send for Interview"
         }
         cancelText="Cancel"

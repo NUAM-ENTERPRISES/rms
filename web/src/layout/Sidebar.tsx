@@ -12,9 +12,9 @@ interface SidebarProps {
 
 // Color mapping for non-selected icons
 const getIconColor = (itemId: string) => {
-  // Extract parent ID from child items (e.g., "mock-interviews-dashboard" -> "mock-interviews")
+  // Extract parent ID from child items (e.g., "screenings-dashboard" -> "screenings")
   const parentId =
-    itemId.includes("-") && itemId !== "mock-interviews"
+    itemId.includes("-") && itemId !== "screenings"
       ? itemId.split("-").slice(0, -1).join("-")
       : itemId;
 
@@ -64,7 +64,7 @@ const getIconColor = (itemId: string) => {
       hover:
         "group-hover:bg-rose-500/15 dark:group-hover:bg-rose-500/25 group-hover:text-rose-700 dark:group-hover:text-rose-300",
     },
-    "mock-interviews": {
+    screenings: {
       bg: "bg-purple-500/10 dark:bg-purple-500/20",
       text: "text-purple-600 dark:text-purple-400",
       border: "border-purple-500/30 dark:border-purple-500/40",

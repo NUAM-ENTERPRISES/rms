@@ -24,7 +24,7 @@ import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
-import { SendToMockInterviewDto } from './dto/send-to-mock-interview.dto';
+import { SendToScreeningDto } from './dto/send-to-screening.dto';
 import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
@@ -97,6 +97,36 @@ export class CandidateProjectsController {
       success: true,
       data: result,
       message: 'Candidate sent for verification successfully',
+    };
+  }
+
+  @Post('send-for-screening')
+  @Permissions('manage:candidates', 'schedule:screenings')
+  @ApiOperation({
+    summary: 'Send candidate for screening',
+    description:
+      'Creates candidate-project assignment (if not exists) and updates status to interview / screening_assigned',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate sent for screening successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or project not found',
+  })
+  async sendForScreening(
+    @Body() dto: CreateCandidateProjectDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.sendForScreening(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate sent for screening successfully',
     };
   }
 
@@ -304,29 +334,29 @@ export class CandidateProjectsController {
     };
   }
 
-  @Post(':id/send-to-mock-interview')
-  @Permissions('manage:candidates', 'schedule:mock_interviews')
+  @Post(':id/send-to-screening')
+  @Permissions('manage:candidates', 'schedule:screenings')
   @ApiOperation({
-    summary: 'Send candidate to mock interview',
+    summary: 'Send candidate to screening',
     description:
-      'Assigns a candidate to mock interview with a selected Interview Coordinator. Creates a mock interview record and notifies the coordinator.',
+      'Assigns a candidate to a screening with a selected Interview Coordinator. Creates a screening record and notifies the coordinator.',
   })
   @ApiParam({ name: 'id', description: 'Candidate-Project Map ID' })
   @ApiResponse({
     status: 201,
-    description: 'Candidate sent to mock interview successfully',
+    description: 'Candidate sent to screening successfully',
   })
   @ApiResponse({ status: 400, description: 'Invalid input or status' })
   @ApiResponse({
     status: 404,
     description: 'Candidate-project or coordinator not found',
   })
-  async sendToMockInterview(
+  async sendToScreening(
     @Param('id') id: string,
-    @Body() dto: SendToMockInterviewDto,
+    @Body() dto: SendToScreeningDto,
     @Request() req: any,
   ) {
-    const data = await this.candidateProjectsService.sendToMockInterview(
+    const data = await this.candidateProjectsService.sendToScreening(
       id,
       dto.coordinatorId,
       req.user.userId,
@@ -336,16 +366,16 @@ export class CandidateProjectsController {
     return {
       success: true,
       data,
-      message: 'Candidate sent to mock interview successfully',
+      message: 'Candidate sent to screening successfully',
     };
   }
 
   @Post(':id/approve-for-client-interview')
   @Permissions('approve:candidates')
   @ApiOperation({
-    summary: 'Approve candidate for client interview (skip mock interview)',
+    summary: 'Approve candidate for client interview (skip screening interview)',
     description:
-      'Directly approve a candidate for client interview without conducting a mock interview. Can only be done from documents_verified status.',
+      'Directly approve a candidate for client interview without conducting a screening interview. Can only be done from documents_verified status.',
   })
   @ApiParam({ name: 'id', description: 'Candidate-Project Map ID' })
   @ApiResponse({
@@ -380,9 +410,9 @@ export class CandidateProjectsController {
   @Post('send-for-interview')
   @Permissions('manage:candidates', 'schedule:interviews')
   @ApiOperation({
-    summary: 'Send candidate for interview (mock or client)',
+    summary: 'Send candidate for interview (screening or client)',
     description:
-      "Creates/updates candidate-project assignment, sets main stage to 'interview' and sub-status to either 'interview_assigned' or 'mock_interview_assigned' depending on type",
+      "Creates/updates candidate-project assignment, sets main stage to 'interview' and sub-status to either 'interview_assigned' or 'screening_assigned' depending on type",
   })
   @ApiResponse({ status: 201, description: 'Candidate sent for interview successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })

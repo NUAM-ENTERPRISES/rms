@@ -8,6 +8,8 @@ import {
   Send,
   CheckCircle2,
 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +34,11 @@ type CandidateProjectLink = {
   subStatus?: StatusReference;
   currentProjectStatus?: { statusName?: string };
   mainStatus?: { name?: string };
+  /**
+   * Flag set by the backend when the candidate has been linked to a project
+   * but document verification was intentionally skipped (direct screening).
+   */
+  isSendedForDocumentVerification?: boolean;
 };
 
 export interface CandidateRecord {
@@ -78,6 +85,9 @@ interface CandidateCardProps {
   onSendForInterview?: (candidateId: string) => void;
   isAlreadyInProject?: boolean;
   className?: string;
+  /** When true, hide the verify button and show an alert icon with tooltip */
+  showSkipDocumentVerification?: boolean;
+  skipDocumentVerificationMessage?: string;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -94,6 +104,8 @@ const CandidateCard = memo(function CandidateCard({
   onSendForInterview,
   isAlreadyInProject = false,
   className,
+  showSkipDocumentVerification = false,
+  skipDocumentVerificationMessage,
 }: CandidateCardProps) {
   // Get status configuration
   const getStatusConfig = (status: string) => {
@@ -419,21 +431,45 @@ const CandidateCard = memo(function CandidateCard({
           )}
         </div>
 
-        {showVerifyButton && onVerify && (
+        {showSkipDocumentVerification ? (
           <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
-              onClick={(event) => {
-                event.stopPropagation();
-                onVerify(candidateId);
-              }}
-            >
-              <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-              Send for Verification
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-7 w-7 rounded-full flex items-center justify-center text-red-600 bg-red-50"
+                  aria-label="Skip document verification info"
+                >
+                  <AlertTriangle className="h-4 w-4" aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white text-red-600 border border-red-100 shadow-sm max-w-xs p-2 rounded-md">
+                <p className="text-xs text-red-600">
+                  {skipDocumentVerificationMessage ||
+                    "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </div>
+        ) : (
+          showVerifyButton &&
+          onVerify && (
+            <div className="flex items-center justify-end border-t border-slate-100 pt-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onVerify(candidateId);
+                }}
+              >
+                <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+                Send for Verification
+              </Button>
+            </div>
+          )
         )}
 
         {showInterviewButton && onSendForInterview && (

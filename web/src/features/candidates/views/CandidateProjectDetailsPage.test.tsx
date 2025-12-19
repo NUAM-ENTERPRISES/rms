@@ -54,6 +54,6 @@ describe('CandidateProjectDetailsPage integration', () => {
 
     // Next Step header and the next step label should be present
     expect(await screen.findByText('Next Step')).toBeInTheDocument();
-    expect(await screen.findByText('Approved')).toBeInTheDocument();
+    expect(await screen.findByText('Interview Scheduled')).toBeInTheDocument();
   });
 });

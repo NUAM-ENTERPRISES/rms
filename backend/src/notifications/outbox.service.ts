@@ -93,18 +93,18 @@ export class OutboxService {
   }
 
   /**
-   * Publish candidate sent to mock interview event
+   * Publish candidate sent to screening event
    * Notifies the selected Interview Coordinator
    */
-  async publishCandidateSentToMockInterview(
+  async publishCandidateSentToScreening(
     candidateProjectMapId: string,
-    mockInterviewId: string,
+    screeningId: string,
     coordinatorId: string,
     recruiterId: string,
   ): Promise<void> {
-    await this.publishEvent('CandidateSentToMockInterview', {
+    await this.publishEvent('CandidateSentToScreening', {
       candidateProjectMapId,
-      mockInterviewId,
+      screeningId,
       coordinatorId,
       recruiterId,
     });
@@ -112,18 +112,18 @@ export class OutboxService {
 
   /**
    * Publish candidate approved for client interview event
-   * Notifies recruiter and team head after passing mock interview
+   * Notifies recruiter and team head after passing screening
    */
   async publishCandidateApprovedForClientInterview(
     candidateProjectMapId: string,
-    mockInterviewId: string,
+    screeningId: string,
     coordinatorId: string,
     recruiterId: string,
     teamHeadId?: string,
   ): Promise<void> {
     await this.publishEvent('CandidateApprovedForClientInterview', {
       candidateProjectMapId,
-      mockInterviewId,
+      screeningId,
       coordinatorId,
       recruiterId,
       teamHeadId,
@@ -131,20 +131,20 @@ export class OutboxService {
   }
 
   /**
-   * Publish candidate failed mock interview event
-   * Notifies recruiter and team head when candidate fails mock interview
+   * Publish candidate failed screening event
+   * Notifies recruiter and team head when candidate fails screening
    */
-  async publishCandidateFailedMockInterview(
+  async publishCandidateFailedScreening(
     candidateProjectMapId: string,
-    mockInterviewId: string,
+    screeningId: string,
     coordinatorId: string,
     recruiterId: string,
     decision: string,
     teamHeadId?: string,
   ): Promise<void> {
-    await this.publishEvent('CandidateFailedMockInterview', {
+    await this.publishEvent('CandidateFailedScreening', {
       candidateProjectMapId,
-      mockInterviewId,
+      screeningId,
       coordinatorId,
       recruiterId,
       decision,

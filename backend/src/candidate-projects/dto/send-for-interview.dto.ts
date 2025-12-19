@@ -14,12 +14,12 @@ export class SendForInterviewDto {
 
   @ApiProperty({
     description:
-      "Either 'mock_interview_assigned', 'interview_assigned' or 'training_assigned'",
+      "Either 'screening_assigned', 'interview_assigned' or 'training_assigned'",
     example: 'interview_assigned',
   })
   @IsString()
-  @IsIn(['mock_interview_assigned', 'interview_assigned', 'training_assigned'])
-  type: 'mock_interview_assigned' | 'interview_assigned' | 'training_assigned';
+  @IsIn(['screening_assigned', 'interview_assigned', 'training_assigned'])
+  type: 'screening_assigned' | 'interview_assigned' | 'training_assigned';
 
   @ApiProperty({ description: 'Optional recruiter id to assign', required: false })
   @IsOptional()
