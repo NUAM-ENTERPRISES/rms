@@ -137,300 +137,344 @@ export default function InterviewsPage() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto w-full space-y-6 py-2">
-        <section className="rounded-3xl border border-white/60 bg-white/95 p-6 shadow-xl shadow-slate-200/60 backdrop-blur">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-lg backdrop-blur-sm">
+  {/* Header */}
+  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+    <div className="flex items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 border border-blue-200">
+        <Calendar className="h-5 w-5 text-blue-600" />
+      </div>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
+          Interview Dashboard
+        </p>
+        <h2 className="text-lg font-bold text-slate-900 mt-0.5">
+          Orchestrate every panel with clarity
+        </h2>
+      </div>
+    </div>
+
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-9 px-4 text-sm font-medium border-slate-300 hover:bg-slate-50"
+      onClick={() => {
+        try {
+          refetch?.();
+          refetchAssigned?.();
+          refetchUpcoming?.();
+          refetchDashboard?.();
+        } catch (e) {}
+      }}
+    >
+      <RefreshCw className="mr-2 h-4 w-4" />
+      Refresh
+    </Button>
+  </div>
+
+  {/* Stats Grid – Medium & Compact */}
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    {/* Scheduled This Week */}
+    <div className="group relative rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 hover:shadow-md transition-all duration-300">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600 rounded-l-xl" />
+      
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-semibold text-slate-600">Scheduled (7d)</p>
+          <p className="mt-2 text-3xl font-bold text-slate-900">
+            {stats.scheduledThisWeek}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">last 7 days</p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200">
+          <Calendar className="h-5 w-5 text-blue-600" />
+        </div>
+      </div>
+    </div>
+
+    {/* Completed This Month */}
+    <div className="group relative rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 hover:shadow-md transition-all duration-300">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-purple-600 rounded-l-xl" />
+      
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-semibold text-slate-600">This Month</p>
+          <p className="mt-2 text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
+            {stats.completedThisMonth}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">completed</p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-purple-50 border border-purple-200">
+          <ClipboardCheck className="h-5 w-5 text-purple-600" />
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-3 gap-3 text-center text-xs">
+        <div>
+          <div className="font-bold text-slate-900">{passedCount ?? "-"}</div>
+          <div className="text-slate-500">Passed</div>
+        </div>
+        <div>
+          <div className="font-bold text-slate-900">{failedCount !== undefined ? failedCount : "-"}</div>
+          <div className="text-slate-500">Failed</div>
+        </div>
+        <div>
+          <div className="font-bold text-purple-600">{Number(passRate ?? stats.passRate).toFixed(1)}%</div>
+          <div className="text-slate-500">Pass Rate</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Overall Pass Rate */}
+    <div className="group relative rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 hover:shadow-md transition-all duration-300">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-l-xl" />
+      
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-semibold text-slate-600">Overall Pass Rate</p>
+          <p className="mt-2 text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
+            {Number(passRate ?? stats.passRate).toFixed(1)}%
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            {passedCount ?? "-"} passed • {failedCount !== undefined ? failedCount : "-"} failed
+          </p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+          <TrendingUp className="h-5 w-5 text-emerald-600" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+       <Card className="border-0 shadow-2xl bg-white/90 backdrop-blur-md rounded-3xl overflow-hidden">
+  <CardHeader className="border-b border-slate-100/60 bg-white/70 backdrop-blur-sm pb-6">
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="space-y-1.5">
+        <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight">
+          Interview Dashboard
+        </CardTitle>
+        <CardDescription className="text-base text-slate-600">
+          Track and manage your assigned and upcoming candidate interviews
+        </CardDescription>
+      </div>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-8 space-y-10">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Assigned Interviews – Indigo Theme */}
+      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden">
+        <CardHeader className="pb-5 bg-gradient-to-r from-indigo-50/80 to-transparent">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50">
-                <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="p-3.5 bg-gradient-to-br from-indigo-100 to-indigo-50 rounded-2xl shadow-md border border-indigo-200/60">
+                <Clock className="h-7 w-7 text-indigo-600" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-500">
-                  Interview Dashboard
-                </p>
-                <h1 className="text-2xl font-black text-slate-900">
-                  Orchestrate every panel with clarity
-                </h1>
-              </div>
-            </div>
-              <div className="flex flex-wrap items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => {
-                try {
-                  refetch?.();
-                  refetchAssigned?.();
-                  refetchUpcoming?.();
-                  refetchDashboard?.();
-                } catch (e) {
-                  // ignore
-                }
-              }}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh
-              </Button>
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="group relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 rounded-2xl">
-              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600" />
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-muted-foreground">Scheduled (7d)</p>
-                    <div className="flex items-baseline gap-3">
-                      <p className="text-2xl font-extrabold text-slate-900">{stats.scheduledThisWeek}</p>
-                      <p className="text-xs text-muted-foreground">in the last 7 days</p>
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
-                    <Calendar className="h-4 w-4 text-blue-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="group relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 rounded-2xl">
-              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-purple-600" />
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">This Month</p>
-                    <div className="flex items-baseline gap-3">
-                      <p className="text-2xl font-bold bg-gradient-to-br from-purple-600 to-purple-700 bg-clip-text text-transparent">{stats.completedThisMonth}</p>
-                      <p className="text-xs text-muted-foreground">completed</p>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                      <div className="text-center">
-                        <div className="font-semibold">{passedCount ?? "-"}</div>
-                        <div className="text-[11px]">Passed</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold">{failedCount !== undefined ? failedCount : "-"}</div>
-                        <div className="text-[11px]">Failed</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold">{Number(passRate ?? stats.passRate).toFixed(2)}%</div>
-                        <div className="text-[11px]">Pass Rate</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20">
-                    <ClipboardCheck className="h-4 w-4 text-purple-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="group relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 rounded-2xl">
-              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600" />
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">Pass Rate</p>
-                    <div className="flex items-baseline gap-3">
-                      <p className="text-2xl font-bold bg-gradient-to-br from-green-600 to-green-700 bg-clip-text text-transparent">{Number(passRate ?? stats.passRate).toFixed(2)}%</p>
-                      <p className="text-xs text-muted-foreground">Approved</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">{passedCount ?? "-"} passed • {failedCount !== undefined ? failedCount : "-"} failed</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          
-
-          </div>
-        </section>
-
-        <Card className="border(border-slate-100) shadow-lg">
-          <CardHeader className="border-b border-slate-100 pb-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-900">
-                  Interview Dashboard
+                <CardTitle className="text-xl font-bold text-slate-900">
+                  Assigned Interviews
                 </CardTitle>
+                <CardDescription className="text-sm mt-1.5 text-slate-600">
+                  {assignedInterviews.length} interview{assignedInterviews.length !== 1 ? "s" : ""} ready for scheduling
+                </CardDescription>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-5 p-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (assignedInterviews[0]?.id) {
+                  navigate("/interviews/assigned", { state: { selectedId: assignedInterviews[0]?.id } });
+                } else {
+                  navigate("/interviews/assigned");
+                }
+              }}
+              disabled={assignedInterviews.length === 0}
+              className="group text-sm font-medium text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+            >
+              View All
+              <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </div>
+        </CardHeader>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Assigned Interviews */}
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-                        <Clock className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold">Assigned Interviews</CardTitle>
-                        <CardDescription className="text-xs mt-0.5">{assignedInterviews.length} assigned interview{assignedInterviews.length !== 1 ? "s" : ""}</CardDescription>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (assignedInterviews[0]?.id) {
-                          navigate("/interviews/assigned", { state: { selectedId: assignedInterviews[0]?.id } });
-                        } else {
-                          navigate("/interviews/assigned");
-                        }
-                      }}
-                      disabled={assignedInterviews.length === 0}
-                      className="gap-1 h-8 px-2 text-xs hover:bg-accent/50"
-                    >
-                      View All
-                      <ArrowRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {assignedInterviews.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <Calendar className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm font-medium">No Assigned interviews</p>
-                      <p className="text-xs">Assigned interviews will appear here</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {assignedInterviews.map((interview) => {
-                        const candidate = interview.candidate;
-                        const role = interview.roleNeeded;
-                        return (
-                            <div key={interview.id} className="relative w-full p-3 rounded-lg border hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 text-left group hover:shadow-sm" onClick={() => navigate(`/interviews/assigned`, { state: { selectedId: interview.id } })}>
-                            <div className="flex items-start justify-between mb-1.5">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}</p>
-                                <p className="text-xs text-muted-foreground truncate">{role?.designation || "Unknown Role"}</p>
-                              </div>
-                              <div className="flex flex-col items-end gap-2">
-                                {interview.mode && <Badge variant="outline" className="text-xs">{interview.mode}</Badge>}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <span>{interview.scheduledTime ? new Date(interview.scheduledTime).toLocaleString() : "Not scheduled"}</span>
-                              {interview.expired && (
-                                <Badge className="text-xs capitalize bg-rose-50 text-rose-700 border border-rose-100 ml-2">Expired</Badge>
-                              )}
-                            </div>
-                            {/* Right-side stack: sub-status badge (top) and schedule button (bottom) with spacing */}
-                            <div className="absolute right-3 top-3 bottom-3 flex flex-col justify-between items-end gap-3">
-                              <div className="flex flex-col items-end gap-2">
-                                <Badge className="text-xs capitalize bg-orange-50 text-orange-700 border border-orange-100 px-2 py-0.5 rounded-md">{(interview as any).subStatus?.label || (interview as any).subStatus?.name || 'Assigned'}</Badge>
-                                {/* expired badge shown next to scheduled time */}
-                                <Button
-                                  size="sm"
-                                  className="px-2 py-1 text-xs rounded-md bg-orange-500 text-white hover:bg-orange-600"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const candidateName = interview.candidate
-                                      ? `${interview.candidate.firstName} ${interview.candidate.lastName}`
-                                      : "Unknown Candidate";
-                                    const projectName = interview.project?.title || "Unknown Project";
-                                    setScheduleDialogInitial({
-                                      candidateProjectMapId: interview.id,
-                                      candidateName,
-                                      projectName,
-                                    });
-                                    setScheduleDialogOpen(true);
-                                  }}
-                                >
-                                  Schedule
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Upcoming Interviews */}
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold">Upcoming Interviews</CardTitle>
-                        <CardDescription className="text-xs mt-0.5">{upcomingInterviews.length} upcoming interview{upcomingInterviews.length !== 1 ? "s" : ""}</CardDescription>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (upcomingInterviews[0]?.id) {
-                          navigate("/interviews/upcoming", { state: { selectedId: upcomingInterviews[0]?.id } });
-                        } else {
-                          navigate("/interviews/upcoming");
-                        }
-                      }}
-                      disabled={upcomingInterviews.length === 0}
-                      className="gap-1 h-8 px-2 text-xs hover:bg-accent/50"
-                    >
-                      View All
-                      <ArrowRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {upcomingInterviews.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <Calendar className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm font-medium">No Upcoming interviews</p>
-                      <p className="text-xs">Upcoming interviews will appear here</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {upcomingInterviews.map((interview) => {
-                        const candidate = interview.candidate || interview.candidateProjectMap?.candidate;
-                        const role = interview.roleNeeded || interview.candidateProjectMap?.roleNeeded;
-                        return (
-                          <div key={interview.id} onClick={() => navigate(`/interviews/upcoming`, { state: { selectedId: interview.id } })} className="relative w-full p-3 rounded-lg border hover:border-primary/50 hover:bg-accent/50 transition-all duration-200 text-left hover:shadow-sm">
-                            <div className="flex items-start justify-between mb-1.5">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}</p>
-                                <p className="text-xs text-muted-foreground truncate">{role?.designation || "Unknown Role"}</p>
-                              </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <Badge className="text-xs capitalize bg-blue-100 text-blue-700 border border-blue-100">
-                                  {interview.candidateProjectMap?.subStatus?.label || interview.candidateProjectMap?.subStatus?.name || 'Scheduled'}
-                                </Badge>
-                                {/* expired badge shown next to scheduled time */}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <span>{interview.scheduledTime ? new Date(interview.scheduledTime).toLocaleString() : "Not scheduled"}</span>
-                              {interview.expired && (
-                                <Badge className="text-xs capitalize bg-rose-50 text-rose-700 border border-rose-100 ml-2">Expired</Badge>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+        <CardContent className="pt-4">
+          {assignedInterviews.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <Calendar className="h-14 w-14 mx-auto mb-5 opacity-40" />
+              <p className="font-semibold text-lg">No assigned interviews</p>
+              <p className="text-sm mt-2">New assignments will appear here automatically</p>
             </div>
-            {interviews.length > 0 && (
-              <p className="text-center text-xs text-slate-500">
-                Showing {interviews.length} of {totalInterviews} interviews
-              </p>
-            )}
-          </CardContent>
-        </Card>
+          ) : (
+            <div className="space-y-4">
+              {assignedInterviews.map((interview) => {
+                const candidate = interview.candidate;
+                const role = interview.roleNeeded;
+                return (
+                  <div
+                    key={interview.id}
+                    onClick={() => navigate(`/interviews/assigned`, { state: { selectedId: interview.id } })}
+                    className="group relative p-5 rounded-2xl border border-slate-200/80 hover:border-indigo-300 hover:bg-indigo-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between pr-28">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-lg font-semibold text-slate-900 truncate">
+                          {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
+                        </p>
+                        <p className="text-sm text-slate-600 truncate mt-1">
+                          {role?.designation || "Unknown Role"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
+                      <Calendar className="h-4.5 w-4.5" />
+                      <span className="font-medium">
+                        {interview.scheduledTime 
+                          ? new Date(interview.scheduledTime).toLocaleString() 
+                          : "Not scheduled"}
+                      </span>
+                      {interview.expired && (
+                        <Badge className="ml-auto text-xs bg-rose-100 text-rose-700 border-rose-200 font-medium">
+                          Expired
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Floating Stack */}
+                    <div className="absolute right-5 top-5 bottom-5 flex flex-col justify-between items-end">
+                      <Badge className="text-xs font-semibold bg-indigo-100 text-indigo-700 border-indigo-200 px-4 py-1.5 shadow-sm">
+                        {(interview as any).subStatus?.label || (interview as any).subStatus?.name || 'Assigned'}
+                      </Badge>
+
+                      <Button
+                        size="sm"
+                        className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl text-sm px-5 py-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const candidateName = interview.candidate
+                            ? `${interview.candidate.firstName} ${interview.candidate.lastName}`
+                            : "Unknown Candidate";
+                          const projectName = interview.project?.title || "Unknown Project";
+                          setScheduleDialogInitial({
+                            candidateProjectMapId: interview.id,
+                            candidateName,
+                            projectName,
+                          });
+                          setScheduleDialogOpen(true);
+                        }}
+                      >
+                        Schedule
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upcoming Interviews – Teal Theme */}
+      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden">
+        <CardHeader className="pb-5 bg-gradient-to-r from-teal-50/80 to-transparent">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-gradient-to-br from-teal-100 to-teal-50 rounded-2xl shadow-md border border-teal-200/60">
+                <CheckCircle2 className="h-7 w-7 text-teal-600" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-bold text-slate-900">
+                  Upcoming Interviews
+                </CardTitle>
+                <CardDescription className="text-sm mt-1.5 text-slate-600">
+                  {upcomingInterviews.length} confirmed interview{upcomingInterviews.length !== 1 ? "s" : ""}
+                </CardDescription>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (upcomingInterviews[0]?.id) {
+                  navigate("/interviews/upcoming", { state: { selectedId: upcomingInterviews[0]?.id } });
+                } else {
+                  navigate("/interviews/upcoming");
+                }
+              }}
+              disabled={upcomingInterviews.length === 0}
+              className="group text-sm font-medium text-teal-600 hover:bg-teal-50 hover:text-teal-700"
+            >
+              View All
+              <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-4">
+          {upcomingInterviews.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <Calendar className="h-14 w-14 mx-auto mb-5 opacity-40" />
+              <p className="font-semibold text-lg">No upcoming interviews</p>
+              <p className="text-sm mt-2">Scheduled interviews will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {upcomingInterviews.map((interview) => {
+                const candidate = interview.candidate || interview.candidateProjectMap?.candidate;
+                const role = interview.roleNeeded || interview.candidateProjectMap?.roleNeeded;
+                return (
+                  <div
+                    key={interview.id}
+                    onClick={() => navigate(`/interviews/upcoming`, { state: { selectedId: interview.id } })}
+                    className="group p-5 rounded-2xl border border-slate-200/80 hover:border-teal-300 hover:bg-teal-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-lg font-semibold text-slate-900 truncate">
+                          {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
+                        </p>
+                        <p className="text-sm text-slate-600 truncate mt-1">
+                          {role?.designation || "Unknown Role"}
+                        </p>
+                      </div>
+                      <Badge className="ml-6 text-xs font-semibold bg-teal-100 text-teal-700 border-teal-200 px-4 py-1.5 shadow-sm">
+                        {interview.candidateProjectMap?.subStatus?.label || interview.candidateProjectMap?.subStatus?.name || 'Scheduled'}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
+                      <Calendar className="h-4.5 w-4.5" />
+                      <span className="font-medium">
+                        {interview.scheduledTime 
+                          ? new Date(interview.scheduledTime).toLocaleString() 
+                          : "Not scheduled"}
+                      </span>
+                      {interview.expired && (
+                        <Badge className="ml-auto text-xs bg-rose-100 text-rose-700 border-rose-200 font-medium">
+                          Expired
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+
+    {interviews.length > 0 && (
+      <div className="text-center pt-6">
+        <p className="text-sm font-medium text-slate-500">
+          Showing {interviews.length} of {totalInterviews} total interviews
+        </p>
+      </div>
+    )}
+  </CardContent>
+</Card>
 
         <ScheduleInterviewDialog
           open={scheduleDialogOpen}

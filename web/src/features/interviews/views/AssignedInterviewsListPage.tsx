@@ -1,14 +1,24 @@
 import { useMemo, useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { ClipboardCheck, Search, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X } from "lucide-react";
+import {
+  ClipboardCheck,
+  Search,
+  Loader2,
+  AlertCircle,
+  User,
+  Briefcase,
+  Calendar,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // ← Fixed: Was missing
 import { useGetAssignedInterviewsQuery } from "../api";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
 import { cn } from "@/lib/utils";
@@ -20,9 +30,17 @@ export default function AssignedInterviewsListPage() {
   const [filters, setFilters] = useState({ search: "", status: "all" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [scheduleDialogInitial, setScheduleDialogInitial] = useState<{ candidateProjectMapId?: string; candidateName?: string; projectName?: string }>({});
+  const [scheduleDialogInitial, setScheduleDialogInitial] = useState<{
+    candidateProjectMapId?: string;
+    candidateName?: string;
+    projectName?: string;
+  }>({});
 
-  const { data, isLoading, error } = useGetAssignedInterviewsQuery({ page: 1, limit: 100, search: filters.search || undefined });
+  const { data, isLoading, error } = useGetAssignedInterviewsQuery({
+    page: 1,
+    limit: 100,
+    search: filters.search || undefined,
+  });
   const items = data?.data?.items || [];
   const displayed = items;
 
@@ -39,52 +57,61 @@ export default function AssignedInterviewsListPage() {
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Failed to load assigned interviews. Please try again.</AlertDescription>
+          <AlertDescription>Failed to load assigned interviews.</AlertDescription>
         </Alert>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="h-screen flex flex-col">
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-6 py-4">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
+      {/* Compact Colorful Header */}
+      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+        <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <ClipboardCheck className="h-5 w-5 text-primary" />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                <ClipboardCheck className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Assigned Interviews</h1>
-                <p className="text-sm text-muted-foreground">Interviews assigned to interviewers awaiting scheduling or conduct</p>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Assigned Interviews
+                </h1>
+                <p className="text-xs text-muted-foreground">Interviews awaiting scheduling or conduct</p>
               </div>
             </div>
-            <div>
-              <Button onClick={() => navigate(-1)} variant="ghost">Back</Button>
-            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+              Back
+            </Button>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search candidates, projects, roles..." value={filters.search} onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))} className="pl-10" />
+              <Input
+                placeholder="Search..."
+                value={filters.search}
+                onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
+                className="pl-9 text-sm"
+              />
             </div>
-
             {(filters.search || filters.status !== "all") && (
-              <Button variant="ghost" size="sm" onClick={() => setFilters({ search: "", status: "all" })}>
-                <X className="h-4 w-4 mr-2" />
-                Clear
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFilters({ search: "", status: "all" })}
+              >
+                <X className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -92,139 +119,214 @@ export default function AssignedInterviewsListPage() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-96 border-r bg-muted/20">
+        {/* Compact List Panel */}
+        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60">
           <ScrollArea className="h-full">
             {displayed.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
-                <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm font-medium mb-1">No assigned interviews</p>
-                <p className="text-xs">Assigned interviews will appear here</p>
+                <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-40 text-indigo-400" />
+                <p className="font-medium">No assigned interviews</p>
+                <p className="text-xs mt-1">Assignments will appear here</p>
               </div>
             ) : (
-              <div className="p-2 space-y-1">
+              <div className="p-2 space-y-2">
                 {displayed.map((it) => {
-                  const isSelected = it.id === (selected?.id || displayed[0]?.id);
+                  const candidate = it.candidate;
+                  const role = (it as any).roleNeeded;
+                  const project = it.project;
+                  const isSelected = it.id === selected?.id;
+                  const isScheduled = !!it.scheduledTime;
+
                   return (
-                    <button key={it.id} onClick={() => setSelectedId(it.id)} className={cn("w-full text-left p-3 rounded-lg border transition-all relative", "hover:bg-accent/50", isSelected ? "bg-accent border-primary shadow-sm" : "bg-card border-transparent")}>
-                      <div className="flex items-start justify-between mb-2">
+                    <button
+                      key={it.id}
+                      onClick={() => setSelectedId(it.id)}
+                      className={cn(
+                        "w-full text-left p-3 rounded-lg border transition-all",
+                        isSelected
+                          ? "bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-300 dark:from-indigo-900/30 dark:to-purple-900/30 dark:border-indigo-700"
+                          : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
+                            {candidate
+                              ? `${candidate.firstName?.[0] || ""}${candidate.lastName?.[0] || ""}`.toUpperCase()
+                              : "??"}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm truncate">{it.candidate ? `${it.candidate.firstName} ${it.candidate.lastName}` : "Unknown Candidate"}</span>
+                          <p className="font-medium text-sm truncate">
+                            {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
+                          </p>
+                          <p className="text-xs text-indigo-600 dark:text-indigo-400 truncate">
+                            {role?.designation || "Unknown Role"}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {project?.title || "Unknown Project"}
+                          </p>
+                        </div>
+                        <ChevronRight
+                          className={cn("h-4 w-4 text-muted-foreground", isSelected && "text-indigo-600")}
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <Badge
+                          className={cn(
+                            "text-xs px-2 py-0.5 font-medium",
+                            isScheduled
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                          )}
+                        >
+                          {isScheduled ? "Scheduled" : "Needs Scheduling"}
+                        </Badge>
+                        {it.scheduledTime && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(it.scheduledTime), "MMM d, yyyy")}
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">{(it as any).roleNeeded?.designation || "Unknown Role"}</p>
-                          <p className="text-xs text-muted-foreground truncate">{it.project?.title || "Unknown Project"}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge className="text-xs capitalize bg-orange-50 text-orange-700 border border-orange-100 px-2 py-0.5 rounded-md">{(it as any).subStatus?.label || (it as any).subStatus?.name}</Badge>
-                          <ChevronRight className={cn("h-4 w-4 flex-shrink-0 transition-transform", isSelected && "text-primary")} />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
-                          <Calendar className="h-3 w-3" />
-                          <span className="capitalize">{(it as any).subStatus?.label || (it as any).subStatus?.name || (it.scheduledTime ? 'Scheduled' : 'Unscheduled')}</span>
-                        </div>
-                        {(it as any).recruiter && <Badge className="text-xs">{(it as any).recruiter.name}</Badge>}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>{it.scheduledTime ? format(new Date(it.scheduledTime), "MMM d, yyyy 'at' h:mm a") : "Not scheduled"}</span>
+                        )}
                       </div>
                     </button>
                   );
                 })}
               </div>
-                  )}
+            )}
           </ScrollArea>
         </div>
 
+        {/* Compact Detail Panel */}
         <div className="flex-1 overflow-hidden">
           {selected ? (
             <ScrollArea className="h-full">
-              <div className="p-6 max-w-4xl mx-auto space-y-6">
+              <div className="p-5 max-w-4xl mx-auto space-y-5">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <h2 className="text-2xl font-semibold">Assigned Interview Details</h2>
-                    <p className="text-sm text-muted-foreground">{selected.scheduledTime ? `Scheduled for ${format(new Date(selected.scheduledTime), "MMMM d, yyyy 'at' h:mm a")}` : 'Not scheduled'}</p>
+                  <div>
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-700 bg-clip-text text-transparent">
+                      Interview Details
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selected.scheduledTime
+                        ? format(new Date(selected.scheduledTime), "MMMM d, yyyy • h:mm a")
+                        : "Not scheduled yet"}
+                    </p>
                   </div>
 
-                  {/* Schedule button placeholder (no modal attached here) */}
                   <div className="flex items-center gap-3">
-                    <Badge className="text-sm capitalize bg-orange-50 text-orange-700 border border-orange-100 px-2 py-0.5 rounded-md">{(selected as any).subStatus?.label || (selected as any).subStatus?.name}</Badge>
+                    <Badge
+                      className={cn(
+                        "px-3 py-1 text-sm font-medium shadow-sm",
+                        selected.scheduledTime
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
+                          : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                      )}
+                    >
+                      {selected.scheduledTime ? "Scheduled" : "Pending"}
+                    </Badge>
 
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md"
+                      onClick={() => {
+                        const candidateName = selected.candidate
+                          ? `${selected.candidate.firstName} ${selected.candidate.lastName}`
+                          : "Unknown Candidate";
+                        const projectName = selected.project?.title || "Unknown Project";
+                        setScheduleDialogInitial({
+                          candidateProjectMapId: selected.id,
+                          candidateName,
+                          projectName,
+                        });
+                        setScheduleDialogOpen(true);
+                      }}
+                    >
+                      Schedule Interview
+                    </Button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2"><User className="h-5 w-5 text-primary" />Candidate Information</h3>
-                      <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50/70 to-purple-50/70 dark:from-indigo-900/20 dark:to-purple-900/20">
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                            {selected.candidate
+                              ? `${selected.candidate.firstName?.[0] || ""}${selected.candidate.lastName?.[0] || ""}`.toUpperCase()
+                              : "??"}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Name</p>
-                          <p className="font-medium">{selected.candidate ? `${selected.candidate.firstName} ${selected.candidate.lastName}` : 'Unknown'}</p>
+                          <h3 className="font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-2 text-sm">
+                            <User className="h-4 w-4" />
+                            Candidate
+                          </h3>
+                          <p className="font-medium text-sm mt-1">
+                            {selected.candidate
+                              ? `${selected.candidate.firstName} ${selected.candidate.lastName}`
+                              : "Unknown"}
+                          </p>
+                          {selected.candidate?.email && (
+                            <p className="text-xs text-muted-foreground mt-1 break-all">
+                              {selected.candidate.email}
+                            </p>
+                          )}
                         </div>
-                        {selected.candidate?.email && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Email</p>
-                            <p className="font-medium text-xs break-all">{selected.candidate.email}</p>
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary" />Project & Role</h3>
-                      <div className="space-y-3 text-sm">
+                  <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50/70 to-pink-50/70 dark:from-purple-900/20 dark:to-pink-900/20">
+                    <CardContent className="p-5">
+                      <h3 className="font-semibold text-purple-700 dark:text-purple-400 flex items-center gap-2 text-sm mb-3">
+                        <Briefcase className="h-4 w-4" />
+                        Project & Role
+                      </h3>
+                      <div className="space-y-2 text-sm">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Project</p>
-                          <p className="font-medium cursor-pointer text-primary hover:underline" onClick={() => navigate(`/projects/${selected.project?.id}`)}>{selected.project?.title || 'Unknown'}</p>
+                          <p className="text-muted-foreground text-xs">Project</p>
+                          <p
+                            className="font-medium text-purple-800 dark:text-purple-300 hover:underline cursor-pointer"
+                            onClick={() => selected.project?.id && navigate(`/projects/${selected.project.id}`)}
+                          >
+                            {selected.project?.title || "Unknown"}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Role</p>
-                          <p className="font-medium">{(selected as any).roleNeeded?.designation || 'Unknown'}</p>
+                          <p className="text-muted-foreground text-xs">Role</p>
+                          <p className="font-medium">
+                            {(selected as any).roleNeeded?.designation || "Unknown"}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
-                <div className="pt-4 text-right">
-                  <Button
-                    size="sm"
-                    className="px-2 py-1 rounded-md bg-orange-500 text-white hover:bg-orange-600 text-sm"
-                    onClick={() => {
-                      // Use the assigned interview's id as candidateProjectMapId
-                      const candidateName = selected.candidate
-                        ? `${selected.candidate.firstName} ${selected.candidate.lastName}`
-                        : "Unknown Candidate";
-                      const projectName = selected.project?.title || "Unknown Project";
-                      setScheduleDialogInitial({
-                        candidateProjectMapId: selected.id,
-                        candidateName,
-                        projectName,
-                      });
-                      setScheduleDialogOpen(true);
-                    }}
-                  >
-                    Schedule Interview
-                  </Button>
-                </div>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold mb-4">Assignment Details</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50/70 to-teal-50/70 dark:from-emerald-900/20 dark:to-teal-900/20">
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-emerald-700 dark:text-emerald-400 text-sm mb-3">
+                      Assignment Details
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Status</p>
-                        <p className="font-medium capitalize">{(selected as any).subStatus?.label || (selected as any).subStatus?.name || (selected.scheduledTime ? 'Scheduled' : 'Unscheduled')}</p>
+                        <p className="font-medium capitalize text-emerald-800 dark:text-emerald-300">
+                          {(selected as any).subStatus?.label ||
+                            (selected as any).subStatus?.name ||
+                            (selected.scheduledTime ? "Scheduled" : "Pending")}
+                        </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Scheduled At</p>
-                        <p className="font-medium">{selected.scheduledTime ? format(new Date(selected.scheduledTime), "MMM d, yyyy h:mm a") : 'Not scheduled'}</p>
+                        <p className="text-xs text-muted-foreground mb-1">Scheduled Time</p>
+                        <p className="font-medium text-emerald-800 dark:text-emerald-300">
+                          {selected.scheduledTime
+                            ? format(new Date(selected.scheduledTime), "MMM d, yyyy • h:mm a")
+                            : "Not scheduled"}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -234,22 +336,22 @@ export default function AssignedInterviewsListPage() {
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground">
               <div className="text-center">
-                <ClipboardCheck className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No interview selected</p>
-                <p className="text-sm">Select an interview from the list to view details</p>
+                <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-30 text-indigo-500" />
+                <p className="font-medium">No interview selected</p>
+                <p className="text-sm">Select from the list to view details</p>
               </div>
             </div>
           )}
         </div>
       </div>
-      </div>
+
       <ScheduleInterviewDialog
         open={scheduleDialogOpen}
-        onOpenChange={(o) => setScheduleDialogOpen(o)}
+        onOpenChange={setScheduleDialogOpen}
         initialCandidateProjectMapId={scheduleDialogInitial.candidateProjectMapId}
         initialCandidateName={scheduleDialogInitial.candidateName}
         initialProjectName={scheduleDialogInitial.projectName}
       />
-    </>
+    </div>
   );
 }

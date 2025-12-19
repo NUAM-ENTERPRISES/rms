@@ -19,6 +19,8 @@ import {
   UserPlus,
   Send,
   GraduationCap,
+  CalendarCheck,
+  CheckCircle2,
 } from "lucide-react";
 import {
   Card,
@@ -33,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetBasicTrainingAssignmentsQuery } from "../data";
 import { useCreateTrainingAssignmentMutation } from "../data";
@@ -443,520 +446,508 @@ export default function BasicTrainingPage() {
         {/* Left Panel - Interview List */}
         <Card className="w-96 border-r border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-none min-w-0 min-h-0 h-full flex flex-col">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">
-                  Training Sessions
-                </CardTitle>
-                <CardDescription>
-                  {displayedInterviews.length} session
-                  {displayedInterviews.length !== 1 ? "s" : ""} found
-                </CardDescription>
-              </div>
-              {/* Compact Stats */}
-              <div className="flex items-center gap-2">
-                <div className="text-center">
-                  <div className="text-base font-bold text-orange-600">
-                    {stats.needsTraining}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Training</div>
-                </div>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="text-center">
-                  <div className="text-base font-bold text-green-600">
-                    {stats.approved}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Approved</div>
-                </div>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="text-center">
-                  <div className="text-base font-bold">{stats.completed}</div>
-                  <div className="text-xs text-muted-foreground">Done</div>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              {displayedInterviews.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-sm font-medium mb-1">
-                    No training sessions found
-                  </p>
-                  <p className="text-xs">
-                    {filters.search || filters.mode !== "all" || filters.status !== "all"
-                      ? "Try adjusting your filters"
-                      : "Training sessions will appear here once scheduled"}
-                  </p>
-                </div>
-              ) : (
-                <div className="p-2 space-y-1">
-                  {displayedInterviews.map((interview) => {
-                    const candidate = interview.candidateProjectMap?.candidate;
-                    const role = interview.candidateProjectMap?.roleNeeded;
-                    const sessionType = interview.sessions?.[0]?.sessionType;
-                    const ModeIcon = getModeIcon(sessionType || "");
-                    const isSelected =
-                      interview.id ===
-                      (selectedInterview?.id || displayedInterviews[0]?.id);
-                    const isCompleted = !!interview.completedAt || !!interview.sessions?.some((s) => s.completedAt);
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-1.5">
+        <CalendarCheck className="h-4 w-4 text-slate-600 flex-shrink-0" />
+        <CardTitle className="text-base sm:text-lg font-semibold text-slate-800">
+          Training Sessions
+        </CardTitle>
+      </div>
+      <CardDescription className="text-xs sm:text-sm pl-6">
+        {displayedInterviews.length} session{displayedInterviews.length !== 1 ? "s" : ""} found
+      </CardDescription>
+    </div>
 
-                    return (
-                      <button
-                        key={interview.id}
-                        onClick={() => setSelectedInterviewId(interview.id)}
-                        className={cn(
-                          "w-full text-left p-2.5 rounded-lg border transition-all",
-                          "hover:bg-accent/50",
-                          isSelected
-                            ? "bg-accent border-primary shadow-sm"
-                            : "bg-card border-transparent"
-                        )}
-                      >
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm truncate">
-                                {candidate
-                                  ? `${candidate.firstName} ${candidate.lastName}`
-                                  : "Unknown Candidate"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {role?.designation || "Unknown Role"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {(() => {
-
-                              // If training already completed or basic training assigned, allow sending for interview
-                              if (interview.status === "completed" || interview.status === "basic_training_assigned") {
-                                return (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 px-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSendForInterviewConfirm({
-                                        isOpen: true,
-                                        candidateId: interview.candidateProjectMap?.candidate?.id,
-                                        candidateName:
-                                          interview.candidateProjectMap?.candidate?.firstName +
-                                          " " +
-                                          interview.candidateProjectMap?.candidate?.lastName,
-                                        projectId: interview.candidateProjectMap?.project?.id,
-                                        mockInterviewId: undefined,
-                                        notes: "",
-                                        type: "interview",
-                                      });
-                                    }}
-                                    title="Send for Interview"
-                                  >
-                                    <Send className="h-3.5 w-3.5" />
-                                  </Button>
-                                );
-                              }
-
-                              // Fallback: allow assigning to trainer when assignment is active
-                              if (interview.status === "assigned" || interview.status === "in_progress") {
-                                return (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAssignToTrainer(interview);
-                                    }}
-                                    title="Assign to Trainer"
-                                  >
-                                    <UserPlus className="h-3.5 w-3.5" />
-                                  </Button>
-                                );
-                              }
-
-                              return null;
-                            })()}
-                            <ChevronRight
-                              className={cn(
-                                "h-4 w-4 flex-shrink-0 transition-transform",
-                                isSelected && "text-primary"
-                              )}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <div
-                            className={cn(
-                              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs",
-                              isCompleted
-                                ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300"
-                                : "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                            )}
-                          >
-                            <ModeIcon className="h-3 w-3" />
-                            <span className="capitalize">
-                              {sessionType
-                                ? sessionType.replace("_", " ")
-                                : (interview.trainingType || "basic")}
-                            </span>
-                          </div>
-                          <div>
-                            <Badge className={getStatusBadgeClass(interview.status)}>{getStatusLabel(interview.status)}</Badge>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>
-                            {interview.sessions && interview.sessions.length && interview.sessions[0].sessionDate
-                              ? format(new Date(interview.sessions[0].sessionDate), "MMM d, yyyy")
-                              : interview.assignedAt
-                                ? format(new Date(interview.assignedAt), "MMM d, yyyy")
-                                : "Not scheduled"}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Right Panel - Interview Details */}
-        <div className="flex-1 overflow-hidden bg-muted/20 min-w-0 min-h-0">
-          {selectedInterview ? (
-            <ScrollArea className="h-full">
-              {/*
-                Reduced max width to avoid pushing header actions off-screen on
-                narrower viewports and added `min-w-0` / truncation utility
-                classes to allow the left content to wrap/truncate instead of
-                forcing the Send button out of view.
-              */}
-              <div className="p-4 max-w-2xl mx-auto space-y-4 overflow-x-hidden">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-semibold truncate">
-                        Training Session Details
-                      </h2>
-                      {selectedInterview.status && (
-                        <Badge className={getStatusBadgeClass(selectedInterview.status)}>
-                          {getStatusLabel(selectedInterview.status)}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {selectedInterview.sessions && selectedInterview.sessions.length && selectedInterview.sessions[0].sessionDate
-                        ? `Scheduled for ${format(new Date(selectedInterview.sessions[0].sessionDate), "MMMM d, yyyy 'at' h:mm a")}`
-                        : selectedInterview.assignedAt
-                          ? `Assigned on ${format(new Date(selectedInterview.assignedAt), "MMMM d, yyyy")}`
-                          : "Not scheduled"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {selectedInterview.status === "basic_training_assigned" && (
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          setSendForInterviewConfirm({
-                            isOpen: true,
-                            candidateId: selectedInterview.candidateProjectMap?.candidate?.id,
-                            candidateName:
-                              selectedInterview.candidateProjectMap?.candidate?.firstName +
-                              " " +
-                              selectedInterview.candidateProjectMap?.candidate?.lastName,
-                            projectId: selectedInterview.candidateProjectMap?.project?.id,
-                            mockInterviewId: undefined,
-                            notes: "",
-                            type: "interview",
-                          })
-                        }
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Send for Interview
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
-                  {/* Candidate Info */}
-                  <Card className="min-w-0 w-full max-w-full">
-                    <CardContent className="p-4 overflow-hidden w-full max-w-full">
-                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4 text-primary" />
-                        Candidate Information
-                      </h3>
-                      <div className="space-y-2.5 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Name
-                          </p>
-                          <p className="font-medium">
-                            {selectedInterview.candidateProjectMap?.candidate
-                              ? `${selectedInterview.candidateProjectMap.candidate.firstName} ${selectedInterview.candidateProjectMap.candidate.lastName}`
-                              : "Unknown Candidate"}
-                          </p>
-                        </div>
-                        {selectedInterview.candidateProjectMap?.candidate
-                          ?.email && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Email
-                              </p>
-                              <p className="font-medium break-all text-xs">
-                                {
-                                  selectedInterview.candidateProjectMap.candidate
-                                    .email
-                                }
-                              </p>
-                            </div>
-                          )}
-                        {(selectedInterview.candidateProjectMap?.candidate as any)
-                          ?.phone && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Phone
-                              </p>
-                              <p className="font-medium">
-                                {(selectedInterview.candidateProjectMap?.candidate as any).phone}
-                              </p>
-                            </div>
-                          )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Project & Role */}
-                  <Card className="min-w-0 w-full max-w-full">
-                    <CardContent className="p-4 overflow-hidden w-full max-w-full">
-                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        Project & Role
-                      </h3>
-                      <div className="space-y-2.5 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Project
-                          </p>
-                          <p className="font-medium break-words">
-                            {selectedInterview.candidateProjectMap?.project
-                              ?.title || "Unknown Project"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Role
-                          </p>
-                          <p className="font-medium break-words">
-                            {selectedInterview.candidateProjectMap?.roleNeeded
-                              ?.designation || "Unknown Role"}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Interview Details */}
-                <Card className="min-w-0 w-full max-w-full">
-                  <CardContent className="p-4 overflow-hidden w-full max-w-full">
-                    <h3 className="font-semibold mb-3 text-sm">
-                      Training Details
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Mode
-                        </p>
-                        <p className="font-medium capitalize">
-                          {selectedInterview.sessions?.[0]?.sessionType
-                            ? selectedInterview.sessions[0].sessionType.replace("_", " ")
-                            : (selectedInterview.trainingType || "basic")}
-                        </p>
-                      </div>
-                      {(selectedInterview.completedAt || selectedInterview.sessions?.some((s) => s.completedAt)) && (
-                        <>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Conducted On
-                            </p>
-                            <p className="font-medium">
-                              {selectedInterview.completedAt
-                                ? format(new Date(selectedInterview.completedAt), "MMM d, yyyy 'at' h:mm a")
-                                : format(new Date(selectedInterview.sessions?.find((s) => s.completedAt)?.completedAt!), "MMM d, yyyy 'at' h:mm a")}
-                            </p>
-                          </div>
-                          {selectedInterview.overallPerformance != null && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Overall Performance
-                              </p>
-                              <p className="font-medium">{selectedInterview.overallPerformance}</p>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {getAssignedTrainerName(selectedInterview) && (
-                        <div className="mt-3">
-                          <p className="text-xs text-muted-foreground mb-1">Trainer</p>
-                          <p className="font-medium">{getAssignedTrainerName(selectedInterview)}</p>
-                        </div>
-                      )}
-
-                      {/* Status */}
-                      {selectedInterview.status && (
-                        <div className="mt-3">
-                          <p className="text-xs text-muted-foreground mb-1">Status</p>
-                          <Badge className={getStatusBadgeClass(selectedInterview.status)}>{getStatusLabel(selectedInterview.status)}</Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    {selectedInterview.notes && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Notes
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {selectedInterview.notes}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* No checklist items for Basic Training (training uses sessions/evaluations) */}
-                  </CardContent>
-                </Card>
-
-                {/* Interview History (bottom) */}
-                {selectedInterview?.candidateProjectMap?.id && (
-                  <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
-                )}
-              </div> 
-            </ScrollArea>
-          ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <ClipboardCheck className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No training session selected</p>
-                <p className="text-sm">
-                  Select a training session from the list to view details
-                </p>
-              </div>
-            </div>
-          )}
+    {/* Ultra-compact stats row - wraps only if absolutely necessary */}
+    <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+      <div className="flex items-center gap-1.5">
+        <AlertCircle className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
+        <div className="text-center">
+          <div className="text-sm font-bold text-orange-600">{stats.needsTraining}</div>
+          <div className="text-xs text-muted-foreground hidden xs:block">Training</div>
         </div>
       </div>
 
-      {/* Assign to Trainer Dialog */}
-      <AssignToTrainerDialog
-        open={assignToTrainerOpen}
-        onOpenChange={setAssignToTrainerOpen}
-        onSubmit={handleSubmitTraining}
-        isLoading={isCreatingTraining}
-        candidateName={
-          selectedInterviewForTraining?.candidateProjectMap?.candidate
-            ? `${selectedInterviewForTraining.candidateProjectMap.candidate.firstName} ${selectedInterviewForTraining.candidateProjectMap.candidate.lastName}`
-            : undefined
-        }
-        mockInterviewId={selectedInterviewForTraining?.id}
-      />
+      <div className="hidden sm:block w-px h-8 bg-border" />
 
-      {/* Send For Interview Confirmation */}
-      <ConfirmationDialog
-        isOpen={sendForInterviewConfirm.isOpen}
-        onClose={() =>
-          setSendForInterviewConfirm((s) => ({ ...s, isOpen: false }))
-        }
-        title={"Send for Interview"}
-        description={
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to send {sendForInterviewConfirm.candidateName} for an interview? Please select the type and optionally add notes.
-            </p>
+      <div className="flex items-center gap-1.5">
+        <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+        <div className="text-center">
+          <div className="text-sm font-bold text-green-600">{stats.approved}</div>
+          <div className="text-xs text-muted-foreground hidden xs:block">Approved</div>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="interview-type"
-                className="text-sm font-medium text-gray-700"
-              >
-                Type
-              </label>
-              <Select
-                value={sendForInterviewConfirm.type}
-                onValueChange={(value) =>
-                  setSendForInterviewConfirm((prev) => ({ ...prev, type: value as any }))
-                }
-              >
-                <SelectTrigger id="interview-type" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mock">Mock Interview</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                </SelectContent>
-              </Select>
+      <div className="hidden sm:block w-px h-8 bg-border" />
 
-              <label
-                htmlFor="interview-notes"
-                className="text-sm font-medium text-gray-700"
-              >
-                Notes (Optional)
-              </label>
-              <Textarea
-                id="interview-notes"
-                placeholder="Add any notes for the interview team..."
-                value={sendForInterviewConfirm.notes}
-                onChange={(e) =>
-                  setSendForInterviewConfirm((s) => ({ ...s, notes: e.target.value }))
-                }
-                rows={3}
-                className="w-full"
-              />
+      <div className="flex items-center gap-1.5">
+        <CalendarCheck className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+        <div className="text-center">
+          <div className="text-sm font-bold text-blue-600">{stats.completed}</div>
+          <div className="text-xs text-muted-foreground hidden xs:block">Done</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</CardHeader>
+         <CardContent className="p-0 flex-1 overflow-hidden">
+  <ScrollArea className="h-full">
+    {displayedInterviews.length === 0 ? (
+      <div className="p-12 text-center">
+        <div className="mx-auto w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+          <ClipboardCheck className="h-9 w-9 text-muted-foreground/70" />
+        </div>
+        <p className="text-lg font-semibold text-foreground mb-1">
+          No training sessions found
+        </p>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+          {filters.search || filters.mode !== "all" || filters.status !== "all"
+            ? "Try adjusting your filters to see more results"
+            : "Training sessions will appear here once scheduled"}
+        </p>
+      </div>
+    ) : (
+      <div className="p-3 space-y-2">
+        {displayedInterviews.map((interview) => {
+          const candidate = interview.candidateProjectMap?.candidate;
+          const role = interview.candidateProjectMap?.roleNeeded;
+          const sessionType = interview.sessions?.[0]?.sessionType;
+          const ModeIcon = getModeIcon(sessionType || "");
+          const isSelected =
+            interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
+          const isCompleted =
+            !!interview.completedAt ||
+            !!interview.sessions?.some((s) => s.completedAt);
+
+          const candidateName = candidate
+            ? `${candidate.firstName} ${candidate.lastName}`
+            : "Unknown Candidate";
+
+          return (
+            <button
+              key={interview.id}
+              onClick={() => setSelectedInterviewId(interview.id)}
+              className={cn(
+                "w-full text-left rounded-xl border bg-card p-4 transition-all duration-200",
+                "hover:shadow-md hover:border-primary/30",
+                isSelected
+                  ? "border-primary bg-primary/5 shadow-sm ring-2 ring-primary/20"
+                  : "border-transparent"
+              )}
+            >
+              {/* Top row: Name, Role, Actions */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground truncate">
+                    {candidateName}
+                  </h3>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {role?.designation || "Unknown Role"}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Action Buttons */}
+                  {interview.status === "completed" || 
+                   interview.status === "basic_training_assigned" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 rounded-full hover:bg-orange-100 hover:text-orange-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSendForInterviewConfirm({
+                          isOpen: true,
+                          candidateId: interview.candidateProjectMap?.candidate?.id,
+                          candidateName,
+                          projectId: interview.candidateProjectMap?.project?.id,
+                          mockInterviewId: undefined,
+                          notes: "",
+                          type: "interview",
+                        });
+                      }}
+                      title="Send for Interview"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  ) : (interview.status === "assigned" || 
+                       interview.status === "in_progress") ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 rounded-full hover:bg-blue-100 hover:text-blue-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAssignToTrainer(interview);
+                      }}
+                      title="Assign to Trainer"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+
+                  <ChevronRight
+                    className={cn(
+                      "h-5 w-5 text-muted-foreground transition-transform",
+                      isSelected && "text-primary translate-x-1"
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Middle row: Session Type + Status */}
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+                    isCompleted
+                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                      : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                  )}
+                >
+                  <ModeIcon className="h-3.5 w-3.5" />
+                  {sessionType
+                    ? sessionType.replace("_", " ")
+                    : interview.trainingType || "basic"}
+                </div>
+
+                <Badge
+                  variant="outline"
+                  className={cn("text-xs font-medium", getStatusBadgeClass(interview.status))}
+                >
+                  {getStatusLabel(interview.status)}
+                </Badge>
+              </div>
+
+              {/* Bottom row: Date */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>
+                  {interview.sessions?.[0]?.sessionDate
+                    ? format(new Date(interview.sessions[0].sessionDate), "MMM d, yyyy")
+                    : interview.assignedAt
+                    ? format(new Date(interview.assignedAt), "MMM d, yyyy")
+                    : "Not scheduled"}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    )}
+  </ScrollArea>
+</CardContent>
+        </Card>
+
+        {/* Right Panel - Interview Details */}
+        <div className="flex-1 overflow-hidden bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-black min-w-0 min-h-0">
+  {selectedInterview ? (
+    <ScrollArea className="h-full">
+      <div className="p-5 max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2 flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Training Session Details
+              </h2>
+              {selectedInterview.status && (
+                <Badge className={cn("px-3 py-1 text-sm font-medium shadow-sm", getStatusBadgeClass(selectedInterview.status))}>
+                  {getStatusLabel(selectedInterview.status)}
+                </Badge>
+              )}
             </div>
+            <p className="text-sm text-muted-foreground">
+              {selectedInterview.sessions?.[0]?.sessionDate
+                ? `Scheduled for ${format(new Date(selectedInterview.sessions[0].sessionDate), "MMMM d, yyyy • h:mm a")}`
+                : selectedInterview.assignedAt
+                  ? `Assigned on ${format(new Date(selectedInterview.assignedAt), "MMMM d, yyyy")}`
+                  : "Not scheduled"}
+            </p>
           </div>
-        }
-        confirmText={isSendingInterview ? "Sending..." : "Send"}
-        cancelText="Cancel"
-        isLoading={isSendingInterview}
-        onConfirm={async () => {
-          if (!sendForInterviewConfirm.projectId || !sendForInterviewConfirm.candidateId) {
-            toast.error("Missing candidate or project information");
-            return;
+
+          <div className="flex-shrink-0">
+            {selectedInterview.status === "basic_training_assigned" && (
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg"
+                onClick={() =>
+                  setSendForInterviewConfirm({
+                    isOpen: true,
+                    candidateId: selectedInterview.candidateProjectMap?.candidate?.id,
+                    candidateName:
+                      `${selectedInterview.candidateProjectMap?.candidate?.firstName || ""} ${selectedInterview.candidateProjectMap?.candidate?.lastName || ""}`.trim(),
+                    projectId: selectedInterview.candidateProjectMap?.project?.id,
+                    mockInterviewId: undefined,
+                    notes: "",
+                    type: "interview",
+                  })
+                }
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Send for Interview
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Candidate + Project & Role */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Candidate Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/70 to-purple-50/70 dark:from-indigo-900/20 dark:to-purple-900/20">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4 mb-5">
+                <Avatar className="h-14 w-14 ring-4 ring-white dark:ring-gray-900 shadow-xl">
+                  <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                    {selectedInterview.candidateProjectMap?.candidate
+                      ? `${selectedInterview.candidateProjectMap.candidate.firstName?.[0] || ""}${selectedInterview.candidateProjectMap.candidate.lastName?.[0] || ""}`.toUpperCase()
+                      : "??"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                    <User className="h-5 w-5" />
+                    Candidate
+                  </h3>
+                  <p className="text-lg font-semibold mt-1 text-gray-900 dark:text-gray-100">
+                    {selectedInterview.candidateProjectMap?.candidate
+                      ? `${selectedInterview.candidateProjectMap.candidate.firstName} ${selectedInterview.candidateProjectMap.candidate.lastName}`
+                      : "Unknown Candidate"}
+                  </p>
+                  {selectedInterview.candidateProjectMap?.candidate?.email && (
+                    <p className="text-sm text-muted-foreground mt-2 break-all">
+                      {selectedInterview.candidateProjectMap.candidate.email}
+                    </p>
+                  )}
+                  {(selectedInterview.candidateProjectMap?.candidate as any)?.phone && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {(selectedInterview.candidateProjectMap?.candidate as any).phone}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Project & Role Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50/70 to-pink-50/70 dark:from-purple-900/20 dark:to-pink-900/20">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 mb-5 text-purple-700 dark:text-purple-400">
+                <Briefcase className="h-5 w-5" />
+                Project & Role
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Project</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {selectedInterview.candidateProjectMap?.project?.title || "Unknown Project"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Role</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {selectedInterview.candidateProjectMap?.roleNeeded?.designation || "Unknown Role"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Training Details Card */}
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-emerald-50/70 to-teal-50/70 dark:from-emerald-900/20 dark:to-teal-900/20">
+          <CardContent className="p-6 space-y-6">
+            <h3 className="text-xl font-bold text-emerald-700 dark:text-emerald-400">
+              Training Details
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+              <div>
+                <p className="text-muted-foreground font-medium mb-1">Training Mode</p>
+                <p className="font-semibold text-lg capitalize text-gray-900 dark:text-gray-100">
+                  {selectedInterview.sessions?.[0]?.sessionType
+                    ? selectedInterview.sessions[0].sessionType.replace("_", " ")
+                    : selectedInterview.trainingType || "Basic"}
+                </p>
+              </div>
+
+              {(selectedInterview.completedAt || selectedInterview.sessions?.some(s => s.completedAt)) && (
+                <>
+                  <div>
+                    <p className="text-muted-foreground font-medium mb-1">Conducted On</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">
+                      {selectedInterview.completedAt
+                        ? format(new Date(selectedInterview.completedAt), "MMM d, yyyy • h:mm a")
+                        : selectedInterview.sessions?.find(s => s.completedAt)?.completedAt
+                          ? format(new Date(selectedInterview.sessions.find(s => s.completedAt)!.completedAt!), "MMM d, yyyy • h:mm a")
+                          : "—"}
+                    </p>
+                  </div>
+
+                  {selectedInterview.overallPerformance != null && (
+                    <div>
+                      <p className="text-muted-foreground font-medium mb-1">Performance</p>
+                      <p className="font-bold text-xl text-emerald-800 dark:text-emerald-300">
+                        {selectedInterview.overallPerformance}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {getAssignedTrainerName(selectedInterview) && (
+                <div>
+                  <p className="text-muted-foreground font-medium mb-1">Trainer</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">
+                    {getAssignedTrainerName(selectedInterview)}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-muted-foreground font-medium mb-1">Status</p>
+                <Badge className={cn("px-4 py-2 text-sm font-bold shadow-md", getStatusBadgeClass(selectedInterview.status))}>
+                  {getStatusLabel(selectedInterview.status)}
+                </Badge>
+              </div>
+            </div>
+
+            {selectedInterview.notes && (
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-muted-foreground font-medium mb-3">Notes</p>
+                <p className="text-base leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                  {selectedInterview.notes}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Interview History */}
+        {selectedInterview?.candidateProjectMap?.id && (
+          <div className="mt-8">
+            <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
+          </div>
+        )}
+      </div>
+    </ScrollArea>
+  ) : (
+    <div className="h-full flex items-center justify-center text-muted-foreground">
+      <div className="text-center space-y-4">
+        <ClipboardCheck className="h-20 w-20 mx-auto opacity-30 text-indigo-500" />
+        <p className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+          No training session selected
+        </p>
+        <p className="text-sm">Select a session from the list to view details</p>
+      </div>
+    </div>
+  )}
+</div>
+
+        {/* Assign to Trainer Dialog */}
+        <AssignToTrainerDialog
+          open={assignToTrainerOpen}
+          onOpenChange={setAssignToTrainerOpen}
+          onSubmit={handleSubmitTraining}
+          isLoading={isCreatingTraining}
+          candidateName={
+            selectedInterviewForTraining?.candidateProjectMap?.candidate
+              ? `${selectedInterviewForTraining.candidateProjectMap.candidate.firstName} ${selectedInterviewForTraining.candidateProjectMap.candidate.lastName}`
+              : undefined
           }
+          mockInterviewId={selectedInterviewForTraining?.id}
+        />
 
-          try {
-            const mappedType = sendForInterviewConfirm.type === "mock" ? "mock_interview_assigned" : "interview_assigned";
-            await sendForInterview({
-              projectId: sendForInterviewConfirm.projectId!,
-              candidateId: sendForInterviewConfirm.candidateId!,
-              type: mappedType as "mock_interview_assigned" | "interview_assigned",
-              recruiterId: currentUser?.id,
-              notes: sendForInterviewConfirm.notes || undefined,
-            }).unwrap();
+        {/* Send For Interview Confirmation */}
+        <ConfirmationDialog
+          isOpen={sendForInterviewConfirm.isOpen}
+          onClose={() =>
+            setSendForInterviewConfirm((s) => ({ ...s, isOpen: false }))
+          }
+          title={"Send for Interview"}
+          description={
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to send {sendForInterviewConfirm.candidateName} for an interview? Please select the type and optionally add notes.
+              </p>
 
-            // Ensure the list is refreshed from server before closing modal so UI updates immediately
-            try {
-              await refetch?.();
-            } catch (e) {
-              // ignore
+              <div className="space-y-2">
+                <label
+                  htmlFor="interview-type"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Type
+                </label>
+                <Select
+                  value={sendForInterviewConfirm.type}
+                  onValueChange={(value) =>
+                    setSendForInterviewConfirm((prev) => ({ ...prev, type: value as any }))
+                  }
+                >
+                  <SelectTrigger id="interview-type" className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mock">Mock Interview</SelectItem>
+                    <SelectItem value="interview">Interview</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <label
+                  htmlFor="interview-notes"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Notes (Optional)
+                </label>
+                <Textarea
+                  id="interview-notes"
+                  placeholder="Add any notes for the interview team..."
+                  value={sendForInterviewConfirm.notes}
+                  onChange={(e) =>
+                    setSendForInterviewConfirm((s) => ({ ...s, notes: e.target.value }))
+                  }
+                  rows={3}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          }
+          confirmText={isSendingInterview ? "Sending..." : "Send"}
+          cancelText="Cancel"
+          isLoading={isSendingInterview}
+          onConfirm={async () => {
+            if (!sendForInterviewConfirm.projectId || !sendForInterviewConfirm.candidateId) {
+              toast.error("Missing candidate or project information");
+              return;
             }
 
-            toast.success("Candidate sent for interview");
-            setSendForInterviewConfirm((s) => ({ ...s, isOpen: false }));
-          } catch (error: any) {
-            toast.error(error?.data?.message || "Failed to send candidate for interview");
-          }
-        }}
-      />
+            try {
+              const mappedType = sendForInterviewConfirm.type === "mock" ? "mock_interview_assigned" : "interview_assigned";
+              await sendForInterview({
+                projectId: sendForInterviewConfirm.projectId!,
+                candidateId: sendForInterviewConfirm.candidateId!,
+                type: mappedType as "mock_interview_assigned" | "interview_assigned",
+                recruiterId: currentUser?.id,
+                notes: sendForInterviewConfirm.notes || undefined,
+              }).unwrap();
+
+              // Ensure the list is refreshed from server before closing modal so UI updates immediately
+              try {
+                await refetch?.();
+              } catch (e) {
+                // ignore
+              }
+
+              toast.success("Candidate sent for interview");
+              setSendForInterviewConfirm((s) => ({ ...s, isOpen: false }));
+            } catch (error: any) {
+              toast.error(error?.data?.message || "Failed to send candidate for interview");
+            }
+          }}
+        />
+      </div>
     </div>
   );
+
 }
