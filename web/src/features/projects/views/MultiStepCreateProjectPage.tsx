@@ -95,7 +95,14 @@ export default function MultiStepCreateProjectPage() {
         setCurrentStep(currentStep + 1);
       }
     } else {
-      toast.error("Please fix the errors before proceeding");
+      // Log errors for debugging
+      console.log("Validation errors:", errors);
+      
+      // Get first error message to show
+      const firstError = Object.values(errors).find(err => err);
+      const errorMessage = firstError?.message || "Please fix the errors before proceeding";
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -177,6 +184,10 @@ export default function MultiStepCreateProjectPage() {
             : undefined,
           institutionRequirements: role.institutionRequirements
             ? role.institutionRequirements
+            : undefined,
+          // salaryRange must be a JSON string as per backend requirement
+          salaryRange: role.salaryRange
+            ? JSON.stringify(role.salaryRange)
             : undefined,
         })),
         documentRequirements: data.documentRequirements || [],

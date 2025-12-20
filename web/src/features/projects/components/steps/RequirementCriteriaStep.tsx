@@ -56,7 +56,7 @@ export const RequirementCriteriaStep: React.FC<
         skills: "",
         languageRequirements: "",
         licenseRequirements: "",
-        salaryRange: "",
+        salaryRange: undefined,
         benefits: "",
         shiftType: undefined,
         physicalDemands: "",
@@ -126,14 +126,21 @@ export const RequirementCriteriaStep: React.FC<
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Job Title */}
-              <JobTitleSelect
-                value={role.designation}
-                onValueChange={(value) => updateRole(index, "designation", value)}
-                label="Job Title"
-                placeholder="e.g., Registered Nurse"
-                required
-                allowEmpty={false}
-              />
+              <div className="space-y-2">
+                <JobTitleSelect
+                  value={role.designation}
+                  onValueChange={(value) => updateRole(index, "designation", value)}
+                  label="Job Title"
+                  placeholder="e.g., Registered Nurse"
+                  required
+                  allowEmpty={false}
+                />
+                {errors.rolesNeeded?.[index]?.designation && (
+                  <span className="text-sm text-red-600">
+                    {errors.rolesNeeded[index].designation?.message}
+                  </span>
+                )}
+              </div>
 
               {/* Positions Needed */}
               <div className="space-y-2">
@@ -149,6 +156,11 @@ export const RequirementCriteriaStep: React.FC<
                   min="1"
                   className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                 />
+                {errors.rolesNeeded?.[index]?.quantity && (
+                  <span className="text-sm text-red-600">
+                    {errors.rolesNeeded[index].quantity?.message}
+                  </span>
+                )}
               </div>
 
               {/* Visa Type */}
@@ -180,6 +192,11 @@ export const RequirementCriteriaStep: React.FC<
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.rolesNeeded?.[index]?.visaType && (
+                  <span className="text-sm text-red-600">
+                    {errors.rolesNeeded[index].visaType?.message}
+                  </span>
+                )}
               </div>
 
               {/* Contract Duration (only for contract visa) */}
@@ -203,6 +220,11 @@ export const RequirementCriteriaStep: React.FC<
                     placeholder="e.g., 2"
                     className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                   />
+                  {errors.rolesNeeded?.[index]?.contractDurationYears && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].contractDurationYears?.message}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -219,6 +241,13 @@ export const RequirementCriteriaStep: React.FC<
           <Plus className="h-4 w-4 mr-2" />
           Add Another Role
         </Button>
+
+        {/* General rolesNeeded Error */}
+        {errors.rolesNeeded && !Array.isArray(errors.rolesNeeded) && (
+          <span className="text-sm text-red-600">
+            {errors.rolesNeeded.message}
+          </span>
+        )}
       </CardContent>
     </Card>
   );

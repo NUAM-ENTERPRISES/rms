@@ -38,7 +38,25 @@ export const projectFormSchema = z.object({
         technicalSkills: z.string().nullable().optional(),
         languageRequirements: z.string().nullable().optional(),
         licenseRequirements: z.string().nullable().optional(),
-        salaryRange: z.string().nullable().optional(),
+        salaryRange: z
+          .object({
+            min: z.string().optional(),
+            max: z.string().optional(),
+            currency: z.string().optional(),
+          })
+          .refine(
+            (data) => {
+              // If any field is filled, all should be filled
+              const hasAnyValue = data.min || data.max || data.currency;
+              if (!hasAnyValue) return true; // All empty is ok
+              return data.min && data.max && data.currency; // All must be filled if any is filled
+            },
+            {
+              message: "Please provide minimum salary, maximum salary, and currency",
+            }
+          )
+          .nullable()
+          .optional(),
         benefits: z.string().nullable().optional(),
         // Commented out for now as per requirements
         // backgroundCheckRequired: z.boolean(),

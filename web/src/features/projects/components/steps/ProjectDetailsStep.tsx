@@ -158,6 +158,9 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 </Select>
               )}
             />
+            {errors.priority && (
+              <span className="text-sm text-red-600">{errors.priority.message}</span>
+            )}
           </div>
 
           {/* Project Type */}
@@ -261,6 +264,9 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               />
             )}
           />
+          {errors.description && (
+            <span className="text-sm text-red-600">{errors.description.message}</span>
+          )}
         </div>
 
         {/* New Project-Specific Fields */}
@@ -298,6 +304,9 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 </Select>
               )}
             />
+            {errors.resumeEditable && (
+              <span className="text-sm text-red-600">{errors.resumeEditable.message}</span>
+            )}
           </div>
 
           {/* Grooming Required */}
@@ -336,6 +345,9 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 </Select>
               )}
             />
+            {errors.groomingRequired && (
+              <span className="text-sm text-red-600">{errors.groomingRequired.message}</span>
+            )}
           </div>
 
           {/* Contact Information Visibility */}
@@ -371,6 +383,9 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 </Select>
               )}
             />
+            {errors.hideContactInfo && (
+              <span className="text-sm text-red-600">{errors.hideContactInfo.message}</span>
+            )}
           </div>
         </div>
 
@@ -400,6 +415,9 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               <p className="text-xs text-slate-600 mt-1">
                 Enable this if candidates must complete a mandatory screening process before being considered for this project
               </p>
+              {errors.requiredScreening && (
+                <span className="text-sm text-red-600 mt-1 block">{errors.requiredScreening.message}</span>
+              )}
             </div>
           </div>
         </div>

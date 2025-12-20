@@ -138,6 +138,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     min="0"
                     className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                   />
+                  {errors.rolesNeeded?.[index]?.minExperience && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].minExperience?.message}
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -158,6 +163,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     min="0"
                     className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                   />
+                  {errors.rolesNeeded?.[index]?.maxExperience && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].maxExperience?.message}
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -186,6 +196,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                       <SelectItem value="flexible">Flexible</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.rolesNeeded?.[index]?.shiftType && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].shiftType?.message}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -202,6 +217,96 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     updateRole(index, "educationRequirementsList", requirements)
                   }
                 />
+              </div>
+
+              {/* Salary Range */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <Award className="h-4 w-4 text-emerald-600" />
+                  Salary Range (Optional)
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Input
+                      type="text"
+                      value={
+                        role.salaryRange && typeof role.salaryRange === 'object' && 'min' in role.salaryRange
+                          ? (role.salaryRange as any).min
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const currentRange = (role.salaryRange && typeof role.salaryRange === 'object') 
+                          ? role.salaryRange as any 
+                          : { min: "", max: "", currency: "USD" };
+                        updateRole(index, "salaryRange", {
+                          ...currentRange,
+                          min: e.target.value,
+                        });
+                      }}
+                      placeholder="Min"
+                      className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="text"
+                      value={
+                        role.salaryRange && typeof role.salaryRange === 'object' && 'max' in role.salaryRange
+                          ? (role.salaryRange as any).max
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const currentRange = (role.salaryRange && typeof role.salaryRange === 'object') 
+                          ? role.salaryRange as any 
+                          : { min: "", max: "", currency: "USD" };
+                        updateRole(index, "salaryRange", {
+                          ...currentRange,
+                          max: e.target.value,
+                        });
+                      }}
+                      placeholder="Max"
+                      className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <div>
+                    <Select
+                      value={
+                        role.salaryRange && typeof role.salaryRange === 'object' && 'currency' in role.salaryRange
+                          ? (role.salaryRange as any).currency
+                          : "USD"
+                      }
+                      onValueChange={(value) => {
+                        const currentRange = (role.salaryRange && typeof role.salaryRange === 'object') 
+                          ? role.salaryRange as any 
+                          : { min: 0, max: 0, currency: "USD" };
+                        updateRole(index, "salaryRange", {
+                          ...currentRange,
+                          currency: value,
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="SAR">SAR</SelectItem>
+                        <SelectItem value="AED">AED</SelectItem>
+                        <SelectItem value="INR">INR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">Enter minimum and maximum salary with currency</p>
+                {errors.rolesNeeded?.[index]?.salaryRange && (
+                  <span className="text-sm text-red-600">
+                    {typeof errors.rolesNeeded[index].salaryRange === 'object' && errors.rolesNeeded[index].salaryRange?.message
+                      ? errors.rolesNeeded[index].salaryRange.message
+                      : 'Invalid salary range'}
+                  </span>
+                )}
               </div>
 
               {/* Required Skills and Certifications */}
@@ -282,6 +387,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     placeholder="e.g., RN, BLS, ACLS"
                     className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                   />
+                  {errors.rolesNeeded?.[index]?.requiredCertifications && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].requiredCertifications?.message}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -463,6 +573,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                       className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                     />
                   </div>
+                  {(errors.rolesNeeded?.[index]?.minHeight || errors.rolesNeeded?.[index]?.maxHeight) && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].minHeight?.message || errors.rolesNeeded[index].maxHeight?.message}
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -498,6 +613,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                       className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                     />
                   </div>
+                  {(errors.rolesNeeded?.[index]?.minWeight || errors.rolesNeeded?.[index]?.maxWeight) && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].minWeight?.message || errors.rolesNeeded[index].maxWeight?.message}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -514,6 +634,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                   rows={2}
                   className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                 />
+                {errors.rolesNeeded?.[index]?.notes && (
+                  <span className="text-sm text-red-600">
+                    {errors.rolesNeeded[index].notes?.message}
+                  </span>
+                )}
               </div>
             </div>
           </div>
