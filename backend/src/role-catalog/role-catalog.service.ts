@@ -11,6 +11,7 @@ export class RoleCatalogService {
       q,
       category,
       isClinical,
+      roleDepartmentId,
       isActive,
       page,
       limit,
@@ -29,11 +30,17 @@ export class RoleCatalogService {
     }
 
     if (category) {
+      // legacy filter - kept for backwards compatibility
       where.category = category;
     }
 
     if (isClinical !== undefined) {
+      // legacy filter - no longer used in new schema but allowed
       where.isClinical = isClinical;
+    }
+
+    if (roleDepartmentId) {
+      where.roleDepartmentId = roleDepartmentId;
     }
 
     if (isActive !== undefined) {
@@ -57,11 +64,10 @@ export class RoleCatalogService {
         select: {
           id: true,
           name: true,
-          slug: true,
-          category: true,
-          subCategory: true,
-          isClinical: true,
+          label: true,
+          shortName: true,
           description: true,
+          roleDepartmentId: true,
           isActive: true,
           createdAt: true,
           updatedAt: true,
@@ -87,11 +93,10 @@ export class RoleCatalogService {
       select: {
         id: true,
         name: true,
-        slug: true,
-        category: true,
-        subCategory: true,
-        isClinical: true,
+        label: true,
+        shortName: true,
         description: true,
+        roleDepartmentId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

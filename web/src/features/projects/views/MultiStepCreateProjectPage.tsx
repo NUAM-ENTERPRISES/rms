@@ -146,12 +146,14 @@ export default function MultiStepCreateProjectPage() {
           data.deadline instanceof Date
             ? data.deadline.toISOString()
             : data.deadline,
-        rolesNeeded: data.rolesNeeded.map((role: any) => ({
-          ...role,
-          // Convert arrays to JSON strings for backend
-          requiredSkills: JSON.stringify(role.requiredSkills || []),
-          candidateStates: JSON.stringify(role.candidateStates || []),
-          candidateReligions: JSON.stringify(role.candidateReligions || []),
+        rolesNeeded: data.rolesNeeded.map((role: any) => {
+          const { departmentId, ...roleWithoutDepartmentId } = role;
+          return {
+            ...roleWithoutDepartmentId,
+            // Convert arrays to JSON strings for backend
+            requiredSkills: JSON.stringify(role.requiredSkills || []),
+            candidateStates: JSON.stringify(role.candidateStates || []),
+            candidateReligions: JSON.stringify(role.candidateReligions || []),
           // Convert string arrays to JSON strings if needed
           specificExperience: role.specificExperience
             ? JSON.stringify(
@@ -189,7 +191,8 @@ export default function MultiStepCreateProjectPage() {
           salaryRange: role.salaryRange
             ? JSON.stringify(role.salaryRange)
             : undefined,
-        })),
+          };
+        }),
         documentRequirements: data.documentRequirements || [],
       };
 

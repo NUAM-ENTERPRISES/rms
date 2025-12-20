@@ -5,6 +5,7 @@ import {
   Team,
   Project,
   WorkExperience,
+  RoleCatalog,
   CandidateQualification,
   Qualification,
 } from '@prisma/client';
@@ -28,7 +29,7 @@ export interface CandidateWithRelations extends Candidate {
       email: string;
     } | null;
   })[];
-  workExperiences: WorkExperience[];
+  workExperiences: (WorkExperience & { roleCatalog?: RoleCatalog | null })[];
   qualifications: (CandidateQualification & {
     qualification: Qualification;
   })[];

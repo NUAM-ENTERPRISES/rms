@@ -100,6 +100,8 @@ export default function MultiStepEditProjectPage() {
         requiredScreening: (project as any).requiredScreening ?? false,
             rolesNeeded:
           project.rolesNeeded?.map((role: any) => ({
+            roleCatalogId: role.roleCatalogId || "",
+            departmentId: role.departmentId,
             designation: role.designation,
             // Ensure quantity is a number (fallback to 1 if null/undefined)
             quantity: typeof role.quantity === "number" ? role.quantity : 1,
@@ -292,14 +294,16 @@ export default function MultiStepEditProjectPage() {
           data.deadline instanceof Date
             ? data.deadline.toISOString()
             : data.deadline,
-        rolesNeeded: data.rolesNeeded.map((role: any) => ({
-          ...role,
-          // Ensure contractDurationYears is properly included
-          contractDurationYears: role.contractDurationYears || undefined,
-          // Convert arrays to JSON strings for backend
-          requiredSkills: JSON.stringify(role.requiredSkills || []),
-          candidateStates: JSON.stringify(role.candidateStates || []),
-          candidateReligions: JSON.stringify(role.candidateReligions || []),
+        rolesNeeded: data.rolesNeeded.map((role: any) => {
+          const { departmentId, ...roleWithoutDepartmentId } = role;
+          return {
+            ...roleWithoutDepartmentId,
+            // Ensure contractDurationYears is properly included
+            contractDurationYears: role.contractDurationYears || undefined,
+            // Convert arrays to JSON strings for backend
+            requiredSkills: JSON.stringify(role.requiredSkills || []),
+            candidateStates: JSON.stringify(role.candidateStates || []),
+            candidateReligions: JSON.stringify(role.candidateReligions || []),
           // Convert string arrays to JSON strings if needed
           specificExperience: role.specificExperience
             ? JSON.stringify(
@@ -333,7 +337,8 @@ export default function MultiStepEditProjectPage() {
           institutionRequirements: role.institutionRequirements
             ? role.institutionRequirements
             : undefined,
-        })),
+          };
+        }),
         documentRequirements: data.documentRequirements || [],
       };
 

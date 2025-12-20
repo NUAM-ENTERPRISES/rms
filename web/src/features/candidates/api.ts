@@ -147,6 +147,7 @@ export interface WorkExperience {
   id: string;
   candidateId: string;
   companyName: string;
+  roleCatalogId: string;
   jobTitle: string;
   startDate: string;
   endDate?: string;
@@ -163,6 +164,7 @@ export interface WorkExperience {
 export interface CreateWorkExperienceRequest {
   candidateId: string;
   companyName: string;
+  roleCatalogId: string;
   jobTitle: string;
   startDate: string;
   endDate?: string;
@@ -282,6 +284,7 @@ export interface CreateCandidateRequest {
   }>;
   workExperiences?: Array<{
     companyName: string;
+    roleCatalogId: string;
     jobTitle: string;
     startDate: string;
     endDate?: string;

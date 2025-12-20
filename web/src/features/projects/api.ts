@@ -577,6 +577,29 @@ export const projectsApi = baseApi.injectEndpoints({
         params: params || {},
       }),
     }),
+
+    // Get role departments (includes roles when includeRoles=true)
+    getRoleDepartments: builder.query<
+      ApiResponse<{
+        departments: Array<{
+          id: string;
+          name: string;
+          label: string;
+          shortName?: string;
+          description?: string;
+          isActive?: boolean;
+          roles?: Array<{ id: string; name: string; label?: string; shortName?: string; description?: string; isActive?: boolean }>
+        }>;
+        pagination?: any;
+      }>,
+      { id?: string; search?: string; includeRoles?: boolean; page?: number; limit?: number } | void
+    >({
+      query: (params) => ({
+        url: "/role-departments",
+        method: "GET",
+        params: params || {},
+      }),
+    }),
   }),
 });
 
@@ -598,4 +621,5 @@ export const {
   useGetNominatedCandidatesQuery,
   useGetCandidateProjectStatusesQuery,
   useGetProjectRoleCatalogQuery,
+  useGetRoleDepartmentsQuery,
 } = projectsApi;

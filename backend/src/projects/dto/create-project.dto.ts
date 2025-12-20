@@ -251,6 +251,17 @@ export class CreateRoleNeededDto {
   requiredSkills?: string;
 
   @ApiPropertyOptional({
+    description: 'Optional RoleCatalog ID to link this role to a normalized role',
+    example: 'cmje8as41007gq4eo8btha21t',
+  })
+  @ApiProperty({
+    description: 'RoleCatalog ID to link this role to a normalized role',
+    example: 'cmje8as41007gq4eo8btha21t',
+  })
+  @IsString()
+  roleCatalogId: string;
+
+  @ApiPropertyOptional({
     description: 'Candidate states as JSON array',
     example: '["state1", "state2"]',
   })

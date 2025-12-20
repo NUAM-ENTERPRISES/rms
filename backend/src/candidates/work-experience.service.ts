@@ -51,9 +51,20 @@ export class WorkExperienceService {
       });
     }
 
+    // Validate role catalog exists
+    const roleCatalog = await this.prisma.roleCatalog.findUnique({
+      where: { id: createWorkExperienceDto.roleCatalogId },
+    });
+
+    if (!roleCatalog) {
+      throw new NotFoundException(
+        `RoleCatalog with ID ${createWorkExperienceDto.roleCatalogId} not found`,
+      );
+    }
     return this.prisma.workExperience.create({
       data: {
         candidateId: createWorkExperienceDto.candidateId,
+        roleCatalogId: createWorkExperienceDto.roleCatalogId,
         companyName: createWorkExperienceDto.companyName,
         jobTitle: createWorkExperienceDto.jobTitle,
         startDate: new Date(createWorkExperienceDto.startDate),
@@ -77,6 +88,14 @@ export class WorkExperienceService {
             lastName: true,
           },
         },
+        roleCatalog: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            shortName: true,
+          },
+        },
       },
     });
   }
@@ -92,6 +111,14 @@ export class WorkExperienceService {
             id: true,
             firstName: true,
             lastName: true,
+          },
+        },
+        roleCatalog: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            shortName: true,
           },
         },
       },
@@ -110,6 +137,14 @@ export class WorkExperienceService {
             id: true,
             firstName: true,
             lastName: true,
+          },
+        },
+        roleCatalog: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            shortName: true,
           },
         },
       },
@@ -162,9 +197,23 @@ export class WorkExperienceService {
       });
     }
 
+    // If roleCatalogId is provided, validate it exists
+    if (updateWorkExperienceDto.roleCatalogId) {
+      const roleCatalog = await this.prisma.roleCatalog.findUnique({
+        where: { id: updateWorkExperienceDto.roleCatalogId },
+      });
+
+      if (!roleCatalog) {
+        throw new NotFoundException(
+          `RoleCatalog with ID ${updateWorkExperienceDto.roleCatalogId} not found`,
+        );
+      }
+    }
+
     return this.prisma.workExperience.update({
       where: { id },
       data: {
+        roleCatalogId: updateWorkExperienceDto.roleCatalogId,
         companyName: updateWorkExperienceDto.companyName,
         jobTitle: updateWorkExperienceDto.jobTitle,
         startDate: updateWorkExperienceDto.startDate
@@ -190,6 +239,14 @@ export class WorkExperienceService {
             lastName: true,
           },
         },
+        roleCatalog: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            shortName: true,
+          },
+        },
       },
     });
   }
@@ -213,6 +270,16 @@ export class WorkExperienceService {
       where: { candidateId },
       orderBy: {
         startDate: 'desc',
+      },
+      include: {
+        roleCatalog: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            shortName: true,
+          },
+        },
       },
     });
   }

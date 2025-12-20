@@ -6,8 +6,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { seedSystemConfig } from './seeds/system-config.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
-import { seedProjectRoles } from './seeds/project-roles.seed';
 import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
+import { seedRoleCatalog } from './seeds/role-catalog.seed';
 
 const prisma = new PrismaClient();
 
@@ -322,54 +322,7 @@ async function seedCountries() {
   }
 }
 
-// Healthcare roles catalog seeding functions
-async function seedRoleCatalog() {
-  console.log('🏥 Seeding healthcare roles catalog...');
-
-  try {
-    const rolesPath = path.join(__dirname, 'seeds', 'role-catalog.json');
-    const rolesData = JSON.parse(fs.readFileSync(rolesPath, 'utf8'));
-
-    let createdCount = 0;
-    let updatedCount = 0;
-
-    for (const role of rolesData) {
-      const result = await prisma.roleCatalog.upsert({
-        where: { slug: role.slug },
-        update: {
-          name: role.name,
-          category: role.category,
-          subCategory: role.subCategory,
-          isClinical: role.isClinical,
-          description: role.description,
-          isActive: true,
-        },
-        create: {
-          name: role.name,
-          slug: role.slug,
-          category: role.category,
-          subCategory: role.subCategory,
-          isClinical: role.isClinical,
-          description: role.description,
-          isActive: true,
-        },
-      });
-
-      if (result.createdAt === result.updatedAt) {
-        createdCount++;
-      } else {
-        updatedCount++;
-      }
-    }
-
-    console.log(
-      `✅ Role catalog seeded: ${createdCount} created, ${updatedCount} updated`,
-    );
-  } catch (error) {
-    console.error('❌ Error seeding role catalog:', error);
-    throw error;
-  }
-}
+// Healthcare roles catalog is implemented in prisma/seeds/role-catalog.seed.ts
 
 async function seedQualifications() {
   console.log('🎓 Seeding qualifications catalog...');
@@ -478,66 +431,8 @@ async function seedQualificationAliases() {
 }
 
 async function seedRoleRecommendedQualifications() {
-  console.log('🎯 Seeding role recommended qualifications...');
-
-  try {
-    const recommendationsPath = path.join(
-      __dirname,
-      'seeds',
-      'role-recommended-qualifications.json',
-    );
-    const recommendationsData = JSON.parse(
-      fs.readFileSync(recommendationsPath, 'utf8'),
-    );
-
-    let createdCount = 0;
-
-    for (const recommendation of recommendationsData) {
-      // Find role by slug
-      const role = await prisma.roleCatalog.findFirst({
-        where: { slug: recommendation.roleSlug },
-      });
-
-      // Find qualification by shortName
-      const qualification = await prisma.qualification.findFirst({
-        where: { shortName: recommendation.qualificationShortName },
-      });
-
-      if (role && qualification) {
-        try {
-          await prisma.roleRecommendedQualification.create({
-            data: {
-              roleId: role.id,
-              qualificationId: qualification.id,
-              weight: recommendation.weight,
-              isPreferred: recommendation.isPreferred,
-              notes: recommendation.notes,
-            },
-          });
-          createdCount++;
-        } catch (error) {
-          // Skip if recommendation already exists (unique constraint)
-          if (!error.message.includes('Unique constraint')) {
-            console.warn(
-              `Warning: Could not create recommendation:`,
-              error.message,
-            );
-          }
-        }
-      } else {
-        console.warn(
-          `Warning: Role or qualification not found for: ${recommendation.roleSlug} -> ${recommendation.qualificationShortName}`,
-        );
-      }
-    }
-
-    console.log(
-      `✅ Role recommended qualifications seeded: ${createdCount} created`,
-    );
-  } catch (error) {
-    console.error('❌ Error seeding role recommended qualifications:', error);
-    throw error;
-  }
+  // Role recommended qualifications seeding disabled (depends on role slugs)
+  console.log('⚠️ Role recommended qualifications seeding is currently disabled');
 }
 
 async function seedReligions() {
@@ -838,11 +733,12 @@ async function seedScreeningTemplates() {
   console.log('📋 Seeding screening checklist templates...');
   try {
     // Get sample roles to create templates for
+    // role catalog no longer exposes `slug` in the schema; match by `name`
     const registeredNurse = await prisma.roleCatalog.findFirst({
-      where: { slug: 'registered-nurse' },
+      where: { name: { contains: 'Registered Nurse' } },
     });
     const doctor = await prisma.roleCatalog.findFirst({
-      where: { slug: { contains: 'doctor' } },
+      where: { name: { contains: 'Doctor' } },
     });
 
     if (!registeredNurse && !doctor) {
@@ -1041,14 +937,13 @@ async function main() {
   // Seed candidate project statuses
   await seedCandidateProjectStatuses();
 
-  // Seed project roles
-  await seedProjectRoles();
-
+  // Project roles seeding removed
   // Seed healthcare roles catalog
   await seedRoleCatalog();
   await seedQualifications();
   await seedQualificationAliases();
-  await seedRoleRecommendedQualifications();
+  // seedRoleRecommendedQualifications depends on role slugs, disabled for now
+  // await seedRoleRecommendedQualifications();
 
   // Seed system configuration
   await seedSystemConfig();

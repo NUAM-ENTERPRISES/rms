@@ -16,6 +16,7 @@ export const projectFormSchema = z.object({
   rolesNeeded: z
     .array(
       z.object({
+        roleCatalogId: z.string().min(1, "Role catalog ID is required"),
         designation: z.string().min(1, "Designation is required"),
         quantity: z.number().min(1, "Quantity must be at least 1"),
         // Role-level priority (optional) — some UI still uses per-role priority
@@ -79,6 +80,7 @@ export const projectFormSchema = z.object({
         genderRequirement: z.enum(["female", "male", "all"]),
         // New candidate criteria fields
         requiredSkills: z.array(z.string()),
+        departmentId: z.string().optional(),
         candidateStates: z.array(z.string()),
         candidateReligions: z.array(z.string()),
         minHeight: z.union([z.number().min(0), z.undefined()]).optional(),
@@ -112,6 +114,8 @@ export const defaultProjectValues = {
   requiredScreening: false,
   rolesNeeded: [
     {
+      departmentId: undefined,
+      roleCatalogId: "",
       designation: "",
       quantity: 1,
       priority: "medium" as const,

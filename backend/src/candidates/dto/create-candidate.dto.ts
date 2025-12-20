@@ -399,4 +399,12 @@ export class CandidateWorkExperienceDto {
   @IsOptional()
   @IsString()
   achievements?: string;
+
+  @ApiPropertyOptional({
+    description: 'Role catalog ID for this work experience (optional)',
+    example: 'rolecat_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
 }

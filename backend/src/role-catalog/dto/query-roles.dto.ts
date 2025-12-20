@@ -34,6 +34,14 @@ export class QueryRolesDto {
   isClinical?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Filter by role department ID',
+    example: 'rd_123',
+  })
+  @IsOptional()
+  @IsString()
+  roleDepartmentId?: string;
+
+  @ApiPropertyOptional({
     description: 'Filter by active roles only',
     example: true,
     default: true,
@@ -72,7 +80,7 @@ export class QueryRolesDto {
   @ApiPropertyOptional({
     description: 'Sort by field',
     example: 'name',
-    enum: ['name', 'category', 'createdAt'],
+    enum: ['name', 'label', 'createdAt'],
     default: 'name',
   })
   @IsOptional()

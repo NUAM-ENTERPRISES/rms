@@ -16,6 +16,7 @@ import { TeamsModule } from './teams/teams.module';
 import { DocumentsModule } from './documents/documents.module';
 import { CountriesModule } from './countries/countries.module';
 import { RoleCatalogModule } from './role-catalog/role-catalog.module';
+import { RoleDepartmentsModule } from './role-departments/role-departments.module';
 import { QualificationsModule } from './qualifications/qualifications.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
@@ -37,7 +38,6 @@ import { CandidateStatusModule } from './candidate-status/candidate-status.modul
 import { CandidateStatusHistoryModule } from './candidate-status-history/candidate-status-history.module';
 import { RnrRemindersModule } from './rnr-reminders/rnr-reminders.module';
 import { SystemConfigModule } from './system-config/system-config.module';
-import { ProjectRoleCatalogModule } from './project-role-catalog/project-role-catalog.module';
 import { CandidateProjectStatusModule } from './candidate-project-status/candidate-project-status.module';
 import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
 import { ScreeningCoordinationModule } from './screening-coordination/screening-coordination.module';
@@ -61,6 +61,7 @@ import { ProcessingModule } from './processing/processing.module';
     DocumentsModule,
     CountriesModule,
     RoleCatalogModule,
+    RoleDepartmentsModule,
     QualificationsModule,
     AuditModule,
     SystemModule,
@@ -75,7 +76,6 @@ import { ProcessingModule } from './processing/processing.module';
     CandidateStatusModule,
     CandidateStatusHistoryModule,
     RnrRemindersModule,
-    ProjectRoleCatalogModule,
     CandidateProjectStatusModule,
     CandidateProjectsModule,
     CandidateProjectStatusHistoryModule,

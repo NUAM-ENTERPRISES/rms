@@ -147,6 +147,29 @@ export class CandidatesService {
       this.logger.log(`Work experiences data: ${JSON.stringify(createCandidateDto.workExperiences)}`);
     }
 
+    // Validate provided roleCatalogIds in work experiences (if any)
+    if (createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0) {
+      const roleCatalogIds = Array.from(new Set(
+        createCandidateDto.workExperiences
+          .map((we) => we.roleCatalogId)
+          .filter((id): id is string => id !== undefined && id !== null)
+      ));
+      
+      if (roleCatalogIds.length > 0) {
+        const existingRoleCatalogs = await this.prisma.roleCatalog.findMany({
+          where: { id: { in: roleCatalogIds } },
+          select: { id: true },
+        });
+        const existingIds = existingRoleCatalogs.map((r) => r.id);
+        const missing = roleCatalogIds.filter((id) => !existingIds.includes(id));
+        if (missing.length > 0) {
+          throw new NotFoundException(
+            `RoleCatalog(s) not found: ${missing.join(', ')}`,
+          );
+        }
+      }
+    }
+
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
       ? this.calculateTotalExperience(createCandidateDto.workExperiences)
@@ -229,6 +252,7 @@ export class CandidatesService {
               }
 
               return {
+                roleCatalogId: exp.roleCatalogId,
                 companyName: exp.companyName,
                 jobTitle: exp.jobTitle,
                 startDate: new Date(exp.startDate),
@@ -247,7 +271,11 @@ export class CandidatesService {
       include: {
         // recruiter relation removed - now accessed via projects
         team: true,
-        workExperiences: true,
+        workExperiences: {
+          include: {
+            roleCatalog: true,
+          },
+        },
         qualifications: {
           include: {
             qualification: true,
@@ -449,7 +477,12 @@ export class CandidatesService {
             assignedAt: 'desc',
           },
         },
-        workExperiences: true,
+        // Include role catalog for each work experience
+        workExperiences: {
+          include: {
+            roleCatalog: true,
+          },
+        },
         qualifications: {
           include: {
             qualification: true,
@@ -631,7 +664,11 @@ export class CandidatesService {
             statusName: true,
           },
         },
-        workExperiences: true,
+        workExperiences: {
+          include: {
+            roleCatalog: true,
+          },
+        },
         qualifications: {
           include: {
             qualification: true,
@@ -730,7 +767,11 @@ export class CandidatesService {
           },
           },
         },
-        workExperiences: true,
+        workExperiences: {
+          include: {
+            roleCatalog: true,
+          },
+        },
         qualifications: {
           include: {
             qualification: true,
@@ -885,7 +926,11 @@ export class CandidatesService {
       include: {
         // recruiter relation removed - now accessed via projects
         team: true,
-        workExperiences: true,
+        workExperiences: {
+          include: {
+            roleCatalog: true,
+          },
+        },
         qualifications: {
           include: {
             qualification: true,

@@ -8,6 +8,7 @@ import {
 import { RoundRobinService } from '../round-robin/round-robin.service';
 import { PrismaService } from '../database/prisma.service';
 import { CountriesService } from '../countries/countries.service';
+import { RoleCatalogService } from '../role-catalog/role-catalog.service';
 import { QualificationsService } from '../qualifications/qualifications.service';
 import {
   CreateProjectDto,
@@ -33,6 +34,7 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly countriesService: CountriesService,
     private readonly qualificationsService: QualificationsService,
+    private readonly roleCatalogService: RoleCatalogService,
   ) {}
 
   // Helper method to safely parse JSON fields
@@ -114,6 +116,17 @@ export class ProjectsService {
     // Validate education requirements for all roles
     if (createProjectDto.rolesNeeded) {
       for (const role of createProjectDto.rolesNeeded) {
+        // Validate optional roleCatalogId
+        if (role.roleCatalogId) {
+          const exists = await this.roleCatalogService.validateRoleId(
+            role.roleCatalogId,
+          );
+          if (!exists) {
+            throw new NotFoundException(
+              `RoleCatalog with ID ${role.roleCatalogId} not found or inactive for role: ${role.designation}`,
+            );
+          }
+        }
         if (
           role.educationRequirementsList &&
           role.educationRequirementsList.length > 0
@@ -168,6 +181,7 @@ export class ProjectsService {
           const createdRole = await tx.roleNeeded.create({
             data: {
               projectId: createdProject.id,
+              roleCatalogId: role.roleCatalogId,
               designation: role.designation,
               quantity: role.quantity,
               priority: role.priority || 'medium',
@@ -277,6 +291,14 @@ export class ProjectsService {
                     field: true,
                   },
                 },
+              },
+            },
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                shortName: true,
               },
             },
           },
@@ -449,6 +471,14 @@ export class ProjectsService {
                 },
               },
             },
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                shortName: true,
+              },
+            },
           },
         },
         candidateProjects: {
@@ -609,9 +639,21 @@ export class ProjectsService {
       // Create new roles needed
       if (updateProjectDto.rolesNeeded.length > 0) {
         for (const role of updateProjectDto.rolesNeeded) {
+            // Validate optional roleCatalogId
+            if (role.roleCatalogId) {
+              const exists = await this.roleCatalogService.validateRoleId(
+                role.roleCatalogId,
+              );
+              if (!exists) {
+                throw new NotFoundException(
+                  `RoleCatalog with ID ${role.roleCatalogId} not found or inactive for role: ${role.designation}`,
+                );
+              }
+            }
           const createdRole = await this.prisma.roleNeeded.create({
             data: {
               projectId: id,
+                roleCatalogId: role.roleCatalogId,
               designation: role.designation,
               quantity: role.quantity,
               priority: role.priority || 'medium',

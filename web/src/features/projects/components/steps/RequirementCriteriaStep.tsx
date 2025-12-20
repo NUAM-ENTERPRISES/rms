@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Target, Plus, X } from "lucide-react";
 import { ProjectFormData } from "../../schemas/project-schemas";
-import { JobTitleSelect } from "@/components/molecules";
+import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 
 interface RequirementCriteriaStepProps {
   control: Control<ProjectFormData>;
@@ -40,6 +40,8 @@ export const RequirementCriteriaStep: React.FC<
     setValue("rolesNeeded", [
       ...currentRoles,
       {
+          departmentId: undefined,
+        roleCatalogId: "",
         designation: "",
         quantity: 1,
         visaType: "contract",
@@ -124,16 +126,49 @@ export const RequirementCriteriaStep: React.FC<
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Job Title */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Department */}
+              <div className="space-y-2">
+                <DepartmentSelect
+                  value={role.departmentId}
+                  onValueChange={(value) => {
+                    updateRole(index, "departmentId", value);
+                    // clear selected designation and roleCatalogId when department changes
+                    updateRole(index, "designation", "");
+                    updateRole(index, "roleCatalogId", "");
+                  }}
+                  label="Department"
+                  placeholder="Select department"
+                />
+                {/* If job title is not shown, surface designation validation here so user knows it's required */}
+                {!role.departmentId && errors.rolesNeeded?.[index]?.designation && (
+                  <span className="text-sm text-red-600">
+                    {errors.rolesNeeded[index].designation?.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Job Title (always visible but disabled until department selected) */}
               <div className="space-y-2">
                 <JobTitleSelect
                   value={role.designation}
-                  onValueChange={(value) => updateRole(index, "designation", value)}
+                  onRoleChange={(role) => {
+                    if (role) {
+                      // Save both roleCatalogId and designation
+                      updateRole(index, "roleCatalogId", role.id);
+                      updateRole(index, "designation", role.label);
+                    } else {
+                      // Clear both when deselected
+                      updateRole(index, "roleCatalogId", "");
+                      updateRole(index, "designation", "");
+                    }
+                  }}
                   label="Job Title"
-                  placeholder="e.g., Registered Nurse"
+                  placeholder={role.departmentId ? "e.g., Registered Nurse" : "Select a department to enable job titles"}
                   required
                   allowEmpty={false}
+                  departmentId={role.departmentId}
+                  disabled={!role.departmentId}
                 />
                 {errors.rolesNeeded?.[index]?.designation && (
                   <span className="text-sm text-red-600">
@@ -149,9 +184,9 @@ export const RequirementCriteriaStep: React.FC<
                 </Label>
                 <Input
                   type="number"
-                  value={role.quantity}
+                  value={role.quantity ?? ""}
                   onChange={(e) =>
-                    updateRole(index, "quantity", parseInt(e.target.value))
+                    updateRole(index, "quantity", e.target.value ? parseInt(e.target.value) : undefined)
                   }
                   min="1"
                   className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"

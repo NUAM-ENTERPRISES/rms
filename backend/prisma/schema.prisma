@@ -225,6 +225,8 @@ model Project {
 model RoleNeeded {
   id                        String                           @id @default(cuid())
   projectId                 String
+  roleCatalogId             String?
+  roleCatalog               RoleCatalog?                     @relation(fields: [roleCatalogId], references: [id], onDelete: SetNull)
   designation               String
   quantity                  Int
   priority                  String                           @default("medium")
@@ -265,6 +267,7 @@ model RoleNeeded {
   educationRequirementsList RoleNeededEducationRequirement[]
   project                   Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@index([roleCatalogId])
   @@map("project_roles")
 }
 
@@ -313,23 +316,26 @@ model Candidate {
 }
 
 model WorkExperience {
-  id           String    @id @default(cuid())
-  candidateId  String
-  companyName  String
-  jobTitle     String
-  startDate    DateTime
-  endDate      DateTime?
-  isCurrent    Boolean   @default(false)
-  description  String?
-  salary       Int?
-  location     String?
-  skills       Json      @default("[]")
-  achievements String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  id            String       @id @default(cuid())
+  candidateId   String
+  roleCatalogId String?
+  companyName   String
+  jobTitle      String
+  startDate     DateTime
+  endDate       DateTime?
+  isCurrent     Boolean      @default(false)
+  description   String?
+  salary        Int?
+  location      String?
+  skills        Json         @default("[]")
+  achievements  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  candidate     Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  roleCatalog   RoleCatalog? @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
 
   @@index([candidateId])
+  @@index([roleCatalogId])
   @@index([companyName])
   @@index([jobTitle])
   @@map("work_experiences")
@@ -472,9 +478,9 @@ model Screening {
   templateId            String? // Selected template for this screening
 
   // Whether a trainer/coach has been assigned
-  isAssignedTrainer     Boolean @default(false)
+  isAssignedTrainer Boolean @default(false)
 
-  status                String @default("scheduled")
+  status String @default("scheduled")
 
   // Scheduling
   scheduledTime DateTime?
@@ -495,8 +501,8 @@ model Screening {
   updatedAt DateTime @updatedAt
 
   // Relations
-  candidateProjectMap CandidateProjects            @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  template            ScreeningTemplate?           @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  candidateProjectMap CandidateProjects        @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  template            ScreeningTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
   checklistItems      ScreeningChecklistItem[]
   trainingAssignments TrainingAssignment[]
   // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)
@@ -512,9 +518,9 @@ model Screening {
 /// Checklist items for each screening interview (filled during/after interview)
 /// Links to template item if answer came from a template, otherwise custom question
 model ScreeningChecklistItem {
-  id           String  @id @default(cuid())
-  screeningId  String
-  templateItemId  String? // Optional: Link to template item if from template
+  id             String  @id @default(cuid())
+  screeningId    String
+  templateItemId String? // Optional: Link to template item if from template
 
   category  String // technical_skills, communication, professionalism, role_specific
   criterion String // What was evaluated
@@ -526,8 +532,8 @@ model ScreeningChecklistItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  screening     Screening                    @relation(fields: [screeningId], references: [id], onDelete: Cascade)
-  templateItem  ScreeningTemplateItem?      @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
+  screening    Screening              @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+  templateItem ScreeningTemplateItem? @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
 
   @@index([screeningId])
   @@index([templateItemId])
@@ -563,9 +569,9 @@ model ScreeningTemplate {
 /// Each template can have multiple categories, each category can have multiple questions
 /// No duplicate categories within a single template (enforced by application logic)
 model ScreeningTemplateItem {
-  id         String                @id @default(cuid())
+  id         String            @id @default(cuid())
   templateId String
-  template   ScreeningTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template   ScreeningTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   category  String // technical_skills, communication, professionalism, role_specific
   criterion String // The question/criterion to evaluate
@@ -736,11 +742,12 @@ model ProcessingStep {
   notes                 String?
   notApplicableReason   String?
   lastUpdatedById       String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   lastUpdatedBy       User?             @relation("ProcessingStepUpdatedBy", fields: [lastUpdatedById], references: [id])
+
   @@unique([candidateProjectMapId, stepKey])
   @@index([candidateProjectMapId])
   @@index([stepKey])
@@ -756,7 +763,7 @@ model ProcessingStepHistory {
   notes                 String?
   actorId               String?
   actorName             String?
-  changedAt             DateTime            @default(now())
+  changedAt             DateTime             @default(now())
 
   candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   actor               User?             @relation("ProcessingHistoryActor", fields: [actorId], references: [id])
@@ -936,7 +943,7 @@ model CandidateProjectDocumentVerification {
 /// * Tracks all verification actions on documents
 /// * Records who performed the action, when, and why
 model DocumentVerificationHistory {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   verificationId String?
 
   action String // "verified", "rejected", "resubmission_requested", "pending"
@@ -949,7 +956,7 @@ model DocumentVerificationHistory {
   performedAt DateTime @default(now())
 
   verification CandidateProjectDocumentVerification? @relation(fields: [verificationId], references: [id], onDelete: Cascade)
-  performer    User                                 @relation("DocumentVerificationPerformer", fields: [performedBy], references: [id])
+  performer    User                                  @relation("DocumentVerificationPerformer", fields: [performedBy], references: [id])
 
   @@index([verificationId])
   @@index([performedBy])
@@ -962,41 +969,51 @@ model DocumentVerificationHistory {
 /// * ProjectRole
 /// * Catalog of roles that can be assigned to projects
 /// * Simple role definitions with name and category
-model ProjectRole {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  category  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([category])
-  @@map("project_role_catalog")
-}
+// ProjectRole model removed. Previously mapped to `project_role_catalog`.
 
 /// *
 /// * RoleCatalog
 /// * Normalized catalog of healthcare and general staff roles
 /// * Separate from system RBAC roles (Role model)
 model RoleCatalog {
-  id                        String                         @id @default(cuid())
-  name                      String                         @unique
-  slug                      String                         @unique
-  category                  String
-  subCategory               String?
-  isClinical                Boolean                        @default(true)
-  description               String?
-  isActive                  Boolean                        @default(true)
-  createdAt                 DateTime                       @default(now())
-  updatedAt                 DateTime                       @updatedAt
+  id               String         @id @default(cuid())
+  roleDepartmentId String
+  roleDepartment   RoleDepartment @relation(fields: [roleDepartmentId], references: [id], onDelete: Cascade)
+  name             String         @unique
+  label            String
+  shortName        String?
+  description      String?
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
   recommendedQualifications RoleRecommendedQualification[]
+  screeningTemplates        ScreeningTemplate[]
+  roleNeededEntries         RoleNeeded[]
+  // Work experiences linked to this role catalog
+  workExperiences           WorkExperience[]
 
-  // Screening Interview Template Relations
-  screeningTemplates ScreeningTemplate[]
-
-  @@index([category])
-  @@index([isClinical])
+  @@index([roleDepartmentId])
   @@index([isActive])
   @@map("role_catalog")
+}
+
+model RoleDepartment {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  label       String
+  shortName   String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Opposite relation: list of roles in this department
+  roles RoleCatalog[]
+
+  @@index([isActive])
+  @@map("role_departments")
 }
 
 /// *

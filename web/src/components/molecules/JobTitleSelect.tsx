@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useGetProjectRoleCatalogQuery } from "@/features/projects";
+import { useGetRoleDepartmentsQuery } from "@/features/projects";
 import { useDebounce } from "@/hooks";
 
 export interface JobTitleSelectProps {
@@ -23,6 +23,8 @@ export interface JobTitleSelectProps {
   value?: string;
   /** Callback when job title changes */
   onValueChange?: (jobTitle: string) => void;
+  /** Callback when role changes, returns both id and label */
+  onRoleChange?: (role: { id: string; name: string; label?: string } | null) => void;
   /** Label text */
   label?: string;
   /** Placeholder text */
@@ -37,6 +39,8 @@ export interface JobTitleSelectProps {
   className?: string;
   /** Filter by category */
   filterByCategory?: string;
+  /** Filter roles by department id (if provided this will load roles for the department) */
+  departmentId?: string;
   /** Show "No selection" option */
   allowEmpty?: boolean;
   /** Number of roles to show per page */
@@ -49,6 +53,7 @@ export interface JobTitleSelectProps {
 export function JobTitleSelect({
   value = "",
   onValueChange,
+  onRoleChange,
   label,
   placeholder = "Select a job title...",
   required = false,
@@ -56,6 +61,7 @@ export function JobTitleSelect({
   error,
   className,
   filterByCategory,
+  departmentId,
   allowEmpty = true,
   pageSize = 10,
 }: JobTitleSelectProps) {
@@ -64,52 +70,75 @@ export function JobTitleSelect({
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(search, 300);
 
-  // Build query params
-  const queryParams = useMemo(() => {
-    const params: any = {
-      page,
-      limit: pageSize,
-    };
-    if (debouncedSearch) {
-      params.search = debouncedSearch;
-    }
-    if (filterByCategory) {
-      params.category = filterByCategory;
-    }
-    return params;
-  }, [page, pageSize, debouncedSearch, filterByCategory]);
+  // Note: we intentionally use the `role-departments` endpoint for both global and
+  // department-scoped role fetching. Query params are assembled where the hook is called.
+  // Use the role-departments endpoint exclusively. If departmentId is provided we request that
+  // department with includeRoles=true to get its roles; otherwise request departments with
+  // includeRoles=true and flatten roles from the returned departments for global searching.
+  // If disabled and no department is selected, avoid calling the API (prevent unnecessary network calls)
+  const departmentsQueryParams = disabled && !departmentId
+    ? undefined
+    : departmentId
+    ? { id: departmentId, includeRoles: true, page: 1, limit: 1 }
+    : { includeRoles: true, search: debouncedSearch, page, limit: pageSize };
 
-  // Fetch roles with search and pagination
-  const { data, isLoading, isFetching } = useGetProjectRoleCatalogQuery(queryParams);
-  
-  const roles = data?.data?.roles || [];
-  const pagination = data?.data?.pagination;
-  const hasMore = pagination ? page < pagination.pages : false;
+  const { data: deptData, isLoading, isFetching } = useGetRoleDepartmentsQuery(departmentsQueryParams);
+
+  // When departmentId is provided, the first department contains the roles; otherwise flatten
+  // roles across departments returned on the current page.
+  const departments = deptData?.data?.departments || [];
+  const rolesList = departments.flatMap((d) => d.roles || []);
+
+  // Deduplicate roles by id (in case a role appears in multiple departments)
+  const rolesById = rolesList.reduce<Record<string, any>>((acc, r) => {
+    if (!acc[r.id]) acc[r.id] = r;
+    return acc;
+  }, {});
+  const roles = Object.values(rolesById);
+
+  const pagination = deptData?.data?.pagination;
+  const hasMore = pagination ? page < (pagination.totalPages || pagination.pages || 1) : false;
 
   // Find selected role
-  const selectedRole = roles.find((r) => r.name === value);
+  const selectedRole = roles.find((r) => r.label === value || r.name === value || r.id === value);
 
   // Reset page when search changes
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch]);
 
+  // Reset page when department selection changes
+  useEffect(() => {
+    setPage(1);
+  }, [departmentId]);
+
   // Load more roles
   const loadMore = useCallback(() => {
-    if (hasMore && !isFetching) {
+    if (!departmentId && hasMore && !isFetching) {
       setPage((prev) => prev + 1);
     }
-  }, [hasMore, isFetching]);
+  }, [hasMore, isFetching, departmentId]);
+  // include departmentId in deps to avoid stale closures
 
   // Handle role selection
-  const handleSelect = (jobName: string) => {
-    if (jobName === value) {
+  const handleSelect = (jobLabel: string) => {
+    if (jobLabel === value) {
       // Deselect if clicking the same role
       if (allowEmpty) {
         onValueChange?.("");
+        onRoleChange?.(null);
       }
     } else {
-      onValueChange?.(jobName);
+      onValueChange?.(jobLabel);
+      // Find the selected role and pass both id, name (label), and label
+      const selectedRole = roles.find((r) => r.label === jobLabel);
+      if (selectedRole && onRoleChange) {
+        onRoleChange({ 
+          id: selectedRole.id, 
+          name: selectedRole.label || selectedRole.name,
+          label: selectedRole.label 
+        });
+      }
     }
     setOpen(false);
   };
@@ -135,10 +164,10 @@ export function JobTitleSelect({
               error && "border-red-500"
             )}
           >
-            {selectedRole || value ? (
+                {selectedRole || value ? (
               <div className="flex items-center gap-2 truncate">
                 <Briefcase className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                <span className="truncate">{value}</span>
+                <span className="truncate">{selectedRole?.label || selectedRole?.name || value}</span>
                 {selectedRole?.category && (
                   <Badge
                     variant="outline"
@@ -199,18 +228,25 @@ export function JobTitleSelect({
                   {roles.map((role) => (
                     <button
                       key={role.id}
-                      onClick={() => handleSelect(role.name)}
+                      onClick={() => handleSelect(role.label || role.name)}
                       className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-left"
                     >
-                      <Check
-                        className={cn(
-                          "mr-3 h-4 w-4 flex-shrink-0",
-                          value === role.name ? "opacity-100 text-blue-600" : "opacity-0"
-                        )}
-                      />
+                          {(() => {
+                            const isSelected = Boolean(
+                              selectedRole && (selectedRole.id === role.id || selectedRole.label === role.label)
+                            );
+                            return (
+                              <Check
+                                className={cn(
+                                  "mr-3 h-4 w-4 flex-shrink-0",
+                                  isSelected ? "opacity-100 text-blue-600" : "opacity-0"
+                                )}
+                              />
+                            );
+                          })()}
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Briefcase className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                        <span className="truncate flex-1 text-slate-700 font-medium">{role.name}</span>
+                        <span className="truncate flex-1 text-slate-700 font-medium">{role.label || role.name}</span>
                         {role.category && (
                           <Badge
                             variant="outline"
@@ -239,14 +275,14 @@ export function JobTitleSelect({
                         Loading...
                       </>
                     ) : (
-                      `Load more (${(pagination?.total || 0) - roles.length} remaining)`
+                      `Load more`
                     )}
                   </Button>
                 </div>
               )}
               {pagination && !hasMore && roles.length > 0 && (
                 <div className="py-2 px-3 text-xs text-slate-500 text-center border-t bg-slate-50">
-                  Showing all {pagination.total} {pagination.total === 1 ? 'job title' : 'job titles'}
+                  Showing all {roles.length} results
                 </div>
               )}
             </div>

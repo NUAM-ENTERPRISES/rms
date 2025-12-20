@@ -378,8 +378,8 @@ export class ScreeningsService {
     let roleCatalog: {
       id: string;
       name: string;
-      slug: string;
-      category: string;
+      label: string;
+      shortName?: string | null;
     } | null = null;
     if (interview.candidateProjectMap?.roleNeeded?.designation) {
       roleCatalog = await this.prisma.roleCatalog.findFirst({
@@ -393,8 +393,8 @@ export class ScreeningsService {
         select: {
           id: true,
           name: true,
-          slug: true,
-          category: true,
+          label: true,
+          shortName: true,
         },
       });
     }

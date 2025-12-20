@@ -76,7 +76,7 @@ export class ScreeningTemplatesService {
             select: {
               id: true,
               name: true,
-              slug: true,
+              shortName: true,
             },
           },
           items: {
@@ -108,7 +108,7 @@ export class ScreeningTemplatesService {
           select: {
             id: true,
             name: true,
-            slug: true,
+            shortName: true,
           },
         },
         items: {
@@ -136,7 +136,7 @@ export class ScreeningTemplatesService {
           select: {
             id: true,
             name: true,
-            slug: true,
+            shortName: true,
           },
         },
         items: {
@@ -220,7 +220,7 @@ export class ScreeningTemplatesService {
           select: {
             id: true,
             name: true,
-            slug: true,
+            shortName: true,
           },
         },
         items: {

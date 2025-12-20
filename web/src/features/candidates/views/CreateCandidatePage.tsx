@@ -79,6 +79,8 @@ type CreateCandidateFormData = z.infer<typeof createCandidateSchema>;
 type WorkExperience = {
   id: string;
   companyName: string;
+  departmentId?: string;
+  roleCatalogId: string;
   jobTitle: string;
   startDate: string;
   endDate: string;
@@ -129,6 +131,8 @@ export default function CreateCandidatePage() {
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [newWorkExperience, setNewWorkExperience] = useState<Omit<WorkExperience, "id">>({
     companyName: "",
+    departmentId: undefined,
+    roleCatalogId: "",
     jobTitle: "",
     startDate: "",
     endDate: "",
@@ -273,21 +277,25 @@ export default function CreateCandidatePage() {
 
       // Work experiences
       if (workExperiences && workExperiences.length > 0) {
-        payload.workExperiences = workExperiences.map((exp) => ({
-          companyName: exp.companyName,
-          jobTitle: exp.jobTitle,
-          startDate: exp.startDate,
-          endDate: exp.endDate || undefined,
-          isCurrent: exp.isCurrent || false,
-          description: exp.description || undefined,
-          salary: exp.salary || undefined,
-          location: exp.location || undefined,
-          skills:
-            exp.skills && exp.skills.length > 0
-              ? exp.skills
-              : undefined,
-          achievements: exp.achievements || undefined,
-        }));
+        payload.workExperiences = workExperiences.map((exp) => {
+          const { departmentId, id, ...expData } = exp;
+          return {
+            companyName: expData.companyName,
+            roleCatalogId: expData.roleCatalogId,
+            jobTitle: expData.jobTitle,
+            startDate: expData.startDate,
+            endDate: expData.endDate || undefined,
+            isCurrent: expData.isCurrent || false,
+            description: expData.description || undefined,
+            salary: expData.salary || undefined,
+            location: expData.location || undefined,
+            skills:
+              expData.skills && expData.skills.length > 0
+                ? expData.skills
+                : undefined,
+            achievements: expData.achievements || undefined,
+          };
+        });
       }
 
       const result = await createCandidate(payload).unwrap();

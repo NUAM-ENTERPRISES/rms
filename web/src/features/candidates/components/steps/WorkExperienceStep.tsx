@@ -11,10 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Plus, Star, X } from "lucide-react";
 import { toast } from "sonner";
+import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 
 type WorkExperience = {
   id: string;
   companyName: string;
+  departmentId?: string;
+  roleCatalogId: string;
   jobTitle: string;
   startDate: string;
   endDate: string;
@@ -47,6 +50,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     if (
       newWorkExperience.companyName &&
       newWorkExperience.jobTitle &&
+      newWorkExperience.roleCatalogId &&
       newWorkExperience.startDate
     ) {
       const newId = `work-exp-${Date.now()}-${Math.random()
@@ -58,6 +62,8 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       ]);
       setNewWorkExperience({
         companyName: "",
+        departmentId: undefined,
+        roleCatalogId: "",
         jobTitle: "",
         startDate: "",
         endDate: "",
@@ -71,7 +77,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       setNewSkill("");
     } else {
       toast.error(
-        "Please fill in required fields (Company, Job Title, Start Date)"
+        "Please fill in required fields (Company, Department, Job Title, Start Date)"
       );
     }
   };
@@ -190,6 +196,55 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Department */}
+            <div className="space-y-2">
+              <DepartmentSelect
+                value={newWorkExperience.departmentId}
+                onValueChange={(value) => {
+                  setNewWorkExperience({
+                    ...newWorkExperience,
+                    departmentId: value,
+                    roleCatalogId: "",
+                    jobTitle: "",
+                  });
+                }}
+                label="Department"
+                placeholder="Select department"
+              />
+            </div>
+
+            {/* Job Title */}
+            <div className="space-y-2">
+              <JobTitleSelect
+                value={newWorkExperience.jobTitle}
+                onRoleChange={(role) => {
+                  if (role) {
+                    setNewWorkExperience({
+                      ...newWorkExperience,
+                      roleCatalogId: role.id,
+                      jobTitle: role.label || role.name,
+                    });
+                  } else {
+                    setNewWorkExperience({
+                      ...newWorkExperience,
+                      roleCatalogId: "",
+                      jobTitle: "",
+                    });
+                  }
+                }}
+                label="Job Title"
+                placeholder={
+                  newWorkExperience.departmentId
+                    ? "e.g., Registered Nurse"
+                    : "Select a department first"
+                }
+                required
+                allowEmpty={false}
+                departmentId={newWorkExperience.departmentId}
+                disabled={!newWorkExperience.departmentId}
+              />
+            </div>
+
             {/* Company Name */}
             <div className="space-y-2">
               <Label className="text-slate-700 font-medium">
@@ -204,24 +259,6 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   })
                 }
                 placeholder="ABC Hospital"
-                className="h-11 bg-white border-slate-200"
-              />
-            </div>
-
-            {/* Job Title */}
-            <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
-                Job Title *
-              </Label>
-              <Input
-                value={newWorkExperience.jobTitle}
-                onChange={(e) =>
-                  setNewWorkExperience({
-                    ...newWorkExperience,
-                    jobTitle: e.target.value,
-                  })
-                }
-                placeholder="Staff Nurse"
                 className="h-11 bg-white border-slate-200"
               />
             </div>

@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsService } from '../projects.service';
+import { RoleCatalogService } from '../../role-catalog/role-catalog.service';
+import { RoundRobinService } from '../../round-robin/round-robin.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
@@ -12,7 +14,7 @@ import {
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
-  let prismaService: jest.Mocked<PrismaService>;
+  let prismaService: any;
 
   const mockPrismaService = {
     project: {
@@ -24,19 +26,32 @@ describe('ProjectsService', () => {
       count: jest.fn(),
       groupBy: jest.fn(),
     },
-    client: {
-      findUnique: jest.fn(),
-    },
+    // client methods
     team: {
       findUnique: jest.fn(),
     },
     candidate: {
       findUnique: jest.fn(),
     },
-    candidateProjectMap: {
+    candidateProjects: {
       findUnique: jest.fn(),
       create: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    roleNeeded: {
+      create: jest.fn(),
+    },
+    roleNeededEducationRequirement: {
+      createMany: jest.fn(),
+    },
+    user: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    $transaction: jest.fn((cb) => cb(mockPrismaService)),
+    client: {
+      findUnique: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
 
@@ -47,6 +62,22 @@ describe('ProjectsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RoleCatalogService,
+          useValue: { validateRoleId: jest.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: RoundRobinService,
+          useValue: { getNextRecruiter: jest.fn().mockResolvedValue({ id: 'rec1' }) },
+        },
+        {
+          provide: require('../../countries/countries.service').CountriesService,
+          useValue: { validateCountryCode: jest.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: require('../../qualifications/qualifications.service').QualificationsService,
+          useValue: { validateQualificationIds: jest.fn().mockResolvedValue(true) },
         },
       ],
     }).compile();
@@ -74,6 +105,7 @@ describe('ProjectsService', () => {
           minExperience: 2,
           maxExperience: 10,
           skills: '["Nursing", "Patient Care"]',
+          roleCatalogId: 'role123',
         },
       ],
     };
@@ -98,6 +130,7 @@ describe('ProjectsService', () => {
         name: 'Test Team',
       } as any);
       prismaService.project.create.mockResolvedValue(mockProject as any);
+        prismaService.project.findUnique.mockResolvedValue(mockProject as any);
 
       const result = await service.create(createProjectDto, 'user123');
 
@@ -111,37 +144,24 @@ describe('ProjectsService', () => {
           status: 'active',
           createdBy: 'user123',
           teamId: 'team123',
-          rolesNeeded: {
-            create: [
-              {
-                designation: 'Nurse',
-                quantity: 5,
-                priority: 'high',
-                minExperience: 2,
-                maxExperience: 10,
-                specificExperience: null,
-                educationRequirements: null,
-                requiredCertifications: null,
-                institutionRequirements: undefined,
-                skills: ['Nursing', 'Patient Care'],
-                technicalSkills: null,
-                languageRequirements: null,
-                licenseRequirements: null,
-                backgroundCheckRequired: true,
-                drugScreeningRequired: true,
-                shiftType: undefined,
-                onCallRequired: false,
-                physicalDemands: undefined,
-                salaryRange: null,
-                benefits: undefined,
-                relocationAssistance: false,
-                additionalRequirements: undefined,
-                notes: undefined,
-              },
-            ],
-          },
+          countryCode: null,
+          projectType: 'private',
+          resumeEditable: true,
+          groomingRequired: 'formal',
+          hideContactInfo: true,
+          requiredScreening: false,
+          priority: 'medium',
         },
-        include: expect.any(Object),
+      });
+
+      expect(prismaService.roleNeeded.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          projectId: 'project123',
+          designation: 'Nurse',
+          quantity: 5,
+          priority: 'high',
+          skills: ['Nursing', 'Patient Care'],
+        }),
       });
     });
 
@@ -371,13 +391,26 @@ describe('ProjectsService', () => {
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
       } as any);
-      prismaService.candidateProjectMap.findUnique.mockResolvedValue(null);
-      prismaService.candidateProjectMap.create.mockResolvedValue({
+      prismaService.candidateProjects.findFirst.mockResolvedValue(null);
+      prismaService.candidateProjects.create.mockResolvedValue({
         id: 'assignment123',
         candidateId: 'candidate123',
         projectId: 'project123',
         notes: 'Test assignment',
       } as any);
+      prismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'rec1',
+          name: 'Recruiter One',
+          email: 'rec1@example.com',
+          _count: { candidateProjectMaps: 0 },
+          userRoles: [{ role: { name: 'RECRUITER' } }],
+        },
+      ] as any);
+      // Stub RoundRobinService.getNextRecruiter on prototype to avoid DB cursor operations
+      (RoundRobinService.prototype as any).getNextRecruiter = jest
+        .fn()
+        .mockResolvedValue({ id: 'rec1', name: 'Recruiter One' });
 
       const result = await service.assignCandidate(
         'project123',
@@ -386,12 +419,14 @@ describe('ProjectsService', () => {
       );
 
       expect(result.message).toBe('Candidate assigned to project successfully');
-      expect(prismaService.candidateProjectMap.create).toHaveBeenCalledWith({
-        data: {
+      expect(prismaService.candidateProjects.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
           candidateId: 'candidate123',
           projectId: 'project123',
           notes: 'Test assignment',
-        },
+          recruiterId: 'rec1',
+          currentProjectStatusId: 1,
+        }),
         include: expect.any(Object),
       });
     });
@@ -426,7 +461,7 @@ describe('ProjectsService', () => {
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
       } as any);
-      prismaService.candidateProjectMap.findUnique.mockResolvedValue({
+      prismaService.candidateProjects.findFirst.mockResolvedValue({
         id: 'existing123',
       } as any);
 
@@ -467,17 +502,17 @@ describe('ProjectsService', () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
       } as any);
-      prismaService.candidateProjectMap.findMany.mockResolvedValue(
+      prismaService.candidateProjects.findMany.mockResolvedValue(
         mockAssignments as any,
       );
 
       const result = await service.getProjectCandidates('project123');
 
       expect(result).toEqual(mockAssignments);
-      expect(prismaService.candidateProjectMap.findMany).toHaveBeenCalledWith({
+      expect(prismaService.candidateProjects.findMany).toHaveBeenCalledWith({
         where: { projectId: 'project123' },
         include: expect.any(Object),
-        orderBy: { assignedDate: 'desc' },
+        orderBy: { createdAt: 'desc' },
       });
     });
 
@@ -503,6 +538,11 @@ describe('ProjectsService', () => {
         { clientId: 'client456', _count: { clientId: 50 } },
       ] as any);
 
+      prismaService.client.findMany.mockResolvedValue([
+        { id: 'client123', name: 'Client client123' },
+        { id: 'client456', name: 'Client client456' },
+      ] as any);
+
       prismaService.project.findMany.mockResolvedValue([] as any);
 
       const result = await service.getProjectStats();
@@ -518,8 +558,8 @@ describe('ProjectsService', () => {
           cancelled: 10,
         },
         projectsByClient: {
-          client123: 50,
-          client456: 50,
+          client123: { count: 50, name: 'Client client123' },
+          client456: { count: 50, name: 'Client client456' },
         },
         upcomingDeadlines: [],
       });
