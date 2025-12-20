@@ -34,6 +34,7 @@ import {
   UserPlus,
   Layers,
   Briefcase,
+  CheckCircle2,
 } from "lucide-react";
 import {
   useGetProjectQuery,
@@ -44,7 +45,9 @@ import {
   useSendForScreeningMutation,
   useGetCandidateProjectStatusesQuery,
   useAssignToProjectMutation,
+  useGetEligibleCandidatesQuery,
 } from "@/features/projects";
+import { useGetCandidatesQuery, useGetRecruiterMyCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
 import { useCan } from "@/hooks/useCan";
@@ -75,6 +78,15 @@ const formatDateTime = (dateString?: string) => {
   });
 };
 
+// Minimal colorful badge classes for match scores
+const getMinimalScoreBadgeClass = (score?: number) => {
+  if (typeof score !== "number") return "bg-slate-50 text-slate-700";
+  if (score >= 90) return "bg-green-50 text-green-700";
+  if (score >= 80) return "bg-blue-50 text-blue-700";
+  if (score >= 70) return "bg-amber-50 text-amber-700";
+  return "bg-red-50 text-red-700";
+};
+
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -101,6 +113,49 @@ export default function ProjectDetailPage() {
 
   // Get project statuses for filter options
   const { data: statusesData } = useGetCandidateProjectStatusesQuery();
+
+  // Get eligible candidates
+  const { data: eligibleResponse } = useGetEligibleCandidatesQuery(projectId!);
+  const eligibleCandidates = Array.isArray(eligibleResponse?.data)
+    ? eligibleResponse.data
+    : [];
+
+  // Get all candidates based on user role
+  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const isManager =
+    user?.roles?.some((role) =>
+      ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+    ) ?? false;
+
+  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(undefined, {
+    skip: !isRecruiter || isManager,
+  });
+  const allCandidatesQuery = useGetCandidatesQuery(undefined, {
+    skip: isRecruiter && !isManager,
+  });
+
+  const recruiterCandidatesData =
+    isRecruiter && !isManager ? recruiterCandidatesQuery.data : undefined;
+  const allCandidatesData =
+    !isRecruiter || isManager ? allCandidatesQuery.data : undefined;
+  const candidatesData =
+    isRecruiter && !isManager
+      ? recruiterCandidatesData?.data
+      : allCandidatesData;
+
+  const allCandidates = Array.isArray(candidatesData)
+    ? candidatesData
+    : candidatesData &&
+      typeof candidatesData === "object" &&
+      "candidates" in candidatesData &&
+      Array.isArray(candidatesData.candidates)
+    ? candidatesData.candidates
+    : candidatesData &&
+      typeof candidatesData === "object" &&
+      "data" in candidatesData &&
+      Array.isArray(candidatesData.data)
+    ? candidatesData.data
+    : [];
 
   // Get nominated candidates with proper status filtering
   const shouldLoadNominated = !isProcessingExecutive;
@@ -136,13 +191,18 @@ export default function ProjectDetailPage() {
     candidateName: string;
     roleNeededId?: string;
     notes: string;
+    isRoleEditable?: boolean;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
     roleNeededId: undefined,
     notes: "",
+    isRoleEditable: true,
   });
+
+  // Edit role confirmation dialog for verify modal
+  const [showEditRoleConfirm, setShowEditRoleConfirm] = useState(false);
 
   const [interviewConfirm, setInterviewConfirm] = useState<{
     isOpen: boolean;
@@ -207,12 +267,21 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    // Try to find nominated candidate to prefill nominatedRole if present
+    const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
+      (c) => (c.candidateId || c.id) === candidateId
+    );
+
+    const nominatedRoleId = (candidate as any)?.nominatedRole?.id;
+
     setVerifyConfirm({
       isOpen: true,
       candidateId,
       candidateName,
-      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      roleNeededId: nominatedRoleId || projectData?.data?.rolesNeeded?.[0]?.id,
       notes: "",
+      // If already has nominatedRole, don't allow editing until user confirms
+      isRoleEditable: nominatedRoleId ? false : true,
     });
   };
 
@@ -847,6 +916,20 @@ export default function ProjectDetailPage() {
         isLoading={isDeleting}
       />
 
+      {/* Confirm edit role dialog (Verify modal) */}
+      <ConfirmationDialog
+        isOpen={showEditRoleConfirm}
+        onClose={() => setShowEditRoleConfirm(false)}
+        onConfirm={() => {
+          setVerifyConfirm((prev) => ({ ...prev, isRoleEditable: true }));
+          setShowEditRoleConfirm(false);
+        }}
+        title="Edit assigned role"
+        description={`This candidate already has an assigned role. Do you want to edit it?`}
+        confirmText="Edit role"
+        cancelText="Cancel"
+      />
+
       {/* Direct Screening Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={screeningConfirm.isOpen}
@@ -867,6 +950,73 @@ export default function ProjectDetailPage() {
               Are you sure you want to send {screeningConfirm.candidateName} for
               direct screening? This will notify the screening team.
             </p>
+
+            {/* Candidate Details */}
+            {(() => {
+              const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
+                (c) => (c.candidateId || c.id) === screeningConfirm.candidateId
+              );
+              if (!candidate) return null;
+              return (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                  <h4 className="text-sm font-semibold text-slate-700">Candidate Profile</h4>
+                  
+                  {/* Education/Qualifications */}
+                  {candidate.qualifications && candidate.qualifications.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Education:</p>
+                      <div className="space-y-1">
+                        {candidate.qualifications.map((qual: any, idx: number) => (
+                          <p key={idx} className="text-xs text-slate-700">
+                            {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
+                            {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
+                            {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Work Experience */}
+                  {candidate.workExperiences && candidate.workExperiences.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Experience:</p>
+                      <div className="space-y-1">
+                        {candidate.workExperiences.map((exp: any, idx: number) => (
+                          <p key={idx} className="text-xs text-slate-700">
+                            {exp.designation || exp.position || exp.role} {exp.companyName || exp.company ? `at ${exp.companyName || exp.company}` : ''}
+                            {exp.yearsOfExperience ? ` (${exp.yearsOfExperience} years)` : ''}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Role match scores */}
+                  {candidate.roleMatches && candidate.roleMatches.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
+                      <div className="flex flex-wrap gap-2">
+                        {candidate.roleMatches.map((rm: any, idx: number) => {
+                          const isAssigned = Boolean(candidate.nominatedRole && candidate.nominatedRole.id === rm.roleId);
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex items-center gap-2 rounded-full px-2 py-1 border ${isAssigned ? 'border-primary/30 bg-primary/10' : 'border-slate-100 bg-white/60'}`}
+                            >
+                              <span className="text-xs text-slate-700 max-w-[160px] truncate">
+                                {rm.designation || "Role"}
+                              </span>
+                              <span className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}>{rm.score ?? "-"}%</span>
+                              {isAssigned && <CheckCircle2 className="h-3 w-3 text-primary ml-1" aria-hidden />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>
@@ -937,6 +1087,7 @@ export default function ProjectDetailPage() {
             candidateName: "",
             roleNeededId: undefined,
             notes: "",
+            isRoleEditable: true,
           })
         }
         onConfirm={handleSendForVerification}
@@ -948,25 +1099,119 @@ export default function ProjectDetailPage() {
               verification? This will notify the verification team.
             </p>
 
+            {/* Candidate Details */}
+            {(() => {
+              const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
+                (c) => (c.candidateId || c.id) === verifyConfirm.candidateId
+              );
+              if (!candidate) return null;
+              return (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                  <h4 className="text-sm font-semibold text-slate-700">Candidate Profile</h4>
+                  
+                  {/* Education/Qualifications */}
+                  {(candidate.qualifications || candidate.candidateQualifications) && (candidate.qualifications || candidate.candidateQualifications).length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Education:</p>
+                      <div className="space-y-1">
+                        {(candidate.qualifications || candidate.candidateQualifications).map((qual: any, idx: number) => (
+                          <p key={idx} className="text-xs text-slate-700">
+                            {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
+                            {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
+                            {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Work Experience */}
+                  {((candidate.workExperiences && candidate.workExperiences.length > 0) || candidate.candidateExperience) && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Experience:</p>
+                      <div className="space-y-1">
+                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
+                          candidate.workExperiences.map((exp: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {exp.designation || exp.position || exp.role} {exp.companyName || exp.company ? `at ${exp.companyName || exp.company}` : ''}
+                              {exp.yearsOfExperience ? ` (${exp.yearsOfExperience} years)` : ''}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* Role match scores */}
+                  {candidate.roleMatches && candidate.roleMatches.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
+                      <div className="flex flex-wrap gap-2">
+                        {candidate.roleMatches.map((rm: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 rounded-full px-2 py-1 border border-slate-100 bg-white/60"
+                          >
+                            <span className="text-xs text-slate-700 max-w-[160px] truncate">
+                              {rm.designation || "Role"}
+                            </span>
+                            <span
+                              className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}
+                            >
+                              {rm.score ?? "-"}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>
-              <Select
-                value={verifyConfirm.roleNeededId}
-                onValueChange={(v) =>
-                  setVerifyConfirm((prev) => ({ ...prev, roleNeededId: v }))
-                }
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {project?.rolesNeeded?.map((r: any) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.designation}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                {!verifyConfirm.isRoleEditable && verifyConfirm.roleNeededId ? (
+                  // Show only assigned role and make select disabled
+                  <div className="flex items-center gap-2">
+                    <Select value={verifyConfirm.roleNeededId} onValueChange={(v) => setVerifyConfirm((prev) => ({ ...prev, roleNeededId: v }))}>
+                      <SelectTrigger className="w-56" disabled>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {project?.rolesNeeded?.filter((r: any) => r.id === verifyConfirm.roleNeededId).map((r: any) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.designation}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="ghost" onClick={() => setShowEditRoleConfirm(true)} className="h-8 w-8 p-0">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={verifyConfirm.roleNeededId}
+                    onValueChange={(v) =>
+                      setVerifyConfirm((prev) => ({ ...prev, roleNeededId: v }))
+                    }
+                  >
+                    <SelectTrigger className="w-56">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {project?.rolesNeeded?.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.designation}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <label
                 htmlFor="verify-notes"
                 className="text-sm font-medium text-gray-700"
@@ -1181,6 +1426,73 @@ export default function ProjectDetailPage() {
               Are you sure you want to assign {assignConfirm.candidateName} to
               this project?
             </p>
+
+            {/* Candidate Details */}
+            {(() => {
+              const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
+                (c) => (c.candidateId || c.id) === assignConfirm.candidateId
+              );
+              if (!candidate) return null;
+              return (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                  <h4 className="text-sm font-semibold text-slate-700">Candidate Profile</h4>
+                  
+                  {/* Education/Qualifications */}
+                  {candidate.qualifications && candidate.qualifications.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Education:</p>
+                      <div className="space-y-1">
+                        {candidate.qualifications.map((qual: any, idx: number) => (
+                          <p key={idx} className="text-xs text-slate-700">
+                            {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
+                            {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
+                            {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Work Experience */}
+                  {candidate.workExperiences && candidate.workExperiences.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Experience:</p>
+                      <div className="space-y-1">
+                        {candidate.workExperiences.map((exp: any, idx: number) => (
+                          <p key={idx} className="text-xs text-slate-700">
+                            {exp.designation || exp.position || exp.role} {exp.companyName || exp.company ? `at ${exp.companyName || exp.company}` : ''}
+                            {exp.yearsOfExperience ? ` (${exp.yearsOfExperience} years)` : ''}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Role match scores */}
+                  {candidate.roleMatches && candidate.roleMatches.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
+                      <div className="flex flex-wrap gap-2">
+                        {candidate.roleMatches.map((rm: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 rounded-full px-2 py-1 border border-slate-100 bg-white/60"
+                          >
+                            <span className="text-xs text-slate-700 max-w-[160px] truncate">
+                              {rm.designation || "Role"}
+                            </span>
+                            <span
+                              className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}
+                            >
+                              {rm.score ?? "-"}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>

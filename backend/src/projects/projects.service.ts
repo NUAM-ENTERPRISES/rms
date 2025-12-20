@@ -1034,6 +1034,15 @@ export class ProjectsService {
           },
         },
 
+        // Include the role this candidate was nominated for (if any)
+        roleNeeded: {
+          include: {
+            educationRequirementsList: {
+              include: { qualification: true },
+            },
+          },
+        },
+
         recruiter: {
           select: {
             id: true,
@@ -1051,7 +1060,16 @@ export class ProjectsService {
     const candidatesWithScore = assignments.map((assignment) => {
       const c = assignment.candidate;
 
-      const matchScore = this.calculateMatchScore(c, project.rolesNeeded);
+      // If candidate was nominated for a specific role (roleNeeded), score only that role
+      const nominatedRole =
+        (assignment as any).roleNeeded ||
+        (assignment.project?.rolesNeeded || []).find(
+          (r) => r.id === (assignment as any).roleNeededId,
+        );
+
+      const roleScore = nominatedRole
+        ? this.calculateRoleMatchScore(c, nominatedRole)
+        : this.calculateMatchScore(c, project.rolesNeeded);
 
       return {
         // Candidate Fields (Same as Eligible)
@@ -1079,13 +1097,20 @@ export class ProjectsService {
         projectMainStatus: assignment.mainStatus,
         projectSubStatus: assignment.subStatus,
 
-        // Qualifications
+        // Qualifications (structured) and explicit candidateExperience
         qualifications: c.qualifications.map((q) => ({
           id: q.qualification.id,
           name: q.qualification.name,
           level: q.qualification.level,
           field: q.qualification.field,
         })),
+        candidateQualifications: c.qualifications.map((q) => ({
+          id: q.qualification.id,
+          name: q.qualification.name,
+          level: q.qualification.level,
+          field: q.qualification.field,
+        })),
+        candidateExperience: c.totalExperience ?? c.experience,
 
         // Recruiter who nominated
         recruiter: assignment.recruiter,
@@ -1112,8 +1137,15 @@ export class ProjectsService {
         assignedAt: assignment.assignedAt,
         notes: assignment.notes,
 
-        // Match Score
-        matchScore,
+        // Match Score (for nominated candidates we show nominated-role score when available)
+        matchScore: roleScore,
+        nominatedRole: nominatedRole
+          ? {
+              id: nominatedRole.id,
+              designation: nominatedRole.designation,
+              score: roleScore,
+            }
+          : null,
       };
     });
 
@@ -1511,7 +1543,13 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
-        rolesNeeded: true,
+        rolesNeeded: {
+          include: {
+            educationRequirementsList: {
+              include: { qualification: true },
+            },
+          },
+        },
       },
     });
 
@@ -1658,10 +1696,19 @@ export class ProjectsService {
     // --------------------------------
     // 5. RETURN MATCH SCORE
     // --------------------------------
-    return matchedCandidates.map((candidate) => ({
-      ...candidate,
-      matchScore: this.calculateMatchScore(candidate, project.rolesNeeded),
-    }));
+    return matchedCandidates.map((candidate) => {
+      const roleMatches = project.rolesNeeded.map((role) => ({
+        roleId: role.id,
+        designation: role.designation,
+        score: this.calculateRoleMatchScore(candidate, role),
+      }));
+
+      return {
+        ...candidate,
+        matchScore: this.calculateMatchScore(candidate, project.rolesNeeded),
+        roleMatches,
+      };
+    });
   }
 
   /**
@@ -1732,36 +1779,88 @@ export class ProjectsService {
 
     rolesNeeded.forEach((role) => {
       maxScore += 100; // Max score per role
-      let roleScore = 0;
-
-      // Use totalExperience (preferred) or fall back to experience field
-      const candidateExperience =
-        candidate.totalExperience ?? candidate.experience;
-
-      // Experience scoring (40 points)
-      if (
-        candidateExperience &&
-        this.matchExperience(
-          candidateExperience,
-          role.minExperience,
-          role.maxExperience,
-        )
-      ) {
-        roleScore += 40;
-      }
-
-      // Skills scoring (30 points)
-      if (this.matchSkills(candidate.skills, role.skills)) {
-        roleScore += 30;
-      }
-
-      // Basic qualification (30 points) - always give some points for being in the system
-      roleScore += 30;
-
-      totalScore += roleScore;
+      totalScore += this.calculateRoleMatchScore(candidate, role);
     });
 
     return Math.round((totalScore / maxScore) * 100);
+  }
+
+  /**
+   * Calculate match score for a single role (0-100)
+   */
+  private calculateRoleMatchScore(candidate: any, role: any): number {
+    let roleScore = 0;
+
+    // Use totalExperience (preferred) or fall back to experience field
+    const candidateExperience = candidate.totalExperience ?? candidate.experience;
+
+    // Experience scoring (40 points)
+    if (
+      candidateExperience &&
+      this.matchExperience(candidateExperience, role.minExperience, role.maxExperience)
+    ) {
+      roleScore += 40;
+    }
+
+    // Skills scoring (30 points)
+    if (this.matchSkills(candidate.skills, role.skills)) {
+      roleScore += 30;
+    }
+
+    // Education scoring (30 points) - more accurate: full points for matching qualification id/level/field;
+    // partial points if candidate has qualifications but doesn't match exactly.
+    roleScore += this.calculateEducationScore(candidate.qualifications, role.educationRequirementsList);
+
+    // Ensure value is between 0 and 100
+    return Math.min(100, Math.max(0, Math.round(roleScore)));
+  }
+
+  /**
+   * Calculate education score for a role (0-30)
+   * - If role has no education requirements, award full points (30)
+   * - If candidate has any qualification that matches requirement by id/level/field -> 30
+   * - If candidate has qualifications but none match -> partial (15)
+   */
+  private calculateEducationScore(candidateQualifications: any[] | undefined, roleEducationReqs: any[] | undefined): number {
+    const MAX = 30;
+
+    // No requirement -> full points
+    if (!roleEducationReqs || roleEducationReqs.length === 0) return MAX;
+
+    if (!candidateQualifications || candidateQualifications.length === 0) return 0;
+
+    // Normalize candidate qualifications to inner qualification object
+    const candidateQuals = candidateQualifications
+      .map((cq) => cq?.qualification ?? cq)
+      .filter(Boolean);
+
+    for (const req of roleEducationReqs) {
+      const reqQual = req?.qualification ?? req;
+      if (!reqQual) continue;
+
+      // Match by ID
+      if (reqQual.id && candidateQuals.some((cq) => cq.id === reqQual.id)) {
+        return MAX;
+      }
+
+      // Match by level
+      if (reqQual.level && candidateQuals.some((cq) => cq.level === reqQual.level)) {
+        return MAX;
+      }
+
+      // Match by field (case-insensitive contains)
+      if (
+        reqQual.field &&
+        candidateQuals.some((cq) =>
+          String(cq.field ?? '').toLowerCase().includes(String(reqQual.field).toLowerCase()),
+        )
+      ) {
+        return MAX;
+      }
+    }
+
+    // Candidate has qualifications but none match -> partial credit
+    return Math.round(MAX / 2);
   }
 
   /**

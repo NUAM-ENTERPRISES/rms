@@ -2,13 +2,12 @@ import {
   Mail,
   Phone,
   DollarSign,
-  BarChart3,
   Building2 as Building,
   MoreVertical,
   Send,
   CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
-import { AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,6 +57,8 @@ export interface CandidateRecord {
   currentEmployer?: string;
   expectedSalary?: number;
   matchScore?: number;
+  roleMatches?: Array<{ roleId?: string; designation?: string; score?: number }>;
+  nominatedRole?: { id?: string; designation?: string; score?: number };
   projects?: CandidateProjectLink[];
   project?: { id?: string } | null;
 }
@@ -384,15 +385,46 @@ const CandidateCard = memo(function CandidateCard({
             {statusConfig.label}
           </Badge>
           {showMatchScore && displayMatchScore !== undefined && (
-            <Badge
-              variant="outline"
-              className={`${getMatchScoreColor(
-                displayMatchScore
-              )} border text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1`}
-            >
-              <BarChart3 className="h-2.5 w-2.5" aria-hidden="true" />
-              Match {displayMatchScore}%
-            </Badge>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className={`${getMatchScoreColor(
+                    displayMatchScore
+                  )} border text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1`}
+                >
+                  <span className="text-[11px] font-semibold">{displayMatchScore}%</span>
+                </Badge>
+              </TooltipTrigger>
+
+              <TooltipContent className="bg-white text-slate-700 border shadow-sm p-2 rounded-md max-w-xs">
+                <div className="text-xs font-semibold mb-1">Role match scores</div>
+                {candidate.roleMatches && candidate.roleMatches.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {candidate.roleMatches.map((rm, i) => {
+                      const isAssigned = Boolean(candidate.nominatedRole && candidate.nominatedRole.id === rm.roleId);
+                      return (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-2 rounded-full px-2 py-1 border ${isAssigned ? 'border-primary/30 bg-primary/10' : 'border-slate-100 bg-white/60'}`}
+                        >
+                          <span className="text-xs text-slate-700 max-w-[160px] truncate">{rm.designation || 'Role'}</span>
+                          <span className={`${getMatchScoreColor(rm.score ?? 0)} text-xs font-semibold px-2 py-0.5 rounded-full`}>{rm.score ?? '-'}%</span>
+                          {isAssigned && <CheckCircle2 className="h-3 w-3 text-primary ml-1" aria-hidden />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : candidate.nominatedRole ? (
+                  <div className="text-xs">
+                    <div className="font-medium">Assigned role</div>
+                    <div className="text-slate-700">{candidate.nominatedRole.designation} — <span className="font-semibold">{candidate.nominatedRole.score ?? '-'}%</span></div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-500">No role breakdown available</div>
+                )}
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
