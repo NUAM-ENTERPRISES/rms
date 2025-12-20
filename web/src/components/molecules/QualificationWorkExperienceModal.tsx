@@ -34,6 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, GraduationCap, Briefcase, Search } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
+import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 import {
   useCreateCandidateQualificationMutation,
   useUpdateCandidateQualificationMutation,
@@ -57,6 +58,8 @@ const qualificationSchema = z.object({
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(2, "Company name is required"),
+  departmentId: z.string().optional(),
+  roleCatalogId: z.string().min(1, "Role catalog ID is required"),
   jobTitle: z.string().min(2, "Job title is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
@@ -166,6 +169,8 @@ export default function QualificationWorkExperienceModal({
         setSkills(expSkills);
         workExperienceForm.reset({
           companyName: exp.companyName,
+          departmentId: (exp as any).departmentId || undefined,
+          roleCatalogId: exp.roleCatalogId || "",
           jobTitle: exp.jobTitle,
           startDate: exp.startDate.split("T")[0], // Convert to YYYY-MM-DD format
           endDate: exp.endDate ? exp.endDate.split("T")[0] : "",
@@ -189,6 +194,8 @@ export default function QualificationWorkExperienceModal({
       });
       workExperienceForm.reset({
         companyName: "",
+        departmentId: undefined,
+        roleCatalogId: "",
         jobTitle: "",
         startDate: "",
         endDate: "",
@@ -232,18 +239,19 @@ export default function QualificationWorkExperienceModal({
 
   const handleWorkExperienceSubmit = async (data: WorkExperienceFormData) => {
     try {
+      const { departmentId, ...dataWithoutDepartmentId } = data;
       const payload = {
-        ...data,
+        ...dataWithoutDepartmentId,
         skills: JSON.stringify(skills),
         // Handle endDate - convert to ISO string if not empty, otherwise undefined
         endDate:
-          data.endDate && data.endDate.trim() !== ""
-            ? new Date(data.endDate).toISOString()
+          dataWithoutDepartmentId.endDate && dataWithoutDepartmentId.endDate.trim() !== ""
+            ? new Date(dataWithoutDepartmentId.endDate).toISOString()
             : undefined,
         // Handle salary - only include if it's a valid number
         salary:
-          data.salary !== undefined && data.salary !== null
-            ? data.salary
+          dataWithoutDepartmentId.salary !== undefined && dataWithoutDepartmentId.salary !== null
+            ? dataWithoutDepartmentId.salary
             : undefined,
       };
 
@@ -514,6 +522,64 @@ export default function QualificationWorkExperienceModal({
             className="space-y-4"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Department */}
+              <div className="space-y-2">
+                <Controller
+                  name="departmentId"
+                  control={workExperienceForm.control}
+                  render={({ field }) => (
+                    <DepartmentSelect
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Clear roleCatalogId and jobTitle when department changes
+                        workExperienceForm.setValue("roleCatalogId", "");
+                        workExperienceForm.setValue("jobTitle", "");
+                      }}
+                      label="Department"
+                      placeholder="Select department"
+                    />
+                  )}
+                />
+              </div>
+
+              {/* Job Title */}
+              <div className="space-y-2">
+                <Controller
+                  name="jobTitle"
+                  control={workExperienceForm.control}
+                  render={({ field }) => (
+                    <JobTitleSelect
+                      value={field.value}
+                      onRoleChange={(role) => {
+                        if (role) {
+                          workExperienceForm.setValue("roleCatalogId", role.id);
+                          workExperienceForm.setValue("jobTitle", role.label || role.name);
+                        } else {
+                          workExperienceForm.setValue("roleCatalogId", "");
+                          workExperienceForm.setValue("jobTitle", "");
+                        }
+                      }}
+                      label="Job Title"
+                      placeholder={
+                        workExperienceForm.watch("departmentId")
+                          ? "e.g., Registered Nurse"
+                          : "Select a department first"
+                      }
+                      required
+                      allowEmpty={false}
+                      departmentId={workExperienceForm.watch("departmentId")}
+                      disabled={!workExperienceForm.watch("departmentId")}
+                    />
+                  )}
+                />
+                {workExperienceForm.formState.errors.jobTitle && (
+                  <p className="text-sm text-red-600">
+                    {workExperienceForm.formState.errors.jobTitle.message}
+                  </p>
+                )}
+              </div>
+
               {/* Company Name */}
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name *</Label>
@@ -524,20 +590,6 @@ export default function QualificationWorkExperienceModal({
                 {workExperienceForm.formState.errors.companyName && (
                   <p className="text-sm text-red-600">
                     {workExperienceForm.formState.errors.companyName.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Job Title */}
-              <div className="space-y-2">
-                <Label htmlFor="jobTitle">Job Title *</Label>
-                <Input
-                  {...workExperienceForm.register("jobTitle")}
-                  placeholder="Staff Nurse"
-                />
-                {workExperienceForm.formState.errors.jobTitle && (
-                  <p className="text-sm text-red-600">
-                    {workExperienceForm.formState.errors.jobTitle.message}
                   </p>
                 )}
               </div>

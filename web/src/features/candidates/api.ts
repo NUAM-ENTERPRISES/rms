@@ -199,6 +199,7 @@ export interface UpdateCandidateQualificationRequest {
 export interface UpdateWorkExperienceRequest {
   id: string;
   companyName?: string;
+  roleCatalogId?: string;
   jobTitle?: string;
   startDate?: string;
   endDate?: string;
