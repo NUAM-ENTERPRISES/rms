@@ -57,6 +57,8 @@ import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
+  type RecruiterMyCandidatesResponse,
+  type AllCandidatesResponse,
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
@@ -94,7 +96,10 @@ export default function CandidatesPage() {
     { skip: isRecruiter && !isManager } // Skip this query if user is recruiter without manager role
   );
 
-  const allCandidatesData = allCandidatesQuery.data;
+  const allCandidatesData = allCandidatesQuery.data as
+    | AllCandidatesResponse
+    | undefined
+    | any;
   const isLoadingAll = allCandidatesQuery.isLoading;
   const errorAll = allCandidatesQuery.error;
   const allCandidatesRefetch = allCandidatesQuery.refetch;
@@ -109,7 +114,10 @@ export default function CandidatesPage() {
     { skip: !isRecruiter || isManager } // Skip this query if user is not recruiter or is manager
   );
 
-  const recruiterCandidatesData = recruiterCandidatesQuery.data;
+  const recruiterCandidatesData = recruiterCandidatesQuery.data as
+    | RecruiterMyCandidatesResponse
+    | undefined
+    | any;
   const isLoadingRecruiter = recruiterCandidatesQuery.isLoading;
   const errorRecruiter = recruiterCandidatesQuery.error;
   const recruiterRefetch = recruiterCandidatesQuery.refetch;
@@ -418,8 +426,11 @@ export default function CandidatesPage() {
     statusFilter?: string;
   };
 
+  // Helper to safely extract `counts` from different response shapes
+  const extractCounts = (resp: any) => resp?.counts ?? resp?.data?.counts ?? undefined;
+
   // Prefer server-provided counts (recruiter or all candidates), otherwise derive from client data
-  const serverCounts = isRecruiter && !isManager ? recruiterCandidatesData?.counts : allCandidatesData?.counts;
+  const serverCounts = isRecruiter && !isManager ? extractCounts(recruiterCandidatesData) : extractCounts(allCandidatesData);
 
   const derivedCounts = {
     // Recruiter endpoint uses totalAssigned; all-candidates endpoint uses total
@@ -525,7 +536,7 @@ export default function CandidatesPage() {
 
   // If the user is a recruiter (non-manager), show recruiter-specific tiles
   if (isRecruiter && !isManager) {
-    const recruiterCounts = recruiterCandidatesData?.counts;
+    const recruiterCounts = extractCounts(recruiterCandidatesData);
     const assignedCount = recruiterCounts?.totalAssigned ?? totalCount;
     const untouchedCount = recruiterCounts?.untouched ?? 0;
     const rnrCount = recruiterCounts?.rnr ?? 0;
@@ -622,9 +633,9 @@ export default function CandidatesPage() {
   }
   else {
     // For non-recruiter users: if API returns counts, show the same tiles
-    const allCounts = allCandidatesData?.counts || allCandidatesData?.data?.counts;
+    const allCounts = extractCounts(allCandidatesData);
     if (allCounts) {
-      const assignedCount = allCounts?.total ?? allCounts?.totalAssigned ?? totalCount;
+      const assignedCount = (allCounts as any)?.total ?? (allCounts as any)?.totalAssigned ?? totalCount;
       const untouchedCount = allCounts?.untouched ?? 0;
       const rnrCount = allCounts?.rnr ?? 0;
       const onHoldCount = allCounts?.onHold ?? 0;

@@ -390,6 +390,33 @@ export interface RecruiterMyCandidatesResponse {
   message: string;
 }
 
+export interface AllCandidatesResponse {
+  success?: boolean;
+  data?: Candidate[];
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+  };
+  counts?: {
+    total?: number;
+    totalAssigned?: number;
+    untouched?: number;
+    rnr?: number;
+    onHold?: number;
+    interested?: number;
+    qualified?: number;
+    future?: number;
+    working?: number;
+    notInterested?: number;
+    otherEnquiry?: number;
+  };
+  message?: string;
+}
+
 export interface GetCandidateProjectPipelineResponse {
     success: boolean;
     data: {
