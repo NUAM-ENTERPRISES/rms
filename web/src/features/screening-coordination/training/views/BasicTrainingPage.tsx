@@ -19,6 +19,9 @@ import {
   UserPlus,
   Send,
   GraduationCap,
+  CalendarCheck,
+  CheckCircle2,
+
 } from "lucide-react";
 import {
   Card,
@@ -32,7 +35,7 @@ import { Button } from "@/components/ui/button";
 // Select components not used in Basic Training
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+// import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetBasicTrainingAssignmentsQuery } from "../data";
 import { useCreateTrainingAssignmentMutation } from "../data";
@@ -45,6 +48,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSendForInterviewMutation } from "../data";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetTrainingHistoryQuery } from "../data";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 
 export default function BasicTrainingPage() {
 
@@ -361,496 +366,410 @@ export default function BasicTrainingPage() {
     setFilters((prev) => ({ ...prev, search: value }));
   };
 
-  return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      {/* Page Title */}
-      <div className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-lg">
-            <GraduationCap className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Basic Training</h1>
-            <p className="text-sm text-gray-600">Manage candidate training sessions and progress</p>
-          </div>
+return (
+  <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/20">
+    {/* Compact Header */}
+    <header className="px-4 py-3 border-b bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-20">
+      <div className="flex items-center gap-3 max-w-7xl mx-auto">
+        <div className="p-2 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-md">
+          <GraduationCap className="h-6 w-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Basic Training
+          </h1>
+          <p className="text-xs text-slate-600">Manage training sessions</p>
         </div>
       </div>
+    </header>
 
-      {/* Search & Filters Section */}
-      <div className="w-full max-w-full mx-auto pt-2 pb-4 px-4 overflow-x-hidden">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardContent>
-            <div className="space-y-6">
-              {/* Premium Search Bar with Enhanced Styling */}
-              <div className="relative group">
-                <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${filters.search ? "text-blue-600" : "text-gray-400"
-                    }`}
-                >
-                  <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${filters.search ? "scale-110" : "scale-100"
-                      }`}
-                  />
+    {/* Compact Search & Filters */}
+    <div className="px-4 py-3 max-w-7xl mx-auto w-full">
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-md rounded-2xl ring-1 ring-indigo-200/20">
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                <div className="p-1.5 rounded-full bg-indigo-100/80">
+                  <Search className="h-4 w-4 text-indigo-600" />
                 </div>
-                <Input
-                  placeholder="Search candidates, projects, roles..."
-                  value={filters.search}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-                <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${filters.search ? "ring-2 ring-blue-500/20" : ""
-                    }`}
-                />
               </div>
+              <Input
+                placeholder="Search..."
+                value={filters.search}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-12 h-10 text-sm rounded-xl border-indigo-200/50 bg-white/90 shadow-inner focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-300"
+              />
+              {filters.search && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => handleSearch("")}
+                >
+                  <X className="h-3.5 w-3.5 text-slate-500" />
+                </Button>
+              )}
+            </div>
 
-              {/* Filters Row */}
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Status and search filters (decision filter not applicable) */}
+            <div className="flex items-center gap-2">
+              {(filters.search || filters.status !== "all") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 text-xs rounded-lg border-indigo-200 hover:bg-indigo-50"
+                  onClick={() =>
+                    setFilters({
+                      search: "",
+                      mode: "all",
+                      decision: "all",
+                      status: "all",
+                    })
+                  }
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
 
-                {/* Clear Filters Button */}
-                {(filters.search || filters.status !== "all") && (
+    {/* Compact Master-Detail */}
+    <div className="flex-1 flex overflow-hidden px-4 pb-4 max-w-7xl mx-auto w-full gap-4">
+      {/* Left Panel - Smaller */}
+      <Card className="w-80 border-0 shadow-xl bg-white/80 backdrop-blur-lg rounded-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/20">
+        <CardHeader className="pb-2 border-b bg-gradient-to-r from-white to-indigo-50/30">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <CalendarCheck className="h-4 w-4 text-indigo-600" />
+                <CardTitle className="text-base font-semibold text-slate-800">Sessions</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-slate-600 pl-5">
+                {displayedInterviews.length} found
+              </CardDescription>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5 text-orange-600" />
+                <span className="font-bold text-orange-600">{stats.needsTraining}</span>
+              </div>
+              <div className="hidden sm:block w-px h-5 bg-indigo-200/50" />
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                <span className="font-bold text-green-600">{stats.approved}</span>
+              </div>
+              <div className="hidden sm:block w-px h-5 bg-indigo-200/50" />
+              <div className="flex items-center gap-1">
+                <CalendarCheck className="h-3.5 w-3.5 text-indigo-600" />
+                <span className="font-bold text-indigo-600">{stats.completed}</span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <ScrollArea className="flex-1 px-3 py-2">
+          {displayedInterviews.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6">
+              <ClipboardCheck className="h-12 w-12 text-indigo-300/70 mb-3" />
+              <p className="text-sm font-medium text-slate-600">No sessions</p>
+              <p className="text-xs text-slate-500">
+                {filters.search || filters.status !== "all" ? "Adjust filters" : "Will appear here"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {displayedInterviews.map((interview) => {
+                const candidate = interview.candidateProjectMap?.candidate;
+                const role = interview.candidateProjectMap?.roleNeeded;
+                const sessionType = interview.sessions?.[0]?.sessionType;
+                const ModeIcon = getModeIcon(sessionType || "");
+                const isSelected = interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
+                const isCompleted = !!interview.completedAt || !!interview.sessions?.some((s) => s.completedAt);
+                const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown";
+
+                return (
+                  <button
+                    key={interview.id}
+                    onClick={() => setSelectedInterviewId(interview.id)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-xl border transition-all duration-200 text-sm",
+                      isSelected
+                        ? "bg-indigo-50/70 border-indigo-300 shadow-sm ring-1 ring-indigo-400/30"
+                        : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-md"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">{candidateName}</h3>
+                        <p className="text-xs text-slate-500 truncate">
+                          {role?.designation || "Unknown Role"}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {interview.status === "completed" || interview.status === "basic_training_assigned" ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 rounded-lg hover:bg-orange-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSendForInterviewConfirm({
+                                isOpen: true,
+                                candidateId: interview.candidateProjectMap?.candidate?.id,
+                                candidateName,
+                                projectId: interview.candidateProjectMap?.project?.id,
+                                mockInterviewId: undefined,
+                                notes: "",
+                                type: "interview",
+                              });
+                            }}
+                          >
+                            <Send className="h-3.5 w-3.5 text-orange-600" />
+                          </Button>
+                        ) : interview.status === "assigned" || interview.status === "in_progress" ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 rounded-lg hover:bg-indigo-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAssignToTrainer(interview);
+                            }}
+                          >
+                            <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
+                          </Button>
+                        ) : null}
+
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 transition-all",
+                            isSelected ? "text-indigo-600 translate-x-1" : "text-slate-400"
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-1">
+                      <div
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs",
+                          isCompleted ? "bg-green-100 text-green-700" : "bg-indigo-100 text-indigo-700"
+                        )}
+                      >
+                        <ModeIcon className="h-3 w-3" />
+                        <span className="capitalize">
+                          {sessionType ? sessionType.replace("_", " ") : (interview.trainingType || "basic")}
+                        </span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn("text-xs px-2 py-0.5", getStatusBadgeClass(interview.status))}
+                      >
+                        {getStatusLabel(interview.status)}
+                      </Badge>
+                    </div>
+
+                    <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3" />
+                      {interview.sessions?.[0]?.sessionDate
+                        ? format(new Date(interview.sessions[0].sessionDate), "MMM d, yyyy")
+                        : interview.assignedAt
+                        ? format(new Date(interview.assignedAt), "MMM d, yyyy")
+                        : "Not scheduled"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </Card>
+
+      {/* Right Panel - Compact Details */}
+      <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20 rounded-2xl shadow-xl ring-1 ring-indigo-200/20">
+        {selectedInterview ? (
+          <ScrollArea className="h-full">
+            <div className="p-5 space-y-5 max-w-4xl mx-auto">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4 pb-4 border-b border-indigo-200/50">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      Details
+                    </h2>
+                    <Badge className={cn("text-sm px-3 py-1", getStatusBadgeClass(selectedInterview.status))}>
+                      {getStatusLabel(selectedInterview.status)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    {selectedInterview.sessions?.[0]?.sessionDate
+                      ? format(new Date(selectedInterview.sessions[0].sessionDate), "MMM d, yyyy • h:mm a")
+                      : selectedInterview.assignedAt
+                      ? format(new Date(selectedInterview.assignedAt), "MMM d, yyyy")
+                      : "Not scheduled"}
+                  </p>
+                </div>
+
+                {selectedInterview.status === "basic_training_assigned" && (
                   <Button
-                    variant="ghost"
                     size="sm"
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-xs px-4"
                     onClick={() =>
-                      setFilters({
-                        search: "",
-                        mode: "all",
-                        decision: "all",
-                        status: "all",
+                      setSendForInterviewConfirm({
+                        isOpen: true,
+                        candidateId: selectedInterview.candidateProjectMap?.candidate?.id,
+                        candidateName:
+                          `${selectedInterview.candidateProjectMap?.candidate?.firstName || ""} ${selectedInterview.candidateProjectMap?.candidate?.lastName || ""}`.trim(),
+                        projectId: selectedInterview.candidateProjectMap?.project?.id,
+                        mockInterviewId: undefined,
+                        notes: "",
+                        type: "interview",
                       })
                     }
-                    className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
                   >
-                    <X className="h-3 w-3" />
-                    Clear
+                    <Send className="h-3.5 w-3.5 mr-1" />
+                    Send for Interview
                   </Button>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Master-Detail Layout */}
-      <div className="flex-1 flex overflow-hidden px-4 min-h-0">
-        {/* Left Panel - Interview List */}
-        <Card className="w-96 border-r border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-none min-w-0 min-h-0 h-full flex flex-col">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">
-                  Training Sessions
-                </CardTitle>
-                <CardDescription>
-                  {displayedInterviews.length} session
-                  {displayedInterviews.length !== 1 ? "s" : ""} found
-                </CardDescription>
-              </div>
-              {/* Compact Stats */}
-              <div className="flex items-center gap-2">
-                <div className="text-center">
-                  <div className="text-base font-bold text-orange-600">
-                    {stats.needsTraining}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Training</div>
-                </div>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="text-center">
-                  <div className="text-base font-bold text-green-600">
-                    {stats.approved}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Approved</div>
-                </div>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="text-center">
-                  <div className="text-base font-bold">{stats.completed}</div>
-                  <div className="text-xs text-muted-foreground">Done</div>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              {displayedInterviews.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-sm font-medium mb-1">
-                    No training sessions found
-                  </p>
-                  <p className="text-xs">
-                    {filters.search || filters.mode !== "all" || filters.status !== "all"
-                      ? "Try adjusting your filters"
-                      : "Training sessions will appear here once scheduled"}
-                  </p>
-                </div>
-              ) : (
-                <div className="p-2 space-y-1">
-                  {displayedInterviews.map((interview) => {
-                    const candidate = interview.candidateProjectMap?.candidate;
-                    const role = interview.candidateProjectMap?.roleNeeded;
-                    const sessionType = interview.sessions?.[0]?.sessionType;
-                    const ModeIcon = getModeIcon(sessionType || "");
-                    const isSelected =
-                      interview.id ===
-                      (selectedInterview?.id || displayedInterviews[0]?.id);
-                    const isCompleted = !!interview.completedAt || !!interview.sessions?.some((s) => s.completedAt);
-
-                    return (
-                      <button
-                        key={interview.id}
-                        onClick={() => setSelectedInterviewId(interview.id)}
-                        className={cn(
-                          "w-full text-left p-2.5 rounded-lg border transition-all",
-                          "hover:bg-accent/50",
-                          isSelected
-                            ? "bg-accent border-primary shadow-sm"
-                            : "bg-card border-transparent"
+              {/* Candidate & Project */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50/70 to-purple-50/70">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10 ring-2 ring-white shadow-md">
+                        <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                          {selectedInterview.candidateProjectMap?.candidate
+                            ? `${selectedInterview.candidateProjectMap.candidate.firstName?.[0] || ""}${selectedInterview.candidateProjectMap.candidate.lastName?.[0] || ""}`.toUpperCase()
+                            : "??"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold text-indigo-700 flex items-center gap-1.5 mb-1">
+                          <User className="h-4 w-4" />
+                          Candidate
+                        </h3>
+                        <p className="text-sm font-medium">
+                          {selectedInterview.candidateProjectMap?.candidate
+                            ? `${selectedInterview.candidateProjectMap.candidate.firstName} ${selectedInterview.candidateProjectMap.candidate.lastName}`
+                            : "Unknown"}
+                        </p>
+                        {selectedInterview.candidateProjectMap?.candidate?.email && (
+                          <p className="text-xs text-slate-600 break-all">{selectedInterview.candidateProjectMap.candidate.email}</p>
                         )}
-                      >
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm truncate">
-                                {candidate
-                                  ? `${candidate.firstName} ${candidate.lastName}`
-                                  : "Unknown Candidate"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {role?.designation || "Unknown Role"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {(() => {
-
-                              // If training already completed or basic training assigned, allow sending for interview
-                              if (interview.status === "completed" || interview.status === "basic_training_assigned") {
-                                return (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 px-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSendForInterviewConfirm({
-                                        isOpen: true,
-                                        candidateId: interview.candidateProjectMap?.candidate?.id,
-                                        candidateName:
-                                          interview.candidateProjectMap?.candidate?.firstName +
-                                          " " +
-                                          interview.candidateProjectMap?.candidate?.lastName,
-                                        projectId: interview.candidateProjectMap?.project?.id,
-                                        screeningId: undefined,
-                                        notes: "",
-                                        type: "interview",
-                                      });
-                                    }}
-                                    title="Send for Interview"
-                                  >
-                                    <Send className="h-3.5 w-3.5" />
-                                  </Button>
-                                );
-                              }
-
-                              // Fallback: allow assigning to trainer when assignment is active
-                              if (interview.status === "assigned" || interview.status === "in_progress") {
-                                return (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAssignToTrainer(interview);
-                                    }}
-                                    title="Assign to Trainer"
-                                  >
-                                    <UserPlus className="h-3.5 w-3.5" />
-                                  </Button>
-                                );
-                              }
-
-                              return null;
-                            })()}
-                            <ChevronRight
-                              className={cn(
-                                "h-4 w-4 flex-shrink-0 transition-transform",
-                                isSelected && "text-primary"
-                              )}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <div
-                            className={cn(
-                              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs",
-                              isCompleted
-                                ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300"
-                                : "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                            )}
-                          >
-                            <ModeIcon className="h-3 w-3" />
-                            <span className="capitalize">
-                              {sessionType
-                                ? sessionType.replace("_", " ")
-                                : (interview.trainingType || "basic")}
-                            </span>
-                          </div>
-                          <div>
-                            <Badge className={getStatusBadgeClass(interview.status)}>{getStatusLabel(interview.status)}</Badge>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>
-                            {interview.sessions && interview.sessions.length && interview.sessions[0].sessionDate
-                              ? format(new Date(interview.sessions[0].sessionDate), "MMM d, yyyy")
-                              : interview.assignedAt
-                                ? format(new Date(interview.assignedAt), "MMM d, yyyy")
-                                : "Not scheduled"}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Right Panel - Interview Details */}
-        <div className="flex-1 overflow-hidden bg-muted/20 min-w-0 min-h-0">
-          {selectedInterview ? (
-            <ScrollArea className="h-full">
-              {/*
-                Reduced max width to avoid pushing header actions off-screen on
-                narrower viewports and added `min-w-0` / truncation utility
-                classes to allow the left content to wrap/truncate instead of
-                forcing the Send button out of view.
-              */}
-              <div className="p-4 max-w-2xl mx-auto space-y-4 overflow-x-hidden">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-semibold truncate">
-                        Training Session Details
-                      </h2>
-                      {selectedInterview.status && (
-                        <Badge className={getStatusBadgeClass(selectedInterview.status)}>
-                          {getStatusLabel(selectedInterview.status)}
-                        </Badge>
-                      )}
+                        {(selectedInterview.candidateProjectMap?.candidate as any)?.phone && (
+                          <p className="text-xs text-slate-600">{(selectedInterview.candidateProjectMap?.candidate as any).phone}</p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {selectedInterview.sessions && selectedInterview.sessions.length && selectedInterview.sessions[0].sessionDate
-                        ? `Scheduled for ${format(new Date(selectedInterview.sessions[0].sessionDate), "MMMM d, yyyy 'at' h:mm a")}`
-                        : selectedInterview.assignedAt
-                          ? `Assigned on ${format(new Date(selectedInterview.assignedAt), "MMMM d, yyyy")}`
-                          : "Not scheduled"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {selectedInterview.status === "basic_training_assigned" && (
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          setSendForInterviewConfirm({
-                            isOpen: true,
-                            candidateId: selectedInterview.candidateProjectMap?.candidate?.id,
-                            candidateName:
-                              selectedInterview.candidateProjectMap?.candidate?.firstName +
-                              " " +
-                              selectedInterview.candidateProjectMap?.candidate?.lastName,
-                            projectId: selectedInterview.candidateProjectMap?.project?.id,
-                            screeningId: undefined,
-                            notes: "",
-                            type: "interview",
-                          })
-                        }
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Send for Interview
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
-                  {/* Candidate Info */}
-                  <Card className="min-w-0 w-full max-w-full">
-                    <CardContent className="p-4 overflow-hidden w-full max-w-full">
-                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4 text-primary" />
-                        Candidate Information
-                      </h3>
-                      <div className="space-y-2.5 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Name
-                          </p>
-                          <p className="font-medium">
-                            {selectedInterview.candidateProjectMap?.candidate
-                              ? `${selectedInterview.candidateProjectMap.candidate.firstName} ${selectedInterview.candidateProjectMap.candidate.lastName}`
-                              : "Unknown Candidate"}
-                          </p>
-                        </div>
-                        {selectedInterview.candidateProjectMap?.candidate
-                          ?.email && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Email
-                              </p>
-                              <p className="font-medium break-all text-xs">
-                                {
-                                  selectedInterview.candidateProjectMap.candidate
-                                    .email
-                                }
-                              </p>
-                            </div>
-                          )}
-                        {(selectedInterview.candidateProjectMap?.candidate as any)
-                          ?.phone && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Phone
-                              </p>
-                              <p className="font-medium">
-                                {(selectedInterview.candidateProjectMap?.candidate as any).phone}
-                              </p>
-                            </div>
-                          )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Project & Role */}
-                  <Card className="min-w-0 w-full max-w-full">
-                    <CardContent className="p-4 overflow-hidden w-full max-w-full">
-                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        Project & Role
-                      </h3>
-                      <div className="space-y-2.5 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Project
-                          </p>
-                          <p className="font-medium break-words">
-                            {selectedInterview.candidateProjectMap?.project
-                              ?.title || "Unknown Project"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Role
-                          </p>
-                          <p className="font-medium break-words">
-                            {selectedInterview.candidateProjectMap?.roleNeeded
-                              ?.designation || "Unknown Role"}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Interview Details */}
-                <Card className="min-w-0 w-full max-w-full">
-                  <CardContent className="p-4 overflow-hidden w-full max-w-full">
-                    <h3 className="font-semibold mb-3 text-sm">
-                      Training Details
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Mode
-                        </p>
-                        <p className="font-medium capitalize">
-                          {selectedInterview.sessions?.[0]?.sessionType
-                            ? selectedInterview.sessions[0].sessionType.replace("_", " ")
-                            : (selectedInterview.trainingType || "basic")}
-                        </p>
-                      </div>
-                      {(selectedInterview.completedAt || selectedInterview.sessions?.some((s) => s.completedAt)) && (
-                        <>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Conducted On
-                            </p>
-                            <p className="font-medium">
-                              {selectedInterview.completedAt
-                                ? format(new Date(selectedInterview.completedAt), "MMM d, yyyy 'at' h:mm a")
-                                : format(new Date(selectedInterview.sessions?.find((s) => s.completedAt)?.completedAt!), "MMM d, yyyy 'at' h:mm a")}
-                            </p>
-                          </div>
-                          {selectedInterview.overallPerformance != null && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Overall Performance
-                              </p>
-                              <p className="font-medium">{selectedInterview.overallPerformance}</p>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {getAssignedTrainerName(selectedInterview) && (
-                        <div className="mt-3">
-                          <p className="text-xs text-muted-foreground mb-1">Trainer</p>
-                          <p className="font-medium">{getAssignedTrainerName(selectedInterview)}</p>
-                        </div>
-                      )}
-
-                      {/* Status */}
-                      {selectedInterview.status && (
-                        <div className="mt-3">
-                          <p className="text-xs text-muted-foreground mb-1">Status</p>
-                          <Badge className={getStatusBadgeClass(selectedInterview.status)}>{getStatusLabel(selectedInterview.status)}</Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    {selectedInterview.notes && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Notes
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {selectedInterview.notes}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* No checklist items for Basic Training (training uses sessions/evaluations) */}
                   </CardContent>
                 </Card>
 
-                {/* Interview History (bottom) */}
-                {selectedInterview?.candidateProjectMap?.id && (
-                  <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
-                )}
-              </div> 
-            </ScrollArea>
-          ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <ClipboardCheck className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No training session selected</p>
-                <p className="text-sm">
-                  Select a training session from the list to view details
-                </p>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50/70 to-pink-50/70">
+                  <CardContent className="p-4">
+                    <h3 className="text-base font-semibold text-purple-700 flex items-center gap-1.5 mb-2">
+                      <Briefcase className="h-4 w-4" />
+                      Project & Role
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-500">Project</p>
+                        <p className="font-medium">{selectedInterview.candidateProjectMap?.project?.title || "Unknown"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">Role</p>
+                        <p className="font-medium">{selectedInterview.candidateProjectMap?.roleNeeded?.designation || "Unknown"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
 
+              {/* Training Details */}
+              <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50/70 to-teal-50/70">
+                <CardContent className="p-4 space-y-4">
+                  <h3 className="text-lg font-semibold text-emerald-700">Training Details</h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs text-slate-500">Mode</p>
+                      <p className="font-medium capitalize">
+                        {selectedInterview.sessions?.[0]?.sessionType
+                          ? selectedInterview.sessions[0].sessionType.replace("_", " ")
+                          : selectedInterview.trainingType || "Basic"}
+                      </p>
+                    </div>
+
+                    {(selectedInterview.completedAt || selectedInterview.sessions?.some((s) => s.completedAt)) && (
+                      <>
+                        <div>
+                          <p className="text-xs text-slate-500">Date</p>
+                          <p className="font-medium">
+                            {selectedInterview.completedAt
+                              ? format(new Date(selectedInterview.completedAt), "MMM d, yyyy")
+                              : format(
+                                  new Date(selectedInterview.sessions?.find((s) => s.completedAt)?.completedAt!),
+                                  "MMM d, yyyy"
+                                )}
+                          </p>
+                        </div>
+
+                        {selectedInterview.overallPerformance != null && (
+                          <div>
+                            <p className="text-xs text-slate-500">Perf.</p>
+                            <p className="font-bold text-emerald-800">{selectedInterview.overallPerformance}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {getAssignedTrainerName(selectedInterview) && (
+                      <div>
+                        <p className="text-xs text-slate-500">Trainer</p>
+                        <p className="font-medium">{getAssignedTrainerName(selectedInterview)}</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="text-xs text-slate-500">Status</p>
+                      <Badge className={cn("text-xs px-2 py-1 mt-1", getStatusBadgeClass(selectedInterview.status))}>
+                        {getStatusLabel(selectedInterview.status)}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {selectedInterview.notes && (
+                    <div className="pt-3 border-t border-emerald-200">
+                      <p className="text-xs text-slate-500 mb-1">Notes</p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedInterview.notes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {selectedInterview?.candidateProjectMap?.id && (
+                <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
+              )}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="h-full flex items-center justify-center text-center">
+            <div className="space-y-3">
+              <ClipboardCheck className="h-14 w-14 text-indigo-300/70 mx-auto" />
+              <p className="text-base font-medium text-slate-600">No session selected</p>
+              <p className="text-xs text-slate-500">Select from the list</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
       {/* Assign to Trainer Dialog */}
       <AssignToTrainerDialog
         open={assignToTrainerOpen}
