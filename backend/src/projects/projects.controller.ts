@@ -638,7 +638,18 @@ export class ProjectsController {
                   experience: { type: 'number' },
                   skills: { type: 'array', items: { type: 'string' } },
                   expectedSalary: { type: 'number' },
-                  matchScore: { type: 'number', example: 85 },
+                  // matchScore is now an object describing the top role match
+                  matchScore: {
+                    type: 'object',
+                    properties: {
+                      roleId: { type: 'string' },
+                      roleName: { type: 'string' },
+                      roleCatalogId: { type: 'string' },
+                      roleDepartmentName: { type: 'string' },
+                      roleDepartmentLabel: { type: 'string' },
+                      score: { type: 'number', example: 85 },
+                    },
+                  },
                   currentStatus: { type: 'object' },
                   projectStatus: { type: 'object' },
                   qualifications: { type: 'array' },

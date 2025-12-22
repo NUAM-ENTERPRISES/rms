@@ -20,4 +20,55 @@ describe("CandidateCard - interview button", () => {
 
     expect(onSend).toHaveBeenCalledWith("c1");
   });
+
+  it("shows concise eligible role tooltip when matchScore is object", async () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c2",
+          firstName: "Role",
+          lastName: "Tester",
+          matchScore: { roleName: "Emergency Staff Nurse", score: 100 },
+        }}
+        showMatchScore
+      />
+    );
+
+    const badge = screen.getByText("100%");
+    await userEvent.hover(badge);
+
+    // Tooltip content is rendered twice by the tooltip implementation for
+    // accessibility (one visible, one for aria), so use the "AllBy" queries
+    // and assert at least one match is present.
+    const eligibleTexts = await screen.findAllByText(/This candidate is eligible for/i);
+    expect(eligibleTexts.length).toBeGreaterThan(0);
+    // There may be multiple DOM nodes (visible + sr-only + aria copy), so assert at least one exists
+    expect((await screen.findAllByText(/Emergency Staff Nurse/i)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/100%/i)).length).toBeGreaterThan(0);
+  });
+
+  it("shows a colorful score circle and progress bar in tooltip", async () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c3",
+          firstName: "Pretty",
+          lastName: "Tooltip",
+          matchScore: { roleName: "Emergency Staff Nurse", score: 88, roleDepartmentLabel: "Emergency Department" },
+        }}
+        showMatchScore
+      />
+    );
+
+    const badge = screen.getByText("88%");
+    await userEvent.hover(badge);
+
+    // Ensure the progress text exists (may be rendered twice for accessibility)
+    const progressText = await screen.findAllByText(/88% match/i);
+    expect(progressText.length).toBeGreaterThan(0);
+    // Ensure role is visible (may be duplicated for accessibility)
+    expect((await screen.findAllByText(/Emergency Staff Nurse/i)).length).toBeGreaterThan(0);
+    // Ensure department is visible
+    expect((await screen.findAllByText(/Emergency Department/i)).length).toBeGreaterThan(0);
+  });
 });

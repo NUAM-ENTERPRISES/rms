@@ -56,7 +56,16 @@ export interface CandidateRecord {
   projectStatus?: { statusName?: string };
   currentEmployer?: string;
   expectedSalary?: number;
-  matchScore?: number;
+  matchScore?:
+    | number
+    | {
+        roleId?: string;
+        roleName?: string;
+        roleCatalogId?: string;
+        roleDepartmentName?: string;
+        roleDepartmentLabel?: string;
+        score?: number;
+      };
   roleMatches?: Array<{ roleId?: string; designation?: string; score?: number }>;
   nominatedRole?: { id?: string; designation?: string; score?: number };
   projects?: CandidateProjectLink[];
@@ -277,11 +286,69 @@ const CandidateCard = memo(function CandidateCard({
     candidate.countryCode && candidate.mobileNumber
       ? `${candidate.countryCode} ${candidate.mobileNumber}`
       : candidate.contact;
+  // Determine the primary role + score to display (prefers explicit matchScore object,
+  // then highest-scoring roleMatches, then nominatedRole, then numeric matchScore)
+  const getPrimaryRoleMatch = () => {
+    // If matchScore is an object with roleName and score, use it
+    if (
+      candidate.matchScore &&
+      typeof candidate.matchScore === "object" &&
+      (candidate.matchScore as any).score !== undefined
+    ) {
+      const ms: any = candidate.matchScore;
+      return {
+        designation: ms.roleName ?? ms.roleDepartmentLabel ?? ms.roleId,
+        department: ms.roleDepartmentLabel ?? ms.roleDepartmentName ?? undefined,
+        score: typeof ms.score === "number" ? ms.score : undefined,
+      } as { designation?: string; score?: number | undefined };
+    }
+
+    // If roleMatches array present, pick the highest scoring role
+    if (candidate.roleMatches && candidate.roleMatches.length > 0) {
+      const sorted = [...candidate.roleMatches].sort(
+        (a, b) => (b.score ?? 0) - (a.score ?? 0)
+      );
+      return {
+        designation: sorted[0].designation,
+        score: sorted[0].score,
+        department: undefined,
+      };
+    }
+
+    // Fallback to nominatedRole
+    if (candidate.nominatedRole) {
+      return {
+        designation: candidate.nominatedRole.designation,
+        score: candidate.nominatedRole.score,
+        department: undefined,
+      };
+    }
+
+    // Final fallback: numeric matchScore
+    if (typeof candidate.matchScore === "number") {
+      return { designation: undefined, score: candidate.matchScore };
+    }
+
+    return { designation: undefined, score: undefined, department: undefined };
+  };
+
+  const primaryRoleMatch = getPrimaryRoleMatch();
+  // Ensure the displayed match score is a plain number (not an object).
+  const resolveNumericScore = (s: any): number | undefined => {
+    if (s === undefined || s === null) return undefined;
+    if (typeof s === "number") return s;
+    if (typeof s === "object") {
+      if (typeof s.score === "number") return s.score;
+      // Some responses may use 'score' nested differently; try common keys
+      if (typeof s?.value === "number") return s.value;
+    }
+    return undefined;
+  };
+
   const displayMatchScore =
-    matchScore ??
-    (typeof candidate.matchScore === "number"
-      ? candidate.matchScore
-      : undefined);
+    resolveNumericScore(matchScore) ??
+    resolveNumericScore(candidate.matchScore) ??
+    primaryRoleMatch.score;
 
   // DEBUG: In tests, help verify whether interview button is expected to render
   
@@ -398,28 +465,52 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipTrigger>
 
               <TooltipContent className="bg-white text-slate-700 border shadow-sm p-2 rounded-md max-w-xs">
-                <div className="text-xs font-semibold mb-1">Role match scores</div>
-                {candidate.roleMatches && candidate.roleMatches.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {candidate.roleMatches.map((rm, i) => {
-                      const isAssigned = Boolean(candidate.nominatedRole && candidate.nominatedRole.id === rm.roleId);
-                      return (
-                        <div
-                          key={i}
-                          className={`flex items-center gap-2 rounded-full px-2 py-1 border ${isAssigned ? 'border-primary/30 bg-primary/10' : 'border-slate-100 bg-white/60'}`}
-                        >
-                          <span className="text-xs text-slate-700 max-w-[160px] truncate">{rm.designation || 'Role'}</span>
-                          <span className={`${getMatchScoreColor(rm.score ?? 0)} text-xs font-semibold px-2 py-0.5 rounded-full`}>{rm.score ?? '-'}%</span>
-                          {isAssigned && <CheckCircle2 className="h-3 w-3 text-primary ml-1" aria-hidden />}
+                {primaryRoleMatch.designation ? (
+                  <>
+                    {/* Include a concise, screen-reader-friendly sentence describing
+                        the primary eligible role and score (also useful for tests). */}
+                    <div className="sr-only">
+                      This candidate is eligible for {primaryRoleMatch.designation} with score {displayMatchScore}%
+                    </div>
+                    <div className="p-3 max-w-xs">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`${getMatchScoreColor(
+                          displayMatchScore ?? 0
+                        )} w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold`}
+                        aria-hidden
+                      >
+                        <span className="text-[12px]">{displayMatchScore}%</span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] text-slate-500">Top match</div>
+                        <div className="text-sm font-semibold truncate">
+                          {primaryRoleMatch.designation}
                         </div>
-                      );
-                    })}
+                        {primaryRoleMatch.department && (
+                          <div className="text-xs text-slate-400 mt-0.5 truncate">
+                            {primaryRoleMatch.department}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`${getMatchScoreColor(
+                            displayMatchScore ?? 0
+                          )} h-2 rounded-full`}
+                          style={{ width: `${displayMatchScore}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">{displayMatchScore}% match</div>
+                    </div>
                   </div>
-                ) : candidate.nominatedRole ? (
-                  <div className="text-xs">
-                    <div className="font-medium">Assigned role</div>
-                    <div className="text-slate-700">{candidate.nominatedRole.designation} — <span className="font-semibold">{candidate.nominatedRole.score ?? '-'}%</span></div>
-                  </div>
+                    </>
+                ) : candidate.roleMatches && candidate.roleMatches.length > 0 ? (
+                  <div className="text-xs font-medium">Top role: {candidate.roleMatches[0].designation} — {candidate.roleMatches[0].score ?? '-'}%</div>
                 ) : (
                   <div className="text-xs text-slate-500">No role breakdown available</div>
                 )}

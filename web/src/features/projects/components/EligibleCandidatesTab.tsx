@@ -97,6 +97,13 @@ export default function EligibleCandidatesTab({
     return eligibleCandidates.find((c: any) => c.id === candidateId);
   };
 
+  const getNumericMatchScore = (candidate: any) => {
+    if (candidate == null) return undefined;
+    if (typeof candidate.matchScore === "number") return candidate.matchScore;
+    if (candidate.matchScore && typeof candidate.matchScore === "object") return candidate.matchScore.score;
+    return undefined;
+  };
+
   const showVerifyConfirmation = (candidateId: string, candidateName: string) => {
     setVerifyConfirm({ isOpen: true, candidateId, candidateName, roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id, notes: "" });
   };
@@ -421,15 +428,15 @@ export default function EligibleCandidatesTab({
                   
                   <div className="space-y-2 text-sm">
                     {/* Match Score */}
-                    {candidate.matchScore !== undefined && (
+                    {getNumericMatchScore(candidate) !== undefined && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Match Score:</span>
                         <Badge variant="outline" className={
-                          candidate.matchScore >= 80 ? "bg-green-100 text-green-800" :
-                          candidate.matchScore >= 60 ? "bg-blue-100 text-blue-800" :
+                          getNumericMatchScore(candidate)! >= 80 ? "bg-green-100 text-green-800" :
+                          getNumericMatchScore(candidate)! >= 60 ? "bg-blue-100 text-blue-800" :
                           "bg-amber-100 text-amber-800"
                         }>
-                          {candidate.matchScore}%
+                          {getNumericMatchScore(candidate)}%
                         </Badge>
                       </div>
                     )}
@@ -550,15 +557,15 @@ export default function EligibleCandidatesTab({
                   
                   <div className="space-y-2 text-sm">
                     {/* Match Score */}
-                    {candidate.matchScore !== undefined && (
+                    {getNumericMatchScore(candidate) !== undefined && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Match Score:</span>
                         <Badge variant="outline" className={
-                          candidate.matchScore >= 80 ? "bg-green-100 text-green-800" :
-                          candidate.matchScore >= 60 ? "bg-blue-100 text-blue-800" :
+                          getNumericMatchScore(candidate)! >= 80 ? "bg-green-100 text-green-800" :
+                          getNumericMatchScore(candidate)! >= 60 ? "bg-blue-100 text-blue-800" :
                           "bg-amber-100 text-amber-800"
                         }>
-                          {candidate.matchScore}%
+                          {getNumericMatchScore(candidate)}%
                         </Badge>
                       </div>
                     )}

@@ -216,6 +216,13 @@ export default function ProjectEligibleCandidatesPage() {
     return "text-red-600";
   };
 
+  const getNumericMatchScore = (candidate: any) => {
+    if (candidate == null) return 0;
+    if (typeof candidate.matchScore === "number") return candidate.matchScore;
+    if (candidate.matchScore && typeof candidate.matchScore === "object") return candidate.matchScore.score ?? 0;
+    return 0;
+  };
+
   const getAvailabilityBadge = (availability: string) => {
     const variants = {
       immediate: "bg-green-100 text-green-800",
@@ -498,15 +505,15 @@ export default function ProjectEligibleCandidatesPage() {
                         <div className="flex items-center space-x-2">
                           <div
                             className={`font-semibold ${getMatchScoreColor(
-                              candidate.matchScore
+                              getNumericMatchScore(candidate)
                             )}`}
                           >
-                            {candidate.matchScore}%
+                            {getNumericMatchScore(candidate)}%
                           </div>
                           <div className="w-16 bg-gray-200 rounded-full h-2">
                             <div
                               className="bg-primary h-2 rounded-full"
-                              style={{ width: `${candidate.matchScore}%` }}
+                              style={{ width: `${getNumericMatchScore(candidate)}%` }}
                             />
                           </div>
                         </div>

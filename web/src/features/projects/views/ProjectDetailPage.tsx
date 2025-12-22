@@ -36,6 +36,7 @@ import {
   Briefcase,
   CheckCircle2,
 } from "lucide-react";
+import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -85,6 +86,37 @@ const getMinimalScoreBadgeClass = (score?: number) => {
   if (score >= 80) return "bg-blue-50 text-blue-700";
   if (score >= 70) return "bg-amber-50 text-amber-700";
   return "bg-red-50 text-red-700";
+};
+
+// Format a single work experience item for display. Some records use
+// explicit yearsOfExperience while others provide start/end dates.
+const formatWorkExperienceEntry = (exp: any) => {
+  const title = exp.designation || exp.position || exp.role || "";
+  const company = exp.companyName || exp.company || "";
+
+  // If yearsOfExperience provided, show it, otherwise compute from dates
+  let yearsLabel = "";
+  if (typeof exp.yearsOfExperience === "number") {
+    yearsLabel = ` (${exp.yearsOfExperience} years)`;
+  } else if (exp.startDate) {
+    try {
+      const start = new Date(exp.startDate);
+      const end = exp.endDate ? new Date(exp.endDate) : new Date();
+      const diffMs = Math.max(0, end.getTime() - start.getTime());
+      const years = Math.round((diffMs / (1000 * 60 * 60 * 24 * 365)) * 10) / 10;
+      if (!Number.isNaN(years) && years > 0) {
+        yearsLabel = ` (${years} years)`;
+      }
+    } catch (e) {
+      // ignore and leave blank
+    }
+  }
+
+  // Prefer showing title and company first, then years
+  const parts = [] as string[];
+  if (title) parts.push(title);
+  if (company) parts.push(`at ${company}`);
+  return `${parts.join(" ")}${yearsLabel}`.trim();
 };
 
 export default function ProjectDetailPage() {
@@ -835,14 +867,14 @@ export default function ProjectDetailPage() {
                 </CardHeader>
                 <CardContent className="px-3 pb-3">
                   <div className="flex flex-wrap gap-1.5">
-                    {project.documentRequirements.map((req: any, i: number) => (
+                    {project.documentRequirements?.map((req: any, i: number) => (
                       <span
                         key={i}
                         className="text-xs px-2 py-1 bg-orange-50 text-orange-700 rounded-md border border-orange-300"
                       >
                         {req.docType
                           .replace(/_/g, " ")
-                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                          .replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         {req.mandatory && "*"}
                       </span>
                     ))}
@@ -933,6 +965,7 @@ export default function ProjectDetailPage() {
       {/* Direct Screening Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={screeningConfirm.isOpen}
+        className="sm:max-w-2xl"
         onClose={() =>
           setScreeningConfirm({
             isOpen: false,
@@ -958,39 +991,49 @@ export default function ProjectDetailPage() {
               );
               if (!candidate) return null;
               return (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
-                  <h4 className="text-sm font-semibold text-slate-700">Candidate Profile</h4>
-                  
-                  {/* Education/Qualifications */}
-                  {candidate.qualifications && candidate.qualifications.length > 0 && (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  {/* Match score summary */}
+                  <MatchScoreSummary candidate={candidate} />
+
+                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                    {/* Education column */}
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Education:</p>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
                       <div className="space-y-1">
-                        {candidate.qualifications.map((qual: any, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
-                            {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
-                            {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
-                          </p>
-                        ))}
+                        {candidate.qualifications && candidate.qualifications.length > 0 ? (
+                          candidate.qualifications.map((qual: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
+                              {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
+                              {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-500">No education details</p>
+                        )}
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Work Experience */}
-                  {candidate.workExperiences && candidate.workExperiences.length > 0 && (
+
+                    {/* Experience column */}
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Experience:</p>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
                       <div className="space-y-1">
-                        {candidate.workExperiences.map((exp: any, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {exp.designation || exp.position || exp.role} {exp.companyName || exp.company ? `at ${exp.companyName || exp.company}` : ''}
-                            {exp.yearsOfExperience ? ` (${exp.yearsOfExperience} years)` : ''}
-                          </p>
-                        ))}
+                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
+                          candidate.workExperiences.map((exp: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {formatWorkExperienceEntry(exp)}
+                            </p>
+                          ))
+                        ) : candidate.candidateExperience ? (
+                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
+                        ) : (
+                          <p className="text-xs text-slate-500">No experience details</p>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
                   {/* Role match scores */}
                   {candidate.roleMatches && candidate.roleMatches.length > 0 && (
                     <div>
@@ -1080,6 +1123,7 @@ export default function ProjectDetailPage() {
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
+        className="sm:max-w-2xl"
         onClose={() =>
           setVerifyConfirm({
             isOpen: false,
@@ -1106,43 +1150,49 @@ export default function ProjectDetailPage() {
               );
               if (!candidate) return null;
               return (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
-                  <h4 className="text-sm font-semibold text-slate-700">Candidate Profile</h4>
-                  
-                  {/* Education/Qualifications */}
-                  {(candidate.qualifications || candidate.candidateQualifications) && (candidate.qualifications || candidate.candidateQualifications).length > 0 && (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  {/* Match score summary */}
+                  <MatchScoreSummary candidate={candidate} />
+
+                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                    {/* Education column */}
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Education:</p>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
                       <div className="space-y-1">
-                        {(candidate.qualifications || candidate.candidateQualifications).map((qual: any, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
-                            {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
-                            {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
-                          </p>
-                        ))}
+                        {(candidate.qualifications || candidate.candidateQualifications) && (candidate.qualifications || candidate.candidateQualifications).length > 0 ? (
+                          (candidate.qualifications || candidate.candidateQualifications).map((qual: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
+                              {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
+                              {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-500">No education details</p>
+                        )}
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Work Experience */}
-                  {((candidate.workExperiences && candidate.workExperiences.length > 0) || candidate.candidateExperience) && (
+
+                    {/* Experience column */}
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Experience:</p>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
                       <div className="space-y-1">
                         {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
                           candidate.workExperiences.map((exp: any, idx: number) => (
                             <p key={idx} className="text-xs text-slate-700">
-                              {exp.designation || exp.position || exp.role} {exp.companyName || exp.company ? `at ${exp.companyName || exp.company}` : ''}
-                              {exp.yearsOfExperience ? ` (${exp.yearsOfExperience} years)` : ''}
+                              {formatWorkExperienceEntry(exp)}
                             </p>
                           ))
-                        ) : (
+                        ) : candidate.candidateExperience ? (
                           <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
+                        ) : (
+                          <p className="text-xs text-slate-500">No experience details</p>
                         )}
                       </div>
                     </div>
-                  )}
+                  </div>
                   {/* Role match scores */}
                   {candidate.roleMatches && candidate.roleMatches.length > 0 && (
                     <div>
@@ -1387,7 +1437,7 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         }
-        className="sm:max-w-xl"
+        className="sm:max-w-2xl"
         confirmDisabled={!interviewConfirm.type}
         confirmText={
           interviewConfirm.type === "training"
@@ -1409,6 +1459,7 @@ export default function ProjectDetailPage() {
       {/* Assign Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={assignConfirm.isOpen}
+        className="sm:max-w-2xl"
         onClose={() =>
           setAssignConfirm({
             isOpen: false,
@@ -1434,39 +1485,47 @@ export default function ProjectDetailPage() {
               );
               if (!candidate) return null;
               return (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
-                  <h4 className="text-sm font-semibold text-slate-700">Candidate Profile</h4>
-                  
-                  {/* Education/Qualifications */}
-                  {candidate.qualifications && candidate.qualifications.length > 0 && (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  {/* Match score summary */}
+                  <MatchScoreSummary candidate={candidate} />
+
+                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Education:</p>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
                       <div className="space-y-1">
-                        {candidate.qualifications.map((qual: any, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
-                            {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
-                            {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
-                          </p>
-                        ))}
+                        {candidate.qualifications && candidate.qualifications.length > 0 ? (
+                          candidate.qualifications.map((qual: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
+                              {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
+                              {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-500">No education details</p>
+                        )}
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Work Experience */}
-                  {candidate.workExperiences && candidate.workExperiences.length > 0 && (
+
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Experience:</p>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
                       <div className="space-y-1">
-                        {candidate.workExperiences.map((exp: any, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {exp.designation || exp.position || exp.role} {exp.companyName || exp.company ? `at ${exp.companyName || exp.company}` : ''}
-                            {exp.yearsOfExperience ? ` (${exp.yearsOfExperience} years)` : ''}
-                          </p>
-                        ))}
+                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
+                          candidate.workExperiences.map((exp: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {formatWorkExperienceEntry(exp)}
+                            </p>
+                          ))
+                        ) : candidate.candidateExperience ? (
+                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
+                        ) : (
+                          <p className="text-xs text-slate-500">No experience details</p>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
                   {/* Role match scores */}
                   {candidate.roleMatches && candidate.roleMatches.length > 0 && (
                     <div>

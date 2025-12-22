@@ -333,6 +333,7 @@ export class ProjectsService {
                 name: true,
                 label: true,
                 shortName: true,
+                roleDepartment: { select: { id: true, name: true, shortName: true } },
               },
             },
           },
@@ -533,6 +534,7 @@ export class ProjectsService {
                 name: true,
                 label: true,
                 shortName: true,
+                roleDepartment: { select: { id: true, name: true, shortName: true } },
               },
             },
           },
@@ -1041,6 +1043,9 @@ export class ProjectsService {
             educationRequirementsList: {
               include: { qualification: true },
             },
+            roleCatalog: {
+              include: { roleDepartment: true },
+            },
           },
         },
       },
@@ -1135,6 +1140,15 @@ export class ProjectsService {
                 qualification: true,
               },
             },
+            workExperiences: {
+              select: {
+                id: true,
+                roleCatalogId: true,
+                startDate: true,
+                endDate: true,
+                isCurrent: true,
+              },
+            },
             currentStatus: {
               select: {
                 id: true,
@@ -1181,6 +1195,9 @@ export class ProjectsService {
                 educationRequirementsList: {
                   include: { qualification: true },
                 },
+                roleCatalog: {
+                  include: { roleDepartment: true },
+                },
               },
             },
           },
@@ -1191,6 +1208,9 @@ export class ProjectsService {
           include: {
             educationRequirementsList: {
               include: { qualification: true },
+            },
+            roleCatalog: {
+              include: { roleDepartment: true },
             },
           },
         },
@@ -1219,9 +1239,45 @@ export class ProjectsService {
           (r) => r.id === (assignment as any).roleNeededId,
         );
 
-      const roleScore = nominatedRole
-        ? this.calculateRoleMatchScore(c, nominatedRole)
-        : this.calculateMatchScore(c, project.rolesNeeded);
+      // If nominated for a specific role, use that role only; otherwise pick top role from project.rolesNeeded
+      let matchScoreObj: any = { roleId: null, roleName: null, score: 0 };
+      let nominatedRoleObj: any = null;
+
+      if (nominatedRole) {
+        const score = this.calculateRoleMatchScore(c, nominatedRole);
+        const roleCatalogId = (nominatedRole as any).roleCatalogId ?? null;
+        const roleDepartmentName = (nominatedRole as any).roleCatalog?.roleDepartment?.name ?? null;
+        const roleDepartmentLabel = (nominatedRole as any).roleCatalog?.roleDepartment?.label ?? null;
+        matchScoreObj = {
+          roleId: nominatedRole.id,
+          roleName: nominatedRole.designation,
+          roleCatalogId,
+          roleDepartmentName,
+          roleDepartmentLabel,
+          score,
+        };
+        nominatedRoleObj = { id: nominatedRole.id, designation: nominatedRole.designation, score };
+      } else {
+        const roleMatches = (project.rolesNeeded || []).map((role) => ({
+          roleId: role.id,
+          designation: role.designation,
+          roleCatalogId: role.roleCatalogId ?? null,
+          roleDepartmentName: (role as any).roleCatalog?.roleDepartment?.name ?? null,
+          roleDepartmentLabel: (role as any).roleCatalog?.roleDepartment?.label ?? null,
+          score: this.calculateRoleMatchScore(c, role),
+        }));
+        const top = roleMatches.reduce((best, cur) => (cur.score > (best?.score ?? -1) ? cur : best), null as any);
+        if (top) {
+          matchScoreObj = {
+            roleId: top.roleId,
+            roleName: top.designation,
+            roleCatalogId: top.roleCatalogId,
+            roleDepartmentName: top.roleDepartmentName,
+            roleDepartmentLabel: top.roleDepartmentLabel,
+            score: top.score,
+          };
+        }
+      }
 
       return {
         // Candidate Fields (Same as Eligible)
@@ -1289,15 +1345,9 @@ export class ProjectsService {
         assignedAt: assignment.assignedAt,
         notes: assignment.notes,
 
-        // Match Score (for nominated candidates we show nominated-role score when available)
-        matchScore: roleScore,
-        nominatedRole: nominatedRole
-          ? {
-              id: nominatedRole.id,
-              designation: nominatedRole.designation,
-              score: roleScore,
-            }
-          : null,
+        // Match Score (object with top role info)
+        matchScore: matchScoreObj,
+        nominatedRole: nominatedRoleObj,
       };
     });
 
@@ -1307,11 +1357,11 @@ export class ProjectsService {
     let sorted = [...candidatesWithScore];
 
     if (sortBy === 'matchScore') {
-      sorted.sort((a, b) =>
-        sortOrder === 'desc'
-          ? b.matchScore - a.matchScore
-          : a.matchScore - b.matchScore,
-      );
+      sorted.sort((a, b) => {
+        const aScore = typeof a.matchScore === 'number' ? a.matchScore : a.matchScore?.score ?? 0;
+        const bScore = typeof b.matchScore === 'number' ? b.matchScore : b.matchScore?.score ?? 0;
+        return sortOrder === 'desc' ? bScore - aScore : aScore - bScore;
+      });
     } else if (sortBy === 'experience') {
       sorted.sort((a, b) =>
         sortOrder === 'desc'
@@ -1700,6 +1750,9 @@ export class ProjectsService {
             educationRequirementsList: {
               include: { qualification: true },
             },
+            roleCatalog: {
+              include: { roleDepartment: true },
+            },
           },
         },
       },
@@ -1819,6 +1872,16 @@ export class ProjectsService {
           take: 1,
           orderBy: { assignedAt: 'desc' },
         },
+        // include work experiences so we can match roleCatalog-specific experience
+        workExperiences: {
+          select: {
+            id: true,
+            roleCatalogId: true,
+            startDate: true,
+            endDate: true,
+            isCurrent: true,
+          },
+        },
       },
     });
 
@@ -1846,19 +1909,35 @@ export class ProjectsService {
     });
 
     // --------------------------------
-    // 5. RETURN MATCH SCORE
+    // 5. RETURN MATCH SCORE (TOP ROLE ONLY)
     // --------------------------------
     return matchedCandidates.map((candidate) => {
       const roleMatches = project.rolesNeeded.map((role) => ({
         roleId: role.id,
         designation: role.designation,
+        roleCatalogId: role.roleCatalogId ?? null,
+        roleDepartmentName: (role as any).roleCatalog?.roleDepartment?.name ?? null,
+        roleDepartmentLabel: (role as any).roleCatalog?.roleDepartment?.label ?? null,
         score: this.calculateRoleMatchScore(candidate, role),
       }));
 
+      // pick top role by score
+      const top = roleMatches.reduce((best, cur) => (cur.score > (best?.score ?? -1) ? cur : best), null as any);
+
       return {
         ...candidate,
-        matchScore: this.calculateMatchScore(candidate, project.rolesNeeded),
-        roleMatches,
+        // matchScore is now an object describing the top role match
+        matchScore: top
+          ? {
+              roleId: top.roleId,
+              roleName: top.designation,
+              roleCatalogId: top.roleCatalogId,
+              roleDepartmentName: top.roleDepartmentName,
+              roleDepartmentLabel: top.roleDepartmentLabel,
+              score: top.score,
+            }
+          : { roleId: null, roleName: null, score: 0 },
+        // NOTE: intentionally do not include full roleMatches array (avoids showing all roles)
       };
     });
   }
@@ -1947,7 +2026,14 @@ export class ProjectsService {
     const candidateExperience = candidate.totalExperience ?? candidate.experience;
 
     // Experience scoring (40 points)
-    if (
+    // First, prefer role-catalog specific work experience (if candidate has workExperiences matching role.roleCatalogId)
+    const hasRoleSpecificWorkExp = Array.isArray(candidate.workExperiences)
+      && role.roleCatalogId
+      && candidate.workExperiences.some((we: any) => we.roleCatalogId === role.roleCatalogId);
+
+    if (hasRoleSpecificWorkExp) {
+      roleScore += 40;
+    } else if (
       candidateExperience &&
       this.matchExperience(candidateExperience, role.minExperience, role.maxExperience)
     ) {

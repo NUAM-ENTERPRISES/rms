@@ -94,7 +94,9 @@ const DocumentStatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const MatchScoreBadge = ({ score }: { score: number }) => {
+const MatchScoreBadge = ({ score }: { score?: number | { score?: number } }) => {
+  const numericScore = typeof score === "number" ? score : score?.score ?? 0;
+
   const getScoreColor = (score: number) => {
     if (score >= 90) return "bg-green-100 text-green-800 border-green-200";
     if (score >= 80) return "bg-blue-100 text-blue-800 border-blue-200";
@@ -103,9 +105,9 @@ const MatchScoreBadge = ({ score }: { score: number }) => {
   };
 
   return (
-    <Badge variant="outline" className={`${getScoreColor(score)} border`}>
+    <Badge variant="outline" className={`${getScoreColor(numericScore)} border`}>
       <BarChart3 className="h-3 w-3 mr-1" />
-      {score}%
+      {numericScore}%
     </Badge>
   );
 };
