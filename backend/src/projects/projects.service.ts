@@ -58,26 +58,39 @@ export class ProjectsService {
     userId: string,
   ): Promise<ProjectWithRelations> {
     // Validate client exists if provided
-    if (createProjectDto.clientId) {
-      const client = await this.prisma.client.findUnique({
-        where: { id: createProjectDto.clientId },
-      });
-      if (!client) {
-        throw new NotFoundException(
-          `Client with ID ${createProjectDto.clientId} not found`,
-        );
+    // Normalize clientId: treat empty string as null, validate only if non-empty
+    if (createProjectDto.clientId !== undefined && createProjectDto.clientId !== null) {
+      const trimmed = String(createProjectDto.clientId).trim();
+      if (trimmed === '') {
+        createProjectDto.clientId = null as any;
+      } else {
+        createProjectDto.clientId = trimmed as any;
+        const client = await this.prisma.client.findUnique({
+          where: { id: createProjectDto.clientId },
+        });
+        if (!client) {
+          throw new NotFoundException(
+            `Client with ID ${createProjectDto.clientId} not found`,
+          );
+        }
       }
     }
 
-    // Validate team exists if provided
-    if (createProjectDto.teamId) {
-      const team = await this.prisma.team.findUnique({
-        where: { id: createProjectDto.teamId },
-      });
-      if (!team) {
-        throw new NotFoundException(
-          `Team with ID ${createProjectDto.teamId} not found`,
-        );
+    // Normalize teamId: treat empty string as null, validate only if non-empty
+    if (createProjectDto.teamId !== undefined && createProjectDto.teamId !== null) {
+      const trimmedTeam = String(createProjectDto.teamId).trim();
+      if (trimmedTeam === '') {
+        createProjectDto.teamId = null as any;
+      } else {
+        createProjectDto.teamId = trimmedTeam as any;
+        const team = await this.prisma.team.findUnique({
+          where: { id: createProjectDto.teamId },
+        });
+        if (!team) {
+          throw new NotFoundException(
+            `Team with ID ${createProjectDto.teamId} not found`,
+          );
+        }
       }
     }
 
@@ -178,6 +191,21 @@ export class ProjectsService {
         createProjectDto.rolesNeeded.length > 0
       ) {
         for (const role of createProjectDto.rolesNeeded) {
+          // validate ageRequirement format (expected like "18 to 25") and parse into minAge/maxAge
+          const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
+          const ageMatch = role.ageRequirement?.match(AGE_RE);
+          if (!ageMatch) {
+            throw new BadRequestException(
+              `Invalid or missing ageRequirement for role: ${role.designation}. Expected format like "18 to 25".`,
+            );
+          }
+          const minAge = parseInt(ageMatch[1], 10);
+          const maxAge = parseInt(ageMatch[2], 10);
+          if (isNaN(minAge) || isNaN(maxAge) || minAge > maxAge) {
+            throw new BadRequestException(
+              `Invalid age range for role: ${role.designation}. Ensure age is like "18 to 25" with min <= max.`,
+            );
+          }
           const createdRole = await tx.roleNeeded.create({
             data: {
               projectId: createdProject.id,
@@ -216,10 +244,16 @@ export class ProjectsService {
               relocationAssistance: role.relocationAssistance ?? false,
               additionalRequirements: role.additionalRequirements,
               notes: role.notes,
+              minAge,
+              maxAge,
+              accommodation: role.accommodation,
+              food: role.food,
+              transport: role.transport,
+              target: role.target,
               // New fields
               employmentType: role.employmentType || 'permanent',
               contractDurationYears: role.contractDurationYears,
-              genderRequirement: role.genderRequirement || 'all',
+              genderRequirement: (role.genderRequirement || 'all') as any,
               visaType: role.visaType || 'contract',
               requiredSkills: role.requiredSkills
                 ? JSON.parse(role.requiredSkills)
@@ -330,7 +364,27 @@ export class ProjectsService {
       throw new Error('Failed to create project');
     }
 
-    return completeProject;
+    // Normalize rolesNeeded to include ageRequirement string
+    const normalized = {
+      ...completeProject,
+      rolesNeeded: completeProject.rolesNeeded.map((role) => ({
+        ...role,
+        requiredSkills: this.parseJsonField(role.requiredSkills as any),
+        candidateStates: this.parseJsonField(role.candidateStates as any),
+        candidateReligions: this.parseJsonField(role.candidateReligions as any),
+        skills: this.parseJsonField(role.skills as any),
+        languageRequirements: this.parseJsonField(role.languageRequirements as any),
+        licenseRequirements: this.parseJsonField(role.licenseRequirements as any),
+        requiredCertifications: this.parseJsonField(role.requiredCertifications as any),
+        specificExperience: this.parseJsonField(role.specificExperience as any),
+        salaryRange: this.parseJsonField(role.salaryRange as any),
+        educationRequirements: this.parseJsonField(role.educationRequirements as any),
+        technicalSkills: this.parseJsonField(role.technicalSkills as any),
+        ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
+      })),
+    };
+
+    return normalized;
   }
 
   async findAll(query: QueryProjectsDto): Promise<PaginatedProjects> {
@@ -435,6 +489,8 @@ export class ProjectsService {
         salaryRange: this.parseJsonField(role.salaryRange),
         educationRequirements: this.parseJsonField(role.educationRequirements),
         technicalSkills: this.parseJsonField(role.technicalSkills),
+        // Add computed age string for convenience (e.g., "18 to 25")
+        ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
       })),
     }));
 
@@ -522,6 +578,7 @@ export class ProjectsService {
         salaryRange: this.parseJsonField(role.salaryRange),
         educationRequirements: this.parseJsonField(role.educationRequirements),
         technicalSkills: this.parseJsonField(role.technicalSkills),
+        ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
       })),
     };
 
@@ -542,26 +599,38 @@ export class ProjectsService {
     }
 
     // Validate client exists if updating
-    if (updateProjectDto.clientId) {
-      const client = await this.prisma.client.findUnique({
-        where: { id: updateProjectDto.clientId },
-      });
-      if (!client) {
-        throw new NotFoundException(
-          `Client with ID ${updateProjectDto.clientId} not found`,
-        );
+    // Normalize and validate clientId when provided (allow clearing via empty string/null)
+    if (updateProjectDto.clientId !== undefined) {
+      if (updateProjectDto.clientId === null || String(updateProjectDto.clientId).trim() === '') {
+        // caller wants to clear client
+        updateProjectDto.clientId = null as any;
+      } else {
+        updateProjectDto.clientId = String(updateProjectDto.clientId).trim() as any;
+        const client = await this.prisma.client.findUnique({
+          where: { id: updateProjectDto.clientId },
+        });
+        if (!client) {
+          throw new NotFoundException(
+            `Client with ID ${updateProjectDto.clientId} not found`,
+          );
+        }
       }
     }
 
-    // Validate team exists if updating
-    if (updateProjectDto.teamId) {
-      const team = await this.prisma.team.findUnique({
-        where: { id: updateProjectDto.teamId },
-      });
-      if (!team) {
-        throw new NotFoundException(
-          `Team with ID ${updateProjectDto.teamId} not found`,
-        );
+    // Normalize and validate teamId when provided (allow clearing via empty string/null)
+    if (updateProjectDto.teamId !== undefined) {
+      if (updateProjectDto.teamId === null || String(updateProjectDto.teamId).trim() === '') {
+        updateProjectDto.teamId = null as any;
+      } else {
+        updateProjectDto.teamId = String(updateProjectDto.teamId).trim() as any;
+        const team = await this.prisma.team.findUnique({
+          where: { id: updateProjectDto.teamId },
+        });
+        if (!team) {
+          throw new NotFoundException(
+            `Team with ID ${updateProjectDto.teamId} not found`,
+          );
+        }
       }
     }
 
@@ -639,6 +708,21 @@ export class ProjectsService {
       // Create new roles needed
       if (updateProjectDto.rolesNeeded.length > 0) {
         for (const role of updateProjectDto.rolesNeeded) {
+          // validate ageRequirement format (expected like "18 to 25") and parse into minAge/maxAge
+          const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
+          const ageMatch = role.ageRequirement?.match(AGE_RE);
+          if (!ageMatch) {
+            throw new BadRequestException(
+              `Invalid or missing ageRequirement for role: ${role.designation}. Expected format like "18 to 25".`,
+            );
+          }
+          const minAge = parseInt(ageMatch[1], 10);
+          const maxAge = parseInt(ageMatch[2], 10);
+          if (isNaN(minAge) || isNaN(maxAge) || minAge > maxAge) {
+            throw new BadRequestException(
+              `Invalid age range for role: ${role.designation}. Ensure age is like "18 to 25" with min <= max.`,
+            );
+          }
             // Validate optional roleCatalogId
             if (role.roleCatalogId) {
               const exists = await this.roleCatalogService.validateRoleId(
@@ -688,10 +772,16 @@ export class ProjectsService {
               relocationAssistance: role.relocationAssistance ?? false,
               additionalRequirements: role.additionalRequirements,
               notes: role.notes,
+              minAge,
+              maxAge,
+              accommodation: role.accommodation,
+              food: role.food,
+              transport: role.transport,
+              target: role.target,
               // New fields
               employmentType: role.employmentType || 'permanent',
               contractDurationYears: role.contractDurationYears,
-              genderRequirement: role.genderRequirement || 'all',
+              genderRequirement: (role.genderRequirement || 'all') as any,
               visaType: role.visaType || 'contract',
               requiredSkills: role.requiredSkills
                 ? JSON.parse(role.requiredSkills)
@@ -769,7 +859,27 @@ export class ProjectsService {
       },
     });
 
-    return project;
+    // Normalize rolesNeeded to include ageRequirement string
+    const normalizedProject = {
+      ...project,
+      rolesNeeded: project.rolesNeeded.map((role) => ({
+        ...role,
+        requiredSkills: this.parseJsonField(role.requiredSkills as any),
+        candidateStates: this.parseJsonField(role.candidateStates as any),
+        candidateReligions: this.parseJsonField(role.candidateReligions as any),
+        skills: this.parseJsonField(role.skills as any),
+        languageRequirements: this.parseJsonField(role.languageRequirements as any),
+        licenseRequirements: this.parseJsonField(role.licenseRequirements as any),
+        requiredCertifications: this.parseJsonField(role.requiredCertifications as any),
+        specificExperience: this.parseJsonField(role.specificExperience as any),
+        salaryRange: this.parseJsonField(role.salaryRange as any),
+        educationRequirements: this.parseJsonField(role.educationRequirements as any),
+        technicalSkills: this.parseJsonField(role.technicalSkills as any),
+        ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
+      })),
+    };
+
+    return normalizedProject;
   }
 
   async remove(

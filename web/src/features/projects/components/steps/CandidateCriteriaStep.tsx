@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   X,
   Plus,
@@ -29,6 +30,7 @@ import {
   Ruler,
   Weight,
   Award,
+  Target,
   BookOpen,
   Clock,
   FileText,
@@ -48,7 +50,6 @@ interface CandidateCriteriaStepProps {
 }
 
 export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
-  control,
   watch,
   setValue,
   errors,
@@ -57,11 +58,6 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
   const watchedRoles = watch("rolesNeeded");
   const [skillInputs, setSkillInputs] = useState<{ [key: number]: string }>({});
 
-  // Helper function to get qualification name by ID
-  const getQualificationName = (qualificationId: string) => {
-    // This would need to be implemented based on your qualifications data structure
-    return `Qualification ${qualificationId}`;
-  };
 
   // Add skill to a role
   const addSkill = (roleIndex: number) => {
@@ -538,6 +534,102 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                 </div>
               </div>
 
+              {/* Demographics & Benefits (Gender, Age, Accommodation/Food/Transport, Target) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <User className="h-4 w-4 text-green-600" />
+                    Gender Requirement
+                  </Label>
+                  <Select
+                    value={role.genderRequirement || "all"}
+                    onValueChange={(value) =>
+                      updateRole(
+                        index,
+                        "genderRequirement",
+                        value === "all" ? "all" : value
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.rolesNeeded?.[index]?.genderRequirement && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].genderRequirement?.message}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <User className="h-4 w-4 text-green-600" />
+                    Age Requirement
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g., 18 to 25"
+                    value={role.ageRequirement || ""}
+                    onChange={(e) => updateRole(index, "ageRequirement", e.target.value)}
+                    className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.rolesNeeded?.[index]?.ageRequirement && (
+                    <span className="text-sm text-red-600">
+                      {errors.rolesNeeded[index].ageRequirement?.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={!!role.accommodation}
+                    onCheckedChange={(v) => updateRole(index, "accommodation", !!v)}
+                  />
+                  <span className="text-sm text-slate-700">Accommodation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={!!role.food}
+                    onCheckedChange={(v) => updateRole(index, "food", !!v)}
+                  />
+                  <span className="text-sm text-slate-700">Food</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={!!role.transport}
+                    onCheckedChange={(v) => updateRole(index, "transport", !!v)}
+                  />
+                  <span className="text-sm text-slate-700">Transport</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-orange-600" />
+                  Target (Optional)
+                </Label>
+                <Input
+                  type="number"
+                  value={role.target ?? ""}
+                  onChange={(e) => updateRole(index, "target", e.target.value === "" ? undefined : parseInt(e.target.value))}
+                  placeholder="e.g., 10"
+                  className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+                {errors.rolesNeeded?.[index]?.target && (
+                  <span className="text-sm text-red-600">
+                    {errors.rolesNeeded[index].target?.message}
+                  </span>
+                )}
+              </div>
               {/* Height and Weight Requirements */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">

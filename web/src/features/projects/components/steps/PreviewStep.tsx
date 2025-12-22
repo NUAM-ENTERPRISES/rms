@@ -240,6 +240,37 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
                   </div>
                 )}
 
+                {/* Gender & Age & Benefits */}
+                {role.genderRequirement && (
+                  <div>
+                    <span className="text-slate-600">Gender: </span>
+                    <span className="font-medium capitalize">
+                      {role.genderRequirement}
+                    </span>
+                  </div>
+                )}
+
+                {role.ageRequirement && (
+                  <div>
+                    <span className="text-slate-600">Age: </span>
+                    <span className="font-medium">{role.ageRequirement}</span>
+                  </div>
+                )}
+
+                {(role.accommodation || role.food || role.transport || role.target) && (
+                  <div>
+                    <span className="text-slate-600">Benefits: </span>
+                    <span className="font-medium">
+                      {role.accommodation && "Accommodation"}
+                      {role.accommodation && role.food && ", "}
+                      {role.food && "Food"}
+                      {(role.accommodation || role.food) && role.transport && ", "}
+                      {role.transport && "Transport"}
+                      {role.target ? ` • Target: ${role.target}` : ""}
+                    </span>
+                  </div>
+                )}
+
                 {/* Education Requirements */}
                 {role.educationRequirementsList &&
                   role.educationRequirementsList.length > 0 && (

@@ -43,6 +43,7 @@ export interface RoleNeeded {
   minExperience?: number;
   maxExperience?: number;
   specificExperience?: string;
+  ageRequirement?: string;
   educationRequirements?: string;
   educationRequirementsList?: EducationRequirementWithDetails[];
   requiredCertifications?: string;
@@ -51,7 +52,14 @@ export interface RoleNeeded {
   technicalSkills?: string;
   employmentType: "contract" | "permanent";
   contractDurationYears?: number;
-  genderRequirement: "female" | "male" | "all";
+  genderRequirement: "female" | "male" | "all" | "other";
+  ageRequirement?: string;
+  minAge?: number;
+  maxAge?: number;
+  accommodation?: boolean;
+  food?: boolean;
+  transport?: boolean;
+  target?: number;
   languageRequirements?: string;
   licenseRequirements?: string;
   backgroundCheckRequired: boolean;
@@ -160,6 +168,11 @@ export interface CreateRoleNeededRequest {
   minExperience?: number;
   maxExperience?: number;
   specificExperience?: string;
+  ageRequirement?: string;
+  accommodation?: boolean;
+  food?: boolean;
+  transport?: boolean;
+  target?: number;
   educationRequirements?: string;
   requiredCertifications?: string;
   institutionRequirements?: string;
@@ -179,7 +192,7 @@ export interface CreateRoleNeededRequest {
   notes?: string;
   employmentType?: "contract" | "permanent";
   contractDurationYears?: number;
-  genderRequirement?: "female" | "male" | "all";
+  genderRequirement?: "female" | "male" | "all" | "other";
 }
 
 export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {

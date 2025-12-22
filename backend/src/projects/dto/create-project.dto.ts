@@ -6,6 +6,7 @@ import {
   IsArray,
   ValidateNested,
   IsEnum,
+  Matches,
   IsInt,
   Min,
   Max,
@@ -229,9 +230,55 @@ export class CreateRoleNeededDto {
     enum: ['female', 'male', 'all'],
     default: 'all',
   })
-  @IsOptional()
+  @ApiProperty({
+    description: 'Gender requirement for this role',
+    enum: ['female', 'male', 'all'],
+    example: 'all',
+  })
   @IsEnum(['female', 'male', 'all'])
-  genderRequirement?: string = 'all';
+  genderRequirement: string = 'all';
+
+  @ApiProperty({
+    description: 'Age requirement for this role, formatted like "18 to 25"',
+    example: '18 to 25',
+  })
+  @IsString()
+  @Matches(/^\s*\d+\s*to\s*\d+\s*$/i, {
+    message: 'ageRequirement must be formatted like "18 to 25"',
+  })
+  ageRequirement: string;
+
+  @ApiPropertyOptional({
+    description: 'Accommodation details or requirements',
+    example: 'Company provided',
+  })
+  @IsOptional()
+  @IsBoolean()
+  accommodation?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Food arrangements (optional)',
+    example: 'Lunch provided',
+  })
+  @IsOptional()
+  @IsBoolean()
+  food?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Transport details (optional)',
+    example: 'Daily shuttle',
+  })
+  @IsOptional()
+  @IsBoolean()
+  transport?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Target for this role (optional)',
+    example: '10 placements',
+  })
+  @IsOptional()
+  @IsInt()
+  target?: number;
 
   @ApiPropertyOptional({
     description: 'Visa type for this role',

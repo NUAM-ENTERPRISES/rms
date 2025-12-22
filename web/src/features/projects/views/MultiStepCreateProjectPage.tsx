@@ -146,10 +146,18 @@ export default function MultiStepCreateProjectPage() {
           data.deadline instanceof Date
             ? data.deadline.toISOString()
             : data.deadline,
+        // API requires clientId to be a string
+        clientId: data.clientId || "",
         rolesNeeded: data.rolesNeeded.map((role: any) => {
           const { departmentId, ...roleWithoutDepartmentId } = role;
           return {
             ...roleWithoutDepartmentId,
+            // Candidate criteria fields
+            ageRequirement: role.ageRequirement || undefined,
+            accommodation: !!role.accommodation,
+            food: !!role.food,
+            transport: !!role.transport,
+            target: role.target !== undefined ? role.target : undefined,
             // Convert arrays to JSON strings for backend
             requiredSkills: JSON.stringify(role.requiredSkills || []),
             candidateStates: JSON.stringify(role.candidateStates || []),

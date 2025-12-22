@@ -117,6 +117,25 @@ export default function MultiStepEditProjectPage() {
             specificExperience: Array.isArray(role.specificExperience)
               ? role.specificExperience.join(", ")
               : role.specificExperience,
+            ageRequirement: (role as any).ageRequirement || undefined,
+            accommodation:
+              (role as any).accommodation !== null &&
+              (role as any).accommodation !== undefined
+                ? (role as any).accommodation
+                : false,
+            food:
+              (role as any).food !== null && (role as any).food !== undefined
+                ? (role as any).food
+                : false,
+            transport:
+              (role as any).transport !== null &&
+              (role as any).transport !== undefined
+                ? (role as any).transport
+                : false,
+            target:
+              (role as any).target !== null && (role as any).target !== undefined
+                ? (role as any).target
+                : undefined,
             educationRequirementsList: role.educationRequirementsList || [],
             requiredCertifications: Array.isArray(role.requiredCertifications)
               ? role.requiredCertifications.join(", ")
@@ -298,6 +317,12 @@ export default function MultiStepEditProjectPage() {
           const { departmentId, ...roleWithoutDepartmentId } = role;
           return {
             ...roleWithoutDepartmentId,
+            // Candidate criteria fields
+            ageRequirement: role.ageRequirement || undefined,
+            accommodation: !!role.accommodation,
+            food: !!role.food,
+            transport: !!role.transport,
+            target: role.target !== undefined ? role.target : undefined,
             // Ensure contractDurationYears is properly included
             contractDurationYears: role.contractDurationYears || undefined,
             // Convert arrays to JSON strings for backend

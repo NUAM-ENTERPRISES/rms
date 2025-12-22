@@ -77,7 +77,28 @@ export const projectFormSchema = z.object({
         contractDurationYears: z
           .union([z.number().min(1).max(10), z.undefined()])
           .optional(),
-        genderRequirement: z.enum(["female", "male", "all"]),
+        genderRequirement: z.enum(["female", "male", "all", "other"]),
+        // Age requirement must be like "18 to 25". Validate format and logical bounds.
+        ageRequirement: z
+          .string()
+          .optional()
+          .refine((val) => {
+            if (!val || val.trim() === "") return true;
+            // allow formats like "18 to 25" with optional spaces
+            return /^\s*\d+\s*to\s*\d+\s*$/.test(val);
+          }, { message: "Age must be in format '18 to 25'" })
+          .refine((val) => {
+            if (!val || val.trim() === "") return true;
+            const parts = val.split(/to/i).map((p) => p.trim());
+            if (parts.length !== 2) return false;
+            const min = parseInt(parts[0], 10);
+            const max = parseInt(parts[1], 10);
+            return !isNaN(min) && !isNaN(max) && min <= max;
+          }, { message: "Minimum age must be less than or equal to maximum age" }),
+        accommodation: z.boolean().optional(),
+        food: z.boolean().optional(),
+        transport: z.boolean().optional(),
+        target: z.union([z.number().int(), z.undefined()]).optional(),
         // New candidate criteria fields
         requiredSkills: z.array(z.string()),
         departmentId: z.string().optional(),
@@ -126,6 +147,11 @@ export const defaultProjectValues = {
       relocationAssistance: false,
       visaType: "contract" as const,
       genderRequirement: "all" as const,
+      ageRequirement: undefined,
+      accommodation: false,
+      food: false,
+      transport: false,
+      target: undefined,
       requiredSkills: [],
       candidateStates: [],
       candidateReligions: [],

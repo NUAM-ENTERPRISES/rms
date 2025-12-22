@@ -53,6 +53,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
+import { getAge } from "@/utils";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
@@ -262,6 +263,8 @@ export default function CandidateDetailPage() {
     );
   }
 
+  const age = getAge(candidate.dateOfBirth);
+
   return (
     <div>
       {/* Header */}
@@ -397,6 +400,15 @@ export default function CandidateDetailPage() {
                       <p className="text-sm flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-slate-400" />
                         {formatDate(candidate.dateOfBirth)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                        Age
+                      </label>
+                      <p className="text-sm flex items-center gap-2 mt-1">
+                        <User className="h-3 w-3 text-slate-400" />
+                        {age !== null ? `${age} years` : "N/A"}
                       </p>
                     </div>
                     <div>
