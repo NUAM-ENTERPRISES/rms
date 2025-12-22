@@ -39,6 +39,7 @@ import {
   PaginatedCandidates,
   CandidateStats,
 } from './types';
+import { CANDIDATE_STATUS } from '../common/constants/statuses';
 
 @ApiTags('Candidates')
 @ApiBearerAuth()
@@ -133,68 +134,83 @@ export class CandidatesController {
     description:
       'Retrieve a paginated list of candidates assigned to the current recruiter with optional status filtering and search.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Candidates retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              firstName: { type: 'string' },
-              lastName: { type: 'string' },
-              email: { type: 'string' },
-              mobileNumber: { type: 'string' },
-              countryCode: { type: 'string' },
-              currentStatus: {
-                type: 'object',
-                properties: {
-                  id: { type: 'number' },
-                  statusName: { type: 'string' },
-                },
-              },
-              team: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  name: { type: 'string' },
-                },
-              },
-              projects: {
-                type: 'array',
-                items: {
+    @ApiResponse({
+      status: 200,
+      description: 'Candidates retrieved successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                firstName: { type: 'string' },
+                lastName: { type: 'string' },
+                email: { type: 'string' },
+                mobileNumber: { type: 'string' },
+                countryCode: { type: 'string' },
+                currentStatus: {
                   type: 'object',
                   properties: {
-                    isSendedForDocumentVerification: { type: 'boolean', example: false },
+                    id: { type: 'number' },
+                    statusName: { type: 'string' },
+                  },
+                },
+                team: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                  },
+                },
+                projects: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      isSendedForDocumentVerification: { type: 'boolean', example: false },
+                    },
                   },
                 },
               },
             },
           },
-        },
-        pagination: {
-          type: 'object',
-          properties: {
-            page: { type: 'number', example: 1 },
-            limit: { type: 'number', example: 10 },
-            totalCount: { type: 'number', example: 50 },
-            totalPages: { type: 'number', example: 5 },
-            hasNextPage: { type: 'boolean', example: true },
-            hasPreviousPage: { type: 'boolean', example: false },
+            counts: {
+              type: 'object',
+              properties: {
+                totalAssigned: { type: 'number', example: 120 },
+                untouched: { type: 'number', example: 40 },
+                rnr: { type: 'number', example: 10 },
+                onHold: { type: 'number', example: 5 },
+                interested: { type: 'number', example: 15 },
+                    notInterested: { type: 'number', example: 8 },
+                    otherEnquiry: { type: 'number', example: 6 },
+                qualified: { type: 'number', example: 7 },
+                future: { type: 'number', example: 12 },
+                working: { type: 'number', example: 3 },
+              },
+            },
+          pagination: {
+            type: 'object',
+            properties: {
+              page: { type: 'number', example: 1 },
+              limit: { type: 'number', example: 10 },
+              totalCount: { type: 'number', example: 50 },
+              totalPages: { type: 'number', example: 5 },
+              hasNextPage: { type: 'boolean', example: true },
+              hasPreviousPage: { type: 'boolean', example: false },
+            },
+          },
+          message: {
+            type: 'string',
+            example: 'Recruiter candidates retrieved successfully',
           },
         },
-        message: {
-          type: 'string',
-          example: 'Recruiter candidates retrieved successfully',
-        },
       },
-    },
-  })
+    })
   @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
   async getRecruiterCandidates(
     @Query() query: GetRecruiterCandidatesDto,
@@ -202,6 +218,18 @@ export class CandidatesController {
   ): Promise<{
     success: boolean;
     data: any[];
+    counts?: {
+      totalAssigned: number;
+      untouched: number;
+      rnr: number;
+      onHold: number;
+      interested: number;
+      notInterested: number;
+      otherEnquiry: number;
+      qualified: number;
+      future: number;
+      working: number;
+    };
     pagination: any;
     message: string;
   }> {
@@ -213,6 +241,7 @@ export class CandidatesController {
     return {
       success: true,
       data: result.data,
+      counts: result.counts,
       pagination: result.pagination,
       message: 'Recruiter candidates retrieved successfully',
     };
@@ -234,7 +263,15 @@ export class CandidatesController {
     name: 'currentStatus',
     required: false,
     description: 'Filter by candidate status',
-    enum: ['new', 'shortlisted', 'selected', 'rejected', 'hired'],
+    enum: CANDIDATE_STATUS,
+    example: CANDIDATE_STATUS.UNTOUCHED,
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Alias for currentStatus (kept for backwards compatibility)',
+    enum: CANDIDATE_STATUS,
+    example: CANDIDATE_STATUS.UNTOUCHED,
   })
   @ApiQuery({
     name: 'source',
@@ -309,6 +346,21 @@ export class CandidatesController {
                 limit: { type: 'number' },
                 total: { type: 'number' },
                 totalPages: { type: 'number' },
+              },
+            },
+            counts: {
+              type: 'object',
+              properties: {
+                total: { type: 'number', example: 150 },
+                untouched: { type: 'number', example: 50 },
+                rnr: { type: 'number', example: 10 },
+                onHold: { type: 'number', example: 5 },
+                interested: { type: 'number', example: 20 },
+                notInterested: { type: 'number', example: 8 },
+                otherEnquiry: { type: 'number', example: 6 },
+                qualified: { type: 'number', example: 12 },
+                future: { type: 'number', example: 15 },
+                working: { type: 'number', example: 3 },
               },
             },
           },

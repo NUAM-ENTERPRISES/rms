@@ -43,6 +43,18 @@ export interface PaginatedCandidates {
     total: number;
     totalPages: number;
   };
+  counts?: {
+    total: number;
+    untouched: number;
+    rnr: number;
+    onHold: number;
+    interested: number;
+    notInterested: number;
+    otherEnquiry: number;
+    qualified: number;
+    future: number;
+    working: number;
+  };
 }
 
 export interface CandidateStats {

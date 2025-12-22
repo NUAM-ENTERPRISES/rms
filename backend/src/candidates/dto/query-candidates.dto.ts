@@ -7,6 +7,7 @@ import {
   Max,
   IsDateString,
 } from 'class-validator';
+import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -21,11 +22,21 @@ export class QueryCandidatesDto {
 
   @ApiPropertyOptional({
     description: 'Filter by candidate status',
-    enum: ['new', 'shortlisted', 'selected', 'rejected', 'hired'],
+    enum: CANDIDATE_STATUS,
+    example: CANDIDATE_STATUS.UNTOUCHED,
   })
   @IsOptional()
-  @IsEnum(['new', 'shortlisted', 'selected', 'rejected', 'hired'])
+  @IsEnum(CANDIDATE_STATUS)
   currentStatus?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alias for currentStatus (keeps compatibility with clients using `status`)',
+    enum: CANDIDATE_STATUS,
+    example: CANDIDATE_STATUS.UNTOUCHED,
+  })
+  @IsOptional()
+  @IsEnum(CANDIDATE_STATUS)
+  status?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by source',

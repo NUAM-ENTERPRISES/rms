@@ -90,6 +90,9 @@ export class RecruiterAssignmentService {
           },
         },
       },
+      orderBy: {
+        id: 'asc',
+      },
     });
 
     if (recruiters.length === 0) {
@@ -351,9 +354,35 @@ export class RecruiterAssignmentService {
       },
     };
 
+    // Base assignment-only where used for dashboard counts (ignores search/status filters)
+    const assignmentOnlyWhere = { ...whereClause };
+
     // Add status filter if provided
     if (status) {
-      whereClause.status = status;
+      // Normalize incoming status (e.g., 'on_hold' -> 'On Hold') and try to resolve to a status record
+      const normalized = status.replace(/_/g, ' ').trim();
+      const titleCase = normalized
+        .split(' ')
+        .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
+        .join(' ');
+
+      const statusRecord = await this.prisma.candidateStatus.findFirst({
+        where: {
+          OR: [
+            { statusName: { equals: status, mode: 'insensitive' } },
+            { statusName: { equals: normalized, mode: 'insensitive' } },
+            { statusName: { equals: titleCase, mode: 'insensitive' } },
+          ],
+        },
+        select: { id: true, statusName: true },
+      });
+
+      if (statusRecord) {
+        whereClause.currentStatusId = statusRecord.id;
+      } else {
+        // Fallback: try to match by status enum value directly (some DB rows may store lowercase)
+        whereClause.currentStatus = { statusName: { equals: status, mode: 'insensitive' } };
+      }
     }
 
     // Add search filter if provided
@@ -386,10 +415,139 @@ export class RecruiterAssignmentService {
       ];
     }
 
-    // Get total count
+    // Get total count (for the listing - respects search/status/search filters)
     const totalCount = await this.prisma.candidate.count({
       where: whereClause,
     });
+
+    // Dashboard counts (overall assigned to recruiter, not limited by pagination or search)
+    const totalAssignedCount = await this.prisma.candidate.count({
+      where: assignmentOnlyWhere,
+    });
+
+    // Use status IDs (more reliable) to compute counts
+    // Use case-insensitive lookup for status names to handle different casings in DB
+    const untouchedStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: CANDIDATE_STATUS.UNTOUCHED,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true, statusName: true },
+    });
+
+    const rnrStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: CANDIDATE_STATUS.RNR,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true, statusName: true },
+    });
+
+    this.logger.log(
+      `Resolved statuses => untouched: ${untouchedStatus?.statusName || 'NOT_FOUND'}(${untouchedStatus?.id || 'n/a'}), rnr: ${rnrStatus?.statusName || 'NOT_FOUND'}(${rnrStatus?.id || 'n/a'})`,
+    );
+
+    // Retrieve assigned candidates' currentStatusId and compute counts in-memory
+    const assignedCandidates = await this.prisma.candidate.findMany({
+      where: assignmentOnlyWhere,
+      select: {
+        id: true,
+        currentStatusId: true,
+      },
+    });
+
+    const onHoldStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: CANDIDATE_STATUS.ON_HOLD,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true, statusName: true },
+    });
+
+    const interestedStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: CANDIDATE_STATUS.INTERESTED, mode: 'insensitive' } },
+      select: { id: true, statusName: true },
+    });
+
+    const notInterestedStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: CANDIDATE_STATUS.NOT_INTERESTED, mode: 'insensitive' } },
+      select: { id: true, statusName: true },
+    });
+
+    const otherEnquiryStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: CANDIDATE_STATUS.OTHER_ENQUIRY, mode: 'insensitive' } },
+      select: { id: true, statusName: true },
+    });
+
+    const qualifiedStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: CANDIDATE_STATUS.QUALIFIED, mode: 'insensitive' } },
+      select: { id: true, statusName: true },
+    });
+
+    const futureStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: CANDIDATE_STATUS.FUTURE, mode: 'insensitive' } },
+      select: { id: true, statusName: true },
+    });
+
+    // 'working' status may exist in DB with different naming; try case-insensitive lookup
+    const workingStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: 'working',
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true, statusName: true },
+    });
+
+    const untouchedId = untouchedStatus?.id ?? null;
+    const rnrId = rnrStatus?.id ?? null;
+    const onHoldId = onHoldStatus?.id ?? null;
+
+    const interestedId = interestedStatus?.id ?? null;
+    const qualifiedId = qualifiedStatus?.id ?? null;
+    const futureId = futureStatus?.id ?? null;
+    const workingId = workingStatus?.id ?? null;
+    const notInterestedId = notInterestedStatus?.id ?? null;
+    const otherEnquiryId = otherEnquiryStatus?.id ?? null;
+
+    const countsMap = assignedCandidates.reduce(
+      (acc, c) => {
+        acc.totalAssigned += 1;
+        if (c.currentStatusId === untouchedId) acc.untouched += 1;
+        if (c.currentStatusId === rnrId) acc.rnr += 1;
+        if (c.currentStatusId === onHoldId) acc.onHold += 1;
+        if (c.currentStatusId === interestedId) acc.interested += 1;
+        if (c.currentStatusId === notInterestedId) acc.notInterested += 1;
+        if (c.currentStatusId === otherEnquiryId) acc.otherEnquiry += 1;
+        if (c.currentStatusId === qualifiedId) acc.qualified += 1;
+        if (c.currentStatusId === futureId) acc.future += 1;
+        if (c.currentStatusId === workingId) acc.working += 1;
+        return acc;
+      },
+      {
+        totalAssigned: 0,
+        untouched: 0,
+        rnr: 0,
+        onHold: 0,
+        interested: 0,
+        notInterested: 0,
+        otherEnquiry: 0,
+        qualified: 0,
+        future: 0,
+        working: 0,
+      },
+    );
+
+    this.logger.log(
+      `Recruiter ${recruiterId} counts => totalAssigned: ${countsMap.totalAssigned}, untouched: ${countsMap.untouched}, rnr: ${countsMap.rnr}, onHold: ${countsMap.onHold}, notInterested: ${countsMap.notInterested}, otherEnquiry: ${countsMap.otherEnquiry}`,
+    );
 
     // Get candidates
     const candidates = await this.prisma.candidate.findMany({
@@ -535,6 +693,18 @@ export class RecruiterAssignmentService {
 
     return {
       data: candidates,
+      counts: {
+        totalAssigned: countsMap.totalAssigned,
+        untouched: countsMap.untouched,
+        rnr: countsMap.rnr,
+        onHold: countsMap.onHold,
+        interested: countsMap.interested,
+        notInterested: countsMap.notInterested,
+        otherEnquiry: countsMap.otherEnquiry,
+        qualified: countsMap.qualified,
+        future: countsMap.future,
+        working: countsMap.working,
+      },
       pagination: {
         page,
         limit,

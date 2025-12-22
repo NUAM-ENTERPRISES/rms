@@ -114,7 +114,7 @@ export default function RecruiterCandidatesTab({
   // Determine which data to use
   const candidatesData = isRecruiter && !isManager 
     ? recruiterCandidatesData?.data 
-    : allCandidatesData;
+    : allCandidatesData?.data;
   
   const isLoading = isLoadingRecruiter || isLoadingAll;
   const error = recruiterError || allError;
@@ -142,7 +142,7 @@ export default function RecruiterCandidatesTab({
     useAssignToProjectMutation();
 
   // Get candidates (already filtered by backend based on role)
-  const allCandidates = candidatesData || [];
+  const allCandidates = Array.isArray(candidatesData) ? candidatesData : [];
 
   // Get candidates already assigned to this project
   const projectCandidates = projectCandidatesData?.data || [];

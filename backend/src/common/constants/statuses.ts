@@ -414,6 +414,9 @@ export const CANDIDATE_STATUS = {
   PROCESSING: 'processing',
   HIRED: 'hired',
   REJECTED: 'rejected',
+
+  WORKING: 'working',
+  
 } as const;
 
 export type CandidateStatus =
@@ -502,6 +505,14 @@ export const CANDIDATE_STATUS_CONFIG: Record<CandidateStatus, StatusConfig> = {
     badgeClass: 'bg-green-50 text-green-700 border-green-200',
     icon: 'CheckCircle',
     priority: 'high',
+  },
+  [CANDIDATE_STATUS.WORKING]: {
+    label: 'Working',
+    description: 'Candidate is currently working',
+    color: 'green',
+    badgeClass: 'bg-green-50 text-green-700 border-green-200',
+    icon: 'Briefcase',
+    priority: 'medium',
   },
   // Legacy statuses
   [CANDIDATE_STATUS.NEW]: {
@@ -691,6 +702,7 @@ export function getCandidateStatusPriority(
     [CANDIDATE_STATUS.INTERVIEWING]: 'high',
     [CANDIDATE_STATUS.SELECTED]: 'high',
     [CANDIDATE_STATUS.PROCESSING]: 'high',
+    [CANDIDATE_STATUS.WORKING]: 'medium',
     [CANDIDATE_STATUS.HIRED]: 'low',
     [CANDIDATE_STATUS.REJECTED]: 'low',
   };

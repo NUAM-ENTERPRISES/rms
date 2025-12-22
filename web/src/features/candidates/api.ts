@@ -367,6 +367,18 @@ export interface GetRecruiterMyCandidatesParams {
 export interface RecruiterMyCandidatesResponse {
   success: boolean;
   data: Candidate[];
+  counts: {
+    totalAssigned: number;
+    untouched: number;
+    rnr: number;
+    onHold: number;
+    interested: number;
+    qualified: number;
+    future: number;
+    working: number;
+    notInterested: number;
+    otherEnquiry: number;
+  };
   pagination: {
     page: number;
     limit: number;
@@ -479,7 +491,26 @@ export interface GetCandidateProjectPipelineResponse {
 
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getCandidates: builder.query<Candidate[], GetCandidatesParams | void>({
+    getCandidates: builder.query<
+      {
+        data: Candidate[];
+        pagination?: any;
+        counts?: {
+          total?: number;
+          totalAssigned?: number;
+          untouched?: number;
+          rnr?: number;
+          onHold?: number;
+          interested?: number;
+          notInterested?: number;
+          otherEnquiry?: number;
+          qualified?: number;
+          future?: number;
+          working?: number;
+        };
+      },
+      GetCandidatesParams | void
+    >({
       query: (params) => {
         if (!params) return "/candidates";
         
@@ -492,12 +523,18 @@ export const candidatesApi = baseApi.injectEndpoints({
         const queryString = queryParams.toString();
         return queryString ? `/candidates?${queryString}` : "/candidates";
       },
-      transformResponse: (response: {
-        success: boolean;
-        data: { candidates: Candidate[]; pagination: any };
-        message: string;
-      }) => {
-        return response.data.candidates;
+      transformResponse: (response: any) => {
+        const candidates = Array.isArray(response?.data?.candidates)
+          ? response.data.candidates
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
+
+        return {
+          data: candidates,
+          pagination: response?.data?.pagination ?? response?.pagination,
+          counts: response?.counts ?? response?.data?.counts,
+        };
       },
       providesTags: ["Candidate"],
     }),

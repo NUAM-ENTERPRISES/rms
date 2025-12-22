@@ -85,20 +85,21 @@ export default function CandidatesPage() {
   });
 
   // Fetch candidates - use different API for Recruiter users
-  const {
-    data: allCandidatesData = [],
-    isLoading: isLoadingAll,
-    error: errorAll,
-  } = useGetCandidatesQuery(
-    undefined,
+  const allCandidatesQuery = useGetCandidatesQuery(
+    {
+      page: filters.page,
+      limit: filters.limit,
+      status: filters.status !== "all" ? filters.status : undefined,
+    },
     { skip: isRecruiter && !isManager } // Skip this query if user is recruiter without manager role
   );
 
-  const {
-    data: recruiterCandidatesData,
-    isLoading: isLoadingRecruiter,
-    error: errorRecruiter,
-  } = useGetRecruiterMyCandidatesQuery(
+  const allCandidatesData = allCandidatesQuery.data;
+  const isLoadingAll = allCandidatesQuery.isLoading;
+  const errorAll = allCandidatesQuery.error;
+  const allCandidatesRefetch = allCandidatesQuery.refetch;
+
+  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
     {
       page: filters.page,
       limit: filters.limit,
@@ -108,12 +109,19 @@ export default function CandidatesPage() {
     { skip: !isRecruiter || isManager } // Skip this query if user is not recruiter or is manager
   );
 
+  const recruiterCandidatesData = recruiterCandidatesQuery.data;
+  const isLoadingRecruiter = recruiterCandidatesQuery.isLoading;
+  const errorRecruiter = recruiterCandidatesQuery.error;
+  const recruiterRefetch = recruiterCandidatesQuery.refetch;
+
   // Use the appropriate data source
   const candidates: any[] =
     isRecruiter && !isManager
       ? recruiterCandidatesData?.data || []
       : Array.isArray(allCandidatesData)
         ? allCandidatesData
+        : Array.isArray(allCandidatesData?.data)
+        ? allCandidatesData.data
         : [];
 
   const isLoading = isLoadingRecruiter || isLoadingAll;
@@ -400,36 +408,384 @@ export default function CandidatesPage() {
   const hiringRate =
     totalCount > 0 ? `${Math.round((placedCount / totalCount) * 100)}%` : "0%";
 
-  const stats = [
+  // Stat type and unified recruiter-style tiles for all users
+  type Stat = {
+    label: string;
+    value: number | string;
+    subtitle: string;
+    icon: React.ElementType;
+    color: string;
+    statusFilter?: string;
+  };
+
+  // Prefer server-provided counts (recruiter or all candidates), otherwise derive from client data
+  const serverCounts = isRecruiter && !isManager ? recruiterCandidatesData?.counts : allCandidatesData?.counts;
+
+  const derivedCounts = {
+    // Recruiter endpoint uses totalAssigned; all-candidates endpoint uses total
+    totalAssigned:
+      (isRecruiter && !isManager
+        ? serverCounts?.totalAssigned
+        : serverCounts?.total) ??
+      serverCounts?.totalAssigned ??
+      totalCount,
+    untouched: serverCounts?.untouched ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "untouched").length,
+    rnr: serverCounts?.rnr ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "rnr").length,
+    onHold: serverCounts?.onHold ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "on hold" || (c?.currentStatus?.statusName || "").toLowerCase() === "on_hold").length,
+    interested: serverCounts?.interested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
+    qualified: serverCounts?.qualified ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "qualified").length,
+    future: serverCounts?.future ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "future").length,
+    working: serverCounts?.working ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "working").length,
+    notInterested: serverCounts?.notInterested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not interested" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_interested").length,
+    otherEnquiry: serverCounts?.otherEnquiry ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "other enquiry" || (c?.currentStatus?.statusName || "").toLowerCase() === "other_enquiry").length,
+  };
+
+  let stats: Stat[] = [
     {
-      label: "Total Candidates",
-      value: totalCount,
-      subtitle: "All time",
+      label: "Assigned to Me",
+      value: derivedCounts.totalAssigned,
+      subtitle: "Assigned candidates",
       icon: Users,
+      statusFilter: "all",
       color: "from-blue-500 to-cyan-500",
     },
     {
-      label: "Qualified Today",
-      value: qualifiedToday,
-      subtitle: "Passed screening",
-      icon: CheckCircle,
+      label: "Available Today",
+      value: derivedCounts.untouched,
+      subtitle: "Wants to work today",
+      icon: UserCheck,
+      statusFilter: "untouched",
       color: "from-emerald-500 to-teal-500",
     },
     {
-      label: "In Progress",
-      value: inProgressCount,
-      subtitle: "Under review",
-      icon: Briefcase,
+      label: "Call Back (RNR)",
+      value: derivedCounts.rnr,
+      subtitle: "Ring not responded",
+      icon: Phone,
+      statusFilter: "rnr",
+      color: "from-orange-500 to-red-500",
+    },
+    {
+      label: "On Hold",
+      value: derivedCounts.onHold,
+      subtitle: "Requires follow-up",
+      icon: Clock,
+      statusFilter: "on_hold",
       color: "from-purple-500 to-pink-500",
     },
     {
-      label: "Hiring Rate",
-      value: hiringRate,
-      subtitle: "Placed / Total",
-      icon: TrendingUp,
-      color: "from-orange-500 to-red-500",
+      label: "Interested",
+      value: derivedCounts.interested,
+      subtitle: "Expressed interest",
+      icon: UserCheck,
+      statusFilter: "interested",
+      color: "from-lime-400 to-green-500",
+    },
+    {
+      label: "Qualified",
+      value: derivedCounts.qualified,
+      subtitle: "Passed screening",
+      icon: CheckCircle,
+      statusFilter: "qualified",
+      color: "from-emerald-600 to-teal-400",
+    },
+    {
+      label: "Future",
+      value: derivedCounts.future,
+      subtitle: "Follow up later",
+      icon: Calendar,
+      statusFilter: "future",
+      color: "from-indigo-500 to-violet-500",
+    },
+    {
+      label: "Working",
+      value: derivedCounts.working,
+      subtitle: "Currently working",
+      icon: Briefcase,
+      statusFilter: "working",
+      color: "from-fuchsia-500 to-pink-400",
+    },
+    {
+      label: "Not Interested",
+      value: derivedCounts.notInterested,
+      subtitle: "Not interested",
+      icon: XCircle,
+      statusFilter: "not_interested",
+      color: "from-slate-500 to-stone-400",
+    },
+    {
+      label: "Other Enquiry",
+      value: derivedCounts.otherEnquiry,
+      subtitle: "Other enquiries",
+      icon: Mail,
+      statusFilter: "other_enquiry",
+      color: "from-yellow-400 to-amber-400",
     },
   ];
+
+  // If the user is a recruiter (non-manager), show recruiter-specific tiles
+  if (isRecruiter && !isManager) {
+    const recruiterCounts = recruiterCandidatesData?.counts;
+    const assignedCount = recruiterCounts?.totalAssigned ?? totalCount;
+    const untouchedCount = recruiterCounts?.untouched ?? 0;
+    const rnrCount = recruiterCounts?.rnr ?? 0;
+    const onHoldCount = recruiterCounts?.onHold ?? 0;
+    const interestedCount = recruiterCounts?.interested ?? 0;
+    const qualifiedCount = recruiterCounts?.qualified ?? 0;
+    const futureCount = recruiterCounts?.future ?? 0;
+    const workingCount = recruiterCounts?.working ?? 0;
+    const notInterestedCount = recruiterCounts?.notInterested ?? 0;
+    const otherEnquiryCount = recruiterCounts?.otherEnquiry ?? 0;
+
+    stats = [
+      {
+        label: "Assigned to Me",
+        value: assignedCount,
+        subtitle: "Assigned candidates",
+        icon: Users,
+        statusFilter: "all",
+        color: "from-blue-500 to-cyan-500",
+      },
+      {
+        label: "Available Today",
+        value: untouchedCount,
+        subtitle: "Wants to work today",
+        icon: UserCheck,
+        statusFilter: "untouched",
+        color: "from-emerald-500 to-teal-500",
+      },
+      {
+        label: "Call Back (RNR)",
+        value: rnrCount,
+        subtitle: "Ring not responded",
+        icon: Phone,
+        statusFilter: "rnr",
+        color: "from-orange-500 to-red-500",
+      },
+      {
+        label: "On Hold",
+        value: onHoldCount,
+        subtitle: "Requires follow-up",
+        icon: Clock,
+        statusFilter: "on_hold",
+        color: "from-purple-500 to-pink-500",
+      },
+      {
+        label: "Interested",
+        value: interestedCount,
+        subtitle: "Expressed interest",
+        icon: UserCheck,
+        statusFilter: "interested",
+        color: "from-lime-400 to-green-500",
+      },
+      {
+        label: "Qualified",
+        value: qualifiedCount,
+        subtitle: "Passed screening",
+        icon: CheckCircle,
+        statusFilter: "qualified",
+        color: "from-emerald-600 to-teal-400",
+      },
+      {
+        label: "Future",
+        value: futureCount,
+        subtitle: "Follow up later",
+        icon: Calendar,
+        statusFilter: "future",
+        color: "from-indigo-500 to-violet-500",
+      },
+      {
+        label: "Working",
+        value: workingCount,
+        subtitle: "Currently working",
+        icon: Briefcase,
+        statusFilter: "working",
+        color: "from-fuchsia-500 to-pink-400",
+      },
+      {
+        label: "Not Interested",
+        value: notInterestedCount,
+        subtitle: "Not interested",
+        icon: XCircle,
+        statusFilter: "not_interested",
+        color: "from-slate-500 to-stone-400",
+      },
+      {
+        label: "Other Enquiry",
+        value: otherEnquiryCount,
+        subtitle: "Other enquiries",
+        icon: Mail,
+        statusFilter: "other_enquiry",
+        color: "from-yellow-400 to-amber-400",
+      },
+    ];
+  }
+  else {
+    // For non-recruiter users: if API returns counts, show the same tiles
+    const allCounts = allCandidatesData?.counts || allCandidatesData?.data?.counts;
+    if (allCounts) {
+      const assignedCount = allCounts?.total ?? allCounts?.totalAssigned ?? totalCount;
+      const untouchedCount = allCounts?.untouched ?? 0;
+      const rnrCount = allCounts?.rnr ?? 0;
+      const onHoldCount = allCounts?.onHold ?? 0;
+      const interestedCount = allCounts?.interested ?? 0;
+      const qualifiedCount = allCounts?.qualified ?? 0;
+      const futureCount = allCounts?.future ?? 0;
+      const workingCount = allCounts?.working ?? 0;
+      const notInterestedCount = allCounts?.notInterested ?? 0;
+      const otherEnquiryCount = allCounts?.otherEnquiry ?? 0;
+
+      stats = [
+        {
+          label: "Total Candidates",
+          value: assignedCount,
+          subtitle: "All assigned",
+          icon: Users,
+          color: "from-blue-500 to-cyan-500",
+          statusFilter: "all",
+        },
+        {
+          label: "Available Today",
+          value: untouchedCount,
+          subtitle: "Wants to work today",
+          icon: UserCheck,
+          statusFilter: "untouched",
+          color: "from-emerald-500 to-teal-500",
+        },
+        {
+          label: "Call Back (RNR)",
+          value: rnrCount,
+          subtitle: "Ring not responded",
+          icon: Phone,
+          statusFilter: "rnr",
+          color: "from-orange-500 to-red-500",
+        },
+        {
+          label: "On Hold",
+          value: onHoldCount,
+          subtitle: "Requires follow-up",
+          icon: Clock,
+          statusFilter: "on_hold",
+          color: "from-purple-500 to-pink-500",
+        },
+        {
+          label: "Interested",
+          value: interestedCount,
+          subtitle: "Expressed interest",
+          icon: UserCheck,
+          statusFilter: "interested",
+          color: "from-lime-400 to-green-500",
+        },
+        {
+          label: "Qualified",
+          value: qualifiedCount,
+          subtitle: "Passed screening",
+          icon: CheckCircle,
+          statusFilter: "qualified",
+          color: "from-emerald-600 to-teal-400",
+        },
+        {
+          label: "Future",
+          value: futureCount,
+          subtitle: "Follow up later",
+          icon: Calendar,
+          statusFilter: "future",
+          color: "from-indigo-500 to-violet-500",
+        },
+        {
+          label: "Working",
+          value: workingCount,
+          subtitle: "Currently working",
+          icon: Briefcase,
+          statusFilter: "working",
+          color: "from-fuchsia-500 to-pink-400",
+        },
+        {
+          label: "Not Interested",
+          value: notInterestedCount,
+          subtitle: "Not interested",
+          icon: XCircle,
+          statusFilter: "not_interested",
+          color: "from-slate-500 to-stone-400",
+        },
+        {
+          label: "Other Enquiry",
+          value: otherEnquiryCount,
+          subtitle: "Other enquiries",
+          icon: Mail,
+          statusFilter: "other_enquiry",
+          color: "from-yellow-400 to-amber-400",
+        },
+      ];
+    }
+  }
+
+  // Handler for clicking statistic tiles (applies a status filter)
+  const handleTileClick = (status?: string) => {
+    setFilters((prev) => ({ ...prev, status: status ?? "all", page: 1 }));
+
+    // Force a refetch after state update completes to ensure the network call runs
+    setTimeout(() => {
+      if (isRecruiter && !isManager) {
+        if (typeof recruiterRefetch === "function") recruiterRefetch();
+      } else {
+        if (typeof allCandidatesRefetch === "function") allCandidatesRefetch();
+      }
+    }, 50);
+  };
+
+  // Compute dynamic titles based on active tile/status
+  const getTableTitle = () => {
+    switch (filters.status) {
+      case "untouched":
+        return "Available Today";
+      case "rnr":
+        return "Call Back (RNR)";
+      case "interested":
+        return "Interested";
+      case "not_interested":
+        return "Not Interested";
+      case "other_enquiry":
+        return "Other Enquiries";
+      case "qualified":
+        return "Qualified";
+      case "future":
+        return "Future Follow-ups";
+      case "working":
+        return "Working";
+      case "on_hold":
+        return "On Hold";
+      case "all":
+      default:
+        return isRecruiter && !isManager ? "My Assigned Candidates" : "All Candidates";
+    }
+  };
+
+  const getTableSubtitle = () => {
+    switch (filters.status) {
+      case "untouched":
+        return "Candidates who want to work today";
+      case "rnr":
+        return "Candidates to call back (no response)";
+      case "interested":
+        return "Candidates who expressed interest";
+      case "not_interested":
+        return "Candidates who declined or are not interested";
+      case "other_enquiry":
+        return "Candidates with other enquiries";
+      case "qualified":
+        return "Candidates who passed screening";
+      case "future":
+        return "Candidates to follow up later";
+      case "working":
+        return "Candidates currently placed/working";
+      case "on_hold":
+        return "Candidates on hold needing follow-up";
+      case "all":
+      default:
+        return isRecruiter && !isManager ? "Assigned candidates" : "All candidates";
+    }
+  };
 
   return (
     <div className="min-h-screen ">
@@ -464,7 +820,7 @@ export default function CandidatesPage() {
               {/* Filters Row */}
               <div className="flex flex-wrap items-center gap-4">
                 {/* Status Filter */}
-                <div className="flex items-center gap-3">
+                {/* <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                     <span className="text-sm font-semibold text-gray-700 tracking-wide">
@@ -519,10 +875,10 @@ export default function CandidatesPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
 
                 {/* Experience Filter */}
-                <div className="flex items-center gap-3">
+                {/* <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                     <span className="text-sm font-semibold text-gray-700 tracking-wide">
@@ -573,7 +929,7 @@ export default function CandidatesPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
 
                 {/* Add New Candidate Button */}
                 {canWriteCandidates && (
@@ -587,20 +943,21 @@ export default function CandidatesPage() {
                 )}
 
                 {/* Export Button */}
-                <Button
+                {/* <Button
                   variant="outline"
                   className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
                 >
                   <Download className="h-3 w-3" />
                   Export
-                </Button>
+                </Button> */}
+
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Candidate Dashboard (uses real data, not mocks) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 gap-2">
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             const gradientMap: Record<
@@ -627,8 +984,61 @@ export default function CandidatesPage() {
                 iconBg: "bg-orange-200/40",
                 text: "text-orange-600",
               },
+              "from-lime-400 to-green-500": {
+                bg: "from-lime-50 to-green-100/50",
+                iconBg: "bg-lime-200/40",
+                text: "text-lime-700",
+              },
+              "from-emerald-600 to-teal-400": {
+                bg: "from-emerald-50 to-teal-100/50",
+                iconBg: "bg-emerald-200/40",
+                text: "text-emerald-700",
+              },
+              "from-indigo-500 to-violet-500": {
+                bg: "from-indigo-50 to-violet-100/50",
+                iconBg: "bg-indigo-200/40",
+                text: "text-indigo-700",
+              },
+              "from-fuchsia-500 to-pink-400": {
+                bg: "from-fuchsia-50 to-pink-100/50",
+                iconBg: "bg-fuchsia-200/40",
+                text: "text-fuchsia-700",
+              },
+              "from-slate-500 to-stone-400": {
+                bg: "from-slate-50 to-stone-100/50",
+                iconBg: "bg-slate-200/40",
+                text: "text-slate-700",
+              },
+              "from-yellow-400 to-amber-400": {
+                bg: "from-yellow-50 to-amber-100/50",
+                iconBg: "bg-yellow-200/40",
+                text: "text-amber-700",
+              },
+              "from-green-500 to-emerald-500": {
+                bg: "from-green-50 to-emerald-100/50",
+                iconBg: "bg-green-200/40",
+                text: "text-emerald-700",
+              },
+              "from-teal-500 to-emerald-500": {
+                bg: "from-teal-50 to-emerald-100/50",
+                iconBg: "bg-teal-200/40",
+                text: "text-teal-700",
+              },
+              "from-indigo-500 to-purple-500": {
+                bg: "from-indigo-50 to-purple-100/50",
+                iconBg: "bg-indigo-200/40",
+                text: "text-indigo-700",
+              },
+              "from-emerald-500 to-lime-500": {
+                bg: "from-emerald-50 to-lime-100/50",
+                iconBg: "bg-emerald-200/40",
+                text: "text-emerald-700",
+              },
             };
             const colors = gradientMap[stat.color];
+
+            const isInteractive = Boolean(stat.statusFilter);
+            const isActive = isInteractive && filters.status === stat.statusFilter;
 
             return (
               <motion.div
@@ -638,24 +1048,32 @@ export default function CandidatesPage() {
                 transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
               >
                 <Card
-                  className={`border-0 shadow-lg bg-gradient-to-br ${colors.bg} backdrop-blur-sm hover:shadow-xl transition-all duration-300`}
+                  onClick={() => isInteractive && handleTileClick(stat.statusFilter)}
+                  onKeyDown={(e) => {
+                    if (isInteractive && (e.key === "Enter" || e.key === " ")) {
+                      handleTileClick(stat.statusFilter);
+                    }
+                  }}
+                  role={isInteractive ? "button" : undefined}
+                  tabIndex={isInteractive ? 0 : undefined}
+                  className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 ${isInteractive ? "cursor-pointer hover:shadow-sm transform hover:-translate-y-0.5" : ""} ${isActive ? "ring-2 ring-blue-500/30" : ""}`}
                 >
-                  <CardContent className="pt-6">
+                  <CardContent className="pt-1 pb-1">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-slate-600 mb-1">
+                        <p className="text-[10px] font-medium text-slate-600 mb-0.5">
                           {stat.label}
                         </p>
-                        <h3 className={`text-3xl font-bold ${colors.text}`}>
+                        <h3 className={`text-lg font-semibold ${colors.text}`}>
                           {stat.value}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-2">
+                        <p className="text-[9px] text-slate-500 mt-0.5">
                           {stat.subtitle}
                         </p>
                       </div>
 
-                      <div className={`p-3 ${colors.iconBg} rounded-full`}>
-                        <Icon className={`h-6 w-6 ${colors.text}`} />
+                      <div className={`p-0.5 ${colors.iconBg} rounded-full`}>
+                        <Icon className={`h-3 w-3 ${colors.text}`} />
                       </div>
                     </div>
                   </CardContent>
@@ -671,14 +1089,10 @@ export default function CandidatesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-slate-800">
-                  {isRecruiter && !isManager
-                    ? "My Assigned Candidates"
-                    : "All Candidates"}
+                  {getTableTitle()}
                 </CardTitle>
                 <CardDescription>
-                  {Array.isArray(filteredCandidates)
-                    ? filteredCandidates.length
-                    : 0}{" "}
+                  {getTableSubtitle()} • {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
                   candidates found
                 </CardDescription>
               </div>
@@ -698,14 +1112,10 @@ export default function CandidatesPage() {
 
                   <div className="flex-1">
                     <h4 className="text-lg font-semibold text-gray-900">
-                      {isRecruiter && !isManager
-                        ? "My Assigned Candidates"
-                        : "All Candidates"}
+                      {getTableTitle()}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1 font-medium">
-                      {Array.isArray(filteredCandidates)
-                        ? filteredCandidates.length
-                        : 0}{" "}
+                      {getTableSubtitle()} — {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
                       candidate{filteredCandidates?.length !== 1 ? "s" : ""} in
                       total
                     </p>

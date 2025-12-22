@@ -76,7 +76,7 @@ export default function DocumentUploadPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // Candidates data
-  const candidates = candidatesData || [];
+  const candidates = candidatesData?.data || [];
 
   // Form
   const form = useForm<UploadDocumentFormData>({
