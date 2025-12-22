@@ -82,25 +82,29 @@ export default function DocumentVerificationPage() {
   );
 
   // Verified / Rejected documents query — only call when viewing verified or rejected lists
-  const verifiedRejectedQuery = useGetVerifiedRejectedDocumentsQuery(
-    {
-      status: statusFilter === "documents_verified" ? "verified" : statusFilter === "rejected_documents" ? "rejected" : undefined,
-      search: searchTerm || undefined,
-      page: 1,
-      limit: 50,
-      recruiterId: isStrictRecruiter ? user?.id : undefined,
-    },
-    { skip: statusFilter === "verification_in_progress_document" }
-  );
+  // Always fetch verified/rejected counts (we'll merge counts from both endpoints)
+  const verifiedRejectedQuery = useGetVerifiedRejectedDocumentsQuery({
+    status:
+      statusFilter === "documents_verified"
+        ? "verified"
+        : statusFilter === "rejected_documents"
+        ? "rejected"
+        : undefined,
+    search: searchTerm || undefined,
+    page: 1,
+    limit: 50,
+    recruiterId: isStrictRecruiter ? user?.id : undefined,
+  });
 
   // Normalize data for table rendering
   const verificationData = verificationCandidatesQuery.data;
   const verifiedRejectedData = verifiedRejectedQuery.data;
   const isLoading = verificationCandidatesQuery.isLoading || verifiedRejectedQuery.isLoading;
   const error = verificationCandidatesQuery.error || verifiedRejectedQuery.error;
+  // Refresh both endpoints to keep counts and lists in sync
   const refetch = () => {
-    if (statusFilter === "verification_in_progress_document") verificationCandidatesQuery.refetch();
-    else verifiedRejectedQuery.refetch();
+    verificationCandidatesQuery.refetch?.();
+    verifiedRejectedQuery.refetch?.();
   };
 
   let candidateProjects: any[] = [];
@@ -197,50 +201,49 @@ export default function DocumentVerificationPage() {
 
   // Calculate status counts from API data (prefer server-supplied counts when available)
   const getStatusCounts = () => {
-    // API can return a counts object like: { pending: 1, verified: 2, rejected: 1 }
-    const apiCounts = (verificationData?.data as any)?.counts || (verifiedRejectedData?.data as any)?.counts;
+    // Prefer server-supplied counts when available. We merge counts from both
+    // the verification (pending) endpoint and the verified/rejected endpoint.
+    const verificationCounts = (verificationData?.data as any)?.counts || {};
+    const verifiedCounts = (verifiedRejectedData?.data as any)?.counts || {};
 
-    if (apiCounts) {
-      // Map API count keys to our internal canonical keys
-      // Keep both verification_in_progress_document and verification_in_progress for compatibility
-      return {
-        verification_in_progress_document: Number(apiCounts.pending || 0),
+    const pending = Number(
+      verificationCounts.pending ?? verificationCounts.verification_in_progress ?? verificationCounts.verification_in_progress_document ?? 0
+    );
+
+    const verified = Number(verifiedCounts.verified ?? verificationCounts.verified ?? 0);
+    const rejected = Number(verifiedCounts.rejected ?? verificationCounts.rejected ?? 0);
+
+    // If no counts from API, fall back to computing counts from candidateProjects
+    if (!Object.keys(verificationCounts).length && !Object.keys(verifiedCounts).length) {
+      const counts = {
+        verification_in_progress_document: 0,
         documents_submitted: 0,
-        verification_in_progress: Number(apiCounts.pending || 0),
-        documents_verified: Number(apiCounts.verified || 0),
-        rejected_documents: Number(apiCounts.rejected || 0),
+        verification_in_progress: 0,
+        documents_verified: 0,
+        rejected_documents: 0,
       };
+
+      candidateProjects.forEach((candidateProject: any) => {
+        const rawStatus =
+          candidateProject.status || candidateProject.subStatus?.name || candidateProject.subStatus?.label;
+        let key = rawStatus;
+        if (!key) return;
+        if (key === "pending_documents" || key === "verification_in_progress") {
+          key = "verification_in_progress_document";
+        }
+        if (key in counts) counts[key as keyof typeof counts]++;
+      });
+
+      return counts;
     }
 
-    // Fallback: compute counts from returned candidateProjects array
-    const counts = {
-      verification_in_progress_document: 0,
+    return {
+      verification_in_progress_document: pending,
       documents_submitted: 0,
-      verification_in_progress: 0,
-      documents_verified: 0,
-      rejected_documents: 0,
+      verification_in_progress: pending,
+      documents_verified: verified,
+      rejected_documents: rejected,
     };
-
-    candidateProjects.forEach((candidateProject: any) => {
-      // status can come from different properties depending on API shape
-      const rawStatus =
-        candidateProject.status || candidateProject.subStatus?.name || candidateProject.subStatus?.label;
-
-      // normalize known aliases into the keys we track
-      let key = rawStatus;
-      if (!key) return;
-
-      // map legacy/alternate names to our chosen bucket
-      if (key === "pending_documents" || key === "verification_in_progress") {
-        key = "verification_in_progress_document";
-      }
-
-      if (key in counts) {
-        counts[key as keyof typeof counts]++;
-      }
-    });
-
-    return counts;
   };
 
   const statusCounts = getStatusCounts();
