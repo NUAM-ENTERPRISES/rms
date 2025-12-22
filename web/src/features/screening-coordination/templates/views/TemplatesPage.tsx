@@ -303,205 +303,192 @@ export default function TemplatesPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Header */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20">
-                  <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-semibold tracking-tight">
-                    Screening Templates
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    {filteredTemplates.length} template
-                    {filteredTemplates.length !== 1 ? "s" : ""} found •{" "}
-                    {filteredTemplates.filter((t) => t.isActive).length} active
-                  </CardDescription>
-                </div>
-              </div>
-              {canWrite && (
-                <Button
-                  onClick={handleCreate}
-                  className="gap-2 h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-sm"
-                >
-                  <Plus className="h-3 w-3" />
-                  New Template
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Premium Search Bar with Enhanced Styling */}
-              <div className="relative group">
-                <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
-                  }`}
-                >
-                  <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      filters.search ? "scale-110" : "scale-100"
-                    }`}
-                  />
-                </div>
-                <Input
-                  placeholder="Search templates by name, description, or role..."
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, search: e.target.value }))
-                  }
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-                <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    filters.search ? "ring-2 ring-blue-500/20" : ""
-                  }`}
-                />
-              </div>
+   <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
+  <CardHeader className="pb-3 border-b border-indigo-200/50">
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center gap-4">
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-500"></div>
+          <div className="relative p-2.5 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl shadow-md transform transition-transform duration-300 group-hover:scale-105">
+            <FileText className="h-6 w-6 text-white drop-shadow-md" />
+          </div>
+        </div>
+        <div>
+          <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
+            Screening Templates
+          </CardTitle>
+          <CardDescription className="text-sm text-slate-600 mt-1 font-medium">
+            {filteredTemplates.length} template{filteredTemplates.length !== 1 ? "s" : ""} found •{" "}
+            {filteredTemplates.filter((t) => t.isActive).length} active
+          </CardDescription>
+        </div>
+      </div>
 
-              {/* Filters Row */}
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Role Filter */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
-                      Role
-                    </span>
-                  </div>
-                  <Select
-                    value={filters.roleId}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({ ...prev, roleId: value }))
-                    }
-                  >
-                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[180px]">
-                      <SelectValue placeholder="All Roles" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm max-h-[300px]">
-                      <SelectItem
-                        value="all"
-                        className="rounded-lg hover:bg-blue-50"
-                      >
-                        All Roles
-                      </SelectItem>
-                      {roles.map((role) => (
-                        <SelectItem
-                          key={role.id}
-                          value={role.id}
-                          className="rounded-lg hover:bg-blue-50"
-                        >
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+      {canWrite && (
+       <Button
+  onClick={handleCreate}
+  className="relative group overflow-hidden gap-2 h-11 px-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 rounded-xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] text-white font-medium text-sm tracking-wide"
+>
+  {/* Subtle shine effect on hover */}
+  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-out" />
+  
+  <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
+  New Template
+</Button>
+      )}
+    </div>
+  </CardHeader>
 
-                {/* Status Filter */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
-                      Status
-                    </span>
-                  </div>
-                  <Select
-                    value={filters.isActive}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({ ...prev, isActive: value }))
-                    }
-                  >
-                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
-                      <SelectItem
-                        value="all"
-                        className="rounded-lg hover:bg-blue-50"
-                      >
-                        All Status
-                      </SelectItem>
-                      <SelectItem
-                        value="true"
-                        className="rounded-lg hover:bg-blue-50"
-                      >
-                        Active Only
-                      </SelectItem>
-                      <SelectItem
-                        value="false"
-                        className="rounded-lg hover:bg-blue-50"
-                      >
-                        Inactive Only
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+  <CardContent className="p-6">
+    <div className="space-y-6">
+      {/* Premium Search Bar */}
+      <div className="relative group">
+        <div
+          className={`absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-all duration-300 ${
+            filters.search ? "text-indigo-600 scale-110" : "text-slate-400"
+          }`}
+        >
+          <Search className="h-5 w-5 transition-transform duration-300" />
+        </div>
+        <Input
+          placeholder="Search templates by name, description, or role..."
+          value={filters.search}
+          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+          className="pl-12 h-12 text-base rounded-xl border-0 bg-white/80 backdrop-blur-sm shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 transition-all duration-300 placeholder:text-slate-400"
+        />
+        <div
+          className={`absolute inset-0 rounded-xl pointer-events-none transition-all duration-300 ${
+            filters.search ? "ring-2 ring-indigo-400/20 shadow-lg" : ""
+          }`}
+        />
+      </div>
 
-                {/* Clear Filters Button */}
-                {(filters.search ||
-                  filters.roleId !== "all" ||
-                  filters.isActive !== "all") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setFilters({
-                        roleId: "all",
-                        isActive: "all",
-                        search: "",
-                      })
-                    }
-                    className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
-                  >
-                    <X className="h-3 w-3" />
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* Role Filter */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+              Role
+            </span>
+          </div>
+          <Select
+            value={filters.roleId}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, roleId: value }))}
+          >
+            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[180px] text-sm">
+              <SelectValue placeholder="All Roles" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm max-h-[300px]">
+              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50">
+                All Roles
+              </SelectItem>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id} className="rounded-lg hover:bg-indigo-50">
+                  {role.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
+        {/* Status Filter */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+              Status
+            </span>
+          </div>
+          <Select
+            value={filters.isActive}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, isActive: value }))}
+          >
+            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[140px] text-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50">
+                All Status
+              </SelectItem>
+              <SelectItem value="true" className="rounded-lg hover:bg-indigo-50">
+                Active Only
+              </SelectItem>
+              <SelectItem value="false" className="rounded-lg hover:bg-indigo-50">
+                Inactive Only
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Clear Filters */}
+        {(filters.search || filters.roleId !== "all" || filters.isActive !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setFilters({
+                roleId: "all",
+                isActive: "all",
+                search: "",
+              })
+            }
+            className="h-10 px-4 text-sm text-slate-600 hover:text-slate-900 hover:bg-indigo-50/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 gap-2"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear
+          </Button>
+        )}
+      </div>
+    </div>
+  </CardContent>
+</Card>
         {/* Content */}
         {filteredTemplates.length === 0 ? (
-          <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <CardContent className="py-12 px-6">
-              <div className="text-center max-w-md mx-auto space-y-4">
-                <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto">
-                  <FileText className="h-8 w-8 text-slate-400 dark:text-slate-500" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    No templates found
-                  </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {filters.search ||
-                    filters.roleId !== "all" ||
-                    filters.isActive !== "all"
-                      ? "Try adjusting your filters to find what you're looking for"
-                      : "Get started by creating your first interview template"}
-                  </p>
-                </div>
-                {canWrite &&
-                  !filters.search &&
-                  filters.roleId === "all" &&
-                  filters.isActive === "all" && (
-                    <Button
-                      onClick={handleCreate}
-                      size="default"
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Create Template
-                    </Button>
-                  )}
-              </div>
-            </CardContent>
-          </Card>
+         <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
+  <CardContent className="py-16 px-8">
+    <div className="text-center max-w-md mx-auto space-y-6">
+      {/* Perfectly centered premium icon with glow */}
+      <div className="relative mx-auto w-20 h-20">
+        {/* Glow background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-3xl opacity-30 animate-pulse-slow"></div>
+        
+        {/* Icon container - centered with flex */}
+        <div className="relative w-full h-full rounded-2xl bg-white/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-105">
+          <FileText className="h-10 w-10 text-indigo-600 drop-shadow-md" />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
+          No Templates Found
+        </h3>
+        <p className="text-base text-slate-600 leading-relaxed font-medium">
+          {filters.search ||
+          filters.roleId !== "all" ||
+          filters.isActive !== "all"
+            ? "Try adjusting your filters to find matches"
+            : "Get started by creating your first interview template"}
+        </p>
+      </div>
+
+      {canWrite &&
+        !filters.search &&
+        filters.roleId === "all" &&
+        filters.isActive === "all" && (
+          <Button
+            onClick={handleCreate}
+            size="lg"
+            className="gap-2 h-12 px-8 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] text-base font-medium"
+          >
+            <Plus className="h-5 w-5" />
+            Create Template
+          </Button>
+        )}
+    </div>
+  </CardContent>
+</Card>
         ) : (
           <div className="space-y-4">
             {Object.keys(templatesByRole).map((roleName, roleIndex) => {
@@ -512,63 +499,61 @@ export default function TemplatesPage() {
               const totalCount = templatesByRole[roleName].length;
 
               return (
-                <Card
-                  key={roleName}
-                  className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${roleColor.iconBg} border border-slate-200 dark:border-slate-800`}
-                        >
-                          <BookOpen className={`h-4 w-4 ${roleColor.icon}`} />
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            {roleName}
-                          </CardTitle>
-                          <CardDescription className="text-xs mt-0.5">
-                            {totalCount} template{totalCount !== 1 ? "s" : ""} •{" "}
-                            {activeCount} active
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs font-medium border rounded px-2 py-0.5 h-5 ${roleColor.badge}`}
-                      >
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${roleColor.dot} mr-1.5`}
-                        />
-                        {activeCount}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-                      {templatesByRole[roleName].map(
-                        (template, templateIndex) => {
-                          const cardColor = getTemplateCardColor(
-                            templateIndex,
-                            template.isActive
-                          );
-                          return (
-                            <TemplateCard
-                              key={template.id}
-                              template={template}
-                              onEdit={handleEdit}
-                              onDelete={handleDelete}
-                              canEdit={canWrite}
-                              canDelete={canDelete}
-                              colorScheme={cardColor}
-                            />
-                          );
-                        }
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-white/90 to-indigo-50/50 dark:from-slate-900/90 dark:to-indigo-950/50 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:ring-indigo-800/30 transition-all duration-300 hover:shadow-2xl hover:ring-indigo-300/50 dark:hover:ring-indigo-700/50">
+  <CardHeader className="pb-3 border-b border-indigo-200/50 dark:border-indigo-800/50">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center ${roleColor.iconBg} border border-indigo-200/50 dark:border-indigo-800/50 shadow-sm`}
+        >
+          <BookOpen className={`h-5 w-5 ${roleColor.icon}`} />
+        </div>
+        <div>
+          <CardTitle className="text-lg font-bold bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent tracking-tight">
+            {roleName}
+          </CardTitle>
+          <CardDescription className="text-xs mt-1 text-slate-600 dark:text-slate-400 font-medium">
+            {totalCount} template{totalCount !== 1 ? "s" : ""} • {activeCount} active
+          </CardDescription>
+        </div>
+      </div>
+
+      <Badge
+        variant="outline"
+        className={`text-xs font-medium border rounded px-3 py-1 h-6 flex items-center gap-1.5 shadow-sm ${roleColor.badge}`}
+      >
+        <div
+          className={`w-2 h-2 rounded-full ${roleColor.dot} animate-pulse`}
+        />
+        {activeCount} active
+      </Badge>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-5">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+      {templatesByRole[roleName].map(
+        (template, templateIndex) => {
+          const cardColor = getTemplateCardColor(
+            templateIndex,
+            template.isActive
+          );
+          return (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              canEdit={canWrite}
+              canDelete={canDelete}
+              colorScheme={cardColor}
+            />
+          );
+        }
+      )}
+    </div>
+  </CardContent>
+</Card>
               );
             })}
           </div>

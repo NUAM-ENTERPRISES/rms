@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { ClipboardCheck, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,147 +11,191 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetUpcomingScreeningsQuery } from "../data";
 import { EditScreeningDialog } from "../components";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function UpcomingInterviewsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [filters, setFilters] = useState({ search: "", status: "all" });
+  const [filters, setFilters] = useState({ search: "" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  // auto-select id passed via navigation state
   useEffect(() => {
     const s = (location.state as any)?.selectedId;
     if (s) setSelectedId(s);
   }, [location.state]);
 
-  const { data, isLoading, error, refetch } = useGetUpcomingScreeningsQuery({ page: 1, limit: 100 });
+  const { data, isLoading, error } = useGetUpcomingScreeningsQuery({ page: 1, limit: 100 });
   const items = data?.data?.items || [];
 
-  const { allItems } = useMemo(() => {
-    let filtered = items;
-    if (filters.search) {
-      const term = filters.search.toLowerCase();
-      filtered = filtered.filter((it) => {
-        const cand = it.candidateProjectMap?.candidate;
-        const role = it.candidateProjectMap?.roleNeeded;
-        return (
-          cand?.firstName?.toLowerCase().includes(term) ||
-          cand?.lastName?.toLowerCase().includes(term) ||
-          it.candidateProjectMap?.project?.title?.toLowerCase().includes(term) ||
-          role?.designation?.toLowerCase().includes(term)
-        );
-      });
-    }
-
-    return { allItems: filtered };
-  }, [items, filters]);
-
-  const displayed = allItems;
+  const filteredItems = useMemo(() => {
+    if (!filters.search) return items;
+    const term = filters.search.toLowerCase();
+    return items.filter((it) => {
+      const cand = it.candidateProjectMap?.candidate;
+      const role = it.candidateProjectMap?.roleNeeded;
+      return (
+        cand?.firstName?.toLowerCase().includes(term) ||
+        cand?.lastName?.toLowerCase().includes(term) ||
+        it.candidateProjectMap?.project?.title?.toLowerCase().includes(term) ||
+        role?.designation?.toLowerCase().includes(term)
+      );
+    });
+  }, [items, filters.search]);
 
   const selected = useMemo(() => {
-    if (selectedId) return displayed.find((i) => i.id === selectedId) || null;
-    return displayed[0] || null;
-  }, [displayed, selectedId]);
+    if (selectedId) return filteredItems.find((i) => i.id === selectedId) || null;
+    return filteredItems[0] || null;
+  }, [filteredItems, selectedId]);
 
-  // Debug: log selected interview
-  console.log("Selected interview:", selected, "ID:", selected?.id);
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50/50 to-purple-50/50">
+        <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
-  if (isLoading) return (<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>);
-
-  if (error) return (
-    <div className="p-8">
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Failed to load upcoming interviews. Please try again.</AlertDescription>
-      </Alert>
-    </div>
-  );
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50/50 to-purple-50/50">
+        <Alert variant="destructive" className="max-w-sm rounded-xl shadow-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">Failed to load upcoming screenings</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
+    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+      {/* Compact Header */}
+      <header className="border-b bg-white/95 backdrop-blur-2xl shadow-sm sticky top-0 z-20">
+        <div className="px-4 py-2.5 max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <ClipboardCheck className="h-5 w-5 text-primary" />
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                <div className="relative p-2 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-lg shadow-md transform transition-transform duration-200 group-hover:scale-105">
+                  <ClipboardCheck className="h-5 w-5 text-white" />
+                </div>
               </div>
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Upcoming Screenings</h1>
-                <p className="text-sm text-muted-foreground">Scheduled screenings and recent assignments</p>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Upcoming Screenings
+                </h1>
+                <p className="text-xs text-slate-500">Scheduled & assigned</p>
               </div>
             </div>
-            <div>
-              <Button onClick={() => navigate(-1)} variant="ghost">Back</Button>
-            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs px-3 h-8"
+              onClick={() => navigate(-1)}
+            >
+              Back
+            </Button>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search candidates, projects, roles..." value={filters.search} onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))} className="pl-10" />
+          <div className="flex items-center gap-3 mt-3">
+            <div className="relative flex-1 max-w-md group">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-600 transition-transform duration-300 group-focus-within:scale-110" />
+              <Input
+                placeholder="Search..."
+                value={filters.search}
+                onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
+                className="pl-10 h-8 text-xs rounded-lg border-indigo-200/50 bg-white/90 shadow-inner hover:shadow-md focus:shadow-lg transition-all duration-200 focus:ring-1 focus:ring-indigo-400/30 focus:border-indigo-400"
+              />
             </div>
 
-            {(filters.search || filters.status !== "all") && (
-              <Button variant="ghost" size="sm" onClick={() => setFilters({ search: "", status: "all" })}>
-                <X className="h-4 w-4 mr-2" />
-                Clear
+            {filters.search && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs rounded-lg hover:bg-indigo-50"
+                onClick={() => setFilters({ search: "" })}
+              >
+                <X className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-96 border-r bg-muted/20">
-          <ScrollArea className="h-full">
-            {displayed.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm font-medium mb-1">No upcoming interviews</p>
-                <p className="text-xs">Scheduled interviews will appear here</p>
+        {/* Compact Left Panel */}
+        <div className="w-72 border-r bg-white/90 backdrop-blur-2xl shadow-md overflow-hidden flex flex-col">
+          <ScrollArea className="flex-1">
+            {filteredItems.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                <ClipboardCheck className="h-12 w-12 text-indigo-300/70 mb-3" />
+                <p className="text-base font-medium text-slate-700">No screenings</p>
+                <p className="text-xs text-slate-500 mt-1">Scheduled ones appear here</p>
               </div>
             ) : (
-              <div className="p-2 space-y-1">
-                {displayed.map((it) => {
+              <div className="p-2 space-y-1.5">
+                {filteredItems.map((it) => {
                   const candidate = it.candidateProjectMap?.candidate;
                   const role = it.candidateProjectMap?.roleNeeded;
-                  const isSelected = it.id === (selected?.id || displayed[0]?.id);
+                  const isSelected = it.id === (selected?.id || filteredItems[0]?.id);
+                  const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown";
 
                   return (
                     <button
                       key={it.id}
                       onClick={() => setSelectedId(it.id)}
-                      className={cn("relative w-full text-left p-3 rounded-lg border transition-all", "hover:bg-accent/50", isSelected ? "bg-accent border-primary shadow-sm" : "bg-card border-transparent")}
+                      className={cn(
+                        "w-full text-left p-3 rounded-xl border transition-all duration-200 group relative overflow-hidden shadow-sm text-xs",
+                        isSelected
+                          ? "bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-400/50 shadow-md ring-1 ring-indigo-300/30"
+                          : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-md"
+                      )}
                     >
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-opacity duration-300" />
+
+                      <div className="relative flex items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm truncate">{candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">{role?.designation || "Unknown Role"}</p>
+                          <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
+                            {candidateName}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate mt-0.5">
+                            {role?.designation || "Unknown Role"}
+                          </p>
                         </div>
-                        <ChevronRight className={cn("h-4 w-4 flex-shrink-0 transition-transform", isSelected && "text-primary")} />
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 transition-all duration-200",
+                            isSelected ? "text-indigo-600 translate-x-1" : "text-slate-400 group-hover:text-slate-600"
+                          )}
+                        />
                       </div>
 
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 shadow-sm">
                           <Calendar className="h-3 w-3" />
-                          <span className="capitalize">{(it.candidateProjectMap as any)?.subStatus?.label || (it.candidateProjectMap as any)?.subStatus?.name || 'Scheduled'}</span>
+                          <span className="capitalize">Scheduled</span>
                         </div>
-                        {it.candidateProjectMap?.recruiter && <Badge className="text-xs">{it.candidateProjectMap.recruiter.name}</Badge>}
+                        {it.candidateProjectMap?.recruiter && (
+                          <Badge variant="outline" className="text-xs px-2 py-0.5">
+                            {it.candidateProjectMap.recruiter.name}
+                          </Badge>
+                        )}
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
                         <Calendar className="h-3 w-3" />
-                        <span>{it.scheduledTime ? format(new Date(it.scheduledTime), "MMM d, yyyy 'at' h:mm a") : "Not scheduled"}</span>
+                        <span>
+                          {it.scheduledTime ? format(new Date(it.scheduledTime), "MMM d 'at' h:mm a") : "Not scheduled"}
+                        </span>
                       </div>
-                      {/* expired badge aligned bottom-right */}
+
                       {(it as any).isExpired && (
-                        <div className="absolute bottom-3 right-3">
-                          <div className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-destructive/10 text-destructive border border-destructive/20">Date expired</div>
+                        <div className="absolute bottom-2 right-2">
+                          <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                            Expired
+                          </Badge>
                         </div>
                       )}
                     </button>
@@ -163,18 +206,29 @@ export default function UpcomingInterviewsListPage() {
           </ScrollArea>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        {/* Compact Right Panel */}
+        <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20">
           {selected ? (
             <ScrollArea className="h-full">
-              <div className="p-6 max-w-4xl mx-auto space-y-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <h2 className="text-2xl font-semibold">Upcoming Screening Details</h2>
-                    <p className="text-sm text-muted-foreground">{selected.scheduledTime ? `Scheduled for ${format(new Date(selected.scheduledTime), "MMMM d, yyyy 'at' h:mm a")}` : 'Not scheduled'}</p>
+              <div className="p-5 max-w-4xl mx-auto space-y-5">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-4 border-b border-indigo-200/50">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
+                      Screening Details
+                    </h2>
+                    <p className="text-xs text-slate-600">
+                      {selected.scheduledTime
+                        ? format(new Date(selected.scheduledTime), "MMM d 'at' h:mm a")
+                        : "Not scheduled"}
+                    </p>
                   </div>
-                      {!selected.conductedAt && (
-                    <div className="flex items-center gap-2">
+
+                  {!selected.conductedAt && (
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
+                        size="sm"
+                        className="h-8 px-4 text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-lg shadow-md transition-all"
                         onClick={() => {
                           if (!selected?.id) {
                             toast.error("Screening ID is missing");
@@ -182,78 +236,117 @@ export default function UpcomingInterviewsListPage() {
                           }
                           navigate(`/screenings/${selected.id}/conduct`);
                         }}
-                        disabled={!selected?.id}
                       >
-                        Conduct Screening
+                        Conduct
                       </Button>
-                      <Button variant="outline" onClick={() => setEditOpen(true)} disabled={!selected?.id}>Edit</Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-4 text-xs rounded-lg border-indigo-300 hover:bg-indigo-50 transition-all"
+                        onClick={() => setEditOpen(true)}
+                      >
+                        Edit
+                      </Button>
+
+                      {selected && (
+                        <EditScreeningDialog
+                          open={editOpen}
+                          onOpenChange={setEditOpen}
+                          screeningId={selected.id}
+                        />
+                      )}
                     </div>
-                  )}
-                  {/* Edit dialog */}
-                  {selected && (
-                    <EditScreeningDialog open={editOpen} onOpenChange={setEditOpen} screeningId={selected.id} />
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2"><User className="h-5 w-5 text-primary" />Candidate Information</h3>
-                      <div className="space-y-3 text-sm">
+                {/* Candidate & Project */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-xl overflow-hidden">
+                    <CardContent className="p-4">
+                      <h3 className="text-lg font-semibold text-indigo-700 mb-3 flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Candidate
+                      </h3>
+                      <div className="space-y-2 text-xs">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Name</p>
-                          <p className="font-medium">{selected.candidateProjectMap?.candidate ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}` : 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">Name</p>
+                          <p className="font-medium text-slate-900">
+                            {selected.candidateProjectMap?.candidate
+                              ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}`
+                              : "Unknown"}
+                          </p>
                         </div>
                         {selected.candidateProjectMap?.candidate?.email && (
                           <div>
-                            <p className="text-xs text-muted-foreground mb-1">Email</p>
-                            <p className="font-medium text-xs break-all">{selected.candidateProjectMap.candidate.email}</p>
+                            <p className="text-xs text-slate-500">Email</p>
+                            <p className="font-medium break-all text-slate-900">
+                              {selected.candidateProjectMap.candidate.email}
+                            </p>
                           </div>
                         )}
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary" />Project & Role</h3>
-                      <div className="space-y-3 text-sm">
+                  <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl overflow-hidden">
+                    <CardContent className="p-4">
+                      <h3 className="text-lg font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                        <Briefcase className="h-4 w-4" />
+                        Project & Role
+                      </h3>
+                      <div className="space-y-2 text-xs">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Project</p>
-                          <p className="font-medium">{selected.candidateProjectMap?.project?.title || 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">Project</p>
+                          <p className="font-medium text-slate-900">
+                            {selected.candidateProjectMap?.project?.title || "N/A"}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Role</p>
-                          <p className="font-medium">{selected.candidateProjectMap?.roleNeeded?.designation || 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">Role</p>
+                          <p className="font-medium text-slate-900">
+                            {selected.candidateProjectMap?.roleNeeded?.designation || "N/A"}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold mb-4">Interview Details</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                {/* Interview Details */}
+                <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50/90 to-teal-50/90 rounded-xl overflow-hidden">
+                  <CardContent className="p-4">
+                    <h3 className="text-lg font-semibold text-emerald-700 mb-3">Interview Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Mode</p>
-                        <p className="font-medium capitalize">{selected.mode?.replace('_', ' ')}</p>
+                        <p className="text-xs text-slate-500">Mode</p>
+                        <p className="font-medium capitalize text-slate-900">
+                          {selected.mode?.replace('_', ' ') || "—"}
+                        </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Status</p>
+                        <p className="text-xs text-slate-500">Status</p>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium capitalize">{(selected.candidateProjectMap as any)?.subStatus?.label || (selected.candidateProjectMap as any)?.subStatus?.name || 'Scheduled'}</p>
+                          <p className="font-medium capitalize text-slate-900">
+                            {(selected.candidateProjectMap as any)?.subStatus?.label ||
+                              (selected.candidateProjectMap as any)?.subStatus?.name ||
+                              "Scheduled"}
+                          </p>
                           {(selected as any).isExpired && (
-                            <div className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-destructive/10 text-destructive border border-destructive/20">Date expired</div>
+                            <Badge variant="destructive" className="text-xs px-2.5 py-0.5">
+                              Expired
+                            </Badge>
                           )}
                         </div>
                       </div>
                     </div>
 
                     {selected.notes && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-xs text-muted-foreground mb-2">Notes</p>
-                        <p className="text-sm whitespace-pre-wrap">{selected.notes}</p>
+                      <div className="mt-4 pt-4 border-t border-emerald-200/50">
+                        <p className="text-xs text-slate-500 mb-1">Notes</p>
+                        <p className="text-xs text-slate-700 whitespace-pre-wrap">
+                          {selected.notes}
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -261,11 +354,13 @@ export default function UpcomingInterviewsListPage() {
               </div>
             </ScrollArea>
           ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <ClipboardCheck className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No upcoming interview selected</p>
-                <p className="text-sm">Select an interview from the list to view details</p>
+            <div className="h-full flex items-center justify-center text-center bg-gradient-to-b from-white to-indigo-50/20">
+              <div className="space-y-4 max-w-sm">
+                <ClipboardCheck className="h-16 w-16 text-indigo-300/70 mx-auto" />
+                <p className="text-xl font-semibold text-slate-700">No Screening Selected</p>
+                <p className="text-sm text-slate-600">
+                  Select from the list to view details or conduct
+                </p>
               </div>
             </div>
           )}

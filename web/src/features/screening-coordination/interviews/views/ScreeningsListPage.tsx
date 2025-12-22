@@ -19,6 +19,8 @@ import {
   UserPlus,
   Send,
   Clipboard,
+  CalendarCheck,
+  Plus
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
@@ -353,556 +355,233 @@ export default function ScreeningsListPage() {
   return (
     <div className="h-screen flex flex-col">
       {/* Page Title */}
-      <div className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-lg">
-            <Clipboard className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Screenings</h1>
-            <p className="text-sm text-gray-600">Manage and track candidate screening sessions</p>
-          </div>
+     <div className="px-6 py-5 border-b bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-pink-50/80 backdrop-blur-xl shadow-sm sticky top-0 z-20">
+  <div className="flex items-center justify-between max-w-7xl mx-auto">
+    {/* Logo + Title */}
+    <div className="flex items-center gap-4">
+      <div className="relative group">
+        {/* Modern 2025 Aurora Glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1] via-[#a855f7] to-[#ec4899] rounded-xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500 animate-pulse-slow"></div>
+        {/* Icon container */}
+        <div className="relative p-3.5 bg-gradient-to-br from-[#4f46e5] via-[#7c3aed] to-[#db2777] rounded-xl shadow-2xl transform transition-transform duration-300 group-hover:scale-105">
+          <Clipboard className="h-7 w-7 text-white drop-shadow-md" />
         </div>
       </div>
 
-      {/* Search & Filters Section */}
-      <div className="w-full mx-auto pt-2 pb-4 px-4">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardContent>
-            <div className="space-y-6">
-              {/* Premium Search Bar with Enhanced Styling */}
-              <div className="relative group">
-                <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
-                  }`}
-                >
-                  <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      filters.search ? "scale-110" : "scale-100"
-                    }`}
-                  />
-                </div>
-                <Input
-                  placeholder="Search candidates, projects, roles..."
-                  value={filters.search}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-                <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    filters.search ? "ring-2 ring-blue-500/20" : ""
-                  }`}
-                />
-              </div>
-
-              {/* Filters Row */}
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Decision Filter */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
-                      Decision
-                    </span>
-                  </div>
-                  <Select
-                    value={filters.decision}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({ ...prev, decision: value }))
-                    }
-                  >
-                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
-                      <SelectValue placeholder="All Decisions" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
-                      {decisionOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="rounded-lg hover:bg-blue-50"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Clear Filters Button */}
-                {(filters.search ||
-                  filters.mode !== "all" ||
-                  filters.decision !== "all" ||
-                  filters.status !== "all") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setFilters({
-                        search: "",
-                        mode: "all",
-                        decision: "all",
-                        status: "all",
-                      })
-                    }
-                    className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
-                  >
-                    <X className="h-3 w-3" />
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-0.5">
+        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#ec4899] bg-clip-text text-transparent tracking-tight leading-none">
+          Screenings
+        </h1>
+        <p className="text-sm text-slate-600 font-medium">
+          Manage and track candidate screening sessions
+        </p>
       </div>
+    </div>
+
+    {/* Optional: Add a subtle call-to-action or indicator if needed */}
+    <div className="text-sm font-medium text-indigo-600/80 flex items-center gap-2">
+      <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+      Active Sessions
+    </div>
+  </div>
+</div>
+
+      {/* Search & Filters Section */}
+     <div className="w-full mx-auto pt-3 pb-5 px-4 max-w-7xl">
+  <Card className="border-0 shadow-2xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 overflow-hidden">
+    <CardContent className="p-6">
+      <div className="space-y-5">
+        {/* Premium Search Bar */}
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-all duration-300">
+            <div className="p-2 rounded-full bg-gradient-to-r from-indigo-100/80 to-purple-100/80 group-focus-within:from-indigo-200/80 group-focus-within:to-purple-200/80 transition-all duration-300 shadow-sm">
+              <Search className="h-5 w-5 text-indigo-600 transition-transform duration-300 group-focus-within:scale-110" />
+            </div>
+          </div>
+          <Input
+            placeholder="Search candidates, projects, roles..."
+            value={filters.search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-16 h-12 text-base rounded-2xl border-indigo-200/50 bg-white/90 shadow-inner hover:shadow-xl focus:shadow-2xl transition-all duration-300 focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-400 placeholder:text-slate-400"
+          />
+          {filters.search && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-indigo-50"
+              onClick={() => handleSearch("")}
+            >
+              <X className="h-4 w-4 text-slate-500" />
+            </Button>
+          )}
+        </div>
+
+        {/* Filters Row - Modern & Compact */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Decision Filter - Premium */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full animate-pulse"></div>
+              <span className="text-sm font-semibold text-slate-700 tracking-wide">Decision</span>
+            </div>
+            <Select
+              value={filters.decision}
+              onValueChange={(value) => setFilters((prev) => ({ ...prev, decision: value }))}
+            >
+              <SelectTrigger className="h-11 px-5 border-indigo-200/50 bg-white/90 rounded-xl shadow-inner hover:shadow-md focus:ring-2 focus:ring-indigo-400/30 transition-all min-w-[160px]">
+                <SelectValue placeholder="All Decisions" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-indigo-200/50 shadow-2xl bg-white/95 backdrop-blur-lg">
+                {decisionOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="rounded-xl hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Clear Filters Button */}
+          {(filters.search ||
+            filters.mode !== "all" ||
+            filters.decision !== "all" ||
+            filters.status !== "all") && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11 px-5 rounded-xl border-indigo-300 hover:bg-gradient-to-r hover:from-red-50 hover:to-rose-50 hover:text-red-700 transition-all duration-300 shadow-sm hover:shadow-md"
+              onClick={() =>
+                setFilters({
+                  search: "",
+                  mode: "all",
+                  decision: "all",
+                  status: "all",
+                })
+              }
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+</div>
 
       {/* Master-Detail Layout */}
       <div className="flex-1 flex overflow-hidden px-4">
         {/* Left Panel - Interview List */}
-        <Card className="w-96 border-r border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-none">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">
-                  Screenings
-                </CardTitle>
-                <CardDescription>
-                  {displayedInterviews.length} interview
-                  {displayedInterviews.length !== 1 ? "s" : ""} found
-                </CardDescription>
-              </div>
-              {/* Compact Stats */}
-              <div className="flex items-center gap-2">
-                <div className="text-center">
-                  <div className="text-base font-bold text-orange-600">
-                    {stats.needsTraining}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Training</div>
-                </div>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="text-center">
-                  <div className="text-base font-bold text-green-600">
-                    {stats.approved}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Approved</div>
-                </div>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="text-center">
-                  <div className="text-base font-bold">{stats.completed}</div>
-                  <div className="text-xs text-muted-foreground">Done</div>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-full">
-              {displayedInterviews.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-sm font-medium mb-1">
-                    No interviews found
-                  </p>
-                  <p className="text-xs">
-                    {filters.search ||
-                    filters.mode !== "all" ||
-                    filters.decision !== "all" ||
-                    filters.status !== "all"
-                      ? "Try adjusting your filters"
-                      : "Screenings will appear here once scheduled"}
-                  </p>
-                </div>
-              ) : (
-                <div className="p-2 space-y-1">
-                  {displayedInterviews.map((interview: any) => {
-                    const candidate = interview.candidateProjectMap?.candidate;
-                    const role = interview.candidateProjectMap?.roleNeeded;
-                    const ModeIcon = getModeIcon(interview.mode);
+       <Card className="w-96 border-r border-0 shadow-2xl bg-white/80 backdrop-blur-2xl rounded-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/30">
+  <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/40">
+    <div className="flex items-center justify-between">
+      <div>
+        <CardTitle className="text-xl font-bold text-slate-800 tracking-tight">
+          Screenings
+        </CardTitle>
+        <CardDescription className="text-sm text-slate-600 mt-1">
+          {displayedInterviews.length} interview{displayedInterviews.length !== 1 ? "s" : ""} found
+        </CardDescription>
+      </div>
 
-                    // Precompute verification flags so we can render status badge at the bottom row
-                    const explicitVerificationRequired =
-                      interview.isDocumentVerificationRequired ||
-                      interview.candidateProjectMap?.isDocumentVerificationRequired;
+      {/* Premium Compact Stats */}
+      <div className="flex items-center gap-4">
+        <div className="text-center">
+          <div className="text-xl font-extrabold bg-gradient-to-br from-orange-600 to-amber-600 bg-clip-text text-transparent">
+            {stats.needsTraining}
+          </div>
+          <div className="text-xs text-slate-500 font-medium">Training</div>
+        </div>
+        <Separator orientation="vertical" className="h-8 opacity-50" />
+        <div className="text-center">
+          <div className="text-xl font-extrabold bg-gradient-to-br from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            {stats.approved}
+          </div>
+          <div className="text-xs text-slate-500 font-medium">Approved</div>
+        </div>
+        <Separator orientation="vertical" className="h-8 opacity-50" />
+        <div className="text-center">
+          <div className="text-xl font-extrabold bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            {stats.completed}
+          </div>
+          <div className="text-xs text-slate-500 font-medium">Done</div>
+        </div>
+      </div>
+    </div>
+  </CardHeader>
 
-                    const verificationInProgress =
-                      !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
-                      interview.candidateProjectMap?.mainStatus?.name === "documents";
+  <CardContent className="p-0 flex-1 overflow-hidden">
+    <ScrollArea className="h-full px-3 py-2">
+      {displayedInterviews.length === 0 ? (
+        <div className="h-full flex flex-col items-center justify-center text-center p-10 text-slate-500">
+          <ClipboardCheck className="h-16 w-16 text-indigo-300/70 mb-4" />
+          <p className="text-lg font-medium text-slate-700">No interviews found</p>
+          <p className="text-sm mt-2 max-w-xs">
+            {filters.search || filters.mode !== "all" || filters.decision !== "all" || filters.status !== "all"
+              ? "Try adjusting your filters"
+              : "Screenings will appear here once scheduled"}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {displayedInterviews.map((interview: any) => {
+            const candidate = interview.candidateProjectMap?.candidate;
+            const role = interview.candidateProjectMap?.roleNeeded;
+            const ModeIcon = getModeIcon(interview.mode);
 
-                    const _docVerified =
-                      !!interview.isDocumentVerified ||
-                      !!interview.candidateProjectMap?.isDocumentVerified;
-                    const isSelected =
-                      interview.id ===
-                      (selectedInterview?.id || displayedInterviews[0]?.id);
-                    const isCompleted = !!interview.conductedAt;
+            const explicitVerificationRequired =
+              interview.isDocumentVerificationRequired ||
+              interview.candidateProjectMap?.isDocumentVerificationRequired;
 
-                    return (
-                      <button
-                        key={interview.id}
-                        onClick={() => setSelectedInterviewId(interview.id)}
-                        className={cn(
-                          "w-full text-left p-2.5 rounded-lg border transition-all",
-                          "hover:bg-accent/50",
-                          isSelected
-                            ? "bg-accent border-primary shadow-sm"
-                            : "bg-card border-transparent"
-                        )}
-                      >
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm truncate">
-                                {candidate
-                                  ? `${candidate.firstName} ${candidate.lastName}`
-                                  : "Unknown Candidate"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {role?.designation || "Unknown Role"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {(() => {
-                              const isTrainingAssigned =
-                                interview.candidateProjectMap?.subStatus?.name ===
-                                "training_assigned";
-                              const trainerName = getAssignedTrainerName(interview);
-                              const isMainAssigned =
-                                interview.status === "assigned" ||
-                                !!interview.candidateProjectMap?.mainInterviewId;
+            const verificationInProgress =
+              !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
+              interview.candidateProjectMap?.mainStatus?.name === "documents";
 
-                              if (isTrainingAssigned) {
-                                return (
-                                  <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
-                                    {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
-                                  </Badge>
-                                );
-                              }
+            const _docVerified =
+              !!interview.isDocumentVerified ||
+              !!interview.candidateProjectMap?.isDocumentVerified;
 
-                              // If this mock interview has been linked to a main interview,
-                              // show a clear badge and allow assigning to trainer if needed.
-                              if (isMainAssigned) {
-                                return (
-                                  <div className="flex items-center gap-2">
-                                    <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
-                                      Assigned to Main Interview
-                                    </Badge>
-                                    {/* Only allow Assign to Trainer when decision indicates training is needed or when rejected */}
-                                    {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                                      interview.decision === SCREENING_DECISION.REJECTED) && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-6 w-6 p-0"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleAssignToTrainer(interview);
-                                        }}
-                                        title="Assign to Trainer"
-                                      >
-                                        <UserPlus className="h-3.5 w-3.5" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                );
-                              }
+            const isSelected = interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
+            const isCompleted = !!interview.conductedAt;
+            const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
 
-                              // Determine explicit requirement, in-progress state, and verified flag
-                              const explicitVerificationRequired =
-                                interview.isDocumentVerificationRequired ||
-                                interview.candidateProjectMap?.isDocumentVerificationRequired;
+            return (
+              <button
+                key={interview.id}
+                onClick={() => setSelectedInterviewId(interview.id)}
+                className={cn(
+                  "w-full text-left p-4 rounded-xl border transition-all duration-300 group relative overflow-hidden",
+                  isSelected
+                    ? "bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-400/50 shadow-lg ring-2 ring-indigo-300/30"
+                    : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-100/50"
+                )}
+              >
+                {/* Hover gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-opacity duration-500" />
 
-                              const verificationInProgress =
-                                !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
-                                interview.candidateProjectMap?.mainStatus?.name === "documents";
-
-                              const _docVerified =
-                                !!interview.isDocumentVerified ||
-                                !!interview.candidateProjectMap?.isDocumentVerified;
-
-                              // If already verified — show a verified badge and allow assigning
-                              if (
-                                _docVerified &&
-                                interview.decision === SCREENING_DECISION.APPROVED &&
-                                interview.status === "completed"
-                              ) {
-                                return (
-                                  <div className="flex items-center gap-2">
-                                    <Badge className="text-xs bg-green-100 text-green-700">Document Verified</Badge>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 px-2"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSendForInterviewConfirm({
-                                          isOpen: true,
-                                          candidateId:
-                                            interview.candidateProjectMap?.candidate?.id,
-                                          candidateName:
-                                            interview.candidateProjectMap?.candidate?.firstName +
-                                            " " +
-                                            interview.candidateProjectMap?.candidate?.lastName,
-                                          projectId: interview.candidateProjectMap?.project?.id,
-                                          projectName: interview.candidateProjectMap?.project?.title,
-                                          projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
-                                          scheduledTime: interview.scheduledTime,
-                                          overallRating: interview.overallRating,
-                                          decision: interview.decision,
-                                          screeningId: interview.id,
-                                          notes: "",
-                                        });
-                                      }}
-                                      title="Assign Main Interview"
-                                    >
-                                      <Send className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                );
-                              }
-
-                              // If verification explicitly required but not yet verified, show Send for Verification button
-                              if (
-                                explicitVerificationRequired &&
-                                !_docVerified &&
-                                interview.decision === SCREENING_DECISION.APPROVED &&
-                                interview.status === "completed"
-                              ) {
-                                return (
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 px-2 text-amber-600 hover:bg-amber-50"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSendForVerificationConfirm({
-                                          isOpen: true,
-                                          candidateId:
-                                            interview.candidateProjectMap?.candidate?.id,
-                                          projectId: interview.candidateProjectMap?.project?.id,
-                                          screeningId: interview.id,
-                                          projectName: interview.candidateProjectMap?.project?.title,
-                                          projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
-                                          notes: "",
-                                          roleId: interview.candidateProjectMap?.roleNeededId,
-                                        });
-                                      }}
-                                      title="Send for Verification"
-                                    >
-                                      <ClipboardCheck className="h-3.5 w-3.5" />
-                                    </Button>
-
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="inline-block">
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 px-2 opacity-50 cursor-not-allowed"
-                                            disabled
-                                            title="Assign Main Interview (disabled until verification complete)"
-                                          >
-                                            <Send className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                );
-                              }
-
-                              // If verification is in progress, avoid placing the long badge in the compact action
-                              // area (it truncates). Instead show only the disabled Assign control here and render
-                              // the readable badge in the bottom status row to the left of the decision badge.
-                              if (
-                                verificationInProgress &&
-                                !_docVerified &&
-                                interview.decision === SCREENING_DECISION.APPROVED &&
-                                interview.status === "completed"
-                              ) {
-                                return (
-                                  <div className="flex items-center gap-2">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="inline-block">
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 px-2 opacity-50 cursor-not-allowed"
-                                            disabled
-                                            title="Assign Main Interview (disabled until verification complete)"
-                                          >
-                                            <Send className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                );
-                              }
-
-                              // Only show 'Assign Main Interview' when the candidate is ready:
-                              // decision must be APPROVED and interview status should be completed
-                              if (
-                                interview.decision === SCREENING_DECISION.APPROVED &&
-                                interview.status === "completed"
-                              ) {
-                                return (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 px-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSendForInterviewConfirm({
-                                        isOpen: true,
-                                        candidateId:
-                                          interview.candidateProjectMap?.candidate?.id,
-                                        candidateName:
-                                          interview.candidateProjectMap?.candidate?.firstName +
-                                          " " +
-                                          interview.candidateProjectMap?.candidate?.lastName,
-                                        projectId: interview.candidateProjectMap?.project?.id,
-                                        projectName: interview.candidateProjectMap?.project?.title,
-                                        projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
-                                        scheduledTime: interview.scheduledTime,
-                                        overallRating: interview.overallRating,
-                                        decision: interview.decision,
-                                        screeningId: interview.id,
-                                        notes: "",
-                                      });
-                                    }}
-                                    title="Assign Main Interview"
-                                  >
-                                    <Send className="h-3.5 w-3.5" />
-                                  </Button>
-                                );
-                              }
-
-                              // Fallback: allow assigning to trainer for needs training / rejected
-                              if (
-                                interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                                interview.decision === SCREENING_DECISION.REJECTED
-                              ) {
-                                return (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAssignToTrainer(interview);
-                                    }}
-                                    title="Assign to Trainer"
-                                  >
-                                    <UserPlus className="h-3.5 w-3.5" />
-                                  </Button>
-                                );
-                              }
-
-                              return null;
-                            })()}
-                            <ChevronRight
-                              className={cn(
-                                "h-4 w-4 flex-shrink-0 transition-transform",
-                                isSelected && "text-primary"
-                              )}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <div
-                            className={cn(
-                              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs",
-                              isCompleted
-                                ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300"
-                                : "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                            )}
-                          >
-                            <ModeIcon className="h-3 w-3" />
-                            <span className="capitalize">
-                              {interview.mode.replace("_", " ")}
-                            </span>
-                          </div>
-                          {interview.decision && getDecisionBadge(interview.decision)}
-                          {/* Show verification-in-progress badge in the bottom status row to avoid truncation */}
-                          {verificationInProgress && !_docVerified && (
-                            <span className="ml-2">
-                              <Badge className="text-xs bg-amber-100 text-amber-700">Verification in progress</Badge>
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>
-                            {interview.scheduledTime
-                              ? format(
-                                  new Date(interview.scheduledTime),
-                                  "MMM d, yyyy"
-                                )
-                              : "Not scheduled"}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Right Panel - Interview Details */}
-        <div className="flex-1 overflow-hidden bg-muted/20 min-w-0 min-h-0">
-          {selectedInterview ? (
-            <ScrollArea className="h-full">
-              <div className="p-4 max-w-2xl mx-auto space-y-4 min-w-0">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1 min-w-0">
-                    <h2 className="text-xl font-semibold truncate">
-                      Screening Details
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedInterview.scheduledTime
-                        ? `Scheduled for ${format(
-                            new Date(selectedInterview.scheduledTime),
-                            "MMMM d, yyyy 'at' h:mm a"
-                          )}`
-                        : "Not scheduled"}
+                <div className="relative flex items-start justify-between gap-4 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-base text-slate-900 truncate group-hover:text-indigo-700 transition-colors">
+                      {candidateName}
+                    </p>
+                    <p className="text-sm text-slate-500 truncate mt-0.5">
+                      {role?.designation || "Unknown Role"}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {!selectedInterview.conductedAt && (
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          navigate(
-                            `/screenings/${selectedInterview.id}/conduct`
-                          )
-                        }
-                      >
-                        Conduct Interview
-                      </Button>
-                    )}
                     {(() => {
-                      const isTrainingAssigned =
-                        selectedInterview.candidateProjectMap?.subStatus?.name ===
-                        "training_assigned";
-                      const trainerName = getAssignedTrainerName(selectedInterview);
-                      const isMainAssigned =
-                        selectedInterview.status === "assigned" ||
-                        !!selectedInterview.candidateProjectMap?.mainInterviewId;
+                      const isTrainingAssigned = interview.candidateProjectMap?.subStatus?.name === "training_assigned";
+                      const trainerName = getAssignedTrainerName(interview);
+                      const isMainAssigned = interview.status === "assigned" || !!interview.candidateProjectMap?.mainInterviewId;
 
                       if (isTrainingAssigned) {
                         return (
-                          <Badge className="text-sm bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                          <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
                             {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
                           </Badge>
                         );
@@ -911,456 +590,621 @@ export default function ScreeningsListPage() {
                       if (isMainAssigned) {
                         return (
                           <div className="flex items-center gap-2">
-                            <Badge className="text-sm bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                            <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
                               Assigned to Main Interview
                             </Badge>
-                            {/* Only show Assign to Trainer when decision is NEEDS_TRAINING or REJECTED */}
-                            {(selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                              selectedInterview.decision === SCREENING_DECISION.REJECTED) && (
+                            {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                              interview.decision === SCREENING_DECISION.REJECTED) && (
                               <Button
-                                size="sm"
-                                onClick={() => handleAssignToTrainer(selectedInterview)}
-                                variant="outline"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 rounded-lg hover:bg-indigo-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAssignToTrainer(interview);
+                                }}
+                                title="Assign to Trainer"
                               >
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                Assign to Trainer
+                                <UserPlus className="h-4 w-4 text-indigo-600" />
                               </Button>
                             )}
                           </div>
                         );
                       }
 
-                      const selected_explicitVerificationRequired =
-                        selectedInterview.isDocumentVerificationRequired ||
-                        selectedInterview.candidateProjectMap?.isDocumentVerificationRequired;
-
-                      const selected_verificationInProgress =
-                        !!selectedInterview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
-                        selectedInterview.candidateProjectMap?.mainStatus?.name === "documents";
-
-                      const selected_docVerified =
-                        !!selectedInterview.isDocumentVerified ||
-                        !!selectedInterview.candidateProjectMap?.isDocumentVerified;
-
-                      // Verified -> show badge + enabled Assign
-                      if (
-                        selected_docVerified &&
-                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
-                        selectedInterview.status === "completed"
-                      ) {
+                      if (_docVerified && interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
                         return (
                           <div className="flex items-center gap-2">
-                            <Badge className="text-sm bg-green-100 text-green-700">Document Verified</Badge>
+                            <Badge className="text-xs bg-green-100 text-green-700">Document Verified</Badge>
                             <Button
-                              size="sm"
-                              onClick={() =>
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-lg hover:bg-indigo-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSendForInterviewConfirm({
                                   isOpen: true,
-                                  candidateId:
-                                    selectedInterview.candidateProjectMap?.candidate?.id,
-                                  candidateName:
-                                    selectedInterview.candidateProjectMap?.candidate?.firstName +
-                                    " " +
-                                    selectedInterview.candidateProjectMap?.candidate?.lastName,
-                                  projectId:
-                                    selectedInterview.candidateProjectMap?.project?.id,
-                                  projectName: selectedInterview.candidateProjectMap?.project?.title,
-                                  projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
-                                  scheduledTime: selectedInterview.scheduledTime,
-                                  overallRating: selectedInterview.overallRating,
-                                  decision: selectedInterview.decision,
-                                  screeningId: selectedInterview.id,
+                                  candidateId: interview.candidateProjectMap?.candidate?.id,
+                                  candidateName,
+                                  projectId: interview.candidateProjectMap?.project?.id,
+                                  projectName: interview.candidateProjectMap?.project?.title,
+                                  projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
+                                  scheduledTime: interview.scheduledTime,
+                                  overallRating: interview.overallRating,
+                                  decision: interview.decision,
+                                  screeningId: interview.id,
                                   notes: "",
-                                })
-                              }
-                              className="bg-blue-600 text-white hover:bg-blue-700"
+                                });
+                              }}
+                              title="Assign Main Interview"
                             >
-                              <Send className="h-4 w-4 mr-2" />
-                              Assign Main Interview
+                              <Send className="h-4 w-4 text-indigo-600" />
                             </Button>
                           </div>
                         );
                       }
 
-                      // Explicit requirement -> show Send for Verification button + disabled Assign
-                      if (
-                        selected_explicitVerificationRequired &&
-                        !selected_docVerified &&
-                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
-                        selectedInterview.status === "completed"
-                      ) {
+                      if (explicitVerificationRequired && !_docVerified && interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
                         return (
                           <div className="flex items-center gap-2">
                             <Button
-                              size="sm"
-                              onClick={() =>
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-lg hover:bg-amber-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSendForVerificationConfirm({
                                   isOpen: true,
-                                  candidateId:
-                                    selectedInterview.candidateProjectMap?.candidate?.id,
-                                  projectId:
-                                    selectedInterview.candidateProjectMap?.project?.id,
-                                  screeningId: selectedInterview.id,
-                                  projectName: selectedInterview.candidateProjectMap?.project?.title,
-                                  projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                                  candidateId: interview.candidateProjectMap?.candidate?.id,
+                                  projectId: interview.candidateProjectMap?.project?.id,
+                                  screeningId: interview.id,
+                                  projectName: interview.candidateProjectMap?.project?.title,
+                                  projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
                                   notes: "",
-                                  roleId: selectedInterview.candidateProjectMap?.roleNeededId,
-                                })
-                              }
-                              className="bg-amber-500 text-white hover:bg-amber-600"
+                                  roleId: interview.candidateProjectMap?.roleNeededId,
+                                });
+                              }}
+                              title="Send for Verification"
                             >
-                              <ClipboardCheck className="h-4 w-4 mr-2" />
-                              Send for Verification
+                              <ClipboardCheck className="h-4 w-4 text-amber-600" />
                             </Button>
-
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="inline-block">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="opacity-50 cursor-not-allowed border-amber-200 text-amber-600"
-                                    disabled
-                                    title="Assign Main Interview (disabled until verification complete)"
-                                  >
-                                    <Send className="h-4 w-4 mr-2" />
-                                    Assign Main Interview
-                                  </Button>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
-                            </Tooltip>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-lg opacity-50 cursor-not-allowed"
+                              disabled
+                              title="Assign Main Interview (disabled until verification complete)"
+                            >
+                              <Send className="h-4 w-4 text-slate-400" />
+                            </Button>
                           </div>
                         );
                       }
 
-                      // Verification in progress -> show in-progress badge + disabled Assign
-                      if (
-                        selected_verificationInProgress &&
-                        !selected_docVerified &&
-                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
-                        selectedInterview.status === "completed"
-                      ) {
-                        return (
-                          <div className="flex items-center gap-2">
-                            <Badge className="text-sm bg-amber-100 text-amber-700">Document Verification in progress</Badge>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="inline-block">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="opacity-50 cursor-not-allowed border-amber-200 text-amber-600"
-                                    disabled
-                                    title="Assign Main Interview (disabled until verification complete)"
-                                  >
-                                    <Send className="h-4 w-4 mr-2" />
-                                    Assign Main Interview
-                                  </Button>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent sideOffset={4}>Assign disabled until documents are verified</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        );
-                      }
-
-                      if (
-                        selectedInterview.decision === SCREENING_DECISION.APPROVED &&
-                        selectedInterview.status === "completed"
-                      ) {
+                      if (verificationInProgress && !_docVerified && interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
                         return (
                           <Button
-                            size="sm"
-                            onClick={() =>
-                              setSendForInterviewConfirm({
-                                isOpen: true,
-                                candidateId:
-                                  selectedInterview.candidateProjectMap?.candidate?.id,
-                                candidateName:
-                                  selectedInterview.candidateProjectMap?.candidate?.firstName +
-                                  " " +
-                                  selectedInterview.candidateProjectMap?.candidate?.lastName,
-                                projectId:
-                                  selectedInterview.candidateProjectMap?.project?.id,
-                                projectName: selectedInterview.candidateProjectMap?.project?.title,
-                                projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
-                                scheduledTime: selectedInterview.scheduledTime,
-                                overallRating: selectedInterview.overallRating,
-                                decision: selectedInterview.decision,
-                                screeningId: selectedInterview.id,
-                                notes: "",
-                              })
-                            }
-                            variant="outline"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-lg opacity-50 cursor-not-allowed"
+                            disabled
+                            title="Assign Main Interview (disabled until verification complete)"
                           >
-                            <Send className="h-4 w-4 mr-2" />
-                            Assign Main Interview
+                            <Send className="h-4 w-4 text-slate-400" />
                           </Button>
                         );
                       }
 
-                      if (
-                        selectedInterview.decision ===
-                          SCREENING_DECISION.NEEDS_TRAINING ||
-                        selectedInterview.decision ===
-                          SCREENING_DECISION.REJECTED
-                      ) {
+                      if (interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
                         return (
                           <Button
-                            size="sm"
-                            onClick={() => handleAssignToTrainer(selectedInterview)}
-                            variant="outline"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-lg hover:bg-indigo-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSendForInterviewConfirm({
+                                isOpen: true,
+                                candidateId: interview.candidateProjectMap?.candidate?.id,
+                                candidateName,
+                                projectId: interview.candidateProjectMap?.project?.id,
+                                projectName: interview.candidateProjectMap?.project?.title,
+                                projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
+                                scheduledTime: interview.scheduledTime,
+                                overallRating: interview.overallRating,
+                                decision: interview.decision,
+                                screeningId: interview.id,
+                                notes: "",
+                              });
+                            }}
+                            title="Assign Main Interview"
                           >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Assign to Trainer
+                            <Send className="h-4 w-4 text-indigo-600" />
+                          </Button>
+                        );
+                      }
+
+                      if (interview.decision === SCREENING_DECISION.NEEDS_TRAINING || interview.decision === SCREENING_DECISION.REJECTED) {
+                        return (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-lg hover:bg-indigo-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAssignToTrainer(interview);
+                            }}
+                            title="Assign to Trainer"
+                          >
+                            <UserPlus className="h-4 w-4 text-indigo-600" />
                           </Button>
                         );
                       }
 
                       return null;
                     })()}
+                    <ChevronRight
+                      className={cn(
+                        "h-5 w-5 transition-all duration-300",
+                        isSelected ? "text-indigo-600 translate-x-1 scale-110" : "text-slate-400 group-hover:text-slate-600"
+                      )}
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Candidate Info */}
-                  <Card className="min-w-0">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4 text-primary" />
-                        Candidate Information
-                      </h3>
-                      <div className="space-y-2.5 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Name
-                          </p>
-                          <p className="font-medium">
-                            {
-                              selectedInterview.candidateProjectMap?.candidate
-                                ?.firstName
-                            }{" "}
-                            {
-                              selectedInterview.candidateProjectMap?.candidate
-                                ?.lastName
-                            }
-                          </p>
-                        </div>
-                        {selectedInterview.candidateProjectMap?.candidate
-                          ?.email && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Email
-                            </p>
-                            <p className="font-medium text-xs break-all">
-                              {
-                                selectedInterview.candidateProjectMap?.candidate
-                                  ?.email
-                              }
-                            </p>
-                          </div>
-                        )}
-                        {selectedInterview.candidateProjectMap?.candidate
-                          ?.phone && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Phone
-                            </p>
-                            <p className="font-medium">
-                              {
-                                selectedInterview.candidateProjectMap?.candidate
-                                  ?.phone
-                              }
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Project & Role */}
-                  <Card className="min-w-0">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        Project & Role
-                      </h3>
-                      <div className="space-y-2.5 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Project
-                          </p>
-                          <p className="font-medium">
-                            {
-                              selectedInterview.candidateProjectMap?.project
-                                ?.title
-                            }
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Role
-                          </p>
-                          <p className="font-medium">
-                            {
-                              selectedInterview.candidateProjectMap?.roleNeeded
-                                ?.designation
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium shadow-sm",
+                      isCompleted ? "bg-green-100 text-green-800" : "bg-indigo-100 text-indigo-800"
+                    )}
+                  >
+                    <ModeIcon className="h-3.5 w-3.5" />
+                    <span className="capitalize">{interview.mode.replace("_", " ")}</span>
+                  </div>
+                  {interview.decision && getDecisionBadge(interview.decision)}
+                  {verificationInProgress && !_docVerified && (
+                    <Badge className="text-xs bg-amber-100 text-amber-700">Verification in progress</Badge>
+                  )}
                 </div>
 
-                {/* Interview Details */}
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-3 text-sm">
-                      Interview Details
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Mode
-                        </p>
-                        <p className="font-medium capitalize">
-                          {selectedInterview.mode.replace("_", " ")}
-                        </p>
-                      </div>
-                      {selectedInterview.conductedAt && (
-                        <>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Conducted At
-                            </p>
-                            <p className="font-medium">
-                              {format(
-                                new Date(selectedInterview.conductedAt),
-                                "MMM d, yyyy h:mm a"
-                              )}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Decision
-                            </p>
-                            <div>
-                              {getDecisionBadge(selectedInterview.decision)}
-                            </div>
-                          </div>
-                          {selectedInterview.overallRating != null && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Overall Score
-                              </p>
-                              <p className="font-medium text-lg">
-                                {selectedInterview.overallRating}%
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>
+                    {interview.scheduledTime
+                      ? format(new Date(interview.scheduledTime), "MMM d, yyyy")
+                      : "Not scheduled"}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </ScrollArea>
+  </CardContent>
+</Card> 
 
-                    {selectedInterview.notes && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Notes
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {selectedInterview.notes}
-                        </p>
-                      </div>
+        {/* Right Panel - Interview Details */}
+        <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20 min-w-0 min-h-0">
+  {selectedInterview ? (
+    <ScrollArea className="h-full">
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        {/* Premium Header */}
+        <div className="flex items-start justify-between gap-6 pb-6 border-b border-indigo-200/50">
+          <div className="space-y-2 flex-1 min-w-0">
+            <h2 className="text-3xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
+              Screening Details
+            </h2>
+            <p className="text-base text-slate-600 font-medium">
+              {selectedInterview.scheduledTime
+                ? `Scheduled for ${format(new Date(selectedInterview.scheduledTime), "MMMM d, yyyy 'at' h:mm a")}`
+                : "Not scheduled yet"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {!selectedInterview.conductedAt && (
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-lg px-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+                onClick={() => navigate(`/screenings/${selectedInterview.id}/conduct`)}
+              >
+                <CalendarCheck className="h-4 w-4 mr-2" />
+                Conduct Interview
+              </Button>
+            )}
+
+            {(() => {
+              const isTrainingAssigned =
+                selectedInterview.candidateProjectMap?.subStatus?.name ===
+                "training_assigned";
+              const trainerName = getAssignedTrainerName(selectedInterview);
+              const isMainAssigned =
+                selectedInterview.status === "assigned" ||
+                !!selectedInterview.candidateProjectMap?.mainInterviewId;
+
+              if (isTrainingAssigned) {
+                return (
+                  <Badge className="text-base px-5 py-1.5 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 shadow-sm">
+                    {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
+                  </Badge>
+                );
+              }
+
+              if (isMainAssigned) {
+                return (
+                  <div className="flex items-center gap-3">
+                    <Badge className="text-base px-5 py-1.5 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 shadow-sm">
+                      Assigned to Main Interview
+                    </Badge>
+                    {(selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                      selectedInterview.decision === SCREENING_DECISION.REJECTED) && (
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="rounded-xl border-indigo-300 hover:bg-indigo-50 hover:shadow-md transition-all duration-300"
+                        onClick={() => handleAssignToTrainer(selectedInterview)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Assign to Trainer
+                      </Button>
                     )}
+                  </div>
+                );
+              }
 
-                    {/* Checklist Items */}
-                    {Array.isArray(selectedInterview.checklistItems) &&
-                      selectedInterview.checklistItems.length > 0 && (
-                        <div className="mt-4 pt-4 border-t">
-                          <h3 className="font-semibold mb-2 text-sm">
-                            Checklist Evaluation
-                          </h3>
-                          {/* Group by category */}
-                          {(() => {
-                            type ChecklistItem = NonNullable<
-                              typeof selectedInterview.checklistItems
-                            >[number];
-                            const grouped =
-                              selectedInterview.checklistItems.reduce(
-                                (
-                                  acc: Record<string, ChecklistItem[]>,
-                                  item: ChecklistItem
-                                ) => {
-                                  const key = item.category || "misc";
-                                  (acc[key] ||= []).push(item);
-                                  return acc;
-                                },
-                                {}
-                              );
+              const selected_explicitVerificationRequired =
+                selectedInterview.isDocumentVerificationRequired ||
+                selectedInterview.candidateProjectMap?.isDocumentVerificationRequired;
 
-                            return (
-                              Object.entries(grouped) as [
-                                string,
-                                ChecklistItem[]
-                              ][]
-                            ).map(([category, items]) => (
-                              <div key={category} className="mb-3">
-                                <div className="text-xs font-medium text-primary mb-2 capitalize">
-                                  {category.replace(/_/g, " ")}
-                                </div>
-                                <div className="space-y-1.5">
-                                  {items.map((ci: ChecklistItem) => (
-                                    <div
-                                      key={ci.id}
-                                      className="flex items-start justify-between rounded border p-2.5 bg-card"
-                                    >
-                                      <div className="pr-2 flex-1">
-                                        <div className="text-xs font-medium">
-                                          {ci.criterion}
-                                        </div>
-                                        {ci.notes ? (
-                                          <div className="text-xs text-muted-foreground mt-1">
-                                            {ci.notes}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                      <div className="flex items-center gap-3 text-xs">
-                                        <div className="text-right">
-                                          <div className="font-semibold">
-                                            {ci.score != null
-                                              ? `${ci.score}%`
-                                              : "—"}
-                                          </div>
-                                          <div className="text-xs text-muted-foreground">
-                                            Score
-                                          </div>
-                                        </div>
+              const selected_verificationInProgress =
+                !!selectedInterview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
+                selectedInterview.candidateProjectMap?.mainStatus?.name === "documents";
 
-                                        <div>
-                                          <Badge
-                                            variant={
-                                              ci.passed
-                                                ? "secondary"
-                                                : "destructive"
-                                            }
-                                            className="text-xs"
-                                          >
-                                            {ci.passed ? "Passed" : "Failed"}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ));
-                          })()}
+              const selected_docVerified =
+                !!selectedInterview.isDocumentVerified ||
+                !!selectedInterview.candidateProjectMap?.isDocumentVerified;
+
+              if (
+                selected_docVerified &&
+                selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                selectedInterview.status === "completed"
+              ) {
+                return (
+                  <div className="flex items-center gap-3">
+                    <Badge className="text-base px-5 py-1.5 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 shadow-sm">
+                      Document Verified
+                    </Badge>
+                    <Button
+                      size="lg"
+                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-lg px-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+                      onClick={() =>
+                        setSendForInterviewConfirm({
+                          isOpen: true,
+                          candidateId:
+                            selectedInterview.candidateProjectMap?.candidate?.id,
+                          candidateName:
+                            selectedInterview.candidateProjectMap?.candidate?.firstName +
+                            " " +
+                            selectedInterview.candidateProjectMap?.candidate?.lastName,
+                          projectId:
+                            selectedInterview.candidateProjectMap?.project?.id,
+                          projectName: selectedInterview.candidateProjectMap?.project?.title,
+                          projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                          scheduledTime: selectedInterview.scheduledTime,
+                          overallRating: selectedInterview.overallRating,
+                          decision: selectedInterview.decision,
+                          screeningId: selectedInterview.id,
+                          notes: "",
+                        })
+                      }
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Assign Main Interview
+                    </Button>
+                  </div>
+                );
+              }
+
+              if (
+                selected_explicitVerificationRequired &&
+                !selected_docVerified &&
+                selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                selectedInterview.status === "completed"
+              ) {
+                return (
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="lg"
+                      className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-xl shadow-lg px-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+                      onClick={() =>
+                        setSendForVerificationConfirm({
+                          isOpen: true,
+                          candidateId:
+                            selectedInterview.candidateProjectMap?.candidate?.id,
+                          projectId:
+                            selectedInterview.candidateProjectMap?.project?.id,
+                          screeningId: selectedInterview.id,
+                          projectName: selectedInterview.candidateProjectMap?.project?.title,
+                          projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                          notes: "",
+                          roleId: selectedInterview.candidateProjectMap?.roleNeededId,
+                        })
+                      }
+                    >
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      Send for Verification
+                    </Button>
+
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="opacity-60 cursor-not-allowed rounded-xl border-amber-300"
+                      disabled
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Assign Main Interview
+                    </Button>
+                  </div>
+                );
+              }
+
+              if (
+                selected_verificationInProgress &&
+                !selected_docVerified &&
+                selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                selectedInterview.status === "completed"
+              ) {
+                return (
+                  <div className="flex items-center gap-3">
+                    <Badge className="text-base px-5 py-1.5 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 shadow-sm">
+                      Document Verification in progress
+                    </Badge>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="opacity-60 cursor-not-allowed rounded-xl border-amber-300"
+                      disabled
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Assign Main Interview
+                    </Button>
+                  </div>
+                );
+              }
+
+              if (
+                selectedInterview.decision === SCREENING_DECISION.APPROVED &&
+                selectedInterview.status === "completed"
+              ) {
+                return (
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-lg px-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+                    onClick={() =>
+                      setSendForInterviewConfirm({
+                        isOpen: true,
+                        candidateId:
+                          selectedInterview.candidateProjectMap?.candidate?.id,
+                        candidateName:
+                          selectedInterview.candidateProjectMap?.candidate?.firstName +
+                          " " +
+                          selectedInterview.candidateProjectMap?.candidate?.lastName,
+                        projectId:
+                          selectedInterview.candidateProjectMap?.project?.id,
+                        projectName: selectedInterview.candidateProjectMap?.project?.title,
+                        projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                        scheduledTime: selectedInterview.scheduledTime,
+                        overallRating: selectedInterview.overallRating,
+                        decision: selectedInterview.decision,
+                        screeningId: selectedInterview.id,
+                        notes: "",
+                      })
+                    }
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Assign Main Interview
+                  </Button>
+                );
+              }
+
+              if (
+                selectedInterview.decision ===
+                  SCREENING_DECISION.NEEDS_TRAINING ||
+                selectedInterview.decision ===
+                  SCREENING_DECISION.REJECTED
+              ) {
+                return (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="rounded-xl border-indigo-300 hover:bg-indigo-50 hover:shadow-md transition-all duration-300"
+                    onClick={() => handleAssignToTrainer(selectedInterview)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assign to Trainer
+                  </Button>
+                );
+              }
+
+              return null;
+            })()}
+          </div>
+        </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Candidate Info */}
+                 <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-2xl overflow-hidden">
+            <CardContent className="p-5">
+              <h3 className="font-semibold mb-4 flex items-center gap-2 text-indigo-700">
+                <User className="h-5 w-5" />
+                Candidate Information
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-xs text-slate-500 mb-0.5">Name</p>
+                  <p className="font-medium text-slate-900">
+                    {selectedInterview.candidateProjectMap?.candidate?.firstName || ""}{" "}
+                    {selectedInterview.candidateProjectMap?.candidate?.lastName || ""}
+                  </p>
+                </div>
+                {selectedInterview.candidateProjectMap?.candidate?.email && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Email</p>
+                    <p className="font-medium text-slate-900 break-all">
+                      {selectedInterview.candidateProjectMap?.candidate?.email}
+                    </p>
+                  </div>
+                )}
+                {selectedInterview.candidateProjectMap?.candidate?.phone && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Phone</p>
+                    <p className="font-medium text-slate-900">
+                      {selectedInterview.candidateProjectMap?.candidate?.phone}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Project & Role */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50/80 to-pink-50/80 rounded-2xl overflow-hidden">
+            <CardContent className="p-5">
+              <h3 className="font-semibold mb-4 flex items-center gap-2 text-purple-700">
+                <Briefcase className="h-5 w-5" />
+                Project & Role
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-xs text-slate-500 mb-0.5">Project</p>
+                  <p className="font-medium text-slate-900">
+                    {selectedInterview.candidateProjectMap?.project?.title || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-0.5">Role</p>
+                  <p className="font-medium text-slate-900">
+                    {selectedInterview.candidateProjectMap?.roleNeeded?.designation || "N/A"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Interview Details */}
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-2xl overflow-hidden">
+          <CardContent className="p-6">
+            <h3 className="text-xl font-semibold text-indigo-700 mb-4">Interview Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Mode</p>
+                <p className="font-medium capitalize text-slate-900">
+                  {selectedInterview.mode.replace("_", " ")}
+                </p>
+              </div>
+
+              {selectedInterview.conductedAt && (
+                <>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Conducted At</p>
+                    <p className="font-medium text-slate-900">
+                      {format(new Date(selectedInterview.conductedAt), "MMM d, yyyy h:mm a")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Decision</p>
+                    <div>{getDecisionBadge(selectedInterview.decision)}</div>
+                  </div>
+                  {selectedInterview.overallRating != null && (
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Overall Score</p>
+                      <p className="font-bold text-lg text-indigo-700">
+                        {selectedInterview.overallRating}%
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {selectedInterview.notes && (
+              <div className="mt-6 pt-6 border-t border-indigo-200/50">
+                <p className="text-xs text-slate-500 mb-2">Notes</p>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  {selectedInterview.notes}
+                </p>
+              </div>
+            )}
+
+            {/* Checklist Items */}
+            {Array.isArray(selectedInterview.checklistItems) &&
+              selectedInterview.checklistItems.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-indigo-200/50">
+                  <h3 className="font-semibold text-lg text-indigo-700 mb-4">Checklist Evaluation</h3>
+                  {(() => {
+                    type ChecklistItem = NonNullable<
+                      typeof selectedInterview.checklistItems
+                    >[number];
+                    const grouped = selectedInterview.checklistItems.reduce(
+                      (acc: Record<string, ChecklistItem[]>, item: ChecklistItem) => {
+                        const key = item.category || "misc";
+                        (acc[key] ||= []).push(item);
+                        return acc;
+                      },
+                      {}
+                    );
+
+                    return (
+                      Object.entries(grouped) as [string, ChecklistItem[]][]
+                    ).map(([category, items]) => (
+                      <div key={category} className="mb-5">
+                        <div className="text-sm font-medium text-indigo-600 mb-3 capitalize">
+                          {category.replace(/_/g, " ")}
                         </div>
-                      )}
-                  </CardContent>
-                </Card>
+                        <div className="space-y-3">
+                          {items.map((ci: ChecklistItem) => (
+                            <div
+                              key={ci.id}
+                              className="flex items-start justify-between rounded-xl border bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <div className="pr-4 flex-1">
+                                <div className="text-sm font-medium text-slate-900">
+                                  {ci.criterion}
+                                </div>
+                                {ci.notes && (
+                                  <div className="text-xs text-slate-500 mt-1">
+                                    {ci.notes}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-4 text-sm">
+                                <div className="text-right">
+                                  <div className="font-semibold text-indigo-700">
+                                    {ci.score != null ? `${ci.score}%` : "—"}
+                                  </div>
+                                  <div className="text-xs text-slate-500">Score</div>
+                                </div>
+
+                                <Badge
+                                  variant={ci.passed ? "default" : "destructive"}
+                                  className="text-xs px-3 py-1"
+                                >
+                                  {ci.passed ? "Passed" : "Failed"}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+          </CardContent>
+        </Card>
 
                 {/* Interview History (bottom) */}
                 {selectedInterview?.candidateProjectMap?.id && (
@@ -1369,15 +1213,25 @@ export default function ScreeningsListPage() {
               </div>
             </ScrollArea>
           ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <ClipboardCheck className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No interview selected</p>
-                <p className="text-sm">
-                  Select an interview from the list to view details
-                </p>
-              </div>
-            </div>
+           <div className="h-full flex items-center justify-center text-center bg-gradient-to-b from-white to-indigo-50/20">
+  <div className="space-y-5 max-w-md">
+    {/* Premium Empty State Icon */}
+    <div className="relative mx-auto">
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-2xl opacity-30 animate-pulse-slow"></div>
+      <ClipboardCheck className="h-24 w-24 text-indigo-500/70 mx-auto relative z-10" />
+    </div>
+
+    <h3 className="text-2xl font-semibold text-slate-700 tracking-tight">
+      No Interview Selected
+    </h3>
+    <p className="text-base text-slate-500 leading-relaxed">
+      Select an interview from the list on the left to view detailed information, conduct the screening, or assign next steps.
+    </p>
+
+    {/* Subtle CTA Button */}
+   
+  </div>
+</div>
           )}
         </div>
       </div>
