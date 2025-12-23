@@ -1085,11 +1085,53 @@ export class DocumentsService {
     const allDocumentsVerified =
       totalVerified === totalRequired && totalRequired > 0;
 
+    // Check candidate project status history for documentation review
+    // If a previous sub-status change to 'documents_verified' or 'rejected_documents' exists,
+    // we consider documentation as reviewed. Also expose a human-friendly label
+    // and a code for the documentation status.
+    const reviewSubStatuses = await this.prisma.candidateProjectSubStatus.findMany({
+      where: { name: { in: ['documents_verified', 'rejected_documents'] } },
+      select: { id: true, name: true },
+    });
+
+    let isDocumentationReviewed = false;
+    let documentationStatusCode = 'pending';
+    let documentationStatus = 'Document verification pending';
+
+    if (reviewSubStatuses.length > 0) {
+      const reviewSubStatusIds = reviewSubStatuses.map((s) => s.id);
+      const reviewHistory = await this.prisma.candidateProjectStatusHistory.findFirst({
+        where: {
+          candidateProjectMapId: candidateProject.id,
+          subStatusId: { in: reviewSubStatusIds },
+        },
+        include: {
+          subStatus: { select: { name: true } },
+        },
+        orderBy: { statusChangedAt: 'desc' },
+      });
+
+      if (reviewHistory) {
+        isDocumentationReviewed = true;
+        const subName = reviewHistory.subStatus?.name;
+        if (subName === 'documents_verified') {
+          documentationStatusCode = 'documents_verified';
+          documentationStatus = 'Document verified';
+        } else if (subName === 'rejected_documents') {
+          documentationStatusCode = 'rejected_documents';
+          documentationStatus = 'Document rejected';
+        }
+      }
+    }
+
     return {
       candidateProject,
       requirements,
       verifications, // ONLY LATEST DOCUMENT PER DOCTYPE
       allCandidateDocuments, // FULL HISTORY
+      isDocumentationReviewed,
+      documentationStatus,
+      documentationStatusCode,
       summary: {
         totalRequired,
         totalSubmitted,
@@ -1098,6 +1140,9 @@ export class DocumentsService {
         totalPending,
         allDocumentsVerified,
         canApproveCandidate: allDocumentsVerified,
+        isDocumentationReviewed,
+        documentationStatus,
+        documentationStatusCode,
       },
     };
   }

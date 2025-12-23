@@ -861,10 +861,103 @@ export class ProjectsService {
       },
     });
 
+    // If caller provided documentRequirements during update, upsert (create/update) them.
+    if (updateProjectDto.documentRequirements !== undefined) {
+      for (const dto of updateProjectDto.documentRequirements) {
+        // If id provided, update existing
+        if ((dto as any).id) {
+          const existing = await this.prisma.documentRequirement.findFirst({
+            where: { id: (dto as any).id, projectId: id },
+          });
+          if (!existing) {
+            throw new NotFoundException(
+              `Document requirement with ID ${(dto as any).id} not found for project ${id}`,
+            );
+          }
+
+          await this.prisma.documentRequirement.update({
+            where: { id: (dto as any).id },
+            data: {
+              mandatory:
+                dto.mandatory !== undefined ? dto.mandatory : existing.mandatory,
+              description:
+                dto.description !== undefined ? dto.description : existing.description,
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          // Create new, ensure no duplicate docType for project
+          const duplicate = await this.prisma.documentRequirement.findUnique({
+            where: { projectId_docType: { projectId: id, docType: dto.docType } },
+          });
+          if (duplicate) {
+            throw new BadRequestException(
+              `Document requirement already exists for this project: ${dto.docType}`,
+            );
+          }
+          await this.prisma.documentRequirement.create({
+            data: {
+              projectId: id,
+              docType: dto.docType,
+              mandatory: dto.mandatory,
+              description: dto.description,
+            },
+          });
+        }
+      }
+    }
+
+    // Re-fetch project to include updated document requirements and related relations
+    const refreshedProject = await this.prisma.project.findUnique({
+      where: { id },
+      include: {
+        client: true,
+        creator: true,
+        team: true,
+        rolesNeeded: {
+          include: {
+            educationRequirementsList: {
+              include: {
+                qualification: {
+                  select: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                    level: true,
+                    field: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        candidateProjects: {
+          include: {
+            candidate: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                countryCode: true,
+                mobileNumber: true,
+                email: true,
+                currentStatus: true,
+              },
+            },
+          },
+        },
+        documentRequirements: true,
+      },
+    });
+
+    if (!refreshedProject) {
+      throw new NotFoundException(`Project with ID ${id} not found after update`);
+    }
+
     // Normalize rolesNeeded to include ageRequirement string
     const normalizedProject = {
-      ...project,
-      rolesNeeded: project.rolesNeeded.map((role) => ({
+      ...refreshedProject,
+      rolesNeeded: refreshedProject.rolesNeeded.map((role) => ({
         ...role,
         requiredSkills: this.parseJsonField(role.requiredSkills as any),
         candidateStates: this.parseJsonField(role.candidateStates as any),

@@ -683,8 +683,8 @@ export default function CandidateDocumentVerificationPage() {
 
           {/* Right: Flag + Title + Actions */}
           <div className="flex items-center gap-2">
-            <Flag
-              code={selectedProject.project?.countryCode || "UN"}
+            <FlagIcon
+              countryCode={selectedProject.project?.countryCode || "UN"}
               className="w-7 h-7 rounded shadow-sm ring-1 ring-white/70 flex-shrink-0"
             />
             <p className="text-sm font-semibold text-slate-800 max-w-[120px] truncate">
@@ -692,7 +692,7 @@ export default function CandidateDocumentVerificationPage() {
             </p>
 
             {/* Tiny Action Buttons */}
-            {canVerifyDocuments && (
+            {canVerifyDocuments && !summary.isDocumentationReviewed && (
               <div className="flex gap-1.5">
                 {summary.totalSubmitted > 0 && summary.totalVerified < summary.totalSubmitted && (
                   <Button
@@ -820,6 +820,13 @@ export default function CandidateDocumentVerificationPage() {
               <p className={`text-3xl font-extrabold mt-2 text-${item.color}-600`}>{item.value}</p>
             </div>
           ))}
+          {summary.isDocumentationReviewed && (
+            <div className="flex items-center ml-2">
+              <Badge className="bg-emerald-100 text-emerald-800 px-3 py-2 rounded-full">
+                {summary.documentationStatus || "Document reviewed"}
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -891,7 +898,9 @@ export default function CandidateDocumentVerificationPage() {
 
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          {verification ? (
+                          {summary.isDocumentationReviewed ? (
+                            <Badge className="bg-slate-100 text-slate-700">{summary.documentationStatus || "Document reviewed"}</Badge>
+                          ) : verification ? (
                             <>
                               {canVerifyDocuments && displayedStatus === "pending" && (
                                 <>
@@ -923,7 +932,7 @@ export default function CandidateDocumentVerificationPage() {
                             </div>
                           )}
                         </div>
-                      </TableCell>
+                      </TableCell> 
                     </TableRow>
                   );
                 })}
@@ -932,7 +941,7 @@ export default function CandidateDocumentVerificationPage() {
           </div>
 
           {/* Final Complete/Reject Buttons */}
-          {(summary.allDocumentsVerified || allRejected) && canVerifyDocuments && (
+          {(summary.allDocumentsVerified || allRejected) && canVerifyDocuments && !summary.isDocumentationReviewed && (
        <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
   {summary.allDocumentsVerified && (
     <Button

@@ -270,6 +270,7 @@ export default function EditProjectPage() {
       [
         ...currentRoles,
         {
+          roleCatalogId: "",
           designation: "",
           quantity: 1,
           priority: "medium",

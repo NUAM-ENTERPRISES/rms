@@ -307,7 +307,15 @@ export default function MultiStepEditProjectPage() {
     console.log("onSubmit called with data:", data);
     try {
       // Transform the data for backend
-      const transformedData = {
+      // Only send newly added document requirements to avoid duplicate 'docType' creation errors
+      const existingDocTypes =
+        projectData?.data?.documentRequirements?.map((d: any) => d.docType) || [];
+
+      const newDocumentRequirements = (data.documentRequirements || []).filter(
+        (d) => !existingDocTypes.includes(d.docType)
+      );
+
+      let transformedData: any = {
         ...data,
         deadline:
           data.deadline instanceof Date
@@ -364,8 +372,11 @@ export default function MultiStepEditProjectPage() {
             : undefined,
           };
         }),
-        documentRequirements: data.documentRequirements || [],
       };
+
+      if (newDocumentRequirements.length > 0) {
+        transformedData.documentRequirements = newDocumentRequirements;
+      }
 
       console.log("Calling updateProject API with:", {
         id: projectId,

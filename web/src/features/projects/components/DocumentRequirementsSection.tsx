@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Control,
   UseFormSetValue,
@@ -51,6 +52,13 @@ export default function DocumentRequirementsSection({
   const addDocumentRequirement = () => {
     if (newDocType) {
       const currentRequirements = watch("documentRequirements") || [];
+
+      // Prevent adding duplicate docTypes in the same form
+      if (currentRequirements.some((r: any) => r.docType === newDocType)) {
+        toast.error("This document is already added to the project");
+        return;
+      }
+
       setValue("documentRequirements", [
         ...currentRequirements,
         {
