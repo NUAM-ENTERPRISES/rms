@@ -1458,7 +1458,7 @@ async getVerifiedOrRejectedList() {
       ];
     }
 
-    const [items, total, verifiedCount, rejectedCount] = await Promise.all([
+    const [items, total, verifiedDistinctRows, rejectedDistinctRows] = await Promise.all([
       this.prisma.candidateProjectDocumentVerification.findMany({
         where: baseWhere,
         include: {
@@ -1496,10 +1496,21 @@ async getVerifiedOrRejectedList() {
         take: Number(limit),
       }),
       this.prisma.candidateProjectDocumentVerification.count({ where: baseWhere }),
-      // counts respect recruiter/search filters
-      this.prisma.candidateProjectDocumentVerification.count({ where: { ...baseWhere, status: 'verified' } }),
-      this.prisma.candidateProjectDocumentVerification.count({ where: { ...baseWhere, status: 'rejected' } }),
+      // Use distinct candidateProjectMapId so counts represent unique candidate-projects
+      this.prisma.candidateProjectDocumentVerification.findMany({
+        where: { ...baseWhere, status: 'verified' },
+        select: { candidateProjectMapId: true },
+        distinct: ['candidateProjectMapId'],
+      }),
+      this.prisma.candidateProjectDocumentVerification.findMany({
+        where: { ...baseWhere, status: 'rejected' },
+        select: { candidateProjectMapId: true },
+        distinct: ['candidateProjectMapId'],
+      }),
     ]);
+
+    const verifiedCount = verifiedDistinctRows.length;
+    const rejectedCount = rejectedDistinctRows.length;
 
     return {
       items,
