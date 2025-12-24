@@ -18,6 +18,8 @@ import { toast } from "sonner";
 export interface CandidateResumeListProps {
   /** Candidate ID to fetch resumes for */
   candidateId: string;
+  /** Role Catalog ID to link to the resume */
+  roleCatalogId?: string;
   /** Whether the component is loading */
   isLoading?: boolean;
   /** Additional CSS classes */
@@ -26,6 +28,7 @@ export interface CandidateResumeListProps {
 
 export function CandidateResumeList({
   candidateId,
+  roleCatalogId,
   isLoading = false,
   className = "",
 }: CandidateResumeListProps) {
@@ -81,6 +84,7 @@ export function CandidateResumeList({
       await uploadResume({
         candidateId,
         file: selectedFile,
+        roleCatalogId,
       }).unwrap();
 
       toast.success("Resume uploaded successfully!");

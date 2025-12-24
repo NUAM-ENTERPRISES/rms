@@ -286,6 +286,7 @@ export class UploadService {
   async uploadResume(
     file: Express.Multer.File,
     candidateId: string,
+    roleCatalogId?: string,
   ): Promise<UploadResult> {
     const allowedMimeTypes = ['application/pdf'];
     const folder = `candidates/resumes/${candidateId}`;
@@ -334,6 +335,7 @@ export class UploadService {
         fileUrl: uploadResult.fileUrl,
         fileSize: file.size,
         mimeType: file.mimetype,
+        roleCatalogId: roleCatalogId || null,
         uploadedBy: 'system', // TODO: Get from auth context
         status: 'pending',
       },

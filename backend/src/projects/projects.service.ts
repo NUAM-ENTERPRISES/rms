@@ -1195,7 +1195,22 @@ export class ProjectsService {
       !userRoles.includes('Director');
 
     if (isRecruiter) {
-      whereClause.recruiterId = userId;
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        OR: [
+          { recruiterId: userId },
+          {
+            candidate: {
+              recruiterAssignments: {
+                some: {
+                  recruiterId: userId,
+                  isActive: true,
+                },
+              },
+            },
+          },
+        ],
+      });
     }
 
     // 🔍 Search filter
@@ -1293,6 +1308,19 @@ export class ProjectsService {
                 },
               },
             },
+            documentRequirements: {
+              select: {
+                id: true,
+                docType: true,
+                mandatory: true,
+                description: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
           },
         },
 
@@ -1313,6 +1341,34 @@ export class ProjectsService {
             id: true,
             name: true,
             email: true,
+          },
+        },
+
+        // Document verifications for this candidate-project mapping
+        documentVerifications: {
+          select: {
+            id: true,
+            status: true,
+            notes: true,
+            rejectionReason: true,
+            resubmissionRequested: true,
+            createdAt: true,
+            updatedAt: true,
+            document: {
+              select: {
+                id: true,
+                docType: true,
+                fileName: true,
+                fileUrl: true,
+                status: true,
+                notes: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
           },
         },
       },
@@ -1430,6 +1486,7 @@ export class ProjectsService {
                     skills: this.parseJsonField(r.skills),
                   }))
                 : [],
+              documentRequirements: assignment.project.documentRequirements || [],
             }
           : null,
 
@@ -1441,6 +1498,9 @@ export class ProjectsService {
         // Match Score (object with top role info)
         matchScore: matchScoreObj,
         nominatedRole: nominatedRoleObj,
+
+        // Document verifications for this project
+        documentVerifications: assignment.documentVerifications || [],
       };
     });
 

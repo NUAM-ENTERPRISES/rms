@@ -3,7 +3,7 @@ import { useGetScreeningQuery, useAssignTemplateToScreeningMutation, useComplete
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Calendar, Clock, MapPin, User, CheckCircle2, Circle } from "lucide-react";
+import { AlertCircle, Calendar, Clock, MapPin, User, CheckCircle2, Circle, Loader2, Link } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Screening, ScreeningTemplate } from "../../types";
 import {
@@ -30,7 +30,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { CompleteScreeningDialog } from "../components/CompleteScreeningDialog";
 import { format } from "date-fns";
-import { Link } from "lucide-react";
 
 
 export default function ConductScreeningPage() {
@@ -607,12 +606,12 @@ export default function ConductScreeningPage() {
         {selectedTemplate && (selectedTemplate.items ?? []).length > 0 && (() => {
           const itemsByCategory = (selectedTemplate.items ?? []).reduce((acc, item) => {
             if (!acc[item.category]) acc[item.category] = [];
-            acc[item.category].push(item);
+            (acc[item.category] ??= []).push(item);
             return acc;
           }, {} as Record<string, typeof selectedTemplate.items>);
 
           Object.keys(itemsByCategory).forEach(category => {
-            itemsByCategory[category].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            itemsByCategory[category]!.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
           });
 
           return (
@@ -624,12 +623,12 @@ export default function ConductScreeningPage() {
                       {category}
                     </div>
                     <Badge variant="secondary" className="text-xs px-3 py-1">
-                      {items.length} {items.length === 1 ? 'item' : 'items'}
+                      {items?.length} {items?.length === 1 ? 'item' : 'items'}
                     </Badge>
                   </div>
 
                   <div className="space-y-2">
-                    {items.map((item) => (
+                    {items?.map((item) => (
                       <div key={item.id} className="flex gap-3 text-sm p-2 rounded-lg hover:bg-indigo-50/50 transition-colors">
                         <span className="font-medium text-indigo-600 min-w-[20px]">
                           {item.order ?? 0}.

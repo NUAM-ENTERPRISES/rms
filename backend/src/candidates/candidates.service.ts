@@ -593,6 +593,19 @@ export class CandidatesService {
                     type: true,
                   },
                 },
+                documentRequirements: {
+                  select: {
+                    id: true,
+                    docType: true,
+                    mandatory: true,
+                    description: true,
+                    createdAt: true,
+                    updatedAt: true,
+                  },
+                  orderBy: {
+                    createdAt: 'asc',
+                  },
+                },
               },
             },
             roleNeeded: {
@@ -626,6 +639,33 @@ export class CandidatesService {
               },
             },
 
+            // Document verifications for this candidate-project mapping
+            documentVerifications: {
+              select: {
+                id: true,
+                status: true,
+                notes: true,
+                rejectionReason: true,
+                resubmissionRequested: true,
+                createdAt: true,
+                updatedAt: true,
+                document: {
+                  select: {
+                    id: true,
+                    docType: true,
+                    fileName: true,
+                    fileUrl: true,
+                    status: true,
+                    notes: true,
+                    createdAt: true,
+                    updatedAt: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
 
             recruiter: {
               select: {

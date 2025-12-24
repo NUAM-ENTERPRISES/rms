@@ -10,6 +10,14 @@ export class VerifyDocumentDto {
   @IsString()
   candidateProjectMapId: string;
 
+  @ApiPropertyOptional({
+    description: 'Role Catalog ID',
+    example: 'rc_123abc',
+  })
+  @IsString()
+  @IsOptional()
+  roleCatalogId?: string;
+
   @ApiProperty({
     description: 'Verification status',
     enum: [DOCUMENT_STATUS.VERIFIED, DOCUMENT_STATUS.REJECTED],

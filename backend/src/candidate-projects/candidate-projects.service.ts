@@ -17,7 +17,9 @@ import {
   TRAINING_TYPE,
   TRAINING_PRIORITY,
   TRAINING_EVENT,
-} from '../common/constants/statuses';
+  DOCUMENT_STATUS,
+  DOCUMENT_TYPE,
+} from '../common/constants';
 
 @Injectable()
 export class CandidateProjectsService {
@@ -195,6 +197,18 @@ export class CandidateProjectsService {
         },
       });
 
+      // AUTO-ASSIGN DOCUMENTS OF SAME ROLE
+      if (roleNeededId) {
+        await this.autoAssignExistingDocuments(
+          tx,
+          candidateId,
+          roleNeededId,
+          newAssignment.id,
+          userId,
+          user?.name,
+        );
+      }
+
       return newAssignment;
     });
 
@@ -367,6 +381,18 @@ export class CandidateProjectsService {
         },
       });
 
+      // AUTO-ASSIGN DOCUMENTS OF SAME ROLE
+      if (roleNeededId) {
+        await this.autoAssignExistingDocuments(
+          tx,
+          candidateId,
+          roleNeededId,
+          assignment.id,
+          userId,
+          user?.name,
+        );
+      }
+
       return assignment;
     });
 
@@ -512,6 +538,18 @@ export class CandidateProjectsService {
           reason: 'Sent for screening',
         },
       });
+
+      // AUTO-ASSIGN DOCUMENTS OF SAME ROLE
+      if (roleNeededId) {
+        await this.autoAssignExistingDocuments(
+          tx,
+          candidateId,
+          roleNeededId,
+          assignment.id,
+          userId,
+          user?.name,
+        );
+      }
 
       return assignment;
     });
@@ -1692,5 +1730,79 @@ export class CandidateProjectsService {
     // Optionally we could publish an outbox event here if needed
 
     return candidateProject;
+  }
+
+  /**
+   * Automatically assign existing documents of the same role to a new project assignment
+   */
+  private async autoAssignExistingDocuments(
+    tx: any,
+    candidateId: string,
+    roleNeededId: string,
+    newAssignmentId: string,
+    userId: string,
+    userName?: string,
+  ) {
+    if (!roleNeededId) return;
+
+    // Find the role catalog ID for this role needed
+    const roleNeeded = await tx.roleNeeded.findUnique({
+      where: { id: roleNeededId },
+      select: { roleCatalogId: true },
+    });
+
+    if (!roleNeeded) return;
+
+    const roleCatalogId = roleNeeded.roleCatalogId;
+
+    // Find existing resumes for this candidate that match the role
+    // We only auto-assign resumes as per requirement
+    const existingResumes = await tx.document.findMany({
+      where: {
+        candidateId: candidateId,
+        docType: DOCUMENT_TYPE.RESUME,
+        roleCatalogId: roleCatalogId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    for (const doc of existingResumes) {
+      // Check if this document is already linked to the new assignment
+      const alreadyLinked =
+        await tx.candidateProjectDocumentVerification.findUnique({
+          where: {
+            candidateProjectMapId_documentId: {
+              candidateProjectMapId: newAssignmentId,
+              documentId: doc.id,
+            },
+          },
+        });
+
+      if (!alreadyLinked) {
+        const newVerification =
+          await tx.candidateProjectDocumentVerification.create({
+            data: {
+              candidateProjectMapId: newAssignmentId,
+              documentId: doc.id,
+              roleCatalogId: roleCatalogId,
+              status: doc.status,
+              notes: `Auto-assigned from existing resume`,
+            },
+          });
+
+        // Create history entry for the auto-assignment
+        await tx.documentVerificationHistory.create({
+          data: {
+            verificationId: newVerification.id,
+            action: doc.status,
+            performedBy: userId,
+            performedByName: userName || null,
+            notes: 'auto assigned when project assigned',
+          },
+        });
+      }
+    }
   }
 }

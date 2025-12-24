@@ -433,6 +433,7 @@ model Document {
   expiryDate     DateTime?
   fileSize       Int?
   mimeType       String?
+  roleCatalogId  String?
 
   rejectedAt      DateTime?
   rejectedBy      String?
@@ -441,10 +442,12 @@ model Document {
 
   verifications CandidateProjectDocumentVerification[]
   candidate     Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  roleCatalog   RoleCatalog?                           @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
 
   @@index([candidateId])
   @@index([docType])
   @@index([status])
+  @@index([roleCatalogId])
   @@map("documents")
 }
 
@@ -920,6 +923,7 @@ model CandidateProjectDocumentVerification {
   id                    String @id @default(cuid())
   candidateProjectMapId String
   documentId            String
+  roleCatalogId         String?
 
   // Document status inside this project
   status String @default("pending")
@@ -934,12 +938,14 @@ model CandidateProjectDocumentVerification {
 
   candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   document            Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  roleCatalog         RoleCatalog?      @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
 
   verificationHistory DocumentVerificationHistory[]
 
   @@unique([candidateProjectMapId, documentId])
   @@index([candidateProjectMapId])
   @@index([documentId])
+  @@index([roleCatalogId])
   @@index([status])
   @@map("candidate_project_document_verifications")
 }
@@ -997,6 +1003,8 @@ model RoleCatalog {
   recommendedQualifications RoleRecommendedQualification[]
   screeningTemplates        ScreeningTemplate[]
   roleNeededEntries         RoleNeeded[]
+  documentVerifications     CandidateProjectDocumentVerification[]
+  documents                 Document[]
   // Work experiences linked to this role catalog
   workExperiences           WorkExperience[]
 

@@ -68,6 +68,13 @@ export const navigationConfig: NavItem[] = [
     // Hidden from CRE - they only manage candidates
   },
   {
+    id: "recruiter-docs",
+    label: "Recruiter Docs",
+    path: "/recruiter-docs",
+    icon: FileText,
+    roles: ["Recruiter", "System Admin"],
+  },
+  {
     id: "candidates",
     label: "Candidates",
     path: "/candidates",

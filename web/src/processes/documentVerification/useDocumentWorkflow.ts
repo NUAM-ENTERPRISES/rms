@@ -11,6 +11,7 @@ import { candidatesApi } from "@/features/candidates/api";
 interface DocumentWorkflowParams {
   documentId: string;
   candidateProjectMapId: string;
+  roleCatalogId?: string;
   action: "verify" | "reject" | "request_resubmission";
   notes?: string;
   rejectionReason?: string;
@@ -45,6 +46,7 @@ export function useDocumentWorkflow() {
           result = await verifyDocument({
             documentId: params.documentId,
             candidateProjectMapId: params.candidateProjectMapId,
+            roleCatalogId: params.roleCatalogId,
             status: "verified",
             notes: params.notes,
           });
@@ -54,6 +56,7 @@ export function useDocumentWorkflow() {
           result = await verifyDocument({
             documentId: params.documentId,
             candidateProjectMapId: params.candidateProjectMapId,
+            roleCatalogId: params.roleCatalogId,
             status: "rejected",
             notes: params.notes,
             rejectionReason: params.rejectionReason,
@@ -64,6 +67,7 @@ export function useDocumentWorkflow() {
           result = await requestResubmission({
             documentId: params.documentId,
             candidateProjectMapId: params.candidateProjectMapId,
+            roleCatalogId: params.roleCatalogId,
             reason: params.rejectionReason || "Document requires resubmission",
           });
           break;

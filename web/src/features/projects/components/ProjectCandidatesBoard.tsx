@@ -356,22 +356,14 @@ const ProjectCandidatesBoard = ({
       const showInterviewButton = subStatusName === "documents_verified";
       const hasProject = Boolean(candidate.project);
 
-      const actions =
-        !hasProject && !isVerificationInProgress
-          ? [
-              {
-                label: "Assign to Project",
-                action: "assign",
-                variant: "default" as const,
-                icon: UserPlus,
-              },
-            ]
-          : [];
+      const actions = [];
 
       return (
         <CandidateCard
           key={`nominated-${candidateId}`}
           candidate={candidate}
+          projectId={projectId}
+          isRecruiter={isRecruiter}
           onView={() => onViewCandidate(candidateId)}
           onAction={(id, action) => {
             if (action === "assign") {
@@ -397,6 +389,13 @@ const ProjectCandidatesBoard = ({
           onVerify={() =>
             onVerifyCandidate(
               candidateId,
+              `${candidate.firstName} ${candidate.lastName}`
+            )
+          }
+          showAssignButton={!hasProject}
+          onAssignToProject={(id) =>
+            onAssignCandidate(
+              id,
               `${candidate.firstName} ${candidate.lastName}`
             )
           }
@@ -442,12 +441,6 @@ const ProjectCandidatesBoard = ({
 
       const actions = !assignmentInfo.isAssigned
         ? [
-            {
-              label: "Assign to Project",
-              action: "assign",
-              variant: "default" as const,
-              icon: UserPlus,
-            },
             ...(requiredScreening
               ? [
                   {
@@ -462,7 +455,7 @@ const ProjectCandidatesBoard = ({
         : [];
 
       const showVerifyButton =
-        !assignmentInfo.isAssigned || assignmentInfo.isNominated;
+        assignmentInfo.isAssigned && assignmentInfo.isNominated;
       // Show the interview button for candidates whose project sub-status
       // is documents_verified even if they're not yet assigned to the project.
       const showInterviewButton =
@@ -483,6 +476,8 @@ const ProjectCandidatesBoard = ({
         <CandidateCard
           key={`eligible-${assignmentInfo.candidateId}`}
           candidate={sanitized}
+          projectId={projectId}
+          isRecruiter={isRecruiter}
           onView={() => onViewCandidate(assignmentInfo.candidateId)}
           onAction={(id, action) => {
             if (action === "assign") {
@@ -506,6 +501,13 @@ const ProjectCandidatesBoard = ({
           onVerify={() =>
             onVerifyCandidate(
               assignmentInfo.candidateId,
+              `${candidate.firstName} ${candidate.lastName}`
+            )
+          }
+          showAssignButton={!assignmentInfo.isAssigned}
+          onAssignToProject={(id) =>
+            onAssignCandidate(
+              id,
               `${candidate.firstName} ${candidate.lastName}`
             )
           }
@@ -555,12 +557,6 @@ const ProjectCandidatesBoard = ({
       const sanitized = sanitizeCandidate(candidate, hideContactInfo);
       const actions = !assignmentInfo.isAssigned
         ? [
-            {
-              label: "Assign to Project",
-              action: "assign",
-              variant: "default" as const,
-              icon: UserPlus,
-            },
             ...(requiredScreening
               ? [
                   {
@@ -575,9 +571,9 @@ const ProjectCandidatesBoard = ({
         : [];
 
       const showVerifyButton =
-        !assignmentInfo.isAssigned ||
-        (assignmentInfo.isNominated &&
-          !assignmentInfo.isVerificationInProgress);
+        assignmentInfo.isAssigned &&
+        assignmentInfo.isNominated &&
+        !assignmentInfo.isVerificationInProgress;
 
       // If the candidate is linked to this project and the project indicates
       // it should skip document verification (direct screening), hide the
@@ -595,6 +591,8 @@ const ProjectCandidatesBoard = ({
         <CandidateCard
           key={`all-${assignmentInfo.candidateId}`}
           candidate={sanitized}
+          projectId={projectId}
+          isRecruiter={isRecruiter}
           onView={() => onViewCandidate(assignmentInfo.candidateId)}
           onAction={(id, action) => {
             if (action === "assign") {
@@ -616,6 +614,13 @@ const ProjectCandidatesBoard = ({
           onVerify={() =>
             onVerifyCandidate(
               assignmentInfo.candidateId,
+              `${candidate.firstName} ${candidate.lastName}`
+            )
+          }
+          showAssignButton={!assignmentInfo.isAssigned}
+          onAssignToProject={(id) =>
+            onAssignCandidate(
+              id,
               `${candidate.firstName} ${candidate.lastName}`
             )
           }

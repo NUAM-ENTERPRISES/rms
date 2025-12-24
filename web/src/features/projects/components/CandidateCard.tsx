@@ -7,9 +7,15 @@ import {
   Send,
   CheckCircle2,
   AlertTriangle,
+  UserPlus,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Upload,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { memo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,11 +75,33 @@ export interface CandidateRecord {
   roleMatches?: Array<{ roleId?: string; designation?: string; score?: number }>;
   nominatedRole?: { id?: string; designation?: string; score?: number };
   projects?: CandidateProjectLink[];
-  project?: { id?: string } | null;
+  project?: {
+    id?: string;
+    title?: string;
+    documentRequirements?: Array<{
+      id: string;
+      docType: string;
+      mandatory: boolean;
+      description: string;
+    }>;
+  } | null;
+  documentVerifications?: Array<{
+    id: string;
+    status: string;
+    document: {
+      id: string;
+      docType: string;
+      fileName: string;
+      fileUrl: string;
+      status: string;
+    };
+  }>;
 }
 
 interface CandidateCardProps {
   candidate: CandidateRecord;
+  projectId?: string;
+  isRecruiter?: boolean;
   onView?: (candidateId: string) => void;
   onAction?: (candidateId: string, action: string) => void;
   actions?: Array<{
@@ -87,6 +115,11 @@ interface CandidateCardProps {
   projectStatus?: string;
   showVerifyButton?: boolean;
   onVerify?: (candidateId: string) => void;
+  /**
+   * Show an 'Assign to Project' button and handler.
+   */
+  showAssignButton?: boolean;
+  onAssignToProject?: (candidateId: string) => void;
   /**
    * Show a 'Send for Interview' button and handler. The handler gets called
    * with candidate id when the button is clicked.
@@ -102,6 +135,8 @@ interface CandidateCardProps {
 
 const CandidateCard = memo(function CandidateCard({
   candidate,
+  projectId: propProjectId,
+  isRecruiter = false,
   onView,
   onAction,
   actions,
@@ -112,11 +147,44 @@ const CandidateCard = memo(function CandidateCard({
   showInterviewButton = false,
   onVerify,
   onSendForInterview,
+  showAssignButton = false,
+  onAssignToProject,
   isAlreadyInProject = false,
   className,
   showSkipDocumentVerification = false,
   skipDocumentVerificationMessage,
 }: CandidateCardProps) {
+  const navigate = useNavigate();
+  // Filter out "Assign to Project" from actions as it's now a primary button
+  const filteredActions = actions?.filter(
+    (action) => action.label.toLowerCase() !== "assign to project"
+  );
+
+  // Document verification logic
+  const requiredDocs = candidate.project?.documentRequirements || [];
+  const uploadedDocs = candidate.documentVerifications || [];
+  const isNoneUploaded = uploadedDocs.length === 0;
+  
+  const docStatusList = requiredDocs.map(req => {
+    const uploaded = uploadedDocs.find(u => u.document.docType === req.docType);
+    return {
+      ...req,
+      isUploaded: !!uploaded,
+      status: uploaded?.status || 'pending'
+    };
+  });
+
+  const isAllUploaded = docStatusList.every(d => d.isUploaded);
+  const isPartialUploaded = !isNoneUploaded && !isAllUploaded;
+
+  const handleUploadNavigation = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const pId = propProjectId || candidate.project?.id;
+    if (pId) {
+      navigate(`/recruiter-docs/${pId}`);
+    }
+  };
+
   // Get status configuration
   const getStatusConfig = (status: string) => {
     const statusLower = status?.toLowerCase() || "";
@@ -401,7 +469,7 @@ const CandidateCard = memo(function CandidateCard({
                     In Project
                   </Badge>
                 )}
-                {actions && actions.length > 0 && (
+                {filteredActions && filteredActions.length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       asChild
@@ -420,7 +488,7 @@ const CandidateCard = memo(function CandidateCard({
                       align="end"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {actions.map((action, index) => {
+                      {filteredActions.map((action, index) => {
                         const Icon = action.icon;
                         return (
                           <DropdownMenuItem
@@ -517,6 +585,73 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipContent>
             </Tooltip>
           )}
+
+          {/* Document Status Icon */}
+          {(requiredDocs.length > 0 || uploadedDocs.length > 0) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div 
+                  className={cn(
+                    "flex items-center justify-center w-6 h-6 rounded-full transition-all duration-300",
+                    isAllUploaded ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600",
+                    isNoneUploaded && "animate-pulse"
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {isAllUploaded ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-900">Project Documents</h4>
+                    {isAllUploaded ? (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px] h-5">Complete</Badge>
+                    ) : (
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-[10px] h-5">Pending</Badge>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {docStatusList.map((doc, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          {doc.isUploaded ? (
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <AlertCircle className="h-3 w-3 text-amber-500" />
+                          )}
+                          <span className="capitalize">{doc.docType.replace(/_/g, ' ')}</span>
+                        </div>
+                        <span className={cn(
+                          "font-medium",
+                          doc.isUploaded ? "text-green-600" : "text-amber-600"
+                        )}>
+                          {doc.isUploaded ? "Uploaded" : "Missing"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {isRecruiter && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full h-7 text-[10px] text-black gap-1.5 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                      onClick={handleUploadNavigation}
+                    >
+                      <Upload className="h-3 w-3" />
+                      Upload Documents
+                    </Button>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Detail pills */}
@@ -554,6 +689,23 @@ const CandidateCard = memo(function CandidateCard({
           )}
         </div>
 
+        {showAssignButton && onAssignToProject && (
+          <div className="flex items-center justify-end border-t border-slate-100 pt-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="h-7 text-[11px] bg-green-600 hover:bg-green-700 px-2.5"
+              onClick={(event) => {
+                event.stopPropagation();
+                onAssignToProject(candidateId);
+              }}
+            >
+              <UserPlus className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+              Assign to Project
+            </Button>
+          </div>
+        )}
+
         {showSkipDocumentVerification ? (
           <div className="flex items-center justify-end border-t border-slate-100 pt-2">
             <Tooltip>
@@ -576,21 +728,33 @@ const CandidateCard = memo(function CandidateCard({
             </Tooltip>
           </div>
         ) : (
-          showVerifyButton &&
-          onVerify && (
+          isRecruiter && showVerifyButton &&
+          onVerify && !isAllUploaded && projectStatus !== "Verification In Progress" && (
             <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-              <Button
-                variant="default"
-                size="sm"
-                className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onVerify(candidateId);
-                }}
-              >
-                <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-                Send for Verification
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      disabled={isNoneUploaded}
+                      className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onVerify(candidateId);
+                      }}
+                    >
+                      <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+                      Send for Verification
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isNoneUploaded && (
+                  <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
+                    <p>Please upload documents for this project</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </div>
           )
         )}

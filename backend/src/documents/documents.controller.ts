@@ -25,6 +25,7 @@ import { UpdateDocumentDto } from './dto/update-document.dto';
 import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
+import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Documents')
@@ -398,11 +399,6 @@ export class DocumentsController {
     description: 'Document ID',
     example: 'doc_123abc',
   })
-  @ApiParam({
-    name: 'projectId',
-    description: 'Project ID',
-    example: 'proj_123abc',
-  })
   @ApiResponse({
     status: 201,
     description: 'Document linked to project successfully',
@@ -417,12 +413,13 @@ export class DocumentsController {
   })
   async reuseDocument(
     @Param('documentId') documentId: string,
-    @Body() body: { projectId: string },
+    @Body() reuseDto: ReuseDocumentDto,
     @Request() req,
   ) {
     const result = await this.documentsService.reuseDocument(
       documentId,
-      body.projectId,
+      reuseDto.projectId,
+      reuseDto.roleCatalogId,
       req.user.sub,
     );
     return {

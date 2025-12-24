@@ -163,18 +163,27 @@ export class UploadController {
           type: 'string',
           format: 'binary',
         },
+        roleCatalogId: {
+          type: 'string',
+          description: 'Role Catalog ID',
+        },
       },
     },
   })
   async uploadResume(
     @Param('candidateId') candidateId: string,
     @UploadedFile() file: Express.Multer.File,
+    @Body('roleCatalogId') roleCatalogId?: string,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
-    const result = await this.uploadService.uploadResume(file, candidateId);
+    const result = await this.uploadService.uploadResume(
+      file,
+      candidateId,
+      roleCatalogId,
+    );
 
     return {
       success: true,

@@ -66,11 +66,14 @@ export const uploadApi = baseApi.injectEndpoints({
 
     uploadResume: builder.mutation<
       UploadResponse,
-      { candidateId: string; file: File }
+      { candidateId: string; file: File; roleCatalogId?: string }
     >({
-      query: ({ candidateId, file }) => {
+      query: ({ candidateId, file, roleCatalogId }) => {
         const formData = new FormData();
         formData.append("file", file);
+        if (roleCatalogId) {
+          formData.append("roleCatalogId", roleCatalogId);
+        }
         return {
           url: `/upload/resume/${candidateId}`,
           method: "POST",

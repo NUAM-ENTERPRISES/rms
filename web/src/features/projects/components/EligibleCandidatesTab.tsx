@@ -68,6 +68,7 @@ export default function EligibleCandidatesTab({
 
   // Get current user
   const { user } = useAppSelector((state) => state.auth);
+  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
 
   // Get eligible candidates with match scores
   const {
@@ -284,24 +285,25 @@ export default function EligibleCandidatesTab({
                 (currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase() === "nominated"
               );
 
-              // Show verify button if: 1) Not in project, OR 2) In project and nominated
-              const showVerifyBtn = !isAssignedToProject || isNominated;
+              // Explicitly detect verification-in-progress states so we never show the
+              // "Send for Verification" button for candidates already in verification.
+              const isVerificationInProgress = isAssignedToProject && (
+                (!!actualSubStatusName && actualSubStatusName.toLowerCase().includes("verification")) ||
+                (!!actualSubStatusLabel && actualSubStatusLabel.toLowerCase().includes("verification")) ||
+                ((currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase().includes("verification"))
+              );
+
+              // Show verify button if: In project and nominated AND not already in verification
+              const showVerifyBtn = isAssignedToProject && isNominated && !isVerificationInProgress;
 
               const actions = [];
-
-              if (!isAssignedToProject) {
-                actions.push({
-                  label: "Assign to Project",
-                  action: "assign",
-                  variant: "default" as const,
-                  icon: UserPlus,
-                });
-              }
 
               return (
                 <CandidateCard
                   key={candidate.id}
                   candidate={candidate}
+                  projectId={projectId}
+                  isRecruiter={isRecruiter}
                   onView={handleViewCandidate}
                   onAction={(candidateId, action) => {
                     if (action === "assign") {
@@ -317,6 +319,13 @@ export default function EligibleCandidatesTab({
                   showVerifyButton={showVerifyBtn}
                   onVerify={(candidateId) =>
                     showVerifyConfirmation(
+                      candidateId,
+                      `${candidate.firstName} ${candidate.lastName}`
+                    )
+                  }
+                  showAssignButton={!isAssignedToProject}
+                  onAssignToProject={(candidateId) =>
+                    showAssignConfirmation(
                       candidateId,
                       `${candidate.firstName} ${candidate.lastName}`
                     )

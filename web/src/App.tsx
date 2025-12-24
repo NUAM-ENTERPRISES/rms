@@ -94,6 +94,14 @@ const ScreeningsListPage = lazy(
   () => import("@/features/screening-coordination/interviews/views/ScreeningsListPage")
 );
 
+const RecruiterDocsPage = lazy(
+  () => import("@/features/recruiter-docs/views/RecruiterDocsPage")
+);
+
+const RecruiterDocsDetailPage = lazy(
+  () => import("@/features/recruiter-docs/views/RecruiterDocsDetailPage")
+);
+
 const UpcomingScreeningsListPage = lazy(
   () =>
     import(
@@ -304,6 +312,32 @@ function App() {
                         <ProtectedRoute>
                           <AppLayout>
                             <ProjectDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/recruiter-docs"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                          <AppLayout>
+                            <RecruiterDocsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/recruiter-docs/:projectId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                          <AppLayout>
+                            <RecruiterDocsDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

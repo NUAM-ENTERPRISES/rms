@@ -39,6 +39,7 @@ export default function SubmittedCandidatesSection({
 
   // Get current user
   const { user } = useAppSelector((state) => state.auth);
+  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
 
   // Confirmation dialog state
   const [verifyConfirm, setVerifyConfirm] = useState<{
@@ -234,6 +235,8 @@ export default function SubmittedCandidatesSection({
               <CandidateCard
                 key={candidate.id}
                 candidate={candidate}
+                projectId={projectId}
+                isRecruiter={isRecruiter}
                 onView={() => handleViewCandidate(actualCandidateId)}
                 onAction={() => {}}
                 actions={[]}

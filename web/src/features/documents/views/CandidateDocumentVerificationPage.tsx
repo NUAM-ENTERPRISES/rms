@@ -243,6 +243,7 @@ export default function CandidateDocumentVerificationPage() {
       await verifyDocument({
         documentId: verification.document.id,
         candidateProjectMapId: selectedProject?.id || "",
+        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
         status: "verified",
         notes: verificationNotes,
       }).unwrap();
@@ -261,6 +262,7 @@ export default function CandidateDocumentVerificationPage() {
       await verifyDocument({
         documentId: verification.document.id,
         candidateProjectMapId: selectedProject?.id || "",
+        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
         status: "rejected",
         notes: verificationNotes,
         rejectionReason: verificationNotes,
@@ -298,6 +300,7 @@ export default function CandidateDocumentVerificationPage() {
         verifyDocument({
           documentId: verification.document.id,
           candidateProjectMapId: selectedProject.id,
+          roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
           status: "verified",
           notes: "Bulk verification",
         }).unwrap()
@@ -340,6 +343,7 @@ export default function CandidateDocumentVerificationPage() {
         verifyDocument({
           documentId: verification.document.id,
           candidateProjectMapId: selectedProject.id,
+          roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
           status: "rejected",
           notes: "Bulk rejection",
         }).unwrap()
@@ -366,6 +370,7 @@ export default function CandidateDocumentVerificationPage() {
       await reuseDocument({
         documentId: selectedDocumentType,
         projectId: selectedProjectId,
+        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
       }).unwrap();
       toast.success("Document linked successfully!");
       setShowReuseDialog(false);
@@ -413,12 +418,14 @@ export default function CandidateDocumentVerificationPage() {
         fileUrl,
         fileSize,
         mimeType,
+        roleCatalogId: uploadDocType.toLowerCase() === "resume" ? (selectedProject?.roleNeeded?.roleCatalog?.id || "") : undefined,
       }).unwrap();
 
       // Step 3: Link the document to the current project
       await reuseDocument({
         documentId: documentData.data.id,
         projectId: selectedProjectId,
+        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
       }).unwrap();
 
       toast.success("Document uploaded and linked successfully!");
@@ -606,9 +613,9 @@ export default function CandidateDocumentVerificationPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "verified":
-        return <Badge className="bg-green-100 text-green-800">Verified</Badge>;
+        return <Badge className="bg-green-500 text-white font-semibold">Verified</Badge>;
       case "rejected":
-        return <Badge variant="destructive">Rejected</Badge>;
+        return <Badge className="bg-red-500 text-white font-semibold">Rejected</Badge>;
       case "pending":
         return <Badge variant="outline">Pending</Badge>;
       default:
@@ -822,7 +829,14 @@ export default function CandidateDocumentVerificationPage() {
           ))}
           {summary.isDocumentationReviewed && (
             <div className="flex items-center ml-2">
-              <Badge className="bg-emerald-100 text-emerald-800 px-3 py-2 rounded-full">
+              <Badge className={cn(
+                "px-3 py-2 rounded-full font-semibold",
+                summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified"
+                  ? "bg-green-500 text-white"
+                  : summary.documentationStatus === "Documents Rejected" || summary.documentationStatus === "Document rejected"
+                  ? "bg-red-500 text-white"
+                  : "bg-emerald-100 text-emerald-800"
+              )}>
                 {summary.documentationStatus || "Document reviewed"}
               </Badge>
             </div>
@@ -899,7 +913,14 @@ export default function CandidateDocumentVerificationPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {summary.isDocumentationReviewed ? (
-                            <Badge className="bg-slate-100 text-slate-700">{summary.documentationStatus || "Document reviewed"}</Badge>
+                            <Badge className={cn(
+                              "font-semibold",
+                              summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified"
+                                ? "bg-green-500 text-white"
+                                : summary.documentationStatus === "Documents Rejected" || summary.documentationStatus === "Document rejected"
+                                ? "bg-red-500 text-white"
+                                : "bg-slate-100 text-slate-700"
+                            )}>{summary.documentationStatus || "Document reviewed"}</Badge>
                           ) : verification ? (
                             <>
                               {canVerifyDocuments && displayedStatus === "pending" && (

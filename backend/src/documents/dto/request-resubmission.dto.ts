@@ -1,5 +1,5 @@
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RequestResubmissionDto {
   @ApiProperty({
@@ -8,6 +8,14 @@ export class RequestResubmissionDto {
   })
   @IsString()
   candidateProjectMapId: string;
+
+  @ApiPropertyOptional({
+    description: 'Role Catalog ID',
+    example: 'rc_123abc',
+  })
+  @IsString()
+  @IsOptional()
+  roleCatalogId?: string;
 
   @ApiProperty({
     description: 'Reason for resubmission request',

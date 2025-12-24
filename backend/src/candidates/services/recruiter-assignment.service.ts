@@ -637,6 +637,33 @@ export class RecruiterAssignmentService {
               },
             },
 
+            // Documents list for document verification
+            documentVerifications: {
+              select: {
+                id: true,
+                status: true,
+                notes: true,
+                rejectionReason: true,
+                resubmissionRequested: true,
+                createdAt: true,
+                updatedAt: true,
+                document: {
+                  select: {
+                    id: true,
+                    docType: true,
+                    fileName: true,
+                    fileUrl: true,
+                    status: true,
+                    notes: true,
+                    createdAt: true,
+                    updatedAt: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
 
             recruiter: {
               select: {

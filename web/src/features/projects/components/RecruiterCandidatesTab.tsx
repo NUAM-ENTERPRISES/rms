@@ -588,25 +588,17 @@ export default function RecruiterCandidatesTab({
                   ((currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase().includes("verification"))
                 );
 
-                // Show verify button if: 1) not in project OR 2) in project and nominated AND not already in verification
-                const showVerifyBtn = !isAssignedToProject || (isNominated && !isVerificationInProgress);
+                // Show verify button if: in project and nominated AND not already in verification
+                const showVerifyBtn = isAssignedToProject && isNominated && !isVerificationInProgress;
 
                 const actions = [];
-
-                // Only show assign button if NOT in project
-                if (!isAssignedToProject) {
-                  actions.push({
-                    label: "Assign to Project",
-                    action: "assign",
-                    variant: "default" as const,
-                    icon: UserPlus,
-                  });
-                }
 
                 return (
                   <CandidateCard
                     key={candidate.id}
                     candidate={candidate}
+                    projectId={projectId}
+                    isRecruiter={isRecruiter}
                     onView={handleViewCandidate}
                     onAction={(candidateId, action) => {
                       if (action === "assign") {
@@ -621,6 +613,13 @@ export default function RecruiterCandidatesTab({
                     showVerifyButton={showVerifyBtn}
                     onVerify={(candidateId) =>
                       showVerifyConfirmation(
+                        candidateId,
+                        `${candidate.firstName} ${candidate.lastName}`
+                      )
+                    }
+                    showAssignButton={!isAssignedToProject}
+                    onAssignToProject={(candidateId) =>
+                      showAssignConfirmation(
                         candidateId,
                         `${candidate.firstName} ${candidate.lastName}`
                       )

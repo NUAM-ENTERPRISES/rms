@@ -4,6 +4,7 @@ import {
   CandidateProjectDocumentVerification,
   CandidateProjects,
   Project,
+  RoleCatalog,
 } from '@prisma/client';
 
 /**
@@ -18,6 +19,7 @@ export interface DocumentWithRelations extends Document {
     mobileNumber: string;
     email: string | null;
   };
+  roleCatalog?: RoleCatalog | null;
   verifications: (CandidateProjectDocumentVerification & {
     candidateProjectMap: {
       id: string;
@@ -85,6 +87,8 @@ export interface CandidateProjectDocumentSummary {
     fileName: string;
     status: string;
     verificationStatus: string;
+    roleCatalogId?: string | null;
+    roleCatalog?: RoleCatalog | null;
     uploadedAt: Date;
     verifiedAt: Date | null;
   }[];

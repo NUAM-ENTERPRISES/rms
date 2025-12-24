@@ -22,6 +22,12 @@ export interface Document {
   notes?: string;
   rejectionReason?: string;
   documentNumber?: string;
+  roleCatalogId?: string;
+  roleCatalog?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   createdAt: string;
   updatedAt: string;
   candidate: {
@@ -95,6 +101,12 @@ export interface CandidateProjectDocumentSummary {
     verificationStatus: string;
     uploadedAt: string;
     verifiedAt?: string;
+    roleCatalogId?: string;
+    roleCatalog?: {
+      id: string;
+      name: string;
+      label: string;
+    };
   }[];
 }
 
@@ -120,6 +132,7 @@ export interface CreateDocumentRequest {
   expiryDate?: string;
   documentNumber?: string;
   notes?: string;
+  roleCatalogId?: string;
 }
 
 export interface UpdateDocumentRequest {
@@ -130,10 +143,12 @@ export interface UpdateDocumentRequest {
   expiryDate?: string;
   documentNumber?: string;
   notes?: string;
+  roleCatalogId?: string;
 }
 
 export interface VerifyDocumentRequest {
   candidateProjectMapId: string;
+  roleCatalogId?: string;
   status: "verified" | "rejected";
   notes?: string;
   rejectionReason?: string;
@@ -141,6 +156,7 @@ export interface VerifyDocumentRequest {
 
 export interface RequestResubmissionRequest {
   candidateProjectMapId: string;
+  roleCatalogId?: string;
   reason: string;
 }
 

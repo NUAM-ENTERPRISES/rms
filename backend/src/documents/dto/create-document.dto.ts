@@ -80,4 +80,12 @@ export class CreateDocumentDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Role Catalog ID (only for resume)',
+    example: 'rc_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
 }

@@ -18,6 +18,7 @@ import {
 } from './types';
 import {
   DOCUMENT_STATUS,
+  DOCUMENT_TYPE,
   DOCUMENT_TYPE_META,
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
@@ -87,6 +88,10 @@ export class DocumentsService {
           : null,
         documentNumber: createDocumentDto.documentNumber,
         notes: createDocumentDto.notes,
+        roleCatalogId:
+          createDocumentDto.docType === DOCUMENT_TYPE.RESUME
+            ? createDocumentDto.roleCatalogId
+            : null,
         uploadedBy: userId,
         status: DOCUMENT_STATUS.PENDING,
       },
@@ -101,6 +106,7 @@ export class DocumentsService {
             email: true,
           },
         },
+        roleCatalog: true,
         verifications: {
           include: {
             candidateProjectMap: {
@@ -172,6 +178,7 @@ export class DocumentsService {
               email: true,
             },
           },
+          roleCatalog: true,
           verifications: {
             include: {
               candidateProjectMap: {
@@ -219,6 +226,7 @@ export class DocumentsService {
             email: true,
           },
         },
+        roleCatalog: true,
         verifications: {
           include: {
             candidateProjectMap: {
@@ -259,6 +267,8 @@ export class DocumentsService {
     }
 
     // Update document
+    const docType = updateDocumentDto.docType || existingDocument.docType;
+
     const document = await this.prisma.document.update({
       where: { id },
       data: {
@@ -271,6 +281,10 @@ export class DocumentsService {
           : undefined,
         documentNumber: updateDocumentDto.documentNumber,
         notes: updateDocumentDto.notes,
+        roleCatalogId:
+          docType === DOCUMENT_TYPE.RESUME
+            ? updateDocumentDto.roleCatalogId
+            : null,
       },
       include: {
         candidate: {
@@ -283,6 +297,7 @@ export class DocumentsService {
             email: true,
           },
         },
+        roleCatalog: true,
         verifications: {
           include: {
             candidateProjectMap: {
@@ -389,6 +404,7 @@ export class DocumentsService {
           data: {
             candidateProjectMapId: verifyDto.candidateProjectMapId,
             documentId: documentId,
+            roleCatalogId: verifyDto.roleCatalogId,
             status: verifyDto.status,
             notes: verifyDto.notes,
             rejectionReason: verifyDto.rejectionReason,
@@ -399,6 +415,7 @@ export class DocumentsService {
         updatedVerification = await tx.candidateProjectDocumentVerification.update({
           where: { id: verification.id },
           data: {
+            roleCatalogId: verifyDto.roleCatalogId,
             status: verifyDto.status,
             notes: verifyDto.notes,
             rejectionReason: verifyDto.rejectionReason,
@@ -503,6 +520,7 @@ export class DocumentsService {
           data: {
             candidateProjectMapId: requestDto.candidateProjectMapId,
             documentId: documentId,
+            roleCatalogId: requestDto.roleCatalogId,
             status: DOCUMENT_STATUS.RESUBMISSION_REQUIRED,
             resubmissionRequested: true,
             rejectionReason: requestDto.reason,
@@ -512,6 +530,7 @@ export class DocumentsService {
         updatedVerification = await tx.candidateProjectDocumentVerification.update({
           where: { id: updatedVerification.id },
           data: {
+            roleCatalogId: requestDto.roleCatalogId,
             status: DOCUMENT_STATUS.RESUBMISSION_REQUIRED,
             resubmissionRequested: true,
             rejectionReason: requestDto.reason,
@@ -569,7 +588,11 @@ export class DocumentsService {
           },
           documentVerifications: {
             include: {
-              document: true,
+              document: {
+                include: {
+                  roleCatalog: true,
+                },
+              },
               verificationHistory: {
                 where: {
                   action: 'verified',
@@ -625,8 +648,10 @@ export class DocumentsService {
         fileName: v.document.fileName,
         status: v.document.status,
         verificationStatus: v.status,
+        roleCatalogId: v.document.roleCatalogId,
+        roleCatalog: v.document.roleCatalog,
         uploadedAt: v.document.createdAt,
-        verifiedAt: v.verificationHistory[0]?.performedAt || null,
+        verifiedAt: v.verificationHistory[0]?.performedAt ?? null,
       })),
     };
   }
@@ -803,7 +828,19 @@ export class DocumentsService {
               client: { select: { name: true } },
             },
           },
-          roleNeeded: { select: { id: true, designation: true } },
+          roleNeeded: {
+            select: {
+              id: true,
+              designation: true,
+              roleCatalog: {
+                select: {
+                  id: true,
+                  name: true,
+                  label: true,
+                },
+              },
+            },
+          },
           recruiter: { select: { id: true, name: true, email: true } },
           mainStatus: true,
           subStatus: true,
@@ -818,6 +855,7 @@ export class DocumentsService {
                   status: true,
                   uploadedBy: true,
                   createdAt: true,
+                  roleCatalog: true,
                 },
               },
             },
@@ -944,6 +982,13 @@ export class DocumentsService {
           select: {
             id: true,
             designation: true,
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+              },
+            },
           },
         },
 
@@ -1006,6 +1051,19 @@ export class DocumentsService {
             id: true,
             name: true,
             email: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            id: true,
+            designation: true,
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+              },
+            },
           },
         },
       },
@@ -1154,6 +1212,7 @@ export class DocumentsService {
   async reuseDocument(
     documentId: string,
     projectId: string,
+    roleCatalogId: string | undefined,
     userId: string,
   ): Promise<any> {
     // Check if document exists
@@ -1192,11 +1251,12 @@ export class DocumentsService {
         where: {
           candidateProjectMapId: candidateProject.id,
           documentId,
+          roleCatalogId,
         },
       });
 
     if (existingVerification) {
-      throw new BadRequestException('Document already linked to this project');
+      throw new BadRequestException('Document already linked to this project and role');
     }
 
     // Create document verification record
@@ -1205,6 +1265,7 @@ export class DocumentsService {
         data: {
           candidateProjectMapId: candidateProject.id,
           documentId,
+          roleCatalogId,
           status: 'pending',
         },
       });
@@ -1470,6 +1531,7 @@ async getVerifiedOrRejectedList() {
               fileUrl: true,
               status: true,
               createdAt: true,
+              roleCatalog: true,
             },
           },
           candidateProjectMap: {
@@ -1482,6 +1544,19 @@ async getVerifiedOrRejectedList() {
               },
               recruiter: {
                 select: { id: true, name: true },
+              },
+              roleNeeded: {
+                select: {
+                  id: true,
+                  designation: true,
+                  roleCatalog: {
+                    select: {
+                      id: true,
+                      name: true,
+                      label: true,
+                    },
+                  },
+                },
               },
             },
           },
