@@ -61,6 +61,7 @@ const hasAssignmentData = (
 
 interface ProjectCandidatesBoardProps {
   projectId: string;
+  project?: any;
   nominatedCandidates: CandidateRecord[];
   isLoadingNominated: boolean;
   searchTerm: string;
@@ -127,21 +128,31 @@ const buildAssignmentInfo = (
   );
 
   const isAssigned =
-    Boolean(assignmentFromCandidate || assignmentFromManager) ||
-    assignedIds.has(candidateId);
+    Boolean(
+      assignmentFromCandidate ||
+        assignmentFromManager ||
+        candidate.projectSubStatus ||
+        candidate.projectMainStatus
+    ) || assignedIds.has(candidateId);
 
   const subStatusLabel =
     assignmentFromCandidate?.subStatus?.label ||
-    assignmentFromManager?.subStatus?.label;
+    assignmentFromManager?.subStatus?.label ||
+    candidate.projectSubStatus?.label;
   const subStatusName =
     assignmentFromCandidate?.subStatus?.name ||
-    assignmentFromManager?.subStatus?.name;
+    assignmentFromManager?.subStatus?.name ||
+    candidate.projectSubStatus?.name ||
+    candidate.projectSubStatus?.statusName;
   const currentProjectStatus =
     assignmentFromCandidate?.currentProjectStatus?.statusName ||
-    assignmentFromManager?.currentProjectStatus?.statusName;
+    assignmentFromManager?.currentProjectStatus?.statusName ||
+    candidate.currentProjectStatus?.statusName ||
+    candidate.projectStatus?.statusName;
   const mainStatus =
     assignmentFromCandidate?.mainStatus?.name ||
-    assignmentFromManager?.mainStatus?.name;
+    assignmentFromManager?.mainStatus?.name ||
+    candidate.projectMainStatus?.name;
 
   const projectStatusToShow = isAssigned
     ? subStatusLabel ||
@@ -174,13 +185,18 @@ const buildAssignmentInfo = (
   // Skip document verification only when the project indicates direct
   // screening (sub-status or main-status contains 'screening') AND
   // the backend flag `isSendedForDocumentVerification` is explicitly false.
+  // We also check if the flag is missing but the status clearly indicates screening.
   const shouldSkipDocumentVerification = Boolean(
-    assignmentFromCandidate &&
-      assignmentFromCandidate.isSendedForDocumentVerification === false &&
-      (assignmentFromCandidate.subStatus?.name?.toLowerCase().includes("screening") ||
-        assignmentFromCandidate.subStatus?.statusName?.toLowerCase().includes("screening") ||
-        assignmentFromCandidate.mainStatus?.name?.toLowerCase().includes("screening") ||
-        assignmentFromCandidate.currentProjectStatus?.statusName?.toLowerCase().includes("screening"))
+    (assignmentFromCandidate?.isSendedForDocumentVerification === false ||
+      candidate.isSendedForDocumentVerification === false ||
+      ((assignmentFromCandidate?.isSendedForDocumentVerification === undefined &&
+        candidate.isSendedForDocumentVerification === undefined) &&
+        (subStatusName?.toLowerCase().includes("screening") ||
+          mainStatus?.toLowerCase().includes("screening") ||
+          currentProjectStatus?.toLowerCase().includes("screening")))) &&
+      (subStatusName?.toLowerCase().includes("screening") ||
+        currentProjectStatus?.toLowerCase().includes("screening") ||
+        mainStatus?.toLowerCase().includes("screening"))
   );
 
   return {
@@ -195,6 +211,7 @@ const buildAssignmentInfo = (
 
 const ProjectCandidatesBoard = ({
   projectId,
+  project,
   nominatedCandidates,
   isLoadingNominated,
   searchTerm,
@@ -343,13 +360,29 @@ const ProjectCandidatesBoard = ({
     }
 
     return sanitizedNominated.map((candidate) => {
+      const assignmentInfo = buildAssignmentInfo(
+        candidate,
+        projectId,
+        managerAssignments,
+        assignedToProjectIds
+      );
+
       const candidateId = candidate.candidateId || candidate.id;
       if (!candidateId) return null;
+
+      // Ensure candidate has project info for document requirements if missing
+      const candidateWithProject = {
+        ...candidate,
+        project: candidate.project || project
+      };
 
       const subStatusName =
         candidate.projectSubStatus?.name ||
         candidate.projectSubStatus?.statusName ||
         "";
+      
+      const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
+
       const isVerificationInProgress =
         subStatusName === "verification_in_progress_document";
       const showVerifyButton = subStatusName === "nominated_initial";
@@ -361,7 +394,7 @@ const ProjectCandidatesBoard = ({
       return (
         <CandidateCard
           key={`nominated-${candidateId}`}
-          candidate={candidate}
+          candidate={candidateWithProject}
           projectId={projectId}
           isRecruiter={isRecruiter}
           onView={() => onViewCandidate(candidateId)}
@@ -385,7 +418,7 @@ const ProjectCandidatesBoard = ({
             candidate.matchScore !== undefined && candidate.matchScore !== null
           }
           matchScore={candidate.matchScore}
-          showVerifyButton={showVerifyButton}
+          showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
           onVerify={() =>
             onVerifyCandidate(
               candidateId,
@@ -398,6 +431,10 @@ const ProjectCandidatesBoard = ({
               id,
               `${candidate.firstName} ${candidate.lastName}`
             )
+          }
+          showSkipDocumentVerification={shouldSkipDocVerification}
+          skipDocumentVerificationMessage={
+            "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
           }
           showInterviewButton={showInterviewButton}
           onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
@@ -438,6 +475,10 @@ const ProjectCandidatesBoard = ({
       );
 
       const sanitized = sanitizeCandidate(candidate, hideContactInfo);
+      const candidateWithProject = {
+        ...sanitized,
+        project: sanitized.project || project
+      };
 
       const actions = !assignmentInfo.isAssigned
         ? [
@@ -456,6 +497,9 @@ const ProjectCandidatesBoard = ({
 
       const showVerifyButton =
         assignmentInfo.isAssigned && assignmentInfo.isNominated;
+      
+      const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
+
       // Show the interview button for candidates whose project sub-status
       // is documents_verified even if they're not yet assigned to the project.
       const showInterviewButton =
@@ -475,7 +519,7 @@ const ProjectCandidatesBoard = ({
       return (
         <CandidateCard
           key={`eligible-${assignmentInfo.candidateId}`}
-          candidate={sanitized}
+          candidate={candidateWithProject}
           projectId={projectId}
           isRecruiter={isRecruiter}
           onView={() => onViewCandidate(assignmentInfo.candidateId)}
@@ -497,7 +541,7 @@ const ProjectCandidatesBoard = ({
           projectStatus={assignmentInfo.projectStatus}
           showMatchScore
           matchScore={candidate.matchScore}
-          showVerifyButton={showVerifyButton}
+          showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
           onVerify={() =>
             onVerifyCandidate(
               assignmentInfo.candidateId,
@@ -511,12 +555,15 @@ const ProjectCandidatesBoard = ({
               `${candidate.firstName} ${candidate.lastName}`
             )
           }
+          showSkipDocumentVerification={shouldSkipDocVerification}
+          skipDocumentVerificationMessage={
+            "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
+          }
           showInterviewButton={showInterviewButton}
           onSendForInterview={(id) =>
             onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
           }
-          isAlreadyInProject={assignmentInfo.isAssigned}
-        />
+          isAlreadyInProject={assignmentInfo.isAssigned}          showDocumentStatus={false}        />
       );
     });
   };
@@ -555,6 +602,10 @@ const ProjectCandidatesBoard = ({
       );
 
       const sanitized = sanitizeCandidate(candidate, hideContactInfo);
+      const candidateWithProject = {
+        ...sanitized,
+        project: sanitized.project || project
+      };
       const actions = !assignmentInfo.isAssigned
         ? [
             ...(requiredScreening
@@ -590,7 +641,7 @@ const ProjectCandidatesBoard = ({
       return (
         <CandidateCard
           key={`all-${assignmentInfo.candidateId}`}
-          candidate={sanitized}
+          candidate={candidateWithProject}
           projectId={projectId}
           isRecruiter={isRecruiter}
           onView={() => onViewCandidate(assignmentInfo.candidateId)}
@@ -633,6 +684,7 @@ const ProjectCandidatesBoard = ({
             onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
           }
           isAlreadyInProject={assignmentInfo.isAssigned}
+          showDocumentStatus={assignmentInfo.isAssigned}
         />
       );
     });

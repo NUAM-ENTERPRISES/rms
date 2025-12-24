@@ -44,6 +44,17 @@ type CandidateProjectLink = {
    * but document verification was intentionally skipped (direct screening).
    */
   isSendedForDocumentVerification?: boolean;
+  documentVerifications?: Array<{
+    id: string;
+    status: string;
+    document: {
+      id: string;
+      docType: string;
+      fileName: string;
+      fileUrl: string;
+      status: string;
+    };
+  }>;
 };
 
 export interface CandidateRecord {
@@ -58,10 +69,16 @@ export interface CandidateRecord {
   countryCode?: string;
   currentStatus?: StatusReference | string;
   projectSubStatus?: StatusReference;
+  projectMainStatus?: StatusReference;
   currentProjectStatus?: { statusName?: string };
   projectStatus?: { statusName?: string };
   currentEmployer?: string;
   expectedSalary?: number;
+  /**
+   * Flag set by the backend when the candidate has been linked to a project
+   * but document verification was intentionally skipped (direct screening).
+   */
+  isSendedForDocumentVerification?: boolean;
   matchScore?:
     | number
     | {
@@ -128,6 +145,8 @@ interface CandidateCardProps {
   onSendForInterview?: (candidateId: string) => void;
   isAlreadyInProject?: boolean;
   className?: string;
+  /** Whether to show the document verification status icon and tooltip */
+  showDocumentStatus?: boolean;
   /** When true, hide the verify button and show an alert icon with tooltip */
   showSkipDocumentVerification?: boolean;
   skipDocumentVerificationMessage?: string;
@@ -151,6 +170,7 @@ const CandidateCard = memo(function CandidateCard({
   onAssignToProject,
   isAlreadyInProject = false,
   className,
+  showDocumentStatus = true,
   showSkipDocumentVerification = false,
   skipDocumentVerificationMessage,
 }: CandidateCardProps) {
@@ -162,11 +182,22 @@ const CandidateCard = memo(function CandidateCard({
 
   // Document verification logic
   const requiredDocs = candidate.project?.documentRequirements || [];
-  const uploadedDocs = candidate.documentVerifications || [];
+  
+  // Try to find project-specific document verifications if projectId is provided
+  const projectLink = propProjectId 
+    ? candidate.projects?.find(p => p.projectId === propProjectId)
+    : undefined;
+    
+  const uploadedDocs = [
+    ...(candidate.documentVerifications || []),
+    ...(projectLink?.documentVerifications || [])
+  ];
   const isNoneUploaded = uploadedDocs.length === 0;
   
   const docStatusList = requiredDocs.map(req => {
-    const uploaded = uploadedDocs.find(u => u.document.docType === req.docType);
+    const uploaded = uploadedDocs.find(u => 
+      u.document?.docType?.toLowerCase() === req.docType?.toLowerCase()
+    );
     return {
       ...req,
       isUploaded: !!uploaded,
@@ -587,7 +618,7 @@ const CandidateCard = memo(function CandidateCard({
           )}
 
           {/* Document Status Icon */}
-          {(requiredDocs.length > 0 || uploadedDocs.length > 0) && (
+          {showDocumentStatus && (requiredDocs.length > 0 || uploadedDocs.length > 0) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div 
@@ -652,6 +683,26 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipContent>
             </Tooltip>
           )}
+
+          {/* Skip Document Verification Icon */}
+          {showSkipDocumentVerification && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className="flex items-center justify-center w-6 h-6 rounded-full bg-red-50 text-red-600 cursor-help"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <AlertTriangle className="h-4 w-4" aria-hidden />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white text-red-600 border border-red-100 shadow-sm max-w-xs p-2 rounded-md">
+                <p className="text-xs text-red-600">
+                  {skipDocumentVerificationMessage ||
+                    "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Detail pills */}
@@ -706,29 +757,7 @@ const CandidateCard = memo(function CandidateCard({
           </div>
         )}
 
-        {showSkipDocumentVerification ? (
-          <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-7 w-7 rounded-full flex items-center justify-center text-red-600 bg-red-50"
-                  aria-label="Skip document verification info"
-                >
-                  <AlertTriangle className="h-4 w-4" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white text-red-600 border border-red-100 shadow-sm max-w-xs p-2 rounded-md">
-                <p className="text-xs text-red-600">
-                  {skipDocumentVerificationMessage ||
-                    "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        ) : (
-          isRecruiter && showVerifyButton &&
+        {isRecruiter && showVerifyButton &&
           onVerify && !isAllUploaded && projectStatus !== "Verification In Progress" && (
             <div className="flex items-center justify-end border-t border-slate-100 pt-2">
               <Tooltip>
@@ -757,7 +786,7 @@ const CandidateCard = memo(function CandidateCard({
               </Tooltip>
             </div>
           )
-        )}
+        }
 
         {showInterviewButton && onSendForInterview && (
           <div className="flex items-center justify-end border-t border-slate-100 pt-2">

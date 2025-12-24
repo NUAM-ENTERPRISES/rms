@@ -333,6 +333,7 @@ export default function EligibleCandidatesTab({
                   isAlreadyInProject={isAssignedToProject}
                   projectStatus={projectStatusToShow}
                   className="hover:scale-100"
+                  showDocumentStatus={false}
                 />
               );
             })}

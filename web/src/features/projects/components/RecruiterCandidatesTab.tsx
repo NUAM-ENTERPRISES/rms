@@ -626,6 +626,7 @@ export default function RecruiterCandidatesTab({
                     }
                     isAlreadyInProject={isAssignedToProject}
                     className="hover:scale-100"
+                    showDocumentStatus={isAssignedToProject}
                   />
                 );
               })}

@@ -673,6 +673,7 @@ export default function ProjectDetailPage() {
             ) : (
               <ProjectCandidatesBoard
                 projectId={projectId!}
+                project={project}
                 nominatedCandidates={projectCandidates}
                 isLoadingNominated={isLoadingCandidates}
                 searchTerm={searchTerm}
