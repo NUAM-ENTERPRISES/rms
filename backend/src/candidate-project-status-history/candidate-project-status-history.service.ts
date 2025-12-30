@@ -20,6 +20,7 @@ export class CandidateProjectStatusHistoryService {
             countryCode: true,
             profileImage: true,
             dateOfBirth: true,
+            gender: true,
             teamId: true,
             currentStatusId: true,
             currentStatus: { select: { id: true, statusName: true } },

@@ -10,6 +10,7 @@ import {
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Gender } from './create-candidate.dto';
 
 export class QueryCandidatesDto {
   @ApiPropertyOptional({
@@ -45,6 +46,15 @@ export class QueryCandidatesDto {
   @IsOptional()
   @IsEnum(['manual', 'meta', 'referral'])
   source?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by gender',
+    enum: Gender,
+    example: Gender.MALE,
+  })
+  @IsOptional()
+  @IsEnum(Gender)
+  gender?: Gender;
 
   @ApiPropertyOptional({
     description: 'Filter by team ID',

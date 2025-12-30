@@ -1044,6 +1044,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     <span className="text-slate-600">{candidate.countryCode} {candidate.mobileNumber}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-slate-600">{candidate.gender ? candidate.gender.charAt(0).toUpperCase() + candidate.gender.slice(1).toLowerCase() : "N/A"}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
                     <Award className="h-4 w-4 text-muted-foreground" />
                     <span className="text-slate-600">{candidate.totalExperience || candidate.experience || 0} Years Experience</span>
                   </div>

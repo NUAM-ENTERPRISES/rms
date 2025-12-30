@@ -34,6 +34,7 @@ export interface Candidate {
   email?: string;
   profileImage?: string;
   source: string;
+  gender?: string;
   dateOfBirth: string; // Now mandatory
   currentStatus: {
     id: number;

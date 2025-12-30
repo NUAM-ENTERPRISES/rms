@@ -282,6 +282,7 @@ model Candidate {
   email                String?
   source               String                         @default("manual")
   dateOfBirth          DateTime
+  gender               Gender?
   currentStatusId      Int?
   currentStatus        CandidateStatus?               @relation(fields: [currentStatusId], references: [id])
   experience           Int?
@@ -1238,6 +1239,12 @@ enum RelationshipType {
   PARTNERSHIP
   DIRECT_CLIENT
   EXTERNAL_SOURCE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum QualificationLevel {

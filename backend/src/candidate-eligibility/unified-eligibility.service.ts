@@ -122,6 +122,14 @@ export class UnifiedEligibilityService {
       },
     };
 
+    // Check gender compatibility (Mandatory if specified)
+    const genderCheck = this.checkGenderEligibility(candidate, roleNeeded);
+    if (!genderCheck.isEligible) {
+      result.isEligible = false;
+      result.reasons.push(...genderCheck.reasons);
+      result.missingRequirements.push(...genderCheck.missingRequirements);
+    }
+
     // Check education requirements (35% weight)
     const educationCheck = await this.checkEducationEligibility(
       candidate,
@@ -174,6 +182,48 @@ export class UnifiedEligibilityService {
 
     // Round final score
     result.score = Math.round(result.score);
+
+    return result;
+  }
+
+  /**
+   * Check gender compatibility
+   */
+  private checkGenderEligibility(
+    candidate: any,
+    roleNeeded: any,
+  ): {
+    isEligible: boolean;
+    reasons: string[];
+    missingRequirements: string[];
+  } {
+    const result: {
+      isEligible: boolean;
+      reasons: string[];
+      missingRequirements: string[];
+    } = {
+      isEligible: true,
+      reasons: [],
+      missingRequirements: [],
+    };
+
+    if (
+      roleNeeded.genderRequirement &&
+      roleNeeded.genderRequirement.toLowerCase() !== 'all'
+    ) {
+      const candidateGender = candidate.gender?.toLowerCase();
+      const requiredGender = roleNeeded.genderRequirement.toLowerCase();
+
+      if (candidateGender !== requiredGender) {
+        result.isEligible = false;
+        result.reasons.push(
+          `Gender mismatch: Role requires ${requiredGender}, candidate is ${candidateGender || 'not specified'}`,
+        );
+        result.missingRequirements.push(`Gender: ${requiredGender}`);
+      } else {
+        result.reasons.push(`Gender match: ${candidateGender}`);
+      }
+    }
 
     return result;
   }

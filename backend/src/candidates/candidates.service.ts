@@ -204,6 +204,7 @@ export class CandidatesService {
         profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
         dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
+        gender: createCandidateDto.gender,
         currentStatusId: defaultStatusId,
         totalExperience: totalExperience,
         currentSalary: createCandidateDto.currentSalary,
@@ -364,6 +365,7 @@ export class CandidatesService {
       currentStatus,
       status,
       source,
+      gender,
       teamId,
       assignedTo,
       minExperience,
@@ -410,6 +412,10 @@ export class CandidatesService {
 
     if (source) {
       where.source = source;
+    }
+
+    if (gender) {
+      where.gender = gender;
     }
 
     if (teamId) {
@@ -741,6 +747,7 @@ export class CandidatesService {
       limit?: number;
       search?: string;
       currentStatus?: string;
+      gender?: string;
     },
   ): Promise<{
     candidates: any[];
@@ -751,7 +758,7 @@ export class CandidatesService {
       totalPages: number;
     };
   }> {
-    const { page = 1, limit = 10, search, currentStatus } = query;
+    const { page = 1, limit = 10, search, currentStatus, gender } = query;
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -777,6 +784,11 @@ export class CandidatesService {
     // Add status filter
     if (currentStatus) {
       where.currentStatusId = parseInt(currentStatus);
+    }
+
+    // Add gender filter
+    if (gender) {
+      where.gender = gender;
     }
 
     // Get total count
@@ -1025,6 +1037,8 @@ export class CandidatesService {
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.dateOfBirth)
       updateData.dateOfBirth = new Date(updateCandidateDto.dateOfBirth);
+    if (updateCandidateDto.gender)
+      updateData.gender = updateCandidateDto.gender;
     if (updateCandidateDto.currentStatusId !== undefined)
       updateData.currentStatusId = updateCandidateDto.currentStatusId;
     if (updateCandidateDto.totalExperience !== undefined)
@@ -1369,6 +1383,15 @@ export class CandidatesService {
    * Basic eligibility check as fallback
    */
   private basicEligibilityCheck(candidate: any, role: any): boolean {
+    // Check gender requirements
+    if (role.genderRequirement && role.genderRequirement !== 'all') {
+      const candidateGender = candidate.gender?.toLowerCase();
+      const requiredGender = role.genderRequirement.toLowerCase();
+      if (candidateGender !== requiredGender) {
+        return false;
+      }
+    }
+
     // Check experience requirements
     if (role.minExperience && candidate.totalExperience < role.minExperience) {
       return false;

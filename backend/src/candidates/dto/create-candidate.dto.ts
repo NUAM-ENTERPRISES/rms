@@ -18,6 +18,12 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { CreateWorkExperienceDto } from './create-work-experience.dto';
 
+export enum Gender {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+  OTHER = 'OTHER',
+}
+
 export class CreateCandidateDto {
   @ApiProperty({
     description: 'Candidate first name',
@@ -89,6 +95,15 @@ export class CreateCandidateDto {
   })
   @IsDateString()
   dateOfBirth: string;
+
+  @ApiPropertyOptional({
+    description: 'Gender of the candidate',
+    enum: Gender,
+    example: Gender.MALE,
+  })
+  @IsOptional()
+  @IsEnum(Gender)
+  gender?: Gender;
 
   @ApiPropertyOptional({
     description: 'Candidate current status ID (from candidate_status table)',

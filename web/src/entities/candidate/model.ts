@@ -9,6 +9,7 @@ export interface Candidate {
   contact: string;
   email?: string;
   source: string;
+  gender?: string;
   dateOfBirth?: string;
   currentStatus: string;
   experience?: number;

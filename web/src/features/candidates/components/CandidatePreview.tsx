@@ -28,6 +28,7 @@ interface CandidatePreviewProps {
     contact: string;
     email?: string;
     source: string;
+    gender: string;
     dateOfBirth: string;
     highestEducation?: string;
     university?: string;
@@ -122,6 +123,14 @@ export default function CandidatePreview({
                 </label>
                 <Badge variant="outline" className="mt-1 text-xs text-blue-600 border-blue-600">
                   {candidateData.source}
+                </Badge>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Gender
+                </label>
+                <Badge variant="outline" className="mt-1 text-xs text-indigo-600 border-indigo-600 lowercase capitalize">
+                  {candidateData.gender}
                 </Badge>
               </div>
             </div>

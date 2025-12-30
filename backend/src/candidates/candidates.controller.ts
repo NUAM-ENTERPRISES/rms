@@ -72,6 +72,7 @@ export class CandidatesController {
             name: { type: 'string', example: 'John Doe' },
             contact: { type: 'string', example: '+1234567890' },
             email: { type: 'string', example: 'john.doe@example.com' },
+            gender: { type: 'string', example: 'MALE' },
             currentStatusId: { type: 'number', example: 1 },
             experience: { type: 'number', example: 5 },
             skills: { type: 'array', items: { type: 'string' } },

@@ -42,6 +42,7 @@ const updateCandidateSchema = z.object({
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "referral"]),
+  gender: z.any(),
   dateOfBirth: z.string().optional(),
 
   teamId: z
@@ -82,6 +83,7 @@ export default function EditCandidatePage() {
       mobileNumber: "",
       email: "",
       source: "manual",
+      gender: "" as any,
       dateOfBirth: "",
       teamId: "none",
     },
@@ -112,6 +114,14 @@ export default function EditCandidatePage() {
         candidate.mobileNumber ||
         parseContact(candidate.contact || "").mobileNumber;
 
+      // Map gender to uppercase and handle short forms (M/F)
+      let genderValue = String(candidate.gender || "").trim().toUpperCase();
+      if (genderValue === "M") genderValue = "MALE";
+      if (genderValue === "F") genderValue = "FEMALE";
+      if (!["MALE", "FEMALE", "OTHER"].includes(genderValue)) {
+        genderValue = ""; // Reset if invalid
+      }
+
       form.reset({
         name: candidate.name || `${candidate.firstName} ${candidate.lastName}`,
         countryCode,
@@ -119,6 +129,7 @@ export default function EditCandidatePage() {
         email: candidate.email || "",
         source:
           (candidate.source as "manual" | "meta" | "referral") || "manual",
+        gender: genderValue,
         dateOfBirth: candidate.dateOfBirth
           ? new Date(candidate.dateOfBirth).toISOString().split("T")[0]
           : "",
@@ -201,6 +212,7 @@ export default function EditCandidatePage() {
         countryCode: data.countryCode,
         mobileNumber: data.mobileNumber,
         source: data.source || "manual",
+        gender: data.gender,
       };
 
       // Split the single 'name' field into firstName / lastName
@@ -261,7 +273,7 @@ export default function EditCandidatePage() {
             Edit Candidate
           </h1>
           <p className="text-slate-600 mt-2">
-            Update candidate information and documents.
+            Update candidate information and profile details.
           </p>
         </div>
 
@@ -307,7 +319,7 @@ export default function EditCandidatePage() {
                     />
                     {form.formState.errors.name && (
                       <p className="text-sm text-red-600">
-                        {form.formState.errors.name.message}
+                        {typeof form.formState.errors.name?.message === 'string' ? form.formState.errors.name.message : 'Invalid name'}
                       </p>
                     )}
                   </div>
@@ -352,7 +364,7 @@ export default function EditCandidatePage() {
                     </div>
                     {form.formState.errors.mobileNumber && (
                       <p className="text-sm text-red-600">
-                        {form.formState.errors.mobileNumber.message}
+                        {typeof form.formState.errors.mobileNumber?.message === 'string' ? form.formState.errors.mobileNumber.message : 'Invalid mobile number'}
                       </p>
                     )}
                   </div>
@@ -377,7 +389,7 @@ export default function EditCandidatePage() {
                     </div>
                     {form.formState.errors.email && (
                       <p className="text-sm text-red-600">
-                        {form.formState.errors.email.message}
+                        {typeof form.formState.errors.email?.message === 'string' ? form.formState.errors.email.message : 'Invalid email'}
                       </p>
                     )}
                   </div>
@@ -399,6 +411,38 @@ export default function EditCandidatePage() {
                         className="h-11 pl-10 bg-white border-slate-200"
                       />
                     </div>
+                  </div>
+
+                  {/* Gender */}
+                  <div className="space-y-2">
+                    <FormLabel className="text-slate-700 font-medium">
+                      Gender *
+                    </FormLabel>
+                    <Controller
+                      name="gender"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Select
+                          key={candidate?.id ? `gender-${field.value}` : "loading"}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="h-11 bg-white border-slate-200">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="MALE">Male</SelectItem>
+                            <SelectItem value="FEMALE">Female</SelectItem>
+                            <SelectItem value="OTHER">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {form.formState.errors.gender && (
+                      <p className="text-sm text-red-600">
+                        {typeof form.formState.errors.gender?.message === 'string' ? form.formState.errors.gender.message : 'Invalid gender'}
+                      </p>
+                    )}
                   </div>
 
                   {/* Source */}

@@ -598,6 +598,34 @@ export const projectsApi = baseApi.injectEndpoints({
       }),
     }),
 
+    // Check candidate eligibility for a project
+    checkCandidateEligibility: builder.query<
+      ApiResponse<{
+        candidateId: string;
+        candidateName: string;
+        projectId: string;
+        projectTitle: string;
+        isEligible: boolean;
+        roleEligibility: Array<{
+          roleId: string;
+          designation: string;
+          isEligible: boolean;
+          flags: {
+            gender: boolean;
+            age: boolean;
+            experience: boolean;
+          };
+          reasons: string[];
+        }>;
+      }>,
+      { candidateId: string; projectId: string }
+    >({
+      query: ({ candidateId, projectId }) => ({
+        url: "/candidate-projects/eligibility-check",
+        params: { candidateId, projectId },
+      }),
+    }),
+
     // Get role departments (includes roles when includeRoles=true)
     getRoleDepartments: builder.query<
       ApiResponse<{
@@ -641,5 +669,6 @@ export const {
   useGetNominatedCandidatesQuery,
   useGetCandidateProjectStatusesQuery,
   useGetProjectRoleCatalogQuery,
+  useCheckCandidateEligibilityQuery,
   useGetRoleDepartmentsQuery,
 } = projectsApi;

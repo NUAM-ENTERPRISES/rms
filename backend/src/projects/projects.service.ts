@@ -464,6 +464,7 @@ export class ProjectsService {
                 countryCode: true,
                 mobileNumber: true,
                 email: true,
+                gender: true,
                 currentStatus: true,
               },
             },
@@ -549,6 +550,7 @@ export class ProjectsService {
                 countryCode: true,
                 mobileNumber: true,
                 email: true,
+                gender: true,
                 currentStatus: true,
               },
             },
@@ -886,23 +888,34 @@ export class ProjectsService {
             },
           });
         } else {
-          // Create new, ensure no duplicate docType for project
-          const duplicate = await this.prisma.documentRequirement.findUnique({
+          // Upsert: update if exists, create if not
+          const existing = await this.prisma.documentRequirement.findUnique({
             where: { projectId_docType: { projectId: id, docType: dto.docType } },
           });
-          if (duplicate) {
-            throw new BadRequestException(
-              `Document requirement already exists for this project: ${dto.docType}`,
-            );
+          
+          if (existing) {
+            // Update existing document requirement
+            await this.prisma.documentRequirement.update({
+              where: { id: existing.id },
+              data: {
+                mandatory:
+                  dto.mandatory !== undefined ? dto.mandatory : existing.mandatory,
+                description:
+                  dto.description !== undefined ? dto.description : existing.description,
+                updatedAt: new Date(),
+              },
+            });
+          } else {
+            // Create new document requirement
+            await this.prisma.documentRequirement.create({
+              data: {
+                projectId: id,
+                docType: dto.docType,
+                mandatory: dto.mandatory,
+                description: dto.description,
+              },
+            });
           }
-          await this.prisma.documentRequirement.create({
-            data: {
-              projectId: id,
-              docType: dto.docType,
-              mandatory: dto.mandatory,
-              description: dto.description,
-            },
-          });
         }
       }
     }
@@ -1252,9 +1265,16 @@ export class ProjectsService {
               select: {
                 id: true,
                 roleCatalogId: true,
+                companyName: true,
+                jobTitle: true,
                 startDate: true,
                 endDate: true,
                 isCurrent: true,
+                description: true,
+                salary: true,
+                location: true,
+                skills: true,
+                achievements: true,
               },
             },
             currentStatus: {
@@ -1444,9 +1464,19 @@ export class ProjectsService {
         email: c.email,
         countryCode: c.countryCode,
         mobileNumber: c.mobileNumber,
+        dateOfBirth: c.dateOfBirth,
+        gender: c.gender,
         experience: c.totalExperience ?? c.experience,
         skills: this.parseJsonField(c.skills),
         expectedSalary: c.expectedSalary,
+        currentEmployer: c.currentEmployer,
+        currentRole: c.currentRole,
+        currentSalary: c.currentSalary,
+        university: c.university,
+        graduationYear: c.graduationYear,
+        gpa: c.gpa,
+        highestEducation: c.highestEducation,
+        profileImage: c.profileImage,
 
         // Team
         team: c.team ? { id: c.team.id, name: c.team.name } : null,
@@ -1467,14 +1497,30 @@ export class ProjectsService {
           name: q.qualification.name,
           level: q.qualification.level,
           field: q.qualification.field,
+          university: q.university,
+          graduationYear: q.graduationYear,
+          gpa: q.gpa,
+          isCompleted: q.isCompleted,
+          notes: q.notes,
         })),
         candidateQualifications: c.qualifications.map((q) => ({
           id: q.qualification.id,
           name: q.qualification.name,
           level: q.qualification.level,
           field: q.qualification.field,
+          university: q.university,
+          graduationYear: q.graduationYear,
+          gpa: q.gpa,
+          isCompleted: q.isCompleted,
+          notes: q.notes,
         })),
         candidateExperience: c.totalExperience ?? c.experience,
+
+        // Work Experiences
+        workExperiences: c.workExperiences.map((we) => ({
+          ...we,
+          skills: this.parseJsonField(we.skills),
+        })),
 
         // Recruiter who nominated
         recruiter: assignment.recruiter,
@@ -2075,7 +2121,23 @@ export class ProjectsService {
           role.skills as string,
         );
 
-        return experienceMatch && skillsMatch;
+        // Age filter
+        const candidateAge = candidate.dateOfBirth
+          ? this.calculateAge(new Date(candidate.dateOfBirth))
+          : null;
+        const ageMatch =
+          candidateAge !== null
+            ? candidateAge >= role.minAge && candidateAge <= role.maxAge
+            : false;
+
+        // Gender filter
+        const genderMatch =
+          role.genderRequirement === 'all' ||
+          (candidate.gender &&
+            candidate.gender.toUpperCase() ===
+              role.genderRequirement.toUpperCase());
+
+        return experienceMatch && skillsMatch && ageMatch && genderMatch;
       });
     });
 
@@ -2111,6 +2173,19 @@ export class ProjectsService {
         // NOTE: intentionally do not include full roleMatches array (avoids showing all roles)
       };
     });
+  }
+
+  /**
+   * Calculate age from date of birth
+   */
+  private calculateAge(dob: Date): number {
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
   }
 
   /**
@@ -2191,10 +2266,31 @@ export class ProjectsService {
    * Calculate match score for a single role (0-100)
    */
   private calculateRoleMatchScore(candidate: any, role: any): number {
+    // Age check (Strict)
+    const candidateAge = candidate.dateOfBirth
+      ? this.calculateAge(new Date(candidate.dateOfBirth))
+      : null;
+    const ageMatch =
+      candidateAge !== null
+        ? candidateAge >= role.minAge && candidateAge <= role.maxAge
+        : false;
+
+    if (!ageMatch) return 0;
+
+    // Gender check (Strict)
+    const genderMatch =
+      role.genderRequirement === 'all' ||
+      (candidate.gender &&
+        candidate.gender.toUpperCase() ===
+          role.genderRequirement.toUpperCase());
+
+    if (!genderMatch) return 0;
+
     let roleScore = 0;
 
     // Use totalExperience (preferred) or fall back to experience field
-    const candidateExperience = candidate.totalExperience ?? candidate.experience;
+    const candidateExperience =
+      candidate.totalExperience ?? candidate.experience;
 
     // Experience scoring (40 points)
     // First, prefer role-catalog specific work experience (if candidate has workExperiences matching role.roleCatalogId)

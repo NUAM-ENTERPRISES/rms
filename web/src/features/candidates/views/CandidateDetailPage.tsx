@@ -413,6 +413,15 @@ export default function CandidateDetailPage() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                        Gender
+                      </label>
+                      <p className="text-sm flex items-center gap-2 mt-1 lowercase capitalize">
+                        <User className="h-3 w-3 text-slate-400" />
+                        {candidate.gender || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                         Experience
                       </label>
                       <p className="text-sm flex items-center gap-2 mt-1">

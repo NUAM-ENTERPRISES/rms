@@ -84,15 +84,17 @@ export class CandidateProjectsService {
     // VERIFY role if provided
     // -------------------------------
     if (roleNeededId) {
-      const roleNeeded = await this.prisma.roleNeeded.findUnique({
-        where: { id: roleNeededId },
-      });
-      if (!roleNeeded) {
-        throw new NotFoundException(`Role with ID ${roleNeededId} not found`);
+      const role = project.rolesNeeded.find((r) => r.id === roleNeededId);
+      if (!role) {
+        throw new NotFoundException(
+          `Role with ID ${roleNeededId} not found in this project`,
+        );
       }
-      if (roleNeeded.projectId !== projectId) {
-        throw new BadRequestException(`Role does not belong to this project`);
-      }
+
+      // -------------------------------
+      // VALIDATE GENDER AND AGE
+      // -------------------------------
+      this.validateCandidateForRole(candidate, role);
     }
 
     // -------------------------------
@@ -265,6 +267,11 @@ export class CandidateProjectsService {
         throw new NotFoundException(
           `Role ${roleNeededId} not found in this project`,
         );
+
+      // -------------------------------
+      // VALIDATE GENDER AND AGE
+      // -------------------------------
+      this.validateCandidateForRole(candidate, role);
     }
 
     // -------------------------------
@@ -438,7 +445,15 @@ export class CandidateProjectsService {
     // -------------------------------
     if (roleNeededId) {
       const role = project.rolesNeeded.find((r) => r.id === roleNeededId);
-      if (!role) throw new BadRequestException(`Role ${roleNeededId} does not belong to project ${projectId}`);
+      if (!role)
+        throw new BadRequestException(
+          `Role ${roleNeededId} does not belong to project ${projectId}`,
+        );
+
+      // -------------------------------
+      // VALIDATE GENDER AND AGE
+      // -------------------------------
+      this.validateCandidateForRole(candidate, role);
     }
 
     // -------------------------------
@@ -1802,6 +1817,166 @@ export class CandidateProjectsService {
             notes: 'auto assigned when project assigned',
           },
         });
+      }
+    }
+  }
+
+  /**
+   * Check candidate eligibility for a project
+   * Returns detailed eligibility report for each role in the project
+   */
+  async checkEligibility(candidateId: string, projectId: string) {
+    // 1. Fetch candidate
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        qualifications: {
+          include: { qualification: true },
+        },
+      },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // 2. Fetch project with roles
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        rolesNeeded: true,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    const age = this.calculateAge(new Date(candidate.dateOfBirth));
+    const candidateGender = candidate.gender?.toLowerCase();
+    const candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
+
+    const roleEligibility = project.rolesNeeded.map((role) => {
+      const reasons: string[] = [];
+      const flags = {
+        gender: true,
+        age: true,
+        experience: true,
+      };
+
+      // Gender Check
+      if (
+        role.genderRequirement &&
+        role.genderRequirement.toLowerCase() !== 'all'
+      ) {
+        const requiredGender = role.genderRequirement.toLowerCase();
+        if (!candidateGender) {
+          flags.gender = false;
+          reasons.push(
+            `Gender is required for this role (${role.genderRequirement}), but candidate gender is not specified.`,
+          );
+        } else if (candidateGender !== requiredGender) {
+          flags.gender = false;
+          reasons.push(
+            `Gender mismatch: Role requires ${role.genderRequirement}, but candidate is ${candidate.gender}.`,
+          );
+        }
+      }
+
+      // Age Check
+      if (age < role.minAge || age > role.maxAge) {
+        flags.age = false;
+        reasons.push(
+          `Age mismatch: Candidate is ${age} years old, but role requires ${role.minAge} to ${role.maxAge} years.`,
+        );
+      }
+
+      // Experience Check
+      if (role.minExperience !== null && candidateExp < role.minExperience) {
+        flags.experience = false;
+        reasons.push(
+          `Experience mismatch: Candidate has ${candidateExp} years, but role requires minimum ${role.minExperience} years.`,
+        );
+      }
+      if (role.maxExperience !== null && candidateExp > role.maxExperience) {
+        flags.experience = false;
+        reasons.push(
+          `Experience mismatch: Candidate has ${candidateExp} years, but role exceeds maximum ${role.maxExperience} years.`,
+        );
+      }
+
+      return {
+        roleId: role.id,
+        designation: role.designation,
+        isEligible: reasons.length === 0,
+        flags,
+        reasons,
+      };
+    });
+
+    return {
+      candidateId,
+      candidateName: `${candidate.firstName} ${candidate.lastName}`,
+      projectId,
+      projectTitle: project.title,
+      isEligible: roleEligibility.some((r) => r.isEligible),
+      roleEligibility,
+    };
+  }
+
+  /**
+   * Calculate age from date of birth
+   */
+  private calculateAge(dob: Date): number {
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
+  /**
+   * Validate candidate against role requirements (gender, age)
+   */
+  private validateCandidateForRole(candidate: any, roleNeeded: any) {
+    if (!roleNeeded) return;
+
+    // Gender check
+    if (
+      roleNeeded.genderRequirement &&
+      roleNeeded.genderRequirement.toLowerCase() !== 'all'
+    ) {
+      if (!candidate.gender) {
+        throw new BadRequestException(
+          `This candidate does not have a gender specified, but the project role requires ${roleNeeded.genderRequirement}.`,
+        );
+      }
+      const candidateGender = candidate.gender.toLowerCase();
+      const requiredGender = roleNeeded.genderRequirement.toLowerCase();
+
+      if (candidateGender !== requiredGender) {
+        throw new BadRequestException(
+          `This candidate's gender (${candidate.gender}) does not match the project role requirement (${roleNeeded.genderRequirement}).`,
+        );
+      }
+    }
+
+    // Age check
+    if (candidate.dateOfBirth) {
+      const age = this.calculateAge(new Date(candidate.dateOfBirth));
+      if (age < roleNeeded.minAge || age > roleNeeded.maxAge) {
+        throw new BadRequestException(
+          `This candidate's age (${age}) is outside the required range for this project role (${roleNeeded.minAge} to ${roleNeeded.maxAge} years).`,
+        );
+      }
+    } else {
+      // If dateOfBirth is missing but there are age requirements
+      if (roleNeeded.minAge > 0 || roleNeeded.maxAge < 100) {
+        throw new BadRequestException(
+          `Candidate date of birth is required to verify age requirements (${roleNeeded.minAge} to ${roleNeeded.maxAge} years).`,
+        );
       }
     }
   }

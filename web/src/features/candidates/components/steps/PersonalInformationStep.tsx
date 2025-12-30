@@ -31,6 +31,7 @@ type CreateCandidateFormData = {
   mobileNumber: string;
   email?: string;
   source: "manual" | "meta" | "referral";
+  gender: "MALE" | "FEMALE" | "OTHER";
   dateOfBirth: string;
   [key: string]: any;
 };
@@ -231,6 +232,37 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               {errors.dateOfBirth && (
                 <p className="text-sm text-red-600">
                   {errors.dateOfBirth.message as string}
+                </p>
+              )}
+            </div>
+
+            {/* Gender */}
+            <div className="space-y-2">
+              <Label className="text-slate-700 font-medium">
+                Gender *
+              </Label>
+              <Controller
+                name="gender"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">Male</SelectItem>
+                      <SelectItem value="FEMALE">Female</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.gender && (
+                <p className="text-sm text-red-600">
+                  {errors.gender.message as string}
                 </p>
               )}
             </div>

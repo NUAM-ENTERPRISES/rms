@@ -31,10 +31,16 @@ import {
   User,
   FileText,
   Send,
+  AlertCircle,
   UserPlus,
   Layers,
   Briefcase,
   CheckCircle2,
+  Users,
+  Utensils,
+  Home,
+  Bus,
+  GraduationCap,
 } from "lucide-react";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
@@ -866,20 +872,37 @@ export default function ProjectDetailPage() {
                     <FileText className="h-4 w-4 text-orange-600" /> Documents
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-3 pb-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {project.documentRequirements?.map((req: any, i: number) => (
-                      <span
-                        key={i}
-                        className="text-xs px-2 py-1 bg-orange-50 text-orange-700 rounded-md border border-orange-300"
-                      >
-                        {req.docType
-                          .replace(/_/g, " ")
-                          .replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                        {req.mandatory && "*"}
-                      </span>
-                    ))}
-                  </div>
+                <CardContent className="px-3 pb-3 space-y-2">
+                  {project.documentRequirements?.map((req: any, i: number) => (
+                    <div
+                      key={i}
+                      className="p-2.5 bg-orange-50/30 rounded-lg border border-orange-100/50 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                          <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">
+                            {req.docType
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                          </span>
+                        </div>
+                        {req.mandatory && (
+                          <Badge className="h-4 text-[9px] bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100 px-1.5 font-bold">
+                            REQUIRED
+                          </Badge>
+                        )}
+                      </div>
+                      {req.description && (
+                        <div className="flex items-start gap-1.5 pl-3">
+                          <AlertCircle className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                          <p className="text-[11px] text-slate-600 leading-relaxed italic">
+                            {req.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
@@ -891,26 +914,90 @@ export default function ProjectDetailPage() {
                   {project.rolesNeeded.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 px-3 pb-3">
+              <CardContent className="space-y-3 px-3 pb-3">
                 {project.rolesNeeded.map((role) => (
                   <div
                     key={role.id}
-                    className="p-2.5 bg-slate-50 rounded-lg border border-slate-200"
+                    className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-slate-900 text-xs truncate">
+                      <span className="font-bold text-slate-900 text-sm truncate">
                         {role.designation}
                       </span>
-                      <Badge className="text-xs h-5 bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0">
+                      <Badge className="text-[10px] h-5 bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0">
                         {role.quantity} pos
                       </Badge>
                     </div>
-                    <p className="text-xs text-slate-600 mt-1 truncate">
-                      {role.minExperience
-                        ? `${role.minExperience}+ yrs`
-                        : "Any"}{" "}
-                      {role.shiftType && `• ${role.shiftType}`}
-                    </p>
+
+                    {/* Experience & Age & Gender */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
+                      <div className="flex items-center gap-1">
+                        <Briefcase className="h-3 w-3 text-slate-400" />
+                        <span>
+                          {role.minExperience || 0}-{role.maxExperience || "Any"} yrs
+                        </span>
+                      </div>
+                      {role.ageRequirement && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-slate-400" />
+                          <span>Age: {role.ageRequirement}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3 text-slate-400" />
+                        <span className="capitalize">
+                          {role.genderRequirement || "All"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Education */}
+                    {role.educationRequirementsList &&
+                      role.educationRequirementsList.length > 0 && (
+                        <div className="flex items-start gap-1 text-[11px] text-slate-600">
+                          <GraduationCap className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex flex-wrap gap-1">
+                            {role.educationRequirementsList.map(
+                              (edu: any, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="bg-white px-1.5 py-0.5 rounded border border-slate-200"
+                                >
+                                  {edu.qualification?.shortName ||
+                                    edu.qualification?.name}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Benefits & Type */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                      <div className="flex gap-2">
+                        {role.accommodation && (
+                          <Home
+                            className="h-3 w-3 text-emerald-600"
+                            title="Accommodation provided"
+                          />
+                        )}
+                        {role.food && (
+                          <Utensils
+                            className="h-3 w-3 text-orange-600"
+                            title="Food provided"
+                          />
+                        )}
+                        {role.transport && (
+                          <Bus
+                            className="h-3 w-3 text-blue-600"
+                            title="Transport provided"
+                          />
+                        )}
+                      </div>
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                        {role.employmentType || "Permanent"}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </CardContent>

@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CandidateProjectsService } from './candidate-projects.service';
 import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
@@ -131,7 +132,7 @@ export class CandidateProjectsController {
   }
 
   @Get()
-  @Permissions('view:projects', 'view:candidates')
+  @Permissions('read:projects', 'read:candidates')
   @ApiOperation({
     summary: 'Get all candidate-project assignments',
     description:
@@ -150,7 +151,7 @@ export class CandidateProjectsController {
   }
 
   @Get('project/:projectId')
-  @Permissions('view:projects')
+  @Permissions('read:projects')
   @ApiOperation({
     summary: 'Get candidates for a project',
     description: 'Retrieve all candidates assigned to a specific project',
@@ -175,7 +176,7 @@ export class CandidateProjectsController {
   }
 
   @Get('candidate/:candidateId')
-  @Permissions('view:candidates')
+  @Permissions('read:candidates')
   @ApiOperation({
     summary: 'Get projects for a candidate',
     description: 'Retrieve all projects a candidate is assigned to',
@@ -199,8 +200,35 @@ export class CandidateProjectsController {
     };
   }
 
+  @Get('eligibility-check')
+  @Permissions('read:projects', 'read:candidates')
+  @ApiOperation({
+    summary: 'Check candidate eligibility for a project',
+    description:
+      'Check if a candidate is eligible for a project based on age, gender, and experience requirements.',
+  })
+  @ApiQuery({ name: 'candidateId', description: 'Candidate ID' })
+  @ApiQuery({ name: 'projectId', description: 'Project ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Eligibility check completed successfully',
+  })
+  async checkEligibility(
+    @Query('candidateId') candidateId: string,
+    @Query('projectId') projectId: string,
+  ) {
+    const result = await this.candidateProjectsService.checkEligibility(
+      candidateId,
+      projectId,
+    );
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
   @Get(':id')
-  @Permissions('view:projects', 'view:candidates')
+  @Permissions('read:projects', 'read:candidates')
   @ApiOperation({
     summary: 'Get candidate-project assignment details',
     description: 'Retrieve detailed information about a specific assignment',
@@ -223,7 +251,7 @@ export class CandidateProjectsController {
   }
 
   @Get(':id/status-history')
-  @Permissions('view:projects', 'view:candidates')
+  @Permissions('read:projects', 'read:candidates')
   @ApiOperation({
     summary: 'Get status change history',
     description:

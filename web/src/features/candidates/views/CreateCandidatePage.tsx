@@ -48,6 +48,7 @@ const createCandidateSchema = z.object({
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "referral"]),
+  gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
 
   // Educational Qualifications (legacy fields for backward compatibility)
@@ -159,6 +160,7 @@ export default function CreateCandidatePage() {
       mobileNumber: "",
       email: "",
       source: "manual" as const,
+      gender: "" as any,
       dateOfBirth: "",
       highestEducation: "",
       university: "",
@@ -192,7 +194,7 @@ export default function CreateCandidatePage() {
 
   // Step validation functions
   const validateStep1 = async () => {
-    const step1Fields = ["firstName", "lastName", "countryCode", "mobileNumber", "dateOfBirth", "source"];
+    const step1Fields = ["firstName", "lastName", "countryCode", "mobileNumber", "dateOfBirth", "source", "gender"];
     const isValid = await form.trigger(step1Fields as any);
     
     if (isValid) {
@@ -241,6 +243,7 @@ export default function CreateCandidatePage() {
         countryCode: data.countryCode,
         mobileNumber: data.mobileNumber,
         source: data.source || "manual",
+        gender: data.gender,
         dateOfBirth: data.dateOfBirth,
       };
 
@@ -472,6 +475,7 @@ export default function CreateCandidatePage() {
         contact: `${form.getValues("countryCode")}${form.getValues("mobileNumber")}`,
         email: form.getValues("email"),
         source: form.getValues("source"),
+        gender: form.getValues("gender"),
         dateOfBirth: form.getValues("dateOfBirth"),
         highestEducation: form.getValues("highestEducation"),
         university: form.getValues("university"),

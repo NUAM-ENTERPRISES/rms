@@ -14,6 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
+import { CandidateDetailTooltip } from "./CandidateDetailTooltip";
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useCheckCandidateEligibilityQuery } from "@/features/projects/api";
 
 type StatusReference = {
   name?: string;
@@ -73,7 +75,13 @@ export interface CandidateRecord {
   currentProjectStatus?: { statusName?: string };
   projectStatus?: { statusName?: string };
   currentEmployer?: string;
+  currentRole?: string;
   expectedSalary?: number;
+  currentSalary?: number;
+  totalExperience?: number;
+  dateOfBirth?: string;
+  gender?: string;
+  source?: string;
   /**
    * Flag set by the backend when the candidate has been linked to a project
    * but document verification was intentionally skipped (direct screening).
@@ -113,6 +121,56 @@ export interface CandidateRecord {
       status: string;
     };
   }>;
+  workExperiences?: Array<{
+    id: string;
+    companyName: string;
+    jobTitle: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    description?: string;
+    location?: string;
+  }>;
+  qualifications?: Array<{
+    id: string;
+    qualificationId?: string;
+    university?: string;
+    graduationYear?: number;
+    gpa?: number;
+    isCompleted?: boolean;
+    notes?: string;
+    // Direct qualification fields (from nominated API)
+    name?: string;
+    level?: string;
+    field?: string;
+    // Nested qualification (from eligible/all candidates API)
+    qualification?: {
+      id: string;
+      name: string;
+      shortName?: string;
+      level: string;
+      field: string;
+    };
+  }>;
+  candidateQualifications?: Array<{
+    id: string;
+    name: string;
+    level: string;
+    field: string;
+    university?: string;
+    graduationYear?: number;
+    gpa?: number;
+    isCompleted?: boolean;
+    notes?: string;
+  }>;
+  skills?: string[];
+  highestEducation?: string;
+  university?: string;
+  recruiter?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 interface CandidateCardProps {
@@ -181,6 +239,14 @@ const CandidateCard = memo(function CandidateCard({
     (action) => action.label.toLowerCase() !== "assign to project"
   );
 
+  // Eligibility check
+  const { data: eligibilityResponse } = useCheckCandidateEligibilityQuery(
+    { candidateId, projectId: propProjectId || "" },
+    { skip: !candidateId || !propProjectId }
+  );
+  const eligibilityData = eligibilityResponse?.data;
+  const isNotEligible = eligibilityData?.isEligible === false;
+
   // Document verification logic
   const requiredDocs = candidate.project?.documentRequirements || [];
   
@@ -209,7 +275,6 @@ const CandidateCard = memo(function CandidateCard({
   });
 
   const isAllUploaded = docStatusList.every(d => d.isUploaded);
-  const isPartialUploaded = !isNoneUploaded && !isAllUploaded;
 
   const handleUploadNavigation = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -401,7 +466,7 @@ const CandidateCard = memo(function CandidateCard({
         designation: ms.roleName ?? ms.roleDepartmentLabel ?? ms.roleId,
         department: ms.roleDepartmentLabel ?? ms.roleDepartmentName ?? undefined,
         score: typeof ms.score === "number" ? ms.score : undefined,
-      } as { designation?: string; score?: number | undefined };
+      } as { designation?: string; score?: number | undefined; department?: string };
     }
 
     // If roleMatches array present, pick the highest scoring role
@@ -475,6 +540,10 @@ const CandidateCard = memo(function CandidateCard({
         className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500"
         aria-hidden="true"
       />
+      
+      {/* Detailed Info Tooltip - Hover on entire card */}
+      <CandidateDetailTooltip candidate={candidate} />
+
       <CardContent className="pl-3 pr-3 py-0 space-y-2">
         {/* Header row */}
         <div className="flex items-center gap-3">
@@ -504,19 +573,31 @@ const CandidateCard = memo(function CandidateCard({
                 )}
                 {filteredActions && filteredActions.length > 0 && (
                   <DropdownMenu>
-                    <DropdownMenuTrigger
-                      asChild
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0 text-slate-500"
-                        aria-label="More actions"
-                      >
-                        <MoreVertical className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={cn(isNotEligible && "cursor-not-allowed")}>
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={isNotEligible}
+                              className="h-5 w-5 p-0 text-slate-500"
+                              aria-label="More actions"
+                            >
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </span>
+                      </TooltipTrigger>
+                      {isNotEligible && (
+                        <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
+                          <p>Not Eligible for Project</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                     <DropdownMenuContent
                       align="end"
                       onClick={(event) => event.stopPropagation()}
@@ -705,6 +786,42 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipContent>
             </Tooltip>
           )}
+
+          {/* Eligibility Warning Icon */}
+          {eligibilityData && eligibilityData.isEligible === false && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-600 cursor-help animate-pulse"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <AlertCircle className="h-4 w-4" aria-hidden />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs p-3 rounded-xl">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-red-600 font-bold text-xs">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    <span>Not Eligible for Project</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {eligibilityData.roleEligibility.map((role, rIdx) => (
+                      <div key={rIdx} className="space-y-1">
+                        <div className="text-[11px] font-semibold text-slate-700">{role.designation}</div>
+                        <ul className="list-disc list-inside space-y-0.5">
+                          {role.reasons.map((reason, idx) => (
+                            <li key={idx} className="text-[10px] text-slate-600 leading-relaxed">
+                              {reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Detail pills */}
@@ -744,18 +861,30 @@ const CandidateCard = memo(function CandidateCard({
 
         {showAssignButton && onAssignToProject && (
           <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="h-7 text-[11px] bg-green-600 hover:bg-green-700 px-2.5"
-              onClick={(event) => {
-                event.stopPropagation();
-                onAssignToProject(candidateId);
-              }}
-            >
-              <UserPlus className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-              Assign to Project
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={cn(isNotEligible && "cursor-not-allowed")}>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={isNotEligible}
+                    className="h-7 text-[11px] bg-green-600 hover:bg-green-700 px-2.5"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAssignToProject(candidateId);
+                    }}
+                  >
+                    <UserPlus className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+                    Assign to Project
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isNotEligible && (
+                <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
+                  <p>Not Eligible for Project</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
         )}
 
