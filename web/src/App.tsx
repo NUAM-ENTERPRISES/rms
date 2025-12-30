@@ -332,7 +332,7 @@ function App() {
                   />
 
                   <Route
-                    path="/recruiter-docs/:projectId"
+                    path="/recruiter-docs/:projectId/:candidateId"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute roles={["Recruiter", "System Admin"]}>

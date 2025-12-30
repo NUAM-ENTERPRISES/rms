@@ -33,6 +33,13 @@ export interface Project {
   rolesNeeded: RoleNeeded[];
   candidateProjects: CandidateProject[];
   documentRequirements?: DocumentRequirement[];
+  resumeEditable?: boolean;
+  groomingRequired?: "formal" | "casual" | "not_specified";
+  hideContactInfo?: boolean;
+  requiredScreening?: boolean;
+  accommodation?: boolean;
+  food?: boolean;
+  transport?: boolean;
 }
 
 export interface RoleNeeded {
@@ -52,8 +59,8 @@ export interface RoleNeeded {
   technicalSkills?: string;
   employmentType: "contract" | "permanent";
   contractDurationYears?: number;
+  visaType?: "contract" | "permanent";
   genderRequirement: "female" | "male" | "all" | "other";
-  ageRequirement?: string;
   minAge?: number;
   maxAge?: number;
   accommodation?: boolean;

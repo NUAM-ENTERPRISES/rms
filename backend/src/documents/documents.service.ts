@@ -1066,6 +1066,12 @@ export class DocumentsService {
             },
           },
         },
+        projectStatusHistory: {
+          select: {
+            mainStatus: { select: { name: true } },
+            subStatus: { select: { name: true } },
+          },
+        },
       },
     });
 
@@ -1182,8 +1188,20 @@ export class DocumentsService {
       }
     }
 
+    const isSendedForDocumentVerification = candidateProject.projectStatusHistory.some(
+      (h) =>
+        h.mainStatus?.name === 'documents' ||
+        [
+          'verification_in_progress_document',
+          'pending_documents',
+          'documents_verified',
+          'rejected_documents',
+        ].includes(h.subStatus?.name || ''),
+    );
+
     return {
       candidateProject,
+      isSendedForDocumentVerification,
       requirements,
       verifications, // ONLY LATEST DOCUMENT PER DOCTYPE
       allCandidateDocuments, // FULL HISTORY
@@ -1198,6 +1216,7 @@ export class DocumentsService {
         totalPending,
         allDocumentsVerified,
         canApproveCandidate: allDocumentsVerified,
+        isSendedForDocumentVerification,
         isDocumentationReviewed,
         documentationStatus,
         documentationStatusCode,
@@ -1519,7 +1538,10 @@ async getVerifiedOrRejectedList() {
       ];
     }
 
-    const [items, total, verifiedDistinctRows, rejectedDistinctRows] = await Promise.all([
+    const countBase: any = {};
+    if (recruiterId) countBase.recruiterId = recruiterId;
+
+    const [items, total, verifiedDistinctRows, rejectedDistinctRows, pendingCount] = await Promise.all([
       this.prisma.candidateProjectDocumentVerification.findMany({
         where: baseWhere,
         include: {
@@ -1540,10 +1562,19 @@ async getVerifiedOrRejectedList() {
                 select: { id: true, firstName: true, lastName: true, email: true, mobileNumber: true },
               },
               project: {
-                select: { id: true, title: true, client: { select: { name: true } } },
+                select: {
+                  id: true,
+                  title: true,
+                  client: { select: { name: true } },
+                  documentRequirements: true,
+                },
               },
+              documentVerifications: true,
               recruiter: {
-                select: { id: true, name: true },
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
               roleNeeded: {
                 select: {
@@ -1582,10 +1613,247 @@ async getVerifiedOrRejectedList() {
         select: { candidateProjectMapId: true },
         distinct: ['candidateProjectMapId'],
       }),
+      this.prisma.candidateProjects.count({
+        where: {
+          ...countBase,
+          subStatus: { name: 'verification_in_progress_document' },
+        },
+      }),
     ]);
 
     const verifiedCount = verifiedDistinctRows.length;
     const rejectedCount = rejectedDistinctRows.length;
+
+    const itemsWithProgress = items.map((item) => {
+      const cp = item.candidateProjectMap;
+      const totalDocsToUpload = cp?.project?.documentRequirements?.length || 0;
+      const docsUploaded = cp?.documentVerifications?.length || 0;
+      const docsPercentage =
+        totalDocsToUpload > 0
+          ? Math.round((docsUploaded / totalDocsToUpload) * 100)
+          : 0;
+
+      return {
+        ...item,
+        progress: {
+          docsUploaded,
+          totalDocsToUpload,
+          docsPercentage,
+        },
+      };
+    });
+
+    return {
+      items: itemsWithProgress,
+      pagination: {
+        page,
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      counts: {
+        pending: pendingCount,
+        verified: verifiedCount,
+        rejected: rejectedCount,
+      },
+    };
+  }
+
+  /**
+   * Get pending documents for candidates assigned to a specific recruiter
+   * Includes project details and document upload progress
+   */
+  async getRecruiterPendingDocuments(query: any) {
+    const { page = 1, limit = 20, search, recruiterId } = query;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {
+      // Filter by recruiter if provided
+      ...(recruiterId ? { recruiterId } : {}),
+      // Filter for candidates who are not in a terminal stage
+      mainStatus: {
+        name: { notIn: ['final', 'rejected', 'withdrawn'] },
+      },
+      // Exclude candidates who have already completed document verification or are rejected
+      subStatus: {
+        name: { notIn: ['documents_verified', 'rejected_documents'] },
+      },
+      // Only include if there are actually documents required for the project
+      project: {
+        documentRequirements: {
+          some: {},
+        },
+      },
+    };
+
+    // Search support
+    if (search) {
+      where.OR = [
+        { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
+        { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+        { project: { title: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    // Fetch candidate projects with requirements and verifications
+    const [candidateProjects, total, verifiedCount, rejectedCount, pendingUploadCount] = await Promise.all([
+      this.prisma.candidateProjects.findMany({
+        where,
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              mobileNumber: true,
+              countryCode: true,
+            },
+          },
+          project: {
+            include: {
+              documentRequirements: true,
+              client: { select: { name: true } },
+            },
+          },
+          roleNeeded: {
+            select: {
+              id: true,
+              designation: true,
+              roleCatalog: {
+                select: {
+                  id: true,
+                  name: true,
+                  label: true,
+                },
+              },
+            },
+          },
+          documentVerifications: {
+            include: {
+              document: {
+                select: {
+                  id: true,
+                  docType: true,
+                  fileName: true,
+                  fileUrl: true,
+                  status: true,
+                  createdAt: true,
+                },
+              },
+              verificationHistory: {
+                orderBy: { performedAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
+          projectStatusHistory: {
+            orderBy: { statusChangedAt: 'desc' },
+            take: 1,
+            include: {
+              changedBy: {
+                select: { name: true },
+              },
+            },
+          },
+          subStatus: true,
+          mainStatus: true,
+          recruiter: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: Number(limit),
+      }),
+      this.prisma.candidateProjects.count({ where }),
+      this.prisma.candidateProjects.count({
+        where: {
+          ...(recruiterId ? { recruiterId } : {}),
+          subStatus: { name: 'documents_verified' },
+        },
+      }),
+      this.prisma.candidateProjects.count({
+        where: {
+          ...(recruiterId ? { recruiterId } : {}),
+          subStatus: { name: 'rejected_documents' },
+        },
+      }),
+      this.prisma.candidateProjects.count({
+        where: {
+          ...where,
+          documentVerifications: {
+            none: {},
+          },
+        },
+      }),
+    ]);
+
+    // Calculate progress for each candidate project
+    const items = candidateProjects.map((cp) => {
+      const totalDocsToUpload = cp.project.documentRequirements.length;
+      
+      // Count unique required docTypes that have at least one upload
+      const requiredDocTypes = cp.project.documentRequirements.map(r => r.docType);
+      const uploadedDocTypes = new Set(cp.documentVerifications.map(dv => dv.document.docType));
+      const docsUploaded = requiredDocTypes.filter(type => uploadedDocTypes.has(type)).length;
+
+      const docsPercentage =
+        totalDocsToUpload > 0
+          ? Math.min(100, Math.round((docsUploaded / totalDocsToUpload) * 100))
+          : 0;
+
+      return {
+        candidateProjectMapId: cp.id,
+        candidate: cp.candidate,
+        project: {
+          id: cp.project.id,
+          title: cp.project.title,
+          client: cp.project.client,
+          role: cp.roleNeeded
+            ? {
+                id: cp.roleNeeded.id,
+                designation: cp.roleNeeded.designation,
+                roleCatalog: cp.roleNeeded.roleCatalog,
+              }
+            : null,
+        },
+        recruiter: cp.recruiter,
+        documentDetails: cp.documentVerifications.map((dv) => ({
+          id: dv.id,
+          documentId: dv.documentId,
+          docType: dv.document.docType,
+          status: dv.status,
+          fileName: dv.document.fileName,
+          fileUrl: dv.document.fileUrl,
+          uploadedAt: dv.document.createdAt,
+          lastHistory: dv.verificationHistory[0] || null,
+        })),
+        progress: {
+          docsUploaded,
+          totalDocsToUpload,
+          docsPercentage,
+        },
+        lastAction: cp.projectStatusHistory[0]
+          ? {
+              status: cp.projectStatusHistory[0].subStatusSnapshot,
+              performedBy: cp.projectStatusHistory[0].changedBy?.name,
+              at: cp.projectStatusHistory[0].statusChangedAt,
+              reason: cp.projectStatusHistory[0].reason,
+            }
+          : null,
+        status: {
+          main: cp.mainStatus?.name || null,
+          mainLabel: cp.mainStatus?.label || null,
+          sub: cp.subStatus?.name || null,
+          subLabel: cp.subStatus?.label || null,
+        },
+      };
+    });
 
     return {
       items,
@@ -1596,10 +1864,252 @@ async getVerifiedOrRejectedList() {
         totalPages: Math.ceil(total / limit),
       },
       counts: {
+        pending: total,
+        pendingUpload: pendingUploadCount,
         verified: verifiedCount,
         rejected: rejectedCount,
       },
     };
   }
 
+  /**
+   * Get verified or rejected documents for candidates assigned to a specific recruiter
+   * Includes project details, document upload progress and counts
+   */
+  async getRecruiterVerifiedRejectedDocuments(query: any) {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      recruiterId,
+      status = 'verified',
+    } = query;
+    const skip = (page - 1) * limit;
+
+    // 1. Define the base where clauses for counts (filtered by recruiter but NOT search)
+    const pendingWhereBase: any = {
+      ...(recruiterId ? { recruiterId } : {}),
+      mainStatus: {
+        name: { notIn: ['final', 'rejected', 'withdrawn'] },
+      },
+      subStatus: {
+        name: { notIn: ['documents_verified', 'rejected_documents'] },
+      },
+      project: {
+        documentRequirements: {
+          some: {},
+        },
+      },
+    };
+
+    const verifiedWhereBase: any = {
+      ...(recruiterId ? { recruiterId } : {}),
+      subStatus: { name: 'documents_verified' },
+    };
+
+    const rejectedWhereBase: any = {
+      ...(recruiterId ? { recruiterId } : {}),
+      subStatus: { name: 'rejected_documents' },
+    };
+
+    // 2. Determine the active where clause for the list based on status
+    let activeWhere: any;
+    if (status === 'verified') {
+      activeWhere = { ...verifiedWhereBase };
+    } else if (status === 'rejected') {
+      activeWhere = { ...rejectedWhereBase };
+    } else if (status === 'pending_documents') {
+      activeWhere = { ...pendingWhereBase };
+    } else {
+      // Default to verified or both if needed, but user asked for verified/rejected
+      activeWhere = {
+        ...(recruiterId ? { recruiterId } : {}),
+        subStatus: {
+          name: { in: ['documents_verified', 'rejected_documents'] },
+        },
+      };
+    }
+
+    // 3. Apply search to activeWhere for the paginated list
+    if (search) {
+      activeWhere.OR = [
+        { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
+        { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+        { project: { title: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    // 4. Fetch data and counts in parallel
+    const [
+      candidateProjects,
+      total,
+      pendingCount,
+      verifiedCount,
+      rejectedCount,
+      pendingUploadCount,
+    ] = await Promise.all([
+      this.prisma.candidateProjects.findMany({
+        where: activeWhere,
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              mobileNumber: true,
+              countryCode: true,
+            },
+          },
+          project: {
+            include: {
+              documentRequirements: true,
+              client: { select: { name: true } },
+            },
+          },
+          roleNeeded: {
+            select: {
+              id: true,
+              designation: true,
+              roleCatalog: {
+                select: {
+                  id: true,
+                  name: true,
+                  label: true,
+                },
+              },
+            },
+          },
+          documentVerifications: {
+            include: {
+              document: {
+                select: {
+                  id: true,
+                  docType: true,
+                  fileName: true,
+                  fileUrl: true,
+                  status: true,
+                  createdAt: true,
+                },
+              },
+              verificationHistory: {
+                orderBy: { performedAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
+          projectStatusHistory: {
+            orderBy: { statusChangedAt: 'desc' },
+            take: 1,
+            include: {
+              changedBy: {
+                select: { name: true },
+              },
+            },
+          },
+          subStatus: true,
+          mainStatus: true,
+          recruiter: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: Number(limit),
+      }),
+      this.prisma.candidateProjects.count({ where: activeWhere }),
+      this.prisma.candidateProjects.count({ where: pendingWhereBase }),
+      this.prisma.candidateProjects.count({ where: verifiedWhereBase }),
+      this.prisma.candidateProjects.count({ where: rejectedWhereBase }),
+      this.prisma.candidateProjects.count({
+        where: {
+          ...pendingWhereBase,
+          documentVerifications: {
+            none: {},
+          },
+        },
+      }),
+    ]);
+
+    // 5. Format items (same structure as getRecruiterPendingDocuments)
+    const items = candidateProjects.map((cp) => {
+      const totalDocsToUpload = cp.project.documentRequirements.length;
+      
+      // Count unique required docTypes that have at least one upload
+      const requiredDocTypes = cp.project.documentRequirements.map(r => r.docType);
+      const uploadedDocTypes = new Set(cp.documentVerifications.map(dv => dv.document.docType));
+      const docsUploaded = requiredDocTypes.filter(type => uploadedDocTypes.has(type)).length;
+
+      const docsPercentage =
+        totalDocsToUpload > 0
+          ? Math.min(100, Math.round((docsUploaded / totalDocsToUpload) * 100))
+          : 0;
+
+      return {
+        candidateProjectMapId: cp.id,
+        candidate: cp.candidate,
+        project: {
+          id: cp.project.id,
+          title: cp.project.title,
+          client: cp.project.client,
+          role: cp.roleNeeded
+            ? {
+                id: cp.roleNeeded.id,
+                designation: cp.roleNeeded.designation,
+                roleCatalog: cp.roleNeeded.roleCatalog,
+              }
+            : null,
+        },
+        recruiter: cp.recruiter,
+        documentDetails: cp.documentVerifications.map((dv) => ({
+          id: dv.id,
+          documentId: dv.documentId,
+          docType: dv.document.docType,
+          status: dv.status,
+          fileName: dv.document.fileName,
+          fileUrl: dv.document.fileUrl,
+          uploadedAt: dv.document.createdAt,
+          lastHistory: dv.verificationHistory[0] || null,
+        })),
+        progress: {
+          docsUploaded,
+          totalDocsToUpload,
+          docsPercentage,
+        },
+        lastAction: cp.projectStatusHistory[0]
+          ? {
+              status: cp.projectStatusHistory[0].subStatusSnapshot,
+              performedBy: cp.projectStatusHistory[0].changedBy?.name,
+              at: cp.projectStatusHistory[0].statusChangedAt,
+              reason: cp.projectStatusHistory[0].reason,
+            }
+          : null,
+        status: {
+          main: cp.mainStatus?.name || null,
+          mainLabel: cp.mainStatus?.label || null,
+          sub: cp.subStatus?.name || null,
+          subLabel: cp.subStatus?.label || null,
+        },
+      };
+    });
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      counts: {
+        pending: pendingCount,
+        pendingUpload: pendingUploadCount,
+        verified: verifiedCount,
+        rejected: rejectedCount,
+      },
+    };
+  }
 }

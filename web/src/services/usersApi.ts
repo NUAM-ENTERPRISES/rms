@@ -1,5 +1,4 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQuery } from "@/services/baseApi";
+import { baseApi } from "@/app/api/baseApi";
 
 interface User {
   id: string;
@@ -33,10 +32,8 @@ interface UpdateUserRequest {
   mobileNumber?: string;
 }
 
-export const usersApi = createApi({
-  reducerPath: "usersApi",
-  baseQuery,
-  tagTypes: ["User"],
+export const usersApi = baseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     getUsers: builder.query<User[], void>({
       query: () => "/users",

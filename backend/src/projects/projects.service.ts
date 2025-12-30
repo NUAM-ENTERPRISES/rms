@@ -1344,6 +1344,13 @@ export class ProjectsService {
           },
         },
 
+        projectStatusHistory: {
+          select: {
+            mainStatus: { select: { name: true } },
+            subStatus: { select: { name: true } },
+          },
+        },
+
         // Document verifications for this candidate-project mapping
         documentVerifications: {
           select: {
@@ -1501,6 +1508,17 @@ export class ProjectsService {
 
         // Document verifications for this project
         documentVerifications: assignment.documentVerifications || [],
+
+        isSendedForDocumentVerification: assignment.projectStatusHistory.some(
+          (h) =>
+            h.mainStatus?.name === 'documents' ||
+            [
+              'verification_in_progress_document',
+              'pending_documents',
+              'documents_verified',
+              'rejected_documents',
+            ].includes(h.subStatus?.name || ''),
+        ),
       };
     });
 

@@ -76,6 +76,8 @@ import { FlagIcon } from "@/shared/components/FlagIcon";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Link2 } from "lucide-react";
+
+
 export default function CandidateDocumentVerificationPage() {
   const { candidateId, projectId: routeProjectId } = useParams<{
     candidateId: string;

@@ -118,6 +118,47 @@ export class DocumentsController {
     };
   }
 
+  @Get('recruiter-documents')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get pending documents for recruiter candidates',
+    description:
+      'Retrieve candidates assigned to a recruiter who have pending documents, including project details and upload progress.',
+  })
+  @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name or project title' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  async getRecruiterDocuments(@Query() query: any) {
+    const result = await this.documentsService.getRecruiterPendingDocuments(query);
+    return {
+      success: true,
+      data: result,
+      message: 'Recruiter pending documents retrieved successfully',
+    };
+  }
+
+  @Get('recruiter-verified-rejected-documents')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get verified/rejected documents for recruiter candidates',
+    description:
+      'Retrieve candidates assigned to a recruiter who have verified or rejected documents, including project details, upload progress and counts.',
+  })
+  @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name or project title' })
+  @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'pending_documents'. Defaults to 'verified'." })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  async getRecruiterVerifiedRejectedDocuments(@Query() query: any) {
+    const result = await this.documentsService.getRecruiterVerifiedRejectedDocuments(query);
+    return {
+      success: true,
+      data: result,
+      message: 'Recruiter verified/rejected documents retrieved successfully',
+    };
+  }
+
   @Get('stats')
   @Permissions('read:documents')
   @ApiOperation({

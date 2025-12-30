@@ -256,10 +256,21 @@ export class ScreeningsService {
             candidate: {
               select: { id: true, firstName: true, lastName: true },
             },
-            project: { select: { id: true, title: true } },
+            project: {
+              select: {
+                id: true,
+                title: true,
+                documentRequirements: true,
+              },
+            },
             roleNeeded: { select: { designation: true } },
             mainStatus: true,
             subStatus: true,
+            documentVerifications: {
+              include: {
+                document: true,
+              },
+            },
           },
         },
         checklistItems: {
@@ -345,11 +356,22 @@ export class ScreeningsService {
                   mobileNumber: true,
                 },
               },
-              project: { select: { id: true, title: true } },
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                  documentRequirements: true,
+                },
+              },
               roleNeeded: { select: { id: true, designation: true } },
               // Ensure callers get the current main/sub status on the candidate-project map
               mainStatus: true,
               subStatus: true,
+              documentVerifications: {
+                include: {
+                  document: true,
+                },
+              },
             },
           },
         template: {
@@ -801,11 +823,22 @@ export class ScreeningsService {
       where,
       include: {
         candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
-        project: { select: { id: true, title: true } },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            documentRequirements: true,
+          },
+        },
         roleNeeded: { select: { id: true, designation: true } },
         recruiter: { select: { id: true, name: true, email: true } },
         mainStatus: true,
         subStatus: true,
+        documentVerifications: {
+          include: {
+            document: true,
+          },
+        },
       },
       orderBy: { assignedAt: 'desc' },
       skip: (page - 1) * limit,
@@ -859,10 +892,21 @@ export class ScreeningsService {
         candidateProjectMap: {
           include: {
             candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
-            project: { select: { id: true, title: true } },
+            project: {
+              select: {
+                id: true,
+                title: true,
+                documentRequirements: true,
+              },
+            },
             roleNeeded: { select: { id: true, designation: true } },
             mainStatus: true,
             subStatus: true,
+            documentVerifications: {
+              include: {
+                document: true,
+              },
+            },
           },
         },
       },

@@ -1,5 +1,4 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauth } from "@/services/baseQuery";
+import { baseApi } from "@/app/api/baseApi";
 
 // Types
 export interface Project {
@@ -184,11 +183,8 @@ interface ApiResponse<T> {
   message: string;
 }
 
-export const projectsApi = createApi({
-  reducerPath: "projectsApi",
-  baseQuery: baseQueryWithReauth,
-  tagTypes: ["Project", "ProjectStats"],
-  keepUnusedDataFor: 300, // 5 minutes
+export const projectsApi = baseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     // Get all projects with pagination and filtering
     getProjects: builder.query<

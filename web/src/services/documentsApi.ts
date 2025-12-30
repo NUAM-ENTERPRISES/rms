@@ -1,5 +1,4 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauth } from "@/services/baseQuery";
+import { baseApi } from "@/app/api/baseApi";
 import { DocumentStatus, DocumentType } from "@/constants";
 
 // ==================== INTERFACES ====================
@@ -120,6 +119,68 @@ export interface PaginatedDocuments {
   };
 }
 
+export interface RecruiterDocumentItem {
+  candidateProjectMapId: string;
+  candidate: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    mobileNumber: string;
+    countryCode: string;
+  };
+  project: {
+    id: string;
+    title: string;
+    client: {
+      name: string;
+    } | null;
+    role?: {
+      id: string;
+      designation: string;
+      roleCatalog?: {
+        id: string;
+        name: string;
+        label: string;
+      };
+    };
+  };
+  recruiter: {
+    id: string;
+    name: string;
+  };
+  documentDetails: {
+    id: string;
+    documentId: string;
+    docType: string;
+    status: string;
+    fileName: string;
+    fileUrl: string;
+    uploadedAt: string;
+  }[];
+  progress: {
+    docsUploaded: number;
+    totalDocsToUpload: number;
+    docsPercentage: number;
+  };
+  status: {
+    main: string;
+    mainLabel: string;
+    sub: string;
+    subLabel: string;
+  };
+}
+
+export interface RecruiterDocumentsResponse {
+  items: RecruiterDocumentItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 // ==================== REQUEST TYPES ====================
 
 export interface CreateDocumentRequest {
@@ -171,12 +232,16 @@ export interface QueryDocumentsParams {
   search?: string;
 }
 
+export interface RecruiterDocumentsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 // ==================== API ====================
 
-export const documentsApi = createApi({
-  reducerPath: "documentsApi",
-  baseQuery: baseQueryWithReauth,
-  tagTypes: ["Document", "DocumentStats", "DocumentSummary"],
+export const documentsApi = baseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     getDocuments: builder.query<
       { success: boolean; data: PaginatedDocuments },
@@ -193,6 +258,27 @@ export const documentsApi = createApi({
         }
         const queryString = searchParams.toString();
         return `/documents${queryString ? `?${queryString}` : ""}`;
+      },
+      providesTags: ["Document"],
+    }),
+
+    getRecruiterDocuments: builder.query<
+      { success: boolean; data: RecruiterDocumentsResponse },
+      RecruiterDocumentsParams | void
+    >({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params) {
+          Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              searchParams.append(key, String(value));
+            }
+          });
+        }
+        const queryString = searchParams.toString();
+        return `/documents/recruiter-documents${
+          queryString ? `?${queryString}` : ""
+        }`;
       },
       providesTags: ["Document"],
     }),
@@ -287,6 +373,7 @@ export const documentsApi = createApi({
 
 export const {
   useGetDocumentsQuery,
+  useGetRecruiterDocumentsQuery,
   useGetDocumentByIdQuery,
   useCreateDocumentMutation,
   useUpdateDocumentMutation,

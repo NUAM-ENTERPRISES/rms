@@ -130,6 +130,15 @@ export interface Candidate {
     date: string;
     user: string;
   }>;
+
+  // Additional properties used in UI
+  candidateQualifications?: any[];
+  candidateExperience?: number;
+  roleMatches?: Array<{
+    roleId?: string;
+    designation?: string;
+    score?: number;
+  }>;
 }
 
 export interface CandidateQualification {

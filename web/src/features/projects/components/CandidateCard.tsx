@@ -175,6 +175,7 @@ const CandidateCard = memo(function CandidateCard({
   skipDocumentVerificationMessage,
 }: CandidateCardProps) {
   const navigate = useNavigate();
+  const candidateId = candidate.candidateId || candidate.id || "";
   // Filter out "Assign to Project" from actions as it's now a primary button
   const filteredActions = actions?.filter(
     (action) => action.label.toLowerCase() !== "assign to project"
@@ -187,6 +188,8 @@ const CandidateCard = memo(function CandidateCard({
   const projectLink = propProjectId 
     ? candidate.projects?.find(p => p.projectId === propProjectId)
     : undefined;
+
+  const isSendedForVerification = projectLink?.isSendedForDocumentVerification ?? candidate.isSendedForDocumentVerification;
     
   const uploadedDocs = [
     ...(candidate.documentVerifications || []),
@@ -211,8 +214,8 @@ const CandidateCard = memo(function CandidateCard({
   const handleUploadNavigation = (e: React.MouseEvent) => {
     e.stopPropagation();
     const pId = propProjectId || candidate.project?.id;
-    if (pId) {
-      navigate(`/recruiter-docs/${pId}`);
+    if (pId && candidateId) {
+      navigate(`/recruiter-docs/${pId}/${candidateId}`);
     }
   };
 
@@ -377,7 +380,6 @@ const CandidateCard = memo(function CandidateCard({
     }).format(salary);
   };
 
-  const candidateId = candidate.candidateId || candidate.id || "";
   const fullName = `${candidate.firstName || ""} ${
     candidate.lastName || ""
   }`.trim();
@@ -758,7 +760,7 @@ const CandidateCard = memo(function CandidateCard({
         )}
 
         {isRecruiter && showVerifyButton &&
-          onVerify && !isAllUploaded && projectStatus !== "Verification In Progress" && (
+          onVerify && isSendedForVerification === false && projectStatus !== "Verification In Progress" && (
             <div className="flex items-center justify-end border-t border-slate-100 pt-2">
               <Tooltip>
                 <TooltipTrigger asChild>
