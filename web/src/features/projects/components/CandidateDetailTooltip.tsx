@@ -116,26 +116,28 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
 
         <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
           {/* Contact Information */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
-              <Mail className="h-3 w-3" />
-              Contact
-            </h4>
-            <div className="space-y-1 text-[11px] text-slate-600">
-              {candidate.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-3 w-3 text-slate-400" />
-                  <span className="break-all">{candidate.email}</span>
-                </div>
-              )}
-              {contactValue && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-3 w-3 text-slate-400" />
-                  <span>{contactValue}</span>
-                </div>
-              )}
+          {(candidate.email || contactValue) && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                Contact
+              </h4>
+              <div className="space-y-1 text-[11px] text-slate-600">
+                {candidate.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3 w-3 text-slate-400" />
+                    <span className="break-all">{candidate.email}</span>
+                  </div>
+                )}
+                {contactValue && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3 w-3 text-slate-400" />
+                    <span>{contactValue}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Personal Details */}
           {(age || candidate.gender) && (
