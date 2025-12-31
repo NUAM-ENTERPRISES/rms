@@ -204,6 +204,7 @@ export const DOCUMENT_STATUS = {
   REJECTED: 'rejected',
   EXPIRED: 'expired',
   RESUBMISSION_REQUIRED: 'resubmission_required',
+  RESUBMITTED: 'resubmitted',
 } as const;
 
 export type DocumentStatus =

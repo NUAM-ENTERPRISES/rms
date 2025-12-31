@@ -261,12 +261,18 @@ export function DocumentUploadSection({
         );
       case "rejected":
         return <Badge variant="destructive">Rejected</Badge>;
+      case "resubmission_required":
+        return (
+          <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+            Waiting for re-submission
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
-  const documents = documentsData?.data?.documents || [];
+  const documents = documentsData?.documents || [];
 
   return (
     <div className="space-y-8">

@@ -87,6 +87,7 @@ const RecruiterDocsPage: React.FC = () => {
       (item.documentDetails || []).map((doc) => ({
         ...doc,
         candidateName: `${item.candidate.firstName} ${item.candidate.lastName}`,
+        candidateId: item.candidate.id,
         projectTitle: item.project.title,
         projectId: item.project.id
       }))
@@ -273,11 +274,18 @@ const RecruiterDocsPage: React.FC = () => {
                 items.map((item) => {
                   const statusConfig = getStatusConfig(item.status.main as CandidateProjectStatus);
                   const StatusIcon = (Icons as any)[statusConfig.icon] || Icons.HelpCircle;
+                  const hasResubmission = item.documentDetails?.some(doc => doc.status === "resubmission_required");
                   
                   return (
                     <TableRow 
                       key={item.candidateProjectMapId}
-                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      className={cn(
+                        "cursor-pointer transition-colors",
+                        statusFilter === "documents_verified" ? "bg-emerald-50/50 hover:bg-emerald-100/50" :
+                        statusFilter === "rejected_documents" ? "bg-rose-50/50 hover:bg-rose-100/50" :
+                        hasResubmission ? "bg-amber-100/50 hover:bg-amber-200/50" : 
+                        "hover:bg-muted/50"
+                      )}
                       onClick={() => navigate(`/recruiter-docs/${item.project.id}/${item.candidate.id}`)}
                     >
                       <TableCell className="font-medium">
@@ -308,6 +316,12 @@ const RecruiterDocsPage: React.FC = () => {
                             <StatusIcon className="h-3 w-3" />
                             {item.status.subLabel}
                           </Badge>
+                          {hasResubmission && (
+                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1 w-fit px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                              <AlertCircle className="h-2.5 w-2.5" />
+                              Resubmit Needed
+                            </Badge>
+                          )}
                           {item.lastAction && (
                             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               <Clock className="h-2.5 w-2.5" />
@@ -401,7 +415,11 @@ const RecruiterDocsPage: React.FC = () => {
             <div className="space-y-3">
               {recentSubmissions.length > 0 ? (
                 recentSubmissions.map((doc) => (
-                  <div key={doc.id} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div 
+                    key={doc.id} 
+                    className="flex items-center gap-4 p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/recruiter-docs/${doc.projectId}/${doc.candidateId}`)}
+                  >
                     <div className="bg-blue-50 p-2.5 rounded-full">
                       <FileText className="h-4 w-4 text-blue-600" />
                     </div>

@@ -26,6 +26,7 @@ import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
+import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Documents')
@@ -354,6 +355,43 @@ export class DocumentsController {
       success: true,
       data: result,
       message: 'Resubmission request sent successfully',
+    };
+  }
+
+  @Post(':id/reupload')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Re-upload a document',
+    description:
+      'Re-upload a document after a resubmission request. Updates document status to resubmitted.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Document ID',
+    example: 'doc_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document re-uploaded successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  async reupload(
+    @Param('id') id: string,
+    @Body() reuploadDto: ReuploadDocumentDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.reupload(
+      id,
+      reuploadDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document re-uploaded successfully',
     };
   }
 

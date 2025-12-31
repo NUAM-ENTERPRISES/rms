@@ -89,7 +89,8 @@ import {
   useGetCandidateProjectRequirementsQuery,
   useCreateDocumentMutation,
   useReuseDocumentMutation,
-  useGetDocumentsQuery
+  useGetDocumentsQuery,
+  useReuploadDocumentMutation
 } from "@/features/documents/api";
 import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification, Document as CandidateDocument } from "@/features/candidates/api";
 import { useAppSelector } from "@/app/hooks";
@@ -171,6 +172,8 @@ interface DocumentRequirement {
 interface DocumentVerification {
   id: string;
   status: string;
+  rejectionReason?: string;
+  notes?: string;
   createdAt: string;
   document: {
     id: string;
@@ -237,12 +240,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const [createDocument, { isLoading: isCreating }] = useCreateDocumentMutation();
   const [reuseDocument, { isLoading: isReusing }] = useReuseDocumentMutation();
   const [sendForVerification, { isLoading: isSendingVerification }] = useSendForVerificationMutation();
+  const [reuploadDocument, { isLoading: isReuploading }] = useReuploadDocumentMutation();
 
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [showReuseDialog, setShowReuseDialog] = React.useState(false);
   const [uploadDocType, setUploadDocType] = React.useState("");
   const [selectedExistingDocId, setSelectedExistingDocId] = React.useState("");
   const [selectedRequirement, setSelectedRequirement] = React.useState<DocumentRequirement | null>(null);
+  const [isReuploadMode, setIsReuploadMode] = React.useState(false);
+  const [reuploadDocId, setReuploadDocId] = React.useState<string | null>(null);
 
   // Verification Confirmation State
   const [isVerifyConfirmOpen, setIsVerifyConfirmOpen] = React.useState(false);
@@ -302,26 +308,42 @@ const RecruiterDocsDetailPage: React.FC = () => {
       // The upload API can return either { fileName, fileUrl, ... } or { data: { fileName, fileUrl, ... } }
       const uploadData = (uploadResult && 'data' in uploadResult) ? (uploadResult.data as UploadData) : (uploadResult as unknown as UploadData);
 
-      // Step 2: Create Document record in database
-      const documentData = await createDocument({
-        candidateId,
-        docType: uploadDocType,
-        fileName: uploadData.fileName,
-        fileUrl: uploadData.fileUrl,
-        fileSize: uploadData.fileSize,
-        mimeType: uploadData.mimeType,
-      }).unwrap();
+      if (isReuploadMode && reuploadDocId) {
+        // Handle Reupload
+        await reuploadDocument({
+          documentId: reuploadDocId,
+          candidateProjectMapId: candidateProject?.id || "",
+          fileName: uploadData.fileName,
+          fileUrl: uploadData.fileUrl,
+          fileSize: uploadData.fileSize,
+          mimeType: uploadData.mimeType,
+        }).unwrap();
+        toast.success("Document re-uploaded successfully!");
+      } else {
+        // Step 2: Create Document record in database
+        const documentData = await createDocument({
+          candidateId,
+          docType: uploadDocType,
+          fileName: uploadData.fileName,
+          fileUrl: uploadData.fileUrl,
+          fileSize: uploadData.fileSize,
+          mimeType: uploadData.mimeType,
+        }).unwrap();
 
-      // Step 3: Link the document to the current project
-      await reuseDocument({
-        documentId: documentData.data.id,
-        projectId,
-      }).unwrap();
+        // Step 3: Link the document to the current project
+        await reuseDocument({
+          documentId: documentData.data.id,
+          projectId,
+        }).unwrap();
 
-      toast.success("Document uploaded and linked successfully!");
+        toast.success("Document uploaded and linked successfully!");
+      }
+
       setShowUploadDialog(false);
       setUploadDocType("");
       setSelectedRequirement(null);
+      setIsReuploadMode(false);
+      setReuploadDocId(null);
       refetchRequirements();
     } catch (error) {
       console.error("Upload error:", error);
@@ -533,13 +555,44 @@ const RecruiterDocsDetailPage: React.FC = () => {
                         <TableCell>{requirement.description || "N/A"}</TableCell>
                         <TableCell>
                           {verification ? (
-                            <Badge className={
-                              verification.status === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                              verification.status === "rejected" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                              "bg-amber-50 text-amber-700 border-amber-200"
-                            }>
-                              {verification.status.charAt(0).toUpperCase() + verification.status.slice(1)}
-                            </Badge>
+                            <div className="space-y-1">
+                              <Badge className={
+                                verification.status === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                verification.status === "rejected" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                                verification.status === "resubmission_required" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                "bg-amber-50 text-amber-700 border-amber-200"
+                              }>
+                                {verification.status === "resubmission_required" ? "Resubmission Needed" : verification.status.charAt(0).toUpperCase() + verification.status.slice(1)}
+                              </Badge>
+                              {verification.status === "resubmission_required" && verification.rejectionReason && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
+                                        Reason: {verification.rejectionReason}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p className="text-xs">Reason: {verification.rejectionReason}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              {verification.status === "verified" && verification.notes && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-emerald-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
+                                        Note: {verification.notes}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p className="text-xs">Note: {verification.notes}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                           ) : (
                             <Badge variant="outline" className="text-slate-400 border-slate-200">Not Submitted</Badge>
                           )}
@@ -591,19 +644,26 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
-                                {(!isVerificationSent || verification.status === "rejected") && (
+                                {(!isVerificationSent || verification.status === "resubmission_required") && (
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    title="Re-upload"
-                                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    title={verification.status === "resubmission_required" ? "Re-upload (Requested)" : "Re-upload"}
+                                    className={verification.status === "resubmission_required" ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"}
                                     onClick={() => {
                                       setSelectedRequirement(requirement);
                                       setUploadDocType(requirement.docType);
+                                      if (verification.status === "resubmission_required") {
+                                        setIsReuploadMode(true);
+                                        setReuploadDocId(verification.document.id);
+                                      } else {
+                                        setIsReuploadMode(false);
+                                        setReuploadDocId(null);
+                                      }
                                       setShowUploadDialog(true);
                                     }}
                                   >
-                                    <RefreshCw className="h-4 w-4" />
+                                    {verification.status === "resubmission_required" ? <Upload className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                                   </Button>
                                 )}
                               </>
@@ -729,13 +789,44 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           </TooltipProvider>
                         </TableCell>
                         <TableCell>
-                          <Badge className={
-                            doc.status === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                            doc.status === "rejected" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                            "bg-amber-50 text-amber-700 border-amber-200"
-                          }>
-                            {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
-                          </Badge>
+                          <div className="space-y-1">
+                            <Badge className={
+                              doc.status === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                              doc.status === "rejected" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                              doc.status === "resubmission_required" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                              "bg-amber-50 text-amber-700 border-amber-200"
+                            }>
+                              {doc.status === "resubmission_required" ? "Resubmission Needed" : doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                            </Badge>
+                            {doc.verifications?.[0]?.status === "resubmission_required" && doc.verifications?.[0]?.rejectionReason && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
+                                      Reason: {doc.verifications[0].rejectionReason}
+                                    </p>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="text-xs">Reason: {doc.verifications[0].rejectionReason}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {doc.verifications?.[0]?.status === "verified" && doc.verifications?.[0]?.notes && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <p className="text-xs text-emerald-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
+                                      Note: {doc.verifications[0].notes}
+                                    </p>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="text-xs">Note: {doc.verifications[0].notes}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {new Date(doc.createdAt).toLocaleDateString("en-GB", {

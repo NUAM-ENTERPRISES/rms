@@ -28,7 +28,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useCheckCandidateEligibilityQuery } from "@/features/projects/api";
 
 type StatusReference = {
   name?: string;
@@ -208,6 +207,20 @@ interface CandidateCardProps {
   /** When true, hide the verify button and show an alert icon with tooltip */
   showSkipDocumentVerification?: boolean;
   skipDocumentVerificationMessage?: string;
+  eligibilityData?: {
+    isEligible: boolean;
+    roleEligibility?: Array<{
+      roleId: string;
+      designation: string;
+      isEligible: boolean;
+      flags: {
+        gender: boolean;
+        age: boolean;
+        experience: boolean;
+      };
+      reasons: string[];
+    }>;
+  };
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -231,6 +244,7 @@ const CandidateCard = memo(function CandidateCard({
   showDocumentStatus = true,
   showSkipDocumentVerification = false,
   skipDocumentVerificationMessage,
+  eligibilityData: propEligibilityData,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -240,12 +254,8 @@ const CandidateCard = memo(function CandidateCard({
   );
 
   // Eligibility check
-  const { data: eligibilityResponse } = useCheckCandidateEligibilityQuery(
-    { candidateId, projectId: propProjectId || "" },
-    { skip: !candidateId || !propProjectId }
-  );
-  const eligibilityData = eligibilityResponse?.data;
-  const isNotEligible = eligibilityData?.isEligible === false;
+  const isNotEligible = propEligibilityData?.isEligible === false;
+  const eligibilityData = propEligibilityData;
 
   // Document verification logic
   const requiredDocs = candidate.project?.documentRequirements || [];

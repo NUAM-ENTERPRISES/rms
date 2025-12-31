@@ -248,6 +248,17 @@ export interface RequestResubmissionRequest {
   reason: string;
 }
 
+export interface ReuploadDocumentRequest {
+  candidateProjectMapId: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  mimeType?: string;
+  expiryDate?: string;
+  documentNumber?: string;
+  notes?: string;
+}
+
 export interface QueryDocumentsParams {
   candidateId?: string;
   docType?: string;
@@ -394,6 +405,18 @@ export const documentsApi = baseApi.injectEndpoints({
         body: requestData,
       }),
       invalidatesTags: ["Document", "DocumentStats", "DocumentSummary"],
+    }),
+
+    reuploadDocument: builder.mutation<
+      { success: boolean; data: Document; message: string },
+      { documentId: string } & ReuploadDocumentRequest
+    >({
+      query: ({ documentId, ...reuploadData }) => ({
+        url: `/documents/${documentId}/reupload`,
+        method: "POST",
+        body: reuploadData,
+      }),
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification"],
     }),
 
     getDocumentStats: builder.query<
@@ -545,6 +568,7 @@ export const {
   useDeleteDocumentMutation,
   useVerifyDocumentMutation,
   useRequestResubmissionMutation,
+  useReuploadDocumentMutation,
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,
   useGetVerificationCandidatesQuery,

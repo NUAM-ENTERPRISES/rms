@@ -46,6 +46,69 @@ export class OutboxService {
     });
   }
 
+  /**
+   * Publish specific document verified event
+   */
+  async publishDocumentVerified(
+    documentId: string,
+    verifiedBy: string,
+    candidateProjectMapId: string,
+  ): Promise<void> {
+    await this.publishEvent('DocumentVerified', {
+      documentId,
+      verifiedBy,
+      candidateProjectMapId,
+    });
+  }
+
+  /**
+   * Publish specific document rejected event
+   */
+  async publishDocumentRejected(
+    documentId: string,
+    rejectedBy: string,
+    candidateProjectMapId: string,
+    reason?: string,
+  ): Promise<void> {
+    await this.publishEvent('DocumentRejected', {
+      documentId,
+      rejectedBy,
+      candidateProjectMapId,
+      reason,
+    });
+  }
+
+  /**
+   * Publish document resubmission requested event
+   */
+  async publishDocumentResubmissionRequested(
+    documentId: string,
+    requestedBy: string,
+    candidateProjectMapId: string,
+    reason?: string,
+  ): Promise<void> {
+    await this.publishEvent('DocumentResubmissionRequested', {
+      documentId,
+      requestedBy,
+      candidateProjectMapId,
+      reason,
+    });
+  }
+
+  /**
+   * Publish document resubmitted event
+   */
+  async publishDocumentResubmitted(
+    documentId: string,
+    resubmittedBy: string,
+    candidateProjectMapId: string,
+  ): Promise<void> {
+    await this.publishEvent('DocumentResubmitted', {
+      documentId,
+      resubmittedBy,
+      candidateProjectMapId,
+    });
+  }
 
   /**
    * Publish candidate documents verified event

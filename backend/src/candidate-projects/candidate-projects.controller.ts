@@ -27,6 +27,7 @@ import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
 import { SendToScreeningDto } from './dto/send-to-screening.dto';
 import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
+import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Candidate Projects')
@@ -220,6 +221,28 @@ export class CandidateProjectsController {
     const result = await this.candidateProjectsService.checkEligibility(
       candidateId,
       projectId,
+    );
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Post('bulk-eligibility-check')
+  @HttpCode(HttpStatus.OK)
+  @Permissions('read:projects', 'read:candidates')
+  @ApiOperation({
+    summary: 'Bulk check candidate eligibility for a project',
+    description:
+      'Check eligibility for multiple candidates at once. Returns only candidates who are NOT eligible with reasons.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk eligibility check completed successfully',
+  })
+  async bulkCheckEligibility(@Body() dto: BulkCheckEligibilityDto) {
+    const result = await this.candidateProjectsService.checkBulkEligibility(
+      dto,
     );
     return {
       success: true,

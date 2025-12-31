@@ -12,6 +12,7 @@ import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
+import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
   TRAINING_TYPE,
@@ -1922,6 +1923,109 @@ export class CandidateProjectsService {
       isEligible: roleEligibility.some((r) => r.isEligible),
       roleEligibility,
     };
+  }
+
+  /**
+   * Bulk check candidate eligibility for a project
+   * Returns only candidates who are NOT eligible
+   */
+  async checkBulkEligibility(dto: BulkCheckEligibilityDto) {
+    const { projectId, candidateIds } = dto;
+
+    // 1. Fetch project with roles
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        rolesNeeded: true,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    // 2. Fetch all candidates
+    const candidates = await this.prisma.candidate.findMany({
+      where: {
+        id: { in: candidateIds },
+      },
+    });
+
+    const results = candidates.map((candidate) => {
+      const age = this.calculateAge(new Date(candidate.dateOfBirth));
+      const candidateGender = candidate.gender?.toLowerCase();
+      const candidateExp =
+        candidate.totalExperience ?? candidate.experience ?? 0;
+
+      const roleEligibility = project.rolesNeeded.map((role) => {
+        const reasons: string[] = [];
+        const flags = {
+          gender: true,
+          age: true,
+          experience: true,
+        };
+
+        // Gender Check
+        if (
+          role.genderRequirement &&
+          role.genderRequirement.toLowerCase() !== 'all'
+        ) {
+          const requiredGender = role.genderRequirement.toLowerCase();
+          if (!candidateGender) {
+            flags.gender = false;
+            reasons.push(
+              `Gender is required for this role (${role.genderRequirement}), but candidate gender is not specified.`,
+            );
+          } else if (candidateGender !== requiredGender) {
+            flags.gender = false;
+            reasons.push(
+              `Gender mismatch: Role requires ${role.genderRequirement}, but candidate is ${candidate.gender}.`,
+            );
+          }
+        }
+
+        // Age Check
+        if (age < role.minAge || age > role.maxAge) {
+          flags.age = false;
+          reasons.push(
+            `Age mismatch: Candidate is ${age} years old, but role requires ${role.minAge} to ${role.maxAge} years.`,
+          );
+        }
+
+        // Experience Check
+        if (role.minExperience !== null && candidateExp < role.minExperience) {
+          flags.experience = false;
+          reasons.push(
+            `Experience mismatch: Candidate has ${candidateExp} years, but role requires minimum ${role.minExperience} years.`,
+          );
+        }
+
+        if (role.maxExperience !== null && candidateExp > role.maxExperience) {
+          flags.experience = false;
+          reasons.push(
+            `Experience mismatch: Candidate has ${candidateExp} years, but role exceeds maximum ${role.maxExperience} years.`,
+          );
+        }
+
+        return {
+          roleId: role.id,
+          designation: role.designation,
+          isEligible: reasons.length === 0,
+          flags,
+          reasons,
+        };
+      });
+
+      return {
+        candidateId: candidate.id,
+        candidateName: `${candidate.firstName} ${candidate.lastName}`,
+        isEligible: roleEligibility.some((r) => r.isEligible),
+        roleEligibility,
+      };
+    });
+
+    // Return only candidates who are NOT eligible
+    return results.filter((r) => !r.isEligible);
   }
 
   /**

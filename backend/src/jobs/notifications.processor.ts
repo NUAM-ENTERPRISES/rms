@@ -33,6 +33,14 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateDocumentsVerified(job);
         case 'CandidateDocumentsRejected':
           return await this.handleCandidateDocumentsRejected(job);
+        case 'DocumentVerified':
+          return await this.handleDocumentVerified(job);
+        case 'DocumentRejected':
+          return await this.handleDocumentRejected(job);
+        case 'DocumentResubmissionRequested':
+          return await this.handleDocumentResubmissionRequested(job);
+        case 'DocumentResubmitted':
+          return await this.handleDocumentResubmitted(job);
         case 'CandidateSentForVerification':
           return await this.handleCandidateSentForVerification(job);
         case 'CandidateAssignedToRecruiter':
@@ -201,7 +209,7 @@ export class NotificationsProcessor extends WorkerHost {
         type: 'candidate_documents_verified',
         title: 'Candidate Documents Verified',
         message: `Documents for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} have been verified for project ${candidateProjectMap.project.title}. You can now proceed with project allocation.`,
-        link: `/candidate-project/${candidateProjectMap.candidate.id}/projects/${candidateProjectMap.project.id}`,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${candidateProjectMap.candidate.id}`,
         meta: {
           candidateProjectMapId,
           candidateId: candidateProjectMap.candidate.id,
@@ -298,7 +306,7 @@ export class NotificationsProcessor extends WorkerHost {
         type: 'candidate_documents_rejected',
         title: 'Candidate Documents Rejected',
         message: `Documents for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} have been rejected for project ${candidateProjectMap.project.title}. Please review and take necessary action.`,
-         link: `/candidate-project/${candidateProjectMap.candidate.id}/projects/${candidateProjectMap.project.id}`,
+         link: `/recruiter-docs/${candidateProjectMap.project.id}/${candidateProjectMap.candidate.id}`,
         meta: {
           candidateProjectMapId,
           candidateId: candidateProjectMap.candidate.id,
@@ -314,6 +322,393 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error(
         `Failed to process candidate documents rejected: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleDocumentVerified(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing document verified event: ${eventId}`);
+
+    try {
+      const { documentId, verifiedBy, candidateProjectMapId } = payload as {
+        documentId: string;
+        verifiedBy: string;
+        candidateProjectMapId: string;
+      };
+
+      // Load document with candidate details
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      if (!document) {
+        this.logger.error(`Document ${documentId} not found`);
+        return;
+      }
+
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.error(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      // Get the recruiter who uploaded the document
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (!uploader) {
+        this.logger.error(`Uploader ${document.uploadedBy} not found`);
+        return;
+      }
+
+      const idemKey = `${eventId}:${uploader.id}:document_verified`;
+
+      await this.notificationsService.createNotification({
+        userId: uploader.id,
+        type: 'document_verified',
+        title: 'Document Verified',
+        message: `Your uploaded document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been verified for project ${candidateProjectMap.project.title}.`,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          verifiedBy,
+        },
+        idemKey,
+      });
+
+      this.logger.log(
+        `Document verified notification created for uploader ${uploader.id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process document verified: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleDocumentRejected(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing document rejected event: ${eventId}`);
+
+    try {
+      const { documentId, rejectedBy, candidateProjectMapId, reason } =
+        payload as {
+          documentId: string;
+          rejectedBy: string;
+          candidateProjectMapId: string;
+          reason?: string;
+        };
+
+      // Load document with candidate details
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      if (!document) {
+        this.logger.error(`Document ${documentId} not found`);
+        return;
+      }
+
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.error(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      // Get the recruiter who uploaded the document
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (!uploader) {
+        this.logger.error(`Uploader ${document.uploadedBy} not found`);
+        return;
+      }
+
+      const idemKey = `${eventId}:${uploader.id}:document_rejected`;
+
+      await this.notificationsService.createNotification({
+        userId: uploader.id,
+        type: 'document_rejected',
+        title: 'Document Rejected',
+        message: `Your uploaded document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been rejected for project ${candidateProjectMap.project.title}.${reason ? ` Reason: ${reason}` : ''}`,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          rejectedBy,
+          reason,
+        },
+        idemKey,
+      });
+
+      this.logger.log(
+        `Document rejected notification created for uploader ${uploader.id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process document rejected: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleDocumentResubmissionRequested(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing document resubmission requested event: ${eventId}`,
+    );
+
+    try {
+      const { documentId, requestedBy, candidateProjectMapId, reason } =
+        payload as {
+          documentId: string;
+          requestedBy: string;
+          candidateProjectMapId: string;
+          reason?: string;
+        };
+
+      // Load document with candidate details
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      if (!document) {
+        this.logger.error(`Document ${documentId} not found`);
+        return;
+      }
+
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.error(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      // Get the recruiter who uploaded the document
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (!uploader) {
+        this.logger.error(`Uploader ${document.uploadedBy} not found`);
+        return;
+      }
+
+      const idemKey = `${eventId}:${uploader.id}:document_resubmission_requested`;
+
+      await this.notificationsService.createNotification({
+        userId: uploader.id,
+        type: 'document_resubmission_requested',
+        title: 'Document Resubmission Requested',
+        message: `Resubmission requested for document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} for project ${candidateProjectMap.project.title}.${reason ? ` Reason: ${reason}` : ''}`,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          requestedBy,
+          reason,
+        },
+        idemKey,
+      });
+
+      this.logger.log(
+        `Document resubmission requested notification created for uploader ${uploader.id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process document resubmission requested: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleDocumentResubmitted(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing document resubmitted event: ${eventId}`);
+
+    try {
+      const { documentId, resubmittedBy, candidateProjectMapId } = payload as {
+        documentId: string;
+        resubmittedBy: string;
+        candidateProjectMapId: string;
+      };
+
+      // Load document with candidate details
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      if (!document) {
+        this.logger.error(`Document ${documentId} not found`);
+        return;
+      }
+
+      const candidateProjectMap =
+        await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+            documentVerifications: {
+              where: { documentId },
+              include: {
+                verificationHistory: {
+                  where: { action: 'resubmission_required' },
+                  orderBy: { performedAt: 'desc' },
+                  take: 1,
+                },
+              },
+            },
+          },
+        });
+
+      if (!candidateProjectMap) {
+        this.logger.error(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      // Find the user who requested the resubmission
+      const verification = candidateProjectMap.documentVerifications[0];
+      const requesterId = verification?.verificationHistory[0]?.performedBy;
+
+      if (!requesterId) {
+        this.logger.warn(
+          `No resubmission requester found for document ${documentId} in project ${candidateProjectMapId}`,
+        );
+        return;
+      }
+
+      const idemKey = `${eventId}:${requesterId}:document_resubmitted`;
+
+      await this.notificationsService.createNotification({
+        userId: requesterId,
+        type: 'document_resubmitted',
+        title: 'Document Resubmitted',
+        message: `Candidate ${document.candidate.firstName} ${document.candidate.lastName} has resubmitted the document "${document.fileName}" for project ${candidateProjectMap.project.title}.`,
+        link: `/candidates/${document.candidate.id}/documents/${candidateProjectMap.project.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          resubmittedBy,
+        },
+        idemKey,
+      });
+
+      this.logger.log(
+        `Document resubmitted notification created for requester ${requesterId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process document resubmitted: ${error.message}`,
         error.stack,
       );
       throw error;
@@ -367,7 +762,7 @@ export class NotificationsProcessor extends WorkerHost {
         type: 'candidate_sent_for_verification',
         title: 'New Candidate for Document Verification',
         message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been assigned to you for document verification for project ${candidateProjectMap.project.title}.`,
-        link: `/candidates/${candidateProjectMap.candidate.id}/verification/${candidateProjectMapId}`,
+        link: `/candidates/${candidateProjectMap.candidate.id}/documents/${candidateProjectMap.project.id}`,
         meta: {
           candidateProjectMapId,
           candidateId: candidateProjectMap.candidate.id,

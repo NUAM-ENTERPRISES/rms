@@ -598,13 +598,11 @@ export const projectsApi = baseApi.injectEndpoints({
       }),
     }),
 
-    // Check candidate eligibility for a project
-    checkCandidateEligibility: builder.query<
-      ApiResponse<{
+    // Check bulk candidate eligibility for a project
+    checkBulkCandidateEligibility: builder.query<
+      ApiResponse<Array<{
         candidateId: string;
         candidateName: string;
-        projectId: string;
-        projectTitle: string;
         isEligible: boolean;
         roleEligibility: Array<{
           roleId: string;
@@ -617,12 +615,13 @@ export const projectsApi = baseApi.injectEndpoints({
           };
           reasons: string[];
         }>;
-      }>,
-      { candidateId: string; projectId: string }
+      }>>,
+      { projectId: string; candidateIds: string[] }
     >({
-      query: ({ candidateId, projectId }) => ({
-        url: "/candidate-projects/eligibility-check",
-        params: { candidateId, projectId },
+      query: (body) => ({
+        url: "/candidate-projects/bulk-eligibility-check",
+        method: "POST",
+        body,
       }),
     }),
 
@@ -669,6 +668,6 @@ export const {
   useGetNominatedCandidatesQuery,
   useGetCandidateProjectStatusesQuery,
   useGetProjectRoleCatalogQuery,
-  useCheckCandidateEligibilityQuery,
+  useCheckBulkCandidateEligibilityQuery,
   useGetRoleDepartmentsQuery,
 } = projectsApi;

@@ -1,4 +1,4 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,12 +20,14 @@ import {
 import {
   useGetEligibleCandidatesQuery,
   useGetProjectCandidatesByRoleQuery,
+  useCheckBulkCandidateEligibilityQuery,
 } from "@/features/projects";
 import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
+import { useDebounce } from "@/hooks/useDebounce";
 import CandidateCard, {
   CandidateRecord,
 } from "@/features/projects/components/CandidateCard";
@@ -286,6 +288,51 @@ const ProjectCandidatesBoard = ({
     ? (candidatesData as { data: CandidateRecord[] }).data
     : [];
 
+  // Trigger bulk eligibility check when candidates are loaded
+  const allCandidateIds = useMemo(() => {
+    const ids = new Set<string>();
+    nominatedCandidates.forEach((c) => {
+      const id = c.candidateId || c.id;
+      if (id) ids.add(id);
+    });
+    eligibleCandidates.forEach((c) => {
+      const id = c.candidateId || c.id;
+      if (id) ids.add(id);
+    });
+    allCandidates.forEach((c) => {
+      const id = c.candidateId || c.id;
+      if (id) ids.add(id);
+    });
+    return Array.from(ids).sort();
+  }, [nominatedCandidates, eligibleCandidates, allCandidates]);
+
+  // Debounce the candidate IDs to avoid multiple API calls as different lists load
+  const debouncedCandidateIds = useDebounce(allCandidateIds, 500);
+
+  const { data: bulkEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    {
+      projectId,
+      candidateIds: debouncedCandidateIds,
+    },
+    {
+      skip: !projectId || debouncedCandidateIds.length === 0,
+    }
+  );
+
+  // Map bulk eligibility data for easy access
+  const eligibilityMap = useMemo(() => {
+    const map = new Map<string, any>();
+    if (
+      bulkEligibilityResponse?.data &&
+      Array.isArray(bulkEligibilityResponse.data)
+    ) {
+      bulkEligibilityResponse.data.forEach((item) => {
+        map.set(item.candidateId, item);
+      });
+    }
+    return map;
+  }, [bulkEligibilityResponse]);
+
   const managerAssignmentsSource = managerAssignmentsData as unknown;
   const managerAssignmentsPayload = hasAssignmentData(managerAssignmentsSource)
     ? (Reflect.get(managerAssignmentsSource, "data") as
@@ -439,6 +486,7 @@ const ProjectCandidatesBoard = ({
           showInterviewButton={showInterviewButton}
           onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
           isAlreadyInProject={hasProject}
+          eligibilityData={eligibilityMap.get(candidateId)}
         />
       );
     });
@@ -563,7 +611,9 @@ const ProjectCandidatesBoard = ({
           onSendForInterview={(id) =>
             onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
           }
-          isAlreadyInProject={assignmentInfo.isAssigned}          showDocumentStatus={false}        />
+          isAlreadyInProject={assignmentInfo.isAssigned}          showDocumentStatus={false}
+          eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
+        />
       );
     });
   };
@@ -685,6 +735,7 @@ const ProjectCandidatesBoard = ({
           }
           isAlreadyInProject={assignmentInfo.isAssigned}
           showDocumentStatus={assignmentInfo.isAssigned}
+          eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
         />
       );
     });

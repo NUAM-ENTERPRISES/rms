@@ -465,7 +465,7 @@ function App() {
                     path="/interviews"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute>
+                        <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <InterviewsPage />
                           </AppLayout>
@@ -478,7 +478,7 @@ function App() {
                     path="/interviews/list"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute>
+                        <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <MyInterviewsListPage />
                           </AppLayout>
@@ -491,7 +491,7 @@ function App() {
                     path="/interviews/assigned"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute>
+                        <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <AssignedInterviewsListPage />
                           </AppLayout>
@@ -504,7 +504,7 @@ function App() {
                     path="/interviews/upcoming"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute>
+                        <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <UpcomingInterviewsListPage />
                           </AppLayout>

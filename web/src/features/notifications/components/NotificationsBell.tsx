@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, CheckCheck, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,10 +22,14 @@ import {
   useClearNotifications,
 } from "@/features/notifications/hooks";
 import NotificationsList from "./NotificationsList";
+import type { NotificationDto } from "@/features/notifications/data";
 
 export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [allNotifications, setAllNotifications] = useState<NotificationDto[]>([]);
+  const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined);
+
   const { markAsRead } = useMarkNotificationRead();
   const { clearAll } = useClearNotifications();
 
@@ -36,28 +40,55 @@ export default function NotificationsBell() {
   const {
     data: notificationsData,
     isLoading: notificationsLoading,
+    isFetching: notificationsFetching,
     error: notificationsError,
     refetch: refetchNotifications,
-  } = useNotificationsList({ limit: 10 });
+  } = useNotificationsList({ 
+    limit: 10, 
+    cursor: currentCursor 
+  });
 
   const unreadCount = badgeData?.data?.unread || 0;
-  const notifications = notificationsData?.data?.notifications || [];
+  const totalCount = notificationsData?.data?.total || 0;
+  const hasMore = notificationsData?.data?.hasMore || false;
+  const nextCursor = notificationsData?.data?.nextCursor;
 
-  const handleRefresh = () => {
-    refetchNotifications();
+  useEffect(() => {
+    if (notificationsData?.data?.notifications) {
+      if (currentCursor === undefined) {
+        setAllNotifications(notificationsData.data.notifications);
+      } else {
+        setAllNotifications(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const newOnes = notificationsData.data.notifications.filter(n => !existingIds.has(n.id));
+          return [...prev, ...newOnes];
+        });
+      }
+    }
+  }, [notificationsData, currentCursor]);
+
+  const handleRefresh = async () => {
+    setCurrentCursor(undefined);
+    await refetchNotifications();
+  };
+
+  const handleLoadMore = () => {
+    if (nextCursor && !notificationsFetching) {
+      setCurrentCursor(nextCursor);
+    }
   };
 
   const handleMarkAllAsRead = async () => {
-    const unreadNotifications = notifications.filter((n) => n.status === "unread");
+    const unreadNotifications = allNotifications.filter((n) => n.status === "unread");
     for (const notification of unreadNotifications) {
       await markAsRead(notification.id);
     }
-    refetchNotifications();
+    handleRefresh();
   };
 
   const handleClearAll = async () => {
     await clearAll();
-    refetchNotifications();
+    handleRefresh();
   };
 
   return (
@@ -100,14 +131,20 @@ export default function NotificationsBell() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-base text-slate-900">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs px-2.5 py-0.5 shadow-sm">
-                      {unreadCount}
-                    </Badge>
+                  <Badge className={cn(
+                    "text-white text-xs px-2.5 py-0.5 shadow-sm",
+                    unreadCount > 0 ? "bg-gradient-to-r from-blue-500 to-indigo-600" : "bg-slate-400"
+                  )}>
+                    {unreadCount} Unread
+                  </Badge>
+                  {totalCount > 0 && (
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Total: {totalCount}
+                    </span>
                   )}
                 </div>
               </div>
-              {notifications.length > 0 && (
+              {allNotifications.length > 0 && (
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
                     <Button
@@ -120,24 +157,17 @@ export default function NotificationsBell() {
                       Mark all read
                     </Button>
                   )}
-                  {/* <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowConfirmDialog(true)}
-                    className="h-8 text-xs gap-1 hover:bg-red-100 text-red-600 border-red-200 flex-1"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Clear all
-                  </Button> */}
                 </div>
               )}
             </div>
 
             <NotificationsList
-              notifications={notifications}
-              isLoading={notificationsLoading}
+              notifications={allNotifications}
+              isLoading={notificationsFetching}
               error={notificationsError}
               onRefresh={handleRefresh}
+              onLoadMore={handleLoadMore}
+              hasMore={hasMore}
               className="min-h-32"
             />
           </PopoverContent>

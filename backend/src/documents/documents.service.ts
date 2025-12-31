@@ -10,6 +10,7 @@ import { UpdateDocumentDto } from './dto/update-document.dto';
 import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
+import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import {
   DocumentWithRelations,
   PaginatedDocuments,
@@ -424,14 +425,14 @@ export class DocumentsService {
       }
 
       // update main document status
- await tx.document.update({
-  where: { id: documentId },
-  data: {
-    status: verifyDto.status,
-    verifiedAt: verifyDto.status === DOCUMENT_STATUS.VERIFIED ? new Date() : null,
-    rejectedAt: verifyDto.status === DOCUMENT_STATUS.REJECTED ? new Date() : null,
-  },
-});
+      await tx.document.update({
+        where: { id: documentId },
+        data: {
+          status: verifyDto.status,
+          verifiedAt: verifyDto.status === DOCUMENT_STATUS.VERIFIED ? new Date() : null,
+          rejectedAt: verifyDto.status === DOCUMENT_STATUS.REJECTED ? new Date() : null,
+        },
+      });
 
 
 
@@ -453,20 +454,36 @@ export class DocumentsService {
     // Update CandidateProjectMap status based on verification
     await this.updateCandidateProjectStatus(verifyDto.candidateProjectMapId);
 
-    // Check if all documents are now verified and publish event
-    // if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
-    //   const summary = await this.getDocumentSummary(
-    //     verifyDto.candidateProjectMapId,
-    //   );
+    // Publish event for specific document verification/rejection
+    if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
+      await this.outboxService.publishDocumentVerified(
+        documentId,
+        verifierId,
+        verifyDto.candidateProjectMapId,
+      );
+    } else if (verifyDto.status === DOCUMENT_STATUS.REJECTED) {
+      await this.outboxService.publishDocumentRejected(
+        documentId,
+        verifierId,
+        verifyDto.candidateProjectMapId,
+        verifyDto.rejectionReason,
+      );
+    }
 
-    //   if (summary.allDocumentsVerified) {
-    //     // Publish event to notify recruiter that all documents are verified
-    //     await this.outboxService.publishCandidateDocumentsVerified(
-    //       verifyDto.candidateProjectMapId,
-    //       verifierId,
-    //     );
-    //   }
-    // }
+    // Check if all documents are now verified and publish event
+    if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
+      const summary = await this.getDocumentSummary(
+        verifyDto.candidateProjectMapId,
+      );
+
+      if (summary.allDocumentsVerified) {
+        // Publish event to notify recruiter that all documents are verified
+        await this.outboxService.publishCandidateDocumentsVerified(
+          verifyDto.candidateProjectMapId,
+          verifierId,
+        );
+      }
+    }
 
     return verification;
   }
@@ -542,7 +559,7 @@ export class DocumentsService {
       await tx.documentVerificationHistory.create({
         data: {
           verificationId: updatedVerification.id,
-          action: 'resubmission_requested',
+          action: DOCUMENT_STATUS.RESUBMISSION_REQUIRED,
           performedBy: requesterId,
           performedByName: requester?.name || null,
           reason: requestDto.reason,
@@ -567,7 +584,110 @@ export class DocumentsService {
       });
     }
 
+    // Publish event for document resubmission request
+    await this.outboxService.publishDocumentResubmissionRequested(
+      documentId,
+      requesterId,
+      requestDto.candidateProjectMapId,
+      requestDto.reason,
+    );
+
     return verification;
+  }
+
+  /**
+   * Re-upload a document after resubmission request
+   */
+  async reupload(
+    documentId: string,
+    reuploadDto: ReuploadDocumentDto,
+    userId: string,
+  ): Promise<any> {
+    // Check document exists
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+    });
+    if (!document) {
+      throw new NotFoundException(`Document with ID ${documentId} not found`);
+    }
+
+    // Check candidateProjectMap exists
+    const candidateProjectMap =
+      await this.prisma.candidateProjects.findUnique({
+        where: { id: reuploadDto.candidateProjectMapId },
+      });
+    if (!candidateProjectMap) {
+      throw new NotFoundException(
+        `Candidate project mapping with ID ${reuploadDto.candidateProjectMapId} not found`,
+      );
+    }
+
+    // Get user details for history
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    // Update document and verification in a transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. Update the main document record
+      const updatedDocument = await tx.document.update({
+        where: { id: documentId },
+        data: {
+          fileName: reuploadDto.fileName,
+          fileUrl: reuploadDto.fileUrl,
+          fileSize: reuploadDto.fileSize,
+          mimeType: reuploadDto.mimeType,
+          expiryDate: reuploadDto.expiryDate
+            ? new Date(reuploadDto.expiryDate)
+            : undefined,
+          documentNumber: reuploadDto.documentNumber,
+          notes: reuploadDto.notes,
+          status: DOCUMENT_STATUS.RESUBMITTED,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 2. Update the verification record
+      const verification = await tx.candidateProjectDocumentVerification.update({
+        where: {
+          candidateProjectMapId_documentId: {
+            candidateProjectMapId: reuploadDto.candidateProjectMapId,
+            documentId: documentId,
+          },
+        },
+        data: {
+          status: DOCUMENT_STATUS.RESUBMITTED,
+          resubmissionRequested: false, // Reset flag as it's now resubmitted
+          updatedAt: new Date(),
+        },
+      });
+
+      // 3. Create history entry
+      await tx.documentVerificationHistory.create({
+        data: {
+          verificationId: verification.id,
+          action: DOCUMENT_STATUS.RESUBMITTED,
+          performedBy: userId,
+          performedByName: user?.name || null,
+          notes: reuploadDto.notes,
+        },
+      });
+
+      return { updatedDocument, verification };
+    });
+
+    // Update CandidateProjectMap status
+    await this.updateCandidateProjectStatus(reuploadDto.candidateProjectMapId);
+
+    // Publish event for notification
+    await this.outboxService.publishDocumentResubmitted(
+      documentId,
+      userId,
+      reuploadDto.candidateProjectMapId,
+    );
+
+    return result;
   }
 
   /**
@@ -1456,51 +1576,51 @@ export class DocumentsService {
 
 
   // Verified and Rejected list API
-async getVerifiedOrRejectedList() {
-  return this.prisma.candidateProjects.findMany({
-    where: {
-      documentVerifications: {
-        some: {
-          status: { in: ['verified', 'rejected'] },  // include both statuses
+  async getVerifiedOrRejectedList() {
+    return this.prisma.candidateProjects.findMany({
+      where: {
+        documentVerifications: {
+          some: {
+            status: { in: ['verified', 'rejected'] },  // include both statuses
+          },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
 
-    include: {
-      candidate: {
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
+      include: {
+        candidate: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
-      },
-      project: {
-        select: {
-          title: true,
+        project: {
+          select: {
+            title: true,
+          },
         },
-      },
-      recruiter: {
-        select: {
-          name: true,
+        recruiter: {
+          select: {
+            name: true,
+          },
         },
-      },
-      documentVerifications: {
-        where: { 
-          status: { in: ['verified', 'rejected'] }   // include both statuses here also
-        },
-        include: {
-          document: {
-            select: {
-              fileName: true,
-              fileUrl: true,
+        documentVerifications: {
+          where: {
+            status: { in: ['verified', 'rejected'] }   // include both statuses here also
+          },
+          include: {
+            document: {
+              select: {
+                fileName: true,
+                fileUrl: true,
+              },
             },
           },
         },
       },
-    },
-  });
-}
+    });
+  }
 
   /**
    * Get paginated list of document verifications filtered by verified/rejected
@@ -1515,8 +1635,8 @@ async getVerifiedOrRejectedList() {
       status === 'verified'
         ? ['verified']
         : status === 'rejected'
-        ? ['rejected']
-        : ['verified', 'rejected'];
+          ? ['rejected']
+          : ['verified', 'rejected'];
 
     // Base where clause applied to counts and list
     const baseWhere: any = {
@@ -1796,7 +1916,7 @@ async getVerifiedOrRejectedList() {
     // Calculate progress for each candidate project
     const items = candidateProjects.map((cp) => {
       const totalDocsToUpload = cp.project.documentRequirements.length;
-      
+
       // Count unique required docTypes that have at least one upload
       const requiredDocTypes = cp.project.documentRequirements.map(r => r.docType);
       const uploadedDocTypes = new Set(cp.documentVerifications.map(dv => dv.document.docType));
@@ -1816,10 +1936,10 @@ async getVerifiedOrRejectedList() {
           client: cp.project.client,
           role: cp.roleNeeded
             ? {
-                id: cp.roleNeeded.id,
-                designation: cp.roleNeeded.designation,
-                roleCatalog: cp.roleNeeded.roleCatalog,
-              }
+              id: cp.roleNeeded.id,
+              designation: cp.roleNeeded.designation,
+              roleCatalog: cp.roleNeeded.roleCatalog,
+            }
             : null,
         },
         recruiter: cp.recruiter,
@@ -1840,11 +1960,11 @@ async getVerifiedOrRejectedList() {
         },
         lastAction: cp.projectStatusHistory[0]
           ? {
-              status: cp.projectStatusHistory[0].subStatusSnapshot,
-              performedBy: cp.projectStatusHistory[0].changedBy?.name,
-              at: cp.projectStatusHistory[0].statusChangedAt,
-              reason: cp.projectStatusHistory[0].reason,
-            }
+            status: cp.projectStatusHistory[0].subStatusSnapshot,
+            performedBy: cp.projectStatusHistory[0].changedBy?.name,
+            at: cp.projectStatusHistory[0].statusChangedAt,
+            reason: cp.projectStatusHistory[0].reason,
+          }
           : null,
         status: {
           main: cp.mainStatus?.name || null,
@@ -2037,7 +2157,7 @@ async getVerifiedOrRejectedList() {
     // 5. Format items (same structure as getRecruiterPendingDocuments)
     const items = candidateProjects.map((cp) => {
       const totalDocsToUpload = cp.project.documentRequirements.length;
-      
+
       // Count unique required docTypes that have at least one upload
       const requiredDocTypes = cp.project.documentRequirements.map(r => r.docType);
       const uploadedDocTypes = new Set(cp.documentVerifications.map(dv => dv.document.docType));
@@ -2057,10 +2177,10 @@ async getVerifiedOrRejectedList() {
           client: cp.project.client,
           role: cp.roleNeeded
             ? {
-                id: cp.roleNeeded.id,
-                designation: cp.roleNeeded.designation,
-                roleCatalog: cp.roleNeeded.roleCatalog,
-              }
+              id: cp.roleNeeded.id,
+              designation: cp.roleNeeded.designation,
+              roleCatalog: cp.roleNeeded.roleCatalog,
+            }
             : null,
         },
         recruiter: cp.recruiter,
@@ -2081,11 +2201,11 @@ async getVerifiedOrRejectedList() {
         },
         lastAction: cp.projectStatusHistory[0]
           ? {
-              status: cp.projectStatusHistory[0].subStatusSnapshot,
-              performedBy: cp.projectStatusHistory[0].changedBy?.name,
-              at: cp.projectStatusHistory[0].statusChangedAt,
-              reason: cp.projectStatusHistory[0].reason,
-            }
+            status: cp.projectStatusHistory[0].subStatusSnapshot,
+            performedBy: cp.projectStatusHistory[0].changedBy?.name,
+            at: cp.projectStatusHistory[0].statusChangedAt,
+            reason: cp.projectStatusHistory[0].reason,
+          }
           : null,
         status: {
           main: cp.mainStatus?.name || null,

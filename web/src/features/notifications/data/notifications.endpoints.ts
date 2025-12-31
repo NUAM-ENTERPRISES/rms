@@ -26,11 +26,9 @@ export interface QueryNotificationsRequest {
 
 export interface PaginatedNotificationsResponse {
   notifications: NotificationDto[];
-  pagination: {
-    cursor: string | null;
-    hasMore: boolean;
-    total: number;
-  };
+  total: number;
+  hasMore: boolean;
+  nextCursor: string | null;
 }
 
 // API Response wrapper
