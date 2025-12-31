@@ -22,6 +22,7 @@ import { ApproveCandidateDto } from './dto/approve-candidate.dto';
 import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
+import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import {
@@ -2227,6 +2228,76 @@ export class CandidatesService {
     return {
       message: `Recruiter ${recruiter.name} assigned to candidate`,
       assignment,
+    };
+  }
+
+  /**
+   * Transfer candidate to another recruiter
+   * Validates that the candidate is currently assigned and prevents transferring to the same recruiter
+   */
+  async transferRecruiter(
+    candidateId: string,
+    transferCandidateDto: TransferCandidateDto,
+    userId: string,
+  ): Promise<{ message: string; assignment: any }> {
+    // Check if candidate exists
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: {
+            recruiter: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // Get current active assignment
+    const currentAssignment = candidate.recruiterAssignments[0];
+
+    // Check if candidate is already assigned to the target recruiter
+    if (
+      currentAssignment &&
+      currentAssignment.recruiterId === transferCandidateDto.targetRecruiterId
+    ) {
+      throw new BadRequestException(
+        `Candidate is already assigned to recruiter ${currentAssignment.recruiter.name}`,
+      );
+    }
+
+    // Check if target recruiter exists
+    const targetRecruiter = await this.prisma.user.findUnique({
+      where: { id: transferCandidateDto.targetRecruiterId },
+    });
+
+    if (!targetRecruiter) {
+      throw new NotFoundException(
+        `Target recruiter with ID ${transferCandidateDto.targetRecruiterId} not found`,
+      );
+    }
+
+    // Use the existing assignRecruiter method to handle the transfer
+    const result = await this.assignRecruiter(
+      candidateId,
+      {
+        recruiterId: transferCandidateDto.targetRecruiterId,
+        reason:
+          transferCandidateDto.reason ||
+          `Transferred from ${currentAssignment ? currentAssignment.recruiter.name : 'unassigned'}`,
+      },
+      userId,
+    );
+
+    return {
+      message: `Candidate transferred from ${currentAssignment ? currentAssignment.recruiter.name : 'unassigned'} to ${targetRecruiter.name}`,
+      assignment: result.assignment,
     };
   }
 

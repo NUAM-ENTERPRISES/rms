@@ -18,10 +18,8 @@ import {
   AlertCircle,
   Search,
   ExternalLink,
-  FolderOpen,
   ChevronLeft,
   ChevronRight,
-  Users,
   CheckCircle,
   XCircle,
 } from "lucide-react";

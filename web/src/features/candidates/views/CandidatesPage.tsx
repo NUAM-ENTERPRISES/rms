@@ -57,11 +57,14 @@ import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
+  useTransferCandidateMutation,
   type RecruiterMyCandidatesResponse,
   type AllCandidatesResponse,
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
+import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
+import { toast } from "sonner";
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
@@ -76,6 +79,18 @@ export default function CandidatesPage() {
   // All roles can read candidates
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
+  const canTransferCandidates = user?.roles?.some((role) =>
+    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+  );
+
+  // Transfer candidate state
+  const [transferDialog, setTransferDialog] = useState<{
+    isOpen: boolean;
+    candidateId?: string;
+    candidateName?: string;
+  }>({ isOpen: false });
+
+  const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
 
   // State for filters and pagination
   const [filters, setFilters] = useState({
@@ -138,6 +153,34 @@ export default function CandidatesPage() {
   // Handle search
   const handleSearch = (value: string) => {
     setFilters((prev) => ({ ...prev, search: value, page: 1 }));
+  };
+
+  // Handle transfer candidate
+  const handleTransferCandidate = async (data: {
+    targetRecruiterId: string;
+    reason: string;
+  }) => {
+    if (!transferDialog.candidateId) return;
+
+    try {
+      await transferCandidate({
+        candidateId: transferDialog.candidateId,
+        targetRecruiterId: data.targetRecruiterId,
+        reason: data.reason,
+      }).unwrap();
+
+      toast.success("Candidate transferred successfully!");
+      setTransferDialog({ isOpen: false });
+
+      // Refetch candidates
+      if (isRecruiter && !isManager) {
+        recruiterRefetch();
+      } else {
+        allCandidatesRefetch();
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to transfer candidate");
+    }
   };
 
   // Filter and paginate candidates
@@ -1305,6 +1348,23 @@ export default function CandidatesPage() {
                                     </DropdownMenuItem>
                                   </>
                                 )}
+                                {canTransferCandidates && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        setTransferDialog({
+                                          isOpen: true,
+                                          candidateId: candidate.id,
+                                          candidateName: `${candidate.firstName} ${candidate.lastName}`,
+                                        })
+                                      }
+                                      className="text-blue-600"
+                                    >
+                                      <UserCheck className="mr-2 h-4 w-4" /> Transfer Candidate
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -1453,6 +1513,18 @@ export default function CandidatesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Transfer Candidate Dialog */}
+      {transferDialog.isOpen && transferDialog.candidateId && (
+        <TransferCandidateDialog
+          open={transferDialog.isOpen}
+          onOpenChange={(open) => setTransferDialog({ isOpen: open })}
+          candidateId={transferDialog.candidateId}
+          candidateName={transferDialog.candidateName || "Unknown Candidate"}
+          onConfirm={handleTransferCandidate}
+          isLoading={isTransferring}
+        />
+      )}
     </div>
   );
 }

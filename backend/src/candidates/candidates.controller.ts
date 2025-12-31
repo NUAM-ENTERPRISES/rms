@@ -29,6 +29,7 @@ import { ApproveCandidateDto } from './dto/approve-candidate.dto';
 import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
+import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
@@ -1106,6 +1107,47 @@ export class CandidatesController {
       success: true,
       data: result,
       message: 'Recruiter assigned successfully',
+    };
+  }
+
+  @Post(':id/transfer-candidate')
+  @Permissions('transfer:candidates')
+  @ApiOperation({
+    summary: 'Transfer candidate to another recruiter',
+    description:
+      'Transfer a candidate from their current recruiter to a new recruiter. Only accessible by Admin, Manager, and Team Lead roles.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Candidate ID',
+    example: 'clx1234567890',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate transferred successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or target recruiter not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Candidate is already assigned to the target recruiter',
+  })
+  async transferRecruiter(
+    @Param('id') id: string,
+    @Body() transferCandidateDto: TransferCandidateDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidatesService.transferRecruiter(
+      id,
+      transferCandidateDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate transferred successfully',
     };
   }
 

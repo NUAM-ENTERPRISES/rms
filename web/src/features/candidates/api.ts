@@ -870,6 +870,19 @@ export const candidatesApi = baseApi.injectEndpoints({
       query: () => "/candidates/status-config",
       providesTags: ["StatusConfig"],
     }),
+
+    // Transfer candidate to another recruiter
+    transferCandidate: builder.mutation<
+      { success: boolean; message: string; data?: any },
+      { candidateId: string; targetRecruiterId: string; reason: string }
+    >({
+      query: ({ candidateId, targetRecruiterId, reason }) => ({
+        url: `/candidates/${candidateId}/transfer-candidate`,
+        method: "POST",
+        body: { targetRecruiterId, reason },
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
   }),
 });
 
@@ -900,4 +913,5 @@ export const {
   useGetRecruiterMyCandidatesQuery,
   useGetStatusConfigQuery,
   useGetCandidateProjectPipelineQuery,
+  useTransferCandidateMutation,
 } = candidatesApi;

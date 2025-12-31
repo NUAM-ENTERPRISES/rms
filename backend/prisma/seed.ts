@@ -34,6 +34,7 @@ const roles = [
       'read:teams',
       'read:settings',
       'manage:projects',
+      'transfer:candidates',
     ],
   },
   {
@@ -75,6 +76,7 @@ const roles = [
       'schedule:interviews',
       'manage:recruiters',
       'read:documents',
+      'transfer:candidates',
     ],
   },
   {
@@ -88,6 +90,7 @@ const roles = [
       'manage:candidates',
       'nominate:candidates',
       'read:projects',
+      // 'read:interviews',
       // Document-related permissions
       'read:documents',
       'write:documents',
@@ -136,8 +139,13 @@ const roles = [
     permissions: [
       'read:candidates',
       'write:candidates',
+      'manage:candidates',
+      'read:users',
       'read:projects',
       'read:interviews',
+      'write:interviews',
+      'manage:interviews',
+      'schedule:interviews',
       'read:screenings',
       'write:screenings',
       'manage:screenings',
@@ -195,6 +203,7 @@ const allPermissions = [
   'nominate:candidates',
   'approve:candidates',
   'reject:candidates',
+  'transfer:candidates',
 
   // Document management
   'read:documents',

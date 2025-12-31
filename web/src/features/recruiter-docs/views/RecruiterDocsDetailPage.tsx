@@ -173,7 +173,6 @@ interface DocumentVerification {
   id: string;
   status: string;
   rejectionReason?: string;
-  notes?: string;
   createdAt: string;
   document: {
     id: string;
@@ -578,20 +577,6 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
-                              {verification.status === "verified" && verification.notes && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <p className="text-xs text-emerald-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
-                                        Note: {verification.notes}
-                                      </p>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs">
-                                      <p className="text-xs">Note: {verification.notes}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
                             </div>
                           ) : (
                             <Badge variant="outline" className="text-slate-400 border-slate-200">Not Submitted</Badge>
@@ -808,20 +793,6 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                   </TooltipTrigger>
                                   <TooltipContent className="max-w-xs">
                                     <p className="text-xs">Reason: {doc.verifications[0].rejectionReason}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {doc.verifications?.[0]?.status === "verified" && doc.verifications?.[0]?.notes && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <p className="text-xs text-emerald-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
-                                      Note: {doc.verifications[0].notes}
-                                    </p>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs">
-                                    <p className="text-xs">Note: {doc.verifications[0].notes}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

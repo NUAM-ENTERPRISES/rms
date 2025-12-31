@@ -674,154 +674,6 @@ export default function ScreeningsListPage() {
 
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {interview.decision === SCREENING_DECISION.APPROVED && renderDocStatusIcon(interview)}
-                    {(() => {
-                      const isTrainingAssigned = interview.candidateProjectMap?.subStatus?.name === "training_assigned";
-                      const trainerName = getAssignedTrainerName(interview);
-                      const isMainAssigned = interview.status === "assigned" || !!interview.candidateProjectMap?.mainInterviewId;
-
-                      if (isTrainingAssigned) {
-                        return (
-                          <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300 truncate max-w-[120px]">
-                            {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
-                          </Badge>
-                        );
-                      }
-
-                      if (isMainAssigned) {
-                        return (
-                          <div className="flex items-center gap-1 overflow-hidden">
-                            <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300 truncate max-w-[100px]">
-                              Main Interview
-                            </Badge>
-                            {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                              interview.decision === SCREENING_DECISION.REJECTED) && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 rounded-lg hover:bg-indigo-50"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAssignToTrainer(interview);
-                                }}
-                                title="Assign to Trainer"
-                              >
-                                <UserPlus className="h-4 w-4 text-indigo-600" />
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      if (interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
-                        const status = getDocStatus(interview);
-                        const isAllUploaded = status?.isAllUploaded;
-
-                        return (
-                          <div className="flex items-center gap-1 overflow-hidden">
-                            {_docVerified ? (
-                              <Badge className="text-xs bg-green-100 text-green-700 truncate">Verified</Badge>
-                            ) : verificationInProgress ? (
-                              <Badge className="text-xs bg-amber-100 text-amber-700 truncate">Verifying</Badge>
-                            ) : explicitVerificationRequired ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      disabled={!interview.candidateProjectMap?.documentVerifications?.length}
-                                      className={cn(
-                                        "h-8 w-8 rounded-lg",
-                                        interview.candidateProjectMap?.documentVerifications?.length ? "hover:bg-amber-50" : "opacity-50 cursor-not-allowed"
-                                      )}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSendForVerificationConfirm({
-                                          isOpen: true,
-                                          candidateId: interview.candidateProjectMap?.candidate?.id,
-                                          projectId: interview.candidateProjectMap?.project?.id,
-                                          screeningId: interview.id,
-                                          projectName: interview.candidateProjectMap?.project?.title,
-                                          projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
-                                          notes: "",
-                                          roleId: interview.candidateProjectMap?.roleNeededId,
-                                        });
-                                      }}
-                                    >
-                                      <ClipboardCheck className={cn("h-4 w-4", interview.candidateProjectMap?.documentVerifications?.length ? "text-amber-600" : "text-slate-400")} />
-                                    </Button>
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs">
-                                  {interview.candidateProjectMap?.documentVerifications?.length 
-                                    ? "Send for Verification" 
-                                    : "Please upload documents to enable this button"}
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : null}
-
-                            <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  disabled={!isAllUploaded}
-                                  className={cn(
-                                    "h-8 w-8 rounded-lg",
-                                    isAllUploaded ? "hover:bg-indigo-50" : "opacity-50 cursor-not-allowed"
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSendForInterviewConfirm({
-                                      isOpen: true,
-                                      candidateId: interview.candidateProjectMap?.candidate?.id,
-                                      candidateName,
-                                      projectId: interview.candidateProjectMap?.project?.id,
-                                      projectName: interview.candidateProjectMap?.project?.title,
-                                      projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
-                                      scheduledTime: interview.scheduledTime,
-                                      overallRating: interview.overallRating,
-                                      decision: interview.decision,
-                                      screeningId: interview.id,
-                                      notes: "",
-                                    });
-                                  }}
-                                  title={isAllUploaded ? "Assign Main Interview" : "Please complete the document verification"}
-                                >
-                                  <Send className={cn("h-4 w-4", isAllUploaded ? "text-indigo-600" : "text-slate-400")} />
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            {!isAllUploaded && (
-                              <TooltipContent side="top" className="text-xs">
-                                Please complete the document verification
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                          </div>
-                        );
-                      }
-
-                      if (interview.decision === SCREENING_DECISION.NEEDS_TRAINING || interview.decision === SCREENING_DECISION.REJECTED) {
-                        return (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-lg hover:bg-indigo-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAssignToTrainer(interview);
-                            }}
-                            title="Assign to Trainer"
-                          >
-                            <UserPlus className="h-4 w-4 text-indigo-600" />
-                          </Button>
-                        );
-                      }
-
-                      return null;
-                    })()}
                     <ChevronRight
                       className={cn(
                         "h-5 w-5 transition-all duration-300",
@@ -845,6 +697,154 @@ export default function ScreeningsListPage() {
                   {verificationInProgress && !_docVerified && (
                     <Badge className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0">Verifying</Badge>
                   )}
+                  {(() => {
+                    const isTrainingAssigned = interview.candidateProjectMap?.subStatus?.name === "training_assigned";
+                    const trainerName = getAssignedTrainerName(interview);
+                    const isMainAssigned = interview.status === "assigned" || !!interview.candidateProjectMap?.mainInterviewId;
+
+                    if (isTrainingAssigned) {
+                      return (
+                        <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300 truncate">
+                          {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
+                        </Badge>
+                      );
+                    }
+
+                    if (isMainAssigned) {
+                      return (
+                        <>
+                          <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                            Main Interview
+                          </Badge>
+                          {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                            interview.decision === SCREENING_DECISION.REJECTED) && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 rounded-lg hover:bg-indigo-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAssignToTrainer(interview);
+                              }}
+                              title="Assign to Trainer"
+                            >
+                              <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
+                            </Button>
+                          )}
+                        </>
+                      );
+                    }
+
+                    if (interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
+                      const status = getDocStatus(interview);
+                      const isAllUploaded = status?.isAllUploaded;
+
+                      return (
+                        <>
+                          {_docVerified ? (
+                            <Badge className="text-xs bg-green-100 text-green-700">Verified</Badge>
+                          ) : verificationInProgress ? (
+                            <Badge className="text-xs bg-amber-100 text-amber-700">Verifying</Badge>
+                          ) : explicitVerificationRequired ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    disabled={!interview.candidateProjectMap?.documentVerifications?.length}
+                                    className={cn(
+                                      "h-6 w-6 rounded-lg",
+                                      interview.candidateProjectMap?.documentVerifications?.length ? "hover:bg-amber-50" : "opacity-50 cursor-not-allowed"
+                                    )}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSendForVerificationConfirm({
+                                        isOpen: true,
+                                        candidateId: interview.candidateProjectMap?.candidate?.id,
+                                        projectId: interview.candidateProjectMap?.project?.id,
+                                        screeningId: interview.id,
+                                        projectName: interview.candidateProjectMap?.project?.title,
+                                        projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
+                                        notes: "",
+                                        roleId: interview.candidateProjectMap?.roleNeededId,
+                                      });
+                                    }}
+                                  >
+                                    <ClipboardCheck className={cn("h-3.5 w-3.5", interview.candidateProjectMap?.documentVerifications?.length ? "text-amber-600" : "text-slate-400")} />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                {interview.candidateProjectMap?.documentVerifications?.length 
+                                  ? "Send for Verification" 
+                                  : "Please upload documents to enable this button"}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : null}
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  disabled={!isAllUploaded}
+                                  className={cn(
+                                    "h-6 w-6 rounded-lg",
+                                    isAllUploaded ? "hover:bg-indigo-50" : "opacity-50 cursor-not-allowed"
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSendForInterviewConfirm({
+                                      isOpen: true,
+                                      candidateId: interview.candidateProjectMap?.candidate?.id,
+                                      candidateName,
+                                      projectId: interview.candidateProjectMap?.project?.id,
+                                      projectName: interview.candidateProjectMap?.project?.title,
+                                      projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
+                                      scheduledTime: interview.scheduledTime,
+                                      overallRating: interview.overallRating,
+                                      decision: interview.decision,
+                                      screeningId: interview.id,
+                                      notes: "",
+                                    });
+                                  }}
+                                  title={isAllUploaded ? "Assign Main Interview" : "Please complete the document verification"}
+                                >
+                                  <Send className={cn("h-3.5 w-3.5", isAllUploaded ? "text-indigo-600" : "text-slate-400")} />
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            {!isAllUploaded && (
+                              <TooltipContent side="top" className="text-xs">
+                                Please complete the document verification
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </>
+                      );
+                    }
+
+                    if (interview.decision === SCREENING_DECISION.NEEDS_TRAINING || interview.decision === SCREENING_DECISION.REJECTED) {
+                      return (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 rounded-lg hover:bg-indigo-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAssignToTrainer(interview);
+                          }}
+                          title="Assign to Trainer"
+                        >
+                          <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
+                        </Button>
+                      );
+                    }
+
+                    return null;
+                  })()}
                 </div>
 
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-2">
