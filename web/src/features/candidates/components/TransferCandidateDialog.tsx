@@ -23,8 +23,8 @@ import { useGetUsersQuery } from "@/services/usersApi";
 interface TransferCandidateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  candidateId: string;
   candidateName: string;
+  currentRecruiter?: { id: string; name?: string; email?: string } | null;
   onConfirm: (data: { targetRecruiterId: string; reason: string }) => void;
   isLoading?: boolean;
 }
@@ -32,8 +32,8 @@ interface TransferCandidateDialogProps {
 export function TransferCandidateDialog({
   open,
   onOpenChange,
-  candidateId,
   candidateName,
+  currentRecruiter,
   onConfirm,
   isLoading = false,
 }: TransferCandidateDialogProps) {
@@ -45,16 +45,24 @@ export function TransferCandidateDialog({
   });
 
   // Fetch list of recruiters
-  const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery({});
+  const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery();
   
-  // Filter only recruiters from users
-  const allUsers = usersData?.data?.users || [];
+  // Filter only recruiters from users (handles both direct array and wrapped responses)
+  const usersWrapped = usersData as any;
+  const allUsers: any[] = Array.isArray(usersWrapped)
+    ? usersWrapped
+    : Array.isArray(usersWrapped?.data?.users)
+    ? usersWrapped.data.users
+    : [];
     
-  const recruiters = allUsers.filter((user: any) => 
-    user.userRoles?.some((userRole: any) => 
-      userRole.role?.name?.toLowerCase() === 'recruiter'
+  const recruiters = allUsers
+    .filter((user: any) => 
+      user.userRoles?.some((userRole: any) => 
+        userRole.role?.name?.toLowerCase() === 'recruiter'
+      )
     )
-  );
+    // exclude current recruiter (if any) to avoid transferring to same person
+    .filter((u: any) => u.id !== currentRecruiter?.id);
 
   // Reset form when dialog opens/closes
   useEffect(() => {
@@ -100,6 +108,25 @@ export function TransferCandidateDialog({
               <DialogDescription className="text-sm mt-1">
                 Transfer <span className="font-semibold text-slate-700">{candidateName}</span> to another recruiter
               </DialogDescription>
+            </div>
+          </div>
+          {/* Current recruiter display - minimal design */}
+          <div className="mb-4">
+            <div className="text-xs font-medium text-slate-600 mb-2">Current Recruiter</div>
+            <div className="flex items-center gap-3 p-2 rounded-md bg-slate-50/50">
+              {currentRecruiter ? (
+                <>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
+                    {currentRecruiter.name?.charAt(0)?.toUpperCase() || "R"}
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm text-slate-900">{currentRecruiter.name}</div>
+                    <div className="text-xs text-slate-500">{currentRecruiter.email}</div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-slate-400 italic">Unassigned</div>
+              )}
             </div>
           </div>
         </DialogHeader>

@@ -45,6 +45,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateSentForVerification(job);
         case 'CandidateAssignedToRecruiter':
           return await this.handleCandidateAssignedToRecruiter(job);
+        case 'CandidateRecruiterAssigned':
+          return await this.handleCandidateRecruiterAssigned(job);
         case 'CandidateSentToScreening':
           return await this.handleCandidateSentToScreening(job);
         case 'CandidateApprovedForClientInterview':
@@ -890,8 +892,75 @@ export class NotificationsProcessor extends WorkerHost {
     }
   }
 
-  
-    async handleCandidateSentToScreening(job: Job<NotificationJobData>) {
+  async handleCandidateRecruiterAssigned(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate recruiter assignment event: ${eventId}`,
+    );
+
+    try {
+      const { candidateId, recruiterId, assignedBy, reason } = payload as {
+        candidateId: string;
+        recruiterId: string;
+        assignedBy: string;
+        reason?: string;
+      };
+
+      // Load candidate and assigner details
+      const [candidate, assigner] = await Promise.all([
+        this.prisma.candidate.findUnique({
+          where: { id: candidateId },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: assignedBy },
+          select: {
+            id: true,
+            name: true,
+          },
+        }),
+      ]);
+
+      if (!candidate || !assigner) {
+        this.logger.warn(
+          `Missing data for candidate recruiter assignment: candidate=${!!candidate}, assigner=${!!assigner}`,
+        );
+        return;
+      }
+
+      const idemKey = `${eventId}:${recruiterId}:candidate_transferred`;
+
+      await this.notificationsService.createNotification({
+        userId: recruiterId,
+        type: 'candidate_transferred',
+        title: 'Candidate Transferred to You',
+        message: `${assigner.name} transferred candidate ${candidate.firstName} ${candidate.lastName} to you.${reason ? ` Reason: ${reason}` : ''}`,
+        link: `/candidates/${candidateId}`,
+        meta: {
+          candidateId,
+          assignedBy,
+          reason,
+        },
+        idemKey,
+      });
+
+      this.logger.log(
+        `Candidate transferred notification created for recruiter ${recruiterId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate recruiter assignment: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleCandidateSentToScreening(job: Job<NotificationJobData>) {
       const { eventId, payload } = job.data;
       this.logger.log(`Processing candidate sent to screening event: ${eventId}`);
 

@@ -88,6 +88,7 @@ export default function CandidatesPage() {
     isOpen: boolean;
     candidateId?: string;
     candidateName?: string;
+    currentRecruiter?: { id: string; name?: string; email?: string } | null;
   }>({ isOpen: false });
 
   const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
@@ -1352,13 +1353,15 @@ export default function CandidatesPage() {
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
-                                      onClick={() =>
+                                      onClick={() => {
+                                        const currentRecruiter = candidate.recruiter || candidate.recruiterAssignments?.find((a: any) => a.isActive)?.recruiter || null;
                                         setTransferDialog({
                                           isOpen: true,
                                           candidateId: candidate.id,
                                           candidateName: `${candidate.firstName} ${candidate.lastName}`,
-                                        })
-                                      }
+                                          currentRecruiter,
+                                        });
+                                      }}
                                       className="text-blue-600"
                                     >
                                       <UserCheck className="mr-2 h-4 w-4" /> Transfer Candidate
@@ -1519,8 +1522,8 @@ export default function CandidatesPage() {
         <TransferCandidateDialog
           open={transferDialog.isOpen}
           onOpenChange={(open) => setTransferDialog({ isOpen: open })}
-          candidateId={transferDialog.candidateId}
           candidateName={transferDialog.candidateName || "Unknown Candidate"}
+          currentRecruiter={transferDialog.currentRecruiter}
           onConfirm={handleTransferCandidate}
           isLoading={isTransferring}
         />
