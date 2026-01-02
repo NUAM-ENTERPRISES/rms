@@ -31,7 +31,33 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 
 import { useGetCandidateProjectPipelineQuery } from "@/features/candidates/api";
-import { calculateProgress as calculateProgressUtil, getMostRecentEntry as getMostRecentEntryUtil, normalizeStatusName as normalizeStatusNameUtil, PROGRESS_ORDER, getNextProgressStatus, mapToProgressKey } from "@/features/candidates/utils/progress";
+import { calculateProgress as calculateProgressUtil, getMostRecentEntry as getMostRecentEntryUtil, normalizeStatusName as normalizeStatusNameUtil, getNextProgressStatus, mapToProgressKey } from "@/features/candidates/utils/progress";
+
+// Extended type for API response with additional fields
+interface ExtendedPipelineResponse {
+    candidate: any;
+    project: any;
+    nominatedRole?: any;
+    currentStatus?: any;
+    pipeline?: {
+        progressOrder?: Array<{
+            order: number;
+            name: string;
+            label: string;
+            isCompleted: boolean;
+            isCurrent: boolean;
+        }>;
+        applicationProgress?: number;
+        duration?: string;
+        nextStep?: {
+            name: string;
+            label: string;
+            type: string;
+        };
+    };
+    history: any[];
+    totalEntries: number;
+}
 
 export default function CandidateProjectDetailsPage() {
 
@@ -204,10 +230,13 @@ export default function CandidateProjectDetailsPage() {
 
     // Calculate data for rendering
     const history = pipelineResponse?.data?.history || [];
+    // Cast to extended type to access additional API fields
+    const extendedData = pipelineResponse?.data as ExtendedPipelineResponse | undefined;
     // most-recent raw entry (used for display label) — keep canonical progress separate
     const latestEntry = getMostRecentEntryUtil(history);
     const projectDeadline = pipelineResponse?.data?.project?.deadline;
-    const progress = calculateProgress();
+    // Use API's applicationProgress if available, otherwise calculate locally
+    const progress = extendedData?.pipeline?.applicationProgress ?? calculateProgress();
     const latestProjectStatusName = getLatestProjectStatusName();
     const latestDisplayLabel = (() => {
         // Prefer explicit human-friendly labels from API
@@ -375,29 +404,21 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                 </div>
 
-                                {/* Stage Indicators */}
-                                <div className="grid grid-cols-4 gap-2 mt-6">
-                                    {[
-                                        { name: 'Nomination', statuses: ['nominated'], icon: Users },
-                                        { name: 'Documents', statuses: ['pending_documents', 'documents_submitted', 'verification_in_progress', 'documents_verified'], icon: FileText },
-                                        { name: 'Interview', statuses: [
-                                            'approved', 'interview_assigned', 'interview_scheduled', 'interview_rescheduled', 'interview_completed', 'interview_selected', 'interview_passed', 'interview_failed',
-                                            // mock / training categories (also part of interview flow)
-                                            'screening_assigned','screening_scheduled','screening_completed','screening_passed','screening_failed',
-                                            'training_assigned','training_in_progress','training_completed','ready_for_reassessment'
-                                        ], icon: MessageCircle },
-                                        { name: 'Final', statuses: ['selected', 'processing', 'hired'], icon: CheckCircle2 }
-                                    ].map((stage) => {
-                                        // compare stage membership using canonical mapping so fine-grained sub-statuses map correctly
-                                        const canonicalLatest = latestProjectStatusName;
-                                        const canonicalStageKeys = stage.statuses.map(s => mapToProgressKey(s)).filter(Boolean) as string[];
-                                        const isActive = canonicalStageKeys.includes(canonicalLatest || '');
-                                        const isPassed = canonicalStageKeys.some(sKey => {
-                                            const a = PROGRESS_ORDER.indexOf(sKey);
-                                            const b = PROGRESS_ORDER.indexOf(canonicalLatest || '');
-                                            return a >= 0 && b >= 0 ? a < b : false;
-                                        });
-                                        const StageIcon = stage.icon;
+                                                {/* Stage Indicators - Dynamic from API */}
+                                <div className="grid gap-2 mt-6" style={{ gridTemplateColumns: `repeat(${extendedData?.pipeline?.progressOrder?.length || 4}, minmax(0, 1fr))` }}>
+                                    {(extendedData?.pipeline?.progressOrder || []).map((stage: any) => {
+                                        const isActive = stage.isCurrent;
+                                        const isPassed = stage.isCompleted;
+                                        
+                                        // Icon mapping based on stage name
+                                        const iconMap: Record<string, any> = {
+                                            nominated: Users,
+                                            documents: FileText,
+                                            interview: MessageCircle,
+                                            processing: ClipboardList,
+                                            final: CheckCircle2
+                                        };
+                                        const StageIcon = iconMap[stage.name] || FileText;
 
                                         return (
                                             <div
@@ -427,7 +448,7 @@ export default function CandidateProjectDetailsPage() {
                                                         ? 'text-green-700'
                                                         : 'text-gray-500'
                                                     }`}>
-                                                    {stage.name}
+                                                    {stage.label}
                                                 </p>
                                                 {isActive && (
                                                     <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
@@ -445,10 +466,10 @@ export default function CandidateProjectDetailsPage() {
                                             <p className="text-xs font-medium text-gray-500">Duration</p>
                                         </div>
                                         <p className="text-lg font-bold text-gray-900">
-                                            {history.length > 0
-                                                ? Math.ceil((new Date().getTime() - new Date(history[0].statusChangedAt).getTime()) / (1000 * 60 * 60 * 24))
-                                                : 0
-                                            } days
+                                            {extendedData?.pipeline?.duration || (history.length > 0
+                                                ? `${Math.ceil((new Date().getTime() - new Date(history[0].statusChangedAt).getTime()) / (1000 * 60 * 60 * 24))} days`
+                                                : '0 days'
+                                            )}
                                         </p>
                                     </div>
                                     <div className="text-center border-l border-r border-gray-200">
@@ -477,8 +498,8 @@ export default function CandidateProjectDetailsPage() {
                                             <div>
                                                 <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Next Step</p>
                                                 <p className="text-sm font-semibold text-blue-900 mt-0.5">
-                                                    {(() => {
-                                                        // Use canonical progress order for next step
+                                                    {extendedData?.pipeline?.nextStep?.label || (() => {
+                                                        // Use canonical progress order for next step as fallback
                                                         const nextStatus = getNextProgressStatus(latestProjectStatusName);
                                                         return nextStatus ? getStatusLabel(nextStatus) : 'Completion';
                                                     })()}
@@ -613,7 +634,7 @@ export default function CandidateProjectDetailsPage() {
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <User className="h-5 w-5 text-blue-600" />
-                                    Candidate
+                                    Candidate Details
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
@@ -624,12 +645,13 @@ export default function CandidateProjectDetailsPage() {
                                     <h3 className="font-semibold text-gray-900">
                                         {pipelineResponse?.data?.candidate?.firstName} {pipelineResponse?.data?.candidate?.lastName}
                                     </h3>
+                                    <Badge className="mt-2 capitalize">{pipelineResponse?.data?.candidate?.gender?.toLowerCase()}</Badge>
                                 </div>
 
                                 <div className="space-y-2 pt-3 border-t">
                                     <div className="flex items-center gap-2 text-sm">
                                         <Mail className="h-4 w-4 text-gray-400" />
-                                        <span className="text-gray-700">{pipelineResponse?.data?.candidate?.email}</span>
+                                        <span className="text-gray-700 truncate">{pipelineResponse?.data?.candidate?.email}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm">
                                         <Phone className="h-4 w-4 text-gray-400" />
@@ -637,23 +659,65 @@ export default function CandidateProjectDetailsPage() {
                                             {pipelineResponse?.data?.candidate?.countryCode} {pipelineResponse?.data?.candidate?.mobileNumber}
                                         </span>
                                     </div>
+                                    {pipelineResponse?.data?.candidate?.dateOfBirth && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Calendar className="h-4 w-4 text-gray-400" />
+                                            <span className="text-gray-700">
+                                                {new Date(pipelineResponse.data.candidate.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                {' '}({new Date().getFullYear() - new Date(pipelineResponse.data.candidate.dateOfBirth).getFullYear()} years)
+                                            </span>
+                                        </div>
+                                    )}
+                                    {pipelineResponse?.data?.candidate?.experience != null && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Award className="h-4 w-4 text-gray-400" />
+                                            <span className="text-gray-700">{pipelineResponse.data.candidate.experience} years experience</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Qualifications */}
+                                {pipelineResponse?.data?.candidate?.qualifications && pipelineResponse.data.candidate.qualifications.length > 0 && (
+                                    <div className="pt-3 border-t">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Qualifications</p>
+                                        <div className="space-y-2">
+                                            {pipelineResponse.data.candidate.qualifications.map((qual: any) => (
+                                                <div key={qual.id} className="bg-blue-50 border border-blue-200 rounded p-2">
+                                                    <p className="text-sm font-semibold text-blue-900">{qual.qualification.shortName}</p>
+                                                    <p className="text-xs text-blue-700 mt-0.5">{qual.university}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-xs text-blue-600">Graduated: {qual.graduationYear}</span>
+                                                        <span className="text-xs text-blue-600">•</span>
+                                                        <span className="text-xs text-blue-600">GPA: {qual.gpa}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Current Status */}
+                                <div className="pt-3 border-t">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Source</p>
+                                    <Badge variant="outline" className="capitalize">{pipelineResponse?.data?.candidate?.source}</Badge>
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* Project Info */}
-
                         <Card className="shadow-sm">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <Building className="h-5 w-5 text-green-600" />
-                                    Project
+                                    Project Details
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 <div>
                                     <h3 className="font-semibold text-gray-900">{pipelineResponse?.data?.project?.title}</h3>
-                                    <p className="text-gray-600 text-sm mt-1">{pipelineResponse?.data?.project?.description}</p>
+                                    {pipelineResponse?.data?.project?.description && (
+                                        <p className="text-gray-600 text-sm mt-1">{pipelineResponse.data.project.description}</p>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 pt-3 border-t">
@@ -663,21 +727,233 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                     <div>
                                         <label className="text-xs text-gray-500 uppercase tracking-wide">Priority</label>
-                                        <p className="text-sm font-medium capitalize mt-0.5">{pipelineResponse?.data?.project?.priority}</p>
+                                        <Badge className={`mt-0.5 ${
+                                            pipelineResponse?.data?.project?.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                            pipelineResponse?.data?.project?.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-blue-100 text-blue-700'
+                                        }`}>
+                                            {pipelineResponse?.data?.project?.priority}
+                                        </Badge>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 uppercase tracking-wide">Status</label>
+                                        <Badge className="mt-0.5 capitalize" variant={pipelineResponse?.data?.project?.status === 'active' ? 'default' : 'secondary'}>
+                                            {pipelineResponse?.data?.project?.status}
+                                        </Badge>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 uppercase tracking-wide">Country</label>
+                                        <p className="text-sm font-medium mt-0.5">{extendedData?.project?.country?.name}</p>
                                     </div>
                                 </div>
 
                                 {pipelineResponse?.data?.project?.deadline && (
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 pt-2">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 pt-2 border-t">
                                         <Calendar className="h-4 w-4" />
-                                        <span>Deadline: {projectDeadline ? new Date(projectDeadline).toLocaleDateString() : ''}</span>
+                                        <span>Deadline: {projectDeadline ? new Date(projectDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}</span>
+                                    </div>
+                                )}
+
+                                {/* Project Requirements */}
+                                <div className="pt-3 border-t space-y-2">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase">Requirements</p>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div className="flex items-center gap-1">
+                                            {extendedData?.project?.requiredScreening ? (
+                                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                                <XCircle className="h-3 w-3 text-gray-400" />
+                                            )}
+                                            <span className="text-gray-700">Screening</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {extendedData?.project?.resumeEditable ? (
+                                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                                <XCircle className="h-3 w-3 text-gray-400" />
+                                            )}
+                                            <span className="text-gray-700">Editable Resume</span>
+                                        </div>
+                                        {extendedData?.project?.groomingRequired && (
+                                            <div className="flex items-center gap-1">
+                                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                                <span className="text-gray-700 capitalize">Grooming: {extendedData.project.groomingRequired}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-1">
+                                            {extendedData?.project?.hideContactInfo ? (
+                                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                                <XCircle className="h-3 w-3 text-gray-400" />
+                                            )}
+                                            <span className="text-gray-700">Hide Contact</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Document Requirements */}
+                                {extendedData?.project?.documentRequirements && extendedData.project.documentRequirements.length > 0 && (
+                                    <div className="pt-3 border-t">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Document Requirements</p>
+                                        <div className="space-y-1.5">
+                                            {extendedData.project.documentRequirements.map((doc: any) => (
+                                                <div key={doc.id} className="flex items-center gap-2 text-xs">
+                                                    <FileText className="h-3 w-3 text-blue-600" />
+                                                    <span className="text-gray-700 capitalize">{doc.docType.replace(/_/g, ' ')}</span>
+                                                    {doc.mandatory && (
+                                                        <Badge variant="destructive" className="h-4 text-[10px] px-1">Required</Badge>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Creator Info */}
+                                {extendedData?.project?.creator && (
+                                    <div className="pt-3 border-t">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Created By</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-700 text-xs font-semibold">
+                                                {extendedData.project.creator.name[0]}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-900">{extendedData.project.creator.name}</p>
+                                                <p className="text-[10px] text-gray-500">{extendedData.project.creator.email}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>
                         </Card>
 
-                        {/* Quick Stats */}
+                        {/* Nominated Role Info */}
+                        {extendedData?.nominatedRole && (() => {
+                            const role = extendedData.nominatedRole;
+                            return (
+                            <Card className="shadow-sm">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <Award className="h-5 w-5 text-purple-600" />
+                                        Nominated Role
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <div>
+                                        <h3 className="font-semibold text-gray-900">{role.designation}</h3>
+                                        <p className="text-xs text-gray-600 mt-0.5">{role.roleCatalog.description}</p>
+                                    </div>
 
+                                    <div className="grid grid-cols-2 gap-3 pt-3 border-t">
+                                        <div>
+                                            <label className="text-xs text-gray-500 uppercase tracking-wide">Quantity</label>
+                                            <p className="text-sm font-medium mt-0.5">{role.quantity} positions</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 uppercase tracking-wide">Priority</label>
+                                            <Badge className={`mt-0.5 capitalize ${
+                                                role.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                                role.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-blue-100 text-blue-700'
+                                            }`}>
+                                                {role.priority}
+                                            </Badge>
+                                        </div>
+                                    </div>
+
+                                    {/* Experience & Employment */}
+                                    <div className="pt-3 border-t space-y-2">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Experience</span>
+                                            <span className="font-medium text-gray-900">
+                                                {role.minExperience} - {role.maxExperience} years
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Employment</span>
+                                            <Badge variant="outline" className="capitalize text-[10px]">
+                                                {role.employmentType}
+                                            </Badge>
+                                        </div>
+                                        {role.visaType && (
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-gray-500">Visa Type</span>
+                                                <Badge variant="outline" className="capitalize text-[10px]">
+                                                    {role.visaType}
+                                                </Badge>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Age Requirements */}
+                                    {(role.minAge || role.maxAge) && (
+                                        <div className="pt-3 border-t">
+                                            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Age Requirements</p>
+                                            <p className="text-sm text-gray-700">
+                                                {role.minAge} - {role.maxAge} years
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Benefits */}
+                                    <div className="pt-3 border-t">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Benefits</p>
+                                        <div className="grid grid-cols-3 gap-2 text-xs">
+                                            <div className="flex items-center gap-1">
+                                                {role.accommodation ? (
+                                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                                ) : (
+                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                <span className="text-gray-700">Housing</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {role.food ? (
+                                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                                ) : (
+                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                <span className="text-gray-700">Food</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {role.transport ? (
+                                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                                ) : (
+                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                <span className="text-gray-700">Transport</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Screening Requirements */}
+                                    <div className="pt-3 border-t">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Screening</p>
+                                        <div className="space-y-1.5 text-xs">
+                                            <div className="flex items-center gap-1">
+                                                {role.backgroundCheckRequired ? (
+                                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                                ) : (
+                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                <span className="text-gray-700">Background Check</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {role.drugScreeningRequired ? (
+                                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                                ) : (
+                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                <span className="text-gray-700">Drug Screening</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            );
+                        })()}
+
+                        {/* Quick Stats */}
                         <Card className="shadow-sm">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg">Pipeline Statistics</CardTitle>
@@ -690,10 +966,10 @@ export default function CandidateProjectDetailsPage() {
                                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                                     <span className="text-sm text-gray-600">Days in Pipeline</span>
                                     <span className="font-semibold text-gray-900 text-lg">
-                                        {history.length > 0
+                                        {extendedData?.pipeline?.duration?.replace(' day', '') || (history.length > 0
                                             ? Math.ceil((new Date().getTime() - new Date(history[0].statusChangedAt).getTime()) / (1000 * 60 * 60 * 24))
                                             : 0
-                                        }
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center py-2">

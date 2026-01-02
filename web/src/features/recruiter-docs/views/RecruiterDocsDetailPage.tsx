@@ -45,6 +45,7 @@ import {
   Mail,
   Phone,
   Award,
+  Plus,
 } from "lucide-react";
 import {
   Tabs,
@@ -96,6 +97,9 @@ import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, Ca
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
+
+const CandidateUploadDocumentModal = React.lazy(() => import("../components/CandidateUploadDocumentModal"));
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { FlagIcon } from "@/shared/components/FlagIcon";
@@ -260,8 +264,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const [candidateDocsPage, setCandidateDocsPage] = React.useState(1);
   const candidateDocsLimit = 10;
   const [candidateDocsSearch, setCandidateDocsSearch] = React.useState("");
+  const [showCandidateUploadDialog, setShowCandidateUploadDialog] = React.useState(false);
 
-  const { data: candidateDocsData, isLoading: isCandidateDocsLoading } = useGetDocumentsQuery({
+  const { data: candidateDocsData, isLoading: isCandidateDocsLoading, refetch: refetchCandidateDocs } = useGetDocumentsQuery({
     candidateId: candidateId || "",
     page: candidateDocsPage,
     limit: candidateDocsLimit,
@@ -367,6 +372,54 @@ const RecruiterDocsDetailPage: React.FC = () => {
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to link document");
+    }
+  };
+
+  // Upload candidate-specific document (code-split modal will call this)
+  const handleUploadCandidateDocument = async (
+    file: File,
+    meta: {
+      docType: string;
+      roleCatalogId?: string;
+      documentNumber?: string;
+      expiryDate?: string;
+      notes?: string;
+    }
+  ) => {
+    if (!candidateId) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("docType", meta.docType);
+
+      const response = await uploadDocument({
+        candidateId,
+        formData,
+      }).unwrap();
+
+      const uploadData = response.data;
+
+      await createDocument({
+        candidateId,
+        docType: meta.docType,
+        fileName: uploadData.fileName,
+        fileUrl: uploadData.fileUrl,
+        fileSize: uploadData.fileSize,
+        mimeType: uploadData.mimeType,
+        documentNumber: meta.documentNumber,
+        expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+        notes: meta.notes,
+        roleCatalogId: meta.roleCatalogId,
+      }).unwrap();
+
+      toast.success("Document uploaded successfully");
+      setShowCandidateUploadDialog(false);
+      refetchCandidateDocs();
+      refetchRequirements();
+    } catch (error) {
+      console.error("Candidate upload error:", error);
+      toast.error("Failed to upload document");
     }
   };
 
@@ -722,6 +775,16 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     }}
                   />
                 </div>
+
+                <Button
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => setShowCandidateUploadDialog(true)}
+                  disabled={isUploading || isCreating}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Upload New Document
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -1223,6 +1286,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
         isMandatory={selectedRequirement?.mandatory}
         isUploading={isUploading || isCreating || isReusing}
       />
+
+      <React.Suspense fallback={null}>
+        <CandidateUploadDocumentModal
+          isOpen={showCandidateUploadDialog}
+          onClose={() => setShowCandidateUploadDialog(false)}
+          onUpload={handleUploadCandidateDocument}
+          isUploading={isUploading || isCreating}
+        />
+      </React.Suspense>
 
       <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
         <DialogContent className="sm:max-w-md">

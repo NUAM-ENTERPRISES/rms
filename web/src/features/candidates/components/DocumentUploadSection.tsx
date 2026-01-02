@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+const CandidateUploadDocumentModal = React.lazy(() => import("../../recruiter-docs/components/CandidateUploadDocumentModal"));
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,9 +48,12 @@ import {
   CheckCircle,
   Clock,
   X,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGetDocumentsQuery, useUploadDocumentMutation } from "../api";
+import { useCreateDocumentMutation } from "@/features/documents/api";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
 
 // Document type options based on backend constants
@@ -151,7 +155,9 @@ const DOCUMENT_TYPES = [
 
 const uploadSchema = z.object({
   docType: z.string().min(1, "Document type is required"),
-  file: z.any().refine((file) => file && file.length > 0, "File is required"),
+  file: z.custom<File>((value) => value instanceof File, {
+    message: "File is required",
+  }),
   documentNumber: z.string().optional(),
   expiryDate: z.string().optional(),
   notes: z.string().optional(),
@@ -168,6 +174,9 @@ export function DocumentUploadSection({
 }: DocumentUploadSectionProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string } | null>(null);
 
   const {
     data: documentsData,
@@ -180,6 +189,7 @@ export function DocumentUploadSection({
   });
 
   const [uploadDocument] = useUploadDocumentMutation();
+  const [createDocument] = useCreateDocumentMutation();
 
   const form = useForm<UploadFormData>({
     resolver: zodResolver(uploadSchema),
@@ -233,20 +243,24 @@ export function DocumentUploadSection({
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "VERIFIED":
+    const normalized = (status || "").toLowerCase();
+    switch (normalized) {
+      case "verified":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case "PENDING":
+      case "pending":
         return <Clock className="h-4 w-4 text-yellow-600" />;
-      case "REJECTED":
+      case "rejected":
         return <X className="h-4 w-4 text-red-600" />;
+      case "resubmission_required":
+        return <AlertCircle className="h-4 w-4 text-amber-600" />;
       default:
         return <AlertCircle className="h-4 w-4 text-gray-600" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const normalized = (status || "").toLowerCase();
+    switch (normalized) {
       case "verified":
         return (
           <Badge variant="default" className="bg-green-100 text-green-800">
@@ -272,176 +286,40 @@ export function DocumentUploadSection({
     }
   };
 
-  const documents = documentsData?.documents || [];
+  // API returns: { success: true, data: { documents: [...], pagination: ... } }
+  const documents = documentsData?.data?.documents || [];
 
   return (
     <div className="space-y-8">
 
-  {/* ===== UPLOAD DOCUMENT CARD ===== */}
-  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden">
-    <CardHeader className="bg-gradient-to-r">
-      <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
-        <div className="p-2 bg-indigo-100 rounded-xl">
-          <Upload className="h-6 w-6 text-indigo-600" />
-        </div>
-        Upload Document
-      </CardTitle>
-      <CardDescription className="text-slate-600 mt-1">
-        Upload required documents (PDF only) for verification and compliance
-      </CardDescription>
-    </CardHeader>
-
-    <CardContent className="pt-6">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Document Type */}
-            <FormField
-              control={form.control}
-              name="docType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-semibold">Document Type <span className="text-red-500">*</span></FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Choose document type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {DOCUMENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex items-center justify-between w-full">
-                            <span className="font-medium">{type.label}</span>
-                            <Badge variant="secondary" className="ml-3 text-xs">
-                              {type.category}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Document Number */}
-            <FormField
-              control={form.control}
-              name="documentNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-semibold">Document Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., A12345678, PP987654" className="h-11" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Expiry Date */}
-            <FormField
-              control={form.control}
-              name="expiryDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-semibold">Expiry Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" className="h-11" {...field} value={field.value || ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* File Upload */}
-            <div className="space-y-2">
-              <FormLabel className="font-semibold">PDF File <span className="text-red-500">*</span></FormLabel>
-              <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-indigo-400 transition-colors bg-slate-50/50">
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  id="pdf-upload"
-                />
-                <label htmlFor="pdf-upload" className="cursor-pointer">
-                  <Upload className="h-10 w-10 text-indigo-500 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-slate-700">Click to upload PDF</p>
-                  <p className="text-xs text-slate-500 mt-1">Max size: 10MB</p>
-                </label>
-              </div>
-              {selectedFile && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <FileText className="h-5 w-5 text-green-600" />
-                  <div className="flex-1 text-sm">
-                    <p className="font-medium text-green-800">{selectedFile.name}</p>
-                    <p className="text-xs text-green-700">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="font-semibold">Notes (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="e.g., Renewed version, verified by HR..."
-                    className="h-11"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <Button
-            type="submit"
-            disabled={isUploading || !selectedFile}
-            className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-400 shadow-lg"
-          >
-            {isUploading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
-                Uploading Document...
-              </>
-            ) : (
-              <>
-                <Upload className="h-5 w-5 mr-2" />
-                Upload Document
-              </>
-            )}
-          </Button>
-        </form>
-      </Form>
-    </CardContent>
-  </Card>
 
   {/* ===== UPLOADED DOCUMENTS LIST ===== */}
   <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden">
     <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-slate-100">
-      <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
-        <div className="p-2 bg-gray-100 rounded-xl">
-          <FileText className="h-6 w-6 text-gray-700" />
+      <div className="flex items-center w-full justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
+            <div className="p-2 bg-gray-100 rounded-xl">
+              <FileText className="h-6 w-6 text-gray-700" />
+            </div>
+            Uploaded Documents
+          </CardTitle>
+          <CardDescription className="text-slate-600">
+            All candidate documents • Click to view or download
+          </CardDescription>
         </div>
-        Uploaded Documents
-      </CardTitle>
-      <CardDescription className="text-slate-600">
-        All candidate documents • Click to view or download
-      </CardDescription>
+        <div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowUploadModal(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Upload New Document
+          </Button>
+        </div>
+      </div>
     </CardHeader>
 
     <CardContent className="p-0">
@@ -476,39 +354,47 @@ export function DocumentUploadSection({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {documents.map((document: any) => (
-              <TableRow key={document.id} className="hover:bg-indigo-50/30 transition-colors">
+            {documents.map((doc: any) => (
+              <TableRow key={doc.id} className="hover:bg-indigo-50/30 transition-colors">
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-red-100 rounded-lg">
                       <FileText className="h-5 w-5 text-red-600" />
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-900">{document.fileName}</p>
-                      {document.documentNumber && (
-                        <p className="text-sm text-slate-600">#{document.documentNumber}</p>
+                      <p className="font-semibold text-slate-900">{doc.fileName}</p>
+                      {doc.documentNumber && (
+                        <p className="text-sm text-slate-600">#{doc.documentNumber}</p>
                       )}
                     </div>
                   </div>
                 </TableCell>
 
                 <TableCell>
-                  <Badge variant="outline" className="font-medium">
-                    {DOCUMENT_TYPES.find(t => t.value === document.docType)?.label || document.docType}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge variant="outline" className="font-medium w-fit">
+                      {DOCUMENT_TYPES.find((t) => t.value === doc.docType)?.label ||
+                        doc.docType}
+                    </Badge>
+                    {doc.docType === "resume" && doc.roleCatalog?.label && (
+                      <span className="text-xs text-slate-500 font-medium px-1">
+                        {doc.roleCatalog.label}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
 
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(document.status)}
-                    {getStatusBadge(document.status)}
+                    {getStatusIcon(doc.status)}
+                    {getStatusBadge(doc.status)}
                   </div>
                 </TableCell>
 
                 <TableCell className="text-slate-700">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-slate-500" />
-                    {DateUtils.formatDateTime(document.createdAt)}
+                    {DateUtils.formatDateTime(doc.createdAt)}
                   </div>
                 </TableCell>
 
@@ -517,7 +403,14 @@ export function DocumentUploadSection({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(document.fileUrl, "_blank")}
+                      onClick={() => {
+                        setPreviewDoc({ fileUrl: doc.fileUrl, fileName: doc.fileName });
+                        if ((doc.mimeType || "").startsWith("application/pdf")) {
+                          setIsPDFViewerOpen(true);
+                        } else {
+                          window.open(doc.fileUrl, "_blank");
+                        }
+                      }}
                       className="hover:bg-indigo-100 hover:text-indigo-700"
                     >
                       <Eye className="h-4 w-4" />
@@ -526,10 +419,13 @@ export function DocumentUploadSection({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        const link = document.createElement("a");
-                        link.href = document.fileUrl;
-                        link.download = document.fileName;
+                        const link = window.document.createElement("a");
+                        link.href = doc.fileUrl;
+                        link.download = doc.fileName;
+                        link.rel = "noopener";
+                        window.document.body.appendChild(link);
                         link.click();
+                        window.document.body.removeChild(link);
                       }}
                       className="hover:bg-green-100 hover:text-green-700"
                     >
@@ -544,6 +440,63 @@ export function DocumentUploadSection({
       )}
     </CardContent>
   </Card>
+
+  {/* Lazy-loaded Upload Modal */}
+  <React.Suspense fallback={null}>
+    <CandidateUploadDocumentModal
+      isOpen={showUploadModal}
+      onClose={() => setShowUploadModal(false)}
+      onUpload={async (file: File, meta: any) => {
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("docType", meta.docType);
+
+          const response = await uploadDocument({ candidateId, formData }).unwrap();
+          const uploadData = response.data;
+
+          await createDocument({
+            candidateId,
+            docType: meta.docType,
+            fileName: uploadData.fileName,
+            fileUrl: uploadData.fileUrl,
+            fileSize: uploadData.fileSize,
+            mimeType: uploadData.mimeType,
+            documentNumber: meta.documentNumber,
+            expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+            notes: meta.notes,
+            roleCatalogId: meta.roleCatalogId,
+          }).unwrap();
+
+          toast.success("Document uploaded successfully");
+          setShowUploadModal(false);
+          refetch();
+        } catch (error) {
+          console.error("Upload error:", error);
+          toast.error("Failed to upload document");
+        }
+      }}
+      isUploading={isUploading}
+    />
+  </React.Suspense>
+
+  {/* PDF Viewer for existing documents */}
+  {previewDoc && (
+    <PDFViewer
+      fileUrl={previewDoc.fileUrl}
+      fileName={previewDoc.fileName}
+      isOpen={isPDFViewerOpen}
+      onClose={() => {
+        setIsPDFViewerOpen(false);
+        setPreviewDoc(null);
+      }}
+      showDownload={true}
+      showZoomControls={true}
+      showRotationControls={true}
+      showFullscreenToggle={true}
+    />
+  )}
+
 </div>
   );
 }

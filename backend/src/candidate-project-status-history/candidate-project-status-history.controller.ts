@@ -26,6 +26,44 @@ export class CandidateProjectStatusHistoryController {
           properties: {
             candidate: { type: 'object' },
             project: { type: 'object' },
+            nominatedRole: { type: 'object' },
+            currentStatus: {
+              type: 'object',
+              properties: {
+                mainStatus: { type: 'object' },
+                subStatus: { type: 'object' },
+                timeInStatus: { type: 'string', example: '2 days' },
+              },
+            },
+            pipeline: {
+              type: 'object',
+              properties: {
+                progressOrder: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      order: { type: 'number' },
+                      name: { type: 'string' },
+                      label: { type: 'string' },
+                      isCompleted: { type: 'boolean' },
+                      isCurrent: { type: 'boolean' },
+                    },
+                  },
+                },
+                applicationProgress: { type: 'number', example: 60 },
+                duration: { type: 'string', example: '15 days' },
+                nextStep: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    name: { type: 'string' },
+                    label: { type: 'string' },
+                    type: { type: 'string', enum: ['main_status', 'sub_status'] },
+                  },
+                },
+              },
+            },
             history: { type: 'array', items: { type: 'object' } },
             totalEntries: { type: 'number', example: 5 },
           },

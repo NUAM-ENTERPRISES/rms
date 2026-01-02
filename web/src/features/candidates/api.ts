@@ -16,6 +16,12 @@ export interface Document {
   status: string;
   uploadedBy: string;
   verifiedBy?: string;
+  roleCatalogId?: string;
+  roleCatalog?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -771,7 +777,7 @@ export const candidatesApi = baseApi.injectEndpoints({
 
     // Document endpoints
     getDocuments: builder.query<
-      { documents: Document[]; pagination: any },
+      { success: boolean; data: { documents: Document[]; pagination: any } },
       { candidateId: string; page?: number; limit?: number }
     >({
       query: ({ candidateId, page = 1, limit = 20 }) => ({
@@ -780,7 +786,10 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Document"],
     }),
-    uploadDocument: builder.mutation<Document, UploadDocumentRequest>({
+    uploadDocument: builder.mutation<
+      { success: boolean; data: Document; message?: string },
+      UploadDocumentRequest
+    >({
       query: ({ candidateId, formData }) => ({
         url: `/upload/document/${candidateId}`,
         method: "POST",
