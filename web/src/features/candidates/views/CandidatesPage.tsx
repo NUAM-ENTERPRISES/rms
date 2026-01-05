@@ -401,7 +401,7 @@ export default function CandidatesPage() {
     return (
       <div className="min-h-screen   p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-white/90">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold text-slate-800">
                 Access Denied
@@ -846,7 +846,7 @@ export default function CandidatesPage() {
     <div className="min-h-screen ">
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardContent>
             <div className="space-y-6">
               {/* Premium Search Bar with Enhanced Styling */}
@@ -1139,7 +1139,7 @@ export default function CandidatesPage() {
         </div>
 
         {/* Candidates Table */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -1408,7 +1408,7 @@ export default function CandidatesPage() {
             {/* Pagination - Your Original */}
             {Array.isArray(filteredCandidates) &&
               filteredCandidates.length > 0 && (
-                <Card className="mt-4 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <Card className="mt-4 border-0 shadow-lg bg-white/90">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-slate-600">

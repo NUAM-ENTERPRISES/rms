@@ -184,7 +184,7 @@ const AdminDashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+        <Card className="border-0 shadow-lg bg-white/90 hover:shadow-xl transition-all duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Total Revenue
@@ -200,7 +200,7 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+        <Card className="border-0 shadow-lg bg-white/90 hover:shadow-xl transition-all duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Active Projects
@@ -216,7 +216,7 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+        <Card className="border-0 shadow-lg bg-white/90 hover:shadow-xl transition-all duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Total Candidates
@@ -232,7 +232,7 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+        <Card className="border-0 shadow-lg bg-white/90 hover:shadow-xl transition-all duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Success Rate
@@ -250,7 +250,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Revenue Trend Chart */}
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-white/90">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-slate-800">
             Revenue Trend Analysis
@@ -307,7 +307,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Performance Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-slate-800">
               Team Performance Rankings
@@ -347,7 +347,7 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-slate-800">
               Revenue Breakdown
@@ -386,7 +386,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Candidate Analytics */}
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-white/90">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-slate-800">
             Candidate Pipeline Analytics
@@ -425,7 +425,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Quick Actions & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-slate-800">
               Quick Actions
@@ -460,7 +460,7 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-slate-800">
               Recent Activity
@@ -519,7 +519,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* System Health & Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               System Health
@@ -538,7 +538,7 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Active Alerts
@@ -555,7 +555,7 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/90">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Performance Score
@@ -582,7 +582,7 @@ const ManagerDashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+        <Card className="border-0 shadow-lg bg-white/90 hover:shadow-xl transition-all duration-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Team Performance
@@ -597,7 +597,7 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+        <Card className="border-0 shadow-lg bg-white/90 hover:shadow-xl transition-all duration-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Active Projects
@@ -612,7 +612,7 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+        <Card className="border-0 shadow-lg bg-white/90 hover:shadow-xl transition-all duration-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-600">
               Team Members
@@ -629,7 +629,7 @@ const ManagerDashboard: React.FC = () => {
       </div>
 
       {/* Team Performance Chart */}
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-white/90">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-slate-800">
             Team Performance Trend
@@ -665,7 +665,7 @@ const ManagerDashboard: React.FC = () => {
       </Card>
 
       {/* Quick Actions */}
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-white/90">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-slate-800">
             Quick Actions

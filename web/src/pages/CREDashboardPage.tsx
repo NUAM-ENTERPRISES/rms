@@ -124,7 +124,7 @@ export default function CREDashboardPage() {
         </div>
 
         {/* Recent Assigned Candidates */}
-        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-xl bg-white/90">
           <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-blue-50">
             <div className="flex items-center justify-between">
               <div>
