@@ -48,6 +48,23 @@ const CandidateDetailPage = lazy(
 const CandidateNominationPage = lazy(
   () => import("@/features/candidates/views/CandidateNominationPage")
 );
+const RecruiterOverviewPage = lazy(
+  () => import("@/features/analytics/views/RecruiterOverviewPage")
+);
+
+const InterviewAnalyticPage = lazy(
+  () => import("@/features/analytics/views/InterviewAnalyticPage")
+);
+
+const DocumentAnalyticPage = lazy(
+  () => import("@/features/analytics/views/DocumentAnalyticPage")
+);
+const RecruiterDetailPage = lazy(
+  () => import("@/features/analytics/views/RecruiterDetailPage")
+);
+// const TrainingAnalyticsPage = lazy(
+//   () => import("@/features/analytics/views/TraningAnalyticsPage")
+// );
 
 const TeamsPage = lazy(() => import("@/features/teams/views/TeamsPage"));
 const CreateTeamPage = lazy(
@@ -81,7 +98,6 @@ const AssignedInterviewsListPage = lazy(
 const UpcomingInterviewsListPage = lazy(
   () => import("@/features/interviews/views/UpcomingInterviewsListPage")
 );
-
 // Mock Interview Coordination
 const ScreeningsDashboardPage = lazy(
   () =>
@@ -332,7 +348,7 @@ function App() {
                   />
 
                   <Route
-                    path="/recruiter-docs/:projectId/:candidateId"
+                    path="/recruiter-docs/:projectId"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute roles={["Recruiter", "System Admin"]}>
@@ -408,6 +424,68 @@ function App() {
                       </RouteErrorBoundary>
                     }
                   />
+                  <Route
+  path="/analytics/candidates"
+  element={
+    <RouteErrorBoundary>
+      <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
+        <AppLayout>
+          <RecruiterOverviewPage />
+        </AppLayout>
+      </ProtectedRoute>
+    </RouteErrorBoundary>
+  }
+/>
+<Route
+  path="/recruiter/:id"
+  element={
+    <RouteErrorBoundary>
+      <ProtectedRoute roles={["CEO"]}>
+        <AppLayout>
+          <RecruiterDetailPage />
+        </AppLayout>
+      </ProtectedRoute>
+    </RouteErrorBoundary>
+  }
+/>
+
+<Route
+  path="/analytics/candidates/funnel"
+  element={
+    <RouteErrorBoundary>
+      <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
+        <AppLayout>
+          <InterviewAnalyticPage />
+        </AppLayout>
+      </ProtectedRoute>
+    </RouteErrorBoundary>
+  }
+/>
+
+<Route
+  path="/analytics/candidates/time"
+  element={
+    <RouteErrorBoundary>
+      <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
+        <AppLayout>
+          <DocumentAnalyticPage />
+        </AppLayout>
+      </ProtectedRoute>
+    </RouteErrorBoundary>
+  }
+/>
+{/* <Route
+  path="/analytics/candidates/screening"
+  element={
+    <RouteErrorBoundary>
+      <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
+        <AppLayout>
+          <TrainingAnalyticsPage />
+        </AppLayout>
+      </ProtectedRoute>
+    </RouteErrorBoundary>
+  }
+/> */}
 
                   <Route
                     path="/teams"
