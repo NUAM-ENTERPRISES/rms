@@ -27,13 +27,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { DatePicker } from "@/components/molecules";
-import { MapPin, Video, PhoneCall, Plus } from "lucide-react";
+import { MapPin, Video, PhoneCall, Plus, Users } from "lucide-react";
 import { useGetProjectsQuery } from "@/features/projects/api";
-import { useCreateInterviewMutation } from "../api";
+import { useCreateInterviewMutation, useCreateBulkInterviewsMutation } from "../api";
 import { toast } from "sonner";
 
 const scheduleInterviewSchema = z.object({
-  candidateProjectMapId: z.string(),
+  candidateProjectMapId: z.string().optional(),
+  candidateProjectMapIds: z.array(z.string()).optional(),
   scheduledTime: z.date({
     message: "Please select a date and time",
   }),
@@ -51,6 +52,7 @@ interface ScheduleInterviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialCandidateProjectMapId?: string;
+  initialCandidateProjectMapIds?: string[];
   initialCandidateName?: string;
   initialProjectName?: string;
 }
@@ -59,6 +61,7 @@ export default function ScheduleInterviewDialog({
   open,
   onOpenChange,
   initialCandidateProjectMapId,
+  initialCandidateProjectMapIds,
   initialCandidateName,
   initialProjectName,
 }: ScheduleInterviewDialogProps) {
@@ -69,18 +72,23 @@ export default function ScheduleInterviewDialog({
       limit: 100,
     },
     {
-      skip: !!initialCandidateProjectMapId, // Skip fetching projects if we already have a candidateProjectMapId
+      skip: !!initialCandidateProjectMapId || !!initialCandidateProjectMapIds, // Skip fetching projects if we already have candidate mapping(s)
     }
   );
 
-  const [createInterview, { isLoading: isCreating }] =
+  const [createInterview, { isLoading: isCreatingSingle }] =
     useCreateInterviewMutation();
+  const [createBulkInterviews, { isLoading: isCreatingBulk }] =
+    useCreateBulkInterviewsMutation();
+
+  const isCreating = isCreatingSingle || isCreatingBulk;
 
   const form = useForm<ScheduleInterviewForm>({
     mode: "onChange",
     resolver: zodResolver(scheduleInterviewSchema) as any,
     defaultValues: {
       candidateProjectMapId: initialCandidateProjectMapId ?? undefined,
+      candidateProjectMapIds: initialCandidateProjectMapIds ?? undefined,
       scheduledTime: undefined,
       duration: 60,
       type: "technical",
@@ -97,14 +105,14 @@ export default function ScheduleInterviewDialog({
     if (modeValue !== "video") {
       form.setValue("meetingLink", undefined, { shouldValidate: true, shouldDirty: false });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modeValue]);
+  }, [modeValue, form]);
 
   // Reset form values when initial props change / dialog opens
   React.useEffect(() => {
     if (open) {
       form.reset({
         candidateProjectMapId: initialCandidateProjectMapId ?? undefined,
+        candidateProjectMapIds: initialCandidateProjectMapIds ?? undefined,
         scheduledTime: undefined,
         duration: 60,
         type: "technical",
@@ -113,8 +121,7 @@ export default function ScheduleInterviewDialog({
         notes: "",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialCandidateProjectMapId]);
+  }, [open, initialCandidateProjectMapId, initialCandidateProjectMapIds, form]);
 
   const handleSubmit = async (data: ScheduleInterviewForm) => {
     if (!data.scheduledTime) {
@@ -123,18 +130,31 @@ export default function ScheduleInterviewDialog({
     }
 
     try {
-      const interviewData: any = {
-        candidateProjectMapId: data.candidateProjectMapId,
-        scheduledTime: data.scheduledTime.toISOString(),
-        duration: data.duration,
-        type: data.type,
-        mode: data.mode,
-        meetingLink: data.meetingLink,
-        notes: data.notes,
-      };
-
-      await createInterview(interviewData as any).unwrap();
-      toast.success("Interview scheduled successfully");
+      if (initialCandidateProjectMapIds && initialCandidateProjectMapIds.length > 0) {
+        const bulkData = initialCandidateProjectMapIds.map((id) => ({
+          candidateProjectMapId: id,
+          scheduledTime: data.scheduledTime.toISOString(),
+          duration: data.duration,
+          type: data.type,
+          mode: data.mode,
+          meetingLink: data.meetingLink,
+          notes: data.notes,
+        }));
+        await createBulkInterviews(bulkData).unwrap();
+        toast.success(`${bulkData.length} Interviews scheduled successfully`);
+      } else {
+        const interviewData = {
+          candidateProjectMapId: data.candidateProjectMapId,
+          scheduledTime: data.scheduledTime.toISOString(),
+          duration: data.duration,
+          type: data.type,
+          mode: data.mode,
+          meetingLink: data.meetingLink,
+          notes: data.notes,
+        };
+        await createInterview(interviewData as any).unwrap();
+        toast.success("Interview scheduled successfully");
+      }
       onOpenChange(false);
       form.reset();
     } catch (error) {
@@ -159,7 +179,23 @@ export default function ScheduleInterviewDialog({
             className="space-y-6"
           >
             {/* Candidate & Project Selection */}
-            {initialCandidateProjectMapId ? (
+            {initialCandidateProjectMapIds && initialCandidateProjectMapIds.length > 0 ? (
+              <div className="p-4 rounded-lg bg-indigo-50 border border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">
+                      Bulk Scheduling
+                    </p>
+                    <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                      Scheduling interviews for {initialCandidateProjectMapIds.length} candidates at once.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : initialCandidateProjectMapId ? (
               <FormField
                 control={form.control}
                 name="candidateProjectMapId"
@@ -372,7 +408,9 @@ export default function ScheduleInterviewDialog({
                 ) : (
                   <>
                     <Plus className="h-4 w-4 mr-2" />
-                    Schedule Interview
+                    {initialCandidateProjectMapIds && initialCandidateProjectMapIds.length > 0 
+                      ? `Bulk Schedule ${initialCandidateProjectMapIds.length} Interviews`
+                      : "Schedule Interview"}
                   </>
                 )}
               </Button>

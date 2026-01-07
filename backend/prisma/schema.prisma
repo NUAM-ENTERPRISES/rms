@@ -304,6 +304,11 @@ model Candidate {
   university           String?
   countryCode          String
   mobileNumber         String
+  referralCompanyName  String?
+  referralCountryCode  String?
+  referralEmail        String?
+  referralPhone        String?
+  referralDescription  String?
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
   team                 Team?                          @relation(fields: [teamId], references: [id])

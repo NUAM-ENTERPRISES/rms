@@ -44,6 +44,7 @@ export const CANDIDATE_PROJECT_STATUS = {
   INTERVIEW_SCHEDULED: 'interview_scheduled',
   INTERVIEW_COMPLETED: 'interview_completed',
   INTERVIEW_PASSED: 'interview_passed',
+  
 
   // === Selection Stage ===
   SELECTED: 'selected',

@@ -26,7 +26,15 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useGetUpcomingInterviewsQuery } from "../api";
+import { useGetProjectsQuery, useGetProjectQuery } from "@/services/projectsApi";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetInterviewHistoryQuery } from "../api";
@@ -62,7 +70,12 @@ export default function UpcomingInterviewsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [filters, setFilters] = useState({ search: "" });
+  const [filters, setFilters] = useState({ 
+    search: "",
+    projectId: "",
+    roleNeededId: ""
+  });
+  const [projectSearch, setProjectSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,30 +85,35 @@ export default function UpcomingInterviewsListPage() {
 
   const { data, isLoading, error } = useGetUpcomingInterviewsQuery({
     page: 1,
-    limit: 100,
+    limit: 15,
     search: filters.search || undefined,
+    projectId: filters.projectId || undefined,
+    roleNeededId: filters.roleNeededId || undefined,
   });
+
+  const { data: projectsData } = useGetProjectsQuery({ 
+    limit: 100, 
+    status: "active" 
+  });
+  
+  const { data: projectDetails } = useGetProjectQuery(filters.projectId || "", {
+    skip: !filters.projectId,
+  });
+
+  const projects = projectsData?.data?.projects || [];
+  const filteredProjects = useMemo(() => {
+    if (!projectSearch) return projects;
+    const term = projectSearch.toLowerCase();
+    return projects.filter((p: any) => p.title?.toLowerCase().includes(term));
+  }, [projects, projectSearch]);
+
+  const roles = projectDetails?.data?.rolesNeeded || [];
+
   const items = data?.data?.interviews || [];
 
   const displayed = useMemo(() => {
-    let filtered = items.filter((it) => it.scheduledTime && !(it as any).conductedAt);
-
-    if (filters.search) {
-      const term = filters.search.toLowerCase();
-      filtered = filtered.filter((it) => {
-        const cand = it.candidateProjectMap?.candidate;
-        const role = (it as any).candidateProjectMap?.roleNeeded;
-        return (
-          cand?.firstName?.toLowerCase().includes(term) ||
-          cand?.lastName?.toLowerCase().includes(term) ||
-          it.candidateProjectMap?.project?.title?.toLowerCase().includes(term) ||
-          role?.designation?.toLowerCase().includes(term)
-        );
-      });
-    }
-
-    return filtered;
-  }, [items, filters.search]);
+    return items.filter((it) => it.scheduledTime && !(it as any).conductedAt);
+  }, [items]);
 
   const selected = useMemo(() => {
     if (selectedId) return displayed.find((i) => i.id === selectedId) || null;
@@ -165,19 +183,69 @@ export default function UpcomingInterviewsListPage() {
             <Button onClick={() => navigate(-1)} variant="ghost" size="sm">Back</Button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 max-w-sm min-w-[200px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search..."
+                placeholder="Search candidates..."
                 value={filters.search}
-                onChange={(e) => setFilters({ search: e.target.value })}
+                onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
                 className="pl-9 text-sm"
               />
             </div>
-            {filters.search && (
-              <Button variant="ghost" size="sm" onClick={() => setFilters({ search: "" })}>
-                <X className="h-4 w-4" />
+
+            <Select
+              value={filters.projectId || "all_projects"}
+              onValueChange={(val) => {
+                setFilters(p => ({ ...p, projectId: val === "all_projects" ? "" : val, roleNeededId: "" }));
+                setProjectSearch("");
+              }}
+            >
+              <SelectTrigger className="w-[200px] text-sm h-10">
+                <SelectValue placeholder="All Projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <div className="p-2">
+                  <Input
+                    placeholder="Search projects..."
+                    value={projectSearch}
+                    onChange={(e) => setProjectSearch(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <SelectItem value="all_projects">All Projects</SelectItem>
+                {filteredProjects.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {filters.projectId && (
+              <Select
+                value={filters.roleNeededId || "all_roles"}
+                onValueChange={(val) => setFilters(p => ({ ...p, roleNeededId: val === "all_roles" ? "" : val }))}
+              >
+                <SelectTrigger className="w-[200px] text-sm h-10">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all_roles">All Roles</SelectItem>
+                  {roles.map(r => (
+                    <SelectItem key={r.id} value={r.id!}>{r.designation}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {(filters.search || filters.projectId || filters.roleNeededId) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setFilters({ search: "", projectId: "", roleNeededId: "" })}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear
               </Button>
             )}
           </div>

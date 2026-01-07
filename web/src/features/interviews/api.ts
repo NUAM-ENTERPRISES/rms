@@ -79,6 +79,7 @@ export interface QueryInterviewsRequest {
   mode?: string;
   status?: string;
   projectId?: string;
+  roleNeededId?: string;
   candidateId?: string;
   page?: number;
   limit?: number;
@@ -91,7 +92,7 @@ export interface QueryUpcomingInterviewsRequest {
   projectId?: string;
   candidateId?: string;
   recruiterId?: string;
-  roleNeeded?: string;
+  roleNeededId?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -100,6 +101,7 @@ export interface QueryAssignedInterviewsRequest {
   page?: number;
   limit?: number;
   projectId?: string;
+  roleNeededId?: string;
   candidateId?: string;
   recruiterId?: string;
   search?: string;
@@ -151,7 +153,19 @@ export const interviewsApi = baseApi.injectEndpoints({
 
     createInterview: builder.mutation<
       { success: boolean; data: Interview; message: string },
-      CreateInterviewRequest
+      CreateInterviewRequest | CreateInterviewRequest[]
+    >({
+      query: (body) => ({
+        url: "/interviews",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Interview"],
+    }),
+
+    createBulkInterviews: builder.mutation<
+      { success: boolean; data: Interview[]; message: string },
+      CreateInterviewRequest[]
     >({
       query: (body) => ({
         url: "/interviews",
@@ -229,6 +243,22 @@ export const interviewsApi = baseApi.injectEndpoints({
     }),
 
     /**
+     * Update bulk interview status
+     * PATCH /interviews/status
+     */
+    updateBulkInterviewStatus: builder.mutation<
+      { success: boolean; data: Interview[]; message?: string },
+      { updates: { id: string; interviewStatus?: string; subStatus?: string; reason?: string }[] }
+    >({
+      query: (body) => ({
+        url: "/interviews/status",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Interview"],
+    }),
+
+    /**
      * Get interview history: GET /interviews/:id/history
      */
     getInterviewHistory: builder.query<
@@ -258,7 +288,9 @@ export const {
   useGetInterviewQuery,
   useGetInterviewHistoryQuery,
   useCreateInterviewMutation,
+  useCreateBulkInterviewsMutation,
   useUpdateInterviewMutation,
+  useUpdateBulkInterviewStatusMutation,
   useDeleteInterviewMutation,
   useUpdateInterviewStatusMutation,
   useGetAssignedInterviewsQuery,

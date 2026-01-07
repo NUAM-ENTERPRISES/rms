@@ -3,6 +3,7 @@ import {
   Control,
   Controller,
   FieldErrors,
+  useWatch,
 } from "react-hook-form";
 import {
   Card,
@@ -12,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -33,6 +35,11 @@ type CreateCandidateFormData = {
   source: "manual" | "meta" | "referral";
   gender: "MALE" | "FEMALE" | "OTHER";
   dateOfBirth: string;
+  referralCompanyName?: string;
+  referralEmail?: string;
+  referralCountryCode?: string;
+  referralPhone?: string;
+  referralDescription?: string;
   [key: string]: any;
 };
 
@@ -52,6 +59,11 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
   uploadingImage,
   isLoading,
 }) => {
+  const source = useWatch({
+    control,
+    name: "source",
+  });
+
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
       <CardHeader>
@@ -297,6 +309,123 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 </p>
               )}
             </div>
+
+            {/* Referral Information */}
+            {source === "referral" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="referralCompanyName" className="text-slate-700 font-medium">
+                    Referral Company Name
+                  </Label>
+                  <Controller
+                    name="referralCompanyName"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="referralCompanyName"
+                        placeholder="Global Staffing Solutions"
+                        className="h-11 bg-white border-slate-200"
+                      />
+                    )}
+                  />
+                  {errors.referralCompanyName && (
+                    <p className="text-sm text-red-600">
+                      {errors.referralCompanyName.message as string}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="referralEmail" className="text-slate-700 font-medium">
+                    Referral Email
+                  </Label>
+                  <Controller
+                    name="referralEmail"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="referralEmail"
+                        type="email"
+                        placeholder="referrals@globalstaffing.com"
+                        className="h-11 bg-white border-slate-200"
+                      />
+                    )}
+                  />
+                  {errors.referralEmail && (
+                    <p className="text-sm text-red-600">
+                      {errors.referralEmail.message as string}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="referralPhone" className="text-slate-700 font-medium">
+                    Referral Phone
+                  </Label>
+                  <div className="flex gap-2">
+                    <div className="w-32 flex-shrink-0">
+                      <Controller
+                        name="referralCountryCode"
+                        control={control}
+                        render={({ field }) => (
+                          <CountryCodeSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            name={field.name}
+                            placeholder="Code"
+                            error={errors.referralCountryCode?.message as string}
+                          />
+                        )}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Controller
+                        name="referralPhone"
+                        control={control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            id="referralPhone"
+                            placeholder="9876543210"
+                            className="h-11 bg-white border-slate-200"
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+                  {errors.referralPhone && (
+                    <p className="text-sm text-red-600">
+                      {errors.referralPhone.message as string}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="referralDescription" className="text-slate-700 font-medium">
+                    Referral Description
+                  </Label>
+                  <Controller
+                    name="referralDescription"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        id="referralDescription"
+                        placeholder="Candidate recommended by our partner agency."
+                        className="bg-white border-slate-200 min-h-[100px]"
+                      />
+                    )}
+                  />
+                  {errors.referralDescription && (
+                    <p className="text-sm text-red-600">
+                      {errors.referralDescription.message as string}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </CardContent>

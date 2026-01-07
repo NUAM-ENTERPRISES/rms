@@ -51,6 +51,13 @@ const createCandidateSchema = z.object({
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
 
+  // Referral Fields
+  referralCompanyName: z.string().optional(),
+  referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+  referralCountryCode: z.string().optional(),
+  referralPhone: z.string().optional(),
+  referralDescription: z.string().optional(),
+
   // Educational Qualifications (legacy fields for backward compatibility)
   highestEducation: z.string().max(100).optional(),
   university: z.string().max(200).optional(),
@@ -162,6 +169,11 @@ export default function CreateCandidatePage() {
       source: "manual" as const,
       gender: "" as any,
       dateOfBirth: "",
+      referralCompanyName: "",
+      referralEmail: "",
+      referralCountryCode: "+91",
+      referralPhone: "",
+      referralDescription: "",
       highestEducation: "",
       university: "",
       graduationYear: undefined,
@@ -194,7 +206,20 @@ export default function CreateCandidatePage() {
 
   // Step validation functions
   const validateStep1 = async () => {
-    const step1Fields = ["firstName", "lastName", "countryCode", "mobileNumber", "dateOfBirth", "source", "gender"];
+    const step1Fields = [
+      "firstName",
+      "lastName",
+      "countryCode",
+      "mobileNumber",
+      "dateOfBirth",
+      "source",
+      "gender",
+      "referralCompanyName",
+      "referralEmail",
+      "referralCountryCode",
+      "referralPhone",
+      "referralDescription"
+    ];
     const isValid = await form.trigger(step1Fields as any);
     
     if (isValid) {
@@ -250,6 +275,15 @@ export default function CreateCandidatePage() {
       // Add optional fields only if they have values
       if (data.email && data.email.trim()) {
         payload.email = data.email;
+      }
+
+      // Referral fields
+      if (data.source === "referral") {
+        if (data.referralCompanyName) payload.referralCompanyName = data.referralCompanyName;
+        if (data.referralEmail) payload.referralEmail = data.referralEmail;
+        if (data.referralCountryCode) payload.referralCountryCode = data.referralCountryCode;
+        if (data.referralPhone) payload.referralPhone = data.referralPhone;
+        if (data.referralDescription) payload.referralDescription = data.referralDescription;
       }
 
       // Educational qualifications (legacy fields)
@@ -477,6 +511,11 @@ export default function CreateCandidatePage() {
         source: form.getValues("source"),
         gender: form.getValues("gender"),
         dateOfBirth: form.getValues("dateOfBirth"),
+        referralCompanyName: form.getValues("referralCompanyName"),
+        referralEmail: form.getValues("referralEmail"),
+        referralCountryCode: form.getValues("referralCountryCode"),
+        referralPhone: form.getValues("referralPhone"),
+        referralDescription: form.getValues("referralDescription"),
         highestEducation: form.getValues("highestEducation"),
         university: form.getValues("university"),
         graduationYear: form.getValues("graduationYear"),

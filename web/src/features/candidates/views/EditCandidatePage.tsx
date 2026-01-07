@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label as FormLabel } from "@/components/ui/label";
 import {
   Select,
@@ -44,6 +45,12 @@ const updateCandidateSchema = z.object({
   source: z.enum(["manual", "meta", "referral"]),
   gender: z.any(),
   dateOfBirth: z.string().optional(),
+
+  referralCompanyName: z.string().optional(),
+  referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+  referralCountryCode: z.string().optional(),
+  referralPhone: z.string().optional(),
+  referralDescription: z.string().optional(),
 
   teamId: z
     .union([z.string().uuid("Invalid team ID"), z.literal("none")])
@@ -86,6 +93,11 @@ export default function EditCandidatePage() {
       gender: "" as any,
       dateOfBirth: "",
       teamId: "none",
+      referralCompanyName: "",
+      referralEmail: "",
+      referralCountryCode: "+91",
+      referralPhone: "",
+      referralDescription: "",
     },
   });
 
@@ -134,6 +146,11 @@ export default function EditCandidatePage() {
           ? new Date(candidate.dateOfBirth).toISOString().split("T")[0]
           : "",
         teamId: candidate.assignedTo || "none",
+        referralCompanyName: candidate.referralCompanyName || "",
+        referralEmail: candidate.referralEmail || "",
+        referralCountryCode: candidate.referralCountryCode || "+91",
+        referralPhone: candidate.referralPhone || "",
+        referralDescription: candidate.referralDescription || "",
       });
     }
   }, [candidate, form]);
@@ -233,6 +250,15 @@ export default function EditCandidatePage() {
       }
       if (data.teamId && data.teamId !== "none" && data.teamId.trim()) {
         payload.assignedTo = data.teamId;
+      }
+
+      // Referral fields
+      if (data.source === "referral") {
+        if (data.referralCompanyName) payload.referralCompanyName = data.referralCompanyName;
+        if (data.referralEmail) payload.referralEmail = data.referralEmail;
+        if (data.referralCountryCode) payload.referralCountryCode = data.referralCountryCode;
+        if (data.referralPhone) payload.referralPhone = data.referralPhone;
+        if (data.referralDescription) payload.referralDescription = data.referralDescription;
       }
 
       const result = await updateCandidate({
@@ -466,6 +492,91 @@ export default function EditCandidatePage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Referral Information */}
+                  {form.watch("source") === "referral" && (
+                    <>
+                      <div className="space-y-2">
+                        <FormLabel
+                          htmlFor="referralCompanyName"
+                          className="text-slate-700 font-medium"
+                        >
+                          Referral Company Name
+                        </FormLabel>
+                        <Input
+                          id="referralCompanyName"
+                          {...form.register("referralCompanyName")}
+                          placeholder="Global Staffing Solutions"
+                          className="h-11 bg-white border-slate-200"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <FormLabel
+                          htmlFor="referralEmail"
+                          className="text-slate-700 font-medium"
+                        >
+                          Referral Email
+                        </FormLabel>
+                        <Input
+                          id="referralEmail"
+                          type="email"
+                          {...form.register("referralEmail")}
+                          placeholder="referrals@globalstaffing.com"
+                          className="h-11 bg-white border-slate-200"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <FormLabel
+                          htmlFor="referralPhone"
+                          className="text-slate-700 font-medium"
+                        >
+                          Referral Phone
+                        </FormLabel>
+                        <div className="flex gap-2">
+                          <div className="w-32 flex-shrink-0">
+                            <Controller
+                              name="referralCountryCode"
+                              control={form.control}
+                              render={({ field }) => (
+                                <CountryCodeSelect
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                  name={field.name}
+                                  placeholder="Code"
+                                  error={form.formState.errors.referralCountryCode?.message}
+                                />
+                              )}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <Input
+                              id="referralPhone"
+                              {...form.register("referralPhone")}
+                              placeholder="9876543210"
+                              className="h-11 bg-white border-slate-200"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <FormLabel
+                          htmlFor="referralDescription"
+                          className="text-slate-700 font-medium"
+                        >
+                          Referral Description
+                        </FormLabel>
+                        <Textarea
+                          id="referralDescription"
+                          {...form.register("referralDescription")}
+                          placeholder="Candidate recommended by our partner agency."
+                          className="bg-white border-slate-200 min-h-[100px]"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -89,6 +89,49 @@ export class CreateCandidateDto {
   @IsEnum(['manual', 'meta', 'referral'])
   source?: string = 'manual';
 
+  @ApiPropertyOptional({
+    description: 'Referral company name (only if source is referral)',
+    example: 'ABC Referrals',
+  })
+  @IsOptional()
+  @IsString()
+  referralCompanyName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Referral country code (only if source is referral)',
+    example: '+91',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+[1-9]\d{0,3}$/, {
+    message: 'Please provide a valid referral country code (e.g., +91, +1, +44)',
+  })
+  referralCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Referral email (only if source is referral)',
+    example: 'referral@example.com',
+  })
+  @IsOptional()
+  @IsEmail()
+  referralEmail?: string;
+
+  @ApiPropertyOptional({
+    description: 'Referral phone (only if source is referral)',
+    example: '+919876543210',
+  })
+  @IsOptional()
+  @IsString()
+  referralPhone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Referral description or notes (only if source is referral)',
+    example: 'Long-term partner agency',
+  })
+  @IsOptional()
+  @IsString()
+  referralDescription?: string;
+
   @ApiProperty({
     description: 'Date of birth (mandatory)',
     example: '1990-01-01T00:00:00.000Z',

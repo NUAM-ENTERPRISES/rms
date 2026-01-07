@@ -19,6 +19,7 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { InterviewsService } from './interviews.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
@@ -26,7 +27,10 @@ import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
 import { QueryAssignedInterviewsDto } from './dto/query-assigned-interviews.dto';
 import { QueryUpcomingInterviewsDto } from './dto/query-upcoming-interviews.dto';
-import { UpdateInterviewStatusDto } from './dto/update-interview-status.dto';
+import {
+  UpdateInterviewStatusDto,
+  BulkUpdateInterviewStatusDto,
+} from './dto/update-interview-status.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Interviews')
@@ -36,14 +40,24 @@ export class InterviewsController {
   constructor(private readonly interviewsService: InterviewsService) { }
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   @Permissions('schedule:interviews')
   @ApiOperation({
-    summary: 'Schedule a new interview',
-    description: 'Schedule an interview tied to a candidate-project mapping. Requires `candidateProjectMapId` and `scheduledTime`.',
+    summary: 'Schedule a new interview (single or bulk)',
+    description: 'Schedule one or more interviews tied to candidate-project mappings. Each item requires `candidateProjectMapId` and `scheduledTime`.',
+  })
+  // Accept either a single CreateInterviewDto or an array of them
+  @ApiBody({
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(CreateInterviewDto) },
+        { type: 'array', items: { $ref: getSchemaPath(CreateInterviewDto) } },
+      ],
+    },
   })
   @ApiResponse({
     status: 201,
-    description: 'Interview scheduled successfully',
+    description: 'Interview(s) scheduled successfully',
     schema: {
       type: 'object',
       properties: {
@@ -51,22 +65,15 @@ export class InterviewsController {
         data: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
-            scheduledTime: { type: 'string', format: 'date-time' },
-            duration: { type: 'number' },
-            type: { type: 'string' },
-            mode: { type: 'string' },
-            meetingLink: { type: 'string' },
-            // Example value shown when meetingLink is present
-            // (optional; generated automatically for video mode if not provided)
-            interviewer: { type: 'string' },
-            interviewerEmail: { type: 'string' },
-            candidateProjectMapId: { type: 'string' },
+            interviews: {
+              type: 'array',
+              items: { type: 'object' },
+            },
           },
         },
         message: {
           type: 'string',
-          example: 'Interview scheduled successfully',
+          example: 'Interview(s) scheduled successfully',
         },
       },
     },
@@ -74,13 +81,23 @@ export class InterviewsController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
-    @Body() createInterviewDto: CreateInterviewDto,
+    @Body() createInterviewDto: CreateInterviewDto | CreateInterviewDto[],
     @Request() req,
   ): Promise<{
     success: boolean;
     data: any;
     message: string;
   }> {
+    // Support bulk create (array) and single create
+    if (Array.isArray(createInterviewDto)) {
+      const results = await this.interviewsService.createBulk(createInterviewDto, req.user.id);
+      return {
+        success: true,
+        data: { interviews: results },
+        message: 'Interview(s) scheduled successfully',
+      };
+    }
+
     const interview = await this.interviewsService.create(
       createInterviewDto,
       req.user.id,
@@ -127,6 +144,11 @@ export class InterviewsController {
     name: 'projectId',
     required: false,
     description: 'Filter by project ID',
+  })
+  @ApiQuery({
+    name: 'roleNeededId',
+    required: false,
+    description: 'Filter by Project Role ID',
   })
   @ApiQuery({
     name: 'candidateId',
@@ -246,6 +268,7 @@ export class InterviewsController {
   @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
   @ApiQuery({ name: 'projectId', required: false, description: 'Filter by project ID' })
+  @ApiQuery({ name: 'roleNeededId', required: false, description: 'Filter by Project Role ID' })
   @ApiQuery({ name: 'candidateId', required: false, description: 'Filter by candidate ID' })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter by recruiter/assignee ID' })
   @ApiQuery({ name: 'search', required: false, description: 'Search term: candidate name/email/project title/role designation' })
@@ -379,6 +402,26 @@ export class InterviewsController {
       success: true,
       data: dashboard,
       message: 'Dashboard metrics retrieved successfully',
+    };
+  }
+
+  @Patch('status')
+  @Permissions('write:interviews')
+  @ApiOperation({
+    summary: 'Bulk update interview statuses',
+    description: 'Update outcomes and sub-statuses for multiple interviews at once.',
+  })
+  @ApiBody({ type: BulkUpdateInterviewStatusDto })
+  @ApiResponse({ status: 200, description: 'Interviews updated successfully' })
+  async bulkUpdateStatus(
+    @Body() body: BulkUpdateInterviewStatusDto,
+    @Request() req,
+  ): Promise<any> {
+    const results = await this.interviewsService.updateBulkInterviewStatus(body.updates, req.user?.id);
+    return {
+      success: true,
+      data: results,
+      message: 'Bulk interview status update completed',
     };
   }
 

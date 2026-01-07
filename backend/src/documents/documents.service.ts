@@ -1785,12 +1785,17 @@ export class DocumentsService {
    */
   async getRecruiterPendingDocuments(query: any) {
     const { page = 1, limit = 20, search, recruiterId } = query;
+
+    if (!recruiterId) {
+      throw new BadRequestException('Recruiter ID is required');
+    }
+
     const skip = (page - 1) * limit;
 
     // Build where clause
     const where: any = {
-      // Filter by recruiter if provided
-      ...(recruiterId ? { recruiterId } : {}),
+      // Filter by recruiter
+      recruiterId,
       // Filter for candidates who are not in a terminal stage
       mainStatus: {
         name: { notIn: ['final', 'rejected', 'withdrawn'] },
@@ -1893,13 +1898,13 @@ export class DocumentsService {
       this.prisma.candidateProjects.count({ where }),
       this.prisma.candidateProjects.count({
         where: {
-          ...(recruiterId ? { recruiterId } : {}),
+          recruiterId,
           subStatus: { name: 'documents_verified' },
         },
       }),
       this.prisma.candidateProjects.count({
         where: {
-          ...(recruiterId ? { recruiterId } : {}),
+          recruiterId,
           subStatus: { name: 'rejected_documents' },
         },
       }),
@@ -2004,11 +2009,16 @@ export class DocumentsService {
       recruiterId,
       status = 'verified',
     } = query;
+
+    if (!recruiterId) {
+      throw new BadRequestException('Recruiter ID is required');
+    }
+
     const skip = (page - 1) * limit;
 
     // 1. Define the base where clauses for counts (filtered by recruiter but NOT search)
     const pendingWhereBase: any = {
-      ...(recruiterId ? { recruiterId } : {}),
+      recruiterId,
       mainStatus: {
         name: { notIn: ['final', 'rejected', 'withdrawn'] },
       },
@@ -2023,12 +2033,12 @@ export class DocumentsService {
     };
 
     const verifiedWhereBase: any = {
-      ...(recruiterId ? { recruiterId } : {}),
+      recruiterId,
       subStatus: { name: 'documents_verified' },
     };
 
     const rejectedWhereBase: any = {
-      ...(recruiterId ? { recruiterId } : {}),
+      recruiterId,
       subStatus: { name: 'rejected_documents' },
     };
 
@@ -2043,7 +2053,7 @@ export class DocumentsService {
     } else {
       // Default to verified or both if needed, but user asked for verified/rejected
       activeWhere = {
-        ...(recruiterId ? { recruiterId } : {}),
+        recruiterId,
         subStatus: {
           name: { in: ['documents_verified', 'rejected_documents'] },
         },

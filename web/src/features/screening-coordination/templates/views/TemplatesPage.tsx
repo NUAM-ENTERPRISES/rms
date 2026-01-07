@@ -70,7 +70,7 @@ export default function TemplatesPage() {
   const [deleteTemplate] = useDeleteTemplateMutation();
   const { data: roleCatalogData } = useGetRoleCatalogQuery({
     isActive: true,
-    limit: 1000,
+    limit: 100,
   });
 
   const templates = templatesData?.data || [];

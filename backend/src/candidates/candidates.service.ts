@@ -204,6 +204,11 @@ export class CandidatesService {
         email: createCandidateDto.email,
         profileImage: createCandidateDto.profileImage,
         source: createCandidateDto.source || 'manual',
+        referralCompanyName: createCandidateDto.referralCompanyName,
+        referralCountryCode: createCandidateDto.referralCountryCode,
+        referralEmail: createCandidateDto.referralEmail,
+        referralPhone: createCandidateDto.referralPhone,
+        referralDescription: createCandidateDto.referralDescription,
         dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
         gender: createCandidateDto.gender,
         currentStatusId: defaultStatusId,
@@ -1036,6 +1041,16 @@ export class CandidatesService {
       updateData.profileImage = updateCandidateDto.profileImage;
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
+    if (updateCandidateDto.referralCompanyName !== undefined)
+      updateData.referralCompanyName = updateCandidateDto.referralCompanyName;
+    if (updateCandidateDto.referralCountryCode !== undefined)
+      updateData.referralCountryCode = updateCandidateDto.referralCountryCode;
+    if (updateCandidateDto.referralEmail !== undefined)
+      updateData.referralEmail = updateCandidateDto.referralEmail;
+    if (updateCandidateDto.referralPhone !== undefined)
+      updateData.referralPhone = updateCandidateDto.referralPhone;
+    if (updateCandidateDto.referralDescription !== undefined)
+      updateData.referralDescription = updateCandidateDto.referralDescription;
     if (updateCandidateDto.dateOfBirth)
       updateData.dateOfBirth = new Date(updateCandidateDto.dateOfBirth);
     if (updateCandidateDto.gender)

@@ -130,8 +130,12 @@ export class DocumentsController {
   @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name or project title' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
-  async getRecruiterDocuments(@Query() query: any) {
-    const result = await this.documentsService.getRecruiterPendingDocuments(query);
+  async getRecruiterDocuments(@Query() query: any, @Request() req) {
+    const recruiterId = query.recruiterId || req.user.sub;
+    const result = await this.documentsService.getRecruiterPendingDocuments({
+      ...query,
+      recruiterId,
+    });
     return {
       success: true,
       data: result,
@@ -151,8 +155,12 @@ export class DocumentsController {
   @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'pending_documents'. Defaults to 'verified'." })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
-  async getRecruiterVerifiedRejectedDocuments(@Query() query: any) {
-    const result = await this.documentsService.getRecruiterVerifiedRejectedDocuments(query);
+  async getRecruiterVerifiedRejectedDocuments(@Query() query: any, @Request() req) {
+    const recruiterId = query.recruiterId || req.user.sub;
+    const result = await this.documentsService.getRecruiterVerifiedRejectedDocuments({
+      ...query,
+      recruiterId,
+    });
     return {
       success: true,
       data: result,

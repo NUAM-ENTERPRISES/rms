@@ -30,6 +30,11 @@ interface CandidatePreviewProps {
     source: string;
     gender: string;
     dateOfBirth: string;
+    referralCompanyName?: string;
+    referralEmail?: string;
+    referralCountryCode?: string;
+    referralPhone?: string;
+    referralDescription?: string;
     highestEducation?: string;
     university?: string;
     graduationYear?: number;
@@ -133,7 +138,52 @@ export default function CandidatePreview({
                   {candidateData.gender}
                 </Badge>
               </div>
+
+              {/* Integrated Referral Fields */}
+              {candidateData.source === "referral" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase">
+                      Referral Company
+                    </label>
+                    <p className="mt-1 text-sm font-medium text-slate-900">
+                      {candidateData.referralCompanyName || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase">
+                      Referral Email
+                    </label>
+                    <p className="mt-1 text-sm font-medium text-slate-900 flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      {candidateData.referralEmail || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase">
+                      Referral Phone
+                    </label>
+                    <p className="mt-1 text-sm font-medium text-slate-900 flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-blue-600" />
+                      {candidateData.referralCountryCode}
+                      {candidateData.referralPhone || "N/A"}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
+            {/* Integrated Referral Description */}
+            {candidateData.source === "referral" &&
+              candidateData.referralDescription && (
+                <div className="mt-4 p-4 border-t border-slate-200">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Referral Description
+                  </label>
+                  <p className="mt-1 text-sm text-slate-700 leading-relaxed">
+                    {candidateData.referralDescription}
+                  </p>
+                </div>
+              )}
           </CardContent>
         </Card>
 

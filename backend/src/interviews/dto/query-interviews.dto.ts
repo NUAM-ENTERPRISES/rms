@@ -67,6 +67,14 @@ export class QueryInterviewsDto {
   projectId?: string;
 
   @ApiProperty({
+    description: 'Filter by Project Role ID',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  roleNeededId?: string;
+
+  @ApiProperty({
     description: 'Filter by candidate ID',
     required: false,
   })

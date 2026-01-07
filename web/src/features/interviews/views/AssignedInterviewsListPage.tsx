@@ -11,6 +11,8 @@ import {
   Calendar,
   ChevronRight,
   X,
+  CheckSquare,
+  Users,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,8 +20,17 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // ← Fixed: Was missing
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useGetAssignedInterviewsQuery } from "../api";
+import { useGetProjectsQuery, useGetProjectQuery } from "@/services/projectsApi";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
 import { cn } from "@/lib/utils";
 
@@ -27,22 +38,53 @@ export default function AssignedInterviewsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [filters, setFilters] = useState({ search: "", status: "all" });
+  const [filters, setFilters] = useState({ 
+    search: "", 
+    status: "all",
+    projectId: "",
+    roleNeededId: ""
+  });
+  const [projectSearch, setProjectSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleDialogInitial, setScheduleDialogInitial] = useState<{
     candidateProjectMapId?: string;
+    candidateProjectMapIds?: string[];
     candidateName?: string;
     projectName?: string;
   }>({});
 
   const { data, isLoading, error } = useGetAssignedInterviewsQuery({
     page: 1,
-    limit: 100,
+    limit: 15,
     search: filters.search || undefined,
+    projectId: filters.projectId || undefined,
+    roleNeededId: filters.roleNeededId || undefined,
   });
+
+  const { data: projectsData } = useGetProjectsQuery({ 
+    limit: 100, 
+    status: "active" 
+  });
+  
+  const { data: projectDetails } = useGetProjectQuery(filters.projectId || "", {
+    skip: !filters.projectId,
+  });
+
+  const projects = projectsData?.data?.projects || [];
+  const filteredProjects = useMemo(() => {
+    if (!projectSearch) return projects;
+    const term = projectSearch.toLowerCase();
+    return projects.filter((p: any) => p.title?.toLowerCase().includes(term));
+  }, [projects, projectSearch]);
+
+  const roles = projectDetails?.data?.rolesNeeded || [];
+
   const items = data?.data?.items || [];
   const displayed = items;
+
+  const pendingInterviews = useMemo(() => displayed.filter(it => !it.scheduledTime), [displayed]);
 
   const selected = useMemo(() => {
     if (selectedId) return displayed.find((i) => i.id === selectedId) || null;
@@ -95,23 +137,87 @@ export default function AssignedInterviewsListPage() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 max-w-sm min-w-[200px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search..."
+                placeholder="Search candidates..."
                 value={filters.search}
                 onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
                 className="pl-9 text-sm"
               />
             </div>
-            {(filters.search || filters.status !== "all") && (
+
+            <Select
+              value={filters.projectId || "all_projects"}
+              onValueChange={(val) => {
+                setFilters(p => ({ ...p, projectId: val === "all_projects" ? "" : val, roleNeededId: "" }));
+                setProjectSearch("");
+              }}
+            >
+              <SelectTrigger className="w-[200px] text-sm h-10">
+                <SelectValue placeholder="All Projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <div className="p-2">
+                  <Input
+                    placeholder="Search projects..."
+                    value={projectSearch}
+                    onChange={(e) => setProjectSearch(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <SelectItem value="all_projects">All Projects</SelectItem>
+                {filteredProjects.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {filters.projectId && (
+              <Select
+                value={filters.roleNeededId || "all_roles"}
+                onValueChange={(val) => setFilters(p => ({ ...p, roleNeededId: val === "all_roles" ? "" : val }))}
+              >
+                <SelectTrigger className="w-[200px] text-sm h-10">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all_roles">All Roles</SelectItem>
+                  {roles.map(r => (
+                    <SelectItem key={r.id} value={r.id!}>{r.designation}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {(filters.search || filters.projectId || filters.roleNeededId) && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setFilters({ search: "", status: "all" })}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setFilters({ search: "", status: "all", projectId: "", roleNeededId: "" })}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4 mr-2" />
+                Clear Filters
+              </Button>
+            )}
+
+            {selectedBulkIds.length > 0 && (
+              <Button
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md animate-in fade-in zoom-in duration-200"
+                onClick={() => {
+                  setScheduleDialogInitial({
+                    candidateProjectMapIds: selectedBulkIds,
+                    candidateName: `${selectedBulkIds.length} Candidates Selected`,
+                    projectName: "Multiple Projects",
+                  });
+                  setScheduleDialogOpen(true);
+                }}
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Bulk Schedule Interviews ({selectedBulkIds.length})
               </Button>
             )}
           </div>
@@ -120,13 +226,49 @@ export default function AssignedInterviewsListPage() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Compact List Panel */}
-        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60">
-          <ScrollArea className="h-full">
+        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60 flex flex-col">
+          {displayed.length > 0 && (
+            <div className="p-3 border-b flex items-center justify-between bg-white/40 dark:bg-gray-800/40">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="select-all"
+                  checked={
+                    displayed.length > 0 &&
+                    displayed.every((it) => selectedBulkIds.includes(it.id))
+                  }
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedBulkIds(displayed.map((it) => it.id));
+                    } else {
+                      setSelectedBulkIds([]);
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="select-all"
+                  className="text-xs font-medium cursor-pointer select-none"
+                >
+                  {selectedBulkIds.length > 0 ? `${selectedBulkIds.length} selected` : "Select All"}
+                </label>
+              </div>
+              {selectedBulkIds.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => setSelectedBulkIds([])}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          )}
+          <ScrollArea className="flex-1">
             {displayed.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-40 text-indigo-400" />
                 <p className="font-medium">No assigned interviews</p>
-                <p className="text-xs mt-1">Assignments will appear here</p>
+                <p className="text-xs mt-1">Assignments matching your filters will appear here</p>
               </div>
             ) : (
               <div className="p-2 space-y-2">
@@ -138,59 +280,69 @@ export default function AssignedInterviewsListPage() {
                   const isScheduled = !!it.scheduledTime;
 
                   return (
-                    <button
-                      key={it.id}
-                      onClick={() => setSelectedId(it.id)}
-                      className={cn(
-                        "w-full text-left p-3 rounded-lg border transition-all",
-                        isSelected
-                          ? "bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-300 dark:from-indigo-900/30 dark:to-purple-900/30 dark:border-indigo-700"
-                          : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 shrink-0">
-                          <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
-                            {candidate
-                              ? `${candidate.firstName?.[0] || ""}${candidate.lastName?.[0] || ""}`.toUpperCase()
-                              : "??"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
-                          </p>
-                          <p className="text-xs text-indigo-600 dark:text-indigo-400 truncate">
-                            {role?.designation || "Unknown Role"}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {project?.title || "Unknown Project"}
-                          </p>
-                        </div>
-                        <ChevronRight
-                          className={cn("h-4 w-4 text-muted-foreground", isSelected && "text-indigo-600")}
-                        />
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <Badge
-                          className={cn(
-                            "text-xs px-2 py-0.5 font-medium",
-                            isScheduled
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
-                              : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
-                          )}
-                        >
-                          {isScheduled ? "Scheduled" : "Needs Scheduling"}
-                        </Badge>
-                        {it.scheduledTime && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(it.scheduledTime), "MMM d, yyyy")}
-                          </div>
+                    <div key={it.id} className="relative flex items-center gap-1 group">
+                      <Checkbox
+                        checked={selectedBulkIds.includes(it.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedBulkIds((prev) =>
+                            checked ? [...prev, it.id] : prev.filter((id) => id !== it.id)
+                          );
+                        }}
+                        className="ml-1 opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                      />
+                      <button
+                        onClick={() => setSelectedId(it.id)}
+                        className={cn(
+                          "flex-1 text-left p-3 rounded-lg border transition-all",
+                          isSelected
+                            ? "bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-300 dark:from-indigo-900/30 dark:to-purple-900/30 dark:border-indigo-700"
+                            : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
                         )}
-                      </div>
-                    </button>
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 shrink-0">
+                            <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
+                              {candidate
+                                ? `${candidate.firstName?.[0] || ""}${candidate.lastName?.[0] || ""}`.toUpperCase()
+                                : "??"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
+                            </p>
+                            <p className="text-xs text-indigo-600 dark:text-indigo-400 truncate">
+                              {role?.designation || "Unknown Role"}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {project?.title || "Unknown Project"}
+                            </p>
+                          </div>
+                          <ChevronRight
+                            className={cn("h-4 w-4 text-muted-foreground", isSelected && "text-indigo-600")}
+                          />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          <Badge
+                            className={cn(
+                              "text-xs px-2 py-0.5 font-medium",
+                              isScheduled
+                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                            )}
+                          >
+                            {isScheduled ? "Scheduled" : "Needs Scheduling"}
+                          </Badge>
+                          {it.scheduledTime && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(it.scheduledTime), "MMM d, yyyy")}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -347,8 +499,12 @@ export default function AssignedInterviewsListPage() {
 
       <ScheduleInterviewDialog
         open={scheduleDialogOpen}
-        onOpenChange={setScheduleDialogOpen}
+        onOpenChange={(open) => {
+          setScheduleDialogOpen(open);
+          if (!open) setSelectedBulkIds([]);
+        }}
         initialCandidateProjectMapId={scheduleDialogInitial.candidateProjectMapId}
+        initialCandidateProjectMapIds={scheduleDialogInitial.candidateProjectMapIds}
         initialCandidateName={scheduleDialogInitial.candidateName}
         initialProjectName={scheduleDialogInitial.projectName}
       />

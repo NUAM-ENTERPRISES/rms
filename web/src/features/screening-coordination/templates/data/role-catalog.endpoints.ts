@@ -33,7 +33,7 @@ const roleCatalogApi = baseApi.injectEndpoints({
       RoleCatalogResponse,
       { isActive?: boolean; limit?: number }
     >({
-      query: ({ isActive = true, limit = 1000 } = {}) => ({
+      query: ({ isActive = true, limit = 100 } = {}) => ({
         url: "/role-catalog",
         method: "GET",
         params: { isActive, limit },

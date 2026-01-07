@@ -9,6 +9,8 @@ import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
 import { QueryUpcomingInterviewsDto } from './dto/query-upcoming-interviews.dto';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
 @Injectable()
 export class InterviewsService {
@@ -158,6 +160,39 @@ export class InterviewsService {
     return interview;
   }
 
+  /**
+   * Bulk create interviews. We perform individual creates and collect results.
+   * Each item uses the same scheduler (scheduledBy). Individual creates are
+   * atomic (each uses its own transaction) so some may succeed while others fail.
+   */
+  async createBulk(interviews: CreateInterviewDto[], scheduledBy: string) {
+    if (!Array.isArray(interviews)) {
+      throw new BadRequestException('Expected an array of interviews for bulk create');
+    }
+
+    const results: Array<any> = [];
+
+    for (const itv of interviews) {
+      try {
+        // Validate DTO per item to ensure client-side mistakes are reported clearly
+        const instance = plainToInstance(CreateInterviewDto, itv);
+        const errors = await validate(instance);
+        if (errors.length > 0) {
+          results.push({ success: false, error: 'Validation failed', details: errors });
+          continue;
+        }
+
+        const created = await this.create(instance as CreateInterviewDto, scheduledBy);
+        results.push({ success: true, data: created });
+      } catch (err) {
+        // normalize error
+        results.push({ success: false, error: err?.message ?? String(err) });
+      }
+    }
+
+    return results;
+  }
+
   async findAll(query: QueryInterviewsDto) {
     const {
       search,
@@ -165,6 +200,7 @@ export class InterviewsService {
       mode,
       status,
       projectId,
+      roleNeededId,
       candidateId,
       page = 1,
       limit = 10,
@@ -195,15 +231,11 @@ export class InterviewsService {
       }
     }
 
-    if (projectId) {
+    if (projectId || candidateId || roleNeededId) {
       where.candidateProjectMap = {
-        projectId: projectId,
-      };
-    }
-
-    if (candidateId) {
-      where.candidateProjectMap = {
-        candidateId: candidateId,
+        ...(projectId && { projectId }),
+        ...(candidateId && { candidateId }),
+        ...(roleNeededId && { roleNeededId }),
       };
     }
 
@@ -213,7 +245,27 @@ export class InterviewsService {
         {
           candidateProjectMap: {
             candidate: {
-              name: {
+              firstName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+        {
+          candidateProjectMap: {
+            candidate: {
+              lastName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+        {
+          candidateProjectMap: {
+            candidate: {
+              email: {
                 contains: search,
                 mode: 'insensitive',
               },
@@ -298,7 +350,7 @@ export class InterviewsService {
    * Supports pagination and optional filters.
    */
   async getAssignedCandidateProjects(query: any) {
-    const { page = 1, limit = 10, projectId, candidateId, recruiterId, search, subStatus, includeScheduled } = query;
+    const { page = 1, limit = 10, projectId, roleNeededId, candidateId, recruiterId, search, subStatus, includeScheduled } = query;
 
     const where: any = {};
 
@@ -313,6 +365,7 @@ export class InterviewsService {
     }
 
     if (projectId) where.projectId = projectId;
+    if (roleNeededId) where.roleNeededId = roleNeededId;
     if (candidateId) where.candidateId = candidateId;
     if (recruiterId) where.recruiterId = recruiterId;
 
@@ -625,6 +678,38 @@ export class InterviewsService {
     });
 
     return updated;
+  }
+
+  /**
+   * Bulk update interview statuses.
+   * Expects an array of objects, each with 'id' and the status update fields.
+   */
+  async updateBulkInterviewStatus(
+    updates: Array<{ id: string; interviewStatus?: string; subStatus?: string; reason?: string }>,
+    changedById?: string,
+  ) {
+    if (!Array.isArray(updates)) {
+      throw new BadRequestException('Expected an array of status updates');
+    }
+
+    const results: Array<any> = [];
+
+    for (const update of updates) {
+      try {
+        if (!update.id) {
+          results.push({ success: false, error: 'Interview ID is required for each update' });
+          continue;
+        }
+
+        const { id, ...dto } = update;
+        const result = await this.updateInterviewStatus(id, dto, changedById);
+        results.push({ success: true, data: result });
+      } catch (err) {
+        results.push({ success: false, id: update.id, error: err?.message ?? String(err) });
+      }
+    }
+
+    return results;
   }
 
   async findOne(id: string) {
