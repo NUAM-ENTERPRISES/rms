@@ -5,14 +5,23 @@ import {
   Query,
   HttpStatus,
   NotFoundException,
+  Post,
+  Body,
+  Patch,
+  Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { Public } from '../auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/rbac/roles.guard';
+import { Roles } from '../auth/rbac/roles.decorator';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
   CountriesService,
@@ -21,6 +30,7 @@ import {
 } from './countries.service';
 import { QueryCountriesDto } from './dto/query-countries.dto';
 import { Country } from '@prisma/client';
+import { CreateCountryDocumentRequirementDto, UpdateCountryDocumentRequirementDto } from './dto/country-document-requirement.dto';
 
 @ApiTags('Countries')
 @Controller('countries')
@@ -234,5 +244,63 @@ export class CountriesController {
       }
       throw new NotFoundException(`Country with code '${code}' not found`);
     }
+  }
+
+  // === Country Document Requirements Endpoints ===
+
+  @Get(':code/document-requirements')
+  @Public()
+  @ApiOperation({ summary: 'Get all document requirements for a country' })
+  async getDocumentRequirements(@Param('code') code: string) {
+    const data = await this.countriesService.getDocumentRequirements(code);
+    return {
+      success: true,
+      data,
+      message: 'Document requirements retrieved successfully',
+    };
+  }
+
+  @Post('document-requirements')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CEO', 'Director', 'Manager')
+  @ApiOperation({ summary: 'Create a new country document requirement' })
+  async createDocumentRequirement(@Body() dto: CreateCountryDocumentRequirementDto) {
+    const data = await this.countriesService.createDocumentRequirement(dto);
+    return {
+      success: true,
+      data,
+      message: 'Document requirement created successfully',
+    };
+  }
+
+  @Patch('document-requirements/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CEO', 'Director', 'Manager')
+  @ApiOperation({ summary: 'Update an existing country document requirement' })
+  async updateDocumentRequirement(
+    @Param('id') id: string,
+    @Body() dto: UpdateCountryDocumentRequirementDto,
+  ) {
+    const data = await this.countriesService.updateDocumentRequirement(id, dto);
+    return {
+      success: true,
+      data,
+      message: 'Document requirement updated successfully',
+    };
+  }
+
+  @Delete('document-requirements/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CEO', 'Director', 'Manager')
+  @ApiOperation({ summary: 'Delete a country document requirement' })
+  async deleteDocumentRequirement(@Param('id') id: string) {
+    await this.countriesService.deleteDocumentRequirement(id);
+    return {
+      success: true,
+      message: 'Document requirement deleted successfully',
+    };
   }
 }

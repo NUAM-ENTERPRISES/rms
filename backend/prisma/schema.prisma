@@ -50,13 +50,15 @@ model User {
   assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
   unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
 
+  assignedProcessingTasks    ProcessingCandidate[] @relation("AssignedToProcessing")
+  processingHistoryChanges   ProcessingHistory[]   @relation("UserToProcessingHistory")
+  recruiterProcessingHistory ProcessingHistory[]   @relation("RecruiterToProcessingHistory")
+
   statusChanges               CandidateStatusHistory[]        @relation("UserToHistory")
   rnrReminders                RNRReminder[]                   @relation("RecruiterRNRReminders")
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
-  processingStepUpdates       ProcessingStep[]                @relation("ProcessingStepUpdatedBy")
-  processingStepHistory       ProcessingStepHistory[]         @relation("ProcessingHistoryActor")
 
   @@unique([countryCode, mobileNumber])
   @@index([email])
@@ -187,6 +189,7 @@ model Country {
   qualificationCountryProfiles  QualificationCountryProfile[]
   qualificationEquivalencies    QualificationEquivalency[]
   roleRecommendedQualifications RoleRecommendedQualification[]
+  countryDocumentRequirements   CountryDocumentRequirement[]
 
   @@map("countries")
 }
@@ -218,6 +221,7 @@ model Project {
   creator              User                  @relation("ProjectCreator", fields: [createdBy], references: [id])
   team                 Team?                 @relation(fields: [teamId], references: [id])
   rolesNeeded          RoleNeeded[]
+  processingTasks      ProcessingCandidate[]
 
   @@map("projects")
 }
@@ -254,12 +258,12 @@ model RoleNeeded {
   employmentType            String                           @default("permanent") // "contract" or "permanent"
   contractDurationYears     Int? // Only applicable if employmentType is "contract"
   genderRequirement         String                           @default("all") // "female", "male", or "all"
-  minAge                   Int
-  maxAge                   Int
+  minAge                    Int
+  maxAge                    Int
   accommodation             Boolean?
-  food                     Boolean?
-  transport                Boolean?
-  target                   Int?
+  food                      Boolean?
+  transport                 Boolean?
+  target                    Int?
   technicalSkills           Json?
   visaType                  String                           @default("contract") // "contract", "permanent", "work_permit", "student"
   requiredSkills            Json                             @default("[]") // Array of required skills
@@ -272,6 +276,7 @@ model RoleNeeded {
   candidateAllocations      CandidateProjects[]
   educationRequirementsList RoleNeededEducationRequirement[]
   project                   Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  processingAssignments     ProcessingCandidate[]
 
   @@index([roleCatalogId])
   @@map("project_roles")
@@ -319,6 +324,7 @@ model Candidate {
   recruiterAssignments CandidateRecruiterAssignment[]
   statusHistories      CandidateStatusHistory[]       @relation("CandidateToHistory")
   rnrReminders         RNRReminder[]
+  processingTasks      ProcessingCandidate[]
 
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
@@ -402,14 +408,12 @@ model CandidateProjects {
   project               Project                                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   roleNeeded            RoleNeeded?                            @relation(fields: [roleNeededId], references: [id])
   interviews            Interview[]
-  processing            Processing?
-  processingSteps       ProcessingStep[]
-  processingStepHistory ProcessingStepHistory[]
   projectStatusHistory  CandidateProjectStatusHistory[]
 
   // Screening & Training Relations
   screenings          Screening[]
   trainingAssignments TrainingAssignment[]
+  processing          ProcessingCandidate?
 
   @@unique([candidateId, projectId, roleNeededId])
   @@index([currentProjectStatusId])
@@ -710,106 +714,6 @@ model TrainingSession {
   @@map("training_sessions")
 }
 
-model Processing {
-  id                    String            @id @default(cuid())
-  qvpStatus             String            @default("not_started")
-  medicalStatus         String            @default("not_started")
-  visaStatus            String            @default("not_started")
-  travelStatus          String            @default("not_started")
-  notes                 String?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  actualJoiningDate     DateTime?
-  arrivalDate           DateTime?
-  candidateProjectMapId String            @unique
-  departureDate         DateTime?
-  expectedJoiningDate   DateTime?
-  flightBookedDate      DateTime?
-  joiningNotes          String?
-  joiningStatus         String            @default("pending")
-  medicalClearance      String?
-  medicalCompletionDate DateTime?
-  medicalNotes          String?
-  medicalStartDate      DateTime?
-  qvpCompletionDate     DateTime?
-  qvpStartDate          DateTime?
-  travelNotes           String?
-  visaApplicationDate   DateTime?
-  visaApprovalDate      DateTime?
-  visaExpiryDate        DateTime?
-  visaNotes             String?
-  visaType              String?
-  candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-
-  @@index([candidateProjectMapId])
-  @@map("processing")
-}
-
-model ProcessingStep {
-  id                    String               @id @default(cuid())
-  candidateProjectMapId String
-  stepKey               ProcessingStepKey
-  status                ProcessingStepStatus @default(PENDING)
-  slaDays               Int
-  dueDate               DateTime?
-  startedAt             DateTime?
-  completedAt           DateTime?
-  notes                 String?
-  notApplicableReason   String?
-  lastUpdatedById       String?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-
-  candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  lastUpdatedBy       User?             @relation("ProcessingStepUpdatedBy", fields: [lastUpdatedById], references: [id])
-
-  @@unique([candidateProjectMapId, stepKey])
-  @@index([candidateProjectMapId])
-  @@index([stepKey])
-  @@map("processing_steps")
-}
-
-model ProcessingStepHistory {
-  id                    String               @id @default(cuid())
-  candidateProjectMapId String
-  stepKey               ProcessingStepKey
-  previousStatus        ProcessingStepStatus
-  newStatus             ProcessingStepStatus
-  notes                 String?
-  actorId               String?
-  actorName             String?
-  changedAt             DateTime             @default(now())
-
-  candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  actor               User?             @relation("ProcessingHistoryActor", fields: [actorId], references: [id])
-
-  @@index([candidateProjectMapId])
-  @@index([stepKey])
-  @@map("processing_step_history")
-}
-
-enum ProcessingStepKey {
-  MEDICAL_CERTIFICATE
-  DOCUMENT_COLLECTION
-  HRD_ATTESTATION
-  QVP
-  DATAFLOW
-  PROMETRIC
-  VISA
-  IMMIGRATION
-  TICKETING
-  TRAVEL
-  JOINING
-}
-
-enum ProcessingStepStatus {
-  PENDING
-  IN_PROGRESS
-  DONE
-  REJECTED
-  NOT_APPLICABLE
-}
-
 model Notification {
   id        String    @id @default(cuid())
   userId    String
@@ -926,7 +830,7 @@ model DocumentRequirement {
 /// * Tracks verification status of each document for each project
 /// * Multiple projects can reference the same document (e.g., same passport for multiple projects)
 model CandidateProjectDocumentVerification {
-  id                    String @id @default(cuid())
+  id                    String  @id @default(cuid())
   candidateProjectMapId String
   documentId            String
   roleCatalogId         String?
@@ -1496,4 +1400,67 @@ model CandidateProjectSubStatus {
   statusHistory     CandidateProjectStatusHistory[]
 
   @@map("candidate_project_sub_statuses")
+}
+
+model CountryDocumentRequirement {
+  id          String   @id @default(cuid())
+  countryCode String
+  docType     String
+  mandatory   Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@unique([countryCode, docType])
+  @@index([countryCode])
+  @@map("country_document_requirements")
+}
+
+model ProcessingCandidate {
+  id                           String   @id @default(cuid())
+  candidateId                  String
+  projectId                    String
+  roleNeededId                 String
+  assignedProcessingTeamUserId String?
+  processingStatus             String   @default("assigned") // assigned, in_progress, completed, cancelled
+  notes                        String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  candidate Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role      RoleNeeded @relation(fields: [roleNeededId], references: [id], onDelete: Cascade)
+
+  candidateProjectMap CandidateProjects @relation(fields: [candidateId, projectId, roleNeededId], references: [candidateId, projectId, roleNeededId])
+
+  assignedTo User?               @relation("AssignedToProcessing", fields: [assignedProcessingTeamUserId], references: [id])
+  history    ProcessingHistory[]
+
+  @@unique([candidateId, projectId, roleNeededId])
+  @@index([candidateId])
+  @@index([projectId])
+  @@index([roleNeededId])
+  @@index([assignedProcessingTeamUserId])
+  @@map("processing_candidates")
+}
+
+model ProcessingHistory {
+  id                    String   @id @default(cuid())
+  processingCandidateId String
+  status                String
+  changedById           String?
+  recruiterId           String?
+  notes                 String?
+  createdAt             DateTime @default(now())
+
+  processingCandidate ProcessingCandidate @relation(fields: [processingCandidateId], references: [id], onDelete: Cascade)
+  changedBy           User?               @relation("UserToProcessingHistory", fields: [changedById], references: [id])
+  recruiter           User?               @relation("RecruiterToProcessingHistory", fields: [recruiterId], references: [id])
+
+  @@index([processingCandidateId])
+  @@index([changedById])
+  @@index([recruiterId])
+  @@map("processing_history")
 }

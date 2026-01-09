@@ -54,6 +54,7 @@ export const PERMISSIONS = {
   READ_PROCESSING: 'read:processing',
   WRITE_PROCESSING: 'write:processing',
   MANAGE_PROCESSING: 'manage:processing',
+  TRANSFER_TO_PROCESSING: 'transfer:processing',
 
   // Interview management
   READ_INTERVIEWS: 'read:interviews',
@@ -162,6 +163,7 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.READ_PROCESSING,
     PERMISSIONS.WRITE_PROCESSING,
     PERMISSIONS.MANAGE_PROCESSING,
+    PERMISSIONS.TRANSFER_TO_PROCESSING,
   ],
   RECRUITER: [
     PERMISSIONS.READ_RECRUITERS,

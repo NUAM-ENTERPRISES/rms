@@ -55,6 +55,15 @@ const updateCandidateSchema = z.object({
   teamId: z
     .union([z.string().uuid("Invalid team ID"), z.literal("none")])
     .optional(),
+}).superRefine((data, ctx) => {
+  // Make referralCompanyName required when source is 'referral'
+  if (data.source === "referral" && (!data.referralCompanyName || data.referralCompanyName.trim() === "")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Referral company name is required when source is referral",
+      path: ["referralCompanyName"],
+    });
+  }
 });
 
 type UpdateCandidateFormData = z.infer<typeof updateCandidateSchema>;
@@ -501,7 +510,7 @@ export default function EditCandidatePage() {
                           htmlFor="referralCompanyName"
                           className="text-slate-700 font-medium"
                         >
-                          Referral Company Name
+                          Referral Company Name *
                         </FormLabel>
                         <Input
                           id="referralCompanyName"

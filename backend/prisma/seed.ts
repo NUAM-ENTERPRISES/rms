@@ -8,6 +8,7 @@ import { seedSystemConfig } from './seeds/system-config.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
 import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
 import { seedRoleCatalog } from './seeds/role-catalog.seed';
+import { seedCountryDocuments } from './seeds/country-documents.seed';
 
 const prisma = new PrismaClient();
 
@@ -35,6 +36,7 @@ const roles = [
       'read:settings',
       'manage:projects',
       'transfer:candidates',
+      'transfer:processing',
     ],
   },
   {
@@ -960,6 +962,9 @@ async function main() {
   // Seed candidate project workflow
   await seedCandidateProjectWorkflow();
 
+  // Seed country document requirements
+  await seedCountryDocuments(prisma);
+
   // Create permissions
   console.log('📝 Creating permissions...');
   for (const permissionKey of allPermissions) {
@@ -1177,6 +1182,38 @@ async function main() {
       password: 'processing123',
       countryCode: '+91',
       phone: '9876543221',
+      role: 'Processing Executive',
+    },
+    {
+      email: 'processing1@affiniks.com',
+      name: 'Michael Processing',
+      password: 'processing123',
+      countryCode: '+91',
+      phone: '9876543231',
+      role: 'Processing Executive',
+    },
+    {
+      email: 'processing2@affiniks.com',
+      name: 'Sarah Processing',
+      password: 'processing123',
+      countryCode: '+91',
+      phone: '9876543232',
+      role: 'Processing Executive',
+    },
+    {
+      email: 'processing3@affiniks.com',
+      name: 'Robert Processing',
+      password: 'processing123',
+      countryCode: '+91',
+      phone: '9876543233',
+      role: 'Processing Executive',
+    },
+    {
+      email: 'processing4@affiniks.com',
+      name: 'Emily Processing',
+      password: 'processing123',
+      countryCode: '+91',
+      phone: '9876543234',
       role: 'Processing Executive',
     },
     {

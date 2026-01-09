@@ -315,7 +315,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="referralCompanyName" className="text-slate-700 font-medium">
-                    Referral Company Name
+                    Referral Company Name *
                   </Label>
                   <Controller
                     name="referralCompanyName"

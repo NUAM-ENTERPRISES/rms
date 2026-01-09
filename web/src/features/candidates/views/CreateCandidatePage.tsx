@@ -78,6 +78,15 @@ const createCandidateSchema = z.object({
       })
     )
     .optional(),
+}).superRefine((data, ctx) => {
+  // Make referralCompanyName required when source is 'referral'
+  if (data.source === "referral" && (!data.referralCompanyName || data.referralCompanyName.trim() === "")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Referral company name is required when source is referral",
+      path: ["referralCompanyName"],
+    });
+  }
 });
 
 type CreateCandidateFormData = z.infer<typeof createCandidateSchema>;

@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { QueryCountriesDto } from './dto/query-countries.dto';
 import { Country } from '@prisma/client';
+import { CreateCountryDocumentRequirementDto, UpdateCountryDocumentRequirementDto } from './dto/country-document-requirement.dto';
 
 export interface CountryWithStats extends Country {
   projectCount?: number;
@@ -157,5 +158,87 @@ export class CountriesService {
       },
       {} as Record<string, Country[]>,
     );
+  }
+
+  // === Country Document Requirements Methods ===
+
+  /**
+   * Get all document requirements for a specific country
+   */
+  async getDocumentRequirements(countryCode: string) {
+    return this.prisma.countryDocumentRequirement.findMany({
+      where: { countryCode: countryCode.toUpperCase() },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
+   * Create a new document requirement for a country
+   */
+  async createDocumentRequirement(dto: CreateCountryDocumentRequirementDto) {
+    // Check if country exists
+    const country = await this.prisma.country.findUnique({
+      where: { code: dto.countryCode.toUpperCase() },
+    });
+
+    if (!country) {
+      throw new NotFoundException(`Country with code ${dto.countryCode} not found`);
+    }
+
+    // Check for duplicate
+    const existing = await this.prisma.countryDocumentRequirement.findUnique({
+      where: {
+        countryCode_docType: {
+          countryCode: dto.countryCode.toUpperCase(),
+          docType: dto.docType,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(`Document requirement "${dto.docType}" already exists for country ${dto.countryCode}`);
+    }
+
+    return this.prisma.countryDocumentRequirement.create({
+      data: {
+        ...dto,
+        countryCode: dto.countryCode.toUpperCase(),
+      },
+    });
+  }
+
+  /**
+   * Update an existing document requirement
+   */
+  async updateDocumentRequirement(id: string, dto: UpdateCountryDocumentRequirementDto) {
+    const requirement = await this.prisma.countryDocumentRequirement.findUnique({
+      where: { id },
+    });
+
+    if (!requirement) {
+      throw new NotFoundException(`Document requirement not found`);
+    }
+
+    return this.prisma.countryDocumentRequirement.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  /**
+   * Delete a document requirement
+   */
+  async deleteDocumentRequirement(id: string) {
+    const requirement = await this.prisma.countryDocumentRequirement.findUnique({
+      where: { id },
+    });
+
+    if (!requirement) {
+      throw new NotFoundException(`Document requirement not found`);
+    }
+
+    return this.prisma.countryDocumentRequirement.delete({
+      where: { id },
+    });
   }
 }

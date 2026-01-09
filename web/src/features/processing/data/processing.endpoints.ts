@@ -26,7 +26,8 @@ type Paginated<T> = {
 export type ProcessingCandidatesQuery = {
   search?: string;
   projectId?: string;
-  status?: ProcessingStepStatus;
+  roleNeededId?: string;
+  status?: ProcessingStepStatus | 'all' | 'pending' | 'transferred';
   page?: number;
   limit?: number;
 };
@@ -39,6 +40,24 @@ export const processingApi = baseApi.injectEndpoints({
     >({
       query: (params) => ({
         url: "/processing/candidates",
+        params,
+      }),
+      providesTags: ["ProcessingSummary"],
+    }),
+    getCandidatesToTransfer: builder.query<
+      ApiResponse<{
+        interviews: any[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>,
+      ProcessingCandidatesQuery | void
+    >({
+      query: (params) => ({
+        url: "/processing/candidates-to-transfer",
         params,
       }),
       providesTags: ["ProcessingSummary"],
@@ -86,13 +105,75 @@ export const processingApi = baseApi.injectEndpoints({
         "ProcessingSummary",
       ],
     }),
+    transferToProcessing: builder.mutation<
+      ApiResponse<any>,
+      {
+        candidateIds: string[];
+        projectId: string;
+        roleNeededId: string;
+        assignedProcessingTeamUserId: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/processing/transfer-to-processing",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["ProcessingSummary"],
+    }),
+    getCandidateHistory: builder.query<
+      ApiResponse<{
+        id: string;
+        candidateId: string;
+        projectId: string;
+        roleNeededId: string;
+        processingStatus: string;
+        candidate: {
+          firstName: string;
+          lastName: string;
+          email?: string;
+        };
+        project: {
+          title: string;
+        };
+        role: {
+          designation: string;
+        };
+        history: Array<{
+          id: string;
+          status: string;
+          notes?: string;
+          createdAt: string;
+          changedBy?: {
+            id: string;
+            name: string;
+          };
+          recruiter?: {
+            id: string;
+            name: string;
+          };
+        }>;
+      }>,
+      { candidateId: string; projectId: string; roleNeededId: string }
+    >({
+      query: ({ candidateId, projectId, roleNeededId }) => ({
+        url: `/processing/candidate-history/${candidateId}/${projectId}/${roleNeededId}`,
+      }),
+      providesTags: (_, __, { candidateId, projectId, roleNeededId }) => [
+        { type: "ProcessingHistory", id: `${candidateId}-${projectId}-${roleNeededId}` },
+      ],
+    }),
   }),
 });
 
 export const {
   useGetProcessingCandidatesQuery,
   useLazyGetProcessingCandidatesQuery,
+  useGetCandidatesToTransferQuery,
   useGetProcessingDetailQuery,
   useGetProcessingHistoryQuery,
   useUpdateProcessingStepMutation,
+  useTransferToProcessingMutation,
+  useGetCandidateHistoryQuery,
 } = processingApi;
