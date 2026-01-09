@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   AreaChart,
   Area,
@@ -9,8 +9,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  RadialBarChart,
-  RadialBar,
   XAxis,
   YAxis,
   Tooltip,
@@ -22,7 +20,6 @@ import {
   Users,
   Video,
   TrendingUp,
-  UserCheck,
   Clock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,83 +32,137 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/* ---------------- MOCK DATA ---------------- */
-const interviews = [
-  { date: "Jan 01", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 02", interviewer: "Sarah Chen", mode: "video" },
-  { date: "Jan 03", interviewer: "John Doe", mode: "in-person" },
-  { date: "Jan 04", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 05", interviewer: "Emma Wilson", mode: "video" },
-  { date: "Jan 06", interviewer: "Michael Brown", mode: "video" },
-  { date: "Jan 07", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 08", interviewer: "Sarah Chen", mode: "video" },
-  { date: "Jan 09", interviewer: "John Doe", mode: "video" },
-  { date: "Jan 10", interviewer: "Alex Rivera", mode: "in-person" },
-  { date: "Jan 11", interviewer: "Emma Wilson", mode: "video" },
-  { date: "Jan 12", interviewer: "Michael Brown", mode: "video" },
-  { date: "Jan 13", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 14", interviewer: "Olivia Martinez", mode: "video" },
-  { date: "Jan 15", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 16", interviewer: "Sarah Chen", mode: "in-person" },
-  { date: "Jan 17", interviewer: "John Doe", mode: "video" },
-  { date: "Jan 18", interviewer: "Emma Wilson", mode: "video" },
-  { date: "Jan 19", interviewer: "Michael Brown", mode: "video" },
-  { date: "Jan 20", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 21", interviewer: "Olivia Martinez", mode: "video" },
-  { date: "Jan 22", interviewer: "Sarah Chen", mode: "video" },
-  { date: "Jan 23", interviewer: "John Doe", mode: "in-person" },
-  { date: "Jan 24", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 25", interviewer: "Emma Wilson", mode: "video" },
-  { date: "Jan 26", interviewer: "Michael Brown", mode: "video" },
-  { date: "Jan 27", interviewer: "Alex Rivera", mode: "video" },
-  { date: "Jan 28", interviewer: "Olivia Martinez", mode: "video" },
-  { date: "Jan 29", interviewer: "Sarah Chen", mode: "video" },
-  { date: "Jan 30", interviewer: "John Doe", mode: "video" },
-  { date: "Jan 31", interviewer: "Alex Rivera", mode: "in-person" },
-];
+type Interview = {
+  date: string; // e.g., "Jan 01"
+  interviewer: string;
+  mode: "video" | "in-person";
+};
 
-const statusHistory = [
-  { status: "Scheduled", value: 45, color: "#94a3b8" },
-  { status: "Completed", value: 38, color: "#6366f1" },
-  { status: "Selected", value: 12, color: "#22c55e" },
-  { status: "Rejected", value: 18, color: "#ef4444" },
-];
+type StatusHistoryItem = {
+  status: string;
+  value: number;
+  color: string;
+};
 
-/* ---------------- MAIN COMPONENT ---------------- */
 export default function CEOInterviewAnalyticsPage() {
-  const interviewers = useMemo(() => {
-    return Array.from(new Set(interviews.map((i) => i.interviewer))).sort();
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [statusHistory, setStatusHistory] = useState<StatusHistoryItem[]>([]);
+  const [selectedInterviewer, setSelectedInterviewer] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch interviews
+        const interviewsRes = await fetch("/api/interviews/ceo-analytics");
+        if (!interviewsRes.ok) throw new Error("Failed to fetch interviews");
+
+        const interviewsData: Interview[] = await interviewsRes.json();
+        setInterviews(interviewsData);
+
+        // Fetch status history (pipeline outcomes)
+        const statusRes = await fetch("/api/interviews/status-history");
+        if (!statusRes.ok) throw new Error("Failed to fetch status history");
+
+        const statusData: StatusHistoryItem[] = await statusRes.json();
+        setStatusHistory(statusData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load data");
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const [selectedInterviewer, setSelectedInterviewer] = useState<string>(interviewers[0]);
+  // Extract unique interviewers
+  const interviewers = useMemo(() => {
+    const unique = Array.from(new Set(interviews.map((i) => i.interviewer))).sort();
+    return unique;
+  }, [interviews]);
 
+  // Auto-select first interviewer
+  useEffect(() => {
+    if (interviewers.length > 0 && !selectedInterviewer) {
+      setSelectedInterviewer(interviewers[0]);
+    }
+  }, [interviewers, selectedInterviewer]);
+
+  // Filter interviews for selected interviewer
   const filteredInterviews = useMemo(() => {
+    if (!selectedInterviewer) return [];
     return interviews.filter((i) => i.interviewer === selectedInterviewer);
-  }, [selectedInterviewer]);
+  }, [interviews, selectedInterviewer]);
 
   const total = filteredInterviews.length;
   const videoCount = filteredInterviews.filter((i) => i.mode === "video").length;
   const videoPct = total > 0 ? Math.round((videoCount / total) * 100) : 0;
 
+  // Cumulative interview trend (for Area & Line charts)
   const interviewTrend = useMemo(() => {
+    if (filteredInterviews.length === 0) return [];
+
     const sorted = [...filteredInterviews].sort((a, b) => a.date.localeCompare(b.date));
     const cumulative = [];
     let count = 0;
-    for (let i = 0; i < sorted.length; i++) {
+    let lastDate = "";
+
+    for (const interview of sorted) {
       count++;
-      if (i === 0 || sorted[i].date !== sorted[i - 1].date) {
-        cumulative.push({ date: sorted[i].date, cumulative: count });
+      if (interview.date !== lastDate) {
+        cumulative.push({ date: interview.date, cumulative: count });
+        lastDate = interview.date;
       }
     }
     return cumulative;
   }, [filteredInterviews]);
 
-  const interviewerPerf = [{ name: selectedInterviewer, value: total }];
+  const interviewerPerf = selectedInterviewer ? [{ name: selectedInterviewer, value: total }] : [];
 
   const modeData = [
     { name: "Video", value: videoPct, fill: "#6366f1" },
     { name: "In-Person", value: 100 - videoPct, fill: "#e2e8f0" },
   ];
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
+        <div className="text-xl font-medium text-gray-600 dark:text-gray-400">
+          Loading interview analytics...
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
+        <div className="text-xl font-medium text-red-600 dark:text-red-400">
+          Error: {error}
+        </div>
+      </div>
+    );
+  }
+
+  // No Data State
+  if (interviews.length === 0 || interviewers.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
+        <div className="text-xl font-medium text-gray-600 dark:text-gray-400">
+          No interview data available
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 py-8 px-4 sm:px-6 lg:px-8">
@@ -134,7 +185,7 @@ export default function CEOInterviewAnalyticsPage() {
             </label>
             <Select value={selectedInterviewer} onValueChange={setSelectedInterviewer}>
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="Choose an interviewer" />
               </SelectTrigger>
               <SelectContent>
                 {interviewers.map((name) => (
@@ -151,7 +202,7 @@ export default function CEOInterviewAnalyticsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { label: "Total Interviews", value: total, icon: Briefcase, color: "indigo" },
-            { label: "Interviewer", value: selectedInterviewer, icon: Users, color: "purple" },
+            { label: "Interviewer", value: selectedInterviewer || "N/A", icon: Users, color: "purple" },
             { label: "Video Interviews", value: `${videoPct}%`, icon: Video, color: "blue" },
             { label: "Hiring Momentum", value: "Strong", icon: TrendingUp, color: "green", trend: "↑ 35% YoY" },
           ].map((item, index) => (
@@ -225,7 +276,6 @@ export default function CEOInterviewAnalyticsPage() {
             </CardContent>
           </Card>
         </div>
-
 
         {/* Daily Velocity */}
         <Card className="shadow-xl border-0 overflow-hidden">

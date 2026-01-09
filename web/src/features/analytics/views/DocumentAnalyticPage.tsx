@@ -20,117 +20,86 @@ import { DocumentTypePie } from "@/features/analytics/components/DocumentTypePie
 import { CandidateStatusChart } from "@/features/analytics/components/CandidateStatusChart";
 import { TeamPerformanceChart } from "@/features/analytics/components/TeamPerformanceChart";
 
+type Document = {
+  id: string;
+  candidateName: string;
+  status: "verified" | "pending" | "rejected";
+  docType: string;
+  rejectionReason: string | null;
+  verifiedBy: string | null;
+  createdAt: string; // ISO date string "YYYY-MM-DD"
+};
+
 export default function ProfessionalDocumentationDashboard() {
   const [dateRange, setDateRange] = useState({
-    from: subDays(new Date("2025-12-31"), 30),
-    to: new Date("2025-12-31"),
+    from: subDays(new Date(), 30),
+    to: new Date(),
   });
 
-  // ✅ Verifier only (no "all")
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedVerifier, setSelectedVerifier] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // ---------------- MOCK DATA ----------------
-  const generateDocuments = () => {
-    const candidates = [
-      "Johnson Lee",
-      "Hannah Smith",
-      "Michael Brown",
-      "Emma Davis",
-      "Raj Patel",
-      "Sofia Garcia",
-      "Liam Wilson",
-      "Olivia Martinez",
-      "Aarav Sharma",
-      "Mia Anderson",
-    ];
-
-    const verifiers = [
-      "Alex Thompson",
-      "Sarah Chen",
-      "Mike Rivera",
-      "Emma Wilson",
-      "John Davis",
-    ];
-
-    const docTypes = [
-      "ID Proof",
-      "Address Proof",
-      "Edu Certificate",
-      "Salary Slip",
-      "Bank Statement",
-    ];
-
-    const rejectionReasons = [
-      "Blurry Image",
-      "Expired Document",
-      "Wrong Format",
-      "Incomplete Information",
-      "Name Mismatch",
-      "Illegible Text",
-    ];
-
-    return Array.from({ length: 450 }, (_, i) => {
-      const daysAgo = Math.floor(Math.random() * 120);
-      const rand = Math.random();
-
-      let status: "verified" | "pending" | "rejected" = "verified";
-      let rejectionReason = null;
-      let verifiedBy = null;
-
-      if (rand < 0.2) status = "pending";
-      else if (rand < 0.38) {
-        status = "rejected";
-        rejectionReason =
-          rejectionReasons[Math.floor(Math.random() * rejectionReasons.length)];
-      } else {
-        verifiedBy = verifiers[Math.floor(Math.random() * verifiers.length)];
-      }
-
-      return {
-        id: `doc-${i}`,
-        candidateName:
-          candidates[Math.floor(Math.random() * candidates.length)],
-        status,
-        docType: docTypes[Math.floor(Math.random() * docTypes.length)],
-        rejectionReason,
-        verifiedBy,
-        createdAt: format(
-          subDays(new Date("2025-12-31"), daysAgo),
-          "yyyy-MM-dd"
-        ),
-      };
-    });
-  };
-
-  const rawDocuments = useMemo(() => generateDocuments(), []);
-
-  // ---------------- VERIFIERS ----------------
-  const verifiers = useMemo(() => {
-    return Array.from(
-      new Set(rawDocuments.map((d) => d.verifiedBy).filter(Boolean))
-    ).sort();
-  }, [rawDocuments]);
-
-  // ✅ Auto-select first verifier
+  // Fetch documents from API
   useEffect(() => {
-    if (verifiers.length && !selectedVerifier) {
+    const fetchDocuments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Replace with your actual API endpoint
+        const response = await fetch("/api/documents/professional");
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Failed to fetch documents: ${response.status} ${response.statusText}`);
+        }
+
+        const data: Document[] = await response.json();
+        setDocuments(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load documents");
+        console.error("Documents fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, []);
+
+  // Extract unique verifiers (only those who actually verified something)
+  const verifiers = useMemo(() => {
+    const unique = Array.from(
+      new Set(documents.map((d) => d.verifiedBy).filter(Boolean))
+    ) as string[];
+    return unique.sort();
+  }, [documents]);
+
+  // Auto-select first verifier when verifiers load
+  useEffect(() => {
+    if (verifiers.length > 0 && !selectedVerifier) {
       setSelectedVerifier(verifiers[0]);
     }
   }, [verifiers, selectedVerifier]);
 
-  // ---------------- FILTERED DOCS ----------------
+  // Filter documents by date range and selected verifier
   const docs = useMemo(() => {
-    return rawDocuments.filter((d) => {
-      const date = parseISO(d.createdAt);
-      return (
-        date >= dateRange.from &&
-        date <= dateRange.to &&
-        d.verifiedBy === selectedVerifier
-      );
-    });
-  }, [rawDocuments, dateRange, selectedVerifier]);
+    if (documents.length === 0 || !selectedVerifier) return [];
 
-  // ---------------- STATS ----------------
+    return documents.filter((d) => {
+      if (!d.verifiedBy || d.verifiedBy !== selectedVerifier) return false;
+
+      const docDate = startOfDay(parseISO(d.createdAt));
+      const fromDate = startOfDay(dateRange.from);
+      const toDate = startOfDay(dateRange.to);
+
+      return docDate >= fromDate && docDate <= toDate;
+    });
+  }, [documents, dateRange, selectedVerifier]);
+
+  // Stats
   const stats = useMemo(() => {
     const s = { verified: 0, pending: 0, rejected: 0 };
     docs.forEach((d) => s[d.status]++);
@@ -138,11 +107,11 @@ export default function ProfessionalDocumentationDashboard() {
   }, [docs]);
 
   const total = docs.length;
-  const verifiedPct = total ? Math.round((stats.verified / total) * 100) : 0;
+  const verifiedPct = total > 0 ? Math.round((stats.verified / total) * 100) : 0;
 
-  // ---------------- DAILY TREND ----------------
+  // Daily Trend Data
   const dailyTrend = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, any>();
     let day = startOfDay(dateRange.from);
 
     while (day <= dateRange.to) {
@@ -160,7 +129,7 @@ export default function ProfessionalDocumentationDashboard() {
     return Array.from(map.values());
   }, [docs, dateRange]);
 
-  // ---------------- DOCUMENT TYPE PIE ----------------
+  // Document Type Distribution
   const typeDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     docs.forEach((d) => {
@@ -169,7 +138,7 @@ export default function ProfessionalDocumentationDashboard() {
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
   }, [docs]);
 
-  // ---------------- CANDIDATE STATUS ----------------
+  // Top Candidates by Document Count
   const candidateStatus = useMemo(() => {
     const map: Record<string, any> = {};
     docs.forEach((d) => {
@@ -181,15 +150,11 @@ export default function ProfessionalDocumentationDashboard() {
 
     return Object.entries(map)
       .map(([candidate, data]) => ({ candidate, ...data }))
-      .sort(
-        (a, b) =>
-          b.verified + b.pending + b.rejected -
-          (a.verified + a.pending + a.rejected)
-      )
+      .sort((a, b) => b.verified + b.pending + b.rejected - (a.verified + a.pending + a.rejected))
       .slice(0, 10);
   }, [docs]);
 
-  // ---------------- TEAM PERFORMANCE ----------------
+  // Team Performance (Verifier Performance)
   const teamPerformance = useMemo(() => {
     const perf: Record<string, { verified: number }> = {};
     docs.forEach((d) => {
@@ -212,20 +177,52 @@ export default function ProfessionalDocumentationDashboard() {
     { label: "Total Processed", value: total, icon: FileText, color: "purple" },
   ];
 
+  // Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
+        <div className="text-xl font-medium text-gray-600 dark:text-gray-400">
+          Loading documentation analytics...
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
+        <div className="text-xl font-medium text-red-600 dark:text-red-400">
+          Error: {error}
+        </div>
+      </div>
+    );
+  }
+
+  // No Data State
+  if (documents.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
+        <div className="text-xl font-medium text-gray-600 dark:text-gray-400">
+          No documentation data available
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950">
       <main className="max-w-7xl mx-auto p-6 lg:p-10">
         <div className="mb-10 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
-              <FileSearch className="h-8 w-8 text-indigo-600" />
+              <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
+                <FileSearch className="h-8 w-8 text-indigo-600" />
+              </div>
+              <h1 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Documentation Analysis
+              </h1>
             </div>
-
-            <h1 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Documentation Analysis
-            </h1>
-          </div>
             <p className="text-gray-500 mt-2">Advanced analytics for the Documentation Team</p>
           </div>
           <div className="flex gap-4">
