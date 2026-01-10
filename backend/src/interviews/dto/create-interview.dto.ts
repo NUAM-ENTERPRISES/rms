@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
+  IsArray,
   IsDateString,
   IsNumber,
   IsOptional,
@@ -9,13 +10,24 @@ import {
 } from 'class-validator';
 
 export class CreateInterviewDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
       'Candidate-project map ID (required to schedule an interview)',
     example: 'cmgr8ocw90009u5qojv0uqqg2',
   })
   @IsString()
-  candidateProjectMapId: string;
+  @IsOptional()
+  candidateProjectMapId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Array of candidate-project map IDs for bulk scheduling',
+    type: [String],
+    example: ['cmgr8ocw90009u5qojv0uqqg2', 'cmgr8ocw90009u5qojv0uqqg3'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  candidateProjectMapIds?: string[];
 
   // Note: projectId has been removed. Scheduling now strictly requires
   // a valid `candidateProjectMapId` to ensure candidate-specific updates

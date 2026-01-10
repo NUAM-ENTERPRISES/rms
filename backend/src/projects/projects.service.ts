@@ -357,7 +357,9 @@ export class ProjectsService {
             },
           },
         },
-        documentRequirements: true,
+        documentRequirements: {
+          where: { isDeleted: false },
+        },
       },
     });
 
@@ -556,7 +558,9 @@ export class ProjectsService {
             },
           },
         },
-        documentRequirements: true,
+        documentRequirements: {
+          where: { isDeleted: false },
+        },
       },
     });
 
@@ -863,48 +867,110 @@ export class ProjectsService {
       },
     });
 
-    // If caller provided documentRequirements during update, upsert (create/update) them.
+    // If caller provided documentRequirements during update, apply logic for upsert and remove
     if (updateProjectDto.documentRequirements !== undefined) {
-      for (const dto of updateProjectDto.documentRequirements) {
-        // If id provided, update existing
-        if ((dto as any).id) {
-          const existing = await this.prisma.documentRequirement.findFirst({
-            where: { id: (dto as any).id, projectId: id },
-          });
-          if (!existing) {
-            throw new NotFoundException(
-              `Document requirement with ID ${(dto as any).id} not found for project ${id}`,
-            );
-          }
+      // Get all current non-deleted document requirements for this project
+      const currentRequirements = await this.prisma.documentRequirement.findMany({
+        where: { projectId: id, isDeleted: false },
+      });
 
-          await this.prisma.documentRequirement.update({
-            where: { id: (dto as any).id },
-            data: {
-              mandatory:
-                dto.mandatory !== undefined ? dto.mandatory : existing.mandatory,
-              description:
-                dto.description !== undefined ? dto.description : existing.description,
-              updatedAt: new Date(),
+      const incomingDocTypes = updateProjectDto.documentRequirements.map(req => req.docType);
+      
+      // 1. Handle items to be removed (soft-deleted)
+      const toRemove = currentRequirements.filter(curr => !incomingDocTypes.includes(curr.docType));
+      
+      for (const req of toRemove) {
+        await this.prisma.documentRequirement.update({
+          where: { id: req.id },
+          data: { 
+            isDeleted: true,
+            deletedAt: new Date()
+          },
+        });
+
+        // Also soft-delete associated candidate verifications for this project/docType
+        const candidateMaps = await this.prisma.candidateProjects.findMany({
+          where: { projectId: id },
+          select: { id: true },
+        });
+        
+        const mapIds = candidateMaps.map(m => m.id);
+        
+        if (mapIds.length > 0) {
+          // Find verifications for these maps with this docType
+          const verificationsToSoftDelete = await this.prisma.candidateProjectDocumentVerification.findMany({
+            where: {
+              candidateProjectMapId: { in: mapIds },
+              document: { docType: req.docType },
+              isDeleted: false,
             },
+            select: { id: true }
           });
-        } else {
-          // Upsert: update if exists, create if not
-          const existing = await this.prisma.documentRequirement.findUnique({
-            where: { projectId_docType: { projectId: id, docType: dto.docType } },
+
+          if (verificationsToSoftDelete.length > 0) {
+            await this.prisma.candidateProjectDocumentVerification.updateMany({
+              where: {
+                id: { in: verificationsToSoftDelete.map(v => v.id) }
+              },
+              data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+              }
+            });
+          }
+        }
+      }
+
+      // 2. Handle items to be updated or created
+      for (const dto of updateProjectDto.documentRequirements) {
+          // Check for existing (including soft-deleted)
+          const existing = await this.prisma.documentRequirement.findFirst({
+            where: { projectId: id, docType: dto.docType },
           });
           
           if (existing) {
-            // Update existing document requirement
+            // Update existing (and undelete if necessary)
             await this.prisma.documentRequirement.update({
               where: { id: existing.id },
               data: {
-                mandatory:
-                  dto.mandatory !== undefined ? dto.mandatory : existing.mandatory,
-                description:
-                  dto.description !== undefined ? dto.description : existing.description,
+                mandatory: dto.mandatory !== undefined ? dto.mandatory : existing.mandatory,
+                description: dto.description !== undefined ? dto.description : existing.description,
+                isDeleted: false,
+                deletedAt: null,
                 updatedAt: new Date(),
               },
             });
+
+            // If it was undeleted, we might want to undelete corresponding verifications?
+            // Usually, if it's re-added, we might want to keep the old verifications if they exist.
+            if (existing.isDeleted) {
+                const candidateMaps = await this.prisma.candidateProjects.findMany({
+                  where: { projectId: id },
+                  select: { id: true },
+                });
+                const mapIds = candidateMaps.map(m => m.id);
+                if (mapIds.length > 0) {
+                  const verificationsToRestore = await this.prisma.candidateProjectDocumentVerification.findMany({
+                    where: {
+                      candidateProjectMapId: { in: mapIds },
+                      document: { docType: dto.docType },
+                      isDeleted: true,
+                    },
+                    select: { id: true }
+                  });
+                  if (verificationsToRestore.length > 0) {
+                    await this.prisma.candidateProjectDocumentVerification.updateMany({
+                      where: {
+                        id: { in: verificationsToRestore.map(v => v.id) }
+                      },
+                      data: {
+                        isDeleted: false,
+                        deletedAt: null,
+                      }
+                    });
+                  }
+                }
+            }
           } else {
             // Create new document requirement
             await this.prisma.documentRequirement.create({
@@ -913,10 +979,10 @@ export class ProjectsService {
                 docType: dto.docType,
                 mandatory: dto.mandatory,
                 description: dto.description,
+                isDeleted: false,
               },
             });
           }
-        }
       }
     }
 
@@ -959,7 +1025,9 @@ export class ProjectsService {
             },
           },
         },
-        documentRequirements: true,
+        documentRequirements: {
+          where: { isDeleted: false },
+        },
       },
     });
 
@@ -1329,6 +1397,7 @@ export class ProjectsService {
               },
             },
             documentRequirements: {
+              where: { isDeleted: false } as any,
               select: {
                 id: true,
                 docType: true,
@@ -1373,6 +1442,7 @@ export class ProjectsService {
 
         // Document verifications for this candidate-project mapping
         documentVerifications: {
+          where: { isDeleted: false } as any,
           select: {
             id: true,
             status: true,
@@ -2728,7 +2798,7 @@ export class ProjectsService {
    */
   async getDocumentRequirements(projectId: string): Promise<any[]> {
     const requirements = await this.prisma.documentRequirement.findMany({
-      where: { projectId },
+      where: { projectId, isDeleted: false },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -2753,19 +2823,30 @@ export class ProjectsService {
     }
 
     // Check if requirement already exists
-    const existing = await this.prisma.documentRequirement.findUnique({
+    const existing = await this.prisma.documentRequirement.findFirst({
       where: {
-        projectId_docType: {
-          projectId,
-          docType: dto.docType,
-        },
+        projectId,
+        docType: dto.docType,
       },
     });
 
-    if (existing) {
+    if (existing && !existing.isDeleted) {
       throw new BadRequestException(
         'Document requirement already exists for this project',
       );
+    }
+
+    if (existing && existing.isDeleted) {
+      // Restore soft-deleted requirement
+      return this.prisma.documentRequirement.update({
+        where: { id: existing.id },
+        data: {
+          isDeleted: false,
+          deletedAt: null,
+          mandatory: dto.mandatory,
+          description: dto.description,
+        },
+      });
     }
 
     const requirement = await this.prisma.documentRequirement.create({
@@ -2774,6 +2855,7 @@ export class ProjectsService {
         docType: dto.docType,
         mandatory: dto.mandatory,
         description: dto.description,
+        isDeleted: false,
       },
     });
 
@@ -2794,6 +2876,7 @@ export class ProjectsService {
       where: {
         id: reqId,
         projectId,
+        isDeleted: false,
       },
     });
 
@@ -2826,6 +2909,7 @@ export class ProjectsService {
       where: {
         id: reqId,
         projectId,
+        isDeleted: false,
       },
     });
 
@@ -2833,9 +2917,46 @@ export class ProjectsService {
       throw new NotFoundException('Document requirement not found');
     }
 
-    await this.prisma.documentRequirement.delete({
+    // Soft delete the requirement
+    await this.prisma.documentRequirement.update({
       where: { id: reqId },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
     });
+
+    // Also soft-delete associated candidate verifications for this project/docType
+    const candidateMaps = await this.prisma.candidateProjects.findMany({
+      where: { projectId },
+      select: { id: true },
+    });
+    
+    const mapIds = candidateMaps.map(m => m.id);
+    
+    if (mapIds.length > 0) {
+      // Find verifications for these maps with this docType
+      const verificationsToSoftDelete = await this.prisma.candidateProjectDocumentVerification.findMany({
+        where: {
+          candidateProjectMapId: { in: mapIds },
+          document: { docType: requirement.docType },
+          isDeleted: false,
+        },
+        select: { id: true }
+      });
+
+      if (verificationsToSoftDelete.length > 0) {
+        await this.prisma.candidateProjectDocumentVerification.updateMany({
+          where: {
+            id: { in: verificationsToSoftDelete.map(v => v.id) }
+          },
+          data: {
+            isDeleted: true,
+            deletedAt: new Date(),
+          }
+        });
+      }
+    }
 
     return { success: true };
   }

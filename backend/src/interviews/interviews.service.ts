@@ -17,9 +17,19 @@ export class InterviewsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createInterviewDto: CreateInterviewDto, scheduledBy: string) {
+    // If bulk IDs are provided in a single DTO, we route to createBulk
+    if (createInterviewDto.candidateProjectMapIds && createInterviewDto.candidateProjectMapIds.length > 0) {
+      const interviews = createInterviewDto.candidateProjectMapIds.map(id => ({
+        ...createInterviewDto,
+        candidateProjectMapId: id,
+        candidateProjectMapIds: undefined,
+      }));
+      return this.createBulk(interviews as CreateInterviewDto[], scheduledBy);
+    }
+
     // Scheduling now strictly requires a candidate-project map id
     if (!createInterviewDto.candidateProjectMapId) {
-      throw new BadRequestException('candidateProjectMapId is required');
+      throw new BadRequestException('candidateProjectMapId or candidateProjectMapIds is required');
     }
 
     const candidateProjectMap = await this.prisma.candidateProjects.findUnique({

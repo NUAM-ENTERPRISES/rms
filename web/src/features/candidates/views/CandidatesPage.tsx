@@ -58,6 +58,7 @@ import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
   useTransferCandidateMutation,
+  useTransferBackCandidateMutation,
   type RecruiterMyCandidatesResponse,
   type AllCandidatesResponse,
 } from "@/features/candidates";
@@ -65,6 +66,7 @@ import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { toast } from "sonner";
+import { RotateCcw } from "lucide-react";
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
@@ -75,6 +77,7 @@ export default function CandidatesPage() {
   const isManager = user?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
   );
+  const isCRE = user?.roles?.includes("CRE");
 
   // All roles can read candidates
   const canReadCandidates = true;
@@ -82,6 +85,7 @@ export default function CandidatesPage() {
   const canTransferCandidates = user?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
   );
+  const canTransferBack = useCan("transfer_back:candidates");
 
   // Transfer candidate state
   const [transferDialog, setTransferDialog] = useState<{
@@ -91,7 +95,10 @@ export default function CandidatesPage() {
     currentRecruiter?: { id: string; name?: string; email?: string } | null;
   }>({ isOpen: false });
 
+
+
   const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
+  const [transferBackCandidate, { isLoading: isTransferringBack }] = useTransferBackCandidateMutation();
 
   // State for filters and pagination
   const [filters, setFilters] = useState({
@@ -183,6 +190,9 @@ export default function CandidatesPage() {
       toast.error(error?.data?.message || "Failed to transfer candidate");
     }
   };
+
+
+
 
   // Filter and paginate candidates
   const { filteredCandidates, paginatedCandidates, totalCount } =
@@ -1368,6 +1378,7 @@ export default function CandidatesPage() {
                                     </DropdownMenuItem>
                                   </>
                                 )}
+                            
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -1528,6 +1539,8 @@ export default function CandidatesPage() {
           isLoading={isTransferring}
         />
       )}
+
+  
     </div>
   );
 }

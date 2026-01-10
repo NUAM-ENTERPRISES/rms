@@ -24,6 +24,9 @@ import {
   MapPin,
   Clock,
   ShieldCheck,
+  Eye,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +45,10 @@ import { toast } from "sonner";
 import { SingleTransferToProcessingModal } from "../components/SingleTransferToProcessingModal";
 import { MultiTransferToProcessingModal } from "../components/MultiTransferToProcessingModal";
 import { ProcessingHistory } from "@/features/processing/components/ProcessingHistory";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
+import { useAppDispatch } from "@/app/hooks";
+import { processingApi } from "@/features/processing/data/processing.endpoints";
 
 export default function PassedCandidatesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +56,35 @@ export default function PassedCandidatesPage() {
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [bulkTransferModalOpen, setBulkTransferModalOpen] = useState(false);
+
+  // Offer Letter Upload State
+  const [offerLetterModal, setOfferLetterModal] = useState<{
+    isOpen: boolean;
+    candidateId: string | null;
+    interviewId: string | null;
+  }>({
+    isOpen: false,
+    candidateId: null,
+    interviewId: null,
+  });
+
+  // PDF Viewer State
+  const [pdfViewerState, setPdfViewerState] = useState<{
+    isOpen: boolean;
+    fileUrl: string;
+    fileName: string;
+    candidateId: string | null;
+  }>({
+    isOpen: false,
+    fileUrl: "",
+    fileName: "",
+    candidateId: null,
+  });
+
+  // Local overrides for immediate UI updates
+  const [offerLetterOverrides, setOfferLetterOverrides] = useState<Record<string, string>>({});
+
+  const dispatch = useAppDispatch();
   
   const currentPage = parseInt(searchParams.get("page") || "1");
   const setCurrentPage = (page: number) => {
@@ -108,6 +144,23 @@ export default function PassedCandidatesPage() {
     return interviews.filter(it => it.outcome?.toLowerCase() === "passed");
   }, [interviews]);
 
+  // Derive active PDF URL with cache busting
+  const activePdfUrl = useMemo(() => {
+    if (!pdfViewerState.isOpen || !pdfViewerState.candidateId) return "";
+    
+    // Check if we have an override for this candidate (just uploaded)
+    const overrideUrl = offerLetterOverrides[pdfViewerState.candidateId];
+    if (overrideUrl) {
+      return `${overrideUrl}${overrideUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+    }
+
+    // Otherwise find in the current interview list
+    const interview = interviews.find(it => (it.candidateProjectMap?.candidate?.id || it.candidate?.id) === pdfViewerState.candidateId);
+    const originalUrl = interview?.offerLetterData?.document?.fileUrl || pdfViewerState.fileUrl;
+    
+    return originalUrl ? `${originalUrl}${originalUrl.includes('?') ? '&' : '?'}t=${Date.now()}` : "";
+  }, [pdfViewerState.isOpen, pdfViewerState.candidateId, pdfViewerState.fileUrl, offerLetterOverrides, interviews]);
+
   const filteredList = passedCandidates; // Filtering already done by query and the .filter above
 
   const selected = useMemo(() => {
@@ -136,6 +189,8 @@ export default function PassedCandidatesPage() {
         candidate, // Pass full candidate object for tooltip
         candidateName: `${candidate?.firstName} ${candidate?.lastName}`,
         recruiterName: interview.candidateProjectMap?.recruiter?.name,
+        isOfferLetterUploaded: interview.isOfferLetterUploaded,
+        offerLetterData: interview.offerLetterData,
       };
     }).filter(Boolean) as Array<{
       id: string;
@@ -143,8 +198,15 @@ export default function PassedCandidatesPage() {
       candidate: any;
       candidateName: string;
       recruiterName?: string;
+      isOfferLetterUploaded?: boolean;
+      offerLetterData?: any;
     }>;
   }, [selectedBulkIds, filteredList]);
+
+  const offerLetterInterview = useMemo(() => {
+    if (!offerLetterModal.interviewId) return null;
+    return passedCandidates.find(it => it.id === offerLetterModal.interviewId);
+  }, [passedCandidates, offerLetterModal.interviewId]);
 
   if (isLoading) {
     return (
@@ -370,26 +432,31 @@ export default function PassedCandidatesPage() {
                       <button
                         onClick={() => setSelectedId(it.id)}
                         className={cn(
-                          "flex-1 text-left p-3.5 rounded-lg border transition-all",
+                          "flex-1 text-left p-3.5 rounded-lg border transition-all min-w-0",
                           isSelected
                             ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300 dark:from-emerald-900/30 dark:to-teal-900/30 dark:border-emerald-700"
                             : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
                         )}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <Avatar className="h-10 w-10 shrink-0">
                             <AvatarFallback className="text-sm font-bold bg-emerald-500 text-white">
                               {candidate ? `${candidate.firstName?.[0]}${candidate.lastName?.[0]}` : "??"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-sm truncate">
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-medium text-sm truncate max-w-[120px]">
                                 {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
                               </p>
                               {it.isTransferredToProcessing && (
-                                <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[9px] bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-none">
+                                <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-none shrink-0">
                                   Transferred
+                                </Badge>
+                              )}
+                              {(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) && (
+                                <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-emerald-100 text-emerald-700 border-none shrink-0">
+                                  DOC
                                 </Badge>
                               )}
                             </div>
@@ -397,7 +464,54 @@ export default function PassedCandidatesPage() {
                               {it.candidateProjectMap?.project?.title || it.project?.title || "Unknown Project"}
                             </p>
                           </div>
-                          <ChevronRight className={cn("h-4 w-4", isSelected ? "text-emerald-600" : "text-muted-foreground")} />
+                          <div className="flex items-center shrink-0">
+                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              {(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const fileUrl = offerLetterOverrides[candidate?.id] || it.offerLetterData?.document?.fileUrl;
+                                    if (fileUrl) {
+                                      setPdfViewerState({
+                                        isOpen: true,
+                                        fileUrl,
+                                        fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
+                                        candidateId: candidate?.id
+                                      });
+                                    }
+                                  }}
+                                  title="View Offer Letter"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  "h-6 w-6 p-0",
+                                  (it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) 
+                                    ? "text-amber-600 hover:bg-amber-50" 
+                                    : "text-indigo-600 hover:bg-indigo-50"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOfferLetterModal({
+                                    isOpen: true,
+                                    candidateId: candidate?.id,
+                                    interviewId: it.id
+                                  });
+                                }}
+                                title={(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) ? "Re-upload Offer Letter" : "Upload Offer Letter"}
+                              >
+                                <Upload className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <ChevronRight className={cn("h-4 w-4", isSelected ? "text-emerald-600" : "text-muted-foreground")} />
+                          </div>
                         </div>
                       </button>
                     </div>
@@ -447,28 +561,85 @@ export default function PassedCandidatesPage() {
                           Already Transferred
                         </Badge>
                       )}
+                      {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) && (
+                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 uppercase tracking-wider text-[10px]">
+                          Offer Letter Ready
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">Passed on {format(new Date(selected.updatedAt || selected.scheduledTime), "PPP")}</p>
                   </div>
-                  <Button 
-                    onClick={handleTransfer}
-                    disabled={isUpdating || selected.isTransferredToProcessing}
-                    className={cn(
-                      "shadow-md transition-all hover:scale-105",
-                      selected.isTransferredToProcessing 
-                        ? "bg-slate-200 text-slate-500 cursor-not-allowed hover:scale-100" 
-                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                    )}
-                  >
-                    {isUpdating ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : selected.isTransferredToProcessing ? (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    ) : (
-                      <MoveRight className="h-4 w-4 mr-2" />
-                    )}
-                    {selected.isTransferredToProcessing ? "Transferred" : "Transfer to Processing"}
-                  </Button>
+                  <div className="flex flex-col items-end gap-2">
+                    <Button 
+                      onClick={handleTransfer}
+                      disabled={isUpdating || selected.isTransferredToProcessing}
+                      className={cn(
+                        "shadow-md transition-all hover:scale-105 h-9 min-w-[120px]",
+                        selected.isTransferredToProcessing 
+                          ? "bg-slate-200 text-slate-500 cursor-not-allowed hover:scale-100" 
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      )}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : selected.isTransferredToProcessing ? (
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                      ) : (
+                        <MoveRight className="h-4 w-4 mr-2" />
+                      )}
+                      {selected.isTransferredToProcessing ? "Transferred" : "Transfer"}
+                    </Button>
+
+                    <div className="flex items-center gap-0.5 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-0.5 shadow-sm overflow-hidden">
+                      {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1 px-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => {
+                            const candidate = selected.candidateProjectMap?.candidate || selected.candidate;
+                            const fileUrl = offerLetterOverrides[candidate?.id] || selected.offerLetterData?.document?.fileUrl;
+                            if (fileUrl) {
+                              setPdfViewerState({
+                                isOpen: true,
+                                fileUrl,
+                                fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
+                                candidateId: candidate?.id
+                              });
+                            }
+                          }}
+                          title="View Offer Letter"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span className="hidden md:inline text-[10px] font-medium">View</span>
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "h-7 gap-1 px-1.5",
+                          (selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id])
+                            ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                        )}
+                        onClick={() => {
+                          const candidate = selected.candidateProjectMap?.candidate || selected.candidate;
+                          setOfferLetterModal({
+                            isOpen: true,
+                            candidateId: candidate?.id,
+                            interviewId: selected.id
+                          });
+                        }}
+                        title={(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload Offer" : "Upload Offer"}
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        <span className="hidden md:inline text-[10px] font-medium">
+                          {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload" : "Upload"}
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-6">
@@ -731,6 +902,8 @@ export default function PassedCandidatesPage() {
           recruiterName={selected.candidateProjectMap?.recruiter?.name}
           projectId={selected.candidateProjectMap?.project?.id || selected.project?.id}
           roleNeededId={selected.candidateProjectMap?.roleNeeded?.id || selected.roleNeeded?.id}
+          isAlreadyUploaded={selected.isOfferLetterUploaded || !!offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]}
+          existingFileUrl={offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id] || selected.offerLetterData?.document?.fileUrl}
           onSuccess={() => {
             if (selectedId === selected.id) {
               setSelectedId(null);
@@ -767,6 +940,50 @@ export default function PassedCandidatesPage() {
           }}
         />
       )}
+
+      {offerLetterModal.isOpen && offerLetterInterview && (
+        <OfferLetterUploadModal
+          isOpen={offerLetterModal.isOpen}
+          onClose={() => setOfferLetterModal({ isOpen: false, candidateId: null, interviewId: null })}
+          candidateId={offerLetterModal.candidateId!}
+          candidateName={(offerLetterInterview.candidateProjectMap?.candidate || offerLetterInterview.candidate)?.firstName + " " + (offerLetterInterview.candidateProjectMap?.candidate || offerLetterInterview.candidate)?.lastName}
+          projectId={offerLetterInterview.candidateProjectMap?.project?.id || offerLetterInterview.project?.id || filters.projectId}
+          projectTitle={offerLetterInterview.candidateProjectMap?.project?.title || offerLetterInterview.project?.title || "Project"}
+          roleCatalogId={(offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.roleCatalogId || ""}
+          roleDesignation={(offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.designation || "Unknown Role"}
+          isAlreadyUploaded={!!(offerLetterInterview.isOfferLetterUploaded || offerLetterOverrides[offerLetterModal.candidateId!])}
+          existingFileUrl={offerLetterOverrides[offerLetterModal.candidateId!] || offerLetterInterview.offerLetterData?.document?.fileUrl}
+          onSuccess={(uploadData) => {
+            if (uploadData?.fileUrl) {
+              setOfferLetterOverrides(prev => ({ ...prev, [offerLetterModal.candidateId!]: uploadData.fileUrl }));
+              
+              // Refresh the list to sync everything
+              try {
+                dispatch(processingApi.util.invalidateTags([{ type: "ProcessingSummary" }]));
+                dispatch(
+                  processingApi.endpoints.getCandidatesToTransfer.initiate({
+                    search: filters.search || undefined,
+                    projectId: filters.projectId !== "all" ? filters.projectId : undefined,
+                    roleNeededId: filters.roleNeededId !== "all" ? filters.roleNeededId : undefined,
+                    status: filters.status !== "all" ? filters.status as 'pending' | 'transferred' : undefined,
+                    page: currentPage,
+                    limit: 20,
+                  }, { forceRefetch: true })
+                );
+              } catch (err) {
+                console.warn("Refresh failed", err);
+              }
+            }
+          }}
+        />
+      )}
+
+      <PDFViewer
+        fileUrl={activePdfUrl}
+        fileName={pdfViewerState.fileName}
+        isOpen={pdfViewerState.isOpen}
+        onClose={() => setPdfViewerState({ ...pdfViewerState, isOpen: false, candidateId: null })}
+      />
     </div>
   );
 }

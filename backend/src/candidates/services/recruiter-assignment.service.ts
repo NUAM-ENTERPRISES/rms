@@ -291,9 +291,24 @@ export class RecruiterAssignmentService {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
+    // First, resolve the RNR status record to get its ID
+    const rnrStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: CANDIDATE_STATUS.RNR,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    if (!rnrStatus) {
+      this.logger.error('RNR status not found in database');
+      return [];
+    }
+
     const rnrCandidates = await this.prisma.candidate.findMany({
       where: {
-        // currentStatus: CANDIDATE_STATUS.RNR,
+        currentStatusId: rnrStatus.id,
         updatedAt: {
           lte: threeDaysAgo,
         },

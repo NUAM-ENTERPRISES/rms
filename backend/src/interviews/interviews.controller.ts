@@ -61,52 +61,49 @@ export class InterviewsController {
     schema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean', example: true },
+        success: { type: 'boolean' },
         data: {
-          type: 'object',
-          properties: {
-            interviews: {
-              type: 'array',
-              items: { type: 'object' },
-            },
-          },
+          oneOf: [
+            { $ref: getSchemaPath(CreateInterviewDto) }, // Not exactly right because CreateInterviewDto is input, but you get the idea
+            { type: 'array', items: { type: 'object' } },
+          ],
         },
-        message: {
-          type: 'string',
-          example: 'Interview(s) scheduled successfully',
-        },
+        message: { type: 'string' },
       },
     },
   })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
-    @Body() createInterviewDto: CreateInterviewDto | CreateInterviewDto[],
+    @Body() createInterviewDto: any,
     @Request() req,
   ): Promise<{
     success: boolean;
     data: any;
     message: string;
   }> {
-    // Support bulk create (array) and single create
+    // Support bulk create (array of DTOs)
     if (Array.isArray(createInterviewDto)) {
       const results = await this.interviewsService.createBulk(createInterviewDto, req.user.id);
       return {
         success: true,
-        data: { interviews: results },
+        data: results,
         message: 'Interview(s) scheduled successfully',
       };
     }
 
-    const interview = await this.interviewsService.create(
+    // Support single DTO (which may now contain multiple IDs)
+    const result = await this.interviewsService.create(
       createInterviewDto,
       req.user.id,
     );
 
+    const isBulk = Array.isArray(result);
+
     return {
       success: true,
-      data: interview,
-      message: 'Interview scheduled successfully',
+      data: result,
+      message: isBulk ? 'Bulk interviews scheduled successfully' : 'Interview scheduled successfully',
     };
   }
 

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AlertCircle, UserPlus, Loader2 } from "lucide-react";
-import { useGetUsersQuery } from "@/services/usersApi";
+import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
 
 interface TransferCandidateDialogProps {
   open: boolean;
@@ -44,25 +44,13 @@ export function TransferCandidateDialog({
     reason: false,
   });
 
-  // Fetch list of recruiters
-  const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery();
-  
-  // Filter only recruiters from users (handles both direct array and wrapped responses)
-  const usersWrapped = usersData as any;
-  const allUsers: any[] = Array.isArray(usersWrapped)
-    ? usersWrapped
-    : Array.isArray(usersWrapped?.data?.users)
-    ? usersWrapped.data.users
-    : [];
+  // Fetch list of recruiters using unified lookup
+  const { users, isLoading: isLoadingUsers } = useUsersLookup();
     
-  const recruiters = allUsers
-    .filter((user: any) => 
-      user.userRoles?.some((userRole: any) => 
-        userRole.role?.name?.toLowerCase() === 'recruiter'
-      )
-    )
+  const recruiters = users
+    .filter((user) => user.role.toLowerCase().includes("recruiter"))
     // exclude current recruiter (if any) to avoid transferring to same person
-    .filter((u: any) => u.id !== currentRecruiter?.id);
+    .filter((u) => u.id !== currentRecruiter?.id);
 
   // Reset form when dialog opens/closes
   useEffect(() => {

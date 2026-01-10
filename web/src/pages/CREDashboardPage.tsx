@@ -1,14 +1,62 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, AlertCircle, Clock, TrendingUp } from "lucide-react";
+import { UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye, RotateCcw } from "lucide-react";
 import { useGetMyAssignedCandidatesQuery } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useState } from "react";
+
+import { useCan } from "@/hooks/useCan";
 
 export default function CREDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
+  const canTransferBack = useCan("transfer_back:candidates");
   
+
+  const [transferBackState, setTransferBackState] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    targetRecruiterName: string;
+  }>({
+    isOpen: false,
+    candidateId: "",
+    candidateName: "",
+    targetRecruiterName: "",
+  });
+
+  const handleTransferBack = async () => {
+    if (!transferBackState.candidateId) return;
+    try {
+      await transferBackCandidate(transferBackState.candidateId).unwrap();
+      toast.success("Candidate transferred back successfully");
+      setTransferBackState(prev => ({ ...prev, isOpen: false }));
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to transfer candidate back");
+    }
+  };
+
+  const openTransferBackModal = (e: React.MouseEvent, candidate: any, targetName: string) => {
+    e.stopPropagation();
+    setTransferBackState({
+      isOpen: true,
+      candidateId: candidate.id,
+      candidateName: `${candidate.firstName} ${candidate.lastName}`,
+      targetRecruiterName: targetName,
+    });
+  };
+
   // Fetch only candidates assigned to this CRE with RNR status
   const { data: assignedCandidatesData, isLoading } = useGetMyAssignedCandidatesQuery({
     currentStatus: 8, // RNR status
@@ -212,15 +260,39 @@ export default function CREDashboardPage() {
                           </div>
                         </div>
                         
-                        <div className="text-right flex-shrink-0 bg-slate-50 p-3 rounded-lg">
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Assigned</p>
-                          <p className="text-sm font-semibold text-slate-700 mt-1">
-                            {new Date(assignedDate).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </p>
+                        <div className="text-right flex-shrink-0 bg-slate-50 p-3 rounded-lg flex flex-col items-end gap-2">
+                          <div>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Assigned</p>
+                            <p className="text-sm font-semibold text-slate-700 mt-1">
+                              {new Date(assignedDate).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/candidates/${candidate.id}`);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" /> View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                          
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>

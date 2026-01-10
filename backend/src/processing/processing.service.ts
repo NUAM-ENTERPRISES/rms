@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
+import { DOCUMENT_TYPE } from '../common/constants';
 
 @Injectable()
 export class ProcessingService {
@@ -59,8 +60,8 @@ export class ProcessingService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const candidateId of candidateIds) {
-        // Find existing candidate project map
-        const candidateProjectMap = await tx.candidateProjects.findUnique({
+        // Find existing candidate project map (try exact match first)
+        let candidateProjectMap = await tx.candidateProjects.findUnique({
           where: {
             candidateId_projectId_roleNeededId: {
               candidateId,
@@ -71,18 +72,41 @@ export class ProcessingService {
         });
 
         if (!candidateProjectMap) {
-          throw new NotFoundException(
-            `Candidate ${candidateId} is not nominated for project ${projectId} with role ${roleNeededId}`,
-          );
+          // Fallback: see if candidate is nominated to the project with any role
+          const fallback = await tx.candidateProjects.findFirst({
+            where: { candidateId, projectId },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (fallback) {
+            // If the fallback nomination has no role, require the client to provide a role
+            if (!fallback.roleNeededId) {
+              throw new BadRequestException(
+                `Candidate ${candidateId} is nominated for project ${projectId} but the nomination has no roleAssigned. Please provide a valid roleNeededId.`,
+              );
+            }
+
+            this.logger.warn(
+              `Role mismatch for candidate ${candidateId} in project ${projectId}: requested role ${roleNeededId} - using role ${fallback.roleNeededId}`,
+            );
+
+            candidateProjectMap = fallback;
+          } else {
+            throw new NotFoundException(
+              `Candidate ${candidateId} is not nominated for project ${projectId} with role ${roleNeededId}`,
+            );
+          }
         }
 
-        // Create or Update ProcessingCandidate record
+        // Create or Update ProcessingCandidate record - use the actual role from the candidateProjectMap
+        const roleForProcessing = candidateProjectMap.roleNeededId as string;
+
         const processingCandidate = await tx.processingCandidate.upsert({
           where: {
             candidateId_projectId_roleNeededId: {
               candidateId,
               projectId,
-              roleNeededId,
+              roleNeededId: roleForProcessing,
             },
           },
           update: {
@@ -93,7 +117,7 @@ export class ProcessingService {
           create: {
             candidateId,
             projectId,
-            roleNeededId,
+            roleNeededId: roleForProcessing,
             assignedProcessingTeamUserId,
             processingStatus: 'assigned',
             notes,
@@ -283,6 +307,28 @@ export class ProcessingService {
                 },
               },
               processing: true, // To show if already in processing
+              documentVerifications: {
+                where: {
+                  isDeleted: false,
+                  document: {
+                    docType: DOCUMENT_TYPE.OFFER_LETTER,
+                    isDeleted: false,
+                  },
+                },
+                include: {
+                  document: {
+                    select: {
+                      id: true,
+                      docType: true,
+                      fileName: true,
+                      fileUrl: true,
+                      status: true,
+                      createdAt: true,
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'desc' },
+              },
             },
           },
         },
@@ -298,6 +344,8 @@ export class ProcessingService {
     const mappedInterviews = interviews.map((itv) => ({
       ...itv,
       isTransferredToProcessing: !!itv.candidateProjectMap?.processing,
+      offerLetterData: itv.candidateProjectMap?.documentVerifications?.[0] || null,
+      isOfferLetterUploaded: (itv.candidateProjectMap?.documentVerifications?.length || 0) > 0,
     }));
 
     return {

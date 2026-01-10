@@ -4,7 +4,7 @@
  * Following FE_GUIDELINES.md molecules pattern
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
 
 export interface PDFViewerProps {
   /** PDF file URL to display */
@@ -47,6 +48,22 @@ export interface PDFViewerProps {
   className?: string;
 }
 
+/**
+ * Check if a URL is external (e.g., S3, Cloudinary) vs internal API
+ */
+function isExternalUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    const urlObj = new URL(url, window.location.origin);
+    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+    const apiOrigin = new URL(apiBase).origin;
+    // If URL is not on the same origin as the API, it's external (e.g., S3 signed URL)
+    return urlObj.origin !== apiOrigin && urlObj.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 export function PDFViewer({
   fileUrl,
   fileName = "Document",
@@ -63,17 +80,94 @@ export function PDFViewer({
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  // Get access token for authenticated PDF fetches
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
 
-  // Reset state when file URL changes
-  useEffect(() => {
-    if (fileUrl) {
-      setIsLoading(true);
-      setError(null);
-      setZoom(100);
-      setRotation(0);
+  /**
+   * Fetch PDF with authentication and convert to blob URL
+   * This prevents iframe from making unauthenticated requests that could corrupt session
+   */
+  const fetchPdfAsBlob = useCallback(async (url: string): Promise<string | null> => {
+    try {
+      const headers: HeadersInit = {};
+      
+      // Only add auth header for internal API URLs
+      if (!isExternalUrl(url) && accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+      }
+      
+      const response = await fetch(url, {
+        headers,
+        credentials: isExternalUrl(url) ? "omit" : "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error("Error fetching PDF:", err);
+      return null;
     }
-  }, [fileUrl]);
+  }, [accessToken]);
+
+  // Reset state and fetch PDF when file URL changes
+  useEffect(() => {
+    if (!fileUrl || !isOpen) {
+      // Clean up old blob URL when closing or no URL
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setZoom(100);
+    setRotation(0);
+
+    // For external URLs (S3, etc.), use directly - they don't affect auth
+    if (isExternalUrl(fileUrl)) {
+      setBlobUrl(null); // Use fileUrl directly
+      return;
+    }
+
+    // For internal API URLs, fetch with auth and create blob URL
+    // This prevents iframe from making unauthenticated cookie requests
+    let isMounted = true;
+    fetchPdfAsBlob(fileUrl).then((url) => {
+      if (isMounted) {
+        if (url) {
+          setBlobUrl(url);
+        } else {
+          setError("Failed to load PDF. Please try again.");
+          setIsLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fileUrl, isOpen, fetchPdfAsBlob]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
+
+  // Determine which URL to use for the iframe
+  const displayUrl = blobUrl || (isExternalUrl(fileUrl) ? fileUrl : null);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -89,14 +183,14 @@ export function PDFViewer({
 
   // Fallback timeout for PDFs that don't trigger onLoad event
   useEffect(() => {
-    if (fileUrl && isLoading) {
+    if (displayUrl && isLoading) {
       const fallbackTimeout = setTimeout(() => {
         setIsLoading(false);
       }, 3000); // 3 second fallback timeout
 
       return () => clearTimeout(fallbackTimeout);
     }
-  }, [fileUrl, isLoading]);
+  }, [displayUrl, isLoading]);
 
   const handleDownload = () => {
     // Open the PDF in a new tab for download
@@ -123,6 +217,11 @@ export function PDFViewer({
     setIsFullscreen(false);
     setZoom(100);
     setRotation(0);
+    // Clean up blob URL when closing
+    if (blobUrl) {
+      URL.revokeObjectURL(blobUrl);
+      setBlobUrl(null);
+    }
     onClose();
   };
 
@@ -259,11 +358,11 @@ export function PDFViewer({
             </div>
           )}
 
-          {!error && (
+          {!error && displayUrl && (
             <div className="h-full w-full overflow-hidden bg-white">
               <iframe
                 ref={iframeRef}
-                src={`${fileUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                src={`${displayUrl}#toolbar=0&navpanes=0&scrollbar=1`}
                 className="h-full w-full border-0 min-h-[600px]"
                 onLoad={handleLoad}
                 onError={handleError}
@@ -273,6 +372,15 @@ export function PDFViewer({
                   transformOrigin: "center top",
                 }}
               />
+            </div>
+          )}
+
+          {!error && !displayUrl && !isLoading && (
+            <div className="flex items-center justify-center h-64">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <p className="text-sm text-slate-600">Preparing PDF...</p>
+              </div>
             </div>
           )}
         </div>

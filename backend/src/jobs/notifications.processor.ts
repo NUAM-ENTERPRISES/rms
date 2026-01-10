@@ -47,6 +47,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateAssignedToRecruiter(job);
         case 'CandidateRecruiterAssigned':
           return await this.handleCandidateRecruiterAssigned(job);
+        case 'CandidateTransferredBack':
+          return await this.handleCandidateTransferredBack(job);
         case 'CandidateSentToScreening':
           return await this.handleCandidateSentToScreening(job);
         case 'CandidateApprovedForClientInterview':
@@ -954,6 +956,62 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error(
         `Failed to process candidate recruiter assignment: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleCandidateTransferredBack(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing candidate transfer back event: ${eventId}`);
+
+    try {
+      const { candidateId, recruiterId, transferredBy, reason } = payload as {
+        candidateId: string;
+        recruiterId: string;
+        transferredBy: string;
+        reason?: string;
+      };
+
+      const [candidate, transferrer] = await Promise.all([
+        this.prisma.candidate.findUnique({
+          where: { id: candidateId },
+          select: { id: true, firstName: true, lastName: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: transferredBy },
+          select: { id: true, name: true },
+        }),
+      ]);
+
+      if (!candidate || !transferrer) {
+        this.logger.warn(
+          `Missing data for candidate transfer back: candidate=${!!candidate}, transferrer=${!!transferrer}`,
+        );
+        return;
+      }
+
+      await this.notificationsService.createNotification({
+        userId: recruiterId,
+        type: 'candidate_transferred',
+        title: 'Candidate Transferred Back to You',
+        message: `${transferrer.name} transferred candidate ${candidate.firstName} ${candidate.lastName} back to you.${reason ? ` Reason: ${reason}` : ''}`,
+        link: `/candidates/${candidateId}`,
+        meta: {
+          candidateId,
+          transferredBy,
+          reason,
+        },
+        idemKey: `${eventId}:${recruiterId}:candidate_transferred_back`,
+      });
+
+      this.logger.log(
+        `Candidate transferred back notification created for recruiter ${recruiterId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate transfer back: ${error.message}`,
         error.stack,
       );
       throw error;

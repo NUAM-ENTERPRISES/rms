@@ -1151,6 +1151,69 @@ export class CandidatesController {
     };
   }
 
+  @Post(':id/transfer-back')
+  @Permissions('transfer_back:candidates')
+  @ApiOperation({
+    summary: 'Transfer candidate back to previous recruiter',
+    description:
+      'Transfer a candidate from a CRE back to the previous recruiter who was assigned before escalation.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Candidate ID',
+    example: 'clx1234567890',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Candidate transferred back successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Candidate or previous recruiter not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Candidate has no active assignment or no previous recruiter to transfer to',
+  })
+  async transferBackToPreviousRecruiter(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    const result = await this.candidatesService.transferBackToPreviousRecruiter(
+      id,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate transferred back to previous recruiter successfully',
+    };
+  }
+
+  @Get(':id/original-recruiter')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get original recruiter details',
+    description: 'Retrieves the details of the recruiter who was first assigned to this candidate.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Candidate ID',
+    example: 'clx1234567890',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Original recruiter details retrieved successfully',
+  })
+  async getOriginalRecruiter(@Param('id') id: string) {
+    const result = await this.candidatesService.getOriginalRecruiter(id);
+    return {
+      success: true,
+      data: result,
+      message: 'Original recruiter details retrieved successfully',
+    };
+  }
+
   @Get(':id/recruiter-assignment')
   @Permissions('read:candidates')
   @ApiOperation({

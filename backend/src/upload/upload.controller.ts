@@ -7,16 +7,21 @@ import {
   UseInterceptors,
   BadRequestException,
   Param,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam } from '@nestjs/swagger';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { DocumentsService } from '../documents/documents.service';
 
 @ApiTags('Upload')
 @Controller('upload')
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(
+    private readonly uploadService: UploadService,
+    private readonly documentsService: DocumentsService,
+  ) {}
 
   /**
    * Upload profile image for user
@@ -127,7 +132,7 @@ export class UploadController {
     @Body('docType') docType: string,
   ) {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new BadRequestException('No file uploaded. Please ensure you are sending a file using multipart/form-data with the field name "file".');
     }
 
     if (!docType) {
@@ -144,6 +149,74 @@ export class UploadController {
       success: true,
       data: result,
       message: 'Document uploaded successfully',
+    };
+  }
+
+  /**
+   * Upload an offer letter and link it to a project nomination
+   */
+  @Post('offer-letter/:candidateId')
+  @UseInterceptors(FileInterceptor('file'))
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Upload offer letter',
+    description: 'Upload an offer letter (multipart) and link it to a specific project. This handles both file storage and document record creation.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Offer letter file (PDF or Image)' },
+        projectId: { type: 'string', description: 'Project ID' },
+        roleCatalogId: { type: 'string', description: 'Role Catalog ID' },
+        notes: { type: 'string', description: 'Optional notes' },
+      },
+      required: ['file', 'projectId', 'roleCatalogId'],
+    },
+  })
+  async uploadOfferLetter(
+    @Param('candidateId') candidateId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('projectId') projectId: string,
+    @Body('roleCatalogId') roleCatalogId: string,
+    @Body('notes') notes?: string,
+    @Request() req?: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded. Please ensure you are sending a file using multipart/form-data with the field name "file".');
+    }
+
+    if (!projectId || !roleCatalogId) {
+      throw new BadRequestException('projectId and roleCatalogId are required');
+    }
+
+    // 1. Upload the file to S3/Spaces
+    const uploadResult = await this.uploadService.uploadDocument(
+      file,
+      candidateId,
+      'offer_letter',
+    );
+
+    // 2. Use the DocumentsService to create the database records
+    const result = await this.documentsService.uploadOfferLetter(
+      {
+        candidateId,
+        projectId,
+        roleCatalogId,
+        fileName: file.originalname,
+        fileUrl: uploadResult.fileUrl,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        notes: notes,
+      },
+      req.user.sub,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Offer letter uploaded and linked successfully',
     };
   }
 

@@ -25,6 +25,7 @@ export async function seedCRERole() {
     { key: 'read:candidates', description: 'View candidates' },
     { key: 'manage:candidates', description: 'Manage candidates (full access)' },
     { key: 'update:candidates', description: 'Update candidates' },
+    { key: 'transfer_back:candidates', description: 'Can transfer candidate back to previous recruiter' },
     
     // View their own notifications
     { key: 'read:notifications', description: 'View notifications' },

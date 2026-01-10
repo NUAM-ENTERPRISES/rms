@@ -137,6 +137,23 @@ export class OutboxService {
   }
 
   /**
+   * Publish candidate transferred back event
+   */
+  async publishCandidateTransferredBack(
+    candidateId: string,
+    recruiterId: string,
+    transferredBy: string,
+    reason?: string,
+  ): Promise<void> {
+    await this.publishEvent('CandidateTransferredBack', {
+      candidateId,
+      recruiterId,
+      transferredBy,
+      reason,
+    });
+  }
+
+  /**
    * Publish member transfer requested event
    */
   async publishMemberTransferRequested(

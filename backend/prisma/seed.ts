@@ -36,6 +36,7 @@ const roles = [
       'read:settings',
       'manage:projects',
       'transfer:candidates',
+      'transfer_back:candidates',
       'transfer:processing',
     ],
   },
@@ -49,6 +50,7 @@ const roles = [
       'nominate:candidates',
       'approve:candidates',
       'reject:candidates',
+      'transfer_back:candidates',
       'read:projects',
       'write:projects',
       'read:clients',
@@ -79,6 +81,7 @@ const roles = [
       'manage:recruiters',
       'read:documents',
       'transfer:candidates',
+      'transfer_back:candidates',
     ],
   },
   {
@@ -206,6 +209,7 @@ const allPermissions = [
   'approve:candidates',
   'reject:candidates',
   'transfer:candidates',
+  'transfer_back:candidates',
 
   // Document management
   'read:documents',

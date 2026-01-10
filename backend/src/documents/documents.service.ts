@@ -11,6 +11,7 @@ import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
+import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import {
   DocumentWithRelations,
   PaginatedDocuments,
@@ -136,7 +137,7 @@ export class DocumentsService {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: any = { isDeleted: false };
 
     if (filters.candidateId) {
       where.candidateId = filters.candidateId;
@@ -181,6 +182,7 @@ export class DocumentsService {
           },
           roleCatalog: true,
           verifications: {
+            where: { isDeleted: false },
             include: {
               candidateProjectMap: {
                 include: {
@@ -229,6 +231,7 @@ export class DocumentsService {
         },
         roleCatalog: true,
         verifications: {
+          where: { isDeleted: false },
           include: {
             candidateProjectMap: {
               include: {
@@ -245,7 +248,7 @@ export class DocumentsService {
       },
     });
 
-    if (!document) {
+    if (!document || (document as any).isDeleted) {
       throw new NotFoundException(`Document with ID ${id} not found`);
     }
 
@@ -327,12 +330,26 @@ export class DocumentsService {
     const document = await this.prisma.document.findUnique({
       where: { id },
     });
-    if (!document) {
+    if (!document || (document as any).isDeleted) {
       throw new NotFoundException(`Document with ID ${id} not found`);
     }
 
-    await this.prisma.document.delete({
+    // Soft delete the document
+    await this.prisma.document.update({
       where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      } as any,
+    });
+
+    // Also soft-delete any verifications associated with this document
+    await this.prisma.candidateProjectDocumentVerification.updateMany({
+      where: { documentId: id, isDeleted: false } as any,
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      } as any,
     });
   }
 
@@ -409,10 +426,11 @@ export class DocumentsService {
             status: verifyDto.status,
             notes: verifyDto.notes,
             rejectionReason: verifyDto.rejectionReason,
-          },
+            isDeleted: false,
+          } as any,
         });
       } else {
-        // Update existing verification
+        // Update existing verification (undelete if it was deleted)
         updatedVerification = await tx.candidateProjectDocumentVerification.update({
           where: { id: verification.id },
           data: {
@@ -420,7 +438,9 @@ export class DocumentsService {
             status: verifyDto.status,
             notes: verifyDto.notes,
             rejectionReason: verifyDto.rejectionReason,
-          },
+            isDeleted: false,
+            deletedAt: null,
+          } as any,
         });
       }
 
@@ -541,7 +561,8 @@ export class DocumentsService {
             status: DOCUMENT_STATUS.RESUBMISSION_REQUIRED,
             resubmissionRequested: true,
             rejectionReason: requestDto.reason,
-          },
+            isDeleted: false,
+          } as any,
         });
       } else {
         updatedVerification = await tx.candidateProjectDocumentVerification.update({
@@ -551,7 +572,9 @@ export class DocumentsService {
             status: DOCUMENT_STATUS.RESUBMISSION_REQUIRED,
             resubmissionRequested: true,
             rejectionReason: requestDto.reason,
-          },
+            isDeleted: false,
+            deletedAt: null,
+          } as any,
         });
       }
 
@@ -703,10 +726,13 @@ export class DocumentsService {
           candidate: true,
           project: {
             include: {
-              documentRequirements: true,
+              documentRequirements: {
+                where: { isDeleted: false } as any,
+              },
             },
           },
           documentVerifications: {
+            where: { isDeleted: false } as any,
             include: {
               document: {
                 include: {
@@ -789,26 +815,27 @@ export class DocumentsService {
       documentsByType,
       avgVerificationTimeResult,
     ] = await Promise.all([
-      this.prisma.document.count(),
+      this.prisma.document.count({ where: { isDeleted: false } as any }),
       this.prisma.document.count({
-        where: { status: DOCUMENT_STATUS.PENDING },
+        where: { status: DOCUMENT_STATUS.PENDING, isDeleted: false } as any,
       }),
       this.prisma.document.count({
-        where: { status: DOCUMENT_STATUS.VERIFIED },
+        where: { status: DOCUMENT_STATUS.VERIFIED, isDeleted: false } as any,
       }),
       this.prisma.document.count({
-        where: { status: DOCUMENT_STATUS.REJECTED },
+        where: { status: DOCUMENT_STATUS.REJECTED, isDeleted: false } as any,
       }),
       this.prisma.document.count({
-        where: { status: DOCUMENT_STATUS.EXPIRED },
+        where: { status: DOCUMENT_STATUS.EXPIRED, isDeleted: false } as any,
       }),
       this.prisma.document.groupBy({
+        where: { isDeleted: false } as any,
         by: ['docType'],
         _count: true,
       }),
       this.prisma.$queryRaw<
         Array<{ avg: number }>
-      >`SELECT AVG(EXTRACT(EPOCH FROM ("verifiedAt" - "createdAt")) / 3600) as avg FROM "public"."documents" WHERE "verifiedAt" IS NOT NULL`,
+      >`SELECT AVG(EXTRACT(EPOCH FROM ("verifiedAt" - "createdAt")) / 3600) as avg FROM "public"."documents" WHERE "verifiedAt" IS NOT NULL AND "isDeleted" = false`,
     ]);
 
     const documentsByTypeMap: Record<string, number> = {};
@@ -886,6 +913,170 @@ export class DocumentsService {
         });
       }
     }
+  }
+
+  /**
+   * Upload an offer letter for a candidate and project
+   */
+  async uploadOfferLetter(
+    uploadDto: UploadOfferLetterDto,
+    userId: string,
+  ): Promise<any> {
+    const { candidateId, projectId, roleCatalogId } = uploadDto;
+
+    // 1. Validate candidate and project exist
+    const [candidate, project] = await Promise.all([
+      this.prisma.candidate.findUnique({ where: { id: candidateId } }),
+      this.prisma.project.findUnique({ where: { id: projectId } }),
+    ]);
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    // 2. Find the CandidateProjects record
+    // We need to find the RoleNeeded for this project and roleCatalogId first
+    const roleNeeded = await this.prisma.roleNeeded.findFirst({
+      where: {
+        projectId: projectId,
+        roleCatalogId: roleCatalogId,
+      },
+    });
+
+    if (!roleNeeded) {
+      throw new NotFoundException(
+        `No role matching catalog ID ${roleCatalogId} found for project ${projectId}`,
+      );
+    }
+
+    const candidateProjectMap = await this.prisma.candidateProjects.findUnique({
+      where: {
+        candidateId_projectId_roleNeededId: {
+          candidateId,
+          projectId,
+          roleNeededId: roleNeeded.id,
+        },
+      },
+    });
+
+    if (!candidateProjectMap) {
+      throw new NotFoundException(
+        `Candidate is not nominated for this role in the specified project`,
+      );
+    }
+
+    // Check if an offer letter already exists for this candidate in this project and role
+    const existingOfferLetters = await this.prisma.candidateProjectDocumentVerification.findMany({
+      where: {
+        candidateProjectMapId: candidateProjectMap.id,
+        isDeleted: false,
+        document: {
+          docType: DOCUMENT_TYPE.OFFER_LETTER,
+          isDeleted: false,
+        },
+      } as any,
+      include: { document: true },
+    });
+
+    if (existingOfferLetters && existingOfferLetters.length > 0) {
+      // Soft-delete existing offer letters and their verification records so the new upload replaces them
+      const verificationIds = existingOfferLetters.map((v) => v.id);
+      const documentIds = existingOfferLetters.map((v) => v.documentId);
+
+      // Record user name for history
+      const userForHistory = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.candidateProjectDocumentVerification.updateMany({
+          where: { id: { in: verificationIds } } as any,
+          data: {
+            isDeleted: true,
+            deletedAt: new Date(),
+          } as any,
+        });
+
+        await tx.document.updateMany({
+          where: { id: { in: documentIds }, isDeleted: false } as any,
+          data: {
+            isDeleted: true,
+            deletedAt: new Date(),
+          } as any,
+        });
+
+        // Add history entries indicating the old offer letter was replaced
+        const historyEntries = verificationIds.map((id) => ({
+          verificationId: id,
+          action: 'resubmission_requested',
+          performedBy: userId,
+          performedByName: userForHistory?.name || 'System',
+          notes: 'Offer letter replaced by a new upload (soft-deleted old record)',
+        }));
+
+        if (historyEntries.length > 0) {
+          await tx.documentVerificationHistory.createMany({ data: historyEntries });
+        }
+      });
+    }
+
+    // 3. Create document, verification and history in a transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Create the document
+      const document = await tx.document.create({
+        data: {
+          candidateId,
+          docType: DOCUMENT_TYPE.OFFER_LETTER,
+          fileName: uploadDto.fileName,
+          fileUrl: uploadDto.fileUrl,
+          fileSize: uploadDto.fileSize,
+          mimeType: uploadDto.mimeType,
+          roleCatalogId: uploadDto.roleCatalogId,
+          uploadedBy: userId,
+          status: DOCUMENT_STATUS.PENDING,
+          notes: uploadDto.notes,
+        },
+      });
+
+      // Get user details for history
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+
+      // Create the verification record
+      const verification = await tx.candidateProjectDocumentVerification.create({
+        data: {
+          candidateProjectMapId: candidateProjectMap.id,
+          documentId: document.id,
+          roleCatalogId: uploadDto.roleCatalogId,
+          status: DOCUMENT_STATUS.PENDING,
+          notes: uploadDto.notes,
+        },
+      });
+
+      // Create history record
+      await tx.documentVerificationHistory.create({
+        data: {
+          verificationId: verification.id,
+          action: 'pending',
+          performedBy: userId,
+          performedByName: user?.name || 'System',
+          notes: 'Offer letter uploaded',
+        },
+      });
+
+      return { document, verification };
+    });
+
+    // Update candidate project status
+    await this.updateCandidateProjectStatus(candidateProjectMap.id);
+
+    return result;
   }
 
   /**
@@ -1201,14 +1392,14 @@ export class DocumentsService {
 
     // Get project document requirements
     const requirements = await this.prisma.documentRequirement.findMany({
-      where: { projectId },
+      where: { projectId, isDeleted: false } as any,
       orderBy: { createdAt: 'asc' },
     });
 
     // GET ALL VERIFICATIONS (full list of uploaded docs for this project)
     const allVerifications =
       await this.prisma.candidateProjectDocumentVerification.findMany({
-        where: { candidateProjectMapId: candidateProject.id },
+        where: { candidateProjectMapId: candidateProject.id, isDeleted: false } as any,
         include: {
           document: {
             select: {
@@ -1432,13 +1623,16 @@ export class DocumentsService {
 
     // 2. Get required documents
     const requirements = await this.prisma.documentRequirement.findMany({
-      where: { projectId: candidateProject.projectId },
+      where: {
+        projectId: candidateProject.projectId,
+        isDeleted: false,
+      } as any,
     });
 
     // 3. Get verification records
     const verifications =
       await this.prisma.candidateProjectDocumentVerification.findMany({
-        where: { candidateProjectMapId },
+        where: { candidateProjectMapId, isDeleted: false } as any,
       });
 
     const totalRequired = requirements.length;
@@ -1581,8 +1775,9 @@ export class DocumentsService {
       where: {
         documentVerifications: {
           some: {
-            status: { in: ['verified', 'rejected'] },  // include both statuses
-          },
+            status: { in: ['verified', 'rejected'] }, // include both statuses
+            isDeleted: false,
+          } as any,
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -1607,8 +1802,9 @@ export class DocumentsService {
         },
         documentVerifications: {
           where: {
-            status: { in: ['verified', 'rejected'] }   // include both statuses here also
-          },
+            status: { in: ['verified', 'rejected'] }, // include both statuses here also
+            isDeleted: false,
+          } as any,
           include: {
             document: {
               select: {
@@ -1641,6 +1837,7 @@ export class DocumentsService {
     // Base where clause applied to counts and list
     const baseWhere: any = {
       status: { in: statuses },
+      isDeleted: false,
     };
 
     if (recruiterId) {
@@ -1686,10 +1883,14 @@ export class DocumentsService {
                   id: true,
                   title: true,
                   client: { select: { name: true } },
-                  documentRequirements: true,
+                  documentRequirements: {
+                    where: { isDeleted: false } as any,
+                  },
                 },
               },
-              documentVerifications: true,
+              documentVerifications: {
+                where: { isDeleted: false } as any,
+              },
               recruiter: {
                 select: {
                   id: true,
@@ -1807,7 +2008,7 @@ export class DocumentsService {
       // Only include if there are actually documents required for the project
       project: {
         documentRequirements: {
-          some: {},
+          some: { isDeleted: false } as any,
         },
       },
     };
@@ -1838,7 +2039,9 @@ export class DocumentsService {
           },
           project: {
             include: {
-              documentRequirements: true,
+              documentRequirements: {
+                where: { isDeleted: false } as any,
+              },
               client: { select: { name: true } },
             },
           },
@@ -1856,6 +2059,7 @@ export class DocumentsService {
             },
           },
           documentVerifications: {
+            where: { isDeleted: false } as any,
             include: {
               document: {
                 select: {
@@ -1912,7 +2116,7 @@ export class DocumentsService {
         where: {
           ...where,
           documentVerifications: {
-            none: {},
+            none: { isDeleted: false } as any,
           },
         },
       }),
@@ -2027,7 +2231,7 @@ export class DocumentsService {
       },
       project: {
         documentRequirements: {
-          some: {},
+          some: { isDeleted: false } as any,
         },
       },
     };
@@ -2093,7 +2297,9 @@ export class DocumentsService {
           },
           project: {
             include: {
-              documentRequirements: true,
+              documentRequirements: {
+                where: { isDeleted: false } as any,
+              },
               client: { select: { name: true } },
             },
           },
@@ -2111,6 +2317,7 @@ export class DocumentsService {
             },
           },
           documentVerifications: {
+            where: { isDeleted: false } as any,
             include: {
               document: {
                 select: {
@@ -2158,7 +2365,7 @@ export class DocumentsService {
         where: {
           ...pendingWhereBase,
           documentVerifications: {
-            none: {},
+            none: { isDeleted: false } as any,
           },
         },
       }),

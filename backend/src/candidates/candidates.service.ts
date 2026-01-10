@@ -2183,6 +2183,7 @@ export class CandidatesService {
     candidateId: string,
     assignRecruiterDto: AssignRecruiterDto,
     userId: string,
+    skipNotification: boolean = false,
   ): Promise<{ message: string; assignment: any }> {
     // Check if candidate exists
     const candidate = await this.prisma.candidate.findUnique({
@@ -2233,12 +2234,14 @@ export class CandidatesService {
     });
 
     // Publish assignment event
-    await this.outboxService.publishEvent('CandidateRecruiterAssigned', {
-      candidateId,
-      recruiterId: assignRecruiterDto.recruiterId,
-      assignedBy: userId,
-      reason: assignRecruiterDto.reason,
-    });
+    if (!skipNotification) {
+      await this.outboxService.publishEvent('CandidateRecruiterAssigned', {
+        candidateId,
+        recruiterId: assignRecruiterDto.recruiterId,
+        assignedBy: userId,
+        reason: assignRecruiterDto.reason,
+      });
+    }
 
     return {
       message: `Recruiter ${recruiter.name} assigned to candidate`,
@@ -2314,6 +2317,102 @@ export class CandidatesService {
       message: `Candidate transferred from ${currentAssignment ? currentAssignment.recruiter.name : 'unassigned'} to ${targetRecruiter.name}`,
       assignment: result.assignment,
     };
+  }
+
+  /**
+   * Transfer candidate back from CRE to previous recruiter
+   */
+  async transferBackToPreviousRecruiter(
+    candidateId: string,
+    userId: string,
+  ): Promise<{ message: string; assignment: any }> {
+    // 1. Get current assignment and history
+    const assignments = await this.prisma.candidateRecruiterAssignment.findMany({
+      where: { candidateId },
+      orderBy: { assignedAt: 'desc' },
+      include: {
+        recruiter: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (assignments.length === 0) {
+      throw new NotFoundException(
+        `No recruiter assignments found for candidate ${candidateId}`,
+      );
+    }
+
+    const currentAssignment = assignments.find((a) => a.isActive);
+    if (!currentAssignment) {
+      throw new BadRequestException(
+        `Candidate ${candidateId} has no active recruiter assignment`,
+      );
+    }
+
+    // 2. Find the most recent INACTIVE assignment that is a DIFFERENT recruiter
+    const previousAssignment = assignments.find(
+      (a) => !a.isActive && a.recruiterId !== currentAssignment.recruiterId,
+    );
+
+    if (!previousAssignment) {
+      throw new BadRequestException(
+        `Candidate ${candidateId} has no previous recruiter assignment to transfer back to`,
+      );
+    }
+
+    // 3. Perform the transfer back
+    const result = await this.assignRecruiter(
+      candidateId,
+      {
+        recruiterId: previousAssignment.recruiterId,
+        reason: `Transferred back from ${currentAssignment.recruiter.name} to previous recruiter ${previousAssignment.recruiter.name}`,
+      },
+      userId,
+      true, // Skip generic notification
+    );
+
+    // 4. Publish transfer back notification event
+    await this.outboxService.publishCandidateTransferredBack(
+      candidateId,
+      previousAssignment.recruiterId,
+      userId,
+      `Transferred back from ${currentAssignment.recruiter.name}`,
+    );
+
+    return {
+      message: `Candidate transferred back to previous recruiter ${previousAssignment.recruiter.name}`,
+      assignment: result.assignment,
+    };
+  }
+
+  /**
+   * Get the original recruiter who was first assigned to the candidate
+   */
+  async getOriginalRecruiter(candidateId: string): Promise<any> {
+    const originalAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: { candidateId },
+      orderBy: { assignedAt: 'asc' }, // Get the oldest assignment
+      include: {
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            mobileNumber: true,
+            countryCode: true,
+          },
+        },
+      },
+    });
+
+    if (!originalAssignment) {
+      throw new NotFoundException(
+        `No recruiter assignment history found for candidate ${candidateId}`,
+      );
+    }
+
+    return originalAssignment.recruiter;
   }
 
   /**

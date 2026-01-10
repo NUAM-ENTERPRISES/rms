@@ -83,6 +83,33 @@ export const uploadApi = baseApi.injectEndpoints({
       invalidatesTags: ["Candidate"],
     }),
 
+    uploadOfferLetter: builder.mutation<
+      UploadResponse,
+      {
+        candidateId: string;
+        file: File;
+        projectId: string;
+        roleCatalogId: string;
+        notes?: string;
+      }
+    >({
+      query: ({ candidateId, file, projectId, roleCatalogId, notes }) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("projectId", projectId);
+        formData.append("roleCatalogId", roleCatalogId);
+        if (notes) {
+          formData.append("notes", notes);
+        }
+        return {
+          url: `/upload/offer-letter/${candidateId}`,
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: ["Candidate", "Document", "Interview", "ProcessingSummary"],
+    }),
+
     deleteFile: builder.mutation<{ success: boolean; message: string }, string>(
       {
         query: (fileUrl) => ({
@@ -101,5 +128,6 @@ export const {
   useUploadCandidateProfileImageMutation,
   useUploadDocumentMutation,
   useUploadResumeMutation,
+  useUploadOfferLetterMutation,
   useDeleteFileMutation,
 } = uploadApi;

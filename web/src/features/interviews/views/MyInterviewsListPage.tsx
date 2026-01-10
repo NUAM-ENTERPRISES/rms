@@ -86,6 +86,12 @@ export default function MyInterviewsListPage() {
     });
   }, [searchParams]);
 
+  useEffect(() => {
+    if (filters.projectId === "all") {
+      setSelectedBulkIds([]);
+    }
+  }, [filters.projectId]);
+
   const rawParams = {
     search: filters.search || undefined,
     status: filters.status !== "all" ? filters.status : undefined,
@@ -336,7 +342,7 @@ export default function MyInterviewsListPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Comfortable List Panel */}
         <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60 flex flex-col">
-          {filteredList.length > 0 && (
+          {filteredList.length > 0 && filters.projectId !== "all" && (
             <div className="p-3 border-b flex items-center justify-between bg-white/40 dark:bg-gray-800/40">
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -389,15 +395,17 @@ export default function MyInterviewsListPage() {
 
                   return (
                     <div key={it.id} className="relative flex items-center gap-1 group">
-                      <Checkbox
-                        checked={selectedBulkIds.includes(it.id)}
-                        onCheckedChange={(checked) => {
-                          setSelectedBulkIds((prev) =>
-                            checked ? [...prev, it.id] : prev.filter((id) => id !== it.id)
-                          );
-                        }}
-                        className="ml-1 opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
-                      />
+                      {filters.projectId !== "all" && (
+                        <Checkbox
+                          checked={selectedBulkIds.includes(it.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedBulkIds((prev) =>
+                              checked ? [...prev, it.id] : prev.filter((id) => id !== it.id)
+                            );
+                          }}
+                          className="ml-1 opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                        />
+                      )}
                       <button
                         onClick={() => setSelectedId(it.id)}
                         className={cn(

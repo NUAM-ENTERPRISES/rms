@@ -9,7 +9,7 @@ export interface User {
 }
 
 export const useUsersLookup = () => {
-  const { data: usersResponse, isLoading, error } = useGetUsersQuery();
+  const { data: usersResponse, isLoading, error } = useGetUsersQuery({ limit: 100 });
 
   // Extract users from API response
   const users = useMemo(() => {

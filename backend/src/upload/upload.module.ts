@@ -4,11 +4,13 @@ import { ConfigModule } from '@nestjs/config';
 import { UploadService } from './upload.service';
 import { UploadController } from './upload.controller';
 import { PrismaModule } from '../database/prisma.module';
+import { DocumentsModule } from '../documents/documents.module';
 
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
+    DocumentsModule,
     MulterModule.register({
       storage: undefined, // Use memory storage (file.buffer)
       limits: {

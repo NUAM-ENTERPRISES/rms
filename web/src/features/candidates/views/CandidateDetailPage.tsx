@@ -54,7 +54,9 @@ import {
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
 import { getAge } from "@/utils";
-import { useGetCandidateByIdQuery } from "@/features/candidates";
+import {
+  useGetCandidateByIdQuery
+} from "@/features/candidates";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { CandidateResumeList } from "@/components/molecules";
@@ -63,6 +65,8 @@ import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { StatusHistoryTable } from "../components/StatusHistoryTable";
 import { useStatusConfig } from "../hooks/useStatusConfig";
+import { useAppSelector } from "@/app/hooks";
+import { RotateCcw } from "lucide-react";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -92,12 +96,18 @@ export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const { user } = useAppSelector((state) => state.auth);
+  const isCRE = user?.roles?.includes("CRE");
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<
     "qualification" | "workExperience"
   >("qualification");
+
+ 
+
+
   const [editData, setEditData] = useState<
     CandidateQualification | WorkExperience | undefined
   >();
@@ -151,6 +161,7 @@ export default function CandidateDetailPage() {
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
   const canManageCandidates = useCan("write:candidates");
+  const canTransferBack = useCan("transfer_back:candidates");
 
   // Fetch candidate data from API
   const {
@@ -1333,6 +1344,7 @@ export default function CandidateDetailPage() {
         currentStatus={candidate.currentStatus.statusName}
         candidateName={`${candidate.firstName} ${candidate.lastName}`}
       />
+
     </div>
   );
 }

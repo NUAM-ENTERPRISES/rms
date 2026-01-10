@@ -608,6 +608,9 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
     }),
 
+    getOriginalRecruiter: builder.query<{ success: boolean; data: { id: string; name: string; email: string; mobileNumber: string; countryCode: string }; message: string }, string>({
+      query: (id) => `/candidates/${id}/original-recruiter`,
+    }),
 
     createCandidate: builder.mutation<Candidate, CreateCandidateRequest>({
       query: (candidateData) => ({
@@ -892,6 +895,18 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Candidate"],
     }),
+
+    // Transfer candidate back
+    transferBackCandidate: builder.mutation<
+      { success: boolean; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/transfer-back`,
+        method: "POST",
+      }),
+      invalidatesTags: (_, __, id) => [{ type: "Candidate", id }, "Candidate"],
+    }),
   }),
 });
 
@@ -923,4 +938,6 @@ export const {
   useGetStatusConfigQuery,
   useGetCandidateProjectPipelineQuery,
   useTransferCandidateMutation,
+  useTransferBackCandidateMutation,
+  useGetOriginalRecruiterQuery,
 } = candidatesApi;

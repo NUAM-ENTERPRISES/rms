@@ -4,6 +4,7 @@ import { Job, Queue } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
 import { SystemConfigService, RNRSettings } from '../system-config/system-config.service';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
+import { CANDIDATE_STATUS } from '../common/constants/statuses';
 
 /**
  * RNR Reminder Job Processor
@@ -312,14 +313,11 @@ export class RnrReminderProcessor extends WorkerHost {
         `[CRE ASSIGNMENT] Starting CRE assignment for candidate ${candidateId} after ${settings.totalDays} days in RNR`,
       );
 
-      // Check if candidate is still in RNR status (statusId = 8)
+      // Check if candidate is still in RNR status
       const candidate = await this.prisma.candidate.findUnique({
         where: { id: candidateId },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          currentStatusId: true,
+        include: {
+          currentStatus: true,
         },
       });
 
@@ -328,9 +326,11 @@ export class RnrReminderProcessor extends WorkerHost {
         return;
       }
 
-      if (candidate.currentStatusId !== 8) {
+      const isRNR = candidate.currentStatus?.statusName.toLowerCase() === CANDIDATE_STATUS.RNR.toLowerCase();
+
+      if (!isRNR) {
         this.logger.log(
-          `[CRE ASSIGNMENT] Candidate ${candidateId} is no longer in RNR status (current: ${candidate.currentStatusId}). Skipping CRE assignment.`,
+          `[CRE ASSIGNMENT] Candidate ${candidateId} is no longer in RNR status (current: ${candidate.currentStatus?.statusName}). Skipping CRE assignment.`,
         );
         return;
       }

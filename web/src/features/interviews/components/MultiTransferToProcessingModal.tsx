@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Loader2, User, Users, X, FileText, ChevronLeft, ChevronRight, Mail, Phone, Briefcase, Globe } from "lucide-react";
+import { Loader2, User, Users, X, FileText, ChevronLeft, ChevronRight, Mail, Phone, Briefcase, Globe, Upload, Eye, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,11 +21,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { useTransferToProcessingMutation } from "@/features/processing/data/processing.endpoints";
+import { useTransferToProcessingMutation, processingApi } from "@/features/processing/data/processing.endpoints";
 import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
 import { toast } from "sonner";
+import { useAppDispatch } from "@/app/hooks";
 import { CandidateDetailTooltip } from "@/features/projects/components/CandidateDetailTooltip";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
+import { useGetProjectsQuery } from "@/services/projectsApi";
+import { cn } from "@/lib/utils";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
 
 interface CandidateTransferData {
   candidateId: string;
@@ -44,6 +49,8 @@ interface MultiTransferToProcessingModalProps {
     candidate: any;
     candidateName: string;
     recruiterName?: string;
+    isOfferLetterUploaded?: boolean;
+    offerLetterData?: any;
   }>;
   projectId: string;
   roleNeededId: string;
@@ -63,6 +70,63 @@ export function MultiTransferToProcessingModal({
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 16; // 4 rows × 4 columns
+
+  // State for Offer Letter Upload
+  const [offerLetterModal, setOfferLetterModal] = useState<{
+    isOpen: boolean;
+    candidateId: string | null;
+  }>({
+    isOpen: false,
+    candidateId: null,
+  });
+
+  // Get current candidate for the offer letter modal from props to ensure fresh data
+  const offerLetterCandidate = useMemo(() => {
+    if (!offerLetterModal.candidateId) return null;
+    return candidates.find(c => c.candidateId === offerLetterModal.candidateId);
+  }, [candidates, offerLetterModal.candidateId]);
+
+  // State for PDF Viewer
+  const [pdfViewerState, setPdfViewerState] = useState<{
+    isOpen: boolean;
+    candidateId: string | null;
+    fileUrl: string;
+    fileName: string;
+  }>({
+    isOpen: false,
+    candidateId: null,
+    fileUrl: "",
+    fileName: "",
+  });
+
+  // Local overrides for offer letter URLs to reflect immediate uploads
+  const [offerLetterOverrides, setOfferLetterOverrides] = useState<Record<string, string>>({});
+
+  // Derive the latest PDF URL from the candidates prop to ensure it stays in sync after re-uploads
+  const activePdfUrl = useMemo(() => {
+    if (!pdfViewerState.isOpen || !pdfViewerState.candidateId) return "";
+    const candidate = candidates.find(c => c.candidateId === pdfViewerState.candidateId);
+    // prefer local override if present (immediate upload result)
+    const override = pdfViewerState.candidateId ? offerLetterOverrides[pdfViewerState.candidateId] : undefined;
+    const url = override || candidate?.offerLetterData?.document?.fileUrl || pdfViewerState.fileUrl;
+    // Add cache buster to ensure the PDF viewer reloads the content if the file changed but URL remained same
+    return url ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` : "";
+  }, [candidates, pdfViewerState.isOpen, pdfViewerState.candidateId, pdfViewerState.fileUrl, offerLetterOverrides]);
+
+  const dispatch = useAppDispatch();
+  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+  const selectedProject = useMemo(() => 
+    projectsData?.data?.projects?.find((p: any) => p.id === projectId),
+    [projectsData, projectId]
+  );
+
+  const selectedRole = useMemo(() => {
+    if (!selectedProject?.rolesNeeded || !roleNeededId) return null;
+    return selectedProject.rolesNeeded.find((r: any) => r.id === roleNeededId);
+  }, [selectedProject, roleNeededId]);
+
+  const roleDesignation = selectedRole?.designation || "Unknown Role";
+  const roleCatalogId = selectedRole?.roleCatalogId || "";
 
   // Initialize transfer data for each candidate
   const [candidatesData, setCandidatesData] = useState<Record<string, CandidateTransferData>>(() => {
@@ -287,11 +351,55 @@ export function MultiTransferToProcessingModal({
                               </h4>
                             </div>
                           </CandidateDetailTooltip>
-                          {candidate.recruiterName && (
-                            <Badge variant="outline" className="text-[8px] font-medium border-slate-200 bg-slate-50 text-slate-600 px-1 py-0 shrink-0 uppercase tracking-tighter">
-                              {candidate.recruiterName.split(' ')[0]}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {candidate.isOfferLetterUploaded && (
+                              <>
+                                <Badge 
+                                  variant="secondary" 
+                                  className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 text-[9px] font-bold px-1.5 py-0 h-5 whitespace-nowrap"
+                                >
+                                  DOC UPLOADED
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  type="button"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-100 shadow-sm"
+                                  onClick={() => {
+                                    const fileUrl = candidate.offerLetterData?.document?.fileUrl;
+                                    if (fileUrl) {
+                                      setPdfViewerState({
+                                        isOpen: true,
+                                        candidateId: candidate.candidateId,
+                                        fileUrl,
+                                        fileName: `Offer Letter - ${candidate.candidateName}`,
+                                      });
+                                    } else {
+                                      toast.error("File URL not found");
+                                    }
+                                  }}
+                                  title="View Offer Letter"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              variant="ghost"
+                              type="button"
+                              size="sm"
+                              className={cn(
+                                "h-6 w-6 p-0 border shadow-sm transition-all",
+                                candidate.isOfferLetterUploaded 
+                                  ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-100" 
+                                  : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-100"
+                              )}
+                              onClick={() => setOfferLetterModal({ isOpen: true, candidateId: candidate.candidateId })}
+                              title={candidate.isOfferLetterUploaded ? "Re-upload Offer Letter" : "Upload Offer Letter (Optional)"}
+                            >
+                              <Upload className="h-3 w-3" />
+                            </Button>
+                          </div>
                       </div>
 
                       {/* Candidate Extra Details */}
@@ -318,6 +426,11 @@ export function MultiTransferToProcessingModal({
                           <div className="flex items-center gap-1 truncate col-span-2" title={candidate.candidate.email}>
                             <Mail className="h-2.5 w-2.5 text-slate-400 shrink-0" />
                             <span className="truncate">{candidate.candidate.email}</span>
+                            {candidate.recruiterName && (
+                              <Badge variant="outline" className="ml-auto text-[8px] font-medium border-slate-200 bg-slate-50 text-slate-600 px-1 py-0 uppercase tracking-tighter shrink-0">
+                                {candidate.recruiterName.split(' ')[0]}
+                              </Badge>
+                            )}
                           </div>
                         )}
                       </div>
@@ -459,6 +572,47 @@ export function MultiTransferToProcessingModal({
           </div>
         </div>
       </DialogContent>
+
+      {offerLetterModal.isOpen && offerLetterCandidate && (
+        <OfferLetterUploadModal
+          isOpen={offerLetterModal.isOpen}
+          onClose={() => setOfferLetterModal({ isOpen: false, candidateId: null })}
+          candidateId={offerLetterCandidate.candidateId}
+          candidateName={offerLetterCandidate.candidateName}
+          projectId={projectId}
+          projectTitle={selectedProject?.title || "Project"}
+          roleCatalogId={roleCatalogId || roleNeededId} // Fallback to roleNeededId if catalogId not found
+          roleDesignation={roleDesignation}
+          isAlreadyUploaded={offerLetterCandidate.isOfferLetterUploaded}
+          existingFileUrl={offerLetterCandidate.offerLetterData?.document?.fileUrl}
+          onSuccess={(uploadData) => {
+            if (uploadData?.fileUrl) {
+              // Update local override mapping so viewer uses the new file immediately
+              setOfferLetterOverrides(prev => ({ ...prev, [offerLetterCandidate.candidateId]: uploadData.fileUrl }));
+              // Optionally open viewer immediately with new file
+              setPdfViewerState({ isOpen: true, candidateId: offerLetterCandidate.candidateId, fileUrl: uploadData.fileUrl, fileName: `Offer Letter - ${offerLetterCandidate.candidateName}` });
+
+              // Refresh the processing candidates list so the transfer modal shows fresh data
+              try {
+                dispatch(processingApi.util.invalidateTags([{ type: "ProcessingSummary" }]));
+                dispatch(
+                  processingApi.endpoints.getCandidatesToTransfer.initiate({ projectId, page: 1, limit: 20 }, { forceRefetch: true })
+                );
+              } catch (err) {
+                console.warn("Failed to refresh transfer candidates:", err);
+              }
+            }
+            toast.success(`Offer letter updated successfully`);
+          }}
+        />
+      )}
+
+      <PDFViewer
+        fileUrl={activePdfUrl}
+        fileName={pdfViewerState.fileName}
+        isOpen={pdfViewerState.isOpen}
+        onClose={() => setPdfViewerState({ isOpen: false, candidateId: null, fileUrl: "", fileName: "" })}
+      />
     </Dialog>
   );
 }

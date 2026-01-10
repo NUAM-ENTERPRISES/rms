@@ -33,6 +33,7 @@ export interface Project {
 
 export interface RoleNeeded {
   id: string;
+  roleCatalogId?: string;
   designation: string;
   quantity: number;
   priority: string;

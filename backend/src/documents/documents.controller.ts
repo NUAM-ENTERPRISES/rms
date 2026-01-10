@@ -27,6 +27,7 @@ import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
+import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Documents')
@@ -55,6 +56,32 @@ export class DocumentsController {
       success: true,
       data: document,
       message: 'Document uploaded successfully',
+    };
+  }
+
+  @Post('offer-letter')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Upload an offer letter',
+    description:
+      'Upload an offer letter for a candidate and project. Creates document and links it to the nomination.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Offer letter uploaded successfully',
+  })
+  async uploadOfferLetter(
+    @Body() uploadDto: UploadOfferLetterDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.uploadOfferLetter(
+      uploadDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Offer letter uploaded successfully',
     };
   }
 
