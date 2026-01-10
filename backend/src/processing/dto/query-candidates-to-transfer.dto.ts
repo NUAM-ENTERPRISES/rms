@@ -56,12 +56,12 @@ export class QueryCandidatesToTransferDto {
   @ApiProperty({
     description: 'Filter by transfer status (all, transferred, pending)',
     enum: ['all', 'transferred', 'pending'],
-    default: 'all',
+    default: 'pending',
     required: false,
   })
   @IsEnum(['all', 'transferred', 'pending'])
   @IsOptional()
-  status?: string = 'all';
+  status?: string = 'pending';
 
   @ApiProperty({
     description: 'Page number (1-based)',

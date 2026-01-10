@@ -39,8 +39,6 @@ import {
   Phone,
 } from "lucide-react";
 import { useGetProcessingCandidatesQuery } from "@/features/processing/data/processing.endpoints";
-import { ProcessingStatusBadge } from "@/features/processing/components/ProcessingStatusBadge";
-import { PROCESSING_STEP_META_MAP } from "@/features/processing/constants/processingSteps";
 
 interface ProcessingCandidatesTabProps {
   projectId: string;
@@ -57,13 +55,13 @@ export default function ProcessingCandidatesTab({
     projectId,
     search: searchTerm || undefined,
     status: statusFilter === "all" ? undefined : (statusFilter as any),
-    limit: 50,
+    limit: 15,
   });
 
-  const candidates = data?.data.items ?? [];
+  const candidates = data?.data.candidates ?? [];
 
   const handleViewCandidate = (candidateProjectMapId: string) => {
-    navigate(`/processing/candidates/${candidateProjectMapId}`);
+    navigate(`/processingCandidateDetails/${candidateProjectMapId}`);
   };
 
   if (isLoading) {
@@ -119,10 +117,10 @@ export default function ProcessingCandidatesTab({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="IN_PROGRESS">Pending</SelectItem>
-                <SelectItem value="DONE">Done</SelectItem>
-                <SelectItem value="REJECTED">Rejected</SelectItem>
-                <SelectItem value="NOT_APPLICABLE">Not Applicable</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -143,63 +141,64 @@ export default function ProcessingCandidatesTab({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
-                    <TableHead>Current Step</TableHead>
-                    <TableHead>Project</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Recruiter</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {candidates.map((candidate) => {
-                    const currentStep = candidate.currentStep;
-                    const meta =
-                      currentStep &&
-                      PROCESSING_STEP_META_MAP[currentStep.stepKey];
                     return (
-                      <TableRow key={candidate.candidateProjectMapId}>
+                      <TableRow key={candidate.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white">
                               {candidate.candidate.firstName?.[0]}
                             </div>
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {candidate.candidate.firstName}{" "}
-                                {candidate.candidate.lastName}
-                              </div>
-                              <div className="flex flex-wrap gap-3 text-sm text-gray-500">
-                                {candidate.candidate.email && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Mail className="h-3 w-3" />
-                                    {candidate.candidate.email}
-                                  </span>
-                                )}
-                                {candidate.candidate.mobileNumber && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Phone className="h-3 w-3" />
-                                    {candidate.candidate.countryCode}{" "}
-                                    {candidate.candidate.mobileNumber}
-                                  </span>
-                                )}
-                              </div>
+                            <div className="font-medium text-gray-900">
+                              {candidate.candidate.firstName}{" "}
+                              {candidate.candidate.lastName}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          {currentStep ? (
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900">
-                                {meta?.title}
-                              </div>
-                              <ProcessingStatusBadge
-                                status={currentStep.status}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-500">N/A</span>
-                          )}
+                          <div className="flex flex-col gap-1 text-sm text-gray-500">
+                            {candidate.candidate.email && (
+                              <span className="inline-flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {candidate.candidate.email}
+                              </span>
+                            )}
+                            {candidate.candidate.mobileNumber && (
+                              <span className="inline-flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {candidate.candidate.mobileNumber}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm font-medium text-gray-900">
+                            {candidate.role.designation}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            candidate.processingStatus === 'completed' 
+                              ? 'bg-green-100 text-green-800'
+                              : candidate.processingStatus === 'in_progress'
+                              ? 'bg-blue-100 text-blue-800'
+                              : candidate.processingStatus === 'assigned'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {candidate.processingStatus.replace('_', ' ').toUpperCase()}
+                          </span>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
-                          {candidate.project.title}
+                          {candidate.candidateProjectMap?.recruiter?.name || 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -211,9 +210,7 @@ export default function ProcessingCandidatesTab({
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleViewCandidate(
-                                    candidate.candidateProjectMapId
-                                  )
+                                  handleViewCandidate(candidate.id)
                                 }
                               >
                                 <Eye className="mr-2 h-4 w-4" />

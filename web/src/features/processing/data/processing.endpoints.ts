@@ -5,6 +5,7 @@ import {
   ProcessingStepKey,
   ProcessingStepStatus,
   ProcessingStep,
+  ProcessingCandidate,
 } from "../types";
 
 type ApiResponse<T> = {
@@ -25,9 +26,7 @@ type Paginated<T> = {
 
 export type ProcessingCandidatesQuery = {
   search?: string;
-  projectId?: string;
-  roleNeededId?: string;
-  status?: ProcessingStepStatus | 'all' | 'pending' | 'transferred';
+  status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all";
   page?: number;
   limit?: number;
 };
@@ -35,11 +34,42 @@ export type ProcessingCandidatesQuery = {
 export const processingApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProcessingCandidates: builder.query<
-      ApiResponse<Paginated<ProcessingCandidateSummary>>,
-      ProcessingCandidatesQuery | void
+      ApiResponse<{
+        candidates: ProcessingCandidate[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>,
+      { projectId: string } & ProcessingCandidatesQuery
+    >({
+      query: ({ projectId, ...params }) => ({
+        url: `/processing/project/${projectId}`,
+        params,
+      }),
+      providesTags: ["ProcessingSummary"],
+    }),
+    getAllProcessingCandidates: builder.query<
+      ApiResponse<{
+        candidates: ProcessingCandidate[];
+        counts: {
+          assigned: number;
+          in_progress: number;
+          completed: number;
+          cancelled: number;
+        };
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+        };
+      }>,
+      ProcessingCandidatesQuery & { projectId?: string; roleCatalogId?: string }
     >({
       query: (params) => ({
-        url: "/processing/candidates",
+        url: "/processing/all-candidates",
         params,
       }),
       providesTags: ["ProcessingSummary"],
@@ -73,7 +103,7 @@ export const processingApi = baseApi.injectEndpoints({
       query: (candidateProjectMapId) => ({
         url: `/processing/${candidateProjectMapId}`,
       }),
-      providesTags: (_, __, id) => [{ type: "ProcessingStep", id }],
+      providesTags: (_, __, id) => [{ type: "Processing", id }],
     }),
     getProcessingHistory: builder.query<
       ApiResponse<ProcessingHistoryEntry[]>,
@@ -100,7 +130,7 @@ export const processingApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: (_, __, { candidateProjectMapId }) => [
-        { type: "ProcessingStep", id: candidateProjectMapId },
+        { type: "Processing", id: candidateProjectMapId },
         { type: "ProcessingHistory", id: candidateProjectMapId },
         "ProcessingSummary",
       ],
@@ -164,16 +194,181 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingHistory", id: `${candidateId}-${projectId}-${roleNeededId}` },
       ],
     }),
+    getCandidateProcessingDetails: builder.query<
+      ApiResponse<{
+        id: string;
+        candidateId: string;
+        projectId: string;
+        roleNeededId: string;
+        assignedProcessingTeamUserId: string;
+        processingStatus: string;
+        notes?: string;
+        createdAt: string;
+        updatedAt: string;
+        candidate: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          email?: string;
+          mobileNumber?: string;
+          countryCode?: string;
+          dateOfBirth?: string;
+          gender?: string;
+          source?: string;
+          totalExperience?: number;
+          currentEmployer?: string | null;
+          currentRole?: string | null;
+          highestEducation?: string | null;
+          university?: string | null;
+          qualifications: Array<{
+            id: string;
+            candidateId: string;
+            qualificationId: string;
+            university?: string;
+            graduationYear?: number;
+            gpa?: number;
+            isCompleted?: boolean;
+            notes?: string;
+            qualification?: {
+              id: string;
+              name: string;
+              shortName?: string;
+              level?: string;
+              field?: string;
+              program?: string;
+              description?: string;
+              isActive?: boolean;
+            };
+          }>;
+        };
+        project: {
+          id: string;
+          title: string;
+          description?: string | null;
+          country?: string | null;
+        };
+        role: {
+          id: string;
+          projectId: string;
+          roleCatalogId?: string;
+          designation: string;
+          quantity?: number;
+          priority?: string;
+          minExperience?: number;
+          maxExperience?: number;
+          skills?: any[];
+          employmentType?: string;
+          visaType?: string;
+          backgroundCheckRequired?: boolean;
+          drugScreeningRequired?: boolean;
+          genderRequirement?: string;
+          minAge?: number;
+          maxAge?: number;
+          accommodation?: boolean;
+          food?: boolean;
+          transport?: boolean;
+          salaryRange?: string | null;
+          roleCatalog?: {
+            id: string;
+            name: string;
+            label: string;
+            shortName?: string;
+            description?: string;
+            isActive?: boolean;
+          };
+        };
+        assignedTo?: {
+          id: string;
+          name: string;
+          email?: string;
+          mobileNumber?: string;
+        };
+        candidateProjectMap: {
+          id: string;
+          candidateId: string;
+          projectId: string;
+          roleNeededId: string;
+          notes?: string;
+          recruiterId?: string;
+          recruiter?: {
+            id: string;
+            name: string;
+            email?: string;
+          };
+          mainStatus?: {
+            id: string;
+            name: string;
+            label: string;
+            color?: string;
+            order?: number;
+          };
+          subStatus?: {
+            id: string;
+            name: string;
+            label: string;
+            color?: string;
+            order?: number;
+          };
+          documentVerifications?: Array<{
+            id: string;
+            candidateProjectMapId: string;
+            documentId: string;
+            roleCatalogId?: string;
+            status: string;
+            notes?: string | null;
+            rejectionReason?: string | null;
+            resubmissionRequested?: boolean;
+            document: {
+              id: string;
+              candidateId: string;
+              docType: string;
+              fileName: string;
+              fileUrl: string;
+              status: string;
+              notes?: string | null;
+              mimeType?: string;
+              fileSize?: number;
+            };
+          }>;
+        };
+        history: Array<{
+          id: string;
+          processingCandidateId: string;
+          status: string;
+          changedById?: string;
+          recruiterId?: string;
+          notes?: string;
+          createdAt: string;
+          changedBy?: {
+            id: string;
+            name: string;
+          };
+          recruiter?: {
+            id: string;
+            name: string;
+          };
+        }>;
+      }>,
+      string
+    >({
+      query: (processingId) => ({
+        url: `/processing/candidate-processing-details/${processingId}`,
+      }),
+      providesTags: (_, __, id) => [{ type: "Processing", id }],
+    }),
   }),
 });
 
 export const {
   useGetProcessingCandidatesQuery,
   useLazyGetProcessingCandidatesQuery,
+  useGetAllProcessingCandidatesQuery,
+  useLazyGetAllProcessingCandidatesQuery,
   useGetCandidatesToTransferQuery,
   useGetProcessingDetailQuery,
   useGetProcessingHistoryQuery,
   useUpdateProcessingStepMutation,
   useTransferToProcessingMutation,
   useGetCandidateHistoryQuery,
+  useGetCandidateProcessingDetailsQuery,
 } = processingApi;

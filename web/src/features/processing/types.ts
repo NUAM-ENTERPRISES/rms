@@ -67,3 +67,52 @@ export interface ProcessingHistoryEntry {
   actorName?: string | null;
   changedAt: string;
 }
+
+// New API response types for /processing/project/:projectId endpoint
+export interface ProcessingCandidate {
+  id: string;
+  candidateId: string;
+  projectId: string;
+  roleNeededId: string;
+  assignedProcessingTeamUserId: string;
+  processingStatus: "assigned" | "in_progress" | "completed" | "cancelled";
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  candidate: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string | null;
+    mobileNumber?: string | null;
+    profileImage?: string | null;
+  };
+  role: {
+    id: string;
+    designation: string;
+    roleCatalog?: {
+      id: string;
+      name: string;
+    };
+  };
+  assignedTo?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  project: {
+    id: string;
+    title: string;
+  };
+  candidateProjectMap?: {
+    id: string;
+    candidateId: string;
+    projectId: string;
+    roleNeededId: string;
+    recruiter?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  };
+}

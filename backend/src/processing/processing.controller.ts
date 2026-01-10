@@ -21,6 +21,7 @@ import {
 import { ProcessingService } from './processing.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
+import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -58,6 +59,45 @@ export class ProcessingController {
     };
   }
 
+  @Get('all-candidates')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get all processing candidates with search, filter, and pagination',
+    description: 'Retrieve a paginated list of all candidates currently in processing with various filters.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Processing candidates retrieved successfully',
+  })
+  async getAllProcessingCandidates(@Query() query: QueryAllProcessingCandidatesDto) {
+    const data = await this.processingService.getAllProcessingCandidates(query);
+    return {
+      success: true,
+      data,
+      message: 'Processing candidates retrieved successfully',
+    };
+  }
+
+  @Get('candidate-processing-details/:processingId')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get comprehensive processing details for a candidate by processing ID',
+    description: 'Retrieve all details including candidate info, project info, role info, document verifications, and processing history.',
+  })
+  @ApiParam({ name: 'processingId', type: 'string', description: 'The ID of the processing candidate record' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Processing details retrieved successfully',
+  })
+  async getProcessingDetailsById(@Param('processingId') processingId: string) {
+    const data = await this.processingService.getProcessingDetailsById(processingId);
+    return {
+      success: true,
+      data,
+      message: 'Processing details retrieved successfully',
+    };
+  }
+
   @Get('candidate-history/:candidateId/:projectId/:roleNeededId')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({
@@ -85,6 +125,32 @@ export class ProcessingController {
       success: true,
       data,
       message: 'Processing history retrieved successfully',
+    };
+  }
+
+  @Get('project/:projectId')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get processing candidates for a specific project',
+    description: 'Retrieve a paginated list of candidates currently in processing for a specific project.',
+  })
+  @ApiParam({ name: 'projectId', type: 'string' })
+  @ApiQuery({ name: 'status', required: false, enum: ['assigned', 'in_progress', 'completed', 'cancelled', 'all'] })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async getProcessingCandidatesByProject(
+    @Param('projectId') projectId: string,
+    @Query() query: any,
+  ) {
+    const data = await this.processingService.getProcessingCandidatesByProject(
+      projectId,
+      query,
+    );
+    return {
+      success: true,
+      data,
+      message: 'Processing candidates retrieved successfully',
     };
   }
 

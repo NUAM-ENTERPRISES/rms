@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
+import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
 import { DOCUMENT_TYPE } from '../common/constants';
 
 @Injectable()
@@ -184,7 +185,7 @@ export class ProcessingService {
       projectId,
       roleNeededId,
       candidateId,
-      status = 'all',
+      status = 'pending',
       page = 1,
       limit = 10,
     } = query;
@@ -360,6 +361,175 @@ export class ProcessingService {
   }
 
   /**
+   * Get all processing candidates with filters, search and pagination
+   */
+  async getAllProcessingCandidates(query: QueryAllProcessingCandidatesDto) {
+    const {
+      search,
+      projectId,
+      roleCatalogId,
+      status = 'assigned',
+      page = 1,
+      limit = 10,
+    } = query;
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    // Filter by project
+    if (projectId) {
+      where.projectId = projectId;
+    }
+
+    // Filter by processing status
+    if (status && status !== 'all') {
+      where.processingStatus = status;
+    }
+
+    // Filter by role catalog (via roleNeeded mapping)
+    if (roleCatalogId) {
+      where.role = {
+        roleCatalogId: roleCatalogId,
+      };
+    }
+
+    // Search functionality
+    if (search) {
+      where.OR = [
+        {
+          candidate: {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        },
+        {
+          project: {
+            title: { contains: search, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    const [candidates, total, statusCounts] = await Promise.all([
+      this.prisma.processingCandidate.findMany({
+        where,
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              mobileNumber: true,
+              profileImage: true,
+              countryCode: true,
+              experience: true,
+              highestEducation: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+          role: {
+            include: {
+              roleCatalog: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          candidateProjectMap: {
+            include: {
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.processingCandidate.count({ where }),
+      this.prisma.processingCandidate.groupBy({
+        by: ['processingStatus'],
+        where: {
+          projectId: projectId,
+          ...(roleCatalogId && {
+            role: {
+              roleCatalogId: roleCatalogId,
+            },
+          }),
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+    ]);
+
+    const counts = {
+      all: 0,
+      assigned: 0,
+      in_progress: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+
+    statusCounts.forEach((sc) => {
+      const status = sc.processingStatus as keyof typeof counts;
+      if (counts.hasOwnProperty(status)) {
+        counts[status] = sc._count._all;
+      }
+    });
+
+    counts.all = Object.values(counts).reduce((a, b) => a + b, 0) - counts.all;
+    // Recalculate total for 'all' correctly
+    const allCount = await this.prisma.processingCandidate.count({
+      where: {
+        projectId: projectId,
+        ...(roleCatalogId && {
+          role: {
+            roleCatalogId: roleCatalogId,
+          },
+        }),
+      },
+    });
+    counts.all = allCount;
+
+    return {
+      candidates,
+      counts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
    * Get the processing history for a specific candidate nomination
    */
   async getProcessingHistory(candidateId: string, projectId: string, roleNeededId: string) {
@@ -392,6 +562,13 @@ export class ProcessingService {
             recruiter: {
               select: { id: true, name: true },
             },
+            processingCandidate: {
+              select: {
+                assignedTo: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
           },
           orderBy: {
             createdAt: 'desc',
@@ -406,6 +583,184 @@ export class ProcessingService {
       );
     }
 
-    return processingCandidate;
+    // Map history to include assignedTo at the same level as other relations
+    const mappedHistory = processingCandidate.history.map((h: any) => ({
+      ...h,
+      assignedTo: h.processingCandidate?.assignedTo || null,
+      processingCandidate: undefined,
+    }));
+
+    return { ...processingCandidate, history: mappedHistory };
+  }
+
+  /**
+   * Get processing candidates for a specific project
+   */
+  async getProcessingCandidatesByProject(projectId: string, query: any) {
+    const { page = 1, limit = 10, search, status } = query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where: any = { projectId };
+
+    if (status && status !== 'all') {
+      where.processingStatus = status;
+    }
+
+    if (search) {
+      where.candidate = {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    const [candidates, total] = await Promise.all([
+      this.prisma.processingCandidate.findMany({
+        where,
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              mobileNumber: true,
+              profileImage: true,
+            },
+          },
+          role: {
+            select: {
+              id: true,
+              designation: true,
+            },
+          },
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+          candidateProjectMap: {
+            include: {
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+        skip,
+        take: Number(limit),
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.processingCandidate.count({ where }),
+    ]);
+
+    return {
+      candidates,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / Number(limit)),
+      },
+    };
+  }
+
+  /**
+   * Get processing details by processing ID
+   */
+  async getProcessingDetailsById(id: string) {
+    const processingCandidate = await this.prisma.processingCandidate.findUnique({
+      where: { id },
+      include: {
+        candidate: {
+          include: {
+            qualifications: {
+              include: {
+                qualification: true,
+              },
+            },
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            country: true,
+          },
+        },
+        role: {
+          include: {
+            roleCatalog: true,
+          },
+        },
+        assignedTo: {
+          select: { id: true, name: true, email: true, mobileNumber: true },
+        },
+        candidateProjectMap: {
+          include: {
+            recruiter: {
+              select: { id: true, name: true, email: true },
+            },
+            mainStatus: true,
+            subStatus: true,
+            documentVerifications: {
+              where: { isDeleted: false },
+              include: {
+                document: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+        history: {
+          include: {
+            changedBy: {
+              select: { id: true, name: true },
+            },
+            recruiter: {
+              select: { id: true, name: true },
+            },
+            processingCandidate: {
+              select: {
+                assignedTo: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+
+    if (!processingCandidate) {
+      throw new NotFoundException(`Processing record with ID ${id} not found`);
+    }
+
+    // Map history to include assignedTo at the same level as other relations
+    const mappedHistory = processingCandidate.history.map((h: any) => ({
+      ...h,
+      assignedTo: h.processingCandidate?.assignedTo || null,
+      processingCandidate: undefined,
+    }));
+
+    return { ...processingCandidate, history: mappedHistory };
   }
 }

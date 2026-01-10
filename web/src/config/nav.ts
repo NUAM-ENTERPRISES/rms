@@ -40,6 +40,14 @@ export const navigationConfig: NavItem[] = [
     roles: ["CRE"],
     // Only visible to CRE users
   },
+  {
+    id: "processing-dashboard",
+    label: "Processing",
+    path: "/",
+    icon: Home,
+    roles: ["Processing Executive"],
+    // Dedicated dashboard for Processing Executives
+  },
   // {
   //   id: "dashboard",
   //   label: "Dashboard",
@@ -184,14 +192,6 @@ export const navigationConfig: NavItem[] = [
     path: "/ready-for-processing",
     icon: UserCheck,
     roles: ["CEO", "Director", "Manager", "System Admin"],
-  },
-  {
-    id: "processing",
-    label: "In Processing",
-    path: "/processing/candidates",
-    icon: BookOpen,
-    permissions: ["read:processing"],
-    roles: ["Processing Executive"],
   },
   // {
   //   id: "notifications",

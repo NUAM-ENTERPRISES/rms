@@ -174,11 +174,11 @@ const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
 );
 const ProfilePage = lazy(() => import("@/features/profile/views/ProfilePage"));
-const ProcessingCandidatesPage = lazy(
-  () => import("@/features/processing/views/ProcessingCandidatesPage")
+const ProcessingDashboardPage = lazy(
+  () => import("@/features/processing/views/ProcessingDashboardPage")
 );
-const ProcessingCandidateDetailPage = lazy(
-  () => import("@/features/processing/views/ProcessingCandidateDetailPage")
+const ProcessingCandidateDetailsPage = lazy(
+  () => import("@/features/processing/views/ProcessingCandidateDetailsPage")
 );
 
 // Role-based redirect component
@@ -190,6 +190,15 @@ function RoleBasedRedirect() {
     return (
       <AppLayout>
         <CREDashboardPage />
+      </AppLayout>
+    );
+  }
+
+  // Processing Executive role gets their own dashboard
+  if (user?.roles.some((role) => role === "Processing Executive")) {
+    return (
+      <AppLayout>
+        <ProcessingDashboardPage />
       </AppLayout>
     );
   }
@@ -263,6 +272,19 @@ function App() {
                         <ProtectedRoute roles={["CRE"]}>
                           <AppLayout>
                             <CREDashboardPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/processing-dashboard"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={["Processing Executive"]}>
+                          <AppLayout>
+                            <ProcessingDashboardPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
@@ -779,30 +801,20 @@ function App() {
                       </RouteErrorBoundary>
                     }
                   />
+
                   <Route
-                    path="/processing/candidates"
+                    path="/processingCandidateDetails/:candidateId"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute permissions={["read:processing"]}>
                           <AppLayout>
-                            <ProcessingCandidatesPage />
+                            <ProcessingCandidateDetailsPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
                     }
                   />
-                  <Route
-                    path="/processing/candidates/:candidateProjectMapId"
-                    element={
-                      <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:processing"]}>
-                          <AppLayout>
-                            <ProcessingCandidateDetailPage />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      </RouteErrorBoundary>
-                    }
-                  />
+
                   <Route
                     path="/candidates/:candidateId/documents/:projectId"
                     element={

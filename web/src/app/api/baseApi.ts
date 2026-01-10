@@ -38,6 +38,9 @@ export const baseApi = createApi({
     "ScreeningTemplate",
     "Screening",
     "Training",
+    "Processing",
+    "ProcessingSummary",
+    "ProcessingHistory",
   ],
   endpoints: () => ({}),
 });
