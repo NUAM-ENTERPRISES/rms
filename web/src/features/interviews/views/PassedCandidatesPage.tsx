@@ -949,7 +949,7 @@ export default function PassedCandidatesPage() {
           candidateName={(offerLetterInterview.candidateProjectMap?.candidate || offerLetterInterview.candidate)?.firstName + " " + (offerLetterInterview.candidateProjectMap?.candidate || offerLetterInterview.candidate)?.lastName}
           projectId={offerLetterInterview.candidateProjectMap?.project?.id || offerLetterInterview.project?.id || filters.projectId}
           projectTitle={offerLetterInterview.candidateProjectMap?.project?.title || offerLetterInterview.project?.title || "Project"}
-          roleCatalogId={(offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.roleCatalogId || ""}
+          roleCatalogId={(offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.roleCatalogId || (offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.roleCatalog?.id || ""}
           roleDesignation={(offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.designation || "Unknown Role"}
           isAlreadyUploaded={!!(offerLetterInterview.isOfferLetterUploaded || offerLetterOverrides[offerLetterModal.candidateId!])}
           existingFileUrl={offerLetterOverrides[offerLetterModal.candidateId!] || offerLetterInterview.offerLetterData?.document?.fileUrl}

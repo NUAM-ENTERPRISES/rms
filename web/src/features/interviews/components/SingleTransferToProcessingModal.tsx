@@ -85,7 +85,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
   }, [selectedProject, roleNeededId]);
 
   const roleDesignation = selectedRole?.designation || "Unknown Role";
-  const roleCatalogId = selectedRole?.roleCatalogId || "";
+  const roleCatalogId = selectedRole?.roleCatalogId || selectedRole?.roleCatalog?.id || "";
 
   const { users, isLoading: isLoadingUsers } = useUsersLookup();
   const [transfer, { isLoading: isTransferring }] = useTransferToProcessingMutation();

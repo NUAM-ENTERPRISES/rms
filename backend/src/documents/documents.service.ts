@@ -1997,9 +1997,9 @@ export class DocumentsService {
     const where: any = {
       // Filter by recruiter
       recruiterId,
-      // Filter for candidates who are not in a terminal stage
+      // Filter for candidates who are in recruitment phases and not yet verified/rejected
       mainStatus: {
-        name: { notIn: ['final', 'rejected', 'withdrawn'] },
+        name: { in: ['nominated', 'documents'] },
       },
       // Exclude candidates who have already completed document verification or are rejected
       subStatus: {
@@ -2103,13 +2103,26 @@ export class DocumentsService {
       this.prisma.candidateProjects.count({
         where: {
           recruiterId,
-          subStatus: { name: 'documents_verified' },
+          OR: [
+            { subStatus: { name: 'documents_verified' } },
+            { mainStatus: { name: { in: ['interview', 'processing', 'final'] } } },
+          ],
+          project: {
+            documentRequirements: {
+              some: { isDeleted: false } as any,
+            },
+          },
         },
       }),
       this.prisma.candidateProjects.count({
         where: {
           recruiterId,
           subStatus: { name: 'rejected_documents' },
+          project: {
+            documentRequirements: {
+              some: { isDeleted: false } as any,
+            },
+          },
         },
       }),
       this.prisma.candidateProjects.count({
@@ -2224,7 +2237,7 @@ export class DocumentsService {
     const pendingWhereBase: any = {
       recruiterId,
       mainStatus: {
-        name: { notIn: ['final', 'rejected', 'withdrawn'] },
+        name: { in: ['nominated', 'documents'] },
       },
       subStatus: {
         name: { notIn: ['documents_verified', 'rejected_documents'] },
@@ -2238,12 +2251,25 @@ export class DocumentsService {
 
     const verifiedWhereBase: any = {
       recruiterId,
-      subStatus: { name: 'documents_verified' },
+      OR: [
+        { subStatus: { name: 'documents_verified' } },
+        { mainStatus: { name: { in: ['interview', 'processing', 'final'] } } },
+      ],
+      project: {
+        documentRequirements: {
+          some: { isDeleted: false } as any,
+        },
+      },
     };
 
     const rejectedWhereBase: any = {
       recruiterId,
       subStatus: { name: 'rejected_documents' },
+      project: {
+        documentRequirements: {
+          some: { isDeleted: false } as any,
+        },
+      },
     };
 
     // 2. Determine the active where clause for the list based on status

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { RoundRobinService } from '../round-robin/round-robin.service';
 import { PrismaService } from '../database/prisma.service';
@@ -30,6 +31,8 @@ import {
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly countriesService: CountriesService,
@@ -666,33 +669,24 @@ export class ProjectsService {
       }
     }
 
-    // Prepare update data
+    // Prepare update data - use !== undefined to correctly handle null/falsy values
     const updateData: any = {};
-    if (updateProjectDto.title) updateData.title = updateProjectDto.title;
+    if (updateProjectDto.title !== undefined) updateData.title = updateProjectDto.title;
     if (updateProjectDto.description !== undefined)
       updateData.description = updateProjectDto.description;
-    if (updateProjectDto.deadline)
-      updateData.deadline = new Date(updateProjectDto.deadline);
-    if (updateProjectDto.status) updateData.status = updateProjectDto.status;
-    if (updateProjectDto.priority)
+    if (updateProjectDto.deadline !== undefined)
+      updateData.deadline = updateProjectDto.deadline ? new Date(updateProjectDto.deadline) : null;
+    if (updateProjectDto.status !== undefined) updateData.status = updateProjectDto.status;
+    if (updateProjectDto.priority !== undefined)
       updateData.priority = updateProjectDto.priority;
-    if (updateProjectDto.clientId)
+    if (updateProjectDto.clientId !== undefined)
       updateData.clientId = updateProjectDto.clientId;
     if (updateProjectDto.teamId !== undefined)
       updateData.teamId = updateProjectDto.teamId;
     if (updateProjectDto.countryCode !== undefined) {
-      // If caller explicitly passed null or an empty string, clear the field
-      if (
-        updateProjectDto.countryCode === null ||
-        String(updateProjectDto.countryCode).trim() === ''
-      ) {
-        updateData.countryCode = null;
-      } else {
-        // updateProjectDto.countryCode was normalized to uppercase above
-        updateData.countryCode = String(
-          updateProjectDto.countryCode,
-        ).toUpperCase();
-      }
+      updateData.countryCode = updateProjectDto.countryCode
+        ? String(updateProjectDto.countryCode).toUpperCase().trim()
+        : null;
     }
     // New project-level fields
     if (updateProjectDto.projectType !== undefined)
@@ -706,114 +700,168 @@ export class ProjectsService {
     if (updateProjectDto.requiredScreening !== undefined)
       updateData.requiredScreening = updateProjectDto.requiredScreening;
 
-    // Handle rolesNeeded updates if provided
+    // Handle rolesNeeded updates if provided (SAFE: do not delete referenced roles)
     if (updateProjectDto.rolesNeeded !== undefined) {
-      // Delete existing roles needed
-      await this.prisma.roleNeeded.deleteMany({
+      const incomingRoles = updateProjectDto.rolesNeeded || [];
+
+      // Fetch existing roles for this project
+      const existingRoles = await this.prisma.roleNeeded.findMany({
         where: { projectId: id },
+        select: { id: true, designation: true },
       });
+      const existingIds = existingRoles.map((r) => r.id);
 
-      // Create new roles needed
-      if (updateProjectDto.rolesNeeded.length > 0) {
-        for (const role of updateProjectDto.rolesNeeded) {
-          // validate ageRequirement format (expected like "18 to 25") and parse into minAge/maxAge
-          const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
-          const ageMatch = role.ageRequirement?.match(AGE_RE);
-          if (!ageMatch) {
-            throw new BadRequestException(
-              `Invalid or missing ageRequirement for role: ${role.designation}. Expected format like "18 to 25".`,
-            );
-          }
-          const minAge = parseInt(ageMatch[1], 10);
-          const maxAge = parseInt(ageMatch[2], 10);
-          if (isNaN(minAge) || isNaN(maxAge) || minAge > maxAge) {
-            throw new BadRequestException(
-              `Invalid age range for role: ${role.designation}. Ensure age is like "18 to 25" with min <= max.`,
-            );
-          }
-            // Validate optional roleCatalogId
-            if (role.roleCatalogId) {
-              const exists = await this.roleCatalogService.validateRoleId(
-                role.roleCatalogId,
-              );
-              if (!exists) {
-                throw new NotFoundException(
-                  `RoleCatalog with ID ${role.roleCatalogId} not found or inactive for role: ${role.designation}`,
-                );
-              }
-            }
-          const createdRole = await this.prisma.roleNeeded.create({
-            data: {
-              projectId: id,
-                roleCatalogId: role.roleCatalogId,
-              designation: role.designation,
-              quantity: role.quantity,
-              priority: role.priority || 'medium',
-              minExperience: role.minExperience,
-              maxExperience: role.maxExperience,
-              specificExperience: role.specificExperience
-                ? JSON.parse(role.specificExperience)
-                : null,
-              requiredCertifications: role.requiredCertifications
-                ? JSON.parse(role.requiredCertifications)
-                : null,
-              institutionRequirements: role.institutionRequirements,
-              skills: role.skills ? JSON.parse(role.skills) : [],
-              technicalSkills: role.technicalSkills
-                ? JSON.parse(role.technicalSkills)
-                : null,
-              languageRequirements: role.languageRequirements
-                ? JSON.parse(role.languageRequirements)
-                : null,
-              licenseRequirements: role.licenseRequirements
-                ? JSON.parse(role.licenseRequirements)
-                : null,
-              backgroundCheckRequired: role.backgroundCheckRequired ?? true,
-              drugScreeningRequired: role.drugScreeningRequired ?? true,
-              shiftType: role.shiftType,
-              onCallRequired: role.onCallRequired ?? false,
-              physicalDemands: role.physicalDemands,
-              salaryRange: role.salaryRange
-                ? JSON.parse(role.salaryRange)
-                : null,
-              benefits: role.benefits,
-              relocationAssistance: role.relocationAssistance ?? false,
-              additionalRequirements: role.additionalRequirements,
-              notes: role.notes,
-              minAge,
-              maxAge,
-              accommodation: role.accommodation,
-              food: role.food,
-              transport: role.transport,
-              target: role.target,
-              // New fields
-              employmentType: role.employmentType || 'permanent',
-              contractDurationYears: role.contractDurationYears,
-              genderRequirement: (role.genderRequirement || 'all') as any,
-              visaType: role.visaType || 'contract',
-              requiredSkills: role.requiredSkills
-                ? JSON.parse(role.requiredSkills)
-                : [],
-              candidateStates: role.candidateStates
-                ? JSON.parse(role.candidateStates)
-                : [],
-              candidateReligions: role.candidateReligions
-                ? JSON.parse(role.candidateReligions)
-                : [],
-              minHeight: role.minHeight,
-              maxHeight: role.maxHeight,
-              minWeight: role.minWeight,
-              maxWeight: role.maxWeight,
-            },
+      // Extract incoming IDs (careful with normalization)
+      const incomingIds = incomingRoles
+        .filter(
+          (r: any) =>
+            r.id && typeof r.id === 'string' && r.id.trim() !== '',
+        )
+        .map((r: any) => (r.id as string).trim());
+
+      // FUZZY MATCH LOGIC:
+      // If an incoming role has no ID (or invalid ID), but its designation matches an existing role that is about to be deleted,
+      // we assume it is an update for that role. This prevents "Cannot remove role" errors if UI omits IDs for existing roles.
+      const rolesToDeleteFull = existingRoles.filter(
+        (r) => !incomingIds.includes(r.id),
+      );
+      const unmatchedIncomingRoles = incomingRoles.filter(
+        (r: any) => !r.id || !incomingIds.includes(r.id),
+      );
+
+      for (const incomingRole of unmatchedIncomingRoles as any) {
+        const matchIndex = rolesToDeleteFull.findIndex(
+          (er) => er.designation === incomingRole.designation,
+        );
+        if (matchIndex !== -1) {
+          const matchedRole = rolesToDeleteFull.splice(matchIndex, 1)[0];
+          incomingRole.id = matchedRole.id; // Correct the ID to turn this create into an update
+          incomingIds.push(matchedRole.id);
+        }
+      }
+
+      // Final list of roles that are truly missing from the payload and should be removed if safe
+      const finalRolesToDelete = rolesToDeleteFull.map((r) => r.id);
+
+      if (finalRolesToDelete.length > 0) {
+        // Check references in candidate_projects and processing_candidates
+        const [candidateProjectRefs, processingRefs] = await Promise.all([
+          this.prisma.candidateProjects.count({
+            where: { roleNeededId: { in: finalRolesToDelete } },
+          }),
+          this.prisma.processingCandidate.count({
+            where: { roleNeededId: { in: finalRolesToDelete } },
+          }),
+        ]);
+
+        if (candidateProjectRefs > 0 || processingRefs > 0) {
+          this.logger.warn(
+            `Project ${id}: Skipping deletion of ${finalRolesToDelete.length} roles because they are referenced (candidateProjectRefs=${candidateProjectRefs}, processingRefs=${processingRefs}).`,
+          );
+          // We no longer throw an exception. We protect these roles to ensure project update succeeds without any fail.
+        } else {
+          // Safe to delete truly abandoned roles
+          await this.prisma.roleNeeded.deleteMany({
+            where: { id: { in: finalRolesToDelete } },
           });
+        }
+      }
 
-          // Create normalized education requirements if provided
-          if (
-            role.educationRequirementsList &&
-            role.educationRequirementsList.length > 0
-          ) {
+      // Upsert incoming roles (update if id provided, create otherwise)
+      for (const role of incomingRoles) {
+        // validate ageRequirement format (expected like "18 to 25") and parse into minAge/maxAge
+        const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
+        const ageMatch = role.ageRequirement?.match(AGE_RE);
+        if (!ageMatch) {
+          throw new BadRequestException(
+            `Invalid or missing ageRequirement for role: ${role.designation}. Expected format like "18 to 25".`,
+          );
+        }
+        const minAge = parseInt(ageMatch[1], 10);
+        const maxAge = parseInt(ageMatch[2], 10);
+        if (isNaN(minAge) || isNaN(maxAge) || minAge > maxAge) {
+          throw new BadRequestException(
+            `Invalid age range for role: ${role.designation}. Ensure age is like "18 to 25" with min <= max.`,
+          );
+        }
+
+        // Validate optional roleCatalogId
+        if (role.roleCatalogId) {
+          const exists = await this.roleCatalogService.validateRoleId(role.roleCatalogId);
+          if (!exists) {
+            throw new NotFoundException(
+              `RoleCatalog with ID ${role.roleCatalogId} not found or inactive for role: ${role.designation}`,
+            );
+          }
+        }
+
+        const roleData: any = {
+          roleCatalogId: role.roleCatalogId,
+          designation: role.designation,
+          quantity: role.quantity,
+          priority: role.priority || 'medium',
+          minExperience: role.minExperience,
+          maxExperience: role.maxExperience,
+          specificExperience: role.specificExperience ? JSON.parse(role.specificExperience) : null,
+          requiredCertifications: role.requiredCertifications ? JSON.parse(role.requiredCertifications) : null,
+          institutionRequirements: role.institutionRequirements,
+          skills: role.skills ? JSON.parse(role.skills) : [],
+          technicalSkills: role.technicalSkills ? JSON.parse(role.technicalSkills) : null,
+          languageRequirements: role.languageRequirements ? JSON.parse(role.languageRequirements) : null,
+          licenseRequirements: role.licenseRequirements ? JSON.parse(role.licenseRequirements) : null,
+          backgroundCheckRequired: role.backgroundCheckRequired ?? true,
+          drugScreeningRequired: role.drugScreeningRequired ?? true,
+          shiftType: role.shiftType,
+          onCallRequired: role.onCallRequired ?? false,
+          physicalDemands: role.physicalDemands,
+          salaryRange: role.salaryRange ? JSON.parse(role.salaryRange) : null,
+          benefits: role.benefits,
+          relocationAssistance: role.relocationAssistance ?? false,
+          additionalRequirements: role.additionalRequirements,
+          notes: role.notes,
+          minAge,
+          maxAge,
+          accommodation: role.accommodation,
+          food: role.food,
+          transport: role.transport,
+          target: role.target,
+          employmentType: role.employmentType || 'permanent',
+          contractDurationYears: role.contractDurationYears,
+          genderRequirement: (role.genderRequirement || 'all') as any,
+          visaType: role.visaType || 'contract',
+          requiredSkills: role.requiredSkills ? JSON.parse(role.requiredSkills) : [],
+          candidateStates: role.candidateStates ? JSON.parse(role.candidateStates) : [],
+          candidateReligions: role.candidateReligions ? JSON.parse(role.candidateReligions) : [],
+          minHeight: role.minHeight,
+          maxHeight: role.maxHeight,
+          minWeight: role.minWeight,
+          maxWeight: role.maxWeight,
+        };
+
+        if (role.id) {
+          // Update existing
+          await this.prisma.roleNeeded.update({ where: { id: role.id }, data: roleData });
+
+          // Replace education requirements if provided
+          if (role.educationRequirementsList) {
+            await this.prisma.roleNeededEducationRequirement.deleteMany({ where: { roleNeededId: role.id! } });
+            if (role.educationRequirementsList.length > 0) {
+              await this.prisma.roleNeededEducationRequirement.createMany({
+                data: role.educationRequirementsList.map((req: any) => ({
+                  roleNeededId: role.id!,
+                  qualificationId: req.qualificationId,
+                  mandatory: req.mandatory,
+                })),
+              });
+            }
+          }
+        } else {
+          // Create new
+          const createdRole = await this.prisma.roleNeeded.create({ data: { projectId: id, ...roleData } });
+
+          if (role.educationRequirementsList && role.educationRequirementsList.length > 0) {
             await this.prisma.roleNeededEducationRequirement.createMany({
-              data: role.educationRequirementsList.map((req) => ({
+              data: role.educationRequirementsList.map((req: any) => ({
                 roleNeededId: createdRole.id,
                 qualificationId: req.qualificationId,
                 mandatory: req.mandatory,

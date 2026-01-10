@@ -126,7 +126,7 @@ export function MultiTransferToProcessingModal({
   }, [selectedProject, roleNeededId]);
 
   const roleDesignation = selectedRole?.designation || "Unknown Role";
-  const roleCatalogId = selectedRole?.roleCatalogId || "";
+  const roleCatalogId = selectedRole?.roleCatalogId || selectedRole?.roleCatalog?.id || "";
 
   // Initialize transfer data for each candidate
   const [candidatesData, setCandidatesData] = useState<Record<string, CandidateTransferData>>(() => {

@@ -18,6 +18,14 @@ import { CreateDocumentRequirementDto } from './document-requirement.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoleNeededDto {
+  @ApiPropertyOptional({
+    description: 'Existing RoleNeeded ID (use for updates)',
+    example: 'cmje8as41007gq4eo8btha21t',
+  })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @ApiProperty({
     description: 'Job designation/title',
     example: 'Registered Nurse',

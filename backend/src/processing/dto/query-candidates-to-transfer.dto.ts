@@ -46,6 +46,14 @@ export class QueryCandidatesToTransferDto {
   roleNeededId?: string;
 
   @ApiProperty({
+    description: 'Filter by Role Catalog ID',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  roleCatalogId?: string;
+
+  @ApiProperty({
     description: 'Filter by candidate ID',
     required: false,
   })
@@ -56,12 +64,12 @@ export class QueryCandidatesToTransferDto {
   @ApiProperty({
     description: 'Filter by transfer status (all, transferred, pending)',
     enum: ['all', 'transferred', 'pending'],
-    default: 'pending',
+    default: 'all',
     required: false,
   })
   @IsEnum(['all', 'transferred', 'pending'])
   @IsOptional()
-  status?: string = 'pending';
+  status?: string = 'all';
 
   @ApiProperty({
     description: 'Page number (1-based)',

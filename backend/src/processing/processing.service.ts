@@ -184,8 +184,9 @@ export class ProcessingService {
       mode,
       projectId,
       roleNeededId,
+      roleCatalogId,
       candidateId,
-      status = 'pending',
+      status = 'all',
       page = 1,
       limit = 10,
     } = query;
@@ -215,12 +216,13 @@ export class ProcessingService {
       };
     }
 
-    if (projectId || candidateId || roleNeededId) {
+    if (projectId || candidateId || roleNeededId || roleCatalogId) {
       where.candidateProjectMap = {
         ...where.candidateProjectMap,
         ...(projectId && { projectId }),
         ...(candidateId && { candidateId }),
         ...(roleNeededId && { roleNeededId }),
+        ...(roleCatalogId && { roleNeeded: { roleCatalogId } }),
       };
     }
 
@@ -298,6 +300,14 @@ export class ProcessingService {
                 select: {
                   id: true,
                   designation: true,
+                  roleCatalogId: true,
+                  roleCatalog: {
+                    select: {
+                      id: true,
+                      name: true,
+                      label: true,
+                    },
+                  },
                 },
               },
               recruiter: {
@@ -761,6 +771,30 @@ export class ProcessingService {
       processingCandidate: undefined,
     }));
 
+    // Attach country flag and combined flag-name for project country
+    if (processingCandidate.project && processingCandidate.project.country) {
+      const country = processingCandidate.project.country as any;
+      const flag = this.getCountryFlagEmoji(country.code);
+      processingCandidate.project.country = {
+        ...country,
+        flag,
+        flagName: flag ? `${flag} ${country.name}` : country.name,
+      };
+    }
+
     return { ...processingCandidate, history: mappedHistory };
+  }
+
+  private getCountryFlagEmoji(code?: string): string | null {
+    if (!code) return null;
+    const cc = code.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return null; // only support ISO alpha-2
+    try {
+      return Array.from(cc)
+        .map((c) => String.fromCodePoint(127397 + c.charCodeAt(0)))
+        .join('');
+    } catch (err) {
+      return null;
+    }
   }
 }

@@ -85,7 +85,7 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
               <h3 className="text-sm font-black text-slate-900 truncate">{project.title}</h3>
               {project.country && (
                 <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                  <Globe className="h-3 w-3" /> {project.country}
+                  <Globe className="h-3 w-3" /> {typeof project.country === 'object' ? project.country.name : project.country}
                 </p>
               )}
             </div>

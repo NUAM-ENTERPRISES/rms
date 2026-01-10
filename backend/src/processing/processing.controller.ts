@@ -43,7 +43,8 @@ export class ProcessingController {
   @ApiQuery({ name: 'search', required: false, description: 'Search by candidate name or project title' })
   @ApiQuery({ name: 'projectId', required: false })
   @ApiQuery({ name: 'roleNeededId', required: false })
-  @ApiQuery({ name: 'status', required: false, enum: ['all', 'transferred', 'pending'], description: 'Filter by transfer status' })
+  @ApiQuery({ name: 'roleCatalogId', required: false })
+  @ApiQuery({ name: 'status', required: false, enum: ['all', 'transferred', 'pending'], description: 'Filter by transfer status', example: 'all' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiResponse({
