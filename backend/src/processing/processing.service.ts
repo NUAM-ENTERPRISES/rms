@@ -710,7 +710,42 @@ export class ProcessingService {
             id: true,
             title: true,
             description: true,
+            deadline: true,
+            requiredScreening: true,
+            status: true,
+            createdBy: true,
+            teamId: true,
+            createdAt: true,
+            updatedAt: true,
+            priority: true,
+            countryCode: true,
+            projectType: true,
+            resumeEditable: true,
+            groomingRequired: true,
+            hideContactInfo: true,
             country: true,
+            client: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                type: true,
+              },
+            },
+            team: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            creator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
         },
         role: {
@@ -780,6 +815,13 @@ export class ProcessingService {
         flag,
         flagName: flag ? `${flag} ${country.name}` : country.name,
       };
+    }
+
+    // Add role requirements to project object for convenience
+    if (processingCandidate.project && processingCandidate.role) {
+      (processingCandidate.project as any).minAge = processingCandidate.role.minAge;
+      (processingCandidate.project as any).maxAge = processingCandidate.role.maxAge;
+      (processingCandidate.project as any).genderRequirement = (processingCandidate.role as any).genderRequirement;
     }
 
     return { ...processingCandidate, history: mappedHistory };

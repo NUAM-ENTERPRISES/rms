@@ -80,42 +80,42 @@ export default function ProcessingCandidateDetailsPage() {
 
         {/* Main Content Grid - More Compact */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-12">
-          {/* Left Column - Steps & Info (8 cols) */}
+          {/* Left Column - Steps, Project Details (8 cols) */}
           <div className="lg:col-span-8 space-y-4">
-            {/* Processing Steps - Main Focus */}
+            {/* Processing Steps - Taller */}
             <ProcessingStepsCard
               steps={[]}
-              maxHeight="400px"
+              maxHeight="450px"
             />
 
-            {/* Two column grid for Candidate & Project Info */}
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-              <CandidateInfoCard candidate={data.candidate} />
-              <ProjectInfoCard
-                project={data.project}
-                role={data.role}
-                mainStatus={data.candidateProjectMap?.mainStatus}
-                subStatus={data.candidateProjectMap?.subStatus}
-              />
-            </div>
+            {/* Project Info Card - Below Steps */}
+            <ProjectInfoCard
+              project={data.project}
+              role={data.role}
+              mainStatus={data.candidateProjectMap?.mainStatus}
+              subStatus={data.candidateProjectMap?.subStatus}
+            />
           </div>
 
-          {/* Right Column - Assignment, Documents, Actions (4 cols) */}
+          {/* Right Column - Assignment, Candidate, Documents, History (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
-            {/* Assignment Info */}
+            {/* Assignment Info - Top of right column */}
             <AssignmentCard
               assignedTo={data.assignedTo}
               recruiter={data.candidateProjectMap?.recruiter}
               processingStatus={data.processingStatus}
             />
 
-            {/* Document Verifications */}
+            {/* Candidate Info Card - second */}
+            <CandidateInfoCard candidate={data.candidate} />
+
+            {/* Document Verifications - third */}
             <DocumentVerificationCard
               verifications={data.candidateProjectMap?.documentVerifications || []}
               maxHeight="280px"
             />
 
-            {/* History Modal Button + Quick Notes */}
+            {/* History Modal Button + Quick Notes - last */}
             <div className="flex gap-3">
               <ProcessingHistoryModal history={data.history || []} />
               

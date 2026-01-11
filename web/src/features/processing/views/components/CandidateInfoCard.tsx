@@ -25,6 +25,11 @@ interface CandidateInfoCardProps {
     currentRole?: string | null;
     highestEducation?: string | null;
     university?: string | null;
+    referralCompanyName?: string | null;
+    referralCountryCode?: string | null;
+    referralEmail?: string | null;
+    referralPhone?: string | null;
+    referralDescription?: string | null;
     qualifications?: Array<{
       id: string;
       university?: string;
@@ -52,6 +57,34 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
+        {/* Referral Quick View - shows at top for fast access */}
+        {candidate.source === 'referral' && (
+          <div className="p-3 rounded-lg bg-amber-50 border-l-4 border-amber-400">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase text-amber-700">Referral</p>
+                <p className="text-sm font-bold text-amber-900 truncate">{candidate.referralCompanyName || 'N/A'}</p>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-600 font-medium">Email:</span>
+                    <span className="text-sm font-semibold text-amber-900 break-all">{candidate.referralEmail || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-600 font-medium">Phone:</span>
+                    <span className="text-sm font-semibold text-amber-900">{candidate.referralCountryCode || ''} {candidate.referralPhone || 'N/A'}</span>
+                  </div>
+                  {candidate.referralDescription && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-[11px] text-slate-600">Note:</span>
+                      <span className="text-xs text-slate-600">{candidate.referralDescription}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Personal Details Grid - Compact */}
         <div className="grid grid-cols-2 gap-2">
           <InfoItem icon={<Calendar className="h-3 w-3" />} label="Age" value={candidate.dateOfBirth ? `${calculateAge(candidate.dateOfBirth)}y` : "N/A"} />
