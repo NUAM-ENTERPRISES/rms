@@ -211,6 +211,7 @@ export class InterviewsService {
       status,
       projectId,
       roleNeededId,
+      roleCatalogId,
       candidateId,
       page = 1,
       limit = 10,
@@ -241,12 +242,19 @@ export class InterviewsService {
       }
     }
 
-    if (projectId || candidateId || roleNeededId) {
-      where.candidateProjectMap = {
-        ...(projectId && { projectId }),
-        ...(candidateId && { candidateId }),
-        ...(roleNeededId && { roleNeededId }),
-      };
+    // Build candidateProjectMap filters. If roleCatalogId is provided prefer that
+    // and filter via the roleNeeded relation; otherwise allow roleNeededId.
+    if (projectId || candidateId || roleNeededId || roleCatalogId) {
+      where.candidateProjectMap = {};
+      if (projectId) where.candidateProjectMap.projectId = projectId;
+      if (candidateId) where.candidateProjectMap.candidateId = candidateId;
+
+      if (roleCatalogId) {
+        // Filter by the RoleCatalog on the related RoleNeeded record
+        where.candidateProjectMap.roleNeeded = { is: { roleCatalogId } };
+      } else if (roleNeededId) {
+        where.candidateProjectMap.roleNeededId = roleNeededId;
+      }
     }
 
     // Search functionality
@@ -427,7 +435,7 @@ export class InterviewsService {
    * Supports pagination, search, roleNeeded filter, date range and other optional filters.
    */
   async getUpcomingInterviews(query: QueryUpcomingInterviewsDto) {
-    const { page = 1, limit = 10, projectId, candidateId, recruiterId, search, roleNeeded, startDate, endDate } = query as any;
+    const { page = 1, limit = 10, projectId, candidateId, recruiterId, search, roleNeeded, roleCatalogId, startDate, endDate } = query as any;
 
     const where: any = {};
 
@@ -443,7 +451,10 @@ export class InterviewsService {
     if (candidateId) where.candidateProjectMap.is.candidateId = candidateId;
     if (recruiterId) where.candidateProjectMap.is.recruiterId = recruiterId;
 
-    if (roleNeeded) {
+    // If a roleCatalogId is provided, filter by the linked RoleCatalog on the RoleNeeded record.
+    if (roleCatalogId) {
+      where.candidateProjectMap.is.roleNeeded = { is: { roleCatalogId } };
+    } else if (roleNeeded) {
       // allow roleNeeded to be an id or a text to match designation
       where.candidateProjectMap.is.OR = [
         { roleNeededId: roleNeeded },

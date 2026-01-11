@@ -73,7 +73,7 @@ export default function UpcomingInterviewsListPage() {
   const [filters, setFilters] = useState({ 
     search: "",
     projectId: "",
-    roleNeededId: ""
+    roleCatalogId: ""
   });
   const [projectSearch, setProjectSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -88,7 +88,7 @@ export default function UpcomingInterviewsListPage() {
     limit: 15,
     search: filters.search || undefined,
     projectId: filters.projectId || undefined,
-    roleNeededId: filters.roleNeededId || undefined,
+    roleCatalogId: filters.roleCatalogId || undefined,
   });
 
   const { data: projectsData } = useGetProjectsQuery({ 
@@ -197,7 +197,7 @@ export default function UpcomingInterviewsListPage() {
             <Select
               value={filters.projectId || "all_projects"}
               onValueChange={(val) => {
-                setFilters(p => ({ ...p, projectId: val === "all_projects" ? "" : val, roleNeededId: "" }));
+                setFilters(p => ({ ...p, projectId: val === "all_projects" ? "" : val, roleCatalogId: "" }));
                 setProjectSearch("");
               }}
             >
@@ -222,8 +222,8 @@ export default function UpcomingInterviewsListPage() {
 
             {filters.projectId && (
               <Select
-                value={filters.roleNeededId || "all_roles"}
-                onValueChange={(val) => setFilters(p => ({ ...p, roleNeededId: val === "all_roles" ? "" : val }))}
+                value={filters.roleCatalogId || "all_roles"}
+                onValueChange={(val) => setFilters(p => ({ ...p, roleCatalogId: val === "all_roles" ? "" : val }))}
               >
                 <SelectTrigger className="w-[200px] text-sm h-10">
                   <SelectValue placeholder="All Roles" />
@@ -231,18 +231,18 @@ export default function UpcomingInterviewsListPage() {
                 <SelectContent>
                   <SelectItem value="all_roles">All Roles</SelectItem>
                   {roles.map(r => (
-                    <SelectItem key={r.id} value={r.id!}>{r.designation}</SelectItem>
+                    <SelectItem key={r.id} value={r.roleCatalogId!}>{r.designation}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
 
-            {(filters.search || filters.projectId || filters.roleNeededId) && (
+            {(filters.search || filters.projectId || filters.roleCatalogId) && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
-                onClick={() => setFilters({ search: "", projectId: "", roleNeededId: "" })}
+                onClick={() => setFilters({ search: "", projectId: "", roleCatalogId: "" })}
               >
                 <X className="h-4 w-4 mr-2" />
                 Clear

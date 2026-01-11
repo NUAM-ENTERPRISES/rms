@@ -28,7 +28,9 @@ import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
+import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { PERMISSIONS } from '../common/constants/permissions';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -82,6 +84,32 @@ export class DocumentsController {
       success: true,
       data: result,
       message: 'Offer letter uploaded successfully',
+    };
+  }
+
+  @Post('verify-offer-letter')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Verify an offer letter and move to processing',
+    description:
+      'Verify an offer letter document, update status to processing_in_progress and set processing step to HRD. Only for processing users.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Offer letter verified and candidate moved to processing',
+  })
+  async verifyOfferLetter(
+    @Body() verifyDto: VerifyOfferLetterDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.verifyOfferLetter(
+      verifyDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Offer letter verified and candidate moved to processing',
     };
   }
 

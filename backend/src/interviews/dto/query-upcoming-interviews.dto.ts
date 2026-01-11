@@ -37,10 +37,15 @@ export class QueryUpcomingInterviewsDto {
   @IsString()
   recruiterId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by role catalog ID' })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
+
   @ApiPropertyOptional({ description: 'Filter by role needed (id or designation text)' })
   @IsOptional()
   @IsString()
-  roleNeeded?: string;
+  roleNeeded?: string; 
 
   @ApiPropertyOptional({ description: 'Start date (inclusive) ISO format e.g. 2025-01-01T00:00:00.000Z' })
   @IsOptional()

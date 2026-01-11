@@ -35,7 +35,7 @@ interface SingleTransferToProcessingModalProps {
   candidateName: string;
   recruiterName?: string;
   projectId: string;
-  roleNeededId: string;
+  roleCatalogId: string;
   isAlreadyUploaded?: boolean;
   existingFileUrl?: string;
   onSuccess?: () => void;
@@ -48,7 +48,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
   candidateName,
   recruiterName,
   projectId,
-  roleNeededId,
+  roleCatalogId,
   isAlreadyUploaded = false,
   existingFileUrl = "",
   onSuccess,
@@ -80,12 +80,11 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
   );
 
   const selectedRole = useMemo(() => {
-    if (!selectedProject?.rolesNeeded || !roleNeededId) return null;
-    return selectedProject.rolesNeeded.find((r: any) => r.id === roleNeededId);
-  }, [selectedProject, roleNeededId]);
+    if (!selectedProject?.rolesNeeded || !roleCatalogId) return null;
+    return selectedProject.rolesNeeded.find((r: any) => (r.roleCatalogId || r.roleCatalog?.id) === roleCatalogId);
+  }, [selectedProject, roleCatalogId]);
 
   const roleDesignation = selectedRole?.designation || "Unknown Role";
-  const roleCatalogId = selectedRole?.roleCatalogId || selectedRole?.roleCatalog?.id || "";
 
   const { users, isLoading: isLoadingUsers } = useUsersLookup();
   const [transfer, { isLoading: isTransferring }] = useTransferToProcessingMutation();
@@ -104,7 +103,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
       await transfer({
         candidateIds: [candidateId],
         projectId,
-        roleNeededId,
+        roleCatalogId,
         assignedProcessingTeamUserId,
         notes,
       }).unwrap();
@@ -218,7 +217,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
           <Button variant="outline" onClick={onClose} disabled={isTransferring}>
             Cancel
           </Button>
-          <Button onClick={handleTransfer} disabled={isTransferring || !assignedProcessingTeamUserId || !projectId || !roleNeededId}>
+          <Button onClick={handleTransfer} disabled={isTransferring || !assignedProcessingTeamUserId || !projectId || !roleCatalogId}>
             {isTransferring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Transfer Candidate
           </Button>
@@ -232,7 +231,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
         candidateName={candidateName}
         projectId={projectId}
         projectTitle={selectedProject?.title || "Project"}
-        roleCatalogId={roleCatalogId || roleNeededId}
+        roleCatalogId={roleCatalogId}
         roleDesignation={roleDesignation}
         isAlreadyUploaded={isAlreadyUploaded || !!localOfferLetter}
         existingFileUrl={localOfferLetter || existingFileUrl}

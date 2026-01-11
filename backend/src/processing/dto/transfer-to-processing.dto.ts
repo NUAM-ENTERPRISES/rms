@@ -20,12 +20,22 @@ export class TransferToProcessingDto {
   projectId: string;
 
   @ApiProperty({
-    description: 'The specific role ID within the project',
-    example: 'role_456',
+    description: 'The roleCatalog ID to identify the role (preferred)',
+    example: 'roleCatalog_789',
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
-  roleNeededId: string;
+  @IsOptional()
+  roleCatalogId?: string;
+
+  @ApiProperty({
+    description: 'The specific role ID within the project (optional, deprecated - use roleCatalogId)',
+    example: 'role_456',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  roleNeededId?: string;
 
   @ApiProperty({
     description: 'The user ID of the processing team member being assigned',

@@ -1433,6 +1433,7 @@ model ProcessingCandidate {
   roleNeededId                 String
   assignedProcessingTeamUserId String?
   processingStatus             String   @default("assigned") // assigned, in_progress, completed, cancelled
+  step                         String?
   notes                        String?
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
@@ -1458,6 +1459,7 @@ model ProcessingHistory {
   id                    String   @id @default(cuid())
   processingCandidateId String
   status                String
+  step                  String?
   changedById           String?
   recruiterId           String?
   notes                 String?

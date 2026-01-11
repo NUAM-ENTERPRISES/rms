@@ -12,6 +12,7 @@ import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
+import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import {
   DocumentWithRelations,
   PaginatedDocuments,
@@ -1075,6 +1076,196 @@ export class DocumentsService {
 
     // Update candidate project status
     await this.updateCandidateProjectStatus(candidateProjectMap.id);
+
+    return result;
+  }
+
+  /**
+   * Verify an offer letter and move candidate to processing stage
+   */
+  async verifyOfferLetter(
+    verifyDto: VerifyOfferLetterDto,
+    userId: string,
+  ): Promise<any> {
+    const { documentId, candidateProjectMapId, notes } = verifyDto;
+
+    // 1. Validate document exists
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+    });
+    if (!document) {
+      throw new NotFoundException(`Document with ID ${documentId} not found`);
+    }
+
+    // 2. Validate candidateProjectMap exists
+    const candidateProjectMap = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      include: {
+        candidate: true,
+        project: true,
+      },
+    });
+    if (!candidateProjectMap) {
+      throw new NotFoundException(
+        `Candidate project mapping with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    // 3. Verify document belongs to candidate
+    if (document.candidateId !== candidateProjectMap.candidateId) {
+      throw new BadRequestException(
+        'Document does not belong to this candidate',
+      );
+    }
+
+    // 3.1. Verify document is an offer letter
+    if (document.docType !== DOCUMENT_TYPE.OFFER_LETTER) {
+      throw new BadRequestException('Document is not an offer letter');
+    }
+
+    // 4. Get statuses for update
+    const [processingMain, processingInProgressSub] = await Promise.all([
+      this.prisma.candidateProjectMainStatus.findUnique({
+        where: { name: 'processing' },
+      }),
+      this.prisma.candidateProjectSubStatus.findUnique({
+        where: { name: 'processing_in_progress' },
+      }),
+    ]);
+
+    if (!processingMain || !processingInProgressSub) {
+      throw new BadRequestException(
+        'Processing status not found. Please seed the DB.',
+      );
+    }
+
+    // 5. Get user details for history
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    // 6. Check if verification record exists
+    const verification =
+      await this.prisma.candidateProjectDocumentVerification.findUnique({
+        where: {
+          candidateProjectMapId_documentId: {
+            candidateProjectMapId,
+            documentId,
+          },
+        },
+      });
+
+    // 7. Transaction to update everything
+    const result = await this.prisma.$transaction(async (tx) => {
+      // a. Update Document status
+      await tx.document.update({
+        where: { id: documentId },
+        data: {
+          status: DOCUMENT_STATUS.VERIFIED,
+          verifiedAt: new Date(),
+          verifiedBy: userId,
+        },
+      });
+
+      // b. Update/Create CandidateProjectDocumentVerification status
+      let updatedVerification;
+      if (verification) {
+        updatedVerification =
+          await tx.candidateProjectDocumentVerification.update({
+            where: { id: verification.id },
+            data: {
+              status: DOCUMENT_STATUS.VERIFIED,
+              notes: notes || 'Offer letter verified by processing user',
+              isDeleted: false,
+              deletedAt: null,
+            } as any,
+          });
+      } else {
+        updatedVerification =
+          await tx.candidateProjectDocumentVerification.create({
+            data: {
+              candidateProjectMapId,
+              documentId,
+              status: DOCUMENT_STATUS.VERIFIED,
+              notes: notes || 'Offer letter verified by processing user',
+            },
+          });
+      }
+
+      // c. Create DocumentVerificationHistory
+      await tx.documentVerificationHistory.create({
+        data: {
+          verificationId: updatedVerification.id,
+          action: DOCUMENT_STATUS.VERIFIED,
+          performedBy: userId,
+          performedByName: user?.name || null,
+          notes: notes || 'Offer letter verified',
+        },
+      });
+
+      // d. Update CandidateProject status
+      await tx.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          mainStatusId: processingMain.id,
+          subStatusId: processingInProgressSub.id,
+        },
+      });
+
+      // e. Create CandidateProjectStatusHistory
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId,
+          changedById: userId,
+          changedByName: user?.name || null,
+          mainStatusId: processingMain.id,
+          subStatusId: processingInProgressSub.id,
+          mainStatusSnapshot: processingMain.label,
+          subStatusSnapshot: processingInProgressSub.label,
+          reason: 'Offer letter verified, moved to processing',
+          notes: `Offer letter verified. Candidate moved to processing stage. Step set to HRD.`,
+        },
+      });
+
+      // f. Update ProcessingCandidate step
+      const processingCandidate = await tx.processingCandidate.findFirst({
+        where: {
+          candidateId: candidateProjectMap.candidateId,
+          projectId: candidateProjectMap.projectId,
+          roleNeededId: candidateProjectMap.roleNeededId || undefined,
+        },
+      });
+
+      if (processingCandidate) {
+        await tx.processingCandidate.update({
+          where: { id: processingCandidate.id },
+          data: {
+            step: 'hrd',
+            processingStatus: 'in_progress',
+          },
+        });
+
+        // Add to processing history
+        await tx.processingHistory.create({
+          data: {
+            processingCandidateId: processingCandidate.id,
+            status: 'in_progress',
+            step: 'hrd',
+            changedById: userId,
+            recruiterId: candidateProjectMap.recruiterId,
+            notes: 'Offer letter verified. Step set to HRD.',
+          },
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Offer letter verified and status updated to processing',
+        documentId,
+        candidateProjectMapId,
+      };
+    });
 
     return result;
   }

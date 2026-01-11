@@ -15,12 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { History, Calendar, User } from "lucide-react";
+import { History, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 interface HistoryItem {
   id: string;
   status: string;
+  step?: string;
   notes?: string;
   createdAt: string;
   changedBy?: {
@@ -62,6 +63,17 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
     return labels[status] || status;
   };
 
+  const formatStepLabel = (step?: string) => {
+    if (!step) return "";
+    const map: Record<string, string> = {
+      verify_offer_letter: "Verify Offer Letter",
+      offer_letter: "Offer Letter",
+      hrd: "HRD",
+    };
+    if (map[step]) return map[step];
+    return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -99,15 +111,18 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[50px]">
                     #
                   </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[180px]">
                     Status
+                  </TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
+                    Step
                   </TableHead>
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider min-w-[300px]">
                     Notes
                   </TableHead>
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">
                     Changed By
-                  </TableHead>
+                  </TableHead> 
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">
                     Recruiter
                   </TableHead>
@@ -141,15 +156,39 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
                         </Badge>
                       </TableCell>
                       <TableCell className="min-w-[300px]">
-                        <p className="text-sm text-slate-700 break-words">
-                          {item.notes || "—"}
-                        </p>
+                        {item.step ? (
+                          <Badge className="uppercase tracking-wider text-[10px] font-black border-0 bg-rose-50 text-rose-700">
+                            {formatStepLabel(item.step)}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-slate-400">—</span>
+                        )}
                       </TableCell>
+
+                      <TableCell className="min-w-[300px]">
+                        {item.notes ? (
+                          <div
+                            title={item.notes}
+                            className="text-sm text-slate-700 break-words"
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: 10,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {item.notes}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-400">—</span>
+                        )}
+                      </TableCell>
+
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center text-xs font-bold text-amber-700 border border-amber-100">
                             {changedByName[0]}
-                          </div>
+                          </div> 
                           <div>
                             <p className="text-sm font-bold text-slate-700">{changedByName}</p>
                             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">Executor</p>

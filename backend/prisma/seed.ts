@@ -135,6 +135,11 @@ const roles = [
       'read:interviews',
       'schedule:interviews',
       'write:interviews',
+      'read:documents',
+      'write:documents',
+      'verify:documents',
+      'manage:documents',
+      'request:resubmission',
     ],
   },
   {

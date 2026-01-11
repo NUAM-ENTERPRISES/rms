@@ -1,8 +1,11 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { useState, useMemo } from "react";
 import { useGetCandidateProcessingDetailsQuery } from "@/features/processing/data/processing.endpoints";
+import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   ProcessingCandidateHeader,
   CandidateInfoCard,
@@ -11,16 +14,50 @@ import {
   ProcessingStepsCard,
   ProcessingHistoryModal,
   DocumentVerificationCard,
+  ProcessingOfferLetterModal,
 } from "./components";
+import type { OfferLetterStatus, DocumentVerification } from "./components";
 
 export default function ProcessingCandidateDetailsPage() {
   const { candidateId: processingId } = useParams<{ candidateId: string }>();
   const navigate = useNavigate();
+  const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
 
-  const { data: apiResponse, isLoading, error } = useGetCandidateProcessingDetailsQuery(processingId || "", {
+  const { data: apiResponse, isLoading, error, refetch } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
   });
+  const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
+
+  // Extract offer letter status from document verifications
+  const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
+    const verifications = data?.candidateProjectMap?.documentVerifications || [];
+    const offerLetterDoc = verifications.find(
+      (v: DocumentVerification) => v.document?.docType === "offer_letter"
+    );
+
+    if (!offerLetterDoc) {
+      return {
+        offerLetterStatus: {
+          hasOfferLetter: false,
+          status: "not_uploaded" as const,
+        } as OfferLetterStatus,
+        offerLetterVerification: null,
+      };
+    }
+
+    return {
+      offerLetterStatus: {
+        hasOfferLetter: true,
+        status: offerLetterDoc.document?.status || "pending",
+        documentId: offerLetterDoc.document?.id,
+        verificationId: offerLetterDoc.id,
+        fileUrl: offerLetterDoc.document?.fileUrl,
+        fileName: offerLetterDoc.document?.fileName,
+      } as OfferLetterStatus,
+      offerLetterVerification: offerLetterDoc,
+    };
+  }, [data?.candidateProjectMap?.documentVerifications]);
 
   if (isLoading) {
     return (
@@ -86,6 +123,8 @@ export default function ProcessingCandidateDetailsPage() {
             <ProcessingStepsCard
               steps={[]}
               maxHeight="450px"
+              offerLetterStatus={offerLetterStatus}
+              onOfferLetterClick={() => setShowOfferLetterModal(true)}
             />
 
             {/* Project Info Card - Below Steps */}
@@ -133,6 +172,38 @@ export default function ProcessingCandidateDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Offer Letter Verification Modal */}
+      <ProcessingOfferLetterModal
+        isOpen={showOfferLetterModal}
+        onClose={() => {
+          setShowOfferLetterModal(false);
+          refetch(); // Refresh data when modal closes to show updated document
+        }}
+        candidateId={data.candidate?.id || ""}
+        candidateName={`${data.candidate?.firstName || ""} ${data.candidate?.lastName || ""}`.trim()}
+        projectId={data.project?.id || ""}
+        projectTitle={data.project?.title || ""}
+        roleCatalogId={data.role?.roleCatalogId || ""}
+        roleDesignation={data.role?.designation || ""}
+        documentVerification={offerLetterVerification}
+        isVerifying={isVerifying}
+        onVerify={async (verifyData) => {
+          try {
+            await verifyOfferLetter({
+              ...verifyData,
+              notes: verifyData.notes || "Offer letter verified by processing team"
+            }).unwrap();
+            
+            toast.success("Offer letter verified successfully");
+            await refetch();
+          } catch (error: any) {
+            console.error("Verification error:", error);
+            toast.error(error?.data?.message || "Failed to verify offer letter");
+            throw error;
+          }
+        }}
+      />
     </div>
   );
 }

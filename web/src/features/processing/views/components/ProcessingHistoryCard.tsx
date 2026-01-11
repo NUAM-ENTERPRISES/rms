@@ -1,12 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { History, Clock, Calendar, User } from "lucide-react";
+import { History, Clock, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 interface HistoryItem {
   id: string;
-  status: string;
-  notes?: string;
+  status: string;  step?: string;  notes?: string;
   createdAt: string;
   changedBy?: {
     id?: string;
@@ -41,6 +40,17 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
       cancelled: "Cancelled",
     };
     return labels[status] || status;
+  };
+
+  const formatStepLabel = (step?: string) => {
+    if (!step) return "";
+    const map: Record<string, string> = {
+      verify_offer_letter: "Verify Offer Letter",
+      offer_letter: "Offer Letter",
+      hrd: "HRD",
+    };
+    if (map[step]) return map[step];
+    return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   return (
@@ -95,24 +105,43 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-                      <Badge
-                        className={`w-fit uppercase tracking-wider text-[10px] font-black border ${getStatusBadge(item.status)}`}
-                      >
-                        {displayStatus(item.status)}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={`w-fit uppercase tracking-wider text-[10px] font-black border ${getStatusBadge(item.status)}`}
+                        >
+                          {displayStatus(item.status)}
+                        </Badge>
+                        {item.step && (
+                          <Badge className="w-fit bg-rose-50 text-rose-700 text-[10px] font-bold border-0">
+                            {formatStepLabel(item.step)}
+                          </Badge>
+                        )}
+                      </div>
+
                       <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5" />
                         {format(new Date(item.createdAt), "MMM d, yyyy • h:mm a")}
                       </span>
                     </div>
 
-                    <p
-                      className={`text-sm font-semibold ${
-                        isLatest ? "text-slate-800" : "text-slate-600"
-                      }`}
-                    >
-                      {item.notes || "Status updated"}
-                    </p>
+                    {item.notes ? (
+                      <p
+                        title={item.notes}
+                        className={`text-sm font-semibold ${isLatest ? "text-slate-800" : "text-slate-600"}`}
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 10,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {item.notes}
+                      </p>
+                    ) : (
+                      <p className={`text-sm font-semibold ${isLatest ? "text-slate-800" : "text-slate-600"}`}>
+                        {formatStepLabel(item.step) || "Status updated"}
+                      </p>
+                    )}
 
                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200/50">
                       <div

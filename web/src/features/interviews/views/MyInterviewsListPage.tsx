@@ -57,7 +57,7 @@ export default function MyInterviewsListPage() {
     search: searchParams.get("search") || "", 
     status: searchParams.get("status") || "all",
     projectId: searchParams.get("projectId") || "all",
-    roleNeededId: searchParams.get("roleNeededId") || "all"
+    roleCatalogId: searchParams.get("roleCatalogId") || "all"
   });
   const [projectSearch, setProjectSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export default function MyInterviewsListPage() {
       search: searchParams.get("search") || "",
       status: searchParams.get("status") || "all",
       projectId: searchParams.get("projectId") || "all",
-      roleNeededId: searchParams.get("roleNeededId") || "all"
+      roleCatalogId: searchParams.get("roleCatalogId") || "all"
     });
   }, [searchParams]);
 
@@ -96,7 +96,7 @@ export default function MyInterviewsListPage() {
     search: filters.search || undefined,
     status: filters.status !== "all" ? filters.status : undefined,
     projectId: filters.projectId !== "all" ? filters.projectId : undefined,
-    roleNeededId: filters.roleNeededId !== "all" ? filters.roleNeededId : undefined,
+    roleCatalogId: filters.roleCatalogId !== "all" ? filters.roleCatalogId : undefined,
     type: searchParams.get("type") || undefined,
     mode: searchParams.get("mode") || undefined,
     page: 1,
@@ -266,10 +266,10 @@ export default function MyInterviewsListPage() {
                 const np = new URLSearchParams(searchParams);
                 if (val === "all") {
                   np.delete("projectId");
-                  np.delete("roleNeededId");
+                  np.delete("roleCatalogId");
                 } else {
                   np.set("projectId", val);
-                  np.delete("roleNeededId");
+                  np.delete("roleCatalogId");
                 }
                 // clear inline project search when selection is made
                 setProjectSearch("");
@@ -297,12 +297,12 @@ export default function MyInterviewsListPage() {
             </Select>
 
             <Select 
-              value={filters.roleNeededId} 
+              value={filters.roleCatalogId} 
               disabled={filters.projectId === "all"}
               onValueChange={(val) => {
                 const np = new URLSearchParams(searchParams);
-                if (val === "all") np.delete("roleNeededId");
-                else np.set("roleNeededId", val);
+                if (val === "all") np.delete("roleCatalogId");
+                else np.set("roleCatalogId", val);
                 setSearchParams(np);
               }}
             >
@@ -312,12 +312,12 @@ export default function MyInterviewsListPage() {
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 {selectedProject?.rolesNeeded?.map(r => (
-                  <SelectItem key={r.id} value={r.id}>{r.designation}</SelectItem>
+                  <SelectItem key={r.id} value={r.roleCatalogId!}>{r.designation}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            {(filters.search || filters.status !== "all" || filters.projectId !== "all" || filters.roleNeededId !== "all") && (
+            {(filters.search || filters.status !== "all" || filters.projectId !== "all" || filters.roleCatalogId !== "all") && (
               <Button variant="ghost" size="sm" onClick={() => {
                 setSearchParams(new URLSearchParams());
               }}>

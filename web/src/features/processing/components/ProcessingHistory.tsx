@@ -11,18 +11,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface ProcessingHistoryProps {
   candidateId: string;
   projectId: string;
-  roleNeededId: string;
+  roleCatalogId: string;
 }
 
 export const ProcessingHistory: React.FC<ProcessingHistoryProps> = ({
   candidateId,
   projectId,
-  roleNeededId,
+  roleCatalogId,
 }) => {
   const { data, isLoading, error } = useGetCandidateHistoryQuery({
     candidateId,
     projectId,
-    roleNeededId,
+    roleCatalogId,
   });
 
   if (isLoading) {

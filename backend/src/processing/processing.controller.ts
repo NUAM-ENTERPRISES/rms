@@ -99,7 +99,7 @@ export class ProcessingController {
     };
   }
 
-  @Get('candidate-history/:candidateId/:projectId/:roleNeededId')
+  @Get('candidate-history/:candidateId/:projectId/:roleCatalogId')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({
     summary: 'Get processing history for a specific candidate nomination',
@@ -107,7 +107,7 @@ export class ProcessingController {
   })
   @ApiParam({ name: 'candidateId', type: 'string' })
   @ApiParam({ name: 'projectId', type: 'string' })
-  @ApiParam({ name: 'roleNeededId', type: 'string' })
+  @ApiParam({ name: 'roleCatalogId', type: 'string' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Processing history retrieved successfully',
@@ -115,12 +115,12 @@ export class ProcessingController {
   async getProcessingHistory(
     @Param('candidateId') candidateId: string,
     @Param('projectId') projectId: string,
-    @Param('roleNeededId') roleNeededId: string,
+    @Param('roleCatalogId') roleCatalogId: string,
   ) {
     const data = await this.processingService.getProcessingHistory(
       candidateId,
       projectId,
-      roleNeededId,
+      roleCatalogId,
     );
     return {
       success: true,

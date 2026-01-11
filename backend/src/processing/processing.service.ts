@@ -15,9 +15,9 @@ export class ProcessingService {
    * Transfer candidates to the processing team
    */
   async transferToProcessing(dto: TransferToProcessingDto, userId: string) {
-    const { candidateIds, projectId, roleNeededId, assignedProcessingTeamUserId, notes } = dto;
+    const { candidateIds, projectId, roleNeededId, roleCatalogId, assignedProcessingTeamUserId, notes } = dto;
 
-    // 1. Verify project and role exist
+    // 1. Verify project exists
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
     });
@@ -26,12 +26,29 @@ export class ProcessingService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
-    const roleNeeded = await this.prisma.roleNeeded.findUnique({
-      where: { id: roleNeededId },
-    });
+    // Resolve RoleNeeded:
+    // - If roleCatalogId is provided, find the RoleNeeded entry for this project that references that roleCatalog
+    // - Otherwise, fall back to roleNeededId (if provided)
+    let roleNeeded = null as any;
 
-    if (!roleNeeded) {
-      throw new NotFoundException(`Role requirement with ID ${roleNeededId} not found`);
+    if (roleCatalogId) {
+      roleNeeded = await this.prisma.roleNeeded.findFirst({
+        where: { projectId, roleCatalogId },
+      });
+
+      if (!roleNeeded) {
+        throw new NotFoundException(`Role requirement for project ${projectId} with roleCatalogId ${roleCatalogId} not found`);
+      }
+    } else if (roleNeededId) {
+      roleNeeded = await this.prisma.roleNeeded.findUnique({
+        where: { id: roleNeededId },
+      });
+
+      if (!roleNeeded) {
+        throw new NotFoundException(`Role requirement with ID ${roleNeededId} not found`);
+      }
+    } else {
+      throw new BadRequestException('Either roleCatalogId or roleNeededId must be provided');
     }
 
     // 2. Verify processing user exists
@@ -67,7 +84,7 @@ export class ProcessingService {
             candidateId_projectId_roleNeededId: {
               candidateId,
               projectId,
-              roleNeededId,
+              roleNeededId: roleNeeded.id,
             },
           },
         });
@@ -113,6 +130,7 @@ export class ProcessingService {
           update: {
             assignedProcessingTeamUserId,
             processingStatus: 'assigned',
+            step: 'verify_offer_letter',
             notes,
           },
           create: {
@@ -121,6 +139,7 @@ export class ProcessingService {
             roleNeededId: roleForProcessing,
             assignedProcessingTeamUserId,
             processingStatus: 'assigned',
+            step: 'verify_offer_letter',
             notes,
           },
         });
@@ -130,6 +149,7 @@ export class ProcessingService {
           data: {
             processingCandidate: { connect: { id: processingCandidate.id } },
             status: 'assigned',
+            step: 'verify_offer_letter',
             changedBy: userId ? { connect: { id: userId } } : undefined,
             recruiter: candidateProjectMap.recruiterId
               ? { connect: { id: candidateProjectMap.recruiterId } }
@@ -445,16 +465,15 @@ export class ProcessingService {
             select: {
               id: true,
               title: true,
+              country: { select: { code: true, name: true } },
             },
           },
           role: {
-            include: {
-              roleCatalog: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
+            select: {
+              id: true,
+              projectId: true,
+              roleCatalogId: true,
+              designation: true,
             },
           },
           assignedTo: {
@@ -527,8 +546,22 @@ export class ProcessingService {
     });
     counts.all = allCount;
 
+    // Attach country flag and display name for each candidate's project (if present)
+    const candidatesWithCountry = candidates.map((c: any) => {
+      if (c.project && c.project.country) {
+        const country = c.project.country as any;
+        const flag = this.getCountryFlagEmoji(country.code);
+        c.project.country = {
+          ...country,
+          flag,
+          flagName: flag ? `${flag} ${country.name}` : country.name,
+        };
+      }
+      return c;
+    });
+
     return {
-      candidates,
+      candidates: candidatesWithCountry,
       counts,
       pagination: {
         page,
@@ -542,13 +575,22 @@ export class ProcessingService {
   /**
    * Get the processing history for a specific candidate nomination
    */
-  async getProcessingHistory(candidateId: string, projectId: string, roleNeededId: string) {
+  async getProcessingHistory(candidateId: string, projectId: string, roleCatalogId: string) {
+    // Resolve roleNeeded via projectId + roleCatalogId
+    const roleNeeded = await this.prisma.roleNeeded.findFirst({ where: { projectId, roleCatalogId } });
+
+    if (!roleNeeded) {
+      throw new NotFoundException(
+        `No role mapping found for project ${projectId} and roleCatalogId ${roleCatalogId}`,
+      );
+    }
+
     const processingCandidate = await this.prisma.processingCandidate.findUnique({
       where: {
         candidateId_projectId_roleNeededId: {
           candidateId,
           projectId,
-          roleNeededId,
+          roleNeededId: roleNeeded.id,
         },
       },
       include: {
@@ -589,7 +631,7 @@ export class ProcessingService {
 
     if (!processingCandidate) {
       throw new NotFoundException(
-        `No processing record found for candidate ${candidateId} in project ${projectId}`,
+        `No processing record found for candidate ${candidateId} in project ${projectId} for roleCatalogId ${roleCatalogId}`,
       );
     }
 

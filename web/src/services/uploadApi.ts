@@ -13,6 +13,48 @@ interface UploadResponse {
   message: string;
 }
 
+// Offer letter upload returns a richer payload: both the stored document and its verification metadata
+export interface OfferLetterDocument extends UploadResult {
+  id: string;
+  candidateId: string;
+  docType: string;
+  uploadedBy: string;
+  verifiedBy: string | null;
+  status: "pending" | "verified" | "rejected";
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  fileSize: number;
+  mimeType: string;
+  roleCatalogId: string | null;
+  rejectedAt: string | null;
+  rejectedBy: string | null;
+  rejectionReason: string | null;
+  verifiedAt: string | null;
+}
+
+export interface OfferLetterVerification {
+  id: string;
+  candidateProjectMapId: string;
+  documentId: string;
+  roleCatalogId: string;
+  status: "pending" | "verified" | "rejected";
+  notes: string | null;
+  rejectionReason: string | null;
+  resubmissionRequested: boolean;
+}
+
+export interface OfferLetterUploadData {
+  document: OfferLetterDocument;
+  verification: OfferLetterVerification;
+}
+
+interface OfferLetterUploadResponse {
+  success: boolean;
+  data: OfferLetterUploadData;
+  message: string;
+}
+
 export const uploadApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     uploadUserProfileImage: builder.mutation<
@@ -84,7 +126,7 @@ export const uploadApi = baseApi.injectEndpoints({
     }),
 
     uploadOfferLetter: builder.mutation<
-      UploadResponse,
+      OfferLetterUploadResponse,
       {
         candidateId: string;
         file: File;

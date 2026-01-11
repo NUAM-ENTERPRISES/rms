@@ -76,6 +76,8 @@ export interface ProcessingCandidate {
   roleNeededId: string;
   assignedProcessingTeamUserId: string;
   processingStatus: "assigned" | "in_progress" | "completed" | "cancelled";
+  // Optional current step key returned by the list API (e.g., "verify_offer_letter")
+  step?: string;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -103,6 +105,12 @@ export interface ProcessingCandidate {
   project: {
     id: string;
     title: string;
+    country?: {
+      code: string;
+      name: string;
+      flag?: string;
+      flagName?: string;
+    };
   };
   candidateProjectMap?: {
     id: string;

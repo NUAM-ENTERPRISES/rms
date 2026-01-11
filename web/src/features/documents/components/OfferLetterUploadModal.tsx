@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Upload, FileText, Loader2, CheckCircle2, Eye } from "lucide-react";
-import { useUploadOfferLetterMutation, UploadResult } from "@/services/uploadApi";
+import { useUploadOfferLetterMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
@@ -26,7 +26,7 @@ interface OfferLetterUploadModalProps {
   projectTitle: string;
   roleCatalogId: string;
   roleDesignation: string;
-  onSuccess?: (uploadData?: UploadResult) => void,
+  onSuccess?: (uploadData?: any) => void,
   isAlreadyUploaded?: boolean;
   existingFileUrl?: string;
 }
@@ -82,7 +82,9 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
 
       if (response.success) {
         toast.success("Offer letter uploaded successfully");
-        if (onSuccess) onSuccess(response.data);
+        // The offer letter upload returns both the stored document and its verification metadata
+        // Pass the document portion to onSuccess to preserve existing behavior (fileUrl, fileName, etc.)
+        if (onSuccess) onSuccess(response.data?.document);
         onClose();
       }
     } catch (error: any) {

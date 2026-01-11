@@ -340,6 +340,29 @@ export const documentsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Document", "DocumentStats", "DocumentSummary"],
     }),
 
+    verifyOfferLetter: builder.mutation<
+      { success: boolean; data: any; message: string },
+      {
+        documentId: string;
+        candidateProjectMapId: string;
+        notes?: string;
+      }
+    >({
+      query: (verifyData) => ({
+        url: "/documents/verify-offer-letter",
+        method: "POST",
+        body: verifyData,
+      }),
+      invalidatesTags: [
+        "Document",
+        "DocumentStats",
+        "DocumentSummary",
+        "Candidate",
+        "Interview",
+        "ProcessingSummary",
+      ],
+    }),
+
     requestResubmission: builder.mutation<
       { success: boolean; data: DocumentVerification; message: string },
       { documentId: string } & RequestResubmissionRequest
@@ -379,6 +402,7 @@ export const {
   useUpdateDocumentMutation,
   useDeleteDocumentMutation,
   useVerifyDocumentMutation,
+  useVerifyOfferLetterMutation,
   useRequestResubmissionMutation,
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,

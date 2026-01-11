@@ -26,6 +26,8 @@ type Paginated<T> = {
 
 export type ProcessingCandidatesQuery = {
   search?: string;
+  projectId?: string;
+  roleCatalogId?: string;
   status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all";
   page?: number;
   limit?: number;
@@ -66,7 +68,7 @@ export const processingApi = baseApi.injectEndpoints({
           total: number;
         };
       }>,
-      ProcessingCandidatesQuery & { projectId?: string; roleCatalogId?: string }
+      ProcessingCandidatesQuery
     >({
       query: (params) => ({
         url: "/processing/all-candidates",
@@ -140,7 +142,7 @@ export const processingApi = baseApi.injectEndpoints({
       {
         candidateIds: string[];
         projectId: string;
-        roleNeededId: string;
+        roleCatalogId: string;
         assignedProcessingTeamUserId: string;
         notes?: string;
       }
@@ -157,7 +159,7 @@ export const processingApi = baseApi.injectEndpoints({
         id: string;
         candidateId: string;
         projectId: string;
-        roleNeededId: string;
+        roleCatalogId: string;
         processingStatus: string;
         candidate: {
           firstName: string;
@@ -185,13 +187,13 @@ export const processingApi = baseApi.injectEndpoints({
           };
         }>;
       }>,
-      { candidateId: string; projectId: string; roleNeededId: string }
+      { candidateId: string; projectId: string; roleCatalogId: string }
     >({
-      query: ({ candidateId, projectId, roleNeededId }) => ({
-        url: `/processing/candidate-history/${candidateId}/${projectId}/${roleNeededId}`,
+      query: ({ candidateId, projectId, roleCatalogId }) => ({
+        url: `/processing/candidate-history/${candidateId}/${projectId}/${roleCatalogId}`,
       }),
-      providesTags: (_, __, { candidateId, projectId, roleNeededId }) => [
-        { type: "ProcessingHistory", id: `${candidateId}-${projectId}-${roleNeededId}` },
+      providesTags: (_, __, { candidateId, projectId, roleCatalogId }) => [
+        { type: "ProcessingHistory", id: `${candidateId}-${projectId}-${roleCatalogId}` },
       ],
     }),
     getCandidateProcessingDetails: builder.query<

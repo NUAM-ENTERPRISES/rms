@@ -97,7 +97,7 @@ export default function PassedCandidatesPage() {
   const [filters, setFilters] = useState({ 
     search: searchParams.get("search") || "", 
     projectId: searchParams.get("projectId") || "all",
-    roleNeededId: searchParams.get("roleNeededId") || "all",
+    roleCatalogId: searchParams.get("roleCatalogId") || "all",
     status: searchParams.get("status") || "all"
   });
 
@@ -108,7 +108,7 @@ export default function PassedCandidatesPage() {
     setFilters({
       search: searchParams.get("search") || "",
       projectId: searchParams.get("projectId") || "all",
-      roleNeededId: searchParams.get("roleNeededId") || "all",
+      roleCatalogId: searchParams.get("roleCatalogId") || "all",
       status: searchParams.get("status") || "all"
     });
   }, [searchParams]);
@@ -116,7 +116,7 @@ export default function PassedCandidatesPage() {
   const { data, isLoading, error } = useGetCandidatesToTransferQuery({
     search: filters.search || undefined,
     projectId: filters.projectId !== "all" ? filters.projectId : undefined,
-    roleNeededId: filters.roleNeededId !== "all" ? filters.roleNeededId : undefined,
+    roleCatalogId: filters.roleCatalogId !== "all" ? filters.roleCatalogId : undefined,
     status: filters.status !== "all" ? filters.status as 'pending' | 'transferred' : undefined,
     page: currentPage,
     limit: 20,
@@ -269,11 +269,11 @@ export default function PassedCandidatesPage() {
                 const np = new URLSearchParams(searchParams);
                 if (val === "all") {
                   np.delete("projectId");
-                  np.delete("roleNeededId");
+                  np.delete("roleCatalogId");
                   setSelectedBulkIds([]);
                 } else {
                   np.set("projectId", val);
-                  np.delete("roleNeededId");
+                  np.delete("roleCatalogId");
                 }
                 np.delete("page");
                 setProjectSearch("");
@@ -300,12 +300,12 @@ export default function PassedCandidatesPage() {
             </Select>
 
             <Select 
-              value={filters.roleNeededId} 
+              value={filters.roleCatalogId} 
               disabled={filters.projectId === "all"}
               onValueChange={(val) => {
                 const np = new URLSearchParams(searchParams);
-                if (val === "all") np.delete("roleNeededId");
-                else np.set("roleNeededId", val);
+                if (val === "all") np.delete("roleCatalogId");
+                else np.set("roleCatalogId", val);
                 np.delete("page");
                 setSearchParams(np);
               }}
@@ -316,7 +316,7 @@ export default function PassedCandidatesPage() {
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 {selectedProject?.rolesNeeded?.map((r: any) => (
-                  <SelectItem key={r.id} value={r.id}>{r.designation}</SelectItem>
+                  <SelectItem key={r.id} value={r.roleCatalogId!}>{r.designation}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -341,7 +341,7 @@ export default function PassedCandidatesPage() {
               </SelectContent>
             </Select>
 
-            {(filters.search || filters.projectId !== "all" || filters.roleNeededId !== "all" || filters.status !== "all") && (
+            {(filters.search || filters.projectId !== "all" || filters.roleCatalogId !== "all" || filters.status !== "all") && (
               <Button variant="ghost" size="sm" onClick={() => {
                 setSearchParams(new URLSearchParams());
               }}>
@@ -871,11 +871,11 @@ export default function PassedCandidatesPage() {
                 {selected.isTransferredToProcessing && 
                  selected.candidateProjectMap?.candidate?.id && 
                  selected.candidateProjectMap?.project?.id && 
-                 selected.candidateProjectMap?.roleNeeded?.id && (
+                 selected.candidateProjectMap?.roleNeeded?.roleCatalogId && (
                   <ProcessingHistory
                     candidateId={selected.candidateProjectMap.candidate.id}
                     projectId={selected.candidateProjectMap.project.id}
-                    roleNeededId={selected.candidateProjectMap.roleNeeded.id}
+                    roleCatalogId={selected.candidateProjectMap.roleNeeded.roleCatalogId}
                   />
                 )}
               </div>
@@ -901,7 +901,7 @@ export default function PassedCandidatesPage() {
           candidateName={`${(selected.candidateProjectMap?.candidate || selected.candidate)?.firstName} ${(selected.candidateProjectMap?.candidate || selected.candidate)?.lastName}`}
           recruiterName={selected.candidateProjectMap?.recruiter?.name}
           projectId={selected.candidateProjectMap?.project?.id || selected.project?.id}
-          roleNeededId={selected.candidateProjectMap?.roleNeeded?.id || selected.roleNeeded?.id}
+          roleCatalogId={(selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalogId || (selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalog?.id || ""}
           isAlreadyUploaded={selected.isOfferLetterUploaded || !!offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]}
           existingFileUrl={offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id] || selected.offerLetterData?.document?.fileUrl}
           onSuccess={() => {
@@ -919,11 +919,11 @@ export default function PassedCandidatesPage() {
           onClose={() => setBulkTransferModalOpen(false)}
           candidates={bulkTransferCandidates}
           projectId={filters.projectId}
-          roleNeededId={
-            filters.roleNeededId !== "all" 
-              ? filters.roleNeededId 
-              : (filteredList.find(it => selectedBulkIds.includes(it.id))?.candidateProjectMap?.roleNeeded?.id || 
-                 filteredList.find(it => selectedBulkIds.includes(it.id))?.roleNeeded?.id || "")
+          roleCatalogId={
+            filters.roleCatalogId !== "all" 
+              ? filters.roleCatalogId 
+              : (filteredList.find(it => selectedBulkIds.includes(it.id))?.candidateProjectMap?.roleNeeded?.roleCatalogId || 
+                 filteredList.find(it => selectedBulkIds.includes(it.id))?.roleNeeded?.roleCatalogId || "")
           }
           onSuccess={() => {
             setSelectedBulkIds([]);
@@ -964,7 +964,7 @@ export default function PassedCandidatesPage() {
                   processingApi.endpoints.getCandidatesToTransfer.initiate({
                     search: filters.search || undefined,
                     projectId: filters.projectId !== "all" ? filters.projectId : undefined,
-                    roleNeededId: filters.roleNeededId !== "all" ? filters.roleNeededId : undefined,
+                    roleCatalogId: filters.roleCatalogId !== "all" ? filters.roleCatalogId : undefined,
                     status: filters.status !== "all" ? filters.status as 'pending' | 'transferred' : undefined,
                     page: currentPage,
                     limit: 20,

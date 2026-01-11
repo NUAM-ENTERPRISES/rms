@@ -143,6 +143,11 @@ export class InterviewsController {
     description: 'Filter by project ID',
   })
   @ApiQuery({
+    name: 'roleCatalogId',
+    required: false,
+    description: 'Filter by role catalog ID',
+  })
+  @ApiQuery({
     name: 'roleNeededId',
     required: false,
     description: 'Filter by Project Role ID',
@@ -285,13 +290,14 @@ export class InterviewsController {
   @Permissions('read:interviews')
   @ApiOperation({
     summary: "Get upcoming client interviews (substatus 'interview_scheduled')",
-    description: 'Return interviews that are scheduled and upcoming (candidate-project subStatus of interview_scheduled). Supports pagination, search, roleNeeded filter, and date range filters.',
+    description: 'Return interviews that are scheduled and upcoming (candidate-project subStatus of interview_scheduled). Supports pagination, search, roleCatalog filter, and date range filters.',
   })
   @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
   @ApiQuery({ name: 'projectId', required: false, description: 'Filter by project ID' })
   @ApiQuery({ name: 'candidateId', required: false, description: 'Filter by candidate ID' })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter by recruiter/assignee ID' })
+  @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Filter by role catalog ID' })
   @ApiQuery({ name: 'roleNeeded', required: false, description: 'Filter by role needed designation or id' })
   @ApiQuery({ name: 'search', required: false, description: 'Search term: candidate name/email/project title/role designation' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date (inclusive) ISO format to filter scheduledTime' })

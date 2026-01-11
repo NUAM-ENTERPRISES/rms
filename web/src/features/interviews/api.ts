@@ -79,7 +79,7 @@ export interface QueryInterviewsRequest {
   mode?: string;
   status?: string;
   projectId?: string;
-  roleNeededId?: string;
+  roleCatalogId?: string;
   candidateId?: string;
   page?: number;
   limit?: number;
@@ -92,7 +92,7 @@ export interface QueryUpcomingInterviewsRequest {
   projectId?: string;
   candidateId?: string;
   recruiterId?: string;
-  roleNeededId?: string;
+  roleCatalogId?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -101,7 +101,7 @@ export interface QueryAssignedInterviewsRequest {
   page?: number;
   limit?: number;
   projectId?: string;
-  roleNeededId?: string;
+  roleCatalogId?: string;
   candidateId?: string;
   recruiterId?: string;
   search?: string;

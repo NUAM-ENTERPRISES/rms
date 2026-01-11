@@ -164,6 +164,13 @@ export default function ProcessingDashboardPage() {
     return labels[status] || status;
   };
 
+  const formatStep = (step?: string) => {
+    if (!step) return "—";
+    if (step === "verify_offer_letter") return "Verify Offer Letter";
+    // Fallback: replace underscores and title case
+    return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   // Row background mapping to match tile colors (subtle)
   const rowBgClass = (status: string) => {
     switch (status) {
@@ -442,6 +449,18 @@ export default function ProcessingDashboardPage() {
                           <p className="text-xs text-violet-600 font-semibold uppercase tracking-wide">
                             {procCandidate.role.designation}
                           </p>
+                          {procCandidate.project?.country?.flag && (
+                            <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                              <span
+                                title={procCandidate.project.country.flagName || procCandidate.project.country.name}
+                                aria-label={procCandidate.project.country.flagName || procCandidate.project.country.name}
+                                className="text-lg leading-none"
+                              >
+                                {procCandidate.project.country.flag}
+                              </span>
+                              <span className="font-medium">{procCandidate.project.country.name}</span>
+                            </p>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
@@ -456,8 +475,7 @@ export default function ProcessingDashboardPage() {
                       </TableCell>
                       <TableCell className="py-4">
                         <Badge variant="outline" className="text-xs font-bold border-slate-300 bg-white whitespace-nowrap px-2.5 py-0.5">
-                          {/* Step information is not in the list API, might need to fetch from summary if available */}
-                          Processing
+                          {formatStep(procCandidate.step)}
                         </Badge>
                       </TableCell>
                       <TableCell className="py-4">

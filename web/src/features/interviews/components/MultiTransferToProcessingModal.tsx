@@ -53,7 +53,7 @@ interface MultiTransferToProcessingModalProps {
     offerLetterData?: any;
   }>;
   projectId: string;
-  roleNeededId: string;
+  roleCatalogId: string;
   onSuccess: () => void;
   onRemoveCandidate?: (candidateId: string) => void;
 }
@@ -63,7 +63,7 @@ export function MultiTransferToProcessingModal({
   onClose,
   candidates,
   projectId,
-  roleNeededId,
+  roleCatalogId,
   onSuccess,
   onRemoveCandidate,
 }: MultiTransferToProcessingModalProps) {
@@ -121,12 +121,11 @@ export function MultiTransferToProcessingModal({
   );
 
   const selectedRole = useMemo(() => {
-    if (!selectedProject?.rolesNeeded || !roleNeededId) return null;
-    return selectedProject.rolesNeeded.find((r: any) => r.id === roleNeededId);
-  }, [selectedProject, roleNeededId]);
+    if (!selectedProject?.rolesNeeded || !roleCatalogId) return null;
+    return selectedProject.rolesNeeded.find((r: any) => (r.roleCatalogId || r.roleCatalog?.id) === roleCatalogId);
+  }, [selectedProject, roleCatalogId]);
 
   const roleDesignation = selectedRole?.designation || "Unknown Role";
-  const roleCatalogId = selectedRole?.roleCatalogId || selectedRole?.roleCatalog?.id || "";
 
   // Initialize transfer data for each candidate
   const [candidatesData, setCandidatesData] = useState<Record<string, CandidateTransferData>>(() => {
@@ -236,7 +235,7 @@ export function MultiTransferToProcessingModal({
         transferToProcessing({
           candidateIds: group.candidateIds,
           projectId,
-          roleNeededId,
+          roleCatalogId,
           assignedProcessingTeamUserId: group.userId,
           notes: group.notes || undefined,
         }).unwrap()
@@ -581,7 +580,7 @@ export function MultiTransferToProcessingModal({
           candidateName={offerLetterCandidate.candidateName}
           projectId={projectId}
           projectTitle={selectedProject?.title || "Project"}
-          roleCatalogId={roleCatalogId || roleNeededId} // Fallback to roleNeededId if catalogId not found
+          roleCatalogId={roleCatalogId}
           roleDesignation={roleDesignation}
           isAlreadyUploaded={offerLetterCandidate.isOfferLetterUploaded}
           existingFileUrl={offerLetterCandidate.offerLetterData?.document?.fileUrl}
