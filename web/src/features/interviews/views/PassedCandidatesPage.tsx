@@ -113,11 +113,21 @@ export default function PassedCandidatesPage() {
     });
   }, [searchParams]);
 
+  // Map UI status ('pending'|'transferred'|'all') to API-accepted statuses.
+  // The processing API expects: 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'all'
+  const queryStatus = ((): 'assigned' | 'in_progress' | 'completed' | 'cancelled' | undefined => {
+    if (filters.status === 'assigned' || filters.status === 'in_progress' || filters.status === 'completed' || filters.status === 'cancelled') {
+      return filters.status as 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+    }
+    // Do not pass 'pending' or 'transferred' directly to the API - handle them client-side
+    return undefined;
+  })();
+
   const { data, isLoading, error } = useGetCandidatesToTransferQuery({
     search: filters.search || undefined,
     projectId: filters.projectId !== "all" ? filters.projectId : undefined,
     roleCatalogId: filters.roleCatalogId !== "all" ? filters.roleCatalogId : undefined,
-    status: filters.status !== "all" ? filters.status as 'pending' | 'transferred' : undefined,
+    status: queryStatus,
     page: currentPage,
     limit: 20,
   });
@@ -144,6 +154,16 @@ export default function PassedCandidatesPage() {
     return interviews.filter(it => it.outcome?.toLowerCase() === "passed");
   }, [interviews]);
 
+  // Helper to determine if an interview's offer letter has been verified by processing
+  const isOfferLetterVerified = (it: any) => {
+    if (!it) return false;
+    return (
+      it.offerLetterData?.status === 'verified' ||
+      it.offerLetterData?.document?.status === 'verified' ||
+      (it.candidateProjectMap?.documentVerifications?.some((dv: any) => dv.document?.docType === 'offer_letter' && dv.status === 'verified') ?? false)
+    );
+  };
+
   // Derive active PDF URL with cache busting
   const activePdfUrl = useMemo(() => {
     if (!pdfViewerState.isOpen || !pdfViewerState.candidateId) return "";
@@ -161,12 +181,22 @@ export default function PassedCandidatesPage() {
     return originalUrl ? `${originalUrl}${originalUrl.includes('?') ? '&' : '?'}t=${Date.now()}` : "";
   }, [pdfViewerState.isOpen, pdfViewerState.candidateId, pdfViewerState.fileUrl, offerLetterOverrides, interviews]);
 
-  const filteredList = passedCandidates; // Filtering already done by query and the .filter above
+  // Apply additional client-side filtering for the UI-specific statuses ('pending' | 'transferred')
+  const filteredList = useMemo(() => {
+    return passedCandidates.filter((it) => {
+      if (filters.status === 'pending') return !it.isTransferredToProcessing;
+      if (filters.status === 'transferred') return !!it.isTransferredToProcessing;
+      return true;
+    });
+  }, [passedCandidates, filters.status]); // Filtering already done by query and the .filter above
 
   const selected = useMemo(() => {
     if (selectedId) return filteredList.find((i) => i.id === selectedId) || null;
     return filteredList[0] || null;
   }, [filteredList, selectedId]);
+
+  // Is the selected candidate's offer letter already verified by processing?
+  const selectedIsOfferVerified = selected ? isOfferLetterVerified(selected) : false;
 
   const handleTransfer = async () => {
     setTransferModalOpen(true);
@@ -414,6 +444,7 @@ export default function PassedCandidatesPage() {
                 {filteredList.map((it) => {
                   const candidate = it.candidateProjectMap?.candidate || it.candidate;
                   const isSelected = it.id === selected?.id;
+                  const offerVerified = isOfferLetterVerified(it);
 
                   return (
                     <div key={it.id} className="relative flex items-center gap-1 group">
@@ -454,11 +485,15 @@ export default function PassedCandidatesPage() {
                                   Transferred
                                 </Badge>
                               )}
-                              {(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) && (
+                              {offerVerified ? (
+                                <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-emerald-100 text-emerald-700 border-none shrink-0">
+                                  VERIFIED
+                                </Badge>
+                              ) : ((it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) && (
                                 <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-emerald-100 text-emerald-700 border-none shrink-0">
                                   DOC
                                 </Badge>
-                              )}
+                              ))}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">
                               {it.candidateProjectMap?.project?.title || it.project?.title || "Unknown Project"}
@@ -466,7 +501,7 @@ export default function PassedCandidatesPage() {
                           </div>
                           <div className="flex items-center shrink-0">
                             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              {(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) && (
+                              {(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id] || offerVerified) && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -488,27 +523,29 @@ export default function PassedCandidatesPage() {
                                   <Eye className="h-3 w-3" />
                                 </Button>
                               )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn(
-                                  "h-6 w-6 p-0",
-                                  (it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) 
-                                    ? "text-amber-600 hover:bg-amber-50" 
-                                    : "text-indigo-600 hover:bg-indigo-50"
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOfferLetterModal({
-                                    isOpen: true,
-                                    candidateId: candidate?.id,
-                                    interviewId: it.id
-                                  });
-                                }}
-                                title={(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) ? "Re-upload Offer Letter" : "Upload Offer Letter"}
-                              >
-                                <Upload className="h-3 w-3" />
-                              </Button>
+                              {!offerVerified && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={cn(
+                                    "h-6 w-6 p-0",
+                                    (it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) 
+                                      ? "text-amber-600 hover:bg-amber-50" 
+                                      : "text-indigo-600 hover:bg-indigo-50"
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOfferLetterModal({
+                                      isOpen: true,
+                                      candidateId: candidate?.id,
+                                      interviewId: it.id
+                                    });
+                                  }}
+                                  title={(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) ? "Re-upload Offer Letter" : "Upload Offer Letter"}
+                                >
+                                  <Upload className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                             <ChevronRight className={cn("h-4 w-4", isSelected ? "text-emerald-600" : "text-muted-foreground")} />
                           </div>
@@ -527,7 +564,7 @@ export default function PassedCandidatesPage() {
                 variant="outline"
                 size="sm"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => prev - 1)}
+                onClick={() => setCurrentPage(currentPage - 1)}
                 className="h-8 w-8 p-0"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -539,7 +576,7 @@ export default function PassedCandidatesPage() {
                 variant="outline"
                 size="sm"
                 disabled={currentPage === data.data.pagination.totalPages}
-                onClick={() => setCurrentPage(prev => prev + 1)}
+                onClick={() => setCurrentPage(currentPage + 1)}
                 className="h-8 w-8 p-0"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -548,28 +585,32 @@ export default function PassedCandidatesPage() {
           )}
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-w-0">
           {selected ? (
             <ScrollArea className="h-full">
-              <div className="p-6 max-w-4xl mx-auto space-y-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+              <div className="p-6 max-w-4xl mx-auto space-y-6 w-full overflow-hidden">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Candidate Details</h2>
                       {selected.isTransferredToProcessing && (
                         <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-indigo-200 uppercase tracking-wider text-[10px]">
                           Already Transferred
                         </Badge>
                       )}
-                      {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) && (
-                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 uppercase tracking-wider text-[10px]">
-                          Offer Letter Ready
-                        </Badge>
-                      )}
                     </div>
+                    {selectedIsOfferVerified ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 uppercase tracking-wider text-[10px] mb-2">
+                        Offer Letter Verified
+                      </Badge>
+                    ) : ((selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) && (
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 uppercase tracking-wider text-[10px] mb-2">
+                        Offer Letter Ready
+                      </Badge>
+                    ))}
                     <p className="text-sm text-muted-foreground">Passed on {format(new Date(selected.updatedAt || selected.scheduledTime), "PPP")}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col items-end gap-2 shrink-0">
                     <Button 
                       onClick={handleTransfer}
                       disabled={isUpdating || selected.isTransferredToProcessing}
@@ -591,7 +632,7 @@ export default function PassedCandidatesPage() {
                     </Button>
 
                     <div className="flex items-center gap-0.5 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-0.5 shadow-sm overflow-hidden">
-                      {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) && (
+                      {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id] || selectedIsOfferVerified) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -614,82 +655,84 @@ export default function PassedCandidatesPage() {
                           <span className="hidden md:inline text-[10px] font-medium">View</span>
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "h-7 gap-1 px-1.5",
-                          (selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id])
-                            ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                            : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                        )}
-                        onClick={() => {
-                          const candidate = selected.candidateProjectMap?.candidate || selected.candidate;
-                          setOfferLetterModal({
-                            isOpen: true,
-                            candidateId: candidate?.id,
-                            interviewId: selected.id
-                          });
-                        }}
-                        title={(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload Offer" : "Upload Offer"}
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        <span className="hidden md:inline text-[10px] font-medium">
-                          {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload" : "Upload"}
-                        </span>
-                      </Button>
+                      {!selectedIsOfferVerified && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            "h-7 gap-1 px-1.5",
+                            (selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id])
+                              ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                          )}
+                          onClick={() => {
+                            const candidate = selected.candidateProjectMap?.candidate || selected.candidate;
+                            setOfferLetterModal({
+                              isOpen: true,
+                              candidateId: candidate?.id,
+                              interviewId: selected.id
+                            });
+                          }}
+                          title={(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload Offer" : "Upload Offer"}
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          <span className="hidden md:inline text-[10px] font-medium">
+                            {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload" : "Upload"}
+                          </span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-6 w-full min-w-0 overflow-hidden">
                   {/* Candidate Information Card */}
-                  <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm">
-                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between">
+                  <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm w-full max-w-full">
+                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-400">
-                        <User className="h-5 w-5" />
+                        <User className="h-5 w-5 shrink-0" />
                         Candidate Details
                       </h3>
                       {(selected.candidateProjectMap?.candidate || selected.candidate)?.experience && (
-                        <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                        <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 shrink-0">
                           {(selected.candidateProjectMap?.candidate || selected.candidate).experience} Years Experience
                         </Badge>
                       )}
                     </div>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div className="space-y-4">
+                    <CardContent className="p-6 overflow-hidden max-w-full">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
+                        <div className="space-y-4 min-w-0 overflow-hidden">
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Full Name</p>
-                            <p className="font-bold text-xl text-slate-800 dark:text-slate-200">
+                            <p className="font-bold text-xl text-slate-800 dark:text-slate-200 truncate">
                               {(selected.candidateProjectMap?.candidate || selected.candidate)?.firstName} {(selected.candidateProjectMap?.candidate || selected.candidate)?.lastName}
                             </p>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
                               <Mail className="h-4 w-4 text-slate-500" />
                             </div>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs text-muted-foreground">Email Address</p>
-                              <p className="text-sm font-medium">{(selected.candidateProjectMap?.candidate || selected.candidate)?.email || "N/A"}</p>
+                              <p className="text-sm font-medium truncate">{(selected.candidateProjectMap?.candidate || selected.candidate)?.email || "N/A"}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
                               <Phone className="h-4 w-4 text-slate-500" />
                             </div>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs text-muted-foreground">Contact Number</p>
-                              <p className="text-sm font-medium">
+                              <p className="text-sm font-medium truncate">
                                 {(selected.candidateProjectMap?.candidate || selected.candidate)?.countryCode || "+91"} {(selected.candidateProjectMap?.candidate || selected.candidate)?.mobileNumber || "N/A"}
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div className="space-y-4 min-w-0 overflow-hidden">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
                               <CalendarDays className="h-4 w-4 text-slate-500" />
                             </div>
                             <div>
@@ -724,8 +767,8 @@ export default function PassedCandidatesPage() {
                           )}
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <div className="space-y-4 min-w-0 overflow-hidden">
+                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Work Status</p>
                             <div className="space-y-2">
                               <div className="flex justify-between items-center">
@@ -747,39 +790,39 @@ export default function PassedCandidatesPage() {
                   </Card>
 
                   {/* Project & Handoff Context Card */}
-                  <Card className="border-indigo-100 dark:border-indigo-900/30 overflow-hidden shadow-sm">
+                  <Card className="border-indigo-100 dark:border-indigo-900/30 overflow-hidden shadow-sm w-full max-w-full">
                     <div className="bg-indigo-50/50 dark:bg-indigo-900/10 px-6 py-4 border-b border-indigo-100 dark:border-indigo-900/30">
                       <h3 className="font-semibold text-lg flex items-center gap-2 text-indigo-800 dark:text-indigo-400">
-                        <Briefcase className="h-5 w-5" />
+                        <Briefcase className="h-5 w-5 shrink-0" />
                         Project Context
                       </h3>
                     </div>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div className="space-y-4">
+                    <CardContent className="p-6 overflow-hidden max-w-full">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
+                        <div className="space-y-4 min-w-0 overflow-hidden">
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Target Project</p>
-                            <p className="font-bold text-lg text-slate-800 dark:text-slate-200">
+                            <p className="font-bold text-lg text-slate-800 dark:text-slate-200 truncate">
                               {selected.candidateProjectMap?.project?.title || selected.project?.title}
                             </p>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/40">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/40 shrink-0">
                               <Layers className="h-4 w-4 text-indigo-500" />
                             </div>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs text-muted-foreground">Hiring Designation</p>
-                              <p className="text-sm font-medium">{(selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.designation || "N/A"}</p>
+                              <p className="text-sm font-medium truncate">{(selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.designation || "N/A"}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/40">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/40 shrink-0">
                               <Clock className="h-4 w-4 text-indigo-500" />
                             </div>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs text-muted-foreground">Deadline & Status</p>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] uppercase font-bold text-amber-600 border-amber-200">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-[10px] uppercase font-bold text-amber-600 border-amber-200 shrink-0">
                                   {selected.candidateProjectMap?.project?.priority || "Medium"}
                                 </Badge>
                                 <span className="text-xs font-medium">
@@ -790,41 +833,41 @@ export default function PassedCandidatesPage() {
                           </div>
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <div className="space-y-4 min-w-0 overflow-hidden">
+                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Requirement Details</p>
                             <div className="grid grid-cols-2 gap-4">
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Type</p>
-                                <p className="text-sm font-medium">{(selected.candidateProjectMap?.project?.type || "Bulk").replace("_", " ")}</p>
+                                <p className="text-sm font-medium truncate">{(selected.candidateProjectMap?.project?.type || "Bulk").replace("_", " ")}</p>
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Creator</p>
                                 <p className="text-sm font-medium truncate">{selected.candidateProjectMap?.project?.createdBy?.name || "System"}</p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Grooming Standard</p>
                                 <div className="flex items-center gap-1.5">
-                                  <ShieldCheck className="h-3.5 w-3.5 text-indigo-500" />
-                                  <p className="text-xs font-medium">{selected.candidateProjectMap?.project?.groomingStandard || "A-Grade"}</p>
+                                  <ShieldCheck className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                                  <p className="text-xs font-medium truncate">{selected.candidateProjectMap?.project?.groomingStandard || "A-Grade"}</p>
                                 </div>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/20 rounded-xl border border-indigo-50 dark:border-indigo-900/40">
+                        <div className="space-y-4 min-w-0 overflow-hidden">
+                          <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/20 rounded-xl border border-indigo-50 dark:border-indigo-900/40 overflow-hidden">
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Assigned Recruiter</p>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shrink-0">
                                 <AvatarFallback className="bg-indigo-500 text-white text-xs">
                                   {selected.candidateProjectMap?.recruiter?.name?.split(" ").map((n: string) => n[0]).join("") || "R"}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selected.candidateProjectMap?.recruiter?.name || "System Assigned"}</p>
-                                <p className="text-[11px] text-muted-foreground">{selected.candidateProjectMap?.recruiter?.email || "recruiter@system.com"}</p>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{selected.candidateProjectMap?.recruiter?.name || "System Assigned"}</p>
+                                <p className="text-[11px] text-muted-foreground truncate">{selected.candidateProjectMap?.recruiter?.email || "recruiter@system.com"}</p>
                               </div>
                             </div>
                           </div>
@@ -834,15 +877,15 @@ export default function PassedCandidatesPage() {
                   </Card>
                 </div>
 
-                <Card className="border-emerald-100 dark:border-emerald-900/30">
-                  <CardContent className="p-6">
+                <Card className="border-emerald-100 dark:border-emerald-900/30 w-full max-w-full overflow-hidden">
+                  <CardContent className="p-6 overflow-hidden">
                     <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                      <ClipboardCheck className="h-5 w-5 text-emerald-600" />
+                      <ClipboardCheck className="h-5 w-5 text-emerald-600 shrink-0" />
                       Interview Summary
                     </h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                    <div className="space-y-4 overflow-hidden">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm overflow-hidden">
+                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg overflow-hidden">
                           <p className="text-muted-foreground text-xs uppercase font-semibold">Final Outcome</p>
                           <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 mt-1">PASSED</Badge>
                         </div>
@@ -902,6 +945,7 @@ export default function PassedCandidatesPage() {
           recruiterName={selected.candidateProjectMap?.recruiter?.name}
           projectId={selected.candidateProjectMap?.project?.id || selected.project?.id}
           roleCatalogId={(selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalogId || (selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalog?.id || ""}
+          isOfferVerified={selectedIsOfferVerified}
           isAlreadyUploaded={selected.isOfferLetterUploaded || !!offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]}
           existingFileUrl={offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id] || selected.offerLetterData?.document?.fileUrl}
           onSuccess={() => {
@@ -965,7 +1009,8 @@ export default function PassedCandidatesPage() {
                     search: filters.search || undefined,
                     projectId: filters.projectId !== "all" ? filters.projectId : undefined,
                     roleCatalogId: filters.roleCatalogId !== "all" ? filters.roleCatalogId : undefined,
-                    status: filters.status !== "all" ? filters.status as 'pending' | 'transferred' : undefined,
+                    // Use the same queryStatus mapping so we don't pass UI-specific statuses
+                    status: queryStatus,
                     page: currentPage,
                     limit: 20,
                   }, { forceRefetch: true })

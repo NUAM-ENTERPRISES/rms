@@ -235,7 +235,14 @@ export class ProcessingService {
     const steps = await this.prisma.processingStep.findMany({
       where: { processingCandidateId },
       orderBy: { template: { order: 'asc' } },
-      include: { template: true, documents: { include: { document: true } } },
+      include: {
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: { include: { document: true } },
+          },
+        },
+      },
     });
 
     return steps;
@@ -312,8 +319,63 @@ export class ProcessingService {
   }
 
   async attachDocumentToStep(processingStepId: string, documentId: string, uploadedBy?: string) {
-    // Create ProcessingStepDocument linking the document
-    const doc = await this.prisma.processingStepDocument.create({ data: { processingStepId, documentId, uploadedBy } });
+    // 1. Get the processing step to find the candidate and project
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: processingStepId },
+      include: {
+        processingCandidate: true,
+      },
+    });
+
+    if (!step) {
+      throw new Error(`Processing step ${processingStepId} not found`);
+    }
+
+    // 2. Find the CandidateProjectMap associated with this processing candidate
+    const candidateProjectMap = await this.prisma.candidateProjects.findFirst({
+      where: {
+        candidateId: step.processingCandidate.candidateId,
+        projectId: step.processingCandidate.projectId,
+        roleNeededId: step.processingCandidate.roleNeededId,
+      },
+    });
+
+    if (!candidateProjectMap) {
+      throw new Error(
+        'Candidate project mapping not found for processing candidate',
+      );
+    }
+
+    // 3. Find or Create CandidateProjectDocumentVerification for this document and map
+    let verification =
+      await this.prisma.candidateProjectDocumentVerification.findUnique({
+        where: {
+          candidateProjectMapId_documentId: {
+            candidateProjectMapId: candidateProjectMap.id,
+            documentId,
+          },
+        },
+      });
+
+    if (!verification) {
+      verification = await this.prisma.candidateProjectDocumentVerification.create({
+        data: {
+          candidateProjectMapId: candidateProjectMap.id,
+          documentId,
+          status: 'pending',
+        },
+      });
+    }
+
+    // 4. Create ProcessingStepDocument linking the verification
+    const doc = await this.prisma.processingStepDocument.create({
+      data: {
+        processingStepId,
+        candidateProjectDocumentVerificationId: verification.id,
+        uploadedBy,
+        status: 'pending',
+      },
+    });
     return doc;
   }
 

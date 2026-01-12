@@ -36,6 +36,7 @@ interface SingleTransferToProcessingModalProps {
   recruiterName?: string;
   projectId: string;
   roleCatalogId: string;
+  isOfferVerified?: boolean;
   isAlreadyUploaded?: boolean;
   existingFileUrl?: string;
   onSuccess?: () => void;
@@ -49,6 +50,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
   recruiterName,
   projectId,
   roleCatalogId,
+  isOfferVerified = false,
   isAlreadyUploaded = false,
   existingFileUrl = "",
   onSuccess,
@@ -130,16 +132,20 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Offer Letter</span>
-                {(isAlreadyUploaded || localOfferLetter) && (
+                {isOfferVerified ? (
+                  <Badge variant="secondary" className="px-1 py-0 h-3.5 text-[8px] bg-emerald-100 text-emerald-700 border-none">
+                    VERIFIED
+                  </Badge>
+                ) : ((isAlreadyUploaded || localOfferLetter) && (
                   <Badge variant="secondary" className="px-1 py-0 h-3.5 text-[8px] bg-emerald-100 text-emerald-700 border-none">
                     UPLOADED
                   </Badge>
-                )}
+                ))}
               </div>
               <span className="text-xs text-muted-foreground">Upload signed PDF (Optional)</span>
             </div>
             <div className="flex items-center gap-2">
-              {(isAlreadyUploaded || localOfferLetter) && (
+              {(isAlreadyUploaded || localOfferLetter || isOfferVerified) && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -154,21 +160,23 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
                   <Eye className="h-4 w-4" />
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowOfferLetterModal(true)}
-                className={cn(
-                  "h-8 transition-all gap-2 shadow-sm",
-                  (isAlreadyUploaded || localOfferLetter) 
-                    ? "border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white" 
-                    : "border-indigo-200 hover:bg-indigo-600 hover:text-white"
-                )}
-              >
-                <Upload className="h-3.5 w-3.5" />
-                {(isAlreadyUploaded || localOfferLetter) ? "Re-upload" : "Upload"}
-              </Button>
+              {!isOfferVerified && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowOfferLetterModal(true)}
+                  className={cn(
+                    "h-8 transition-all gap-2 shadow-sm",
+                    (isAlreadyUploaded || localOfferLetter) 
+                      ? "border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white" 
+                      : "border-indigo-200 hover:bg-indigo-600 hover:text-white"
+                  )}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {(isAlreadyUploaded || localOfferLetter) ? "Re-upload" : "Upload"}
+                </Button>
+              )}
             </div>
           </div>
           {recruiterName && (

@@ -1260,6 +1260,17 @@ export class DocumentsService {
             data: { status: 'completed', completedAt: new Date() },
           });
 
+          // Create ProcessingStepDocument for the offer letter
+          await tx.processingStepDocument.create({
+            data: {
+              processingStepId: offerStep.id,
+              candidateProjectDocumentVerificationId: updatedVerification.id,
+              uploadedBy: document.uploadedBy,
+              status: 'verified',
+              notes: 'Successfully verified offer letter.',
+            },
+          });
+
           await tx.processingHistory.create({
             data: {
               processingCandidateId: processingCandidate.id,

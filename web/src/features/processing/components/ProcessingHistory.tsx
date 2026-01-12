@@ -123,9 +123,9 @@ export const ProcessingHistory: React.FC<ProcessingHistoryProps> = ({
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[300px] w-full">
+        <ScrollArea className="max-h-[350px] w-full overflow-auto">
           <div className="px-6 pb-6">
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50 dark:bg-slate-900/50">
