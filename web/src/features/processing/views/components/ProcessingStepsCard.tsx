@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Eye, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,20 +9,11 @@ import {
   ClipboardList,
   FileText,
   Stethoscope,
-  ShieldCheck,
-  GraduationCap,
-  Briefcase,
-  Plane,
-  MessageSquare,
-  Stamp,
-  MapPin,
-  Users,
   CheckCircle2,
   Clock,
   AlertCircle,
   PlayCircle,
   Ban,
-  ChevronRight,
   FileCheck,
   Database,
   Award,
@@ -33,88 +24,29 @@ import {
   Fingerprint,
   ScrollText,
   Ticket,
+  Stamp,
 } from "lucide-react";
+import type { ProcessingStep as ApiProcessingStep } from "@/services/processingApi";
 
-// Define the 12 Processing Steps (Updated)
-export const PROCESSING_STEPS = [
-  {
-    key: "offer_letter",
-    label: "Offer Letter",
-    description: "Issue offer letter to candidate",
-    icon: FileText,
-  },
-  {
-    key: "hrd",
-    label: "HRD",
-    description: "Human Resource Development attestation",
-    icon: FileCheck,
-  },
-  {
-    key: "data_flow",
-    label: "Data Flow",
-    description: "Data flow verification process",
-    icon: Database,
-  },
-  {
-    key: "eligibility",
-    label: "Eligibility",
-    description: "Check candidate eligibility",
-    icon: Award,
-  },
-  {
-    key: "prometric",
-    label: "Prometric",
-    description: "Prometric exam scheduling",
-    icon: BookCheck,
-  },
-  {
-    key: "council_registration",
-    label: "Council Registration",
-    description: "Country-wise council registration",
-    icon: Building2,
-  },
-  {
-    key: "document_attestation",
-    label: "Document Attestation",
-    description: "Attest required documents",
-    icon: FileSignature,
-  },
-  {
-    key: "medical",
-    label: "Medical",
-    description: "Medical examination & reports",
-    icon: Heart,
-    hasSubSteps: true,
-    subSteps: [
-      { key: "mofa_number", label: "MOFA Number", description: "Obtain MOFA number" },
-      { key: "medical_fitness", label: "Medical Fitness Report", description: "Get fitness certificate" },
-    ],
-  },
-  {
-    key: "biometrics",
-    label: "Biometrics",
-    description: "Biometric data collection",
-    icon: Fingerprint,
-  },
-  {
-    key: "visa",
-    label: "Visa",
-    description: "Visa application & processing",
-    icon: Stamp,
-  },
-  {
-    key: "emigration",
-    label: "Emigration",
-    description: "Emigration clearance",
-    icon: ScrollText,
-  },
-  {
-    key: "ticket",
-    label: "Ticket",
-    description: "Flight booking & departure",
-    icon: Ticket,
-  },
-];
+// Icon mapping for different step keys
+const STEP_ICON_MAP: Record<string, typeof FileText> = {
+  offer_letter: FileText,
+  hrd: FileCheck,
+  data_flow: Database,
+  eligibility: Award,
+  prometric: BookCheck,
+  council_registration: Building2,
+  document_attestation: FileSignature,
+  medical: Heart,
+  mofa_number: Stethoscope,
+  medical_fitness: Heart,
+  biometrics: Fingerprint,
+  visa: Stamp,
+  emigration: ScrollText,
+  ticket: Ticket,
+};
+
+const getStepIcon = (key: string) => STEP_ICON_MAP[key] || ClipboardList;
 
 export type ProcessingStepStatus =
   | "not_started"
@@ -123,16 +55,43 @@ export type ProcessingStepStatus =
   | "on_hold"
   | "not_applicable";
 
-interface ProcessingStep {
+// Map API status to component status
+const mapApiStatusToComponentStatus = (
+  apiStatus: "pending" | "in_progress" | "completed" | "rejected" | "resubmission_requested"
+): ProcessingStepStatus => {
+  switch (apiStatus) {
+    case "pending":
+      return "not_started";
+    case "in_progress":
+      return "in_progress";
+    case "completed":
+      return "completed";
+    case "rejected":
+    case "resubmission_requested":
+      return "on_hold";
+    default:
+      return "not_started";
+  }
+};
+
+interface TransformedStep {
   key: string;
+  label: string;
+  description: string;
+  icon: typeof FileText;
   status: ProcessingStepStatus;
   notes?: string;
   updatedAt?: string;
-  subSteps?: {
+  hasSubSteps?: boolean;
+  subStepStatuses?: {
     key: string;
+    label: string;
+    description: string;
     status: ProcessingStepStatus;
-    notes?: string;
   }[];
+  stepId: string;
+  hasDocuments: boolean;
+  documents: ApiProcessingStep["documents"];
 }
 
 export interface OfferLetterStatus {
@@ -145,7 +104,8 @@ export interface OfferLetterStatus {
 }
 
 interface ProcessingStepsCardProps {
-  steps?: ProcessingStep[];
+  /** Processing steps from API */
+  steps: ApiProcessingStep[];
   maxHeight?: string;
   offerLetterStatus?: OfferLetterStatus;
   onOfferLetterClick?: () => void;
@@ -155,7 +115,7 @@ interface ProcessingStepsCardProps {
 }
 
 export function ProcessingStepsCard({
-  steps = [],
+  steps,
   maxHeight = "500px",
   offerLetterStatus,
   onOfferLetterClick,
@@ -164,49 +124,60 @@ export function ProcessingStepsCard({
 }: ProcessingStepsCardProps) {
   const [openStepKey, setOpenStepKey] = useState<string | null>(null);
 
+  // Transform API steps into component structure with parent-child relationships
+  const mergedSteps = useMemo(() => {
+    // Separate parent steps and child steps
+    const parentSteps = steps.filter((s) => !s.template.parentId);
+    const childSteps = steps.filter((s) => s.template.parentId);
+
+    // Sort by order
+    parentSteps.sort((a, b) => a.template.order - b.template.order);
+
+    return parentSteps.map((step): TransformedStep => {
+      const componentStatus = mapApiStatusToComponentStatus(step.status);
+      
+      // Find child steps for this parent (match by template ID)
+      const children = childSteps.filter((c) => c.template.parentId === step.template.id);
+      children.sort((a, b) => a.template.order - b.template.order);
+
+      // Special case for offer_letter - use offerLetterStatus if available
+      let finalStatus = componentStatus;
+      if (step.template.key === "offer_letter" && offerLetterStatus) {
+        if (offerLetterStatus.status === "verified") {
+          finalStatus = "completed";
+        } else if (offerLetterStatus.status === "pending") {
+          finalStatus = "in_progress";
+        }
+      }
+
+      return {
+        key: step.template.key,
+        label: step.template.label,
+        description: step.template.description || `Processing step ${step.template.order}`,
+        icon: getStepIcon(step.template.key),
+        status: finalStatus,
+        notes: step.rejectionReason || undefined,
+        updatedAt: step.updatedAt,
+        stepId: step.id,
+        hasDocuments: step.template.hasDocuments,
+        documents: step.documents,
+        hasSubSteps: children.length > 0,
+        subStepStatuses: children.length > 0
+          ? children.map((child) => ({
+              key: child.template.key,
+              label: child.template.label,
+              description: child.template.description || child.template.label,
+              status: mapApiStatusToComponentStatus(child.status),
+            }))
+          : undefined,
+      };
+    });
+  }, [steps, offerLetterStatus]);
+
   // Get the index of the current step from API
   const currentStepFromApi = currentStep 
-    ? PROCESSING_STEPS.findIndex((s) => s.key === currentStep)
+    ? mergedSteps.findIndex((s) => s.key === currentStep)
     : -1;
-
-  const mergedSteps = PROCESSING_STEPS.map((stepDef, index) => {
-    const actualStep = steps.find((s) => s.key === stepDef.key);
-    
-    // Determine status based on currentStep from API
-    let derivedStatus: ProcessingStepStatus = "not_started";
-    if (currentStepFromApi >= 0) {
-      if (index < currentStepFromApi) {
-        derivedStatus = "completed"; // Steps before current are completed
-      } else if (index === currentStepFromApi) {
-        derivedStatus = "in_progress"; // Current step is in progress
-      }
-    }
-    
-    // Special case for offer_letter - use offerLetterStatus if available
-    if (stepDef.key === "offer_letter" && offerLetterStatus) {
-      if (offerLetterStatus.status === "verified") {
-        derivedStatus = "completed";
-      } else if (offerLetterStatus.status === "pending") {
-        derivedStatus = "in_progress";
-      }
-    }
-    
-    return {
-      ...stepDef,
-      status: actualStep?.status || derivedStatus,
-      notes: actualStep?.notes,
-      updatedAt: actualStep?.updatedAt,
-      subStepStatuses: stepDef.hasSubSteps
-        ? stepDef.subSteps?.map((sub) => {
-            const actualSub = actualStep?.subSteps?.find((s) => s.key === sub.key);
-            return {
-              ...sub,
-              status: (actualSub?.status || "not_started") as ProcessingStepStatus,
-            };
-          })
-        : undefined,
-    };
-  });
 
   const completedCount = mergedSteps.filter((s) => s.status === "completed").length;
   const inProgressCount = mergedSteps.filter((s) => s.status === "in_progress").length;
@@ -263,16 +234,15 @@ export function ProcessingStepsCard({
     }
     
     if (activeStep) {
-      const stepDef = PROCESSING_STEPS.find((s) => s.key === activeStep.key);
       if (activeStep.status === "not_started" || activeStep.status === "in_progress") {
         return {
-          message: `${stepDef?.label} - Please complete this step to proceed.`,
+          message: `${activeStep.label} - Please complete this step to proceed.`,
           type: "warning" as const,
         };
       }
       if (activeStep.status === "on_hold") {
         return {
-          message: `${stepDef?.label} is on hold. Please resolve pending issues.`,
+          message: `${activeStep.label} is on hold. Please resolve pending issues.`,
           type: "hold" as const,
         };
       }
@@ -592,7 +562,6 @@ function StepItem({
   onOfferLetterClick?: () => void;
   onStepClick?: (stepKey: string) => void;
 }) {
-  const StatusIcon = step.icon;
   const statusConfig = getStatusConfig(step.status);
 
   // Determine offer letter specific styling

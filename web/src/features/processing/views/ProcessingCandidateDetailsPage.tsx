@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { useGetCandidateProcessingDetailsQuery } from "@/features/processing/data/processing.endpoints";
+import { useGetProcessingStepsQuery } from "@/services/processingApi";
 import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,12 @@ export default function ProcessingCandidateDetailsPage() {
   const { data: apiResponse, isLoading, error, refetch } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
   });
+  
+  // Fetch processing steps from the new API
+  const { data: processingSteps = [], isLoading: isLoadingSteps } = useGetProcessingStepsQuery(processingId || "", {
+    skip: !processingId,
+  });
+  
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
 
@@ -33,7 +40,7 @@ export default function ProcessingCandidateDetailsPage() {
   const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
     const verifications = data?.candidateProjectMap?.documentVerifications || [];
     const offerLetterDoc = verifications.find(
-      (v: DocumentVerification) => v.document?.docType === "offer_letter"
+      (v) => v.document?.docType === "offer_letter"
     );
 
     if (!offerLetterDoc) {
@@ -59,7 +66,7 @@ export default function ProcessingCandidateDetailsPage() {
     };
   }, [data?.candidateProjectMap?.documentVerifications]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingSteps) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
         <div className="flex flex-col items-center gap-4">
@@ -97,11 +104,6 @@ export default function ProcessingCandidateDetailsPage() {
     );
   }
 
-  const handleManageSteps = () => {
-    // No-op kept for compatibility; feature removed but some callers or cached bundles
-    // may still call this. Safe to keep as a no-op.
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-4 lg:p-6">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -121,7 +123,7 @@ export default function ProcessingCandidateDetailsPage() {
           <div className="lg:col-span-8 space-y-4">
             {/* Processing Steps - Taller */}
             <ProcessingStepsCard
-              steps={[]}
+              steps={processingSteps}
               maxHeight="450px"
               offerLetterStatus={offerLetterStatus}
               onOfferLetterClick={() => setShowOfferLetterModal(true)}
@@ -186,7 +188,7 @@ export default function ProcessingCandidateDetailsPage() {
         projectTitle={data.project?.title || ""}
         roleCatalogId={data.role?.roleCatalogId || ""}
         roleDesignation={data.role?.designation || ""}
-        documentVerification={offerLetterVerification}
+        documentVerification={offerLetterVerification as DocumentVerification | null}
         isVerifying={isVerifying}
         onVerify={async (verifyData) => {
           try {

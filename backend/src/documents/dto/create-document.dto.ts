@@ -88,4 +88,12 @@ export class CreateDocumentDto {
   @IsOptional()
   @IsString()
   roleCatalogId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Processing Step ID to attach this document to',
+    example: 'step_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  processingStepId?: string;
 }

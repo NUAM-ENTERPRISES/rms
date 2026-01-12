@@ -3,6 +3,7 @@ export * from "./baseApi";
 export * from "./baseQuery";
 export * from "./candidatesApi";
 export * from "./clientsApi";
+export * from "./processingApi";
 export * from "./projectsApi";
 export * from "./teamsApi";
 export * from "./usersApi";

@@ -180,6 +180,9 @@ export class ProcessingService {
           },
         });
 
+        // Create processing steps for this processing candidate (idempotent)
+        await this.createStepsForProcessingCandidate(processingCandidate.id, tx);
+
         results.push({
           candidateId,
           processingCandidateId: processingCandidate.id,
@@ -192,6 +195,126 @@ export class ProcessingService {
       transferredCount: candidateIds.length,
       results,
     };
+  }
+
+  /**
+   * Idempotent creation of processing steps for a processingCandidate
+   */
+  async createStepsForProcessingCandidate(processingCandidateId: string, tx?: any) {
+    const prismaTx = tx || this.prisma;
+
+    // If there are already steps for this candidate, skip creation
+    const existing = await prismaTx.processingStep.findFirst({ where: { processingCandidateId } });
+    if (existing) return;
+
+    // Fetch all templates ordered
+    const templates = await prismaTx.processingStepTemplate.findMany({ orderBy: { order: 'asc' } });
+
+    // Create steps
+    for (const t of templates) {
+      await prismaTx.processingStep.create({
+        data: {
+          processingCandidateId,
+          templateId: t.id,
+          status: 'pending',
+        },
+      });
+    }
+
+    // Optionally set first step to in_progress
+    const firstTemplate = templates[0];
+    if (firstTemplate) {
+      const firstStep = await prismaTx.processingStep.findFirst({ where: { processingCandidateId, templateId: firstTemplate.id } });
+      if (firstStep) {
+        await prismaTx.processingStep.update({ where: { id: firstStep.id }, data: { status: 'in_progress', startedAt: new Date() } });
+      }
+    }
+  }
+
+  async getProcessingSteps(processingCandidateId: string) {
+    const steps = await this.prisma.processingStep.findMany({
+      where: { processingCandidateId },
+      orderBy: { template: { order: 'asc' } },
+      include: { template: true, documents: { include: { document: true } } },
+    });
+
+    return steps;
+  }
+
+  async updateProcessingStep(stepId: string, data: any, userId: string) {
+    // Allowed updates: status, assignedTo, rejectionReason, dueDate
+    const { status, assignedTo, rejectionReason, dueDate } = data;
+
+    const step = await this.prisma.processingStep.findUnique({ where: { id: stepId }, include: { template: true, processingCandidate: true } });
+    if (!step) throw new Error('Processing step not found');
+
+    const updates: any = {};
+    if (status) {
+      updates.status = status;
+      if (status === 'completed') updates.completedAt = new Date();
+      if (status === 'in_progress') updates.startedAt = new Date();
+      if (status === 'rejected') updates.rejectionReason = rejectionReason || null;
+    }
+    if (assignedTo) updates.assignedTo = assignedTo;
+    if (dueDate) updates.dueDate = new Date(dueDate);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.processingStep.update({ where: { id: stepId }, data: updates });
+
+      // Add processing history entry
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: step.processingCandidateId,
+          status: status || step.status,
+          step: step.template.key,
+          changedById: userId,
+          notes: JSON.stringify({ action: 'update_step', details: { status, assignedTo, rejectionReason } }),
+        },
+      });
+
+      // If step completed, optionally advance next step (sequential flow)
+      if (status === 'completed') {
+        // Find next pending step for same processingCandidate
+        const nextStep = await tx.processingStep.findFirst({
+          where: { processingCandidateId: step.processingCandidateId, status: 'pending' },
+          orderBy: { template: { order: 'asc' } },
+        });
+        if (nextStep) {
+          await tx.processingStep.update({ where: { id: nextStep.id }, data: { status: 'in_progress', startedAt: new Date() } });
+
+          await tx.processingHistory.create({
+            data: {
+              processingCandidateId: step.processingCandidateId,
+              status: 'in_progress',
+              step: nextStep.templateId,
+              changedById: userId,
+              notes: `Advanced to next step ${nextStep.id}`,
+            },
+          });
+        } else {
+          // All steps completed -> mark processing candidate completed
+          await tx.processingCandidate.update({ where: { id: step.processingCandidateId }, data: { processingStatus: 'completed' } });
+
+          await tx.processingHistory.create({
+            data: {
+              processingCandidateId: step.processingCandidateId,
+              status: 'completed',
+              step: step.template.key,
+              changedById: userId,
+              notes: 'All steps completed',
+            },
+          });
+        }
+      }
+    });
+
+    return { success: true };
+  }
+
+  async attachDocumentToStep(processingStepId: string, documentId: string, uploadedBy?: string) {
+    // Create ProcessingStepDocument linking the document
+    const doc = await this.prisma.processingStepDocument.create({ data: { processingStepId, documentId, uploadedBy } });
+    return doc;
   }
 
   /**

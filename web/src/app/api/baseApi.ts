@@ -39,6 +39,8 @@ export const baseApi = createApi({
     "Screening",
     "Training",
     "Processing",
+    "ProcessingSteps",
+    "ProcessingDetails",
     "ProcessingSummary",
     "ProcessingHistory",
   ],

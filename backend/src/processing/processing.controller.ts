@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { ProcessingService } from './processing.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
+import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
 import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -215,5 +216,21 @@ export class ProcessingController {
       data,
       message: 'Candidates transferred to processing team successfully',
     };
+  }
+
+  @Get('steps/:processingId')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get processing steps for a candidate', description: 'List steps for a processing candidate' })
+  async getStepsForProcessingCandidate(@Param('processingId') processingId: string) {
+    const data = await this.processingService.getProcessingSteps(processingId);
+    return { success: true, data, message: 'Processing steps retrieved' };
+  }
+
+  @Post('steps/:stepId/status')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({ summary: 'Update a processing step status' })
+  async updateStepStatus(@Param('stepId') stepId: string, @Body() body: UpdateProcessingStepDto, @Req() req: any) {
+    const data = await this.processingService.updateProcessingStep(stepId, body, req.user.id);
+    return { success: true, data, message: 'Processing step updated' };
   }
 }

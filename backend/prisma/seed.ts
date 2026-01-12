@@ -9,6 +9,7 @@ import { seedCRERole } from './seeds/cre-role.seed';
 import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
 import { seedRoleCatalog } from './seeds/role-catalog.seed';
 import { seedCountryDocuments } from './seeds/country-documents.seed';
+import { seedProcessingStepTemplates } from './seeds/processing-step-templates.seed';
 
 const prisma = new PrismaClient();
 
@@ -973,6 +974,7 @@ async function main() {
 
   // Seed country document requirements
   await seedCountryDocuments(prisma);
+  await seedProcessingStepTemplates();
 
   // Create permissions
   console.log('📝 Creating permissions...');

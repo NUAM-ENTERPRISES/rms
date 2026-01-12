@@ -27,12 +27,14 @@ import {
   canTransitionStatus,
 } from '../common/constants';
 import { OutboxService } from '../notifications/outbox.service';
+import { ProcessingService } from '../processing/processing.service';
 
 @Injectable()
 export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
+    private readonly processingService: ProcessingService,
   ) { }
 
   /**
@@ -126,6 +128,11 @@ export class DocumentsService {
         },
       },
     });
+
+    // Attach to a processing step if requested
+    if (createDocumentDto.processingStepId) {
+      await this.processingService.attachDocumentToStep(createDocumentDto.processingStepId, document.id, userId);
+    }
 
     return document as DocumentWithRelations;
   }
@@ -1228,7 +1235,7 @@ export class DocumentsService {
         },
       });
 
-      // f. Update ProcessingCandidate step
+      // f. Update ProcessingCandidate steps (mark offer_letter completed, advance HRD)
       const processingCandidate = await tx.processingCandidate.findFirst({
         where: {
           candidateId: candidateProjectMap.candidateId,
@@ -1238,25 +1245,62 @@ export class DocumentsService {
       });
 
       if (processingCandidate) {
-        await tx.processingCandidate.update({
-          where: { id: processingCandidate.id },
-          data: {
-            step: 'hrd',
-            processingStatus: 'in_progress',
+        // Mark offer_letter step as completed
+        const offerStep = await tx.processingStep.findFirst({
+          where: {
+            processingCandidateId: processingCandidate.id,
+            template: { key: 'offer_letter' },
           },
+          include: { template: true },
         });
 
-        // Add to processing history
-        await tx.processingHistory.create({
-          data: {
+        if (offerStep) {
+          await tx.processingStep.update({
+            where: { id: offerStep.id },
+            data: { status: 'completed', completedAt: new Date() },
+          });
+
+          await tx.processingHistory.create({
+            data: {
+              processingCandidateId: processingCandidate.id,
+              status: 'completed',
+              step: 'offer_letter',
+              changedById: userId,
+              recruiterId: candidateProjectMap.recruiterId,
+              notes: 'Offer letter verified and step completed.',
+            },
+          });
+        }
+
+        // Advance HRD step to in_progress (if exists)
+        const hrdStep = await tx.processingStep.findFirst({
+          where: {
             processingCandidateId: processingCandidate.id,
-            status: 'in_progress',
-            step: 'hrd',
-            changedById: userId,
-            recruiterId: candidateProjectMap.recruiterId,
-            notes: 'Offer letter verified. Step set to HRD.',
+            template: { key: 'hrd' },
           },
+          include: { template: true },
         });
+
+        if (hrdStep) {
+          await tx.processingStep.update({
+            where: { id: hrdStep.id },
+            data: { status: 'in_progress', startedAt: new Date() },
+          });
+
+          await tx.processingHistory.create({
+            data: {
+              processingCandidateId: processingCandidate.id,
+              status: 'in_progress',
+              step: 'hrd',
+              changedById: userId,
+              recruiterId: candidateProjectMap.recruiterId,
+              notes: 'Offer letter verified. HRD step started.',
+            },
+          });
+        }
+
+        // Update overall processing candidate status
+        await tx.processingCandidate.update({ where: { id: processingCandidate.id }, data: { processingStatus: 'in_progress' } });
       }
 
       return {

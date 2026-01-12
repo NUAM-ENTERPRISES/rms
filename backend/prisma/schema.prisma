@@ -454,6 +454,7 @@ model Document {
   verifiedAt      DateTime?
 
   verifications CandidateProjectDocumentVerification[]
+  processingStepDocuments ProcessingStepDocument[]
   candidate     Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   roleCatalog   RoleCatalog?                           @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
 
@@ -1411,19 +1412,93 @@ model CandidateProjectSubStatus {
 }
 
 model CountryDocumentRequirement {
-  id          String   @id @default(cuid())
-  countryCode String
-  docType     String
-  mandatory   Boolean  @default(true)
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                          String   @id @default(cuid())
+  countryCode                 String
+  docType                     String
+  label                       String?
+  mandatory                   Boolean  @default(true)
+  description                 String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  // Optional: link to which processing step this document is typically required for
+  processingStepTemplateId    String?
+  processingStepTemplate      ProcessingStepTemplate? @relation(fields: [processingStepTemplateId], references: [id], onDelete: SetNull)
 
   country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
 
   @@unique([countryCode, docType])
   @@index([countryCode])
+  @@index([processingStepTemplateId])
   @@map("country_document_requirements")
+}
+
+// --- New models for step-based processing workflow ---
+model ProcessingStepTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique                // e.g., "offer_letter", "medical", "visa"
+  label       String
+  description String?
+  order       Int
+  isRequired  Boolean  @default(true)
+  hasDocuments Boolean @default(true)
+  parentId    String?
+  parent      ProcessingStepTemplate? @relation("StepParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children    ProcessingStepTemplate[] @relation("StepParent")
+  meta        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  processingSteps ProcessingStep[]
+  countryDocumentRequirements CountryDocumentRequirement[]
+
+  @@index([key])
+  @@index([order])
+  @@map("processing_step_templates")
+}
+
+model ProcessingStep {
+  id                    String   @id @default(cuid())
+  processingCandidateId String
+  templateId            String
+  status                String   @default("pending") // pending | in_progress | completed | rejected | resubmission_requested
+  assignedTo            String?
+  assignedAt            DateTime?
+  dueDate               DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  rejectionReason       String?
+  meta                  Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  processingCandidate ProcessingCandidate @relation(fields: [processingCandidateId], references: [id], onDelete: Cascade)
+  template            ProcessingStepTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  documents           ProcessingStepDocument[]
+
+  @@index([processingCandidateId])
+  @@index([templateId])
+  @@index([status])
+  @@index([assignedTo])
+  @@map("processing_steps")
+}
+
+model ProcessingStepDocument {
+  id               String   @id @default(cuid())
+  processingStepId String
+  documentId       String   // FK to existing Document.id
+  uploadedBy       String?
+  status           String   @default("pending") // pending | verified | rejected
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  processingStep ProcessingStep @relation(fields: [processingStepId], references: [id], onDelete: Cascade)
+  document       Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([processingStepId])
+  @@index([documentId])
+  @@map("processing_step_documents")
 }
 
 model ProcessingCandidate {
@@ -1442,9 +1517,10 @@ model ProcessingCandidate {
   project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   role      RoleNeeded @relation(fields: [roleNeededId], references: [id], onDelete: Cascade)
 
-  candidateProjectMap CandidateProjects @relation(fields: [candidateId, projectId, roleNeededId], references: [candidateId, projectId, roleNeededId])
+  candidateProjectMap CandidateProjects @relation(fields: [candidateId, projectId, roleNeededId], references: [candidateId, projectId, roleNeededId], onDelete: Cascade)
 
   assignedTo User?               @relation("AssignedToProcessing", fields: [assignedProcessingTeamUserId], references: [id])
+  processingSteps ProcessingStep[]
   history    ProcessingHistory[]
 
   @@unique([candidateId, projectId, roleNeededId])
