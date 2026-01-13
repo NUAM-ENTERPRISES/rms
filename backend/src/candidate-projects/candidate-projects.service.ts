@@ -101,12 +101,14 @@ export class CandidateProjectsService {
     // -------------------------------
     // RECRUITER VALIDATION
     // -------------------------------
-    if (!recruiterId) {
-      recruiterId = userId;
-    }
+    // 1. Prioritize candidate's assigned recruiter from assignments table
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateId);
+    
+    // 2. Use assigned recruiter, or provided one, otherwise fallback to current user
+    const finalRecruiterId = activeRecruiterId || recruiterId || userId;
 
     const recruiter = await this.prisma.user.findUnique({
-      where: { id: recruiterId },
+      where: { id: finalRecruiterId },
     });
     if (!recruiter) {
       throw new NotFoundException(`Recruiter not found`);
@@ -164,7 +166,7 @@ export class CandidateProjectsService {
           candidateId,
           projectId,
           roleNeededId: roleNeededId || null,
-          recruiterId: recruiterId || null,
+          recruiterId: finalRecruiterId || null,
           assignedAt: new Date(),
           notes: createDto.notes || null,
 
@@ -278,13 +280,18 @@ export class CandidateProjectsService {
     // -------------------------------
     // RECRUITER HANDLING
     // -------------------------------
-    if (!recruiterId) recruiterId = userId;
+    // 1. Prioritize candidate's assigned recruiter from assignments table
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateId);
+    
+    // 2. Use assigned recruiter, or provided one, otherwise fallback to current user
+    const finalRecruiterId = activeRecruiterId || recruiterId || userId;
 
     const recruiter = await this.prisma.user.findUnique({
-      where: { id: recruiterId },
+      where: { id: finalRecruiterId },
     });
-    if (!recruiter)
-      throw new NotFoundException(`Recruiter ${recruiterId} not found`);
+    if (!recruiter) {
+      throw new NotFoundException(`Recruiter ${finalRecruiterId} not found`);
+    }
 
     // -------------------------------
     // NEW STATUS SYSTEM
@@ -335,6 +342,7 @@ export class CandidateProjectsService {
           data: {
             mainStatusId: mainStatus.id,
             subStatusId: subStatus.id,
+            recruiterId: finalRecruiterId, // Always ensure recruiter is synchronized
             notes: createDto.notes ?? existingAssignment.notes,
           },
           include: {
@@ -353,7 +361,7 @@ export class CandidateProjectsService {
             candidateId,
             projectId,
             roleNeededId: roleNeededId || null,
-            recruiterId: recruiterId || null,
+            recruiterId: finalRecruiterId || null,
 
             mainStatusId: mainStatus.id,
             subStatusId: subStatus.id,
@@ -460,10 +468,14 @@ export class CandidateProjectsService {
     // -------------------------------
     // RECRUITER HANDLING
     // -------------------------------
-    if (!recruiterId) recruiterId = userId;
+    // 1. Prioritize candidate's assigned recruiter from assignments table
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateId);
+    
+    // 2. Use assigned recruiter, or provided one, otherwise fallback to current user
+    const finalRecruiterId = activeRecruiterId || recruiterId || userId;
 
-    const recruiter = await this.prisma.user.findUnique({ where: { id: recruiterId } });
-    if (!recruiter) throw new NotFoundException(`Recruiter ${recruiterId} not found`);
+    const recruiter = await this.prisma.user.findUnique({ where: { id: finalRecruiterId } });
+    if (!recruiter) throw new NotFoundException(`Recruiter ${finalRecruiterId} not found`);
 
     // -------------------------------
     // NEW STATUS SYSTEM: interview / screening_assigned
@@ -492,12 +504,13 @@ export class CandidateProjectsService {
       let assignment;
 
       if (existingAssignment) {
-        // update status and optionally recruiter/notes
+        // update status and always synchronize recruiter
         const data: any = {
           mainStatusId: mainStatus.id,
           subStatusId: subStatus.id,
+          recruiterId: finalRecruiterId,
         };
-        if (recruiterId) data.recruiterId = recruiterId;
+        // Removed: if (recruiterId) data.recruiterId = recruiterId;
         if (createDto.notes !== undefined) data.notes = createDto.notes ?? existingAssignment.notes;
 
         assignment = await tx.candidateProjects.update({
@@ -511,7 +524,7 @@ export class CandidateProjectsService {
             candidateId,
             projectId,
             roleNeededId: roleNeededId || null,
-            recruiterId: recruiterId || null,
+            recruiterId: finalRecruiterId || null,
             assignedAt: new Date(),
             notes: createDto.notes || null,
             mainStatusId: mainStatus.id,
@@ -966,12 +979,14 @@ export class CandidateProjectsService {
     }
 
     // -------------------------------------
-    // GET USER NAME FOR HISTORY
+    // GET USER NAME FOR HISTORY & RESOLVE RECRUITER
     // -------------------------------------
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { name: true },
     });
+
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateProject.candidateId);
 
     // -------------------------------------
     // UPDATE & ADD HISTORY IN TRANSACTION
@@ -983,6 +998,8 @@ export class CandidateProjectsService {
         data: {
           mainStatusId: mainStatus.id,
           subStatusId: subStatus.id,
+          // Sync recruiter if one is active in assignments table
+          ...(activeRecruiterId ? { recruiterId: activeRecruiterId } : {}),
         },
         include: {
           candidate: true,
@@ -1543,6 +1560,8 @@ export class CandidateProjectsService {
     }
 
     // Update status in transaction
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateProject.candidate.id);
+
     await this.prisma.$transaction(async (tx) => {
       // Update candidate-project status to approved
       await tx.candidateProjects.update({
@@ -1553,6 +1572,8 @@ export class CandidateProjectsService {
               name: CANDIDATE_PROJECT_STATUS.APPROVED,
             },
           },
+          // Sync recruiter if one is active in assignments table
+          ...(activeRecruiterId ? { recruiter: { connect: { id: activeRecruiterId } } } : {}),
         },
       });
 
@@ -1581,7 +1602,7 @@ export class CandidateProjectsService {
   /**
    * Send candidate for interview (either screening or client interview assignment)
    * - Sets main stage to 'interview'
-  * - Sets sub-status to either 'interview_assigned' or 'screening_assigned'
+   * - Sets sub-status to either 'interview_assigned' or 'screening_assigned'
    * - Creates or updates candidate-project assignment and adds a status history entry
    */
   async sendForInterview(dto: SendForInterviewDto, userId: string) {
@@ -1594,11 +1615,16 @@ export class CandidateProjectsService {
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
 
-    // Resolve recruiter (optional)
-    let recruiterId = providedRecruiterId ?? userId;
-    if (recruiterId) {
-      const recruiter = await this.prisma.user.findUnique({ where: { id: recruiterId } });
-      if (!recruiter) throw new NotFoundException(`Recruiter ${recruiterId} not found`);
+    // Resolve recruiter
+    // 1. Prioritize candidate's assigned recruiter from assignments table
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateId);
+    
+    // 2. Use assigned recruiter, or provided one, otherwise fallback to current user
+    const finalRecruiterId = activeRecruiterId || providedRecruiterId || userId;
+
+    if (finalRecruiterId) {
+      const recruiter = await this.prisma.user.findUnique({ where: { id: finalRecruiterId } });
+      if (!recruiter) throw new NotFoundException(`Recruiter ${finalRecruiterId} not found`);
     }
 
     // Find main 'interview' status and sub-status name based on type
@@ -1625,12 +1651,13 @@ export class CandidateProjectsService {
       let assignment;
 
       if (existingAssignment) {
-        // Update status and optionally recruiter / notes
+        // Update status and always synchronize recruiter
         const data: any = {
           mainStatusId: mainStatus.id,
           subStatusId: subStatus.id,
+          recruiterId: finalRecruiterId,
         };
-        if (providedRecruiterId) data.recruiterId = recruiterId;
+        // Removed: if (providedRecruiterId) data.recruiterId = finalRecruiterId;
         if (notes !== undefined) data.notes = notes ?? existingAssignment.notes;
 
         assignment = await tx.candidateProjects.update({
@@ -1644,7 +1671,7 @@ export class CandidateProjectsService {
           data: {
             candidateId,
             projectId,
-            recruiterId: recruiterId || null,
+            recruiterId: finalRecruiterId || null,
             assignedAt: new Date(),
             notes: notes || null,
             mainStatusId: mainStatus.id,
@@ -2083,5 +2110,24 @@ export class CandidateProjectsService {
         );
       }
     }
+  }
+
+  /**
+   * Helper to get candidate's active recruiter from CandidateRecruiterAssignment
+   */
+  private async getCandidateActiveRecruiter(
+    candidateId: string,
+  ): Promise<string | null> {
+    const assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        isActive: true,
+      },
+      select: {
+        recruiterId: true,
+      },
+    });
+
+    return assignment?.recruiterId || null;
   }
 }

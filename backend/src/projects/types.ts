@@ -11,7 +11,16 @@ export interface ProjectWithRelations extends Project {
   client: Client | null;
   creator: User;
   team: Team | null;
-  rolesNeeded: RoleNeeded[];
+  rolesNeeded: (RoleNeeded & {
+    roleCatalog?: {
+      id: string;
+      name: string;
+      label: string;
+      shortName?: string | null;
+      isActive?: boolean;
+      roleDepartment?: { id: string; name: string; shortName?: string | null } | null;
+    } | null;
+  })[];
   candidateProjects: (CandidateProjects & {
     candidate: {
       id: string;

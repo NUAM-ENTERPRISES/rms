@@ -156,12 +156,12 @@ export default function ProcessingCandidateDetailsPage() {
               maxHeight="280px"
             />
 
-            {/* History Modal Button + Quick Notes - last */}
-            <div className="flex gap-3">
+            {/* History Modal Button + Processing Notes stacked */}
+            <div className="flex flex-col gap-3">
               <ProcessingHistoryModal history={data.history || []} />
               
               {data.notes && (
-                <Card className="flex-1 border-0 shadow-lg bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-l-amber-400 p-3">
+                <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-l-amber-400 p-3">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">
                     Notes
                   </h4>

@@ -345,8 +345,8 @@ export default function PassedCandidatesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                {selectedProject?.rolesNeeded?.map((r: any) => (
-                  <SelectItem key={r.id} value={r.roleCatalogId!}>{r.designation}</SelectItem>
+                {selectedProject?.rolesNeeded?.filter((r: any) => r.roleCatalogId).map((r: any) => (
+                  <SelectItem key={r.roleCatalogId!} value={r.roleCatalogId!}>{r.designation}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

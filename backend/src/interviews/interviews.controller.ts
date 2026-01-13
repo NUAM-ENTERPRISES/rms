@@ -266,13 +266,73 @@ export class InterviewsController {
     summary: 'List candidate-project assignments with sub-status interview_assigned ordered by latest assignment',
     description: 'Return candidate-projects that have been assigned to client interviews (latest assignments first). Supports pagination and optional filters.',
   })
-  @ApiResponse({ status: 200, description: 'Assigned interview retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Assigned interview retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  candidateId: { type: 'string' },
+                  projectId: { type: 'string' },
+                  roleNeededId: { type: 'string' },
+                  notes: { type: 'string' },
+                  assignedAt: { type: 'string', format: 'date-time' },
+                  candidate: { type: 'object' },
+                  project: { type: 'object' },
+                  roleNeeded: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      designation: { type: 'string' },
+                      roleCatalog: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          label: { type: 'string' },
+                          shortName: { type: 'string' },
+                          isActive: { type: 'boolean' },
+                        },
+                      },
+                    },
+                  },
+                  recruiter: { type: 'object' },
+                  mainStatus: { type: 'object' },
+                  subStatus: { type: 'object' },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' },
+              },
+            },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
   @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
   @ApiQuery({ name: 'projectId', required: false, description: 'Filter by project ID' })
-  @ApiQuery({ name: 'roleNeededId', required: false, description: 'Filter by Project Role ID' })
   @ApiQuery({ name: 'candidateId', required: false, description: 'Filter by candidate ID' })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter by recruiter/assignee ID' })
+  @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Filter by Role Catalog ID' })
   @ApiQuery({ name: 'search', required: false, description: 'Search term: candidate name/email/project title/role designation' })
   @ApiQuery({ name: 'subStatus', required: false, description: "Sub-status to filter by (defaults to 'interview_assigned')" })
   @ApiQuery({ name: 'includeScheduled', required: false, description: 'Include sub-status interview_scheduled as well (boolean)', example: false })

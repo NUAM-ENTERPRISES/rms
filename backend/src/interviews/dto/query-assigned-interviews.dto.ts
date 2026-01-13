@@ -22,10 +22,10 @@ export class QueryAssignedInterviewsDto {
   @IsString()
   projectId?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by Project Role ID' })
+  @ApiPropertyOptional({ description: 'Filter by Role Catalog ID' })
   @IsOptional()
   @IsString()
-  roleNeededId?: string;
+  roleCatalogId?: string;
 
   @ApiPropertyOptional({ description: 'Filter by candidate ID' })
   @IsOptional()

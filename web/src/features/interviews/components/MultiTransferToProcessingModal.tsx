@@ -114,7 +114,7 @@ export function MultiTransferToProcessingModal({
   }, [candidates, pdfViewerState.isOpen, pdfViewerState.candidateId, pdfViewerState.fileUrl, offerLetterOverrides]);
 
   const dispatch = useAppDispatch();
-  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+  const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
   const selectedProject = useMemo(() => 
     projectsData?.data?.projects?.find((p: any) => p.id === projectId),
     [projectsData, projectId]

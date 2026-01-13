@@ -458,7 +458,20 @@ export class ProjectsService {
         client: true,
         creator: true,
         team: true,
-        rolesNeeded: true,
+        rolesNeeded: {
+          include: {
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                shortName: true,
+                isActive: true,
+                roleDepartment: { select: { id: true, name: true, shortName: true } },
+              },
+            },
+          },
+        },
         candidateProjects: {
           include: {
             candidate: {

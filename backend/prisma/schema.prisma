@@ -190,6 +190,7 @@ model Country {
   qualificationEquivalencies    QualificationEquivalency[]
   roleRecommendedQualifications RoleRecommendedQualification[]
   countryDocumentRequirements   CountryDocumentRequirement[]
+  processingCountrySteps        ProcessingCountryStep[]
 
   @@map("countries")
 }
@@ -1451,10 +1452,26 @@ model ProcessingStepTemplate {
 
   processingSteps             ProcessingStep[]
   countryDocumentRequirements CountryDocumentRequirement[]
+  processingCountrySteps      ProcessingCountryStep[]
 
   @@index([key])
   @@index([order])
   @@map("processing_step_templates")
+}
+
+model ProcessingCountryStep {
+  id             String  @id @default(cuid())
+  countryCode    String
+  stepTemplateId String
+  order          Int
+  isRequired     Boolean @default(true)
+
+  country      Country                @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+  stepTemplate ProcessingStepTemplate @relation(fields: [stepTemplateId], references: [id])
+
+  @@unique([countryCode, stepTemplateId])
+  @@index([countryCode])
+  @@map("processing_country_steps")
 }
 
 model ProcessingStep {

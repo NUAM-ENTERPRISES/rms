@@ -92,7 +92,7 @@ export default function UpcomingInterviewsListPage() {
   });
 
   const { data: projectsData } = useGetProjectsQuery({ 
-    limit: 100, 
+    limit: 10, 
     status: "active" 
   });
   

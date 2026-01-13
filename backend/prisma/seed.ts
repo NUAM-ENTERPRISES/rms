@@ -10,6 +10,7 @@ import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-sta
 import { seedRoleCatalog } from './seeds/role-catalog.seed';
 import { seedCountryDocuments } from './seeds/country-documents.seed';
 import { seedProcessingStepTemplates } from './seeds/processing-step-templates.seed';
+import { seedProcessingCountrySteps } from './seeds/processing-country-steps.seed';
 
 const prisma = new PrismaClient();
 
@@ -975,6 +976,9 @@ async function main() {
   // Seed country document requirements
   await seedCountryDocuments(prisma);
   await seedProcessingStepTemplates();
+
+  // Country-specific ordered step plans (Gulf countries: full plan; India: trimmed plan)
+  await seedProcessingCountrySteps(prisma);
 
   // Create permissions
   console.log('📝 Creating permissions...');

@@ -75,7 +75,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
     return `${pdfViewerState.fileUrl}${pdfViewerState.fileUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
   }, [pdfViewerState.isOpen, pdfViewerState.fileUrl]);
 
-  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+  const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
   const selectedProject = useMemo(() => 
     projectsData?.data?.projects?.find((p: any) => p.id === projectId),
     [projectsData, projectId]

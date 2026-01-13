@@ -105,7 +105,7 @@ export default function MyInterviewsListPage() {
 
   const { data, isLoading, error } = useGetInterviewsQuery(rawParams);
 
-  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+  const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
   const projects = projectsData?.data?.projects || [];
   const filteredProjects = useMemo(() => {
     if (!projectSearch) return projects;

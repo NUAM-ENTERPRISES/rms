@@ -368,7 +368,7 @@ export class InterviewsService {
    * Supports pagination and optional filters.
    */
   async getAssignedCandidateProjects(query: any) {
-    const { page = 1, limit = 10, projectId, roleNeededId, candidateId, recruiterId, search, subStatus, includeScheduled } = query;
+    const { page = 1, limit = 10, projectId, roleCatalogId, candidateId, recruiterId, search, subStatus, includeScheduled } = query;
 
     const where: any = {};
 
@@ -383,7 +383,12 @@ export class InterviewsService {
     }
 
     if (projectId) where.projectId = projectId;
-    if (roleNeededId) where.roleNeededId = roleNeededId;
+
+    // Allow filtering by RoleCatalog only (roleNeededId filter removed)
+    if (roleCatalogId) {
+      where.roleNeeded = { is: { roleCatalogId } };
+    }
+
     if (candidateId) where.candidateId = candidateId;
     if (recruiterId) where.recruiterId = recruiterId;
 
@@ -407,7 +412,11 @@ export class InterviewsService {
       include: {
         candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
         project: { select: { id: true, title: true } },
-        roleNeeded: { select: { id: true, designation: true } },
+        roleNeeded: {
+          include: {
+            roleCatalog: { select: { id: true, name: true, label: true, shortName: true, isActive: true } },
+          },
+        },
         recruiter: { select: { id: true, name: true, email: true } },
         mainStatus: true,
         subStatus: true,
@@ -493,7 +502,7 @@ export class InterviewsService {
           include: {
             candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
             project: { select: { id: true, title: true } },
-            roleNeeded: { select: { id: true, designation: true } },
+            roleNeeded: { include: { roleCatalog: { select: { id: true, name: true, label: true, shortName: true, isActive: true } } } },
             recruiter: { select: { id: true, name: true, email: true } },
             mainStatus: true,
             subStatus: true,

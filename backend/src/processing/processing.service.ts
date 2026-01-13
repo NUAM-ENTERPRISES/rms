@@ -203,49 +203,108 @@ export class ProcessingService {
   async createStepsForProcessingCandidate(processingCandidateId: string, tx?: any) {
     const prismaTx = tx || this.prisma;
 
-    // If there are already steps for this candidate, skip creation
-    const existing = await prismaTx.processingStep.findFirst({ where: { processingCandidateId } });
-    if (existing) return;
+    // Fetch processing candidate and determine country (prefer project country)
+    const processingCandidate = await prismaTx.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true },
+    });
+    if (!processingCandidate) throw new Error('Processing candidate not found');
 
-    // Fetch all templates ordered
-    const templates = await prismaTx.processingStepTemplate.findMany({ orderBy: { order: 'asc' } });
+    const country = processingCandidate.project?.countryCode || processingCandidate.candidate?.countryCode || null;
 
-    // Create steps
-    for (const t of templates) {
-      await prismaTx.processingStep.create({
-        data: {
-          processingCandidateId,
-          templateId: t.id,
-          status: 'pending',
-        },
+    // Fetch country-specific plan
+    let plan: Array<{ stepTemplateId: string; stepTemplate?: any; order?: number }> = [];
+    if (country) {
+      const countryPlan = await prismaTx.processingCountryStep.findMany({
+        where: { countryCode: country },
+        orderBy: { order: 'asc' },
+        include: { stepTemplate: true },
       });
+      plan = countryPlan.map((p) => ({ stepTemplateId: p.stepTemplateId, stepTemplate: p.stepTemplate, order: p.order }));
     }
 
-    // Optionally set first step to in_progress
-    const firstTemplate = templates[0];
-    if (firstTemplate) {
-      const firstStep = await prismaTx.processingStep.findFirst({ where: { processingCandidateId, templateId: firstTemplate.id } });
-      if (firstStep) {
-        await prismaTx.processingStep.update({ where: { id: firstStep.id }, data: { status: 'in_progress', startedAt: new Date() } });
+    // Fallback to global templates if no country plan
+    if (plan.length === 0) {
+      const templates = await prismaTx.processingStepTemplate.findMany({ orderBy: { order: 'asc' } });
+      plan = templates.map((t) => ({ stepTemplateId: t.id, stepTemplate: t, order: t.order }));
+    }
+
+    // Create missing steps idempotently
+    for (const p of plan) {
+      const exists = await prismaTx.processingStep.findFirst({ where: { processingCandidateId, templateId: p.stepTemplateId } });
+      if (!exists) {
+        await prismaTx.processingStep.create({
+          data: {
+            processingCandidateId,
+            templateId: p.stepTemplateId,
+            status: 'pending',
+          },
+        });
+      }
+    }
+
+    // Only auto-start the first step if the processing candidate is already marked as 'in_progress'
+    // This prevents a transfer action from immediately setting steps to in_progress; transfers should keep status 'assigned'
+    const anyInProgress = await prismaTx.processingStep.findFirst({ where: { processingCandidateId, status: 'in_progress' } });
+    if (!anyInProgress) {
+      const pc = await prismaTx.processingCandidate.findUnique({ where: { id: processingCandidateId } });
+      if (pc && pc.processingStatus === 'in_progress') {
+        // find first created step ordered by template.order (use template relation)
+        const firstStep = await prismaTx.processingStep.findFirst({
+          where: { processingCandidateId },
+          orderBy: { template: { order: 'asc' } },
+        });
+        if (firstStep) {
+          await prismaTx.processingStep.update({ where: { id: firstStep.id }, data: { status: 'in_progress', startedAt: new Date() } });
+        }
       }
     }
   }
 
   async getProcessingSteps(processingCandidateId: string) {
+    // Ensure steps are materialized according to country plan
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+
+    // Resolve candidate country for document rules
+    const pc = await this.prisma.processingCandidate.findUnique({ where: { id: processingCandidateId }, include: { candidate: true, project: true } });
+    const country = pc?.project?.countryCode || pc?.candidate?.countryCode || null;
+
+    // Fetch all country document rules for this country (if any)
+    const countryRules = country
+      ? await this.prisma.countryDocumentRequirement.findMany({ where: { countryCode: country } })
+      : [];
+
     const steps = await this.prisma.processingStep.findMany({
       where: { processingCandidateId },
       orderBy: { template: { order: 'asc' } },
       include: {
         template: true,
-        documents: {
-          include: {
-            candidateProjectDocumentVerification: { include: { document: true } },
-          },
-        },
+        documents: { include: { candidateProjectDocumentVerification: { include: { document: true } } } },
       },
     });
 
-    return steps;
+    // Attach requiredDocuments for each step
+    const stepsWithRules = steps.map((s) => {
+      const stepSpecific = countryRules.filter((r) => r.processingStepTemplateId === s.templateId);
+      const global = countryRules.filter((r) => r.processingStepTemplateId === null);
+
+      // merge, preferring stepSpecific when docType duplicates
+      const merged: any[] = [];
+      const seen = new Set<string>();
+      for (const r of [...stepSpecific, ...global]) {
+        if (!seen.has(r.docType)) {
+          merged.push(r);
+          seen.add(r.docType);
+        }
+      }
+
+      return {
+        ...s,
+        requiredDocuments: merged,
+      };
+    });
+
+    return stepsWithRules;
   }
 
   async updateProcessingStep(stepId: string, data: any, userId: string) {

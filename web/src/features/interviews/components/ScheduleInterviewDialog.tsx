@@ -69,7 +69,7 @@ export default function ScheduleInterviewDialog({
     {
       status: "active",
       page: 1,
-      limit: 100,
+      limit: 10,
     },
     {
       skip: !!initialCandidateProjectMapId || !!initialCandidateProjectMapIds, // Skip fetching projects if we already have candidate mapping(s)

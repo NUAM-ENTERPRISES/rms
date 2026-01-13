@@ -54,7 +54,7 @@ export default function ProcessingDashboardPage() {
   const [pageSize, setPageSize] = useState<number>(10);
 
   // Fetch Projects for filter
-  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+  const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
   const projects = projectsData?.data?.projects || [];
 
   // API Call for Candidates

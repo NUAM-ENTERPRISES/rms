@@ -64,7 +64,7 @@ export default function AssignedInterviewsListPage() {
   });
 
   const { data: projectsData } = useGetProjectsQuery({ 
-    limit: 100, 
+    limit: 10, 
     status: "active" 
   });
   
@@ -184,8 +184,9 @@ export default function AssignedInterviewsListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all_roles">All Roles</SelectItem>
-                  {roles.map(r => (
-                    <SelectItem key={r.id} value={r.roleCatalogId!}>{r.designation}</SelectItem>
+                  {roles.filter(r => r.roleCatalogId).map(r => (
+                    // Only include roles that have a roleCatalogId so we pass a valid roleCatalogId to the API
+                    <SelectItem key={r.roleCatalogId!} value={r.roleCatalogId!}>{r.designation}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
