@@ -18,6 +18,7 @@ interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  compact?: boolean; // render compact (smaller height) variant
 }
 
 export function DatePicker({
@@ -26,6 +27,7 @@ export function DatePicker({
   placeholder = "Pick a date and time",
   disabled = false,
   className,
+  compact = false,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -71,13 +73,17 @@ export function DatePicker({
     }
   };
 
+  const buttonHeightClasses = compact ? "h-8 sm:h-9 text-sm" : "h-10 sm:h-11 text-sm sm:text-base";
+  const inputHeightClasses = compact ? "h-8 sm:h-9" : "h-10 sm:h-11";
+  const cellSize = compact ? "[--cell-size:2.25rem]" : "[--cell-size:2.75rem]";
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           className={cn(
-            "h-10 sm:h-11 w-full justify-start text-left font-normal border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 text-sm sm:text-base",
+            `${buttonHeightClasses} w-full justify-start text-left font-normal border-slate-200 focus:border-blue-500 focus:ring-blue-500/20`,
             !value && "text-muted-foreground",
             className
           )}
@@ -90,7 +96,7 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto min-w-[600px] max-w-[700px] p-4 sm:p-6"
+        className="w-auto min-w-[520px] max-w-[700px] p-3 sm:p-4"
         align="start"
       >
         <div className="flex gap-6">
@@ -106,7 +112,7 @@ export function DatePicker({
                   selected={selectedDate}
                   onSelect={handleDateSelect}
                   initialFocus
-                  className="rounded-lg border border-slate-200 bg-white shadow-sm [--cell-size:2.75rem] w-full"
+                  className={`rounded-lg border border-slate-200 bg-white shadow-sm ${cellSize} w-full`}
                 />
               </div>
             </div>
@@ -128,17 +134,17 @@ export function DatePicker({
                   type="time"
                   value={timeValue}
                   onChange={(e) => handleTimeChange(e.target.value)}
-                  className="w-full h-10 sm:h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  className={`w-full ${inputHeightClasses} border-slate-200 focus:border-blue-500 focus:ring-blue-500/20`}
                 />
               </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-              <Button
+                <Button
                 variant="outline"
                 size="sm"
                 onClick={handleCancel}
-                className="h-9 sm:h-10 px-4 sm:px-6 border-slate-200 hover:border-slate-300 text-sm"
+                className={`${compact ? 'h-8 sm:h-9 px-3' : 'h-9 sm:h-10 px-4 sm:px-6'} border-slate-200 hover:border-slate-300 text-sm`}
               >
                 Cancel
               </Button>
@@ -146,7 +152,7 @@ export function DatePicker({
                 size="sm"
                 onClick={handleApply}
                 disabled={!selectedDate}
-                className="h-9 sm:h-10 px-4 sm:px-6 bg-blue-600 hover:bg-blue-700 text-sm"
+                className={`${compact ? 'h-8 sm:h-9 px-3' : 'h-9 sm:h-10 px-4 sm:px-6'} bg-blue-600 hover:bg-blue-700 text-sm`}
               >
                 OK
               </Button>

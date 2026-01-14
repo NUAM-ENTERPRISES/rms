@@ -209,6 +209,22 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingDetails", id: "LIST" },
       ],
     }),
+
+    // Submit HRD submission date
+    submitHrdDate: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { stepId: string; submittedAt: string }
+    >({
+      query: ({ stepId, submittedAt }) => ({
+        url: `/processing/steps/${stepId}/submit-date`,
+        method: "POST",
+        body: { submittedAt },
+      }),
+      invalidatesTags: () => [
+        { type: "ProcessingSteps", id: "LIST" },
+        { type: "ProcessingDetails", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -221,4 +237,5 @@ export const {
   useAttachDocumentToStepMutation,
   useReuploadProcessingDocumentMutation,
   useVerifyProcessingDocumentMutation,
+  useSubmitHrdDateMutation,
 } = processingApi;

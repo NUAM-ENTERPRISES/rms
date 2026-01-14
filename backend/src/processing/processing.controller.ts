@@ -29,6 +29,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
+import { SubmitProcessingStepDateDto } from './dto/submit-processing-step-date.dto';
 
 @ApiTags('Processing Department')
 @ApiBearerAuth()
@@ -283,5 +284,14 @@ export class ProcessingController {
   async completeStep(@Param('stepId') stepId: string, @Req() req: any) {
     const data = await this.processingService.completeProcessingStep(stepId, req.user.id);
     return { success: true, data, message: 'Processing step completed and advanced to next step' };
+  }
+
+  @Post('steps/:stepId/submit-date')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set submittedAt on a processing step (mark as submitted by candidate)' })
+  async submitProcessingStepDate(@Param('stepId') stepId: string, @Body() body: SubmitProcessingStepDateDto, @Req() req: any) {
+    const data = await this.processingService.submitProcessingStepDate(stepId, body, req.user.id);
+    return { success: true, data, message: 'Processing step submitted date updated' };
   }
 }

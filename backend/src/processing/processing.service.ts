@@ -570,11 +570,17 @@ export class ProcessingService {
     // HRD completion flag based on HRD step status
     const isHrdCompleted = !!hrdStep && hrdStep.status === 'completed';
 
+    // Remove `documents` from step response (not needed in HRD payload)
+    const step = hrdStep
+      ? (() => {
+          const { documents, ...rest } = hrdStep as any;
+          return rest;
+        })()
+      : null;
+
     return {
       isHrdCompleted,
-      step: hrdStep
-        ? { id: hrdStep.id, templateKey: hrdStep.template.key, status: hrdStep.status }
-        : null,
+      step,
       processingCandidate: {
         id: pc.id,
         processingStatus: pc.processingStatus,
@@ -652,6 +658,36 @@ export class ProcessingService {
             action: 'update_step',
             details: { status, assignedTo, rejectionReason },
           }),
+        },
+      });
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Set or update the submittedAt timestamp for a processing step (candidate submission)
+   * Only updates the submittedAt field (no status changes)
+   */
+  async submitProcessingStepDate(stepId: string, data: any, userId: string) {
+    const { submittedAt } = data || {};
+
+    const step = await this.prisma.processingStep.findUnique({ where: { id: stepId }, include: { template: true } });
+    if (!step) throw new NotFoundException('Processing step not found');
+
+    const newSubmittedAt = submittedAt ? new Date(submittedAt) : new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.processingStep.update({ where: { id: stepId }, data: { submittedAt: newSubmittedAt } });
+
+      // create processing history entry
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: step.processingCandidateId,
+          status: step.status,
+          step: step.template.key,
+          changedById: userId,
+          notes: JSON.stringify({ action: 'submit_step_date', submittedAt: newSubmittedAt.toISOString() }),
         },
       });
     });

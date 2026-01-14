@@ -1484,6 +1484,7 @@ model ProcessingStep {
   dueDate               DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
+  submittedAt           DateTime?
   rejectionReason       String?
   meta                  Json?
   createdAt             DateTime  @default(now())

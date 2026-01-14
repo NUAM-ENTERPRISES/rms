@@ -1,20 +1,24 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, X, Eye } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
+import { DatePicker } from "@/components/molecules/DatePicker";
+import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-import { useGetHrdRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation } from "@/services/processingApi";
+const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
+const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
+import { useGetHrdRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HrdModalProps {
   isOpen: boolean;
@@ -36,6 +40,10 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
+  const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+
+  // HRD submission date state
+  const [hrdSubmissionDate, setHrdSubmissionDate] = useState<Date | undefined>(undefined);
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -51,6 +59,11 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
 
   // Confirmation modal state
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  // Submit date confirmation modal
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  // Edit existing submitted date modal
+  const [editSubmitOpen, setEditSubmitOpen] = useState(false);
+  const [editDate, setEditDate] = useState<Date | undefined>(undefined);
 
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
@@ -330,9 +343,17 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
 
   const handleMarkComplete = async () => {
     if (!activeStep?.id) return;
-    if (!canMarkComplete) {
+
+    // If there are missing mandatory docs, show that message
+    if (statMissing > 0) {
       const missingSummary = missingDocs.length > 2 ? `${missingDocs.slice(0,2).join(', ')} +${missingDocs.length - 2} more` : missingDocs.join(', ');
       toast.error(`Cannot complete — Missing: ${missingSummary}`);
+      return;
+    }
+
+    // Require submittedAt to be set before allowing completion
+    if (!hasSubmittedAt) {
+      toast.error("Cannot complete — Submission date not set");
       return;
     }
 
@@ -361,6 +382,34 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
     }
   };
 
+  const handleSubmitHrdDate = async (date?: Date): Promise<boolean> => {
+    if (!activeStep?.id) {
+      toast.error("No active step found");
+      return false;
+    }
+
+    const payloadDate = date ?? hrdSubmissionDate;
+
+    if (!payloadDate) {
+      toast.error("Please select a date and time");
+      return false;
+    }
+
+    try {
+      await submitHrdDate({
+        stepId: activeStep.id,
+        submittedAt: payloadDate.toISOString(),
+      }).unwrap();
+      toast.success("HRD submission date saved successfully");
+      await refetch();
+      return true;
+    } catch (err: any) {
+      console.error("Submit HRD date failed", err);
+      toast.error(err?.data?.message || "Failed to save HRD submission date");
+      return false;
+    }
+  };
+
 
   // Prefer counts from the API payload when available (keeps UI consistent with backend)
   const apiCounts = data?.counts;
@@ -371,8 +420,11 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const statVerified = apiCounts?.verifiedCount ?? computedStats.verified;
   const statMissing = apiCounts?.missingCount ?? missingDocs.length;
 
-  // Only allow marking complete when no mandatory documents are missing
-  const canMarkComplete = statMissing === 0;
+  // Submitted date check: require a submittedAt date on the active step
+  const hasSubmittedAt = Boolean(activeStep?.submittedAt);
+
+  // Only allow marking complete when no mandatory documents are missing AND a submitted date exists
+  const canMarkComplete = statMissing === 0 && hasSubmittedAt;
 
   // Keep legacy `stats` shape for other usages
   const stats = { ...computedStats, total: statTotal, verified: statVerified }; 
@@ -428,6 +480,91 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                 <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100">
                   <div className="text-2xl font-black text-amber-600">{statMissing}</div>
                   <div className="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Missing</div>
+                </div>
+              </div>
+
+              {/* HRD Submission Date Section (compact) */}
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5" />
+                    HRD Submission Date & Time
+                  </h4>
+                </div>
+                <div className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 w-full sm:w-auto">
+                      <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
+
+                      {/* If step already has submittedAt, show the formatted submitted date and hide the picker */}
+                      {activeStep?.submittedAt ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm font-semibold text-slate-800">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
+                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
+                          </div>
+
+                          {/* Move edit to right edge and apply a circular 'nice' style */}
+                          {!isHrdCompleted && (
+                            <div className="flex items-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-sm"
+                                onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }}
+                                title="Edit submission date"
+                              >
+                                <Edit2 className="h-4 w-4 text-slate-700" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <DatePicker
+                            value={hrdSubmissionDate}
+                            onChange={setHrdSubmissionDate}
+                            placeholder="Pick date and time"
+                            disabled={isHrdCompleted}
+                            className="w-full sm:min-w-[220px] h-8"
+                            compact
+                          />
+
+                          {/* Validation / hint messages when no submittedAt */}
+                          {!activeStep?.submittedAt && (
+                            <div className="mt-1">
+                              {hrdSubmissionDate ? (
+                                <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
+                              ) : (
+                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete HRD</p>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center">
+                      {/* Only show submit button when no submittedAt present */}
+                      {!activeStep?.submittedAt && (
+                        <Button
+                          size="sm"
+                          onClick={() => setSubmitConfirmOpen(true)}
+                          disabled={isSubmittingDate || !hrdSubmissionDate || isHrdCompleted}
+                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          {isSubmittingDate ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5 mr-1" />
+                          )}
+                          Submit Date
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {isHrdCompleted && (
+                    <p className="text-xs text-slate-500 mt-2">HRD is completed. Submission date cannot be modified.</p>
+                  )}
                 </div>
               </div>
 
@@ -603,15 +740,39 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
               {isHrdCompleted ? (
                 <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">HRD Completed ✓</Badge>
               ) : (
-                <Button
-                  size="sm"
-                  onClick={handleMarkComplete}
-                  disabled={isCompletingStep || !canMarkComplete}
-                  title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
-                  aria-disabled={isCompletingStep || !canMarkComplete}
-                >
-                  {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark HRD Complete'}
-                </Button>
+                // If there are no missing documents but submittedAt is not set, show tooltip on hover explaining why the button is disabled
+                statMissing === 0 && !hasSubmittedAt ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button
+                            size="sm"
+                            onClick={handleMarkComplete}
+                            disabled={true}
+                            className="opacity-80"
+                            aria-disabled={true}
+                          >
+                            {'Mark HRD Complete'}
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Submission date required to complete HRD. Please select and submit a date.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={handleMarkComplete}
+                    disabled={isCompletingStep || !canMarkComplete}
+                    title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
+                    aria-disabled={isCompletingStep || !canMarkComplete}
+                  >
+                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark HRD Complete'}
+                  </Button>
+                )
               )}
             </div>
           </div>
@@ -640,6 +801,34 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
           processingStepId={activeStep?.id || ""}
           onConfirm={handleConfirmVerify}
           isVerifying={isVerifying}
+        />
+      </React.Suspense>
+
+      {/* Confirm Submit Date Modal */}
+      <React.Suspense fallback={null}>
+        <ConfirmSubmitDateModal
+          isOpen={submitConfirmOpen}
+          onClose={() => setSubmitConfirmOpen(false)}
+          date={hrdSubmissionDate}
+          onConfirm={async () => {
+            const ok = await handleSubmitHrdDate();
+            if (ok) setSubmitConfirmOpen(false);
+          }}
+          isSubmitting={isSubmittingDate}
+        />
+      </React.Suspense>
+
+      {/* Edit Submit Date Modal */}
+      <React.Suspense fallback={null}>
+        <ConfirmEditSubmitDateModal
+          isOpen={editSubmitOpen}
+          onClose={() => setEditSubmitOpen(false)}
+          existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt}
+          onConfirm={async (newDate: Date) => {
+            const ok = await handleSubmitHrdDate(newDate);
+            return ok;
+          }}
+          isSubmitting={isSubmittingDate}
         />
       </React.Suspense>
 
