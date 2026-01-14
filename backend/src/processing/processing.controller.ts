@@ -23,6 +23,8 @@ import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
 import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
+import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
+import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -218,6 +220,38 @@ export class ProcessingController {
     };
   }
 
+  @Post('documents/reupload')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Processing-level document re-upload (replace existing document)',
+    description: 'Replace an already uploaded document: soft-delete old document and its verifications, add history, create new document and verification, and attach to processing step if provided.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Document replaced and new document created with history' })
+  async processingDocumentReupload(@Body() dto: ProcessingDocumentReuploadDto, @Req() req: any) {
+    const result = await this.processingService.processingDocumentReupload(
+      dto,
+      req.user.id,
+    );
+    return { success: true, data: result, message: 'Document re-upload (processing) completed' };
+  }
+
+  @Post('documents/verify')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify a document in the context of processing',
+    description: 'Updates document status to verified, ensures project-level verification is verified, and creates step-document link with history.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Document verified successfully' })
+  async verifyProcessingDocument(@Body() dto: VerifyProcessingDocumentDto, @Req() req: any) {
+    const result = await this.processingService.verifyProcessingDocument(
+      dto,
+      req.user.id,
+    );
+    return { success: true, data: result, message: 'Document verified successfully' };
+  }
+
   @Get('steps/:processingId')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({ summary: 'Get processing steps for a candidate', description: 'List steps for a processing candidate' })
@@ -226,11 +260,28 @@ export class ProcessingController {
     return { success: true, data, message: 'Processing steps retrieved' };
   }
 
+  @Get('steps/:processingId/hrd-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get HRD requirements for a processing candidate', description: 'Merged global + country HRD document rules and existing processing_documents.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getHrdRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getHrdRequirements(processingId, docType);
+    return { success: true, data, message: 'HRD requirements retrieved' };
+  }
+
   @Post('steps/:stepId/status')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @ApiOperation({ summary: 'Update a processing step status' })
   async updateStepStatus(@Param('stepId') stepId: string, @Body() body: UpdateProcessingStepDto, @Req() req: any) {
     const data = await this.processingService.updateProcessingStep(stepId, body, req.user.id);
     return { success: true, data, message: 'Processing step updated' };
+  }
+
+  @Post('steps/:stepId/complete')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({ summary: 'Mark a processing step as complete and move to next step' })
+  async completeStep(@Param('stepId') stepId: string, @Req() req: any) {
+    const data = await this.processingService.completeProcessingStep(stepId, req.user.id);
+    return { success: true, data, message: 'Processing step completed and advanced to next step' };
   }
 }

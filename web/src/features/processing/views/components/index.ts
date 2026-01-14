@@ -9,3 +9,4 @@ export { ProcessingHistoryModal } from "./ProcessingHistoryModal";
 export { DocumentVerificationCard } from "./DocumentVerificationCard";
 export { ProcessingOfferLetterModal } from "./ProcessingOfferLetterModal";
 export type { OfferLetterDocument, DocumentVerification } from "./ProcessingOfferLetterModal";
+export { HrdModal } from "./HrdModal";

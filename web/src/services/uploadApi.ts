@@ -68,6 +68,7 @@ export const uploadApi = baseApi.injectEndpoints({
           url: `/upload/profile-image/user/${userId}`,
           method: "POST",
           body: formData,
+          formData: true,
         };
       },
       invalidatesTags: ["User"],
@@ -84,6 +85,7 @@ export const uploadApi = baseApi.injectEndpoints({
           url: `/upload/profile-image/candidate/${candidateId}`,
           method: "POST",
           body: formData,
+          formData: true,
         };
       },
       invalidatesTags: ["Candidate"],
@@ -101,6 +103,7 @@ export const uploadApi = baseApi.injectEndpoints({
           url: `/upload/document/${candidateId}`,
           method: "POST",
           body: formData,
+          formData: true,
         };
       },
       invalidatesTags: ["Document", "Candidate"],
@@ -120,6 +123,7 @@ export const uploadApi = baseApi.injectEndpoints({
           url: `/upload/resume/${candidateId}`,
           method: "POST",
           body: formData,
+          formData: true,
         };
       },
       invalidatesTags: ["Candidate"],
@@ -147,6 +151,7 @@ export const uploadApi = baseApi.injectEndpoints({
           url: `/upload/offer-letter/${candidateId}`,
           method: "POST",
           body: formData,
+          formData: true,
         };
       },
       invalidatesTags: ["Candidate", "Document", "Interview", "ProcessingSummary"],

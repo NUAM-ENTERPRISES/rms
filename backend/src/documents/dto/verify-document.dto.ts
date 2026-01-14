@@ -18,6 +18,22 @@ export class VerifyDocumentDto {
   @IsOptional()
   roleCatalogId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Role Catalog (accepted as `roleCatalog`; `roleCatalogId` and common typo `roleCatelogId` supported)',
+    example: 'rc_123abc',
+  })
+  @IsString()
+  @IsOptional()
+  roleCatalog?: string;
+
+  @ApiPropertyOptional({
+    description: 'Common frontend typo alias: `roleCatelogId` (backward compatibility)',
+    example: 'rc_123abc',
+  })
+  @IsString()
+  @IsOptional()
+  roleCatelogId?: string;
+
   @ApiProperty({
     description: 'Verification status',
     enum: [DOCUMENT_STATUS.VERIFIED, DOCUMENT_STATUS.REJECTED],

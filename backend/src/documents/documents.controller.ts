@@ -561,7 +561,7 @@ export class DocumentsController {
     const result = await this.documentsService.reuseDocument(
       documentId,
       reuseDto.projectId,
-      reuseDto.roleCatalogId,
+      reuseDto.roleCatalog || reuseDto.roleCatalogId || reuseDto.roleCatelogId,
       req.user.sub,
     );
     return {

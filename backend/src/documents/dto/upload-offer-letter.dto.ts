@@ -21,12 +21,29 @@ export class UploadOfferLetterDto {
   @IsString()
   projectId: string;
 
-  @ApiProperty({
-    description: 'Role Catalog ID',
+  @ApiPropertyOptional({
+    description: 'Role Catalog ID (accepted as `roleCatalog`; `roleCatalogId` and common typo `roleCatelogId` supported for backward compatibility)',
     example: 'rc_123abc',
   })
+  @IsOptional()
   @IsString()
-  roleCatalogId: string;
+  roleCatalog?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alias for `roleCatalog` - `roleCatalogId` (backward compatibility)',
+    example: 'rc_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Common frontend typo alias: `roleCatelogId` (backward compatibility)',
+    example: 'rc_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatelogId?: string;
 
   @ApiProperty({
     description: 'File name',

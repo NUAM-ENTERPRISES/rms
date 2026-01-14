@@ -304,6 +304,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
       formData.append("file", file);
       formData.append("docType", uploadDocType);
 
+      const roleCatalogId = candidateProject?.roleNeeded?.roleCatalog?.id;
+      if (roleCatalogId) {
+        formData.append("roleCatalogId", roleCatalogId);
+      }
+
       const uploadResult = await uploadDocument({
         candidateId,
         formData,
@@ -332,12 +337,14 @@ const RecruiterDocsDetailPage: React.FC = () => {
           fileUrl: uploadData.fileUrl,
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
+          roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
         }).unwrap();
 
         // Step 3: Link the document to the current project
         await reuseDocument({
           documentId: documentData.data.id,
           projectId,
+          roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
         }).unwrap();
 
         toast.success("Document uploaded and linked successfully!");
@@ -392,6 +399,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("docType", meta.docType);
+      if (meta.roleCatalogId) {
+        formData.append("roleCatalogId", meta.roleCatalogId);
+      }
 
       const response = await uploadDocument({
         candidateId,
@@ -410,7 +420,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
         documentNumber: meta.documentNumber,
         expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
         notes: meta.notes,
-        roleCatalogId: meta.roleCatalogId,
+        roleCatalogId: meta.roleCatalogId || "",
       }).unwrap();
 
       toast.success("Document uploaded successfully");

@@ -3,7 +3,10 @@ import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
 import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
-import { DOCUMENT_TYPE } from '../common/constants';
+import { DOCUMENT_TYPE, DOCUMENT_STATUS } from '../common/constants';
+import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
+import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
+import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
 
 @Injectable()
 export class ProcessingService {
@@ -269,10 +272,10 @@ export class ProcessingService {
     const pc = await this.prisma.processingCandidate.findUnique({ where: { id: processingCandidateId }, include: { candidate: true, project: true } });
     const country = pc?.project?.countryCode || pc?.candidate?.countryCode || null;
 
-    // Fetch all country document rules for this country (if any)
-    const countryRules = country
-      ? await this.prisma.countryDocumentRequirement.findMany({ where: { countryCode: country } })
-      : [];
+    // Fetch all country document rules for this country + global ('ALL')
+    const countryRules = await this.prisma.countryDocumentRequirement.findMany({
+      where: { countryCode: country ? { in: ['ALL', country] } : { in: ['ALL'] } },
+    });
 
     const steps = await this.prisma.processingStep.findMany({
       where: { processingCandidateId },
@@ -285,13 +288,17 @@ export class ProcessingService {
 
     // Attach requiredDocuments for each step
     const stepsWithRules = steps.map((s) => {
-      const stepSpecific = countryRules.filter((r) => r.processingStepTemplateId === s.templateId);
-      const global = countryRules.filter((r) => r.processingStepTemplateId === null);
+      // country-specific step rules (highest priority)
+      const stepSpecificCountry = countryRules.filter((r) => r.processingStepTemplateId === s.templateId && r.countryCode !== 'ALL');
+      // global step rules defined for ALL
+      const stepSpecificGlobal = countryRules.filter((r) => r.processingStepTemplateId === s.templateId && r.countryCode === 'ALL');
+      // legacy/global rules with no template (generic rules)
+      const genericGlobal = countryRules.filter((r) => r.processingStepTemplateId === null);
 
-      // merge, preferring stepSpecific when docType duplicates
+      // merge, preferring country-specific -> global step-level -> generic global
       const merged: any[] = [];
       const seen = new Set<string>();
-      for (const r of [...stepSpecific, ...global]) {
+      for (const r of [...stepSpecificCountry, ...stepSpecificGlobal, ...genericGlobal]) {
         if (!seen.has(r.docType)) {
           merged.push(r);
           seen.add(r.docType);
@@ -307,17 +314,310 @@ export class ProcessingService {
     return stepsWithRules;
   }
 
+  // -----------------
+  // HRD helpers & validation
+  // -----------------
+  private async ensureHrdCanComplete(processingStepId: string) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: processingStepId },
+      include: {
+        processingCandidate: true,
+        template: true,
+        documents: { include: { candidateProjectDocumentVerification: { include: { document: true } } } },
+      },
+    });
+    if (!step) throw new Error('Processing step not found');
+
+    const processingCandidate = await this.prisma.processingCandidate.findUnique({
+      where: { id: step.processingCandidateId },
+      include: { candidate: true, project: true },
+    });
+    if (!processingCandidate) throw new Error('Processing candidate not found');
+
+    const country = processingCandidate.project?.countryCode || processingCandidate.candidate?.countryCode || null;
+
+    // Fetch HRD rules (global + country)
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: step.templateId,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    // Merge rules: country overrides ALL
+    const ruleMap: Record<string, any> = {};
+    for (const r of rules) {
+      if (!ruleMap[r.docType] || r.countryCode !== 'ALL') ruleMap[r.docType] = r;
+    }
+
+    const mandatoryDocTypes = Object.values(ruleMap)
+      .filter((r: any) => r.mandatory)
+      .map((r: any) => r.docType);
+
+    // Check uploaded/verified documents for this step
+    const uploadedDocTypes = new Set<string>();
+    for (const pd of step.documents || []) {
+      const ver = pd.candidateProjectDocumentVerification;
+      // Allow completion if document is verified OR pending (uploaded but not yet verified)
+      // We only block if it's missing or explicitly rejected
+      if (
+        ver &&
+        (ver.status === 'verified' || ver.status === 'pending') &&
+        ver.document?.docType
+      ) {
+        uploadedDocTypes.add(ver.document.docType);
+      }
+    }
+
+    const missing = mandatoryDocTypes.filter((d) => !uploadedDocTypes.has(d));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Cannot complete HRD step. Missing or unverified documents: ${missing.join(
+          ', ',
+        )}`,
+      );
+    }
+  }
+
+  async getHrdRequirements(processingCandidateId: string, docType?: string) {
+    // Ensure steps exist
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: {
+        candidate: true,
+        project: true,
+        role: { include: { roleCatalog: true } },
+      },
+    });
+    if (!pc)
+      throw new NotFoundException(
+        `Processing candidate ${processingCandidateId} not found`,
+      );
+
+    const country =
+      pc.project?.countryCode || pc.candidate?.countryCode || null;
+
+    const hrdTemplate = await this.prisma.processingStepTemplate.findUnique({
+      where: { key: 'hrd' },
+    });
+    if (!hrdTemplate) throw new NotFoundException(`HRD step template not found`);
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: hrdTemplate.id,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    // Merge rules: country wins
+    const map: Record<string, any> = {};
+    for (const r of rules) {
+      if (!map[r.docType] || r.countryCode !== 'ALL') map[r.docType] = r;
+    }
+
+    let requiredDocuments = Object.values(map).map((r: any) => ({
+      docType: r.docType,
+      label: r.label,
+      mandatory: r.mandatory,
+      source: r.countryCode,
+    }));
+
+    // Use DocTypes from rules instead of a hardcoded list to allow country-specific requirements
+    const activeDocTypes = requiredDocuments.map((d) => d.docType);
+
+    // If docType filter provided, restrict requiredDocuments further
+    if (docType) {
+      requiredDocuments = requiredDocuments.filter((d) => d.docType === docType);
+    }
+
+    // Find HRD processing step with rich includes (document, verification, history, related project/role info)
+    const hrdStep = await this.prisma.processingStep.findFirst({
+      where: { processingCandidateId, templateId: hrdTemplate.id },
+      include: {
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: {
+              include: {
+                document: true,
+                roleCatalog: true,
+                // Only include minimal fields for candidateProjectMap.roleNeeded per request
+                candidateProjectMap: {
+                  include: {
+                    project: true,
+                    roleNeeded: {
+                      select: {
+                        id: true,
+                        projectId: true,
+                        roleCatalogId: true,
+                        designation: true,
+                      },
+                    },
+                  },
+                },
+                // Do NOT include verificationHistory (removed intentionally)
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const filterDocTypes = docType ? [docType] : activeDocTypes;
+
+    // Map processing_documents, filter to relevant doc types
+    let processing_documents = (hrdStep?.documents || [])
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        return {
+          processingStepDocumentId: d.id,
+          processingDocument: {
+            id: d.id,
+            status: d.status,
+            notes: d.notes || null,
+            uploadedBy: d.uploadedBy || null,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+          },
+          verification: ver
+            ? {
+                id: ver.id,
+                status: ver.status,
+                notes: ver.notes || null,
+                rejectionReason: ver.rejectionReason || null,
+                resubmissionRequested: ver.resubmissionRequested || false,
+                roleCatalog: ver.roleCatalog || null,
+                // candidateProjectMap will include the trimmed roleNeeded per query
+                candidateProjectMap: ver.candidateProjectMap || null,
+                createdAt: ver.createdAt,
+                updatedAt: ver.updatedAt,
+              }
+            : null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+
+    // Include candidate's own documents of relevant doc types and their verifications
+    const candidateDocuments = await this.prisma.document.findMany({
+      where: {
+        candidateId: pc.candidate.id,
+        isDeleted: false,
+        docType: { in: filterDocTypes },
+        OR: [
+          { roleCatalogId: pc.role?.roleCatalogId || null },
+          { roleCatalogId: null },
+        ],
+      },
+      include: {
+        verifications: {
+          include: {
+            candidateProjectMap: {
+              include: {
+                project: true,
+                roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+              },
+            },
+            roleCatalog: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Compute counts for HRD overview
+    const mandatoryDocTypes = requiredDocuments
+      .filter((d) => d.mandatory)
+      .map((d) => d.docType);
+
+    // Count uploaded document types (either attached to the HRD step or present in candidate documents)
+    const uploadedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => {
+      if (pd.document?.docType) uploadedDocTypes.add(pd.document.docType);
+    });
+    candidateDocuments.forEach((d: any) => {
+      if (d.docType) uploadedDocTypes.add(d.docType);
+    });
+
+    const uploadedCount = uploadedDocTypes.size;
+
+    // Count verified processing documents (verification.status === 'verified')
+    const verifiedCount = processing_documents.filter(
+      (pd: any) => pd.verification && pd.verification.status === 'verified',
+    ).length;
+
+    // Missing count should only reflect mandatory documents that are not uploaded
+    const missingCount = mandatoryDocTypes.filter(
+      (docType) => !uploadedDocTypes.has(docType),
+    ).length;
+
+    // HRD completion flag based on HRD step status
+    const isHrdCompleted = !!hrdStep && hrdStep.status === 'completed';
+
+    return {
+      isHrdCompleted,
+      step: hrdStep
+        ? { id: hrdStep.id, templateKey: hrdStep.template.key, status: hrdStep.status }
+        : null,
+      processingCandidate: {
+        id: pc.id,
+        processingStatus: pc.processingStatus,
+        candidate: {
+          id: pc.candidate?.id || null,
+          firstName: pc.candidate?.firstName || null,
+          lastName: pc.candidate?.lastName || null,
+          email: pc.candidate?.email || null,
+          mobileNumber: pc.candidate?.mobileNumber || null,
+          countryCode: pc.candidate?.countryCode || null,
+        },
+        project: {
+          id: pc.project?.id || null,
+          title: pc.project?.title || null,
+          countryCode: pc.project?.countryCode || null,
+          description: pc.project?.description || null,
+          clientId: pc.project?.clientId || null,
+          teamId: pc.project?.teamId || null,
+        },
+        role: pc.role
+          ? {
+              id: pc.role.id,
+              designation: pc.role.designation,
+              roleCatalog: pc.role.roleCatalog || null,
+            }
+          : null,
+      },
+      requiredDocuments,
+      processing_documents,
+      candidateDocuments,
+      counts: {
+        totalConfigured: requiredDocuments.length,
+        totalMandatory: mandatoryDocTypes.length,
+        uploadedCount,
+        verifiedCount,
+        missingCount, // Only mandatory missing
+      },
+    };
+  }
+
   async updateProcessingStep(stepId: string, data: any, userId: string) {
     // Allowed updates: status, assignedTo, rejectionReason, dueDate
     const { status, assignedTo, rejectionReason, dueDate } = data;
 
-    const step = await this.prisma.processingStep.findUnique({ where: { id: stepId }, include: { template: true, processingCandidate: true } });
-    if (!step) throw new Error('Processing step not found');
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: stepId },
+      include: { template: true, processingCandidate: true },
+    });
+    if (!step) throw new NotFoundException('Processing step not found');
+
+    if (status === 'completed') {
+      return this.completeProcessingStep(stepId, userId);
+    }
 
     const updates: any = {};
     if (status) {
       updates.status = status;
-      if (status === 'completed') updates.completedAt = new Date();
       if (status === 'in_progress') updates.startedAt = new Date();
       if (status === 'rejected') updates.rejectionReason = rejectionReason || null;
     }
@@ -334,47 +634,137 @@ export class ProcessingService {
           status: status || step.status,
           step: step.template.key,
           changedById: userId,
-          notes: JSON.stringify({ action: 'update_step', details: { status, assignedTo, rejectionReason } }),
+          notes: JSON.stringify({
+            action: 'update_step',
+            details: { status, assignedTo, rejectionReason },
+          }),
         },
       });
-
-      // If step completed, optionally advance next step (sequential flow)
-      if (status === 'completed') {
-        // Find next pending step for same processingCandidate
-        const nextStep = await tx.processingStep.findFirst({
-          where: { processingCandidateId: step.processingCandidateId, status: 'pending' },
-          orderBy: { template: { order: 'asc' } },
-        });
-        if (nextStep) {
-          await tx.processingStep.update({ where: { id: nextStep.id }, data: { status: 'in_progress', startedAt: new Date() } });
-
-          await tx.processingHistory.create({
-            data: {
-              processingCandidateId: step.processingCandidateId,
-              status: 'in_progress',
-              step: nextStep.templateId,
-              changedById: userId,
-              notes: `Advanced to next step ${nextStep.id}`,
-            },
-          });
-        } else {
-          // All steps completed -> mark processing candidate completed
-          await tx.processingCandidate.update({ where: { id: step.processingCandidateId }, data: { processingStatus: 'completed' } });
-
-          await tx.processingHistory.create({
-            data: {
-              processingCandidateId: step.processingCandidateId,
-              status: 'completed',
-              step: step.template.key,
-              changedById: userId,
-              notes: 'All steps completed',
-            },
-          });
-        }
-      }
     });
 
     return { success: true };
+  }
+
+  /**
+   * Mark a processing step as completed and auto-advance to next step
+   */
+  async completeProcessingStep(stepId: string, userId: string) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: stepId },
+      include: {
+        template: true,
+        processingCandidate: {
+          include: { candidate: true, project: true },
+        },
+      },
+    });
+
+    if (!step) throw new NotFoundException('Processing step not found');
+    if (step.status === 'completed') {
+      return { success: true, message: 'Step already completed' };
+    }
+
+    // Prevent completing HRD step unless required documents are verified
+    if (step.template?.key === 'hrd') {
+      await this.ensureHrdCanComplete(step.id);
+    }
+
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. Mark current step as completed
+      await tx.processingStep.update({
+        where: { id: stepId },
+        data: {
+          status: 'completed',
+          completedAt: new Date(),
+        },
+      });
+
+      // 2. Create history for step completion
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: step.processingCandidateId,
+          status: 'completed',
+          step: step.template.key,
+          changedById: userId,
+          notes: `Step "${step.template.label}" marked as completed`,
+        },
+      });
+
+      // 3. Find next pending step for same processingCandidate
+      const nextStep = await tx.processingStep.findFirst({
+        where: {
+          processingCandidateId: step.processingCandidateId,
+          status: 'pending',
+        },
+        orderBy: { template: { order: 'asc' } },
+        include: { template: true },
+      });
+
+      if (nextStep) {
+        // 4. Advance to next step
+        await tx.processingStep.update({
+          where: { id: nextStep.id },
+          data: {
+            status: 'in_progress',
+            startedAt: new Date(),
+          },
+        });
+
+        // 5. Update ProcessingCandidate current step
+        await tx.processingCandidate.update({
+          where: { id: step.processingCandidateId },
+          data: {
+            step: nextStep.template.key,
+            processingStatus: 'in_progress',
+          },
+        });
+
+        // 6. Create history for moving to next step
+        await tx.processingHistory.create({
+          data: {
+            processingCandidateId: step.processingCandidateId,
+            status: 'in_progress',
+            step: nextStep.template.key,
+            changedById: userId,
+            notes: `Advanced to next step: ${nextStep.template.label}`,
+          },
+        });
+
+        return {
+          success: true,
+          currentStep: step.template.key,
+          nextStep: nextStep.template.key,
+          processingStatus: 'in_progress',
+        };
+      } else {
+        // 7. All steps completed -> mark processing candidate completed
+        await tx.processingCandidate.update({
+          where: { id: step.processingCandidateId },
+          data: {
+            processingStatus: 'completed',
+            step: 'completed',
+          },
+        });
+
+        // 8. Create history for overall completion
+        await tx.processingHistory.create({
+          data: {
+            processingCandidateId: step.processingCandidateId,
+            status: 'completed',
+            step: 'completed',
+            changedById: userId,
+            notes: 'All processing steps completed',
+          },
+        });
+
+        return {
+          success: true,
+          currentStep: step.template.key,
+          nextStep: null,
+          processingStatus: 'completed',
+        };
+      }
+    });
   }
 
   async attachDocumentToStep(processingStepId: string, documentId: string, uploadedBy?: string) {
@@ -436,6 +826,258 @@ export class ProcessingService {
       },
     });
     return doc;
+  }
+
+  /**
+   * Processing-level document re-upload: replace existing document with a new upload
+   * Soft-deletes the old document and its verification(s), creates history entries,
+   * creates a new document and verification (status RESUBMITTED), attaches to a step if provided and updates project status.
+   */
+  async processingDocumentReupload(dto: ProcessingDocumentReuploadDto, userId: string) {
+    const { oldDocumentId, candidateProjectMapId, fileName, fileUrl, fileSize, mimeType, expiryDate, documentNumber, notes, roleCatalogId, docType } = dto;
+
+    // 1. Validate old document
+    const oldDocument = await this.prisma.document.findUnique({ where: { id: oldDocumentId } });
+    if (!oldDocument || (oldDocument as any).isDeleted) {
+      throw new NotFoundException(`Document with ID ${oldDocumentId} not found`);
+    }
+
+    // 2. Validate candidateProjectMap
+    const candidateProjectMap = await this.prisma.candidateProjects.findUnique({ where: { id: candidateProjectMapId }, include: { project: true } });
+    if (!candidateProjectMap) {
+      throw new NotFoundException(`Candidate project mapping with ID ${candidateProjectMapId} not found`);
+    }
+
+    // 3. Ensure document belongs to candidate
+    if (oldDocument.candidateId !== candidateProjectMap.candidateId) {
+      throw new BadRequestException('Document does not belong to the specified candidate nomination');
+    }
+
+    // 4. Get user info for history
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+
+    // 5. Perform transaction: soft delete old verification(s) + document, add history; create new document + verification + history
+    const result = await this.prisma.$transaction(async (tx) => {
+      // find existing verifications that link this old document to the nomination
+      const existingVerifications = await tx.candidateProjectDocumentVerification.findMany({ where: { documentId: oldDocumentId, candidateProjectMapId: candidateProjectMapId, isDeleted: false } as any });
+      const verificationIds = existingVerifications.map((v) => v.id);
+
+      // soft delete verifications
+      if (verificationIds.length > 0) {
+        await tx.candidateProjectDocumentVerification.updateMany({ where: { id: { in: verificationIds } } as any, data: { isDeleted: true, deletedAt: new Date() } as any });
+      }
+
+      // soft delete the old document
+      await tx.document.updateMany({ where: { id: oldDocumentId, isDeleted: false } as any, data: { isDeleted: true, deletedAt: new Date() } as any });
+
+      // add history entries for the replaced (soft-deleted) verification(s)
+      if (verificationIds.length > 0) {
+        const historyEntries = verificationIds.map((id) => ({
+          verificationId: id,
+          action: 'replaced',
+          performedBy: userId,
+          performedByName: user?.name || 'System',
+          notes: 'Old document replaced by processing re-upload',
+        }));
+        await tx.documentVerificationHistory.createMany({ data: historyEntries });
+      }
+
+      // create the new document
+      const newDocument = await tx.document.create({ data: {
+        candidateId: oldDocument.candidateId,
+        docType: docType || oldDocument.docType,
+        fileName,
+        fileUrl,
+        fileSize,
+        mimeType,
+        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+        documentNumber,
+        notes,
+        roleCatalogId: roleCatalogId || oldDocument.roleCatalogId || null,
+        uploadedBy: userId,
+        status: DOCUMENT_STATUS.PENDING,
+      } });
+
+      // create verification for the new document
+      const newVerification = await tx.candidateProjectDocumentVerification.create({ data: {
+        candidateProjectMapId: candidateProjectMapId,
+        documentId: newDocument.id,
+        roleCatalogId: roleCatalogId || oldDocument.roleCatalogId || null,
+        status: DOCUMENT_STATUS.PENDING,
+        notes,
+      } as any });
+
+      // create history entry for new verification (processing re-upload)
+      await tx.documentVerificationHistory.create({ data: {
+        verificationId: newVerification.id,
+        action: 'reuploaded',
+        performedBy: userId,
+        performedByName: user?.name || null,
+        notes: 'reuploaded',
+      } });
+
+      return { oldDocumentId, newDocument, newVerification };
+    });
+
+    // 6. Update candidate project status similar to DocumentsService
+    // Recompute summary counts to determine new status
+    const totalSubmitted = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isDeleted: false } as any });
+    const totalPending = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isDeleted: false, status: 'pending' } as any });
+    const totalRejected = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isDeleted: false, status: 'rejected' } as any });
+
+    const totalRequired = await this.prisma.documentRequirement.count({ where: { projectId: candidateProjectMap.projectId, isDeleted: false } as any });
+
+    // Safely fetch current project status (can be null) to avoid TS2531
+    const currentProject = await this.prisma.candidateProjects.findUnique({ where: { id: candidateProjectMapId }, include: { currentProjectStatus: true } });
+    let newStatusName = currentProject?.currentProjectStatus?.statusName || 'pending_documents';
+
+    if (totalSubmitted === 0) {
+      newStatusName = 'pending_documents';
+    } else if (totalPending > 0 || totalSubmitted < totalRequired) {
+      newStatusName = 'verification_in_progress';
+    } else if (totalRejected > 0) {
+      newStatusName = 'rejected_documents';
+    } else if (totalSubmitted >= totalRequired && totalRejected === 0 && totalPending === 0) {
+      newStatusName = 'documents_verified';
+    }
+
+    const current = await this.prisma.candidateProjects.findUnique({ where: { id: candidateProjectMapId }, include: { currentProjectStatus: true } });
+
+    if (current && newStatusName !== current.currentProjectStatus.statusName) {
+      const newStatus = await this.prisma.candidateProjectStatus.findFirst({ where: { statusName: newStatusName } });
+      if (newStatus) {
+        await this.prisma.candidateProjects.update({ where: { id: candidateProjectMapId }, data: { currentProjectStatusId: newStatus.id } });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Verify a document in the context of processing
+   * Updates document status, ensures project verification, and links to processing step
+   */
+  async verifyProcessingDocument(dto: VerifyProcessingDocumentDto, userId: string) {
+    const { documentId, processingStepId, notes } = dto;
+
+    // 1. Get the processing step to find the candidate and project
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: processingStepId },
+      include: {
+        processingCandidate: {
+          include: {
+            candidate: true,
+          },
+        },
+      },
+    });
+
+    if (!step) {
+      throw new NotFoundException(`Processing step ${processingStepId} not found`);
+    }
+
+    // 2. Find the CandidateProjectMap associated with this processing candidate
+    const candidateProjectMap = await this.prisma.candidateProjects.findFirst({
+      where: {
+        candidateId: step.processingCandidate.candidateId,
+        projectId: step.processingCandidate.projectId,
+        roleNeededId: step.processingCandidate.roleNeededId,
+      },
+    });
+
+    if (!candidateProjectMap) {
+      throw new NotFoundException('Candidate project mapping not found for processing candidate');
+    }
+
+    // Get user info for history
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    return await this.prisma.$transaction(async (tx) => {
+      // 3. Update Document status
+      await tx.document.update({
+        where: { id: documentId },
+        data: {
+          status: DOCUMENT_STATUS.VERIFIED,
+          verifiedAt: new Date(),
+          verifiedBy: userId,
+        },
+      });
+
+      // 4. Find or Create CandidateProjectDocumentVerification (CPM-Doc link)
+      let verification = await tx.candidateProjectDocumentVerification.findUnique({
+        where: {
+          candidateProjectMapId_documentId: {
+            candidateProjectMapId: candidateProjectMap.id,
+            documentId: documentId,
+          },
+        },
+      });
+
+      if (!verification) {
+        verification = await tx.candidateProjectDocumentVerification.create({
+          data: {
+            candidateProjectMapId: candidateProjectMap.id,
+            documentId: documentId,
+            status: DOCUMENT_STATUS.VERIFIED,
+            notes: notes || 'Verified by processing team',
+          } as any,
+        });
+      } else {
+        verification = await tx.candidateProjectDocumentVerification.update({
+          where: { id: verification.id },
+          data: {
+            status: DOCUMENT_STATUS.VERIFIED,
+            notes: notes || verification.notes || 'Verified by processing team',
+            isDeleted: false,
+            deletedAt: null,
+          } as any,
+        });
+      }
+
+      // 5. Create or Update ProcessingStepDocument (Linking verification TO the step)
+      const existingStepDoc = await tx.processingStepDocument.findFirst({
+        where: {
+          candidateProjectDocumentVerificationId: verification.id,
+        },
+      });
+
+      if (!existingStepDoc) {
+        await tx.processingStepDocument.create({
+          data: {
+            processingStepId: processingStepId,
+            candidateProjectDocumentVerificationId: verification.id,
+            status: DOCUMENT_STATUS.VERIFIED,
+            notes: notes || 'Verified by processing team',
+            uploadedBy: userId,
+          },
+        });
+      } else {
+        await tx.processingStepDocument.update({
+          where: { id: existingStepDoc.id },
+          data: {
+            processingStepId: processingStepId, // Ensure it's linked to the right step if it was floating
+            status: DOCUMENT_STATUS.VERIFIED,
+            notes: notes || existingStepDoc.notes || 'Verified by processing team',
+          },
+        });
+      }
+
+      // 6. Create Document History Entry
+      await tx.documentVerificationHistory.create({
+        data: {
+          verificationId: verification.id,
+          action: DOCUMENT_STATUS.VERIFIED,
+          performedBy: userId,
+          performedByName: user?.name || null,
+          notes: notes || 'initially document verified by processing team',
+        },
+      });
+
+      return { success: true, verificationId: verification.id };
+    });
   }
 
   /**

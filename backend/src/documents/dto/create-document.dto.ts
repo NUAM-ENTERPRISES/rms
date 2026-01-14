@@ -82,12 +82,28 @@ export class CreateDocumentDto {
   notes?: string;
 
   @ApiPropertyOptional({
-    description: 'Role Catalog ID (only for resume)',
+    description: 'Role Catalog ID (accepted as `roleCatalog`; `roleCatalogId` and common typo `roleCatelogId` supported for backward compatibility)',
+    example: 'rc_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalog?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alias for `roleCatalog` - optional role catalog id as `roleCatalogId` key (backward compatibility)',
     example: 'rc_123abc',
   })
   @IsOptional()
   @IsString()
   roleCatalogId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Common frontend typo alias: `roleCatelogId` (backward compatibility)',
+    example: 'rc_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatelogId?: string;
 
   @ApiPropertyOptional({
     description: 'Processing Step ID to attach this document to',

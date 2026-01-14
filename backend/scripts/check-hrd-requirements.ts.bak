@@ -1,0 +1,38 @@
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const processingId = process.argv[2];
+  if (!processingId) {
+    console.error('Usage: ts-node scripts/check-hrd-requirements.ts <processingCandidateId>');
+    process.exit(1);
+  }
+
+  const pc = await prisma.processingCandidate.findUnique({ where: { id: processingId }, include: { candidate: true, project: true } });
+  console.log('Processing Candidate:', pc ? { id: pc.id, processingStatus: pc.processingStatus, country: pc.project?.countryCode || pc.candidate?.countryCode } : null);
+
+  const hrdTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'hrd' } });
+  console.log('HRD Template:', hrdTemplate ? { id: hrdTemplate.id, key: hrdTemplate.key } : null);
+
+  if (!hrdTemplate) process.exit(0);
+
+  const country = pc?.project?.countryCode || pc?.candidate?.countryCode || null;
+
+  const rules = await prisma.countryDocumentRequirement.findMany({ where: { processingStepTemplateId: hrdTemplate.id, countryCode: { in: country ? ['ALL', country] : ['ALL'] } } });
+  console.log(`Found ${rules.length} rules for country(s):`, country ? ['ALL', country] : ['ALL']);
+  console.log(rules.map(r => ({ id: r.id, countryCode: r.countryCode, docType: r.docType, mandatory: r.mandatory, processingStepTemplateId: r.processingStepTemplateId })));
+
+  // Also check legacy/global where processingStepTemplateId is null but countryCode = 'ALL'
+  const legacy = await prisma.countryDocumentRequirement.findMany({ where: { processingStepTemplateId: null, countryCode: 'ALL' } });
+  console.log('Legacy global rules (processingStepTemplateId null) count:', legacy.length);
+  console.log(legacy.map(r => ({ id: r.id, docType: r.docType })));
+
+  process.exit(0);
+}
+
+main().catch((e) => {
+  console.error('Error', e);
+  process.exit(1);
+});

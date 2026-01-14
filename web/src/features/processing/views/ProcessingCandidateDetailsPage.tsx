@@ -16,6 +16,7 @@ import {
   ProcessingHistoryModal,
   DocumentVerificationCard,
   ProcessingOfferLetterModal,
+  HrdModal,
 } from "./components";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
 
@@ -23,18 +24,27 @@ export default function ProcessingCandidateDetailsPage() {
   const { candidateId: processingId } = useParams<{ candidateId: string }>();
   const navigate = useNavigate();
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
+  const [showHrdModal, setShowHrdModal] = useState(false);
 
-  const { data: apiResponse, isLoading, error, refetch } = useGetCandidateProcessingDetailsQuery(processingId || "", {
+  const { data: apiResponse, isLoading, error, refetch: refetchCandidateDetails } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
   });
   
   // Fetch processing steps from the new API
-  const { data: processingSteps = [], isLoading: isLoadingSteps } = useGetProcessingStepsQuery(processingId || "", {
+  const { data: processingSteps = [], isLoading: isLoadingSteps, refetch: refetchProcessingSteps } = useGetProcessingStepsQuery(processingId || "", {
     skip: !processingId,
   });
   
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
+
+  // Handler to refresh all data when HRD step is completed
+  const handleHrdComplete = async () => {
+    await Promise.all([
+      refetchCandidateDetails(),
+      refetchProcessingSteps()
+    ]);
+  };
 
   // Extract offer letter status from document verifications
   const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
@@ -126,8 +136,11 @@ export default function ProcessingCandidateDetailsPage() {
               steps={processingSteps}
               maxHeight="450px"
               offerLetterStatus={offerLetterStatus}
-              onOfferLetterClick={() => setShowOfferLetterModal(true)}
-            />
+              onOfferLetterClick={() => setShowOfferLetterModal(true)}              onStepClick={(stepKey) => {
+                if (stepKey === "hrd") {
+                  setShowHrdModal(true);
+                }
+              }}            />
 
             {/* Project Info Card - Below Steps */}
             <ProjectInfoCard
@@ -180,7 +193,7 @@ export default function ProcessingCandidateDetailsPage() {
         isOpen={showOfferLetterModal}
         onClose={() => {
           setShowOfferLetterModal(false);
-          refetch(); // Refresh data when modal closes to show updated document
+          refetchCandidateDetails(); // Refresh data when modal closes to show updated document
         }}
         candidateId={data.candidate?.id || ""}
         candidateName={`${data.candidate?.firstName || ""} ${data.candidate?.lastName || ""}`.trim()}
@@ -198,13 +211,24 @@ export default function ProcessingCandidateDetailsPage() {
             }).unwrap();
             
             toast.success("Offer letter verified successfully");
-            await refetch();
+            await refetchCandidateDetails();
           } catch (error: any) {
             console.error("Verification error:", error);
             toast.error(error?.data?.message || "Failed to verify offer letter");
             throw error;
           }
         }}
+      />
+
+      {/* HRD Requirements Modal */}
+      <HrdModal
+        isOpen={showHrdModal}
+        onClose={() => {
+          setShowHrdModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleHrdComplete}
       />
     </div>
   );

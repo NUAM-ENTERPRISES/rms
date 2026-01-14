@@ -116,6 +116,99 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingDetails", id: "LIST" },
       ],
     }),
+
+    // Mark a processing step as complete (new endpoint)
+    completeStep: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { stepId: string }
+    >({
+      query: ({ stepId }) => ({
+        url: `/processing/steps/${stepId}/complete`,
+        method: "POST",
+      }),
+      invalidatesTags: () => [
+        { type: "ProcessingSteps", id: "LIST" },
+        { type: "ProcessingDetails", id: "LIST" },
+      ],
+    }),
+
+    // Get HRD requirements and uploads for a processing candidate
+    getHrdRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/hrd-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    // Attach an uploaded document to a HRD step
+    attachDocumentToStep: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { stepId: string; documentId: string; uploadedBy?: string }
+    >({
+      query: ({ stepId, documentId }) => ({
+        url: `/processing/steps/${stepId}/documents`,
+        method: "POST",
+        body: { documentId },
+      }),
+      invalidatesTags: () => [
+        { type: "ProcessingSteps", id: "LIST" },
+        { type: "ProcessingDetails", id: "LIST" },
+      ],
+    }),
+
+    // Re-upload (replace) an existing candidate document and create a processing verification
+    reuploadProcessingDocument: builder.mutation<
+      { success: boolean; data: any; message: string },
+      {
+        oldDocumentId: string;
+        candidateProjectMapId: string;
+        fileName: string;
+        fileUrl: string;
+        fileSize?: number;
+        mimeType?: string;
+        expiryDate?: string;
+        documentNumber?: string;
+        notes?: string;
+        roleCatalogId?: string;
+        processingStepId?: string;
+        docType?: string;
+      }
+    >({
+      query: (body) => ({
+        url: `/processing/documents/reupload`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: () => [
+        { type: "ProcessingSteps", id: "LIST" },
+        { type: "ProcessingDetails", id: "LIST" },
+      ],
+    }),
+
+    // Verify a document for a processing step
+    verifyProcessingDocument: builder.mutation<
+      { success: boolean; data: any; message: string },
+      {
+        documentId: string;
+        processingStepId: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({
+        url: `/processing/documents/verify`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: () => [
+        { type: "ProcessingSteps", id: "LIST" },
+        { type: "ProcessingDetails", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -123,4 +216,9 @@ export const {
   useGetProcessingStepsQuery,
   useGetProcessingDetailsQuery,
   useUpdateStepStatusMutation,
+  useCompleteStepMutation,
+  useGetHrdRequirementsQuery,
+  useAttachDocumentToStepMutation,
+  useReuploadProcessingDocumentMutation,
+  useVerifyProcessingDocumentMutation,
 } = processingApi;
