@@ -15,7 +15,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
   ];
 
   const omanDocs = [
-    { docType: DOCUMENT_TYPE.PASSPORT, label: 'Passport', mandatory: true },
+    { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
     { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
     { docType: DOCUMENT_TYPE.MOH_PROMETRIC, label: 'MOH License / Prometric', mandatory: true },
     { docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS, label: 'Experience Letters', mandatory: true },
@@ -23,7 +23,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
   ];
 
   const qatarDocs = [
-    { docType: DOCUMENT_TYPE.PASSPORT, label: 'Passport', mandatory: true },
+    { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
     { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
     { docType: DOCUMENT_TYPE.QCHP_PROMETRIC, label: 'QCHP Evaluation / Prometric', mandatory: true },
     { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATES, label: 'Experience Certificates', mandatory: true },

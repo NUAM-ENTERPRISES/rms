@@ -13,9 +13,11 @@ export class OutboxService {
   async publishEvent(
     type: string,
     payload: Record<string, unknown>,
+    tx?: any,
   ): Promise<void> {
     try {
-      await this.prisma.outboxEvent.create({
+      const prisma = tx || this.prisma;
+      await prisma.outboxEvent.create({
         data: {
           type,
           payload: payload as any, // Type assertion for Prisma Json type
@@ -39,11 +41,16 @@ export class OutboxService {
   async publishCandidateDocumentsRejected(
     candidateProjectMapId: string,
     verifiedBy: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('CandidateDocumentsRejected', {
-      candidateProjectMapId,
-      verifiedBy,
-    });
+    await this.publishEvent(
+      'CandidateDocumentsRejected',
+      {
+        candidateProjectMapId,
+        verifiedBy,
+      },
+      tx,
+    );
   }
 
   /**
@@ -53,12 +60,17 @@ export class OutboxService {
     documentId: string,
     verifiedBy: string,
     candidateProjectMapId: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('DocumentVerified', {
-      documentId,
-      verifiedBy,
-      candidateProjectMapId,
-    });
+    await this.publishEvent(
+      'DocumentVerified',
+      {
+        documentId,
+        verifiedBy,
+        candidateProjectMapId,
+      },
+      tx,
+    );
   }
 
   /**
@@ -69,13 +81,18 @@ export class OutboxService {
     rejectedBy: string,
     candidateProjectMapId: string,
     reason?: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('DocumentRejected', {
-      documentId,
-      rejectedBy,
-      candidateProjectMapId,
-      reason,
-    });
+    await this.publishEvent(
+      'DocumentRejected',
+      {
+        documentId,
+        rejectedBy,
+        candidateProjectMapId,
+        reason,
+      },
+      tx,
+    );
   }
 
   /**
@@ -86,13 +103,18 @@ export class OutboxService {
     requestedBy: string,
     candidateProjectMapId: string,
     reason?: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('DocumentResubmissionRequested', {
-      documentId,
-      requestedBy,
-      candidateProjectMapId,
-      reason,
-    });
+    await this.publishEvent(
+      'DocumentResubmissionRequested',
+      {
+        documentId,
+        requestedBy,
+        candidateProjectMapId,
+        reason,
+      },
+      tx,
+    );
   }
 
   /**
@@ -102,12 +124,17 @@ export class OutboxService {
     documentId: string,
     resubmittedBy: string,
     candidateProjectMapId: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('DocumentResubmitted', {
-      documentId,
-      resubmittedBy,
-      candidateProjectMapId,
-    });
+    await this.publishEvent(
+      'DocumentResubmitted',
+      {
+        documentId,
+        resubmittedBy,
+        candidateProjectMapId,
+      },
+      tx,
+    );
   }
 
   /**
@@ -116,11 +143,16 @@ export class OutboxService {
   async publishCandidateDocumentsVerified(
     candidateProjectMapId: string,
     verifiedBy: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('CandidateDocumentsVerified', {
-      candidateProjectMapId,
-      verifiedBy,
-    });
+    await this.publishEvent(
+      'CandidateDocumentsVerified',
+      {
+        candidateProjectMapId,
+        verifiedBy,
+      },
+      tx,
+    );
   }
 
   /**
@@ -129,11 +161,16 @@ export class OutboxService {
   async publishCandidateSentForVerification(
     candidateProjectMapId: string,
     assignedToExecutive: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('CandidateSentForVerification', {
-      candidateProjectMapId,
-      assignedToExecutive,
-    });
+    await this.publishEvent(
+      'CandidateSentForVerification',
+      {
+        candidateProjectMapId,
+        assignedToExecutive,
+      },
+      tx,
+    );
   }
 
   /**
@@ -144,13 +181,18 @@ export class OutboxService {
     recruiterId: string,
     transferredBy: string,
     reason?: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('CandidateTransferredBack', {
-      candidateId,
-      recruiterId,
-      transferredBy,
-      reason,
-    });
+    await this.publishEvent(
+      'CandidateTransferredBack',
+      {
+        candidateId,
+        recruiterId,
+        transferredBy,
+        reason,
+      },
+      tx,
+    );
   }
 
   /**
@@ -162,14 +204,19 @@ export class OutboxService {
     fromTeamId: string,
     toTeamId: string,
     requestedBy: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('MemberTransferRequested', {
-      transferId,
-      userId,
-      fromTeamId,
-      toTeamId,
-      requestedBy,
-    });
+    await this.publishEvent(
+      'MemberTransferRequested',
+      {
+        transferId,
+        userId,
+        fromTeamId,
+        toTeamId,
+        requestedBy,
+      },
+      tx,
+    );
   }
 
   /**
@@ -181,13 +228,18 @@ export class OutboxService {
     screeningId: string,
     coordinatorId: string,
     recruiterId: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('CandidateSentToScreening', {
-      candidateProjectMapId,
-      screeningId,
-      coordinatorId,
-      recruiterId,
-    });
+    await this.publishEvent(
+      'CandidateSentToScreening',
+      {
+        candidateProjectMapId,
+        screeningId,
+        coordinatorId,
+        recruiterId,
+      },
+      tx,
+    );
   }
 
   /**
@@ -200,14 +252,43 @@ export class OutboxService {
     coordinatorId: string,
     recruiterId: string,
     teamHeadId?: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('CandidateApprovedForClientInterview', {
-      candidateProjectMapId,
-      screeningId,
-      coordinatorId,
-      recruiterId,
-      teamHeadId,
-    });
+    await this.publishEvent(
+      'CandidateApprovedForClientInterview',
+      {
+        candidateProjectMapId,
+        screeningId,
+        coordinatorId,
+        recruiterId,
+        teamHeadId,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish candidate transferred to processing event
+   */
+  async publishCandidateTransferredToProcessing(
+    processingCandidateId: string,
+    candidateId: string,
+    projectId: string,
+    assignedProcessingTeamUserId: string,
+    transferredBy: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateTransferredToProcessing',
+      {
+        processingCandidateId,
+        candidateId,
+        projectId,
+        assignedProcessingTeamUserId,
+        transferredBy,
+      },
+      tx,
+    );
   }
 
   /**
@@ -221,14 +302,19 @@ export class OutboxService {
     recruiterId: string,
     decision: string,
     teamHeadId?: string,
+    tx?: any,
   ): Promise<void> {
-    await this.publishEvent('CandidateFailedScreening', {
-      candidateProjectMapId,
-      screeningId,
-      coordinatorId,
-      recruiterId,
-      decision,
-      teamHeadId,
-    });
+    await this.publishEvent(
+      'CandidateFailedScreening',
+      {
+        candidateProjectMapId,
+        screeningId,
+        coordinatorId,
+        recruiterId,
+        decision,
+        teamHeadId,
+      },
+      tx,
+    );
   }
 }

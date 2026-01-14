@@ -307,12 +307,16 @@ export default function MultiStepEditProjectPage() {
     console.log("onSubmit called with data:", data);
     try {
       // Transform the data for backend
-      // Only send newly added document requirements to avoid duplicate 'docType' creation errors
-      const existingDocTypes =
-        projectData?.data?.documentRequirements?.map((d: any) => d.docType) || [];
+      // Attach document requirements: send the full (deduplicated) list so existing requirements are preserved.
+      // Previously we only sent newly added requirements which caused existing requirements to be removed on the backend.
+      const formDocumentRequirements = data.documentRequirements || [];
 
-      const newDocumentRequirements = (data.documentRequirements || []).filter(
-        (d) => !existingDocTypes.includes(d.docType)
+      // Deduplicate by docType (form values take precedence)
+      const dedupedDocumentRequirements = Object.values(
+        formDocumentRequirements.reduce((acc: Record<string, any>, req: any) => {
+          acc[req.docType] = req;
+          return acc;
+        }, {})
       );
 
       let transformedData: any = {
@@ -374,8 +378,12 @@ export default function MultiStepEditProjectPage() {
         }),
       };
 
-      if (newDocumentRequirements.length > 0) {
-        transformedData.documentRequirements = newDocumentRequirements;
+      // Always send the full deduplicated document requirements list so existing ones are preserved.
+      if (dedupedDocumentRequirements.length > 0) {
+        transformedData.documentRequirements = dedupedDocumentRequirements;
+      } else {
+        // Ensure we pass an empty array if user removed all document requirements
+        transformedData.documentRequirements = [];
       }
 
       console.log("Calling updateProject API with:", {

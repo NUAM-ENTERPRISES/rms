@@ -7,12 +7,16 @@ import { DOCUMENT_TYPE, DOCUMENT_STATUS } from '../common/constants';
 import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
 import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
+import { OutboxService } from '../notifications/outbox.service';
 
 @Injectable()
 export class ProcessingService {
   private readonly logger = new Logger(ProcessingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outbox: OutboxService,
+  ) {}
 
   /**
    * Transfer candidates to the processing team
@@ -185,6 +189,16 @@ export class ProcessingService {
 
         // Create processing steps for this processing candidate (idempotent)
         await this.createStepsForProcessingCandidate(processingCandidate.id, tx);
+
+        // Publish event for notification
+        await this.outbox.publishCandidateTransferredToProcessing(
+          processingCandidate.id,
+          candidateId,
+          projectId,
+          assignedProcessingTeamUserId,
+          userId,
+          tx,
+        );
 
         results.push({
           candidateId,

@@ -53,6 +53,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateSentToScreening(job);
         case 'CandidateApprovedForClientInterview':
           return await this.handleCandidateApprovedForClientInterview(job);
+        case 'CandidateTransferredToProcessing':
+          return await this.handleCandidateTransferredToProcessing(job);
         case 'CandidateFailedScreening':
           return await this.handleCandidateFailedScreening(job);
         default:
@@ -1202,6 +1204,72 @@ export class NotificationsProcessor extends WorkerHost {
    * Handle candidate failed screening notification
    * Notifies recruiter and team head when candidate fails screening
    */
+  async handleCandidateTransferredToProcessing(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing candidate transferred to processing event: ${eventId}`);
+
+    try {
+      const {
+        processingCandidateId,
+        candidateId,
+        projectId,
+        assignedProcessingTeamUserId,
+        transferredBy,
+      } = payload as {
+        processingCandidateId: string;
+        candidateId: string;
+        projectId: string;
+        assignedProcessingTeamUserId: string;
+        transferredBy: string;
+      };
+
+      // Load candidate and project details for the notification message
+      const [candidate, project, transferer] = await Promise.all([
+        this.prisma.candidate.findUnique({
+          where: { id: candidateId },
+          select: { firstName: true, lastName: true },
+        }),
+        this.prisma.project.findUnique({
+          where: { id: projectId },
+          select: { title: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: transferredBy },
+          select: { name: true },
+        }),
+      ]);
+
+      if (!candidate || !project) {
+        this.logger.warn(`Candidate or project not found for event ${eventId}`);
+        return;
+      }
+
+      const idemKey = `${eventId}:transfer_to_processing`;
+
+      await this.notificationsService.createNotification({
+        userId: assignedProcessingTeamUserId,
+        type: 'processing_assignment',
+        title: 'New Candidate Assigned for Processing',
+        message: `Candidate ${candidate.firstName} ${candidate.lastName} has been assigned to you for processing for project "${project.title}" by ${transferer?.name || 'System'}.`,
+        link: `/processingCandidateDetails/${processingCandidateId}`,
+        meta: payload,
+        idemKey,
+      });
+
+      this.logger.log(
+        `Candidate transfer notification created for user ${assignedProcessingTeamUserId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate transfer to processing: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   async handleCandidateFailedScreening(job: Job<NotificationJobData>) {
     const { eventId, payload } = job.data;
     this.logger.log(`Processing candidate failed screening event: ${eventId}`);
