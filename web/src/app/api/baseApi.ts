@@ -34,6 +34,7 @@ export const baseApi = createApi({
     "RecruiterAssignment",
     "StatusConfig",
     "RNRReminder",
+    "HRDReminder",
     // Screening Coordination
     "ScreeningTemplate",
     "Screening",

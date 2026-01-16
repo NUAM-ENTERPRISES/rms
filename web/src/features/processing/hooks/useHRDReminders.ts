@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { skipToken } from "@reduxjs/toolkit/query/react";
 import { useAppSelector } from "@/app/hooks";
 import { useHasRole } from "@/hooks/useCan";
-import { useGetMyRNRRemindersQuery } from "@/services/rnrRemindersApi";
-import type { RNRReminder } from "@/services/rnrRemindersApi";
+import { useGetHRDRemindersQuery } from "@/services/hrdRemindersApi";
+import type { HRDReminder } from "@/services/hrdRemindersApi";
 
-const SHOWN_REMINDERS_KEY = "rnr_shown_reminders";
+const SHOWN_REMINDERS_KEY = "hrd_shown_reminders";
 
 // Store both reminder ID and count to track which attempts have been shown
 interface ShownReminder {
@@ -22,7 +22,7 @@ const loadShownReminders = (): Map<string, number> => {
       return new Map(items.map(item => [item.id, item.count]));
     }
   } catch (error) {
-    console.error("Failed to load shown reminders:", error);
+    console.error("Failed to load shown HRD reminders:", error);
   }
   return new Map();
 };
@@ -35,17 +35,52 @@ const saveShownReminders = (reminders: Map<string, number>) => {
     );
     localStorage.setItem(SHOWN_REMINDERS_KEY, JSON.stringify(items));
   } catch (error) {
-    console.error("Failed to save shown reminders:", error);
+    console.error("Failed to save shown HRD reminders:", error);
   }
 };
 
 /**
- * Hook to manage RNR (Ring Not Response) reminders
+ * Hook to manage HRD (Hard Copy) reminders
  * Polls for pending reminders and provides modal state management
  */
-export function useRNRReminders() {
+export function useHRDReminders() {
+  // Only fetch for authenticated processing users (no need to call when logged out)
+  const { accessToken, user } = useAppSelector((s) => s.auth);
+  const isProcessingUser = useHasRole("processing") || (!!user && (
+    Array.isArray(user.roles)
+      ? user.roles.some((r: string) => r.toLowerCase().includes("processing"))
+      : typeof (user as any).role === "string" && (user as any).role.toLowerCase().includes("processing")
+  ));
+
+  const queryArg = accessToken && isProcessingUser ? { dueOnly: true } : skipToken;
+
+  // Socket-first + light-polling fallback (5 minutes)
+  const { data: remindersData, isLoading, refetch } = useGetHRDRemindersQuery(queryArg, {
+    pollingInterval: 300000, // 5 minutes fallback poll
+    refetchOnMountOrArgChange: true,
+    refetchOnReconnect: true,
+    refetchOnFocus: false,
+  });
+
+  // Fetch once on mount and on visibility change (when tab becomes visible)
+  useEffect(() => {
+    // Ensure initial fetch only if query is active
+    if (typeof refetch === "function") {
+      refetch().catch(() => {});
+    }
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && typeof refetch === "function") {
+        refetch().catch(() => {});
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [refetch, accessToken]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentReminder, setCurrentReminder] = useState<RNRReminder | null>(
+  const [currentReminder, setCurrentReminder] = useState<HRDReminder | null>(
     null
   );
   const [shownReminderIds, setShownReminderIds] = useState<Map<string, number>>(
@@ -54,45 +89,15 @@ export function useRNRReminders() {
   const [pendingReminderId, setPendingReminderId] = useState<string | null>(null);
   const hasCheckedInitialRef = useRef(false);
 
-  const { accessToken, user } = useAppSelector((s) => s.auth);
-  const isRecruiterUser = useHasRole("recruiter") || (!!user && (
-    Array.isArray(user.roles)
-      ? user.roles.some((r: string) => r.toLowerCase().includes("recruiter"))
-      : typeof (user as any).role === "string" && (user as any).role.toLowerCase().includes("recruiter")
-  ));
-
-  // Socket-first + light-polling fallback (5 minutes). Skip if not logged in or not recruiter.
-  const queryArg = accessToken && isRecruiterUser ? {} : skipToken;
-  const { data: remindersData, isLoading, refetch } = useGetMyRNRRemindersQuery(queryArg as any, {
-    pollingInterval: 300000, // 5 minutes
-    refetchOnMountOrArgChange: true,
-    refetchOnReconnect: true,
-    refetchOnFocus: false,
-  });
-
-  // Fetch once on mount and on visibility change (only if query active)
-  useEffect(() => {
-    if (accessToken && isRecruiterUser && typeof refetch === "function") {
-      refetch().catch(() => {});
-    }
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible" && accessToken && isRecruiterUser && typeof refetch === "function") {
-        refetch().catch(() => {});
-      }
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [refetch, accessToken, isRecruiterUser]);
-
   const reminders = remindersData?.data || [];
   
-  // Show ALL reminders with dailyCount > 0 (which means they have been sent at least once)
+  // Show reminders that have been sent or updated recently
+  // Consider sentAt, dailyCount, or reminderCount to be eligible for showing
   const activeReminders = reminders.filter((r) => {
     const hasDailyCount = r.dailyCount && r.dailyCount > 0;
     const wasSent = !!r.sentAt;
-    return hasDailyCount || wasSent;
+    const hasReminders = r.reminderCount && r.reminderCount > 0;
+    return hasDailyCount || wasSent || hasReminders;
   });
   
   // Clean up shown reminders that are no longer active
@@ -130,7 +135,7 @@ export function useRNRReminders() {
     });
 
     if (newReminder) {
-      console.log(`[RNR] Showing reminder for candidate ${newReminder.candidateId}, count: ${newReminder.reminderCount}`);
+      console.log(`[HRD] Showing reminder for processing ${newReminder.processingStep.processingId}, count: ${newReminder.reminderCount}`);
       setCurrentReminder(newReminder);
       setIsModalOpen(true);
       // Mark as shown with current count
@@ -145,34 +150,49 @@ export function useRNRReminders() {
 
   // Real-time support: open modal immediately when a socket event is dispatched
   useEffect(() => {
-    // Only listen when user is authenticated recruiter
-    if (!accessToken || !isRecruiterUser) return;
+    // Only listen when user is authenticated processing user
+    if (!accessToken || !isProcessingUser) return;
 
     const handler = (e: Event) => {
       try {
         const custom = e as CustomEvent<any>;
         const payload = custom.detail;
+        // Payload shape may vary; support both top-level and payload.payload
         const reminderPayload = payload?.payload || payload?.reminder || payload;
 
+        // If we don't have a payload at all, ignore
         if (!payload && !reminderPayload) return;
 
-        const isSent = (reminderPayload && (reminderPayload.dailyCount > 0 || reminderPayload.sentAt)) || payload?.type === 'rnrReminder.sent' || payload?.show === true || payload?.immediate === true;
+        // Determine whether to open immediately:
+        // - If payload explicitly indicates it's a sent event (`type === 'hrdReminder.sent'`) OR
+        // - If payload includes an explicit show/immediate flag OR
+        // - If the reminder payload itself indicates it was sent (dailyCount > 0 || sentAt)
+        const isSent = (reminderPayload && (reminderPayload.dailyCount > 0 || reminderPayload.sentAt)) || payload?.type === 'hrdReminder.sent' || payload?.show === true || payload?.immediate === true;
+
         if (!isSent) return;
 
-        const reminderObj: RNRReminder = reminderPayload?.reminder || reminderPayload || ({ id: payload?.reminderId || payload?.id } as RNRReminder);
+        // Construct minimal HRDReminder shape if possible
+        const reminderObj: HRDReminder = reminderPayload?.reminder || reminderPayload || ({ id: payload?.reminderId || payload?.id } as HRDReminder);
 
-        if (!reminderObj.candidate) {
-          // wait for refetch to supply full object
+        // If server didn't send full reminder object, wait for refetch to supply it
+        if (!reminderObj.processingStep) {
+          console.debug("[HRD] Real-time reminder received without details, will wait for refetch:", reminderObj, payload);
+          // set pending id so another effect will open the modal once remindersData includes the full object
           setPendingReminderId(reminderObj.id);
+          // clear pending after 30s to avoid stale state
           setTimeout(() => setPendingReminderId((cur) => (cur === reminderObj.id ? null : cur)), 30000);
           return;
         }
 
+        // Avoid opening multiple times if modal already open
         if (isModalOpen) return;
+
+        console.debug("[HRD] Real-time reminder received, opening modal:", reminderObj, payload);
 
         setCurrentReminder(reminderObj);
         setIsModalOpen(true);
 
+        // Mark as shown with current count (use 0 if unknown)
         setShownReminderIds((prev) => {
           const updated = new Map(prev);
           const count = reminderObj.reminderCount ?? reminderPayload?.reminderCount ?? 0;
@@ -181,29 +201,32 @@ export function useRNRReminders() {
           return updated;
         });
       } catch (err) {
-        console.warn("Error handling real-time RNR event:", err);
+        console.warn("Error handling real-time HRD reminder event:", err);
       }
     };
 
-    window.addEventListener("rnr:reminder", handler as EventListener);
-    window.addEventListener("rnrReminder.sent", handler as EventListener);
+    window.addEventListener("hrd:reminder", handler as EventListener);
+    // Some providers might dispatch the raw socket event name as well
+    window.addEventListener("hrdReminder.sent", handler as EventListener);
     return () => {
-      window.removeEventListener("rnr:reminder", handler as EventListener);
-      window.removeEventListener("rnrReminder.sent", handler as EventListener);
+      window.removeEventListener("hrd:reminder", handler as EventListener);
+      window.removeEventListener("hrdReminder.sent", handler as EventListener);
     };
-  }, [isModalOpen, accessToken, isRecruiterUser]);
+  }, [isModalOpen, accessToken, isProcessingUser]);
 
-  // Pending id handler: when refetch returns full reminder, open modal
+  // When we have a pending reminder id (from real-time), wait for the refetch to include full reminder
   useEffect(() => {
     if (!pendingReminderId || !remindersData) return;
 
     const found = remindersData.data?.find((r) => r.id === pendingReminderId);
     if (found) {
       if (!isModalOpen) {
+        console.debug(`[HRD] Refetch returned reminder ${pendingReminderId}, opening modal.`);
         setCurrentReminder(found);
         setIsModalOpen(true);
       }
 
+      // Mark as shown with current count
       setShownReminderIds((prev) => {
         const updated = new Map(prev);
         updated.set(found.id, found.reminderCount ?? 0);

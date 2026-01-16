@@ -4,6 +4,8 @@ import { useAppSelector } from "@/app/hooks";
 import { useAppDispatch } from "@/app/hooks";
 import { notificationsApi } from "@/features/notifications/data";
 import { documentsApi } from "@/features/documents/api";
+import { hrdRemindersApi } from "@/services/hrdRemindersApi";
+import { rnrRemindersApi } from "@/services/rnrRemindersApi";
 import { toast } from "sonner";
 
 interface NotificationEvent {
@@ -47,11 +49,11 @@ export default function NotificationsSocketProvider({
 
     // Handle connection
     socket.on("connect", () => {
-      console.log("Connected to notifications socket");
+      console.log("Connected to notifications socket", { socketId: socket.id, user: user?.id });
     });
 
     socket.on("disconnect", () => {
-      console.log("Disconnected from notifications socket");
+      console.log("Disconnected from notifications socket", { socketId: socket.id, user: user?.id });
     });
 
     // Handle new notifications
@@ -138,6 +140,84 @@ export default function NotificationsSocketProvider({
         } catch (err) {
           console.warn("Failed to refresh VerificationCandidates cache:", err);
         }
+      }
+    });
+
+    // Handle HRD reminder socket events (real-time)
+    socket.on("hrdReminder.sent", (payload: any) => {
+      try {
+        // Log loudly so it's visible in browser console
+        console.log("HRD reminder event received:", payload);
+
+        // Normalize payload to include the actual reminder object if nested
+        const normalized = payload?.payload || payload?.reminder || payload || {};
+
+        // Show toast with Open action (navigates to route if provided)
+        toast(payload?.title || normalized?.title || "HRD Reminder", {
+          description: payload?.body || normalized?.body || payload?.message || "HRD action required",
+          action: (payload?.route || normalized?.route)
+            ? {
+                label: "Open",
+                onClick: () => {
+                  window.location.href = payload?.route || normalized?.route!;
+                },
+              }
+            : undefined,
+        });
+
+        // Force refetch HRD reminders so UI updates immediately
+        dispatch(
+          hrdRemindersApi.endpoints.getHRDReminders.initiate(undefined, {
+            forceRefetch: true,
+          })
+        );
+
+        // Dispatch a window event so hooks/components can open modal immediately if desired
+        try {
+          // Add a show flag to ensure the hook will open modal for this event
+          const detail = { ...normalized, type: payload?.type || 'hrdReminder.sent', show: true };
+          console.log('Dispatching hrd:reminder with detail:', detail);
+          window.dispatchEvent(new CustomEvent("hrd:reminder", { detail }));
+        } catch (err) {
+          console.error("Could not dispatch hrd:reminder event", err);
+        }
+      } catch (err) {
+        console.warn("Failed to handle hrdReminder.sent event:", err);
+      }
+    });
+
+    // Handle RNR reminder socket events (real-time)
+    socket.on("rnrReminder.sent", (payload: any) => {
+      try {
+        console.log("RNR reminder event received:", payload);
+        const normalized = payload?.payload || payload?.reminder || payload || {};
+
+        toast(payload?.title || normalized?.title || "RNR Reminder", {
+          description: payload?.body || normalized?.body || payload?.message || "RNR action required",
+          action: (payload?.route || normalized?.route)
+            ? {
+                label: "Open",
+                onClick: () => {
+                  window.location.href = payload?.route || normalized?.route!;
+                },
+              }
+            : undefined,
+        });
+
+        // Force refetch RNR reminders so UI updates immediately
+        dispatch(
+          rnrRemindersApi.endpoints.getMyRNRReminders.initiate(undefined, { forceRefetch: true }) as any
+        );
+
+        try {
+          const detail = { ...normalized, type: payload?.type || 'rnrReminder.sent', show: true };
+          console.log('Dispatching rnr:reminder with detail:', detail);
+          window.dispatchEvent(new CustomEvent("rnr:reminder", { detail }));
+        } catch (err) {
+          console.error("Could not dispatch rnr:reminder event", err);
+        }
+      } catch (err) {
+        console.warn("Failed to handle rnrReminder.sent event:", err);
       }
     });
 

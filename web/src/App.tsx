@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import AuthProvider from "@/app/providers/auth-provider";
 import NotificationsSocketProvider from "@/app/providers/notifications-socket.provider";
 import { RNRReminderProvider } from "@/app/providers/rnr-reminder.provider";
+import { HRDReminderProvider } from "@/app/providers/hrd-reminder.provider";
 import ProtectedRoute from "@/app/router/protected-route";
 import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
@@ -237,9 +238,10 @@ function App() {
       <AuthProvider>
         <NotificationsSocketProvider>
           <RNRReminderProvider>
-            <div className="min-h-screen bg-background">
-              <Suspense fallback={<LoadingScreen />}>
-                <Routes>
+            <HRDReminderProvider>
+              <div className="min-h-screen bg-background">
+                <Suspense fallback={<LoadingScreen />}>
+                  <Routes>
                   {/* Public routes */}
                   <Route
                     path="/login"
@@ -1048,6 +1050,7 @@ function App() {
                 duration={3000}
               />
             </div>
+            </HRDReminderProvider>
           </RNRReminderProvider>
         </NotificationsSocketProvider>
       </AuthProvider>

@@ -8,6 +8,7 @@ import { ProcessingDocumentReuploadDto } from './dto/processing-document-reuploa
 import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
 import { OutboxService } from '../notifications/outbox.service';
+import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
 
 @Injectable()
 export class ProcessingService {
@@ -16,6 +17,7 @@ export class ProcessingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly hrdRemindersService: HrdRemindersService,
   ) {}
 
   /**
@@ -672,13 +674,31 @@ export class ProcessingService {
   async submitProcessingStepDate(stepId: string, data: any, userId: string) {
     const { submittedAt } = data || {};
 
-    const step = await this.prisma.processingStep.findUnique({ where: { id: stepId }, include: { template: true } });
+    const step = await this.prisma.processingStep.findUnique({ where: { id: stepId }, include: { template: true, processingCandidate: true } });
     if (!step) throw new NotFoundException('Processing step not found');
 
     const newSubmittedAt = submittedAt ? new Date(submittedAt) : new Date();
 
     await this.prisma.$transaction(async (tx) => {
       await tx.processingStep.update({ where: { id: stepId }, data: { submittedAt: newSubmittedAt } });
+
+      // Find recruiter from candidate_projects (to attach to history) if available
+      let recruiterId: string | undefined = undefined;
+      try {
+        const cp = await tx.candidateProjects.findFirst({
+          where: {
+            candidateId: step.processingCandidate?.candidateId,
+            projectId: step.processingCandidate?.projectId,
+            roleNeededId: step.processingCandidate?.roleNeededId,
+          },
+        });
+        if (cp && cp.recruiterId) recruiterId = cp.recruiterId;
+      } catch (err) {
+        // ignore lookup errors
+      }
+
+      // determine action text
+      const action = step.submittedAt ? 'changed' : 'submitted';
 
       // create processing history entry
       await tx.processingHistory.create({
@@ -687,10 +707,20 @@ export class ProcessingService {
           status: step.status,
           step: step.template.key,
           changedById: userId,
-          notes: JSON.stringify({ action: 'submit_step_date', submittedAt: newSubmittedAt.toISOString() }),
+          recruiterId: recruiterId,
+          notes: `HRD submitted date ${action}`,
         },
       });
     });
+
+    // If this is an HRD step, schedule HRD reminder
+    try {
+      if (step.template?.key === 'hrd') {
+        await this.hrdRemindersService.createHRDReminder(step.id, step.processingCandidateId, step.assignedTo || null, newSubmittedAt);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to schedule HRD reminder for step ${stepId}:`, error);
+    }
 
     return { success: true };
   }
@@ -719,7 +749,7 @@ export class ProcessingService {
       await this.ensureHrdCanComplete(step.id);
     }
 
-    return await this.prisma.$transaction(async (tx) => {
+    const txResult = await this.prisma.$transaction(async (tx) => {
       // 1. Mark current step as completed
       await tx.processingStep.update({
         where: { id: stepId },
@@ -815,6 +845,17 @@ export class ProcessingService {
         };
       }
     });
+
+    // After transaction commit: if this was an HRD step, cancel HRD reminders
+    try {
+      if (step.template?.key === 'hrd') {
+        await this.hrdRemindersService.cancelHRDRemindersForStep(stepId);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to cancel HRD reminders after completing step ${stepId}:`, err);
+    }
+
+    return txResult;
   }
 
   async attachDocumentToStep(processingStepId: string, documentId: string, uploadedBy?: string) {
@@ -1045,7 +1086,7 @@ export class ProcessingService {
       select: { name: true },
     });
 
-    return await this.prisma.$transaction(async (tx) => {
+    const txResult = await this.prisma.$transaction(async (tx) => {
       // 3. Update Document status
       await tx.document.update({
         where: { id: documentId },
@@ -1128,6 +1169,18 @@ export class ProcessingService {
 
       return { success: true, verificationId: verification.id };
     });
+
+    // If this verification is related to HRD step, cancel HRD reminders for that step
+    try {
+      const stepWithTemplate = await this.prisma.processingStep.findUnique({ where: { id: processingStepId }, include: { template: true } });
+      if (stepWithTemplate?.template?.key === 'hrd') {
+        await this.hrdRemindersService.cancelHRDRemindersForStep(processingStepId);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to cancel HRD reminders after verification for step ${processingStepId}:`, err);
+    }
+
+    return txResult;
   }
 
   /**

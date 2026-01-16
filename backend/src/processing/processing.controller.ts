@@ -30,13 +30,18 @@ import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { SubmitProcessingStepDateDto } from './dto/submit-processing-step-date.dto';
+import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
 
 @ApiTags('Processing Department')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('processing')
+
 export class ProcessingController {
-  constructor(private readonly processingService: ProcessingService) {}
+  constructor(
+    private readonly processingService: ProcessingService,
+    private readonly hrdRemindersService: HrdRemindersService,
+  ) {}
 
   @Get('candidates-to-transfer')
   @Permissions(PERMISSIONS.READ_PROCESSING, PERMISSIONS.TRANSFER_TO_PROCESSING)
@@ -293,5 +298,14 @@ export class ProcessingController {
   async submitProcessingStepDate(@Param('stepId') stepId: string, @Body() body: SubmitProcessingStepDateDto, @Req() req: any) {
     const data = await this.processingService.submitProcessingStepDate(stepId, body, req.user.id);
     return { success: true, data, message: 'Processing step submitted date updated' };
+  }
+
+  @Post('steps/:stepId/hrd-trigger')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Trigger HRD reminder for a step (manual)' })
+  async triggerHrdReminder(@Param('stepId') stepId: string, @Req() req: any) {
+    const reminder = await this.hrdRemindersService.triggerHRDReminderNow(stepId, req.user.id);
+    return { success: true, data: reminder, message: 'HRD reminder triggered' };
   }
 }

@@ -1,15 +1,21 @@
 import { Test } from '@nestjs/testing';
-import { ProcessingService } from '../../src/processing/processing.service';
-import { PrismaService } from '../../src/database/prisma.service';
-import { OutboxService } from '../../src/notifications/outbox.service';
+import { ProcessingService } from '../processing.service';
+import { PrismaService } from '../../database/prisma.service';
+import { OutboxService } from '../../notifications/outbox.service';
+import { HrdRemindersService } from '../../hrd-reminders/hrd-reminders.service';
 
 describe('ProcessingService - submitProcessingStepDate', () => {
   let service: ProcessingService;
-  let prisma: PrismaService;
+  let prisma: any;
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
-      providers: [ProcessingService, PrismaService, OutboxService],
+      providers: [
+        ProcessingService,
+        PrismaService,
+        OutboxService,
+        { provide: HrdRemindersService, useValue: { createHRDReminder: jest.fn() } },
+      ],
     }).compile();
 
     service = moduleRef.get(ProcessingService);
@@ -39,7 +45,7 @@ describe('ProcessingService - submitProcessingStepDate', () => {
       candidateProjects: { findFirst: jest.fn().mockResolvedValue({ recruiterId: 'recr-1' }) },
     };
 
-    jest.spyOn(prisma, '$transaction' as any).mockImplementation(async (cb) => cb(txMock));
+    jest.spyOn(prisma, '$transaction' as any).mockImplementation(async (cb: any) => cb(txMock));
 
     await service.submitProcessingStepDate('step-1', { submittedAt: '2026-01-16T00:00:00.000Z' }, 'user-1');
 
@@ -49,7 +55,7 @@ describe('ProcessingService - submitProcessingStepDate', () => {
         status: 'pending',
         step: 'hrd',
         changedById: 'user-1',
-        recruiter: { connect: { id: 'recr-1' } },
+        recruiterId: 'recr-1',
         notes: 'HRD submitted date submitted',
       }),
     });

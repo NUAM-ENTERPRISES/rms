@@ -1,5 +1,5 @@
 import { Controller, Get, Put, Body, UseGuards, HttpStatus } from '@nestjs/common';
-import { SystemConfigService, RNRSettings } from './system-config.service';
+import { SystemConfigService, RNRSettings, HRDSettings } from './system-config.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('system-config')
@@ -48,4 +48,39 @@ export class SystemConfigController {
       data: updatedSettings,
     };
   }
+
+  /**
+   * Get HRD Settings
+   * GET /system-config/hrd-settings
+   */
+  @Get('hrd-settings')
+  async getHRDSettings() {
+    const settings = await this.systemConfigService.getHRDSettings();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'HRD settings retrieved successfully',
+      data: settings,
+    };
+  }
+
+  /**
+   * Update HRD Settings
+   * PUT /system-config/hrd-settings
+   */
+  @Put('hrd-settings')
+  async updateHRDSettings(@Body() settings: Partial<HRDSettings>) {
+    await this.systemConfigService.updateHRDSettings(settings);
+
+    // Clear cache to ensure new settings are loaded
+    this.systemConfigService.clearCache('HRD_SETTINGS');
+
+    const updatedSettings = await this.systemConfigService.getHRDSettings();
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'HRD settings updated successfully',
+      data: updatedSettings,
+    };
+  }
 }
+

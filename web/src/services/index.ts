@@ -7,3 +7,5 @@ export * from "./processingApi";
 export * from "./projectsApi";
 export * from "./teamsApi";
 export * from "./usersApi";
+export * from "./hrdRemindersApi";
+export * from "./rnrRemindersApi";

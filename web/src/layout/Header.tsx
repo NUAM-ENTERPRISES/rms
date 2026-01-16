@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/organisms/NotificationBell";
 import UserMenu from "@/components/organisms/UserMenu";
 import { RNRReminderBadge } from "@/features/candidates/components/RNRReminderBadge";
+import { HRDReminderBadge } from "@/features/processing/components/HRDReminderBadge";
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -27,6 +28,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
         <div className="flex items-center gap-3">
           <RNRReminderBadge />
+          {/* HRD badge for processing team users */}
+          <HRDReminderBadge />
           <NotificationBell />
           <UserMenu />
         </div>
