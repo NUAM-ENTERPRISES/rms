@@ -94,6 +94,10 @@ export const PERMISSIONS = {
   WRITE_SETTINGS: 'write:settings',
   MANAGE_SETTINGS: 'manage:settings',
 
+  // System configuration (RNR / HRD) - admin only
+  READ_SYSTEM_CONFIG: 'read:system_config',
+  MANAGE_SYSTEM_CONFIG: 'manage:system_config',
+
   // Audit
   READ_AUDIT: 'read:audit',
   WRITE_AUDIT: 'write:audit',

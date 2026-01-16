@@ -55,7 +55,7 @@ export function useHRDReminders() {
   const queryArg = accessToken && isProcessingUser ? { dueOnly: true } : skipToken;
 
   // Socket-first + light-polling fallback (5 minutes)
-  const { data: remindersData, isLoading, refetch } = useGetHRDRemindersQuery(queryArg, {
+  const { data: remindersData, isLoading, refetch, isUninitialized } = useGetHRDRemindersQuery(queryArg, {
     pollingInterval: 300000, // 5 minutes fallback poll
     refetchOnMountOrArgChange: true,
     refetchOnReconnect: true,
@@ -64,20 +64,20 @@ export function useHRDReminders() {
 
   // Fetch once on mount and on visibility change (when tab becomes visible)
   useEffect(() => {
-    // Ensure initial fetch only if query is active
-    if (typeof refetch === "function") {
+    // Only call refetch when the query has been started (not uninitialized)
+    if (!isUninitialized && typeof refetch === "function") {
       refetch().catch(() => {});
     }
 
     const onVisibility = () => {
-      if (document.visibilityState === "visible" && typeof refetch === "function") {
+      if (document.visibilityState === "visible" && !isUninitialized && typeof refetch === "function") {
         refetch().catch(() => {});
       }
     };
 
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [refetch, accessToken]);
+  }, [refetch, accessToken, isUninitialized]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentReminder, setCurrentReminder] = useState<HRDReminder | null>(

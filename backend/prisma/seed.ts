@@ -271,6 +271,9 @@ const allPermissions = [
   'read:settings',
   'write:settings',
   'manage:settings',
+  // System config (RNR/HRD) - admin only
+  'read:system_config',
+  'manage:system_config',
 
   // Audit
   'read:audit',

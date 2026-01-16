@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAppSelector } from "@/app/hooks";
+import { skipToken } from "@reduxjs/toolkit/query/react";
 import { PhoneCall, Phone, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,21 +12,45 @@ import {
 import { useGetMyRNRRemindersQuery } from "@/services/rnrRemindersApi";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-
+import { useHasRole } from "@/hooks/useCan";
 export function RNRReminderBadge() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { accessToken, user } = useAppSelector((s) => s.auth);
   
+  // Allow both exact role match and case-insensitive substring match (e.g. "Recruiter", "Recruiter Team")
+  const isRecruiterUser = useHasRole("recruiter") || (!!user && (
+    Array.isArray(user.roles)
+      ? user.roles.some((r: string) => r.toLowerCase().includes("recruiter"))
+      : typeof (user as any).role === "string" && (user as any).role.toLowerCase().includes("recruiter")
+  ));
+
+  // If user isn't authenticated or not a recruiter, do not call API
+  if (!accessToken || !isRecruiterUser) return null;
+
   // Force show for testing - set to true to test UI without real data
   const FORCE_SHOW_FOR_TESTING = false;
   
-  const { data: remindersData, isLoading } = useGetMyRNRRemindersQuery(
-    undefined,
-    {
-      pollingInterval: 30000, // Poll every 30 seconds
-      refetchOnMountOrArgChange: true,
-    }
-  );
+  // Socket-first: fetch actionable reminders with low-frequency poll fallback
+  const queryArg = accessToken && isRecruiterUser ? {} : skipToken;
+  const { data: remindersData, isLoading, refetch } = useGetMyRNRRemindersQuery(queryArg as any, {
+    pollingInterval: 300000, // 5 minutes
+    refetchOnMountOrArgChange: true,
+    refetchOnReconnect: true,
+    refetchOnFocus: false,
+  });
+
+  // ensure fresh data when tab becomes visible
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && typeof refetch === "function") {
+        refetch().catch(() => {});
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [refetch]);
 
   const reminders = remindersData?.data || [];
   const activeReminders = reminders

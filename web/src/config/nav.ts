@@ -12,6 +12,7 @@ import {
   Briefcase,
   ClipboardCheck,
   BookOpen,
+  Settings,
 } from "lucide-react";
 
 export interface NavItem {
@@ -226,6 +227,14 @@ export const navigationConfig: NavItem[] = [
         label: "Users",
         path: "/admin/users",
         permissions: ["read:users"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
+      },
+      {
+        id: "admin-system-settings",
+        label: "System Settings",
+        path: "/admin/system-settings",
+        // icon: Settings,
+        permissions: ["read:system_config"],
         roles: ["CEO", "Director", "Manager", "System Admin"],
       },
     ],

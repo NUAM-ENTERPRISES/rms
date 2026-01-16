@@ -183,3 +183,6 @@ export const {
 
 // Export roles API
 export * from "./api/roles";
+
+// Export system settings API
+export * from "./api/systemSettingsApi";

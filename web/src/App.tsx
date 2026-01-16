@@ -170,6 +170,9 @@ const CreateUserPage = lazy(
   () => import("@/features/admin/views/CreateUserPage")
 );
 const EditUserPage = lazy(() => import("@/features/admin/views/EditUserPage"));
+const SystemSettingsPage = lazy(
+  () => import("@/features/admin/views/SystemSettingsPage")
+);
 
 const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
@@ -951,6 +954,22 @@ function App() {
                         >
                           <AppLayout>
                             <EditUserPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/system-settings"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager", "System Admin"]}
+                          permissions={["read:system_config"]}
+                        >
+                          <AppLayout>
+                            <SystemSettingsPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

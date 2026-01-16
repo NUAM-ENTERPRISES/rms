@@ -165,12 +165,16 @@ export default function NotificationsSocketProvider({
             : undefined,
         });
 
-        // Force refetch HRD reminders so UI updates immediately
-        dispatch(
-          hrdRemindersApi.endpoints.getHRDReminders.initiate(undefined, {
-            forceRefetch: true,
-          })
+        // Only refetch HRD reminders for authenticated processing users
+        const isProcessingUser = !!user && (
+          Array.isArray(user.roles)
+            ? user.roles.some((r: string) => r.toLowerCase().includes("processing"))
+            : typeof (user as any).role === "string" && (user as any).role.toLowerCase().includes("processing")
         );
+
+        if (accessToken && isProcessingUser) {
+          dispatch(hrdRemindersApi.endpoints.getHRDReminders.initiate(undefined, { forceRefetch: true }));
+        }
 
         // Dispatch a window event so hooks/components can open modal immediately if desired
         try {
@@ -204,10 +208,16 @@ export default function NotificationsSocketProvider({
             : undefined,
         });
 
-        // Force refetch RNR reminders so UI updates immediately
-        dispatch(
-          rnrRemindersApi.endpoints.getMyRNRReminders.initiate(undefined, { forceRefetch: true }) as any
+        // Only refetch RNR reminders if current user is a recruiter and authenticated
+        const isRecruiterUser = !!user && (
+          Array.isArray(user.roles)
+            ? user.roles.some((r: string) => r.toLowerCase().includes("recruiter"))
+            : typeof (user as any).role === "string" && (user as any).role.toLowerCase().includes("recruiter")
         );
+
+        if (accessToken && isRecruiterUser) {
+          dispatch(rnrRemindersApi.endpoints.getMyRNRReminders.initiate(undefined, { forceRefetch: true }) as any);
+        }
 
         try {
           const detail = { ...normalized, type: payload?.type || 'rnrReminder.sent', show: true };

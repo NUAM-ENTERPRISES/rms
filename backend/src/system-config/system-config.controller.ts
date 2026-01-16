@@ -1,9 +1,12 @@
 import { Controller, Get, Put, Body, UseGuards, HttpStatus } from '@nestjs/common';
 import { SystemConfigService, RNRSettings, HRDSettings } from './system-config.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/rbac/permissions.guard';
+import { Permissions } from '../auth/rbac/permissions.decorator';
+import { PERMISSIONS } from '../common/constants/permissions';
 
 @Controller('system-config')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SystemConfigController {
   constructor(private readonly systemConfigService: SystemConfigService) {}
 
@@ -13,6 +16,7 @@ export class SystemConfigController {
    * Requires: Admin authentication
    */
   @Get('rnr-settings')
+  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
   async getRNRSettings() {
     const settings = await this.systemConfigService.getRNRSettings();
     return {
@@ -34,6 +38,7 @@ export class SystemConfigController {
    * { "delayBetweenReminders": 240 }
    */
   @Put('rnr-settings')
+  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
   async updateRNRSettings(@Body() settings: Partial<RNRSettings>) {
     await this.systemConfigService.updateRNRSettings(settings);
     
@@ -54,6 +59,7 @@ export class SystemConfigController {
    * GET /system-config/hrd-settings
    */
   @Get('hrd-settings')
+  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
   async getHRDSettings() {
     const settings = await this.systemConfigService.getHRDSettings();
     return {
@@ -68,6 +74,7 @@ export class SystemConfigController {
    * PUT /system-config/hrd-settings
    */
   @Put('hrd-settings')
+  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
   async updateHRDSettings(@Body() settings: Partial<HRDSettings>) {
     await this.systemConfigService.updateHRDSettings(settings);
 
