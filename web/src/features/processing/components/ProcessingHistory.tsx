@@ -123,17 +123,17 @@ export const ProcessingHistory: React.FC<ProcessingHistoryProps> = ({
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="max-h-[350px] w-full overflow-auto">
+        <ScrollArea className="max-h-[400px]">
           <div className="px-6 pb-6">
             <div className="rounded-md border overflow-x-auto">
-              <Table>
+              <Table className="min-w-[500px] w-full">
                 <TableHeader>
                   <TableRow className="bg-slate-50 dark:bg-slate-900/50">
-                    <TableHead className="w-[140px] font-semibold">Date & Time</TableHead>
-                    <TableHead className="w-[150px] font-semibold">Status</TableHead>
-                    <TableHead className="w-[180px] font-semibold">Changed By</TableHead>
-                    <TableHead className="w-[180px] font-semibold">Recruiter</TableHead>
-                    <TableHead className="font-semibold">Notes</TableHead>
+                    <TableHead className="w-[120px] font-semibold">Date & Time</TableHead>
+                    <TableHead className="w-[120px] font-semibold">Status</TableHead>
+                    <TableHead className="w-[140px] font-semibold">Changed By</TableHead>
+                    <TableHead className="w-[140px] font-semibold">Recruiter</TableHead>
+                    <TableHead className="min-w-[200px] font-semibold">Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -157,9 +157,9 @@ export const ProcessingHistory: React.FC<ProcessingHistoryProps> = ({
                       </TableCell>
                       <TableCell className="text-sm max-w-md">
                         {entry.notes ? (
-                          <p className="text-slate-600 dark:text-slate-400 line-clamp-2" title={entry.notes}>
+                          <div className="whitespace-pre-wrap break-words" title={entry.notes}>
                             {entry.notes}
-                          </p>
+                          </div>
                         ) : (
                           "—"
                         )}

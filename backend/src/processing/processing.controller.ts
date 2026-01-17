@@ -291,6 +291,17 @@ export class ProcessingController {
     return { success: true, data, message: 'Processing step completed and advanced to next step' };
   }
 
+  @Post('steps/:stepId/cancel')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({ summary: 'Cancel a processing step and the entire processing flow' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Processing step and processing cancelled successfully' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Processing step not found' })
+  async cancelStep(@Param('stepId') stepId: string, @Body() body: import('./dto/cancel-processing-step.dto').CancelProcessingStepDto, @Req() req: any) {
+    const data = await this.processingService.cancelProcessingStep(stepId, req.user.id, body?.reason);
+    return { success: true, data, message: 'Processing step and processing cancelled' };
+  }
+
   @Post('steps/:stepId/submit-date')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @HttpCode(HttpStatus.OK)

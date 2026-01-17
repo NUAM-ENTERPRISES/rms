@@ -587,8 +587,8 @@ export default function PassedCandidatesPage() {
 
         <div className="flex-1 overflow-hidden min-w-0">
           {selected ? (
-            <ScrollArea className="h-full">
-              <div className="p-6 max-w-4xl mx-auto space-y-6 w-full overflow-hidden">
+            <ScrollArea className="h-full [&>div>div]:!block">
+              <div className="p-6 space-y-6 overflow-x-hidden max-w-5xl mx-auto">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -685,9 +685,9 @@ export default function PassedCandidatesPage() {
                   </div>
                 </div>
 
-                <div className="space-y-6 w-full min-w-0 overflow-hidden">
+                <div className="space-y-6">
                   {/* Candidate Information Card */}
-                  <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm w-full max-w-full">
+                  <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm w-full">
                     <div className="bg-emerald-50/50 dark:bg-emerald-900/10 px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-400">
                         <User className="h-5 w-5 shrink-0" />
@@ -699,8 +699,8 @@ export default function PassedCandidatesPage() {
                         </Badge>
                       )}
                     </div>
-                    <CardContent className="p-6 overflow-hidden max-w-full">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
+                    <CardContent className="p-6 overflow-hidden">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                         <div className="space-y-4 min-w-0 overflow-hidden">
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Full Name</p>
@@ -790,15 +790,15 @@ export default function PassedCandidatesPage() {
                   </Card>
 
                   {/* Project & Handoff Context Card */}
-                  <Card className="border-indigo-100 dark:border-indigo-900/30 overflow-hidden shadow-sm w-full max-w-full">
+                  <Card className="border-indigo-100 dark:border-indigo-900/30 overflow-hidden shadow-sm w-full">
                     <div className="bg-indigo-50/50 dark:bg-indigo-900/10 px-6 py-4 border-b border-indigo-100 dark:border-indigo-900/30">
                       <h3 className="font-semibold text-lg flex items-center gap-2 text-indigo-800 dark:text-indigo-400">
                         <Briefcase className="h-5 w-5 shrink-0" />
                         Project Context
                       </h3>
                     </div>
-                    <CardContent className="p-6 overflow-hidden max-w-full">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
+                    <CardContent className="p-6 overflow-hidden">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                         <div className="space-y-4 min-w-0 overflow-hidden">
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Target Project</p>
@@ -877,7 +877,7 @@ export default function PassedCandidatesPage() {
                   </Card>
                 </div>
 
-                <Card className="border-emerald-100 dark:border-emerald-900/30 w-full max-w-full overflow-hidden">
+                <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden w-full">
                   <CardContent className="p-6 overflow-hidden">
                     <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                       <ClipboardCheck className="h-5 w-5 text-emerald-600 shrink-0" />
@@ -915,11 +915,13 @@ export default function PassedCandidatesPage() {
                  selected.candidateProjectMap?.candidate?.id && 
                  selected.candidateProjectMap?.project?.id && 
                  selected.candidateProjectMap?.roleNeeded?.roleCatalogId && (
-                  <ProcessingHistory
-                    candidateId={selected.candidateProjectMap.candidate.id}
-                    projectId={selected.candidateProjectMap.project.id}
-                    roleCatalogId={selected.candidateProjectMap.roleNeeded.roleCatalogId}
-                  />
+                  <div className="w-full">
+                    <ProcessingHistory
+                      candidateId={selected.candidateProjectMap.candidate.id}
+                      projectId={selected.candidateProjectMap.project.id}
+                      roleCatalogId={selected.candidateProjectMap.roleNeeded.roleCatalogId}
+                    />
+                  </div>
                 )}
               </div>
             </ScrollArea>

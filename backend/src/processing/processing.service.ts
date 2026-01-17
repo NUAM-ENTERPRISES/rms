@@ -760,12 +760,23 @@ export class ProcessingService {
       });
 
       // 2. Create history for step completion
+      // Fetch the candidate project mapping to include recruiterId in history (if available)
+      const candidateProjectMap = await tx.candidateProjects.findFirst({
+        where: {
+          candidateId: step.processingCandidate?.candidateId,
+          projectId: step.processingCandidate?.projectId,
+          roleNeededId: step.processingCandidate?.roleNeededId,
+        },
+      });
+      const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
+
       await tx.processingHistory.create({
         data: {
           processingCandidateId: step.processingCandidateId,
           status: 'completed',
           step: step.template.key,
           changedById: userId,
+          recruiterId: recruiterIdForHistory,
           notes: `Step "${step.template.label}" marked as completed`,
         },
       });
@@ -806,6 +817,7 @@ export class ProcessingService {
             status: 'in_progress',
             step: nextStep.template.key,
             changedById: userId,
+            recruiterId: recruiterIdForHistory,
             notes: `Advanced to next step: ${nextStep.template.label}`,
           },
         });
@@ -833,6 +845,7 @@ export class ProcessingService {
             status: 'completed',
             step: 'completed',
             changedById: userId,
+            recruiterId: recruiterIdForHistory,
             notes: 'All processing steps completed',
           },
         });
@@ -853,6 +866,124 @@ export class ProcessingService {
       }
     } catch (err) {
       this.logger.error(`Failed to cancel HRD reminders after completing step ${stepId}:`, err);
+    }
+
+    return txResult;
+  }
+
+  /**
+   * Cancel a processing step
+   * Marks the step as cancelled and records history (includes recruiterId when available)
+   */
+  async cancelProcessingStep(stepId: string, userId: string, reason?: string) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: stepId },
+      include: {
+        template: true,
+        processingCandidate: { include: { candidate: true, project: true } },
+      },
+    });
+
+    if (!step) throw new NotFoundException('Processing step not found');
+    if (step.status === 'cancelled') {
+      return { success: true, message: 'Step already cancelled' };
+    }
+
+    const txResult = await this.prisma.$transaction(async (tx) => {
+      // 1. Mark selected step as cancelled (store provided reason in rejectionReason)
+      await tx.processingStep.update({
+        where: { id: stepId },
+        data: {
+          status: 'cancelled',
+          rejectionReason: reason || 'cancelled',
+        },
+      });
+
+      // 2. Cancel all other pending/in-progress steps for this processing candidate
+      await tx.processingStep.updateMany({
+        where: {
+          processingCandidateId: step.processingCandidateId,
+          id: { not: stepId },
+          status: { in: ['pending', 'in_progress'] },
+        },
+        data: {
+          status: 'cancelled',
+          rejectionReason: reason || 'cancelled',
+        },
+      });
+
+      // 3. Update the ProcessingCandidate as cancelled
+      await tx.processingCandidate.update({
+        where: { id: step.processingCandidateId },
+        data: {
+          processingStatus: 'cancelled',
+          step: 'cancelled',
+        },
+      });
+
+      // Fetch candidateProjectMap to include recruiterId in history if present
+      const candidateProjectMap = await tx.candidateProjects.findFirst({
+        where: {
+          candidateId: step.processingCandidate?.candidateId,
+          projectId: step.processingCandidate?.projectId,
+          roleNeededId: step.processingCandidate?.roleNeededId,
+        },
+      });
+      const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
+
+      // 4. Create history entry for the cancelled step
+      const stepNotes = reason
+        ? `Step "${step.template.label}" cancelled: ${reason}`
+        : `Step "${step.template.label}" cancelled`;
+
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: step.processingCandidateId,
+          status: 'cancelled',
+          step: step.template.key,
+          changedById: userId,
+          recruiterId: recruiterIdForHistory,
+          notes: stepNotes,
+        },
+      });
+
+      // 5. Create overall processing cancellation history entry
+      const overallNotes = reason
+        ? `Processing cancelled due to step cancellation: ${reason}`
+        : 'Processing cancelled due to step cancellation';
+
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: step.processingCandidateId,
+          status: 'cancelled',
+          step: 'cancelled',
+          changedById: userId,
+          recruiterId: recruiterIdForHistory,
+          notes: overallNotes,
+        },
+      });
+
+      return { success: true };
+    });
+
+    // After transaction: cancel HRD reminders for this step and for any other steps belonging to the processingCandidate
+    try {
+      // cancel for the specific step (existing behaviour)
+      if (step.template?.key === 'hrd') {
+        await this.hrdRemindersService.cancelHRDRemindersForStep(stepId);
+      }
+
+      // cancel HRD reminders for all steps of this processing candidate (if any)
+      const otherSteps = await this.prisma.processingStep.findMany({ where: { processingCandidateId: step.processingCandidateId } });
+      for (const s of otherSteps) {
+        try {
+          await this.hrdRemindersService.cancelHRDRemindersForStep(s.id);
+        } catch (err) {
+          this.logger.error(`Failed to cancel HRD reminders for step ${s.id} while cancelling processing ${step.processingCandidateId}:`, err);
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Failed to cancel HRD reminders after cancelling step ${stepId}:`, err);
     }
 
     return txResult;

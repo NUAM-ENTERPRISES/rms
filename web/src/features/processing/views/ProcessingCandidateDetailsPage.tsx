@@ -6,6 +6,7 @@ import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   ProcessingCandidateHeader,
@@ -76,6 +77,15 @@ export default function ProcessingCandidateDetailsPage() {
     };
   }, [data?.candidateProjectMap?.documentVerifications]);
 
+  // If processing was cancelled, find the most recent cancellation history entry to show the reason
+  const cancellationEntry = useMemo(() => {
+    const history = data?.history || [];
+    if (!history.length) return null;
+
+    const sorted = [...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return sorted.find((h) => h.status === "cancelled") || null;
+  }, [data?.history]);
+
   if (isLoading || isLoadingSteps) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
@@ -126,6 +136,24 @@ export default function ProcessingCandidateDetailsPage() {
           processingId={data.id}
           recruiter={data.candidateProjectMap?.recruiter}
         />
+
+        {/* If processing is cancelled, show a clear banner with cancellation reason */}
+        {data.processingStatus === "cancelled" && (
+          <Card className="w-full border-0 shadow-lg bg-rose-50 p-4">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-rose-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-rose-700">Processing Cancelled</h3>
+                <p className="text-sm text-slate-700 mt-1">{cancellationEntry?.notes || "No reason provided"}</p>
+                {cancellationEntry?.createdAt && (
+                  <div className="text-xs text-slate-400 mt-2">Cancelled by {cancellationEntry?.changedBy?.name || "System"} on {format(new Date(cancellationEntry.createdAt), "PPP p")}</div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Main Content Grid - More Compact */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-12">

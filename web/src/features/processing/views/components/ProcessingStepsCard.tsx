@@ -80,6 +80,7 @@ interface TransformedStep {
   description: string;
   icon: typeof FileText;
   status: ProcessingStepStatus;
+  apiStatus?: string; // raw API status (e.g., 'cancelled')
   notes?: string;
   updatedAt?: string;
   hasSubSteps?: boolean;
@@ -156,6 +157,7 @@ export function ProcessingStepsCard({
         description: step.template.description || `Processing step ${step.template.order}`,
         icon: getStepIcon(step.template.key),
         status: finalStatus,
+        apiStatus: step.status,
         notes: step.rejectionReason || undefined,
         updatedAt: step.updatedAt,
         stepId: step.id,
@@ -537,6 +539,7 @@ function StepItem({
     description: string;
     icon: typeof CheckCircle2;
     status: ProcessingStepStatus;
+    apiStatus?: string; // raw API status for special cases like 'cancelled'
     notes?: string;
     updatedAt?: string;
     hasSubSteps?: boolean;
@@ -734,11 +737,13 @@ function StepItem({
       className={cn(
         "flex items-center gap-3 p-3 transition-colors group",
         stepCompleted
-          ? "bg-emerald-50/50 hover:bg-emerald-50" 
-          : shouldBlink 
-          ? "blink-orange pulse-glow rounded-lg m-1" 
+          ? "bg-emerald-50/50 hover:bg-emerald-50"
+          : shouldBlink
+          ? "blink-orange pulse-glow rounded-lg m-1"
           : offerLetterRejected
           ? "bg-red-50/50 hover:bg-red-50"
+          : step.apiStatus === 'cancelled'
+          ? "bg-rose-50/50 hover:bg-rose-50"
           : !stepEnabled
           ? "bg-slate-100/30 opacity-90"
           : "hover:bg-slate-50",
@@ -809,7 +814,7 @@ function StepItem({
             ? "text-slate-500"
             : "text-slate-400"
         )}>
-          {isOfferLetterStep ? getOfferLetterDescription() : step.description}
+          {isOfferLetterStep ? getOfferLetterDescription() : (step.apiStatus === 'cancelled' ? `Processing cancelled — ${step.notes || 'No reason provided'}` : step.description)}
         </p>
       </div>
 
@@ -863,6 +868,8 @@ function StepItem({
             ? "bg-blue-500 text-white animate-pulse"
             : offerLetterRejected
             ? "bg-red-500 text-white"
+            : step.apiStatus === 'cancelled'
+            ? "bg-rose-500 text-white"
             : !stepEnabled
             ? "bg-slate-200 text-slate-400"
             : `${statusConfig.bg} ${statusConfig.color}`
@@ -870,6 +877,8 @@ function StepItem({
       >
         {isOfferLetterStep 
           ? getOfferLetterBadgeText()
+          : step.apiStatus === 'cancelled'
+          ? "Cancelled"
           : stepCompleted 
           ? "Done" 
           : shouldBlink 

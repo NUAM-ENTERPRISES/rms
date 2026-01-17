@@ -172,6 +172,10 @@ export const processingApi = baseApi.injectEndpoints({
         role: {
           designation: string;
         };
+        assignedTo?: {
+          id: string;
+          name: string;
+        };
         history: Array<{
           id: string;
           status: string;

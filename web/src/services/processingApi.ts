@@ -210,6 +210,22 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Cancel a processing step (provide mandatory reason)
+    cancelStep: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { stepId: string; reason: string }
+    >({
+      query: ({ stepId, reason }) => ({
+        url: `/processing/steps/${stepId}/cancel`,
+        method: "POST",
+        body: { reason },
+      }),
+      invalidatesTags: () => [
+        { type: "ProcessingSteps", id: "LIST" },
+        { type: "ProcessingDetails", id: "LIST" },
+      ],
+    }),
+
     // Submit HRD submission date
     submitHrdDate: builder.mutation<
       { success: boolean; data: any; message: string },
@@ -237,5 +253,6 @@ export const {
   useAttachDocumentToStepMutation,
   useReuploadProcessingDocumentMutation,
   useVerifyProcessingDocumentMutation,
+  useCancelStepMutation,
   useSubmitHrdDateMutation,
 } = processingApi;
