@@ -17,6 +17,7 @@ import {
   ProcessingHistoryModal,
   DocumentVerificationCard,
   ProcessingOfferLetterModal,
+  DataFlowModal,
   HrdModal,
 } from "./components";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
@@ -26,6 +27,7 @@ export default function ProcessingCandidateDetailsPage() {
   const navigate = useNavigate();
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);
+  const [showDataFlowModal, setShowDataFlowModal] = useState(false);
 
   const { data: apiResponse, isLoading, error, refetch: refetchCandidateDetails } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
@@ -39,13 +41,17 @@ export default function ProcessingCandidateDetailsPage() {
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
 
-  // Handler to refresh all data when HRD step is completed
-  const handleHrdComplete = async () => {
+  // Handler to refresh all data when a processing step is completed
+  const handleStepComplete = async () => {
     await Promise.all([
       refetchCandidateDetails(),
       refetchProcessingSteps()
     ]);
   };
+
+  // Backwards compatible HRD handler
+  const handleHrdComplete = handleStepComplete;
+  const handleDataFlowComplete = handleStepComplete;
 
   // Extract offer letter status from document verifications
   const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
@@ -164,11 +170,19 @@ export default function ProcessingCandidateDetailsPage() {
               steps={processingSteps}
               maxHeight="450px"
               offerLetterStatus={offerLetterStatus}
-              onOfferLetterClick={() => setShowOfferLetterModal(true)}              onStepClick={(stepKey) => {
-                if (stepKey === "hrd") {
+              onOfferLetterClick={() => setShowOfferLetterModal(true)}
+              onStepClick={(stepKey) => {
+                const k = String(stepKey || "").replace(/[_-]/g, "").toLowerCase();
+                if (k === "hrd") {
                   setShowHrdModal(true);
+                  return;
                 }
-              }}            />
+
+                if (k === "dataflow") {
+                  setShowDataFlowModal(true);
+                }
+              }}
+            />
 
             {/* Project Info Card - Below Steps */}
             <ProjectInfoCard
@@ -257,6 +271,17 @@ export default function ProcessingCandidateDetailsPage() {
         }}
         processingId={data.id}
         onComplete={handleHrdComplete}
+      />
+
+      {/* Data Flow Modal */}
+      <DataFlowModal
+        isOpen={showDataFlowModal}
+        onClose={() => {
+          setShowDataFlowModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleDataFlowComplete}
       />
     </div>
   );

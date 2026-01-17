@@ -8,7 +8,7 @@ export async function seedProcessingStepTemplates() {
   const templates = [
     { key: 'offer_letter', label: 'Offer Letter', order: 1, hasDocuments: true },
     { key: 'hrd', label: 'HRD', order: 2, hasDocuments: true },
-    { key: 'data_flow', label: 'Data Flow', order: 3, hasDocuments: false },
+    { key: 'data_flow', label: 'Data Flow', order: 3, hasDocuments: true },
     { key: 'eligibility', label: 'Eligibility', order: 4, hasDocuments: false },
     { key: 'prometric', label: 'Prometric', order: 5, hasDocuments: false },
     { key: 'council_registration', label: 'Council Registration', order: 6, hasDocuments: false },

@@ -17,6 +17,11 @@ export class CreateCountryDocumentRequirementDto {
   @IsOptional()
   mandatory?: boolean;
 
+  @ApiProperty({ required: false, description: 'Optional processing step template id to link this requirement' })
+  @IsString()
+  @IsOptional()
+  processingStepTemplateId?: string;
+
   @ApiProperty({ required: false, description: 'Additional instructions or description' })
   @IsString()
   @IsOptional()
@@ -33,6 +38,11 @@ export class UpdateCountryDocumentRequirementDto {
   @IsBoolean()
   @IsOptional()
   mandatory?: boolean;
+
+  @ApiProperty({ required: false, description: 'Optional processing step template id to link this requirement' })
+  @IsString()
+  @IsOptional()
+  processingStepTemplateId?: string;
 
   @ApiProperty({ required: false })
   @IsString()

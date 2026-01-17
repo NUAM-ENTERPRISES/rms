@@ -40,24 +40,15 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
 
   for (const item of data) {
     for (const doc of item.docs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType: {
-            countryCode: item.countryCode,
-            docType: doc.docType,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-        },
-        create: {
-          countryCode: item.countryCode,
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-        },
+      // find existing legacy entries (processingStepTemplateId = null)
+      const existing = await prisma.countryDocumentRequirement.findFirst({
+        where: { countryCode: item.countryCode, docType: doc.docType, processingStepTemplateId: null },
       });
+      if (existing) {
+        await prisma.countryDocumentRequirement.update({ where: { id: existing.id }, data: { mandatory: doc.mandatory, label: doc.label ?? doc.docType } });
+      } else {
+        await prisma.countryDocumentRequirement.create({ data: { countryCode: item.countryCode, docType: doc.docType, label: doc.label ?? doc.docType, mandatory: doc.mandatory } });
+      }
     }
   }
 
@@ -87,9 +78,10 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     for (const doc of hrdDocs) {
       await prisma.countryDocumentRequirement.upsert({
         where: {
-          countryCode_docType: {
+          countryCode_docType_processingStepTemplateId: {
             countryCode: 'ALL',
             docType: doc.docType,
+            processingStepTemplateId: hrdTemplate.id,
           },
         },
         update: {
@@ -103,6 +95,45 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
           label: doc.label ?? doc.docType,
           mandatory: doc.mandatory,
           processingStepTemplateId: hrdTemplate.id,
+        },
+      });
+    }
+  }
+
+  // --- Global Data Flow Documents ---
+  // Seed global Data Flow requirements mapped to processing step template 'data_flow'
+  const dataFlowTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'data_flow' } });
+  if (!dataFlowTemplate) {
+    console.warn("ProcessingStepTemplate with key='data_flow' not found — skipping Data Flow global seed");
+  } else {
+    const dataFlowDocs = [
+      { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
+      { docType: DOCUMENT_TYPE.TRANSCRIPT, label: 'Academic Transcript / Mark Sheet', mandatory: true },
+      { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE, label: 'Experience Certificate(s)', mandatory: true },
+      { docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE, label: 'Professional Registration (Nursing / Council / Trade)', mandatory: true },
+      { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
+    ];
+
+    for (const doc of dataFlowDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: dataFlowTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: dataFlowTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: dataFlowTemplate.id,
         },
       });
     }

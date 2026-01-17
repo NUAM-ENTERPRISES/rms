@@ -1458,7 +1458,7 @@ model CountryDocumentRequirement {
 
   country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
 
-  @@unique([countryCode, docType])
+  @@unique([countryCode, docType, processingStepTemplateId])
   @@index([countryCode])
   @@index([processingStepTemplateId])
   @@map("country_document_requirements")

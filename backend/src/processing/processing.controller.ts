@@ -275,6 +275,15 @@ export class ProcessingController {
     return { success: true, data, message: 'HRD requirements retrieved' };
   }
 
+  @Get('steps/:processingId/data-flow-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Data Flow requirements for a processing candidate', description: 'Merged global + country Data Flow document rules and existing processing_documents.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getDataFlowRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getDataFlowRequirements(processingId, docType);
+    return { success: true, data, message: 'Data Flow requirements retrieved' };
+  }
+
   @Post('steps/:stepId/status')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @ApiOperation({ summary: 'Update a processing step status' })

@@ -145,6 +145,19 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Get Data Flow requirements and uploads for a processing candidate (mirrors HRD endpoint but for data flow)
+    getDataFlowRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/data-flow-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Attach an uploaded document to a HRD step
     attachDocumentToStep: builder.mutation<
       { success: boolean; data: any; message: string },
@@ -250,6 +263,7 @@ export const {
   useUpdateStepStatusMutation,
   useCompleteStepMutation,
   useGetHrdRequirementsQuery,
+  useGetDataFlowRequirementsQuery,
   useAttachDocumentToStepMutation,
   useReuploadProcessingDocumentMutation,
   useVerifyProcessingDocumentMutation,

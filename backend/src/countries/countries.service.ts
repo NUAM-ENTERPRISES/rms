@@ -185,18 +185,20 @@ export class CountriesService {
       throw new NotFoundException(`Country with code ${dto.countryCode} not found`);
     }
 
-    // Check for duplicate
+    // Check for duplicate using the new composite unique key (countryCode, docType, processingStepTemplateId)
+    const whereUnique: any = {
+      countryCode: dto.countryCode.toUpperCase(),
+      docType: dto.docType,
+      // do not set property when undefined; when provided, include it
+      ...(dto.processingStepTemplateId ? { processingStepTemplateId: dto.processingStepTemplateId } : { processingStepTemplateId: null }),
+    };
+
     const existing = await this.prisma.countryDocumentRequirement.findUnique({
-      where: {
-        countryCode_docType: {
-          countryCode: dto.countryCode.toUpperCase(),
-          docType: dto.docType,
-        },
-      },
+      where: { countryCode_docType_processingStepTemplateId: whereUnique },
     });
 
     if (existing) {
-      throw new ConflictException(`Document requirement "${dto.docType}" already exists for country ${dto.countryCode}`);
+      throw new ConflictException(`Document requirement "${dto.docType}" already exists for country ${dto.countryCode}${dto.processingStepTemplateId ? ` (step ${dto.processingStepTemplateId})` : ''}`);
     }
 
     return this.prisma.countryDocumentRequirement.create({
