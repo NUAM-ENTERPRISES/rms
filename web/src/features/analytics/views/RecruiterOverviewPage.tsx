@@ -58,29 +58,36 @@ type MonthlyPerformance = {
 };
 
 const RecruiterOverviewPage: React.FC = () => {
+  const currentYear = new Date().getFullYear();
+
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [recruiters, setRecruiters] = useState<RecruiterStats[]>([]);
-  const [performanceData, setPerformanceData] = useState<Record<string, MonthlyPerformance[]>>({});
+  const [performanceData, setPerformanceData] = useState<MonthlyPerformance[]>([]);
   const [selectedRecruiterId, setSelectedRecruiterId] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch recruiter stats
+  // Fetch recruiter stats when year changes
   useEffect(() => {
     const fetchRecruiters = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Replace with your actual API endpoint
-        const response = await fetch("/api/recruiters/stats");
+        const response = await fetch(`/api/v1/recruiters/stats?year=${selectedYear}`);
         if (!response.ok) throw new Error("Failed to fetch recruiter stats");
 
         const data: RecruiterStats[] = await response.json();
         setRecruiters(data);
 
-        // Auto-select first recruiter if none selected
-        if (data.length > 0 && !selectedRecruiterId) {
-          setSelectedRecruiterId(data[0].id);
+        // Auto-select first recruiter if none selected or selected not in new list
+        if (data.length > 0) {
+          if (!selectedRecruiterId || !data.find((r) => r.id === selectedRecruiterId)) {
+            setSelectedRecruiterId(data[0].id);
+          }
+        } else {
+          setSelectedRecruiterId("");
+          setPerformanceData([]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data");
@@ -90,41 +97,37 @@ const RecruiterOverviewPage: React.FC = () => {
     };
 
     fetchRecruiters();
-  }, []);
+  }, [selectedYear]);
 
-  // Fetch monthly performance data
+  // Fetch performance data when recruiter or year changes
   useEffect(() => {
-    if (recruiters.length === 0) return;
+    if (!selectedRecruiterId) {
+      setPerformanceData([]);
+      return;
+    }
 
     const fetchPerformanceData = async () => {
       try {
-        // Replace with your actual endpoint
-        const response = await fetch("/api/recruiters/performance");
+        const response = await fetch(
+          `/api/v1/recruiters/performance?year=${selectedYear}&recruiterId=${selectedRecruiterId}`
+        );
         if (!response.ok) throw new Error("Failed to fetch performance data");
 
-        const data: Record<string, MonthlyPerformance[]> = await response.json();
+        const data: MonthlyPerformance[] = await response.json();
         setPerformanceData(data);
       } catch (err) {
         console.error("Performance data fetch error:", err);
-        // Don't block UI if trend data fails
+        setPerformanceData([]);
       }
     };
 
     fetchPerformanceData();
-  }, [recruiters]);
+  }, [selectedRecruiterId, selectedYear]);
 
-  // Safely get selected recruiter with fallback
+  // Find the selected recruiter object
   const selectedRecruiter = useMemo(() => {
-    if (recruiters.length === 0) return null;
-    return recruiters.find((r) => r.id === selectedRecruiterId) || recruiters[0];
+    return recruiters.find((r) => r.id === selectedRecruiterId) || null;
   }, [selectedRecruiterId, recruiters]);
-
-  // Update selected ID if fallback was used
-  useEffect(() => {
-    if (selectedRecruiter && selectedRecruiter.id !== selectedRecruiterId) {
-      setSelectedRecruiterId(selectedRecruiter.id);
-    }
-  }, [selectedRecruiter]);
 
   const metrics = useMemo(() => {
     if (recruiters.length === 0) {
@@ -161,15 +164,6 @@ const RecruiterOverviewPage: React.FC = () => {
     [metrics, recruiters]
   );
 
-  const kpiItems = [
-    { label: "Active Recruiters", value: metrics.recruiters, icon: Users, color: "indigo" },
-    { label: "Candidates Assigned", value: metrics.assigned, icon: UserCheck, color: "blue" },
-    { label: "Candidates Joined", value: metrics.joined, icon: CheckCircle, color: "green" },
-    { label: "Untouched Profiles", value: metrics.untouched, icon: AlertTriangle, color: "red" },
-    { label: "Conversion Rate", value: `${metrics.conversion}%`, icon: TrendingUp, color: "purple" },
-  ];
-
-  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
@@ -180,7 +174,6 @@ const RecruiterOverviewPage: React.FC = () => {
     );
   }
 
-  // Error State
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
@@ -191,7 +184,6 @@ const RecruiterOverviewPage: React.FC = () => {
     );
   }
 
-  // No Data State
   if (recruiters.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
@@ -215,11 +207,52 @@ const RecruiterOverviewPage: React.FC = () => {
         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mt-2">
           Real-time insights into hiring pipeline health and team efficiency
         </p>
+
+        {/* Year and Recruiter selectors */}
+        <div className="flex items-center gap-6 mt-4">
+          {/* Year Selector */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
+            >
+              {[currentYear, currentYear - 1, currentYear - 2].map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Recruiter Selector */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Recruiter</label>
+            <select
+              value={selectedRecruiterId}
+              onChange={(e) => setSelectedRecruiterId(e.target.value)}
+              className="px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
+            >
+              {recruiters.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {kpiItems.map((item, index) => (
+        {[
+          { label: "Active Recruiters", value: metrics.recruiters, icon: Users, color: "indigo" },
+          { label: "Candidates Assigned", value: metrics.assigned, icon: UserCheck, color: "blue" },
+          { label: "Candidates Joined", value: metrics.joined, icon: CheckCircle, color: "green" },
+          { label: "Untouched Profiles", value: metrics.untouched, icon: AlertTriangle, color: "red" },
+          { label: "Conversion Rate", value: `${metrics.conversion}%`, icon: TrendingUp, color: "purple" },
+        ].map((item, index) => (
           <KpiCard
             key={index}
             label={item.label}
@@ -247,11 +280,11 @@ const RecruiterOverviewPage: React.FC = () => {
       )}
 
       {/* Performance Trend Over Time */}
-      {selectedRecruiter && selectedRecruiterId && (
+      {selectedRecruiter && (
         <PerformanceTrendChart
           recruiterId={selectedRecruiterId}
           recruiterName={selectedRecruiter.name}
-          performanceData={performanceData[selectedRecruiterId] || []}
+          performanceData={performanceData}
         />
       )}
     </div>
