@@ -3,8 +3,9 @@ import { render, screen, act, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "@/features/auth/authSlice";
-import { NotificationsSocketProvider } from "@/app/providers/notifications-socket.provider";
+import NotificationsSocketProvider from "@/app/providers/notifications-socket.provider";
 import { HRDReminderProvider } from "@/app/providers/hrd-reminder.provider";
+import { MemoryRouter } from "react-router-dom";
 
 // Mock the RTK Query hook so network is not required for the E2E-style test
 vi.mock("@/services/hrdRemindersApi", () => ({
@@ -23,9 +24,18 @@ const createStore = (initialAuthState: any) =>
   });
 
 describe("HRD reminder — real socket -> modal (E2E-like)", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     vi.restoreAllMocks();
+
+    // Ensure the hook's underlying query is stubbed (protects against refetch() being undefined)
+    const hrdModule = await import("@/services/hrdRemindersApi");
+    vi.spyOn(hrdModule, "useGetHRDRemindersQuery").mockReturnValue({
+      data: { data: [] },
+      isLoading: false,
+      refetch: () => Promise.resolve(),
+      isUninitialized: false,
+    } as any);
   });
 
   it("opens HRD modal when socket event targets the logged-in user", async () => {
@@ -39,11 +49,13 @@ describe("HRD reminder — real socket -> modal (E2E-like)", () => {
 
     const App = (
       <Provider store={store}>
-        <NotificationsSocketProvider>{/* provider will attach listeners */}
-          <HRDReminderProvider>
-            <div>app-root</div>
-          </HRDReminderProvider>
-        </NotificationsSocketProvider>
+        <MemoryRouter>
+          <NotificationsSocketProvider>{/* provider will attach listeners */}
+            <HRDReminderProvider>
+              <div>app-root</div>
+            </HRDReminderProvider>
+          </NotificationsSocketProvider>
+        </MemoryRouter>
       </Provider>
     );
 
@@ -91,11 +103,13 @@ describe("HRD reminder — real socket -> modal (E2E-like)", () => {
 
     render(
       <Provider store={store}>
-        <NotificationsSocketProvider>
-          <HRDReminderProvider>
-            <div>app-root</div>
-          </HRDReminderProvider>
-        </NotificationsSocketProvider>
+        <MemoryRouter>
+          <NotificationsSocketProvider>
+            <HRDReminderProvider>
+              <div>app-root</div>
+            </HRDReminderProvider>
+          </NotificationsSocketProvider>
+        </MemoryRouter>
       </Provider>
     );
 
@@ -120,15 +134,36 @@ describe("HRD reminder — real socket -> modal (E2E-like)", () => {
 
     render(
       <Provider store={store}>
-        <NotificationsSocketProvider>
-          <HRDReminderProvider>
-            <div>app-root</div>
-          </HRDReminderProvider>
-        </NotificationsSocketProvider>
+        <MemoryRouter>
+          <NotificationsSocketProvider>
+            <HRDReminderProvider>
+              <div>app-root</div>
+            </HRDReminderProvider>
+          </NotificationsSocketProvider>
+        </MemoryRouter>
       </Provider>
     );
 
-    const payload = { id: "r-e2e-3", reminderId: "r-e2e-3", assignedTo: "user-e2e-3", dailyCount: 1, reminderCount: 1 };
+    const payload = {
+      id: "r-e2e-3",
+      reminderId: "r-e2e-3",
+      assignedTo: "user-e2e-3",
+      dailyCount: 1,
+      reminderCount: 1,
+      processingStep: {
+        id: "s-e2e-3",
+        processingId: "p-e2e-3",
+        processing: {
+          id: "p-e2e-3",
+          candidateId: "c-e2e-3",
+          candidate: { firstName: "Dup", lastName: "User" },
+          project: { id: "proj-e2e-dup", name: "Dup Project" },
+        },
+        stepType: "HRD",
+        status: "PENDING",
+        submittedAt: null,
+      },
+    };
 
     act(() => {
       window.dispatchEvent(new CustomEvent("hrd:reminder", { detail: payload }));
