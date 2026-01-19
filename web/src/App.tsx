@@ -5,6 +5,7 @@ import AuthProvider from "@/app/providers/auth-provider";
 import NotificationsSocketProvider from "@/app/providers/notifications-socket.provider";
 import { RNRReminderProvider } from "@/app/providers/rnr-reminder.provider";
 import { HRDReminderProvider } from "@/app/providers/hrd-reminder.provider";
+import { DataFlowReminderProvider } from "@/app/providers/data-flow-reminder.provider";
 import ProtectedRoute from "@/app/router/protected-route";
 import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
@@ -242,7 +243,8 @@ function App() {
         <NotificationsSocketProvider>
           <RNRReminderProvider>
             <HRDReminderProvider>
-              <div className="min-h-screen bg-background">
+              <DataFlowReminderProvider>
+                <div className="min-h-screen bg-background">
                 <Suspense fallback={<LoadingScreen />}>
                   <Routes>
                   {/* Public routes */}
@@ -1068,7 +1070,8 @@ function App() {
                 richColors
                 duration={3000}
               />
-            </div>
+                </div>
+              </DataFlowReminderProvider>
             </HRDReminderProvider>
           </RNRReminderProvider>
         </NotificationsSocketProvider>

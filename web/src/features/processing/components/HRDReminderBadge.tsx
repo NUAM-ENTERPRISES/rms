@@ -28,7 +28,7 @@ export function HRDReminderBadge() {
   if (!accessToken || !isProcessingUser) return null;
 
   // socket-first: fetch actionable reminders only, with low-frequency polling fallback
-  const { data, isLoading, refetch } = useGetHRDRemindersQuery({ dueOnly: true }, {
+  const { data, isLoading, refetch } = useGetHRDRemindersQuery(undefined, {
     pollingInterval: 300000, // 5 minutes
     refetchOnMountOrArgChange: true,
     refetchOnReconnect: true,

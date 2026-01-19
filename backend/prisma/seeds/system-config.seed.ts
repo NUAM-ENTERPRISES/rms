@@ -63,7 +63,7 @@ export async function seedSystemConfig() {
       assignmentStrategy: 'round_robin',
     },
     testMode: {
-      enabled: false,
+      enabled: true,
       immediateDelayMinutes: 1,
     },
   };
@@ -84,6 +84,30 @@ export async function seedSystemConfig() {
     },
   });
 
+  // DATA FLOW Settings (same defaults as HRD) — enable test mode for quick verification
+  const dataFlowSettings = {
+    ...hrdSettings,
+    // For testing: schedule first reminder immediately
+    daysAfterSubmission: 0,
+    testMode: { ...hrdSettings.testMode, enabled: true, immediateDelayMinutes: 1 },
+  };
+
+  await prisma.systemConfig.upsert({
+    where: { key: 'DATA_FLOW_SETTINGS' },
+    update: {
+      value: dataFlowSettings,
+      description: 'Data Flow reminder system configuration',
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    create: {
+      key: 'DATA_FLOW_SETTINGS',
+      value: dataFlowSettings,
+      description: 'Data Flow reminder system configuration',
+      isActive: true,
+    },
+  });
+
   console.log('✅ System Config seeded successfully!');
   console.log(`   - RNR delay between reminders: ${rnrSettings.delayBetweenReminders} minutes`);
   console.log(`   - Reminders per day: ${rnrSettings.remindersPerDay}`);
@@ -94,6 +118,11 @@ export async function seedSystemConfig() {
   console.log('   - HRD daily times:', hrdSettings.dailyTimes.join(', '));
   console.log('   - HRD reminders per day:', hrdSettings.remindersPerDay);
   console.log('   - HRD total days:', hrdSettings.totalDays);
+  console.log('');
+  console.log('   - Data Flow days after submission:', dataFlowSettings.daysAfterSubmission);
+  console.log('   - Data Flow daily times:', dataFlowSettings.dailyTimes.join(', '));
+  console.log('   - Data Flow reminders per day:', dataFlowSettings.remindersPerDay);
+  console.log('   - Data Flow total days:', dataFlowSettings.totalDays);
 }
 
 // Run if executed directly

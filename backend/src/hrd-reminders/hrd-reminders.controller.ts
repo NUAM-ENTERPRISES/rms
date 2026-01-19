@@ -14,12 +14,10 @@ export class HrdRemindersController {
 
   @Get('hrd-scheduler')
   @Permissions(PERMISSIONS.READ_PROCESSING)
-  @ApiOperation({ summary: 'Get HRD scheduler entries', description: 'Get all HRD scheduler reminders for the current processing user. Use query param `dueOnly=true` to return only reminders whose `scheduledFor` is now or in the past.' })
+  @ApiOperation({ summary: 'Get HRD scheduler entries', description: 'Get all HRD scheduler reminders for the current processing user.' })
   @ApiResponse({ status: 200, description: 'HRD scheduler entries retrieved successfully' })
   async getHrdScheduler(@Request() req: any) {
-    // support ?dueOnly=true
-    const dueOnly = req.query && (req.query.dueOnly === 'true' || req.query.dueOnly === true);
-    const data = await this.hrdRemindersService.getMyReminders(req.user.id, { dueOnly });
+    const data = await this.hrdRemindersService.getMyReminders(req.user.id);
     return { success: true, data, message: 'HRD scheduler entries retrieved successfully' };
   }
 

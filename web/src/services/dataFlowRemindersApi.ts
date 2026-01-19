@@ -1,6 +1,6 @@
 import { baseApi } from "@/app/api/baseApi";
 
-export interface HRDReminder {
+export interface DataFlowReminder {
   id: string;
   processingStepId: string;
   processingStep: {
@@ -23,7 +23,6 @@ export interface HRDReminder {
         name: string;
       };
     };
-    // Optional processingCandidate nested on processingStep (some responses include it)
     processingCandidate?: {
       id: string;
       candidateId?: string;
@@ -68,7 +67,6 @@ export interface HRDReminder {
   lastReminderDate: string | null;
   createdAt: string;
   updatedAt: string;
-  // Optional flat processingCandidate for some responses
   processingCandidate?: {
     id: string;
     processingId?: string;
@@ -92,48 +90,22 @@ export interface HRDReminder {
   };
 }
 
-export interface HRDRemindersResponse {
+export interface DataFlowRemindersResponse {
   success: boolean;
-  data: HRDReminder[];
+  data: DataFlowReminder[];
   message: string;
 }
 
-export interface DismissReminderResponse {
-  success: boolean;
-  message: string;
-}
-
-export const hrdRemindersApi = baseApi.injectEndpoints({
+export const dataFlowRemindersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Support optional `dueOnly` arg to fetch only actionable reminders
-    getHRDReminders: builder.query<HRDRemindersResponse, void>({
-      query: () => `/hrd-reminders/hrd-scheduler`,
-      providesTags: ["HRDReminder"],
-    }),
-
-    dismissHRDReminder: builder.mutation<DismissReminderResponse, string>({
-      query: (reminderId) => ({
-        url: `/hrd-reminders/${reminderId}/dismiss`,
-        method: "DELETE",
-      }),
-      invalidatesTags: ["HRDReminder", "Notification"],
-    }),
-
-    processHRDReminders: builder.mutation<
-      { success: boolean; message: string },
-      void
-    >({
-      query: () => ({
-        url: "/hrd-reminders/process",
-        method: "POST",
-      }),
-      invalidatesTags: ["HRDReminder"],
+    getDataFlowReminders: builder.query<DataFlowRemindersResponse, void>({
+      query: () => `/data-flow-reminders/data-flow-scheduler`,
+      providesTags: ["DataFlowReminder"],
     }),
   }),
 });
 
 export const {
-  useGetHRDRemindersQuery,
-  useDismissHRDReminderMutation,
-  useProcessHRDRemindersMutation,
-} = hrdRemindersApi;
+  useGetDataFlowRemindersQuery,
+} = dataFlowRemindersApi;

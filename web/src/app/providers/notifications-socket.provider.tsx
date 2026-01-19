@@ -152,6 +152,15 @@ export default function NotificationsSocketProvider({
         // Normalize payload to include the actual reminder object if nested
         const normalized = payload?.payload || payload?.reminder || payload || {};
 
+        // Canonicalize assigned user id from common shapes
+        const assignedTo = normalized?.assignedTo || normalized?.assigned_to || normalized?.assignedUserId || payload?.assignedTo || null;
+
+        // If the server explicitly targeted a different user, ignore here (prevents broadcasting modal to others)
+        if (assignedTo && user?.id && assignedTo !== user.id) {
+          console.debug("hrdReminder.sent received but not for this user, ignoring", { assignedTo, userId: user.id });
+          return;
+        }
+
         // Show toast with Open action (navigates to route if provided)
         toast(payload?.title || normalized?.title || "HRD Reminder", {
           description: payload?.body || normalized?.body || payload?.message || "HRD action required",
@@ -178,9 +187,9 @@ export default function NotificationsSocketProvider({
 
         // Dispatch a window event so hooks/components can open modal immediately if desired
         try {
-          // Add a show flag to ensure the hook will open modal for this event
-          const detail = { ...normalized, type: payload?.type || 'hrdReminder.sent', show: true };
-          console.log('Dispatching hrd:reminder with detail:', detail);
+          // Ensure assignedTo is present on the detail and add a show flag
+          const detail = { ...normalized, assignedTo, type: payload?.type || 'hrdReminder.sent', show: true };
+          console.log('Dispatching hrd:reminder with detail (assignedTo-aware):', detail);
           window.dispatchEvent(new CustomEvent("hrd:reminder", { detail }));
         } catch (err) {
           console.error("Could not dispatch hrd:reminder event", err);

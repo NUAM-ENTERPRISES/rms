@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
+// DataFlowSettings uses same structure as HRDSettings but kept as a distinct alias for clarity
+export type DataFlowSettings = HRDSettings;
+
 /**
  * System Configuration Service
  * Manages system-wide configuration settings stored in database
@@ -144,6 +147,39 @@ export class SystemConfigService {
       updatedSettings,
       'HRD reminder system configuration'
     );
+  }
+
+  /**
+   * Get Data Flow settings
+   */
+  async getDataFlowSettings(): Promise<DataFlowSettings> {
+    const config = await this.getConfig('DATA_FLOW_SETTINGS');
+
+    if (!config) {
+      this.logger.warn('DATA_FLOW_SETTINGS not found, using defaults');
+      return this.getDefaultDataFlowSettings();
+    }
+
+    return config as DataFlowSettings;
+  }
+
+  /**
+   * Update Data Flow settings
+   */
+  async updateDataFlowSettings(settings: Partial<DataFlowSettings>): Promise<void> {
+    const currentSettings = await this.getDataFlowSettings();
+    const updatedSettings = { ...currentSettings, ...settings };
+
+    await this.setConfig(
+      'DATA_FLOW_SETTINGS',
+      updatedSettings,
+      'Data Flow reminder system configuration'
+    );
+  }
+
+  private getDefaultDataFlowSettings(): DataFlowSettings {
+    // Reuse HRD default but label/values can be adjusted if needed
+    return this.getDefaultHRDSettings();
   }
 
   /**

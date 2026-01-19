@@ -169,14 +169,8 @@ export class HrdRemindersService {
   /**
    * Return HRD reminders assigned to the given user
    */
-  async getMyReminders(userId: string, opts?: { dueOnly?: boolean }) {
-    const now = new Date();
+  async getMyReminders(userId: string) {
     const where: any = { assignedTo: userId, status: { in: ['pending', 'sent'] } };
-
-    if (opts?.dueOnly) {
-      // Return only reminders whose scheduledFor is now or in the past
-      where.scheduledFor = { lte: now };
-    }
 
     return this.prisma.hRDReminder.findMany({
       where,

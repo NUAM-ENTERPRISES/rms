@@ -9,6 +9,7 @@ import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dt
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
 import { OutboxService } from '../notifications/outbox.service';
 import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
+import { DataFlowRemindersService } from '../data-flow-reminders/data-flow-reminders.service';
 
 @Injectable()
 export class ProcessingService {
@@ -18,6 +19,7 @@ export class ProcessingService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly hrdRemindersService: HrdRemindersService,
+    private readonly dataFlowRemindersService: DataFlowRemindersService,
   ) {}
 
   /**
@@ -926,8 +928,11 @@ export class ProcessingService {
       if (step.template?.key === 'hrd') {
         await this.hrdRemindersService.createHRDReminder(step.id, step.processingCandidateId, step.assignedTo || null, newSubmittedAt);
       }
+      if (step.template?.key === 'data_flow') {
+        await this.dataFlowRemindersService.createDataFlowReminder(step.id, step.processingCandidateId, step.assignedTo || null, newSubmittedAt);
+      }
     } catch (error) {
-      this.logger.error(`Failed to schedule HRD reminder for step ${stepId}:`, error);
+      this.logger.error(`Failed to schedule reminder for step ${stepId}:`, error);
     }
 
     return { success: true };
@@ -1072,8 +1077,11 @@ export class ProcessingService {
       if (step.template?.key === 'hrd') {
         await this.hrdRemindersService.cancelHRDRemindersForStep(stepId);
       }
+      if (step.template?.key === 'data_flow') {
+        await this.dataFlowRemindersService.cancelDataFlowRemindersForStep(stepId);
+      }
     } catch (err) {
-      this.logger.error(`Failed to cancel HRD reminders after completing step ${stepId}:`, err);
+      this.logger.error(`Failed to cancel reminders after completing step ${stepId}:`, err);
     }
 
     return txResult;
@@ -1174,14 +1182,17 @@ export class ProcessingService {
       return { success: true };
     });
 
-    // After transaction: cancel HRD reminders for this step and for any other steps belonging to the processingCandidate
+    // After transaction: cancel reminders for this step and for any other steps belonging to the processingCandidate
     try {
       // cancel for the specific step (existing behaviour)
       if (step.template?.key === 'hrd') {
         await this.hrdRemindersService.cancelHRDRemindersForStep(stepId);
       }
+      if (step.template?.key === 'data_flow') {
+        await this.dataFlowRemindersService.cancelDataFlowRemindersForStep(stepId);
+      }
 
-      // cancel HRD reminders for all steps of this processing candidate (if any)
+      // cancel reminders for all steps of this processing candidate (if any)
       const otherSteps = await this.prisma.processingStep.findMany({ where: { processingCandidateId: step.processingCandidateId } });
       for (const s of otherSteps) {
         try {
@@ -1189,9 +1200,14 @@ export class ProcessingService {
         } catch (err) {
           this.logger.error(`Failed to cancel HRD reminders for step ${s.id} while cancelling processing ${step.processingCandidateId}:`, err);
         }
+        try {
+          await this.dataFlowRemindersService.cancelDataFlowRemindersForStep(s.id);
+        } catch (err) {
+          this.logger.error(`Failed to cancel Data Flow reminders for step ${s.id} while cancelling processing ${step.processingCandidateId}:`, err);
+        }
       }
     } catch (err) {
-      this.logger.error(`Failed to cancel HRD reminders after cancelling step ${stepId}:`, err);
+      this.logger.error(`Failed to cancel reminders after cancelling step ${stepId}:`, err);
     }
 
     return txResult;

@@ -8,4 +8,5 @@ export * from "./projectsApi";
 export * from "./teamsApi";
 export * from "./usersApi";
 export * from "./hrdRemindersApi";
+export * from "./dataFlowRemindersApi";
 export * from "./rnrRemindersApi";

@@ -2,18 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { skipToken } from "@reduxjs/toolkit/query/react";
 import { useAppSelector } from "@/app/hooks";
 import { useHasRole } from "@/hooks/useCan";
-import { useGetHRDRemindersQuery } from "@/services/hrdRemindersApi";
-import type { HRDReminder } from "@/services/hrdRemindersApi";
+import { useGetDataFlowRemindersQuery } from "@/services/dataFlowRemindersApi";
+import type { DataFlowReminder } from "@/services/dataFlowRemindersApi";
 
-const SHOWN_REMINDERS_KEY = "hrd_shown_reminders";
+const SHOWN_REMINDERS_KEY = "dataflow_shown_reminders";
 
-// Store both reminder ID and count to track which attempts have been shown
 interface ShownReminder {
   id: string;
   count: number;
 }
 
-// Load shown reminders from localStorage
 const loadShownReminders = (): Map<string, number> => {
   try {
     const stored = localStorage.getItem(SHOWN_REMINDERS_KEY);
@@ -22,12 +20,11 @@ const loadShownReminders = (): Map<string, number> => {
       return new Map(items.map(item => [item.id, item.count]));
     }
   } catch (error) {
-    console.error("Failed to load shown HRD reminders:", error);
+    console.error("Failed to load Data Flow reminders:", error);
   }
   return new Map();
 };
 
-// Save shown reminders to localStorage
 const saveShownReminders = (reminders: Map<string, number>) => {
   try {
     const items: ShownReminder[] = Array.from(reminders.entries()).map(
@@ -35,16 +32,11 @@ const saveShownReminders = (reminders: Map<string, number>) => {
     );
     localStorage.setItem(SHOWN_REMINDERS_KEY, JSON.stringify(items));
   } catch (error) {
-    console.error("Failed to save shown HRD reminders:", error);
+    console.error("Failed to save Data Flow reminders:", error);
   }
 };
 
-/**
- * Hook to manage HRD (Hard Copy) reminders
- * Polls for pending reminders and provides modal state management
- */
-export function useHRDReminders() {
-  // Only fetch for authenticated processing users (no need to call when logged out)
+export function useDataFlowReminders() {
   const { accessToken, user } = useAppSelector((s) => s.auth);
   const isProcessingUser = useHasRole("processing") || (!!user && (
     Array.isArray(user.roles)
@@ -54,17 +46,14 @@ export function useHRDReminders() {
 
   const queryArg = accessToken && isProcessingUser ? undefined : skipToken;
 
-  // Socket-first + light-polling fallback (5 minutes)
-  const { data: remindersData, isLoading, refetch, isUninitialized } = useGetHRDRemindersQuery(queryArg, {
+  const { data: remindersData, isLoading, refetch, isUninitialized } = useGetDataFlowRemindersQuery(queryArg, {
     pollingInterval: 300000, // 5 minutes fallback poll
     refetchOnMountOrArgChange: true,
     refetchOnReconnect: true,
     refetchOnFocus: false,
   });
 
-  // Fetch once on mount and on visibility change (when tab becomes visible)
   useEffect(() => {
-    // Only call refetch when the query has been started (not uninitialized)
     if (!isUninitialized && typeof refetch === "function") {
       refetch().catch(() => {});
     }
@@ -80,7 +69,7 @@ export function useHRDReminders() {
   }, [refetch, accessToken, isUninitialized]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentReminder, setCurrentReminder] = useState<HRDReminder | null>(
+  const [currentReminder, setCurrentReminder] = useState<DataFlowReminder | null>(
     null
   );
   const [shownReminderIds, setShownReminderIds] = useState<Map<string, number>>(
@@ -90,71 +79,45 @@ export function useHRDReminders() {
   const hasCheckedInitialRef = useRef(false);
 
   const reminders = remindersData?.data || [];
-  
-  // Show reminders that have been sent or updated recently
-  // Consider sentAt, dailyCount, or reminderCount to be eligible for showing
+
   const activeReminders = reminders.filter((r) => {
     const hasDailyCount = r.dailyCount && r.dailyCount > 0;
     const wasSent = !!r.sentAt;
     const hasReminders = r.reminderCount && r.reminderCount > 0;
     return hasDailyCount || wasSent || hasReminders;
   });
-  
-  // Clean up shown reminders that are no longer active
+
   useEffect(() => {
     const reminderIds = new Set(activeReminders.map((r) => r.id));
     const cleanedShownIds = new Map(
       Array.from(shownReminderIds.entries()).filter(([id]) => reminderIds.has(id))
     );
-    
+
     if (cleanedShownIds.size !== shownReminderIds.size) {
       setShownReminderIds(cleanedShownIds);
       saveShownReminders(cleanedShownIds);
     }
   }, [activeReminders.length]);
 
-  // Cross-tab sync: listen for shown-reminders updates from other tabs and reconcile
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== SHOWN_REMINDERS_KEY) return;
-      try {
-        const updated = loadShownReminders();
-        setShownReminderIds(updated);
-      } catch (err) {
-        console.warn("Failed to sync shown HRD reminders from storage event:", err);
-      }
-    };
-
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
-  useEffect(() => {
-    // Don't check if we don't have data
     if (!remindersData) return;
 
-    // On initial load, don't show modal for already-shown reminders
     if (!hasCheckedInitialRef.current) {
       hasCheckedInitialRef.current = true;
-      // Just check if there are any new reminders, don't show immediately
       return;
     }
 
-    // Only check for new reminders when modal is closed
     if (isModalOpen) return;
 
-    // Find first active reminder that hasn't been shown at this count yet
     const newReminder = activeReminders.find((r) => {
       const shownCount = shownReminderIds.get(r.id);
-      // Show if never shown, or if reminderCount has increased
       return shownCount === undefined || r.reminderCount > shownCount;
     });
 
     if (newReminder) {
-      console.log(`[HRD] Showing reminder for processing ${newReminder.processingStep.processingId}, count: ${newReminder.reminderCount}`);
+      console.log(`[DataFlow] Showing reminder for processing ${newReminder.processingStep.processingId}, count: ${newReminder.reminderCount}`);
       setCurrentReminder(newReminder);
       setIsModalOpen(true);
-      // Mark as shown with current count
       setShownReminderIds((prev) => {
         const updated = new Map(prev);
         updated.set(newReminder.id, newReminder.reminderCount);
@@ -164,91 +127,68 @@ export function useHRDReminders() {
     }
   }, [activeReminders.map(r => `${r.id}:${r.reminderCount}`).join(','), isModalOpen, remindersData]);
 
-  // Real-time support: open modal immediately when a socket event is dispatched
   useEffect(() => {
-    // Only listen when user is authenticated processing user
     if (!accessToken || !isProcessingUser) return;
 
     const handler = (e: Event) => {
       try {
         const custom = e as CustomEvent<any>;
         const payload = custom.detail;
-        // Payload shape may vary; support both top-level and payload.payload
         const reminderPayload = payload?.payload || payload?.reminder || payload;
 
-        // If we don't have a payload at all, ignore
         if (!payload && !reminderPayload) return;
 
-        // If event explicitly targets a user, ignore if it isn't for the current user
-        const eventAssignedTo = reminderPayload?.assignedTo || reminderPayload?.assigned_to || reminderPayload?.assignedUserId || payload?.assignedTo;
-        if (eventAssignedTo && user?.id && eventAssignedTo !== user.id) return;
-
-        // Determine whether to open immediately:
-        // - If payload explicitly indicates it's a sent event (`type === 'hrdReminder.sent'`) OR
-        // - If payload includes an explicit show/immediate flag OR
-        // - If the reminder payload itself indicates it was sent (dailyCount > 0 || sentAt)
-        const isSent = (reminderPayload && (reminderPayload.dailyCount > 0 || reminderPayload.sentAt)) || payload?.type === 'hrdReminder.sent' || payload?.show === true || payload?.immediate === true;
+        const isSent = (reminderPayload && (reminderPayload.dailyCount > 0 || reminderPayload.sentAt)) || payload?.type === 'dataFlowReminder.sent' || payload?.show === true || payload?.immediate === true;
 
         if (!isSent) return;
 
-        // Construct minimal HRDReminder shape if possible
-        const reminderObj: HRDReminder = reminderPayload?.reminder || reminderPayload || ({ id: payload?.reminderId || payload?.id } as HRDReminder);
+        const reminderObj: DataFlowReminder = reminderPayload?.reminder || reminderPayload || ({ id: payload?.reminderId || payload?.id } as DataFlowReminder);
 
-        // If server didn't send full reminder object, wait for refetch to supply it
         if (!reminderObj.processingStep) {
-          console.debug("[HRD] Real-time reminder received without details, will wait for refetch:", reminderObj, payload);
-          // set pending id so another effect will open the modal once remindersData includes the full object
+          console.debug("[DataFlow] Real-time reminder received without details, will wait for refetch:", reminderObj, payload);
           setPendingReminderId(reminderObj.id);
-          // clear pending after 30s to avoid stale state
           setTimeout(() => setPendingReminderId((cur) => (cur === reminderObj.id ? null : cur)), 30000);
           return;
         }
 
-        // Avoid opening multiple times if modal already shown (cross-tab sync via localStorage will keep shownReminderIds up-to-date)
-        const alreadyShownCount = shownReminderIds.get(reminderObj.id);
-        if (alreadyShownCount !== undefined && reminderObj.reminderCount <= alreadyShownCount) return;
         if (isModalOpen) return;
 
-        // Mark as shown BEFORE opening modal so other tabs won't race to open the same reminder
-        const currentCount = reminderObj.reminderCount ?? reminderPayload?.reminderCount ?? 0;
-        setShownReminderIds((prev) => {
-          const updated = new Map(prev);
-          updated.set(reminderObj.id, currentCount);
-          saveShownReminders(updated);
-          return updated;
-        });
-
-        console.debug("[HRD] Real-time reminder received, opening modal:", reminderObj, payload);
+        console.debug("[DataFlow] Real-time reminder received, opening modal:", reminderObj, payload);
 
         setCurrentReminder(reminderObj);
         setIsModalOpen(true);
+
+        setShownReminderIds((prev) => {
+          const updated = new Map(prev);
+          const count = reminderObj.reminderCount ?? reminderPayload?.reminderCount ?? 0;
+          updated.set(reminderObj.id, count);
+          saveShownReminders(updated);
+          return updated;
+        });
       } catch (err) {
-        console.warn("Error handling real-time HRD reminder event:", err);
+        console.warn("Error handling real-time Data Flow reminder event:", err);
       }
     };
 
-    window.addEventListener("hrd:reminder", handler as EventListener);
-    // Some providers might dispatch the raw socket event name as well
-    window.addEventListener("hrdReminder.sent", handler as EventListener);
+    window.addEventListener("dataflow:reminder", handler as EventListener);
+    window.addEventListener("dataFlowReminder.sent", handler as EventListener);
     return () => {
-      window.removeEventListener("hrd:reminder", handler as EventListener);
-      window.removeEventListener("hrdReminder.sent", handler as EventListener);
+      window.removeEventListener("dataflow:reminder", handler as EventListener);
+      window.removeEventListener("dataFlowReminder.sent", handler as EventListener);
     };
-  }, [isModalOpen, accessToken, isProcessingUser, shownReminderIds, user]);
+  }, [isModalOpen, accessToken, isProcessingUser]);
 
-  // When we have a pending reminder id (from real-time), wait for the refetch to include full reminder
   useEffect(() => {
     if (!pendingReminderId || !remindersData) return;
 
     const found = remindersData.data?.find((r) => r.id === pendingReminderId);
     if (found) {
       if (!isModalOpen) {
-        console.debug(`[HRD] Refetch returned reminder ${pendingReminderId}, opening modal.`);
+        console.debug(`[DataFlow] Refetch returned reminder ${pendingReminderId}, opening modal.`);
         setCurrentReminder(found);
         setIsModalOpen(true);
       }
 
-      // Mark as shown with current count
       setShownReminderIds((prev) => {
         const updated = new Map(prev);
         updated.set(found.id, found.reminderCount ?? 0);

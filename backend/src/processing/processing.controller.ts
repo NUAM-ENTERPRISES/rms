@@ -31,6 +31,7 @@ import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { SubmitProcessingStepDateDto } from './dto/submit-processing-step-date.dto';
 import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
+import { DataFlowRemindersService } from '../data-flow-reminders/data-flow-reminders.service';
 
 @ApiTags('Processing Department')
 @ApiBearerAuth()
@@ -41,6 +42,7 @@ export class ProcessingController {
   constructor(
     private readonly processingService: ProcessingService,
     private readonly hrdRemindersService: HrdRemindersService,
+    private readonly dataFlowRemindersService: DataFlowRemindersService,
   ) {}
 
   @Get('candidates-to-transfer')
@@ -327,5 +329,14 @@ export class ProcessingController {
   async triggerHrdReminder(@Param('stepId') stepId: string, @Req() req: any) {
     const reminder = await this.hrdRemindersService.triggerHRDReminderNow(stepId, req.user.id);
     return { success: true, data: reminder, message: 'HRD reminder triggered' };
+  }
+
+  @Post('steps/:stepId/data-flow-trigger')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Trigger Data Flow reminder for a step (manual)' })
+  async triggerDataFlowReminder(@Param('stepId') stepId: string, @Req() req: any) {
+    const reminder = await this.dataFlowRemindersService.triggerDataFlowReminderNow(stepId, req.user.id);
+    return { success: true, data: reminder, message: 'Data Flow reminder triggered' };
   }
 }

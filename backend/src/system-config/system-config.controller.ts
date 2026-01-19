@@ -89,5 +89,40 @@ export class SystemConfigController {
       data: updatedSettings,
     };
   }
+
+  /**
+   * Get Data Flow Settings
+   */
+  @Get('data-flow-settings')
+  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  async getDataFlowSettings() {
+    const settings = await this.systemConfigService.getDataFlowSettings();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Data Flow settings retrieved successfully',
+      data: settings,
+    };
+  }
+
+  /**
+   * Update Data Flow Settings
+   * PUT /system-config/data-flow-settings
+   */
+  @Put('data-flow-settings')
+  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  async updateDataFlowSettings(@Body() settings: Partial<HRDSettings>) {
+    await this.systemConfigService.updateDataFlowSettings(settings);
+
+    // Clear cache to ensure new settings are loaded
+    this.systemConfigService.clearCache('DATA_FLOW_SETTINGS');
+
+    const updatedSettings = await this.systemConfigService.getDataFlowSettings();
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Data Flow settings updated successfully',
+      data: updatedSettings,
+    };
+  }
 }
 
