@@ -177,6 +177,26 @@ export class DocumentsController {
     };
   }
 
+  @Get('analytics/professional')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get professional documentation analytics',
+    description:
+      'Retrieve all document verifications with candidate and verifier information for analytics dashboard.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Professional analytics retrieved successfully',
+  })
+  async getProfessionalAnalytics() {
+    const data = await this.documentsService.getProfessionalAnalytics();
+    return {
+      success: true,
+      data,
+      message: 'Professional analytics retrieved successfully',
+    };
+  }
+
   @Get('summary/:candidateProjectMapId')
   @Permissions('read:documents')
   @ApiOperation({

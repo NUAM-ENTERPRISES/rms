@@ -23,7 +23,39 @@ export const PipelineBarChart: React.FC<PipelineBarChartProps> = ({
   selectedRecruiterId,
   onRecruiterChange,
 }) => {
-  const selected = recruiters.find((r) => r.id === selectedRecruiterId)!;
+  const selected = recruiters.find((r) => r.id === selectedRecruiterId);
+
+  // If no recruiter selected or found, show empty state
+  if (!selected || recruiters.length === 0) {
+    return (
+      <Card className="shadow-xl border-0">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="text-lg sm:text-xl">
+              Pipeline Performance
+            </CardTitle>
+            <Select value={selectedRecruiterId || ""} onValueChange={onRecruiterChange}>
+              <SelectTrigger className="w-full sm:w-64">
+                <SelectValue placeholder="Select a recruiter" />
+              </SelectTrigger>
+              <SelectContent>
+                {recruiters.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[320px] text-gray-500">
+            {recruiters.length === 0 ? "No recruiter data available" : "Please select a recruiter"}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="shadow-xl border-0">

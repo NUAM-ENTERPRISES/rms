@@ -1,5 +1,12 @@
 import { baseApi } from "@/app/api/baseApi";
 
+// API Response wrapper type
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message: string;
+}
+
 // User Types matching backend structure
 export interface UserRole {
   id: string;
@@ -167,6 +174,65 @@ export const usersApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_, __, { id }) => [{ type: "User", id }],
     }),
+
+    // Get recruiter statistics for analytics
+    getRecruiterStats: builder.query<
+      ApiResponse<
+        Array<{
+          id: string;
+          name: string;
+          email: string;
+          assigned: number;
+          screening: number;
+          interview: number;
+          selected: number;
+          joined: number;
+          untouched: number;
+          avgScreeningDays: number;
+          avgTimeToFirstTouch: number;
+          avgDaysToInterested: number;
+          avgDaysToNotInterested: number;
+          avgDaysToNotEligible: number;
+          avgDaysToOtherEnquiry: number;
+          avgDaysToFuture: number;
+          avgDaysToOnHold: number;
+          avgDaysToRNR: number;
+          avgDaysToQualified: number;
+          avgDaysToWorking: number;
+        }>
+      >,
+      { year?: number }
+    >({
+      query: (params) => ({
+        url: "/recruiters/stats",
+        params: params.year ? { year: params.year } : undefined,
+      }),
+      providesTags: ["User"],
+    }),
+
+    // Get recruiter monthly performance data
+    getRecruiterPerformance: builder.query<
+      ApiResponse<
+        Array<{
+          month: string;
+          assigned: number;
+          screening: number;
+          interview: number;
+          selected: number;
+          joined: number;
+        }>
+      >,
+      { recruiterId: string; year?: number }
+    >({
+      query: (params) => ({
+        url: "/recruiters/performance",
+        params: {
+          recruiterId: params.recruiterId,
+          ...(params.year && { year: params.year }),
+        },
+      }),
+      providesTags: ["User"],
+    }),
   }),
 });
 // Export hooks
@@ -179,6 +245,8 @@ export const {
   useGetUserRolesQuery,
   useGetUserPermissionsQuery,
   useUpdateUserPasswordMutation,
+  useGetRecruiterStatsQuery,
+  useGetRecruiterPerformanceQuery,
 } = usersApi;
 
 // Export roles API

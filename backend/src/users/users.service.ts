@@ -547,4 +547,244 @@ export class UsersService {
       documentsVerified,
     };
   }
+
+  /**
+   * Get recruiter statistics for analytics dashboard
+   */
+  async getRecruiterStats(year: number): Promise<
+    Array<{
+      id: string;
+      name: string;
+      email: string;
+      assigned: number;
+      screening: number;
+      interview: number;
+      selected: number;
+      joined: number;
+      untouched: number;
+      avgScreeningDays: number;
+      avgTimeToFirstTouch: number;
+      avgDaysToInterested: number;
+      avgDaysToNotInterested: number;
+      avgDaysToNotEligible: number;
+      avgDaysToOtherEnquiry: number;
+      avgDaysToFuture: number;
+      avgDaysToOnHold: number;
+      avgDaysToRNR: number;
+      avgDaysToQualified: number;
+      avgDaysToWorking: number;
+    }>
+  > {
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    // Get all users with Recruiter role
+    const recruiters = await this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: 'Recruiter',
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    const stats = await Promise.all(
+      recruiters.map(async (recruiter) => {
+        // Get candidate projects assigned to this recruiter within the year
+        const candidateProjects = await this.prisma.candidateProjects.findMany({
+          where: {
+            recruiterId: recruiter.id,
+            assignedAt: {
+              gte: yearStart,
+              lte: yearEnd,
+            },
+          },
+          include: {
+            currentProjectStatus: {
+              select: {
+                statusName: true,
+              },
+            },
+          },
+        });
+
+        // Count by status
+        const assigned = candidateProjects.length;
+        const screening = candidateProjects.filter(
+          (cp) =>
+            cp.currentProjectStatus?.statusName === 'screening_scheduled' ||
+            cp.currentProjectStatus?.statusName === 'screening_completed' ||
+            cp.currentProjectStatus?.statusName === 'screening_passed' ||
+            cp.currentProjectStatus?.statusName === 'screening_failed',
+        ).length;
+        const interview = candidateProjects.filter(
+          (cp) =>
+            cp.currentProjectStatus?.statusName === 'interview_scheduled' ||
+            cp.currentProjectStatus?.statusName === 'interview_completed' ||
+            cp.currentProjectStatus?.statusName === 'interview_passed',
+        ).length;
+        const selected = candidateProjects.filter(
+          (cp) => cp.currentProjectStatus?.statusName === 'selected',
+        ).length;
+        const joined = candidateProjects.filter(
+          (cp) => cp.currentProjectStatus?.statusName === 'hired',
+        ).length;
+
+        // Get untouched count (candidates with status "untouched")
+        const untouchedStatus = await this.prisma.candidateStatus.findFirst({
+          where: { statusName: 'untouched' },
+        });
+        const untouched = untouchedStatus
+          ? await this.prisma.candidate.count({
+              where: {
+                recruiterAssignments: {
+                  some: {
+                    recruiterId: recruiter.id,
+                    isActive: true,
+                  },
+                },
+                currentStatusId: untouchedStatus.id,
+              },
+            })
+          : 0;
+
+        // Calculate average days (simplified - would need status history for accurate calculation)
+        const avgScreeningDays = 0;
+        const avgTimeToFirstTouch = 0;
+        const avgDaysToInterested = 0;
+        const avgDaysToNotInterested = 0;
+        const avgDaysToNotEligible = 0;
+        const avgDaysToOtherEnquiry = 0;
+        const avgDaysToFuture = 0;
+        const avgDaysToOnHold = 0;
+        const avgDaysToRNR = 0;
+        const avgDaysToQualified = 0;
+        const avgDaysToWorking = 0;
+
+        return {
+          id: recruiter.id,
+          name: recruiter.name,
+          email: recruiter.email,
+          assigned,
+          screening,
+          interview,
+          selected,
+          joined,
+          untouched,
+          avgScreeningDays,
+          avgTimeToFirstTouch,
+          avgDaysToInterested,
+          avgDaysToNotInterested,
+          avgDaysToNotEligible,
+          avgDaysToOtherEnquiry,
+          avgDaysToFuture,
+          avgDaysToOnHold,
+          avgDaysToRNR,
+          avgDaysToQualified,
+          avgDaysToWorking,
+        };
+      }),
+    );
+
+    return stats;
+  }
+
+  /**
+   * Get monthly performance data for a recruiter
+   */
+  async getRecruiterPerformance(
+    recruiterId: string,
+    year: number,
+  ): Promise<
+    Array<{
+      month: string;
+      assigned: number;
+      screening: number;
+      interview: number;
+      selected: number;
+      joined: number;
+    }>
+  > {
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    const monthlyData = await Promise.all(
+      months.map(async (month, index) => {
+        const monthStart = new Date(year, index, 1);
+        const monthEnd = new Date(year, index + 1, 0, 23, 59, 59, 999);
+
+        const candidateProjects = await this.prisma.candidateProjects.findMany({
+          where: {
+            recruiterId,
+            assignedAt: {
+              gte: monthStart,
+              lte: monthEnd,
+            },
+          },
+          include: {
+            currentProjectStatus: {
+              select: {
+                statusName: true,
+              },
+            },
+          },
+        });
+
+        const assigned = candidateProjects.length;
+        const screening = candidateProjects.filter(
+          (cp) =>
+            cp.currentProjectStatus?.statusName === 'screening_scheduled' ||
+            cp.currentProjectStatus?.statusName === 'screening_completed' ||
+            cp.currentProjectStatus?.statusName === 'screening_passed' ||
+            cp.currentProjectStatus?.statusName === 'screening_failed',
+        ).length;
+        const interview = candidateProjects.filter(
+          (cp) =>
+            cp.currentProjectStatus?.statusName === 'interview_scheduled' ||
+            cp.currentProjectStatus?.statusName === 'interview_completed' ||
+            cp.currentProjectStatus?.statusName === 'interview_passed',
+        ).length;
+        const selected = candidateProjects.filter(
+          (cp) => cp.currentProjectStatus?.statusName === 'selected',
+        ).length;
+        const joined = candidateProjects.filter(
+          (cp) => cp.currentProjectStatus?.statusName === 'hired',
+        ).length;
+
+        return {
+          month,
+          assigned,
+          screening,
+          interview,
+          selected,
+          joined,
+        };
+      }),
+    );
+
+    return monthlyData;
+  }
 }

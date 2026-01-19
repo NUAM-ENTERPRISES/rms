@@ -20,7 +20,6 @@ import {
 import {
   Briefcase,
   Users,
-  Video,
   TrendingUp,
   UserCheck,
   Clock,
@@ -114,53 +113,67 @@ export default function CEOInterviewAnalyticsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-10">
+    <div className="min-h-screen">
+      <div className="mx-auto w-full space-y-6 py-2">
+        {/* Header */}
+        <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-rose-600 shadow-lg shadow-purple-500/30">
+                  <Briefcase className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                    Analytics Dashboard
+                  </p>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    Interview Analytics
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Individual interviewer performance dashboard
+                  </p>
+                </div>
+              </div>
 
-        {/* Header + Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Interview Analytics
-            </h1>
-            <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
-              Individual interviewer performance dashboard
-            </p>
-          </div>
-
-          <div className="w-full sm:w-80">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Select Interviewer
-            </label>
-            <Select value={selectedInterviewer} onValueChange={setSelectedInterviewer}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {interviewers.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div className="w-full sm:w-80">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Select Interviewer
+                </label>
+                <Select value={selectedInterviewer} onValueChange={setSelectedInterviewer}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {interviewers.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { label: "Total Interviews", value: total, icon: Briefcase, color: "indigo" },
-            { label: "Interviewer", value: selectedInterviewer, icon: Users, color: "purple" },
-            { label: "Video Interviews", value: `${videoPct}%`, icon: Video, color: "blue" },
-            { label: "Hiring Momentum", value: "Strong", icon: TrendingUp, color: "green", trend: "↑ 35% YoY" },
-          ].map((item, index) => (
-            <KpiCard key={index} label={item.label} value={item.value} icon={item.icon} color={item.color} index={index} />
-          ))}
+        <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+          <div className="p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { label: "Total Interviews", value: total, icon: Briefcase, color: "indigo", compact: true },
+                { label: "Interviewer", value: selectedInterviewer, icon: Users, color: "purple", compact: true },
+                { label: "Hiring Momentum", value: "Strong", icon: TrendingUp, color: "green", trend: "↑ 35% YoY", compact: true },
+              ].map((item, index) => (
+                <KpiCard key={index} label={item.label} value={item.value} icon={item.icon} color={item.color} index={index} compact={item.compact} />
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Main Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="shadow-xl border-0 overflow-hidden">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-semibold flex items-center gap-2">

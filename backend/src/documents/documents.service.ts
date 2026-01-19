@@ -2112,4 +2112,88 @@ async getVerifiedOrRejectedList() {
       },
     };
   }
+
+  /**
+   * Get professional documentation analytics data
+   * Returns all document verifications with candidate and verifier information
+   * Used for analytics dashboard
+   */
+  async getProfessionalAnalytics(): Promise<
+    Array<{
+      id: string;
+      candidateName: string;
+      status: 'verified' | 'pending' | 'rejected';
+      docType: string;
+      rejectionReason: string | null;
+      verifiedBy: string | null;
+      createdAt: string;
+    }>
+  > {
+    const verifications = await this.prisma.candidateProjectDocumentVerification.findMany({
+      include: {
+        document: {
+          select: {
+            id: true,
+            docType: true,
+            createdAt: true,
+            rejectionReason: true,
+          },
+        },
+        candidateProjectMap: {
+          include: {
+            candidate: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        verificationHistory: {
+          where: {
+            action: { in: ['verified', 'rejected'] },
+          },
+          orderBy: { performedAt: 'desc' },
+          take: 1,
+          include: {
+            performer: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return verifications.map((verification) => {
+      const candidate = verification.candidateProjectMap.candidate;
+      const candidateName = `${candidate.firstName} ${candidate.lastName}`.trim();
+      const latestHistory = verification.verificationHistory[0];
+      const verifiedByName = latestHistory?.performer?.name || null;
+
+      // Map verification status to analytics status
+      let status: 'verified' | 'pending' | 'rejected';
+      if (verification.status === 'verified') {
+        status = 'verified';
+      } else if (verification.status === 'rejected') {
+        status = 'rejected';
+      } else {
+        status = 'pending';
+      }
+
+      return {
+        id: verification.id,
+        candidateName,
+        status,
+        docType: verification.document.docType,
+        rejectionReason: verification.rejectionReason || null,
+        verifiedBy: verifiedByName,
+        createdAt: verification.document.createdAt.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      };
+    });
+  }
 }

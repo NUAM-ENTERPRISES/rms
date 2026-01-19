@@ -11,6 +11,7 @@ type KpiCardProps = {
   icon: LucideIcon;
   color: string;
   index: number;
+  compact?: boolean;
 };
 
 export const KpiCard: React.FC<KpiCardProps> = ({
@@ -19,6 +20,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   icon: Icon,
   color,
   index,
+  compact = false,
 }) => {
   return (
     <motion.div
@@ -28,21 +30,34 @@ export const KpiCard: React.FC<KpiCardProps> = ({
     >
       <Card
         className={cn(
-          `border-0 shadow-lg bg-gradient-to-br from-${color}-50 to-${color}-100/50 backdrop-blur-sm hover:shadow-xl transition-all`
+          `border-0 shadow-lg bg-gradient-to-br from-${color}-50 to-${color}-100/50 backdrop-blur-sm hover:shadow-xl transition-all`,
+          compact && "shadow-md"
         )}
       >
-        <CardContent className="pt-6">
+        <CardContent className={cn("pt-6", compact && "pt-4 pb-4")}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600 mb-1">
+              <p className={cn(
+                "text-sm font-medium text-slate-600 mb-1",
+                compact && "text-xs mb-0.5"
+              )}>
                 {label}
               </p>
-              <h3 className={`text-3xl font-bold text-${color}-600`}>
+              <h3 className={cn(
+                `text-3xl font-bold text-${color}-600`,
+                compact && "text-xl"
+              )}>
                 {value}
               </h3>
             </div>
-            <div className={`p-3 bg-${color}-200/40 rounded-full`}>
-              <Icon className={`h-6 w-6 text-${color}-600`} />
+            <div className={cn(
+              `p-3 bg-${color}-200/40 rounded-full`,
+              compact && "p-2"
+            )}>
+              <Icon className={cn(
+                `h-6 w-6 text-${color}-600`,
+                compact && "h-4 w-4"
+              )} />
             </div>
           </div>
         </CardContent>

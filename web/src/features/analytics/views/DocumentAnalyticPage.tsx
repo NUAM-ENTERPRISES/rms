@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { format, subDays, parseISO, startOfDay, addDays } from "date-fns";
 import {
   CheckCircle2,
@@ -19,6 +19,7 @@ import { DailyTrendChart } from "@/features/analytics/components/DailyTrendChart
 import { DocumentTypePie } from "@/features/analytics/components/DocumentTypePie";
 import { CandidateStatusChart } from "@/features/analytics/components/CandidateStatusChart";
 import { TeamPerformanceChart } from "@/features/analytics/components/TeamPerformanceChart";
+import { useGetProfessionalAnalyticsQuery } from "@/features/documents/api";
 
 type Document = {
   id: string;
@@ -36,38 +37,21 @@ export default function ProfessionalDocumentationDashboard() {
     to: new Date(),
   });
 
-  const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedVerifier, setSelectedVerifier] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Fetch documents from API
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Fetch documents from API using RTK Query
+  const {
+    data: analyticsData,
+    isLoading: loading,
+    error: queryError,
+  } = useGetProfessionalAnalyticsQuery();
 
-        // Replace with your actual API endpoint
-        const response = await fetch("/api/documents/professional");
-
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`Failed to fetch documents: ${response.status} ${response.statusText}`);
-        }
-
-        const data: Document[] = await response.json();
-        setDocuments(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load documents");
-        console.error("Documents fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, []);
+  const documents: Document[] = analyticsData?.data || [];
+  const error = queryError
+    ? "message" in queryError
+      ? queryError.message
+      : "Failed to load documents"
+    : null;
 
   // Extract unique verifiers (only those who actually verified something)
   const verifiers = useMemo(() => {
@@ -81,12 +65,26 @@ export default function ProfessionalDocumentationDashboard() {
   useEffect(() => {
     if (verifiers.length > 0 && !selectedVerifier) {
       setSelectedVerifier(verifiers[0]);
+    } else if (verifiers.length === 0 && selectedVerifier) {
+      // Clear selection if no verifiers available
+      setSelectedVerifier("");
     }
   }, [verifiers, selectedVerifier]);
 
   // Filter documents by date range and selected verifier
   const docs = useMemo(() => {
-    if (documents.length === 0 || !selectedVerifier) return [];
+    if (documents.length === 0) return [];
+    
+    // If no verifier selected, show all documents in date range
+    if (!selectedVerifier) {
+      return documents.filter((d) => {
+        const docDate = startOfDay(parseISO(d.createdAt));
+        const fromDate = startOfDay(dateRange.from);
+        const toDate = startOfDay(dateRange.to);
+
+        return docDate >= fromDate && docDate <= toDate;
+      });
+    }
 
     return documents.filter((d) => {
       if (!d.verifiedBy || d.verifiedBy !== selectedVerifier) return false;
@@ -180,66 +178,80 @@ export default function ProfessionalDocumentationDashboard() {
   // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
-        <div className="text-xl font-medium text-gray-600 dark:text-gray-400">
-          Loading documentation analytics...
+      <div className="min-h-screen">
+        <div className="mx-auto w-full space-y-6 py-2">
+          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+            <div className="p-5">
+              <div className="text-center py-12">
+                <div className="text-lg font-medium text-slate-600">
+                  Loading documentation analytics...
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Error State
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
-        <div className="text-xl font-medium text-red-600 dark:text-red-400">
-          Error: {error}
-        </div>
-      </div>
-    );
-  }
-
-  // No Data State
-  if (documents.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
-        <div className="text-xl font-medium text-gray-600 dark:text-gray-400">
-          No documentation data available
-        </div>
-      </div>
-    );
-  }
+  // Error State - Show error banner but still render components
+  const hasError = !!error;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950">
-      <main className="max-w-7xl mx-auto p-6 lg:p-10">
-        <div className="mb-10 flex justify-between items-center">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
-                <FileSearch className="h-8 w-8 text-indigo-600" />
+    <div className="min-h-screen">
+      <div className="mx-auto w-full space-y-6 py-2">
+        {/* Header */}
+        <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
+                  <FileSearch className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                    Analytics Dashboard
+                  </p>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    Documentation Analysis
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Advanced analytics for the Documentation Team
+                  </p>
+                </div>
               </div>
-              <h1 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Documentation Analysis
-              </h1>
+              <div className="flex gap-3">
+                <DateRangePicker date={dateRange} setDate={setDateRange} />
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" /> Export Report
+                </Button>
+              </div>
             </div>
-            <p className="text-gray-500 mt-2">Advanced analytics for the Documentation Team</p>
-          </div>
-          <div className="flex gap-4">
-            <DateRangePicker date={dateRange} setDate={setDateRange} />
-            <Button>
-              <Download className="mr-2 h-4 w-4" /> Export Report
-            </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
-          {kpiItems.map((item, i) => (
-            <KpiCard key={item.label} {...item} index={i} />
-          ))}
+        {/* Error Banner */}
+        {hasError && (
+          <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4">
+            <div className="text-sm font-medium text-red-800 dark:text-red-200">
+              Error loading data: {error}
+            </div>
+          </div>
+        )}
+
+        {/* KPI Cards */}
+        <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+          <div className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {kpiItems.map((item, i) => (
+                <KpiCard key={item.label} {...item} index={i} />
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <DailyTrendChart
             data={dailyTrend}
             verifiers={verifiers}
@@ -250,7 +262,7 @@ export default function ProfessionalDocumentationDashboard() {
           <CandidateStatusChart data={candidateStatus} />
           <TeamPerformanceChart data={teamPerformance} />
         </div>
-      </main>
+      </div>
     </div>
   );
 }
