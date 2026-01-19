@@ -118,13 +118,16 @@ export const processingApi = baseApi.injectEndpoints({
     }),
 
     // Mark a processing step as complete (new endpoint)
+    // Accept an optional body so step-specific data (eg. `prometricResult`) can be sent.
     completeStep: builder.mutation<
       { success: boolean; data: any; message: string },
-      { stepId: string }
+      { stepId: string; prometricResult?: any; [k: string]: any }
     >({
-      query: ({ stepId }) => ({
+      query: ({ stepId, ...body }) => ({
         url: `/processing/steps/${stepId}/complete`,
         method: "POST",
+        // include body only when additional fields are provided (keeps backwards compatibility)
+        body: Object.keys(body).length ? body : undefined,
       }),
       invalidatesTags: () => [
         { type: "ProcessingSteps", id: "LIST" },
@@ -145,12 +148,38 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Get Prometric requirements and uploads for a processing candidate
+    getPrometricRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/prometric-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Get Data Flow requirements and uploads for a processing candidate (mirrors HRD endpoint but for data flow)
     getDataFlowRequirements: builder.query<
       any,
       string
     >({
       query: (processingId) => `/processing/steps/${processingId}/data-flow-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    // Get Eligibility requirements and uploads for a processing candidate (mirrors HRD/Data Flow)
+    getEligibilityRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/eligibility-requirements`,
       transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
       providesTags: (_result, _error, processingId) => [
         { type: "ProcessingSteps", id: processingId },
@@ -263,7 +292,9 @@ export const {
   useUpdateStepStatusMutation,
   useCompleteStepMutation,
   useGetHrdRequirementsQuery,
+  useGetPrometricRequirementsQuery,
   useGetDataFlowRequirementsQuery,
+  useGetEligibilityRequirementsQuery,
   useAttachDocumentToStepMutation,
   useReuploadProcessingDocumentMutation,
   useVerifyProcessingDocumentMutation,

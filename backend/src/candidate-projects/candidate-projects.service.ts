@@ -1861,6 +1861,8 @@ export class CandidateProjectsService {
         qualifications: {
           include: { qualification: true },
         },
+        // include work history so we can compute experience when totalExperience is not set
+        workExperiences: true,
       },
     });
 
@@ -1882,7 +1884,11 @@ export class CandidateProjectsService {
 
     const age = this.calculateAge(new Date(candidate.dateOfBirth));
     const candidateGender = candidate.gender?.toLowerCase();
-    const candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
+    let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
+    // If explicit experience is missing/zero, derive from work history when available
+    if ((!candidateExp || candidateExp === 0) && Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0) {
+      candidateExp = this.calculateExperienceFromWorkHistory(candidate.workExperiences);
+    }
 
     const roleEligibility = project.rolesNeeded.map((role) => {
       const reasons: string[] = [];
@@ -1976,13 +1982,19 @@ export class CandidateProjectsService {
       where: {
         id: { in: candidateIds },
       },
+      include: {
+        // include work history so bulk eligibility mirrors single-candidate behavior
+        workExperiences: true,
+      },
     });
 
     const results = candidates.map((candidate) => {
       const age = this.calculateAge(new Date(candidate.dateOfBirth));
       const candidateGender = candidate.gender?.toLowerCase();
-      const candidateExp =
-        candidate.totalExperience ?? candidate.experience ?? 0;
+      let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
+      if ((!candidateExp || candidateExp === 0) && Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0) {
+        candidateExp = this.calculateExperienceFromWorkHistory(candidate.workExperiences);
+      }
 
       const roleEligibility = project.rolesNeeded.map((role) => {
         const reasons: string[] = [];
@@ -2066,6 +2078,25 @@ export class CandidateProjectsService {
       age--;
     }
     return age;
+  }
+
+  /**
+   * Calculate total experience (years) from an array of workExperiences.
+   * Matches logic used in other services (average month length = 30.44 days).
+   */
+  private calculateExperienceFromWorkHistory(workExperiences: any[]): number {
+    let totalMonths = 0;
+
+    workExperiences.forEach((exp) => {
+      const start = new Date(exp.startDate);
+      const end = exp.endDate ? new Date(exp.endDate) : new Date();
+
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffMonths = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
+      totalMonths += diffMonths;
+    });
+
+    return Math.floor(totalMonths / 12);
   }
 
   /**

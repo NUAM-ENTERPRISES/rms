@@ -11,3 +11,5 @@ export { ProcessingOfferLetterModal } from "./ProcessingOfferLetterModal";
 export type { OfferLetterDocument, DocumentVerification } from "./ProcessingOfferLetterModal";
 export { HrdModal } from "./HrdModal";
 export { DataFlowModal } from "./DataFlowModal";
+export { EligibilityModal } from "./EligibilityModal";
+export { PrometricModal } from "./PrometricModal";

@@ -277,6 +277,15 @@ export class ProcessingController {
     return { success: true, data, message: 'HRD requirements retrieved' };
   }
 
+  @Get('steps/:processingId/eligibility-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Eligibility requirements for a processing candidate', description: 'Merged global + country Eligibility document rules and existing processing_documents. Same response shape as HRD/Data Flow.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getEligibilityRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getEligibilityRequirements(processingId, docType);
+    return { success: true, data, message: 'Eligibility requirements retrieved' };
+  }
+
   @Get('steps/:processingId/data-flow-requirements')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({ summary: 'Get Data Flow requirements for a processing candidate', description: 'Merged global + country Data Flow document rules and existing processing_documents.' })
@@ -297,9 +306,18 @@ export class ProcessingController {
   @Post('steps/:stepId/complete')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @ApiOperation({ summary: 'Mark a processing step as complete and move to next step' })
-  async completeStep(@Param('stepId') stepId: string, @Req() req: any) {
-    const data = await this.processingService.completeProcessingStep(stepId, req.user.id);
+  async completeStep(@Param('stepId') stepId: string, @Body() body: import('./dto/complete-processing-step.dto').CompleteProcessingStepDto, @Req() req: any) {
+    const data = await this.processingService.completeProcessingStep(stepId, req.user.id, body);
     return { success: true, data, message: 'Processing step completed and advanced to next step' };
+  }
+
+  @Get('steps/:processingId/prometric-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Prometric requirements for a processing candidate', description: 'Merged global + country Prometric document rules and existing processing_documents.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getPrometricRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getPrometricRequirements(processingId, docType);
+    return { success: true, data, message: 'Prometric requirements retrieved' };
   }
 
   @Post('steps/:stepId/cancel')

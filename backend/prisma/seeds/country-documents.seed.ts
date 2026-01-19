@@ -139,5 +139,88 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     }
   }
 
+  // --- Global Prometric Documents ---
+  // Seed global Prometric output requirement mapped to processing step template 'prometric'
+  const prometricTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'prometric' } });
+  if (!prometricTemplate) {
+    console.warn("ProcessingStepTemplate with key='prometric' not found — skipping Prometric global seed");
+  } else {
+    const prometricDocs = [
+      { docType: DOCUMENT_TYPE.PROMETRIC_RESULT, label: 'Prometric Result', mandatory: false },
+    ];
+
+    for (const doc of prometricDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: prometricTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: prometricTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: prometricTemplate.id,
+        },
+      });
+    }
+  }
+
+  // --- Global Eligibility Documents ---
+  // Seed global Eligibility requirements mapped to processing step template 'eligibility'
+  const eligibilityTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'eligibility' } });
+  if (!eligibilityTemplate) {
+    console.warn("ProcessingStepTemplate with key='eligibility' not found — skipping Eligibility global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const eligibilityDocs = [
+      { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
+      { docType: DOCUMENT_TYPE.TRANSCRIPT, label: 'Academic Transcript / Mark Sheet', mandatory: true },
+      { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE, label: 'Experience Certificate(s)', mandatory: true },
+      { docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE, label: 'Professional Registration (Nursing / Council / Trade)', mandatory: true },
+      { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
+    ];
+
+    for (const doc of eligibilityDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: eligibilityTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: eligibilityTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: eligibilityTemplate.id,
+        },
+      });
+    }
+  }
+
   console.log('Country document requirements seeded successfully.');
 }
+
+

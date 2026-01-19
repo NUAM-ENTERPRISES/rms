@@ -35,5 +35,12 @@ ALTER TABLE "data_flow_reminders" ADD CONSTRAINT "data_flow_reminders_processing
 -- AddForeignKey
 ALTER TABLE "data_flow_reminders" ADD CONSTRAINT "data_flow_reminders_assignedTo_fkey" FOREIGN KEY ("assignedTo") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- RenameIndex
-ALTER INDEX "country_document_requirements_countryCode_docType_step_key" RENAME TO "country_document_requirements_countryCode_docType_processin_key";
+-- RenameIndex (guarded to avoid failing on shadow DB when index is absent)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_class WHERE relname = 'country_document_requirements_countryCode_docType_step_key'
+  ) THEN
+    EXECUTE 'ALTER INDEX "country_document_requirements_countryCode_docType_step_key" RENAME TO "country_document_requirements_countryCode_docType_processin_key"';
+  END IF;
+END$$;

@@ -19,6 +19,8 @@ import {
   ProcessingOfferLetterModal,
   DataFlowModal,
   HrdModal,
+  PrometricModal,
+  EligibilityModal,
 } from "./components";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
 
@@ -27,7 +29,9 @@ export default function ProcessingCandidateDetailsPage() {
   const navigate = useNavigate();
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);
+  const [showPrometricModal, setShowPrometricModal] = useState(false);
   const [showDataFlowModal, setShowDataFlowModal] = useState(false);
+  const [showEligibilityModal, setShowEligibilityModal] = useState(false);
 
   const { data: apiResponse, isLoading, error, refetch: refetchCandidateDetails } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
@@ -52,6 +56,7 @@ export default function ProcessingCandidateDetailsPage() {
   // Backwards compatible HRD handler
   const handleHrdComplete = handleStepComplete;
   const handleDataFlowComplete = handleStepComplete;
+  const handleEligibilityComplete = handleStepComplete;
 
   // Extract offer letter status from document verifications
   const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
@@ -178,6 +183,16 @@ export default function ProcessingCandidateDetailsPage() {
                   return;
                 }
 
+                if (k === "prometric") {
+                  setShowPrometricModal(true);
+                  return;
+                }
+
+                if (k === "eligibility") {
+                  setShowEligibilityModal(true);
+                  return;
+                }
+
                 if (k === "dataflow") {
                   setShowDataFlowModal(true);
                 }
@@ -271,6 +286,28 @@ export default function ProcessingCandidateDetailsPage() {
         }}
         processingId={data.id}
         onComplete={handleHrdComplete}
+      />
+
+      {/* Prometric Modal */}
+      <PrometricModal
+        isOpen={showPrometricModal}
+        onClose={() => {
+          setShowPrometricModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
+      />
+
+      {/* Eligibility Modal */}
+      <EligibilityModal
+        isOpen={showEligibilityModal}
+        onClose={() => {
+          setShowEligibilityModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleEligibilityComplete}
       />
 
       {/* Data Flow Modal */}

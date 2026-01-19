@@ -14,24 +14,22 @@ const CompleteProcessingStepModal = React.lazy(() => import("../../components/Co
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetHrdRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useGetPrometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface HrdModalProps {
+interface PrometricModalProps {
   isOpen: boolean;
   onClose: () => void;
   processingId: string;
   onComplete?: () => void | Promise<void>;
 }
 
-
-
-export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModalProps) {
-  const { data, isLoading, error, refetch } = useGetHrdRequirementsQuery(processingId, {
+export function PrometricModal({ isOpen, onClose, processingId, onComplete }: PrometricModalProps) {
+  const { data, isLoading, error, refetch } = useGetPrometricRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
 
@@ -47,8 +45,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  // HRD submission date state
-  const [hrdSubmissionDate, setHrdSubmissionDate] = useState<Date | undefined>(undefined);
+  // Prometric submission date state (re-using HRD submit-date endpoint)
+  const [prometricSubmissionDate, setPrometricSubmissionDate] = useState<Date | undefined>(undefined);
+
+  // Prometric result (required when completing)
+  const [prometricResult, setPrometricResult] = useState<string>("");
+  const [prometricNotes, setPrometricNotes] = useState<string>("");
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -81,7 +83,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const uploads: any[] = data?.uploads || [];
 
   // Completion flag from API
-  const isHrdCompleted = data?.isHrdCompleted ?? false;
+  const isPrometricCompleted = data?.isPrometricCompleted ?? false;
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
@@ -324,7 +326,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       setUploadModalOpen(false);
       await refetch();
     } catch (err: any) {
-      console.error("HRD upload error", err);
+      console.error("Prometric upload error", err);
       toast.error(err?.data?.message || "Failed to upload and attach document");
     }
   };
@@ -371,6 +373,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       return;
     }
 
+    // Prometric-specific: require a result to be selected
+    if (!prometricResult) {
+      toast.error("Please select a Prometric result before completing the step");
+      return;
+    }
+
     setCompleteModalOpen(true);
   };
 
@@ -378,8 +386,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
     if (!activeStep?.id) return;
 
     try {
-      await completeStep({ stepId: activeStep.id }).unwrap();
-      toast.success("HRD step marked complete");
+      await completeStep({ stepId: activeStep.id, prometricResult }).unwrap();
+      toast.success("Prometric step marked complete");
       setCompleteModalOpen(false);
       await refetch();
       
@@ -390,8 +398,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       
       onClose();
     } catch (err: any) {
-      console.error("Mark HRD complete failed", err);
-      const msg = err?.data?.message || err?.error || "Failed to complete HRD step";
+      console.error("Mark Prometric complete failed", err);
+      const msg = err?.data?.message || err?.error || "Failed to complete Prometric step";
       toast.error(msg);
     }
   };
@@ -425,7 +433,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       return false;
     }
 
-    const payloadDate = date ?? hrdSubmissionDate;
+    const payloadDate = date ?? prometricSubmissionDate;
 
     if (!payloadDate) {
       toast.error("Please select a date and time");
@@ -437,12 +445,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
         stepId: activeStep.id,
         submittedAt: payloadDate.toISOString(),
       }).unwrap();
-      toast.success("HRD submission date saved successfully");
+      toast.success("Prometric submission date saved successfully");
       await refetch();
       return true;
     } catch (err: any) {
-      console.error("Submit HRD date failed", err);
-      toast.error(err?.data?.message || "Failed to save HRD submission date");
+      console.error("Submit Prometric date failed", err);
+      toast.error(err?.data?.message || "Failed to save Prometric submission date");
       return false;
     }
   };
@@ -479,8 +487,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white">HRD Attestation</DialogTitle>
-                <DialogDescription className="text-sm text-white/70">Upload and verify required documents</DialogDescription>
+                <DialogTitle className="text-lg font-bold text-white">Prometric Exam</DialogTitle>
+                <DialogDescription className="text-sm text-white/70">Upload and verify Prometric documents</DialogDescription>
               </div>
             </div>
             {candidate?.candidate && (
@@ -502,7 +510,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load HRD requirements.</div>
+              <div className="text-sm text-slate-600">Could not load Prometric requirements.</div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -537,12 +545,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                 </div>
               </div>
 
-              {/* HRD Submission Date Section (compact) */}
+              {/* Prometric Submission Date Section (compact) */}
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    HRD Submission Date & Time
+                    Prometric Submission Date & Time
                   </h4>
                 </div>
                 <div className="p-3">
@@ -559,7 +567,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                           </div>
 
                           {/* Move edit to right edge and apply a circular 'nice' style */}
-                          {!isHrdCompleted && !isStepCancelled && (
+                          {!isPrometricCompleted && !isStepCancelled && (
                             <div className="flex items-center">
                               <Button
                                 variant="ghost"
@@ -576,10 +584,10 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                       ) : (
                         <>
                           <DatePicker
-                            value={hrdSubmissionDate}
-                            onChange={setHrdSubmissionDate}
+                            value={prometricSubmissionDate}
+                            onChange={setPrometricSubmissionDate}
                             placeholder="Pick date and time"
-                            disabled={isHrdCompleted}
+                            disabled={isPrometricCompleted}
                             className="w-full sm:min-w-[220px] h-8"
                             compact
                           />
@@ -587,10 +595,10 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                           {/* Validation / hint messages when no submittedAt */}
                           {!activeStep?.submittedAt && (
                             <div className="mt-1">
-                              {hrdSubmissionDate ? (
+                              {prometricSubmissionDate ? (
                                 <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
                               ) : (
-                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete HRD</p>
+                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Prometric</p>
                               )}
                             </div>
                           )}
@@ -603,7 +611,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                         <Button
                           size="sm"
                           onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !hrdSubmissionDate || isHrdCompleted || isStepCancelled}
+                          disabled={isSubmittingDate || !prometricSubmissionDate || isPrometricCompleted || isStepCancelled}
                           className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           {isSubmittingDate ? (
@@ -616,10 +624,38 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                       )}
                     </div>
                   </div>
-                  {isHrdCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">HRD is completed. Submission date cannot be modified.</p>
+                  {isPrometricCompleted && (
+                    <p className="text-xs text-slate-500 mt-2">Prometric is completed. Submission date cannot be modified.</p>
                   )}
                 </div>
+              </div>
+
+              {/* Prometric Result selector - required to complete */}
+              <div className="border rounded-lg p-3 bg-slate-50">
+                <Label className="text-xs text-slate-600 mb-1 block">Prometric result</Label>
+                <div className="flex items-center gap-3">
+                  <select
+                    aria-label="Prometric result"
+                    value={prometricResult}
+                    onChange={(e) => setPrometricResult(e.target.value)}
+                    className="rounded-md border px-3 py-2 text-sm bg-white"
+                    disabled={isPrometricCompleted || isStepCancelled}
+                  >
+                    <option value="">-- select result --</option>
+                    <option value="passed">Passed</option>
+                    <option value="failed">Failed</option>
+                    <option value="absent">Absent / No-show</option>
+                  </select>
+
+                  <input
+                    placeholder="Optional notes"
+                    className="flex-1 rounded-md border px-3 py-2 text-sm bg-white"
+                    value={prometricNotes}
+                    onChange={(e) => setPrometricNotes(e.target.value)}
+                    disabled={isPrometricCompleted || isStepCancelled}
+                  />
+                </div>
+                <p className="text-xs text-slate-400 mt-2">The selected result will be submitted with the completion request.</p>
               </div>
 
               {/* Document List */}
@@ -686,7 +722,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
 
                         {/* Actions: View / Upload / Verify / Processing Badge */}
                         <div className="flex items-center gap-2">
-                          {/* Keep view button available even after HRD is completed */}
+                          {/* Keep view button available even after Prometric is completed */}
                           {(hasCandidate || hasProcessing) && (
                             <Button
                               variant="ghost"
@@ -699,8 +735,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                             </Button>
                           )}
 
-                          {isHrdCompleted ? (
-                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">HRD Completed</Badge>
+                          {isPrometricCompleted ? (
+                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Prometric Completed</Badge>
                           ) : isStepCancelled ? (
                             <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
                           ) : (
@@ -792,14 +828,14 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                 <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
               </Button>
 
-              {!isHrdCompleted && !isStepCancelled && (
+              {!isPrometricCompleted && !isStepCancelled && (
                 <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
                   {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
                 </Button>
               )}
 
-              {isHrdCompleted ? (
-                <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">HRD Completed ✓</Badge>
+              {isPrometricCompleted ? (
+                <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Prometric Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
               ) : (
@@ -810,12 +846,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                       <TooltipTrigger asChild>
                         <div>
                           <Button size="sm" disabled className="opacity-80" aria-disabled>
-                            {'Mark HRD Complete'}
+                            {'Mark Prometric Complete'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>All mandatory documents must be verified before marking HRD complete. Verified {statVerified}/{statTotal}</p>
+                        <p>All mandatory documents must be verified before marking Prometric complete. Verified {statVerified}/{statTotal}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -831,12 +867,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                             className="opacity-80"
                             aria-disabled={true}
                           >
-                            {'Mark HRD Complete'}
+                            {'Mark Prometric Complete'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Submission date required to complete HRD. Please select and submit a date.</p>
+                        <p>Submission date required to complete Prometric. Please select and submit a date.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -848,7 +884,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
                     aria-disabled={isCompletingStep || !canMarkComplete}
                   >
-                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark HRD Complete'}
+                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Prometric Complete'}
                   </Button>
                 )
               )}
@@ -887,7 +923,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
         <ConfirmSubmitDateModal
           isOpen={submitConfirmOpen}
           onClose={() => setSubmitConfirmOpen(false)}
-          date={hrdSubmissionDate}
+          date={prometricSubmissionDate}
           onConfirm={async () => {
             const ok = await handleSubmitHrdDate();
             if (ok) setSubmitConfirmOpen(false);
@@ -970,4 +1006,4 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   );
 }
 
-export default HrdModal;
+export default PrometricModal;

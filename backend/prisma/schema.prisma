@@ -1176,6 +1176,13 @@ enum QualificationLevel {
   DOCTORATE
 }
 
+// Result values for Prometric/exam attempts. Kept nullable on ProcessingStep.
+enum PrometricResult {
+  PASSED
+  FAILED
+  PENDING
+}
+
 model Religion {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -1547,6 +1554,9 @@ model ProcessingStep {
   submittedAt           DateTime?
   rejectionReason       String?
   meta                  Json?
+  /// Prometric outcome for this step. Nullable for backwards compatibility.
+  /// Allowed values: PASSED | FAILED | PENDING
+  prometricResult       PrometricResult?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

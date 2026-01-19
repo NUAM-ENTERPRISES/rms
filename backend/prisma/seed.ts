@@ -976,9 +976,12 @@ async function main() {
   // Seed candidate project workflow
   await seedCandidateProjectWorkflow();
 
-  // Seed country document requirements
-  await seedCountryDocuments(prisma);
+  // Seed processing step templates BEFORE country document requirements
+  // (some country document requirements reference processing step templates)
   await seedProcessingStepTemplates();
+
+  // Seed country document requirements (now that templates exist)
+  await seedCountryDocuments(prisma);
 
   // Country-specific ordered step plans (Gulf countries: full plan; India: trimmed plan)
   await seedProcessingCountrySteps(prisma);

@@ -1,37 +1,44 @@
+import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
-import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import React, { useState, useMemo } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { format } from "date-fns";
+import { toast } from "sonner";
+
+import {
+  useGetEligibilityRequirementsQuery,
+  useCompleteStepMutation,
+  useReuploadProcessingDocumentMutation,
+  useVerifyProcessingDocumentMutation,
+  useSubmitHrdDateMutation,
+  useCancelStepMutation,
+} from "@/services/processingApi";
+import { useUploadDocumentMutation } from "@/features/candidates/api";
+import { useCreateDocumentMutation } from "@/services/documentsApi";
+import { useReuseDocumentMutation } from "@/features/documents/api";
+
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetHrdRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
-import { useUploadDocumentMutation } from "@/features/candidates/api";
-import { useCreateDocumentMutation } from "@/services/documentsApi";
-import { useReuseDocumentMutation } from "@/features/documents/api";
-import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface HrdModalProps {
+interface EligibilityModalProps {
   isOpen: boolean;
   onClose: () => void;
   processingId: string;
   onComplete?: () => void | Promise<void>;
 }
 
-
-
-export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModalProps) {
-  const { data, isLoading, error, refetch } = useGetHrdRequirementsQuery(processingId, {
+export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: EligibilityModalProps) {
+  const { data, isLoading, error, refetch } = useGetEligibilityRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
 
@@ -47,8 +54,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  // HRD submission date state
-  const [hrdSubmissionDate, setHrdSubmissionDate] = useState<Date | undefined>(undefined);
+  // Submission date state
+  const [submissionDate, setSubmissionDate] = useState<Date | undefined>(undefined);
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -64,9 +71,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
 
   // Confirmation modal state
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
-  // Submit date confirmation modal
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
-  // Edit existing submitted date modal
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
 
@@ -80,8 +85,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const requiredDocuments: any[] = data?.requiredDocuments || [];
   const uploads: any[] = data?.uploads || [];
 
-  // Completion flag from API
-  const isHrdCompleted = data?.isHrdCompleted ?? false;
+  // Completion flag from API — prefer specific `isEligibilityCompleted` if present
+  const isEligibilityCompleted = data?.isEligibilityCompleted ?? data?.isCompleted ?? false;
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
@@ -95,7 +100,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
     return map;
   }, [uploads]);
 
-  // Candidate-level documents and processing-level documents from API
   const candidateDocs = data?.candidateDocuments || [];
   const processingDocs = data?.processing_documents || [];
 
@@ -111,14 +115,25 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const processingDocsByDocType = useMemo(() => {
     const map: Record<string, any[]> = {};
     processingDocs.forEach((d: any) => {
-      // processing_documents from API can be nested. Normalize so we can group by docType reliably.
-      const doc = d.document || d.processingDocument?.document || d;
-      const docType = doc?.docType || d.docType || d.processingDocument?.docType;
-      const status = d.processingDocument?.status || d.processingDocument?.processingStatus || doc?.status || d.status;
-      const fileName = d.document?.fileName || doc?.fileName;
-      const fileUrl = d.document?.fileUrl || doc?.fileUrl;
-      const mimeType = d.document?.mimeType || doc?.mimeType;
-      const id = d.document?.id || d.processingDocument?.id || d.id;
+      // API can nest the actual document in several places: d.document, d.processingDocument.document,
+      // d.verification.document (observed in eligibility payload), or sometimes at the root `d`.
+      const nestedDoc = d.document || d.processingDocument?.document || d.verification?.document || d;
+
+      const docType = nestedDoc?.docType || d.docType || d.processingDocument?.docType || d.verification?.document?.docType;
+
+      // status can live on different levels as well
+      const status =
+        d.processingDocument?.status ||
+        d.processingDocument?.processingStatus ||
+        nestedDoc?.status ||
+        d.status ||
+        d.verification?.status ||
+        d.verification?.document?.status;
+
+      const fileName = nestedDoc?.fileName || d.document?.fileName || d.processingDocument?.fileName || d.verification?.document?.fileName;
+      const fileUrl = nestedDoc?.fileUrl || d.document?.fileUrl || d.processingDocument?.fileUrl || d.verification?.document?.fileUrl;
+      const mimeType = nestedDoc?.mimeType || d.document?.mimeType || d.processingDocument?.mimeType || d.verification?.document?.mimeType;
+      const id = nestedDoc?.id || d.document?.id || d.processingDocument?.id || d.verification?.document?.id || d.id;
 
       if (!docType) return; // skip malformed entries
 
@@ -148,11 +163,9 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       return;
     }
 
-    // Prefer mimeType from processing or candidate doc if available
     let mime = pdoc?.mimeType || cdoc?.mimeType;
     const fileName = pdoc?.fileName || cdoc?.fileName || "Document";
 
-    // If mime type is missing or generic, try to infer from file extension
     const tryInferFromUrl = (u: string | undefined) => {
       if (!u) return null;
       const clean = u.split('?')[0].toLowerCase();
@@ -165,7 +178,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       mime = tryInferFromUrl(pdoc?.fileUrl) || tryInferFromUrl(cdoc?.fileUrl) || tryInferFromUrl(fileName);
     }
 
-    // If mime appears as image/* or pdf set it accordingly; otherwise leave undefined
     setViewerMimeType(mime || undefined);
     setViewerFileName(fileName);
     setViewerUrl(url);
@@ -235,14 +247,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       return;
     }
 
-    console.log("🔍 Upload Debug:", {
-      selectedRoleCatalog,
-      replaceOldDocumentId,
-      replaceCandidateProjectMapId,
-      candidateRoleId: candidate?.role?.roleCatalog?.id,
-      candidateRole: candidate?.role,
-    });
-
     try {
       // Build FormData to send as multipart/form-data
       const formData = new FormData();
@@ -250,7 +254,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       formData.append("docType", selectedDocType);
       if (selectedRoleCatalog) {
         formData.append("roleCatalogId", selectedRoleCatalog);
-        console.log("✅ Added roleCatalogId to FormData:", selectedRoleCatalog);
       } else {
         console.warn("⚠️ No roleCatalogId to add to FormData");
       }
@@ -295,7 +298,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       }
 
       // Normal create document flow
-      console.log("📤 Creating document with roleCatalogId:", selectedRoleCatalog);
       const createResp = await createDocument({
         candidateId: candidate.candidate.id,
         docType: selectedDocType,
@@ -304,9 +306,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
         ...(selectedRoleCatalog && { roleCatalogId: selectedRoleCatalog }),
       }).unwrap();
 
-      console.log("📥 Document created:", createResp.data);
-
-      // Call reuse endpoint for the newly created document so it can be reused across projects
       const documentId = createResp.data.id;
       try {
         await reuseDocument({ 
@@ -324,7 +323,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       setUploadModalOpen(false);
       await refetch();
     } catch (err: any) {
-      console.error("HRD upload error", err);
+      console.error("Eligibility upload error", err);
       toast.error(err?.data?.message || "Failed to upload and attach document");
     }
   };
@@ -359,9 +358,9 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
       return;
     }
 
-    // Require all mandatory documents to be verified
+    // Require all documents to be verified
     if (!allVerified) {
-      toast.error("Cannot complete — All mandatory documents must be verified");
+      toast.error("Cannot complete — All documents must be verified");
       return;
     }
 
@@ -379,19 +378,18 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
 
     try {
       await completeStep({ stepId: activeStep.id }).unwrap();
-      toast.success("HRD step marked complete");
+      toast.success("Eligibility step marked complete");
       setCompleteModalOpen(false);
       await refetch();
       
-      // Notify parent to refresh all related data
       if (onComplete) {
         await onComplete();
       }
       
       onClose();
     } catch (err: any) {
-      console.error("Mark HRD complete failed", err);
-      const msg = err?.data?.message || err?.error || "Failed to complete HRD step";
+      console.error("Mark Eligibility complete failed", err);
+      const msg = err?.data?.message || err?.error || "Failed to complete Eligibility step";
       toast.error(msg);
     }
   };
@@ -419,13 +417,13 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
     }
   };
 
-  const handleSubmitHrdDate = async (date?: Date): Promise<boolean> => {
+  const handleSubmitDate = async (date?: Date): Promise<boolean> => {
     if (!activeStep?.id) {
       toast.error("No active step found");
       return false;
     }
 
-    const payloadDate = date ?? hrdSubmissionDate;
+    const payloadDate = date ?? submissionDate;
 
     if (!payloadDate) {
       toast.error("Please select a date and time");
@@ -437,41 +435,32 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
         stepId: activeStep.id,
         submittedAt: payloadDate.toISOString(),
       }).unwrap();
-      toast.success("HRD submission date saved successfully");
+      toast.success("Eligibility submission date saved successfully");
       await refetch();
       return true;
     } catch (err: any) {
-      console.error("Submit HRD date failed", err);
-      toast.error(err?.data?.message || "Failed to save HRD submission date");
+      console.error("Submit Eligibility date failed", err);
+      toast.error(err?.data?.message || "Failed to save Eligibility submission date");
       return false;
     }
   };
 
-
-  // Prefer counts from the API payload when available (keeps UI consistent with backend)
   const apiCounts = data?.counts;
   const computedStats = getDocStats();
   const missingDocs = getMissingMandatory();
 
-  // Use *mandatory* counts (API provides totalMandatory). fall back to computed mandatory count.
-  // Previously we used the total configured docs which incorrectly included optional docs.
-  const statTotal = apiCounts?.totalMandatory ?? computedStats.mandatory;
+  const statTotal = apiCounts?.totalRequired ?? computedStats.total;
   const statVerified = apiCounts?.verifiedCount ?? computedStats.verified;
   const statMissing = apiCounts?.missingCount ?? missingDocs.length;
 
-  // Submitted date check: require a submittedAt date on the active step
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
-  // Require all MANDATORY documents verified AND submitted date exists before allowing completion
   const allVerified = statTotal > 0 ? statVerified === statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
-
-
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0">
-        {/* Header */}
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -479,7 +468,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white">HRD Attestation</DialogTitle>
+                <DialogTitle className="text-lg font-bold text-white">Eligibility Requirements</DialogTitle>
                 <DialogDescription className="text-sm text-white/70">Upload and verify required documents</DialogDescription>
               </div>
             </div>
@@ -502,7 +491,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load HRD requirements.</div>
+              <div className="text-sm text-slate-600">Could not load Eligibility requirements.</div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -537,12 +526,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                 </div>
               </div>
 
-              {/* HRD Submission Date Section (compact) */}
+              {/* Eligibility Submission Date Section (compact) */}
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    HRD Submission Date & Time
+                    Eligibility Submission Date & Time
                   </h4>
                 </div>
                 <div className="p-3">
@@ -550,7 +539,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                     <div className="flex-1 w-full sm:w-auto">
                       <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
 
-                      {/* If step already has submittedAt, show the formatted submitted date and hide the picker */}
                       {activeStep?.submittedAt ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -558,8 +546,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                             <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
                           </div>
 
-                          {/* Move edit to right edge and apply a circular 'nice' style */}
-                          {!isHrdCompleted && !isStepCancelled && (
+                          {!isEligibilityCompleted && !isStepCancelled && (
                             <div className="flex items-center">
                               <Button
                                 variant="ghost"
@@ -576,21 +563,20 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                       ) : (
                         <>
                           <DatePicker
-                            value={hrdSubmissionDate}
-                            onChange={setHrdSubmissionDate}
+                            value={submissionDate}
+                            onChange={setSubmissionDate}
                             placeholder="Pick date and time"
-                            disabled={isHrdCompleted}
+                            disabled={isEligibilityCompleted}
                             className="w-full sm:min-w-[220px] h-8"
                             compact
                           />
 
-                          {/* Validation / hint messages when no submittedAt */}
                           {!activeStep?.submittedAt && (
                             <div className="mt-1">
-                              {hrdSubmissionDate ? (
+                              {submissionDate ? (
                                 <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
                               ) : (
-                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete HRD</p>
+                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Eligibility</p>
                               )}
                             </div>
                           )}
@@ -598,12 +584,11 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                       )}
                     </div>
                     <div className="flex items-center">
-                      {/* Only show submit button when no submittedAt present and when step is not cancelled */}
                       {!activeStep?.submittedAt && !isStepCancelled && (
                         <Button
                           size="sm"
                           onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !hrdSubmissionDate || isHrdCompleted || isStepCancelled}
+                          disabled={isSubmittingDate || !submissionDate || isEligibilityCompleted || isStepCancelled}
                           className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           {isSubmittingDate ? (
@@ -616,8 +601,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                       )}
                     </div>
                   </div>
-                  {isHrdCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">HRD is completed. Submission date cannot be modified.</p>
+                  {isEligibilityCompleted && (
+                    <p className="text-xs text-slate-500 mt-2">Eligibility is completed. Submission date cannot be modified.</p>
                   )}
                 </div>
               </div>
@@ -686,7 +671,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
 
                         {/* Actions: View / Upload / Verify / Processing Badge */}
                         <div className="flex items-center gap-2">
-                          {/* Keep view button available even after HRD is completed */}
                           {(hasCandidate || hasProcessing) && (
                             <Button
                               variant="ghost"
@@ -699,15 +683,14 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                             </Button>
                           )}
 
-                          {isHrdCompleted ? (
-                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">HRD Completed</Badge>
+                          {isEligibilityCompleted ? (
+                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Eligibility Completed</Badge>
                           ) : isStepCancelled ? (
                             <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
                           ) : (
                             <>
                               {!hasProcessing ? (
                                 <>
-                                  {/* Re-upload only when candidate doc is in pending state */}
                                   {candidateDoc?.status === 'pending' && (
                                     <Button
                                       size="sm"
@@ -719,7 +702,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                                         candidate?.role?.roleCatalog?.id,
                                         candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
                                         candidateDoc?.id,
-                                        // pick latest verification's candidateProjectMapId if available
                                         candidateDoc?.verifications?.length ? candidateDoc.verifications[candidateDoc.verifications.length - 1].candidateProjectMapId : undefined
                                       )}
                                     >
@@ -728,7 +710,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                                     </Button>
                                   )}
 
-                                  {/* Upload only when there is no candidate doc */}
                                   {!candidateDoc && (
                                     <Button
                                       size="sm"
@@ -741,7 +722,6 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                                     </Button>
                                   )}
 
-                                  {/* Show Verify only when a candidate document exists (and there's no processing doc) */}
                                   {candidateDoc && (
                                     <Button
                                       size="sm"
@@ -769,6 +749,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                   })}
                 </div>
               </div>
+
             </div>
           )}
         </div>
@@ -792,30 +773,29 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                 <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
               </Button>
 
-              {!isHrdCompleted && !isStepCancelled && (
+              {!isEligibilityCompleted && !isStepCancelled && (
                 <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
                   {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
                 </Button>
               )}
 
-              {isHrdCompleted ? (
-                <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">HRD Completed ✓</Badge>
+              {isEligibilityCompleted ? (
+                <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Eligibility Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
               ) : (
-                // Show contextual tooltip when disabled: prefer verification requirement, then submission date
                 !allVerified ? (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
                           <Button size="sm" disabled className="opacity-80" aria-disabled>
-                            {'Mark HRD Complete'}
+                            {'Mark Eligibility Complete'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>All mandatory documents must be verified before marking HRD complete. Verified {statVerified}/{statTotal}</p>
+                        <p>All documents must be verified before marking Eligibility complete. Verified {statVerified}/{statTotal}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -831,12 +811,12 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                             className="opacity-80"
                             aria-disabled={true}
                           >
-                            {'Mark HRD Complete'}
+                            {'Mark Eligibility Complete'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Submission date required to complete HRD. Please select and submit a date.</p>
+                        <p>Submission date required to complete Eligibility. Please select and submit a date.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -848,7 +828,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
                     aria-disabled={isCompletingStep || !canMarkComplete}
                   >
-                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark HRD Complete'}
+                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Eligibility Complete'}
                   </Button>
                 )
               )}
@@ -887,9 +867,9 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
         <ConfirmSubmitDateModal
           isOpen={submitConfirmOpen}
           onClose={() => setSubmitConfirmOpen(false)}
-          date={hrdSubmissionDate}
+          date={submissionDate}
           onConfirm={async () => {
-            const ok = await handleSubmitHrdDate();
+            const ok = await handleSubmitDate();
             if (ok) setSubmitConfirmOpen(false);
           }}
           isSubmitting={isSubmittingDate}
@@ -903,7 +883,7 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
           onClose={() => setEditSubmitOpen(false)}
           existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt}
           onConfirm={async (newDate: Date) => {
-            const ok = await handleSubmitHrdDate(newDate);
+            const ok = await handleSubmitDate(newDate);
             return ok;
           }}
           isSubmitting={isSubmittingDate}
@@ -970,4 +950,5 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   );
 }
 
-export default HrdModal;
+export default EligibilityModal;
+
