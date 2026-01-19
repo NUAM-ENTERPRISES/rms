@@ -182,12 +182,26 @@ export const usersApi = baseApi.injectEndpoints({
           id: string;
           name: string;
           email: string;
+          // Project-level metrics
           assigned: number;
           screening: number;
           interview: number;
           selected: number;
           joined: number;
           untouched: number;
+          // Candidate-level metrics
+          totalCandidates: number;
+          candidatesUntouched: number;
+          candidatesInterested: number;
+          candidatesNotInterested: number;
+          candidatesRNR: number;
+          candidatesQualified: number;
+          candidatesWorking: number;
+          candidatesOnHold: number;
+          candidatesOtherEnquiry: number;
+          candidatesFuture: number;
+          candidatesNotEligible: number;
+          // Average time metrics
           avgScreeningDays: number;
           avgTimeToFirstTouch: number;
           avgDaysToInterested: number;
@@ -215,6 +229,7 @@ export const usersApi = baseApi.injectEndpoints({
       ApiResponse<
         Array<{
           month: string;
+          year: number;
           assigned: number;
           screening: number;
           interview: number;

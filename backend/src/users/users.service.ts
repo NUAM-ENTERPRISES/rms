@@ -556,12 +556,26 @@ export class UsersService {
       id: string;
       name: string;
       email: string;
+      // Project-level metrics
       assigned: number;
       screening: number;
       interview: number;
       selected: number;
       joined: number;
       untouched: number;
+      // Candidate-level metrics
+      totalCandidates: number;
+      candidatesUntouched: number;
+      candidatesInterested: number;
+      candidatesNotInterested: number;
+      candidatesRNR: number;
+      candidatesQualified: number;
+      candidatesWorking: number;
+      candidatesOnHold: number;
+      candidatesOtherEnquiry: number;
+      candidatesFuture: number;
+      candidatesNotEligible: number;
+      // Average time metrics
       avgScreeningDays: number;
       avgTimeToFirstTouch: number;
       avgDaysToInterested: number;
@@ -638,47 +652,247 @@ export class UsersService {
           (cp) => cp.currentProjectStatus?.statusName === 'hired',
         ).length;
 
-        // Get untouched count (candidates with status "untouched")
-        const untouchedStatus = await this.prisma.candidateStatus.findFirst({
-          where: { statusName: 'untouched' },
-        });
-        const untouched = untouchedStatus
-          ? await this.prisma.candidate.count({
-              where: {
-                recruiterAssignments: {
-                  some: {
-                    recruiterId: recruiter.id,
-                    isActive: true,
+        // ✅ FIXED: Count project assignments still in early stages (project-level)
+        const untouched = candidateProjects.filter(
+          (cp) =>
+            cp.currentProjectStatus?.statusName === 'nominated' ||
+            cp.currentProjectStatus?.statusName === 'pending_documents',
+        ).length;
+
+        // Get candidate-level metrics (candidates assigned to recruiter)
+        const candidateAssignments = await this.prisma.candidateRecruiterAssignment.findMany({
+          where: {
+            recruiterId: recruiter.id,
+            isActive: true,
+            assignedAt: {
+              gte: yearStart,
+              lte: yearEnd,
+            },
+          },
+          include: {
+            candidate: {
+              select: {
+                id: true,
+                currentStatusId: true,
+                currentStatus: {
+                  select: {
+                    statusName: true,
                   },
                 },
-                currentStatusId: untouchedStatus.id,
               },
-            })
-          : 0;
+            },
+          },
+        });
 
-        // Calculate average days (simplified - would need status history for accurate calculation)
-        const avgScreeningDays = 0;
-        const avgTimeToFirstTouch = 0;
-        const avgDaysToInterested = 0;
-        const avgDaysToNotInterested = 0;
-        const avgDaysToNotEligible = 0;
-        const avgDaysToOtherEnquiry = 0;
-        const avgDaysToFuture = 0;
-        const avgDaysToOnHold = 0;
-        const avgDaysToRNR = 0;
-        const avgDaysToQualified = 0;
-        const avgDaysToWorking = 0;
+        const totalCandidates = candidateAssignments.length;
+
+        // Get all candidate statuses for counting
+        const statusMap = new Map<string, number>();
+        candidateAssignments.forEach((assignment) => {
+          const statusName = assignment.candidate.currentStatus?.statusName || 'unknown';
+          statusMap.set(statusName, (statusMap.get(statusName) || 0) + 1);
+        });
+
+        const candidatesUntouched = statusMap.get('untouched') || 0;
+        const candidatesInterested = statusMap.get('interested') || 0;
+        const candidatesNotInterested = statusMap.get('not_interested') || 0;
+        const candidatesRNR = statusMap.get('rnr') || 0;
+        const candidatesQualified = statusMap.get('qualified') || 0;
+        const candidatesWorking = statusMap.get('working') || 0;
+        const candidatesOnHold = statusMap.get('on_hold') || 0;
+        const candidatesOtherEnquiry = statusMap.get('other_enquiry') || 0;
+        const candidatesFuture = statusMap.get('future') || 0;
+        const candidatesNotEligible = statusMap.get('not_eligible') || 0;
+
+        // Calculate average days from status history
+        const statusNames = await this.prisma.candidateStatus.findMany({
+          select: { id: true, statusName: true },
+        });
+        const statusMap = new Map(
+          statusNames.map((s) => [s.statusName, s.id]),
+        );
+
+        // Get all candidates assigned to this recruiter
+        const assignedCandidates = await this.prisma.candidateRecruiterAssignment.findMany({
+          where: {
+            recruiterId: recruiter.id,
+            isActive: true,
+            assignedAt: {
+              gte: yearStart,
+              lte: yearEnd,
+            },
+          },
+          include: {
+            candidate: {
+              include: {
+                statusHistories: {
+                  orderBy: { statusUpdatedAt: 'asc' },
+                },
+              },
+            },
+          },
+        });
+
+        // Calculate average times
+        const calculateAvgDays = (
+          targetStatusName: string,
+        ): number => {
+          const targetStatusId = statusMap.get(targetStatusName);
+          if (!targetStatusId) return 0;
+
+          const times: number[] = [];
+
+          for (const assignment of assignedCandidates) {
+            const histories = assignment.candidate.statusHistories;
+            const untouchedHistory = histories.find(
+              (h) => h.statusNameSnapshot === 'untouched',
+            );
+            const targetHistory = histories.find(
+              (h) => h.statusId === targetStatusId,
+            );
+
+            if (untouchedHistory && targetHistory) {
+              const days =
+                (targetHistory.statusUpdatedAt.getTime() -
+                  untouchedHistory.statusUpdatedAt.getTime()) /
+                (1000 * 60 * 60 * 24);
+              if (days > 0) {
+                times.push(days);
+              }
+            }
+          }
+
+          return times.length > 0
+            ? times.reduce((a, b) => a + b, 0) / times.length
+            : 0;
+        };
+
+        // Calculate average time to first touch (first status change from untouched)
+        const calculateAvgTimeToFirstTouch = (): number => {
+          const times: number[] = [];
+
+          for (const assignment of assignedCandidates) {
+            const histories = assignment.candidate.statusHistories.sort(
+              (a, b) =>
+                a.statusUpdatedAt.getTime() - b.statusUpdatedAt.getTime(),
+            );
+            const untouchedHistory = histories.find(
+              (h) => h.statusNameSnapshot === 'untouched',
+            );
+            const firstChange = histories.find(
+              (h) => h.statusNameSnapshot !== 'untouched',
+            );
+
+            if (untouchedHistory && firstChange) {
+              const days =
+                (firstChange.statusUpdatedAt.getTime() -
+                  untouchedHistory.statusUpdatedAt.getTime()) /
+                (1000 * 60 * 60 * 24);
+              if (days > 0) {
+                times.push(days);
+              }
+            } else if (assignment.assignedAt && firstChange) {
+              // If no untouched history, use assignment date
+              const days =
+                (firstChange.statusUpdatedAt.getTime() -
+                  assignment.assignedAt.getTime()) /
+                (1000 * 60 * 60 * 24);
+              if (days > 0) {
+                times.push(days);
+              }
+            }
+          }
+
+          return times.length > 0
+            ? times.reduce((a, b) => a + b, 0) / times.length
+            : 0;
+        };
+
+        // Calculate average screening days (time in screening statuses)
+        const calculateAvgScreeningDays = (): number => {
+          const times: number[] = [];
+
+          for (const assignment of assignedCandidates) {
+            const histories = assignment.candidate.statusHistories.sort(
+              (a, b) =>
+                a.statusUpdatedAt.getTime() - b.statusUpdatedAt.getTime(),
+            );
+
+            let screeningStart: Date | null = null;
+            let screeningEnd: Date | null = null;
+            let totalScreeningDays = 0;
+
+            for (let i = 0; i < histories.length; i++) {
+              const status = histories[i].statusNameSnapshot;
+              const isScreeningStatus =
+                status === 'screening_scheduled' ||
+                status === 'screening_completed' ||
+                status === 'screening_passed' ||
+                status === 'screening_failed';
+
+              if (isScreeningStatus && !screeningStart) {
+                screeningStart = histories[i].statusUpdatedAt;
+              } else if (
+                screeningStart &&
+                !isScreeningStatus &&
+                histories[i - 1]?.statusNameSnapshot !== status
+              ) {
+                screeningEnd = histories[i].statusUpdatedAt;
+                const days =
+                  (screeningEnd.getTime() - screeningStart.getTime()) /
+                  (1000 * 60 * 60 * 24);
+                totalScreeningDays += days;
+                screeningStart = null;
+              }
+            }
+
+            if (totalScreeningDays > 0) {
+              times.push(totalScreeningDays);
+            }
+          }
+
+          return times.length > 0
+            ? times.reduce((a, b) => a + b, 0) / times.length
+            : 0;
+        };
+
+        // Calculate all averages
+        const avgTimeToFirstTouch = calculateAvgTimeToFirstTouch();
+        const avgDaysToInterested = calculateAvgDays('interested');
+        const avgDaysToNotInterested = calculateAvgDays('not interested');
+        const avgDaysToNotEligible = calculateAvgDays('not eligible');
+        const avgDaysToOtherEnquiry = calculateAvgDays('other enquiry');
+        const avgDaysToFuture = calculateAvgDays('future');
+        const avgDaysToOnHold = calculateAvgDays('on hold');
+        const avgDaysToRNR = calculateAvgDays('rnr');
+        const avgDaysToQualified = calculateAvgDays('qualified');
+        const avgDaysToWorking = calculateAvgDays('working');
+        const avgScreeningDays = calculateAvgScreeningDays();
 
         return {
           id: recruiter.id,
           name: recruiter.name,
           email: recruiter.email,
+          // Project-level metrics
           assigned,
           screening,
           interview,
           selected,
           joined,
           untouched,
+          // Candidate-level metrics
+          totalCandidates,
+          candidatesUntouched,
+          candidatesInterested,
+          candidatesNotInterested,
+          candidatesRNR,
+          candidatesQualified,
+          candidatesWorking,
+          candidatesOnHold,
+          candidatesOtherEnquiry,
+          candidatesFuture,
+          candidatesNotEligible,
+          // Average time metrics
           avgScreeningDays,
           avgTimeToFirstTouch,
           avgDaysToInterested,
@@ -699,6 +913,8 @@ export class UsersService {
 
   /**
    * Get monthly performance data for a recruiter
+   * Returns ALL available historical data (not limited to 3 years)
+   * Frontend can filter as needed
    */
   async getRecruiterPerformance(
     recruiterId: string,
@@ -706,6 +922,7 @@ export class UsersService {
   ): Promise<
     Array<{
       month: string;
+      year: number;
       assigned: number;
       screening: number;
       interview: number;
@@ -713,8 +930,22 @@ export class UsersService {
       joined: number;
     }>
   > {
-    const yearStart = new Date(year, 0, 1);
-    const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+    // Find the earliest assignment date for this recruiter to get all historical data
+    const earliestAssignment = await this.prisma.candidateProjects.findFirst({
+      where: { recruiterId },
+      orderBy: { assignedAt: 'asc' },
+      select: { assignedAt: true },
+    });
+
+    // If no assignments, return empty array
+    if (!earliestAssignment) {
+      return [];
+    }
+
+    // Calculate start year from earliest assignment or use provided year as minimum
+    const earliestYear = earliestAssignment.assignedAt.getFullYear();
+    const startYear = Math.min(earliestYear, year - 10); // Go back max 10 years or to earliest data
+    const endYear = year;
 
     const months = [
       'Jan',
@@ -731,10 +962,21 @@ export class UsersService {
       'Dec',
     ];
 
-    const monthlyData = await Promise.all(
-      months.map(async (month, index) => {
-        const monthStart = new Date(year, index, 1);
-        const monthEnd = new Date(year, index + 1, 0, 23, 59, 59, 999);
+    const monthlyData: Array<{
+      month: string;
+      year: number;
+      assigned: number;
+      screening: number;
+      interview: number;
+      selected: number;
+      joined: number;
+    }> = [];
+
+    // Get data for all years from startYear to endYear
+    for (let y = startYear; y <= endYear; y++) {
+      for (let index = 0; index < months.length; index++) {
+        const monthStart = new Date(y, index, 1);
+        const monthEnd = new Date(y, index + 1, 0, 23, 59, 59, 999);
 
         const candidateProjects = await this.prisma.candidateProjects.findMany({
           where: {
@@ -774,16 +1016,17 @@ export class UsersService {
           (cp) => cp.currentProjectStatus?.statusName === 'hired',
         ).length;
 
-        return {
-          month,
+        monthlyData.push({
+          month: months[index],
+          year: y,
           assigned,
           screening,
           interview,
           selected,
           joined,
-        };
-      }),
-    );
+        });
+      }
+    }
 
     return monthlyData;
   }

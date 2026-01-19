@@ -26,6 +26,7 @@ import {
 
 type MonthlyPerformance = {
   month: string;
+  year: number;
   assigned: number;
   screening: number;
   interview: number;
@@ -47,10 +48,33 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({
   const [timeFilter, setTimeFilter] = useState<"1y" | "2y" | "3y" | "all">("1y");
 
   const trendData = useMemo(() => {
-    if (timeFilter === "1y") return performanceData.slice(-12);
-    if (timeFilter === "2y") return performanceData.slice(-24);
-    if (timeFilter === "3y") return performanceData.slice(-36);
-    return performanceData; // "all"
+    // Format month labels with year for display
+    const formattedData = performanceData.map((item) => ({
+      ...item,
+      monthLabel: `${item.month} ${item.year}`,
+    }));
+
+    // Filter data based on time range
+    let filtered: typeof formattedData;
+    if (timeFilter === "1y") {
+      filtered = formattedData.slice(-12);
+    } else if (timeFilter === "2y") {
+      filtered = formattedData.slice(-24);
+    } else if (timeFilter === "3y") {
+      filtered = formattedData.slice(-36);
+    } else {
+      // "all" - return all data
+      filtered = formattedData;
+    }
+
+    // For long time ranges (>3 years), use shorter labels
+    const useShortLabels = filtered.length > 36;
+    return filtered.map((item) => ({
+      ...item,
+      monthLabel: useShortLabels
+        ? `${item.month.substring(0, 3)} '${item.year.toString().slice(-2)}`
+        : `${item.month} ${item.year}`,
+    }));
   }, [performanceData, timeFilter]);
 
   return (
@@ -84,12 +108,20 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
-              dataKey="month"
+              dataKey="monthLabel"
               angle={-45}
               textAnchor="end"
               height={80}
-              tick={{ fontSize: 11 }}
-              interval={trendData.length > 24 ? 2 : trendData.length > 12 ? 1 : 0}
+              tick={{ fontSize: trendData.length > 60 ? 9 : 11 }}
+              interval={
+                trendData.length > 60 
+                  ? Math.floor(trendData.length / 12) // Show ~12 labels for 10+ years
+                  : trendData.length > 36 
+                    ? 2 // Show every 2nd month for 3+ years
+                    : trendData.length > 12 
+                      ? 1 // Show every month for 1-2 years
+                      : 0 // Show all months for <1 year
+              }
             />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip />
