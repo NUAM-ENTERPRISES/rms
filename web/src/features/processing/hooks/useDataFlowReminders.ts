@@ -55,12 +55,14 @@ export function useDataFlowReminders() {
 
   useEffect(() => {
     if (!isUninitialized && typeof refetch === "function") {
-      refetch().catch(() => {});
+      const maybe = refetch();
+      if (maybe && typeof (maybe as any).catch === "function") maybe.catch(() => {});
     }
 
     const onVisibility = () => {
       if (document.visibilityState === "visible" && !isUninitialized && typeof refetch === "function") {
-        refetch().catch(() => {});
+        const maybe = refetch();
+        if (maybe && typeof (maybe as any).catch === "function") maybe.catch(() => {});
       }
     };
 
@@ -78,7 +80,9 @@ export function useDataFlowReminders() {
   const [pendingReminderId, setPendingReminderId] = useState<string | null>(null);
   const hasCheckedInitialRef = useRef(false);
 
-  const reminders = remindersData?.data || [];
+  const rawReminders = remindersData?.data;
+  const reminders: DataFlowReminder[] = Array.isArray(rawReminders) ? rawReminders : (rawReminders?.items ?? []);
+  const pagination = !Array.isArray(rawReminders) && rawReminders ? { page: rawReminders.page, limit: rawReminders.limit, total: rawReminders.total } : undefined;
 
   const activeReminders = reminders.filter((r) => {
     const hasDailyCount = r.dailyCount && r.dailyCount > 0;
@@ -181,7 +185,7 @@ export function useDataFlowReminders() {
   useEffect(() => {
     if (!pendingReminderId || !remindersData) return;
 
-    const found = remindersData.data?.find((r) => r.id === pendingReminderId);
+    const found = reminders.find((r) => r.id === pendingReminderId);
     if (found) {
       if (!isModalOpen) {
         console.debug(`[DataFlow] Refetch returned reminder ${pendingReminderId}, opening modal.`);
@@ -199,6 +203,7 @@ export function useDataFlowReminders() {
       setPendingReminderId(null);
     }
   }, [pendingReminderId, remindersData, isModalOpen]);
+
 
   const handleCloseModal = () => {
     setIsModalOpen(false);

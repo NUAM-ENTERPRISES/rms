@@ -90,17 +90,31 @@ export interface DataFlowReminder {
   };
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total?: number;
+  page?: number;
+  limit?: number;
+}
+
 export interface DataFlowRemindersResponse {
   success: boolean;
-  data: DataFlowReminder[];
+  data: DataFlowReminder[] | PaginatedResponse<DataFlowReminder>;
   message: string;
 }
 
 export const dataFlowRemindersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Support optional `dueOnly` arg to fetch only actionable reminders
-    getDataFlowReminders: builder.query<DataFlowRemindersResponse, void>({
-      query: () => `/data-flow-reminders/data-flow-scheduler`,
+    // Supports optional pagination params (page = 1-based, limit). Backend now returns only sent reminders.
+    getDataFlowReminders: builder.query<DataFlowRemindersResponse, { page?: number; limit?: number } | void>({
+      query: (arg) => {
+        if (!arg) return `/data-flow-reminders/data-flow-scheduler`;
+        const qp = new URLSearchParams();
+        if (arg.page) qp.set("page", String(arg.page));
+        if (arg.limit) qp.set("limit", String(arg.limit));
+        const qs = qp.toString();
+        return `/data-flow-reminders/data-flow-scheduler${qs ? `?${qs}` : ""}`;
+      },
       providesTags: ["DataFlowReminder"],
     }),
   }),

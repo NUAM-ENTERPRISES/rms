@@ -1235,7 +1235,7 @@ export class DocumentsService {
           mainStatusSnapshot: processingMain.label,
           subStatusSnapshot: processingInProgressSub.label,
           reason: 'Offer letter verified, moved to processing',
-          notes: `Offer letter verified. Candidate moved to processing stage. Step set to HRD.`,
+          notes: `Offer letter verified. Candidate moved to processing stage. Step set to offer_letter.`,
         },
       });
 
@@ -1315,7 +1315,7 @@ export class DocumentsService {
         }
 
         // Update overall processing candidate status
-        await tx.processingCandidate.update({ where: { id: processingCandidate.id }, data: { processingStatus: 'in_progress' } });
+        await tx.processingCandidate.update({ where: { id: processingCandidate.id }, data: { processingStatus: 'in_progress', step: 'hrd' } });
       }
 
       return {

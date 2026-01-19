@@ -122,4 +122,19 @@ describe("useHRDReminders (real-time behavior)", () => {
     expect(result.current.isModalOpen).toBe(false);
     expect(result.current.currentReminder).toBeNull();
   });
+
+  it("handles paginated scheduler response (data.items) without crashing", async () => {
+    const mod = await import("@/services/hrdRemindersApi");
+    vi.spyOn(mod, "useGetHRDRemindersQuery").mockReturnValue({
+      data: { data: { items: [ { id: "p-1", reminderCount: 1, dailyCount: 1, updatedAt: new Date().toISOString(), processingStep: { id: "s-1", processingId: "proc-1", processing: { id: "proc-1", candidateId: "c-1", candidate: { firstName: "P", lastName: "User" }, project: { id: "proj-1", name: "Proj" } }, stepType: "HRD", status: "PENDING", submittedAt: null } } ] } },
+      isLoading: false,
+      refetch: () => Promise.resolve(),
+      isUninitialized: false,
+    } as any);
+
+    const store = createMockStore({ user: { id: "user-1", roles: ["Processing"] }, accessToken: "token", isAuthenticated: true, isLoading: false, status: "authenticated" });
+    const { result } = renderHook(() => useHRDReminders(), { wrapper: createWrapper(store) });
+
+    expect(result.current.pendingRemindersCount).toBeGreaterThanOrEqual(1);
+  });
 });

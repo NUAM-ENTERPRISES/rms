@@ -44,7 +44,8 @@ export function RNRReminderBadge() {
   useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState === "visible" && typeof refetch === "function") {
-        refetch().catch(() => {});
+        const maybe = refetch();
+        if (maybe && typeof (maybe as any).catch === "function") maybe.catch(() => {});
       }
     };
 

@@ -23,9 +23,9 @@ const createStore = (initialAuthState: any) =>
 describe("DataFlowReminderBadge", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("renders count and opens popover with reminders", () => {
-    const { useGetDataFlowRemindersQuery } = require("@/services/dataFlowRemindersApi");
-    useGetDataFlowRemindersQuery.mockReturnValue({
+  it("renders count and opens popover with reminders", async () => {
+    const mod = await import("@/services/dataFlowRemindersApi");
+    vi.spyOn(mod, "useGetDataFlowRemindersQuery").mockReturnValue({
       data: {
         data: [
           {
@@ -68,5 +68,28 @@ describe("DataFlowReminderBadge", () => {
     expect(screen.getByText(/Data Flow Reminders/i)).toBeInTheDocument();
     expect(screen.getByText(/Test User/)).toBeInTheDocument();
     expect(screen.getByText(/Proj/)).toBeInTheDocument();
+  });
+
+  it("handles paginated scheduler response (data.items) without crashing", async () => {
+    const mod = await import("@/services/dataFlowRemindersApi");
+    vi.spyOn(mod, "useGetDataFlowRemindersQuery").mockReturnValue({
+      data: { data: { items: [ { id: "p-1", reminderCount: 1, dailyCount: 1, updatedAt: new Date().toISOString(), processingStep: { id: "s-1", processingId: "proc-1", processing: { id: "proc-1", candidateId: "c-1", candidate: { firstName: "P", lastName: "User" }, project: { id: "proj-1", name: "Proj" } }, stepType: "DATAFLOW", status: "PENDING", submittedAt: null } } ], page: 1, limit: 10, total: 1 } },
+      isLoading: false,
+      refetch: () => Promise.resolve(),
+    } as any);
+
+    const store = createStore({ user: { id: "u1", roles: ["Processing"] }, accessToken: "tok", isAuthenticated: true, isLoading: false, status: "authenticated" });
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter>
+          <div style={{ padding: 20 }}>
+            <DataFlowReminderBadge />
+          </div>
+        </MemoryRouter>
+      </Provider>
+    );
+
+    expect(screen.getByText("1")).toBeInTheDocument();
   });
 });

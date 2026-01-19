@@ -66,14 +66,16 @@ export function useHRDReminders() {
   useEffect(() => {
     // Only call refetch when the query has been started (not uninitialized)
     if (!isUninitialized && typeof refetch === "function") {
-      refetch().catch(() => {});
+      const maybe = refetch();
+      if (maybe && typeof (maybe as any).catch === "function") maybe.catch(() => {});
     }
 
     const onVisibility = () => {
       if (document.visibilityState === "visible" && !isUninitialized && typeof refetch === "function") {
-        refetch().catch(() => {});
+        const maybe = refetch();
+        if (maybe && typeof (maybe as any).catch === "function") maybe.catch(() => {});
       }
-    };
+    }; 
 
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
@@ -89,7 +91,8 @@ export function useHRDReminders() {
   const [pendingReminderId, setPendingReminderId] = useState<string | null>(null);
   const hasCheckedInitialRef = useRef(false);
 
-  const reminders = remindersData?.data || [];
+  const rawReminders = remindersData?.data;
+  const reminders: HRDReminder[] = Array.isArray(rawReminders) ? rawReminders : (rawReminders?.items ?? []);
   
   // Show reminders that have been sent or updated recently
   // Consider sentAt, dailyCount, or reminderCount to be eligible for showing
@@ -240,7 +243,7 @@ export function useHRDReminders() {
   useEffect(() => {
     if (!pendingReminderId || !remindersData) return;
 
-    const found = remindersData.data?.find((r) => r.id === pendingReminderId);
+    const found = reminders.find((r) => r.id === pendingReminderId);
     if (found) {
       if (!isModalOpen) {
         console.debug(`[HRD] Refetch returned reminder ${pendingReminderId}, opening modal.`);

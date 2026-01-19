@@ -92,9 +92,14 @@ export interface HRDReminder {
   };
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  meta?: { page: number; limit: number; total: number };
+}
+
 export interface HRDRemindersResponse {
   success: boolean;
-  data: HRDReminder[];
+  data: HRDReminder[] | PaginatedResponse<HRDReminder>;
   message: string;
 }
 

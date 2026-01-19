@@ -15,6 +15,8 @@ const gulfPlanKeys = [
   'medical_fitness',
   'biometrics',
   'visa',
+  'emigration',
+  'ticket',
 ];
 
 const indiaPlanKeys = [

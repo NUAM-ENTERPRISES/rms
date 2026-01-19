@@ -39,7 +39,8 @@ export function DataFlowReminderBadge() {
   useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
-        refetch().catch(() => {});
+        const maybe = refetch();
+        if (maybe && typeof (maybe as any).catch === "function") maybe.catch(() => {});
       }
     };
 
@@ -47,7 +48,8 @@ export function DataFlowReminderBadge() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [refetch]);
 
-  const reminders = data?.data || [];
+  const rawReminders = data?.data;
+  const reminders = Array.isArray(rawReminders) ? rawReminders : (rawReminders?.items ?? []);
   const activeReminders = reminders
     .filter((r) => (r.dailyCount && r.dailyCount > 0) || r.sentAt || (r.reminderCount && r.reminderCount > 0))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())

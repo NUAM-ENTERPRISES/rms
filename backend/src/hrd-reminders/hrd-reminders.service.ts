@@ -169,49 +169,65 @@ export class HrdRemindersService {
   /**
    * Return HRD reminders assigned to the given user
    */
-  async getMyReminders(userId: string) {
+  async getMyReminders(userId: string, opts?: { sentOnly?: boolean; page?: number; limit?: number }) {
     const where: any = { assignedTo: userId, status: { in: ['pending', 'sent'] } };
 
-    return this.prisma.hRDReminder.findMany({
-      where,
-      orderBy: { scheduledFor: 'asc' },
-      include: {
-        processingStep: {
-          include: {
-            processingCandidate: {
-              include: {
-                candidate: {
-                  select: {
-                    id: true,
-                    email: true,
-                    source: true,
-                    dateOfBirth: true,
-                    gender: true,
-                    firstName: true,
-                    lastName: true,
-                    mobileNumber: true,
-                    countryCode: true,
+    // When requested, return only reminders that have been sent (sentAt != null)
+    if (opts?.sentOnly) {
+      where.sentAt = { not: null };
+    }
+
+    const page = opts?.page && opts.page > 0 ? opts.page : 1;
+    const limit = opts?.limit && opts.limit > 0 ? Math.min(100, opts.limit) : 20;
+    const skip = (page - 1) * limit;
+
+    const [total, items] = await Promise.all([
+      this.prisma.hRDReminder.count({ where }),
+      this.prisma.hRDReminder.findMany({
+        where,
+        orderBy: { scheduledFor: 'asc' },
+        skip,
+        take: limit,
+        include: {
+          processingStep: {
+            include: {
+              processingCandidate: {
+                include: {
+                  candidate: {
+                    select: {
+                      id: true,
+                      email: true,
+                      source: true,
+                      dateOfBirth: true,
+                      gender: true,
+                      firstName: true,
+                      lastName: true,
+                      mobileNumber: true,
+                      countryCode: true,
+                    },
                   },
-                },
-                project: true,
-                role: {
-                  select: {
-                    id: true,
-                    projectId: true,
-                    roleCatalogId: true,
-                    designation: true,
-                    roleCatalog: {
-                      select: { id: true, roleDepartmentId: true, name: true, label: true, shortName: true },
+                  project: true,
+                  role: {
+                    select: {
+                      id: true,
+                      projectId: true,
+                      roleCatalogId: true,
+                      designation: true,
+                      roleCatalog: {
+                        select: { id: true, roleDepartmentId: true, name: true, label: true, shortName: true },
+                      },
                     },
                   },
                 },
               },
+              template: true,
             },
-            template: true,
           },
         },
-      },
-    });
+      }),
+    ]);
+
+    return { items, total };
   }
 
   /**

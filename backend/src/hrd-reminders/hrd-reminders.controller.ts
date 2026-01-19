@@ -1,5 +1,5 @@
 import { Controller, Get, Delete, Request, UseGuards, Param } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { HrdRemindersService } from './hrd-reminders.service';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
@@ -14,11 +14,26 @@ export class HrdRemindersController {
 
   @Get('hrd-scheduler')
   @Permissions(PERMISSIONS.READ_PROCESSING)
-  @ApiOperation({ summary: 'Get HRD scheduler entries', description: 'Get all HRD scheduler reminders for the current processing user.' })
+  @ApiOperation({ summary: 'Get HRD scheduler entries', description: 'Get HRD scheduler reminders for the current processing user. Returns reminders that have been sent (sentAt != null). Supports pagination via `page` and `limit` query params.' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
   @ApiResponse({ status: 200, description: 'HRD scheduler entries retrieved successfully' })
   async getHrdScheduler(@Request() req: any) {
-    const data = await this.hrdRemindersService.getMyReminders(req.user.id);
-    return { success: true, data, message: 'HRD scheduler entries retrieved successfully' };
+    const page = Math.max(1, parseInt(req.query?.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query?.limit, 10) || 20));
+
+    const result = await this.hrdRemindersService.getMyReminders(req.user.id, { sentOnly: true, page, limit });
+
+    return {
+      success: true,
+      data: {
+        items: result.items,
+        total: result.total,
+        page,
+        limit,
+      },
+      message: 'HRD scheduler entries retrieved successfully',
+    };
   }
 
   @Delete(':reminderId/dismiss')

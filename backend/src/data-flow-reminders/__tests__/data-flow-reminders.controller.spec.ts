@@ -5,19 +5,21 @@ describe('DataFlowRemindersController', () => {
   let serviceMock: any;
 
   beforeEach(() => {
-    serviceMock = { getMyReminders: jest.fn().mockResolvedValue([]) };
+    serviceMock = { getMyReminders: jest.fn().mockResolvedValue({ items: [], total: 0 }) };
 
     controller = new DataFlowRemindersController(serviceMock as any);
   });
 
-  it('requests reminders without passing dueOnly', async () => {
-    const req: any = { query: { dueOnly: 'true' }, user: { id: 'user-1' } };
+  it('calls service with sentOnly and pagination and returns paginated shape', async () => {
+    const req: any = { query: { page: '2', limit: '10' }, user: { id: 'user-1' } };
 
-    await controller.getScheduler(req);
+    const resp = await controller.getScheduler(req);
 
     expect(serviceMock.getMyReminders).toHaveBeenCalledTimes(1);
-    const calledWith = serviceMock.getMyReminders.mock.calls[0];
-    expect(calledWith[0]).toBe('user-1');
-    expect(calledWith.length).toBe(1);
+    expect(serviceMock.getMyReminders).toHaveBeenCalledWith('user-1', { sentOnly: true, page: 2, limit: 10 });
+    expect(resp.data).toHaveProperty('items');
+    expect(resp.data).toHaveProperty('total');
+    expect(resp.data.page).toBe(2);
+    expect(resp.data.limit).toBe(10);
   });
 });
