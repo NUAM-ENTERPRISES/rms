@@ -14,6 +14,7 @@ const CompleteProcessingStepModal = React.lazy(() => import("../../components/Co
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
+const ConfirmPrometricResultModal = React.lazy(() => import("../../components/ConfirmPrometricResultModal"));
 import { useGetPrometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
@@ -66,6 +67,8 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
 
   // Confirmation modal state
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  // Prometric-specific confirmation UI
+  const [confirmPrometricOpen, setConfirmPrometricOpen] = useState(false);
   // Submit date confirmation modal
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   // Edit existing submitted date modal
@@ -379,7 +382,8 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
       return;
     }
 
-    setCompleteModalOpen(true);
+    // Open Prometric-specific confirmation modal (shows pass/fail messaging)
+    setConfirmPrometricOpen(true);
   };
 
   const handleConfirmComplete = async () => {
@@ -398,8 +402,8 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
       
       onClose();
     } catch (err: any) {
-      console.error("Mark Prometric complete failed", err);
-      const msg = err?.data?.message || err?.error || "Failed to complete Prometric step";
+      console.error("Save Prometric failed", err);
+      const msg = err?.data?.message || err?.error || "Failed to save Prometric";
       toast.error(msg);
     }
   };
@@ -470,9 +474,9 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
   // Submitted date check: require a submittedAt date on the active step
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
-  // Require all MANDATORY documents verified AND submitted date exists before allowing completion
+  // Require all MANDATORY documents verified, submission date exists, and a prometric result selected before allowing completion
   const allVerified = statTotal > 0 ? statVerified === statTotal : statMissing === 0;
-  const canMarkComplete = allVerified && hasSubmittedAt;
+  const canMarkComplete = allVerified && hasSubmittedAt && Boolean(prometricResult);
 
 
 
@@ -656,6 +660,9 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                   />
                 </div>
                 <p className="text-xs text-slate-400 mt-2">The selected result will be submitted with the completion request.</p>
+                {prometricResult === 'failed' && (
+                  <p className="text-xs text-rose-600 mt-2">If the result is <strong>Failed</strong>, processing should be stopped — consider cancelling the step.</p>
+                )}
               </div>
 
               {/* Document List */}
@@ -846,12 +853,27 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                       <TooltipTrigger asChild>
                         <div>
                           <Button size="sm" disabled className="opacity-80" aria-disabled>
-                            {'Mark Prometric Complete'}
+                            {'Save Prometric'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>All mandatory documents must be verified before marking Prometric complete. Verified {statVerified}/{statTotal}</p>
+                        <p>All mandatory documents must be verified before saving Prometric. Verified {statVerified}/{statTotal}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : !prometricResult ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button size="sm" disabled className="opacity-80" aria-disabled>
+                            {'Save Prometric'}
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Prometric result required to save Prometric. Please select a result.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -867,7 +889,7 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                             className="opacity-80"
                             aria-disabled={true}
                           >
-                            {'Mark Prometric Complete'}
+                            {'Save Prometric'}
                           </Button>
                         </div>
                       </TooltipTrigger>
@@ -884,7 +906,7 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
                     aria-disabled={isCompletingStep || !canMarkComplete}
                   >
-                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Prometric Complete'}
+                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Prometric'}
                   </Button>
                 )
               )}
@@ -943,6 +965,26 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
             return ok;
           }}
           isSubmitting={isSubmittingDate}
+        />
+      </React.Suspense>
+
+      {/* Prometric confirmation modal (shows pass / fail messaging) */}
+      <React.Suspense fallback={null}>
+        <ConfirmPrometricResultModal
+          isOpen={confirmPrometricOpen}
+          onClose={() => setConfirmPrometricOpen(false)}
+          prometricResult={prometricResult}
+          prometricNotes={prometricNotes}
+          isSubmitting={isCompletingStep}
+          onConfirm={async () => {
+            await handleConfirmComplete();
+            return true;
+          }}
+          onRequestCancel={() => {
+            // surface the cancel-step flow when user requests stop-processing from the confirm modal
+            setConfirmPrometricOpen(false);
+            setCancelOpen(true);
+          }}
         />
       </React.Suspense>
 

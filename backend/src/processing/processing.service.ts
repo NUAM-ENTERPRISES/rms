@@ -1216,6 +1216,20 @@ export class ProcessingService {
       if (!['PASSED', 'FAILED', 'PENDING'].includes(opts.prometricResult)) {
         throw new BadRequestException('prometricResult must be one of PASSED, FAILED or PENDING');
       }
+
+      // Business rule: if Prometric result is FAILED -> cancel the processing (preserve prometricResult)
+      if (opts.prometricResult === 'FAILED') {
+        // persist the prometricResult first, then cancel using existing routine so we keep single cancellation path
+        await this.prisma.processingStep.update({
+          where: { id: stepId },
+          data: ({ prometricResult: 'FAILED' } as any),
+        });
+
+        // Reuse existing cancellation logic (creates history, cancels other steps, updates processing candidate)
+        const cancelReason = 'Prometric failed';
+        const cancelResult = await this.cancelProcessingStep(stepId, userId, cancelReason);
+        return Object.assign({}, cancelResult, { prometricResult: 'FAILED' });
+      }
     }
 
     const txResult = await this.prisma.$transaction(async (tx) => {
