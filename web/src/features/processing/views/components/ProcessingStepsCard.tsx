@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Eye, AlertTriangle } from "lucide-react";
+import { Eye, AlertTriangle, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -113,6 +114,12 @@ interface ProcessingStepsCardProps {
   /** Current step key from API (e.g., "hrd", "data_flow") - determines which step is active */
   currentStep?: string;
   onStepClick?: (stepKey: string) => void;
+  /** Open the Hire modal (preferred) */
+  onOpenHire?: () => void;
+  /** If true, the candidate is already hired for this project and the Hire action must be hidden */
+  isHired?: boolean;
+  /** Optional handler to finalize the entire processing once every step is completed (fallback) */
+  onCompleteProcessing?: () => void | Promise<void>;
 }
 
 export function ProcessingStepsCard({
@@ -122,8 +129,12 @@ export function ProcessingStepsCard({
   onOfferLetterClick,
   currentStep,
   onStepClick,
+  onOpenHire,
+  isHired = false,
+  onCompleteProcessing,
 }: ProcessingStepsCardProps) {
   const [openStepKey, setOpenStepKey] = useState<string | null>(null);
+  const [localCompleting, setLocalCompleting] = useState(false);
 
   // Transform API steps into component structure with parent-child relationships
   const mergedSteps = useMemo(() => {
@@ -194,9 +205,17 @@ export function ProcessingStepsCard({
 
   // Generate status message
   const getStatusMessage = () => {
+    // If the candidate is already hired, show that prominently
+    if (isHired) {
+      return {
+        message: "Candidate hired for this project",
+        type: "success" as const,
+      };
+    }
+
     if (completedCount === totalSteps) {
       return {
-        message: "All processing steps completed! Ready for deployment.",
+        message: "All processing steps completed! Ready for flying.",
         type: "success" as const,
       };
     }
@@ -347,6 +366,8 @@ export function ProcessingStepsCard({
             <div className="h-10 w-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
               <span className="text-sm font-black">{progressPercent}%</span>
             </div>
+
+
           </div>
         </div>
 
@@ -393,19 +414,81 @@ export function ProcessingStepsCard({
           )}
         </div>
         <div className="flex-1">
-          <p
-            className={`text-sm font-semibold ${
-              statusMessage.type === "success"
-                ? "text-emerald-800"
-                : statusMessage.type === "info"
-                ? "text-blue-800"
-                : statusMessage.type === "hold"
-                ? "text-amber-800"
-                : "text-orange-800"
-            }`}
-          >
-            {statusMessage.message}
-          </p>
+          <div className="flex items-center gap-3 justify-between">
+            <div className="min-w-0 pr-4">
+              <p
+                className={`text-sm font-semibold truncate ${
+                  statusMessage.type === "success"
+                    ? "text-emerald-800"
+                    : statusMessage.type === "info"
+                    ? "text-blue-800"
+                    : statusMessage.type === "hold"
+                    ? "text-amber-800"
+                    : "text-orange-800"
+                }`}
+                title={statusMessage.message}
+              >
+                {statusMessage.message}
+              </p>
+            </div>
+
+            {/* Hire button (prefers opening Hire modal via `onOpenHire`; falls back to `onCompleteProcessing`) */}
+            <div className="flex-shrink-0 ml-4">
+              {isHired ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Badge className="inline-flex items-center gap-2 bg-emerald-600 text-white text-sm px-3 py-1 rounded-full">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Hired
+                        </Badge>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Candidate already hired for this project</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : completedCount === totalSteps && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (onOpenHire) {
+                              onOpenHire();
+                              return;
+                            }
+
+                            if (!onCompleteProcessing) return;
+                            try {
+                              setLocalCompleting(true);
+                              await onCompleteProcessing();
+                            } catch (err) {
+                              console.error("Complete processing fallback failed", err);
+                            } finally {
+                              setLocalCompleting(false);
+                            }
+                          }}
+                          disabled={!onOpenHire && !onCompleteProcessing || localCompleting}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          {localCompleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Hire
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{onOpenHire ? 'Open hire modal' : onCompleteProcessing ? 'Finalize processing' : 'Handler not provided'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          </div>
         </div>
         {activeStep && (activeStep.status === "not_started" || activeStep.status === "in_progress") && (
           <Badge className="bg-orange-500 text-white text-[10px] uppercase font-bold animate-pulse">
@@ -430,8 +513,9 @@ export function ProcessingStepsCard({
                   getStatusConfig={getStatusConfig} 
                   onOpen={() => setOpenStepKey(step.key)}
                   isCurrentStep={activeStepIndex === index}
-                  isCompleted={index < activeStepIndex}
-                  isEnabled={index <= activeStepIndex}
+                  // If all steps are completed, treat every step as completed and enabled so the eye/button remain visible
+                  isCompleted={completedCount === totalSteps ? true : index < activeStepIndex}
+                  isEnabled={completedCount === totalSteps ? true : index <= activeStepIndex}
                   offerLetterStatus={step.key === "offer_letter" ? offerLetterStatus : undefined}
                   onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
                   onStepClick={onStepClick}
@@ -448,8 +532,9 @@ export function ProcessingStepsCard({
                   getStatusConfig={getStatusConfig} 
                   onOpen={() => setOpenStepKey(step.key)}
                   isCurrentStep={activeStepIndex === index + 6}
-                  isCompleted={index + 6 < activeStepIndex}
-                  isEnabled={index + 6 <= activeStepIndex}
+                  // Show completed state + eye button for all steps when everything is completed
+                  isCompleted={completedCount === totalSteps ? true : index + 6 < activeStepIndex}
+                  isEnabled={completedCount === totalSteps ? true : index + 6 <= activeStepIndex}
                   onStepClick={onStepClick}
                 />
               ))}

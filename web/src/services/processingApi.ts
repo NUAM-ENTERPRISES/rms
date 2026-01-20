@@ -213,6 +213,19 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Get Ticket requirements and uploads for a processing candidate (mirrors HRD shape)
+    getTicketRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/ticket-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Get Visa requirements and uploads for a processing candidate (mirrors HRD shape)
     getVisaRequirements: builder.query<
       any,
@@ -361,6 +374,22 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingDetails", id: "LIST" },
       ],
     }),
+
+    // Mark candidate as hired for a processing candidate
+    hireCandidate: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { processingId: string; notes?: string }
+    >({
+      query: ({ processingId, ...body }) => ({
+        url: `/processing/candidate-hired/${processingId}`,
+        method: "POST",
+        body: Object.keys(body).length ? body : undefined,
+      }),
+      invalidatesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
   }),
 });
 
@@ -375,8 +404,10 @@ export const {
   useGetMedicalRequirementsQuery,
   useGetPrometricRequirementsQuery,
   useGetBiometricRequirementsQuery,
+  useGetTicketRequirementsQuery,
   useGetVisaRequirementsQuery,
   useGetEmigrationRequirementsQuery,
+  useHireCandidateMutation,
   useGetDataFlowRequirementsQuery,
   useGetEligibilityRequirementsQuery,
   useAttachDocumentToStepMutation,

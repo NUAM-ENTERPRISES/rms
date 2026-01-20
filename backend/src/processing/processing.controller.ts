@@ -31,6 +31,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
+import { CompleteProcessingDto } from './dto/complete-processing.dto';
 import { SubmitProcessingStepDateDto } from './dto/submit-processing-step-date.dto';
 import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
 import { DataFlowRemindersService } from '../data-flow-reminders/data-flow-reminders.service';
@@ -422,5 +423,17 @@ export class ProcessingController {
   async triggerDataFlowReminder(@Param('stepId') stepId: string, @Req() req: any) {
     const reminder = await this.dataFlowRemindersService.triggerDataFlowReminderNow(stepId, req.user.id);
     return { success: true, data: reminder, message: 'Data Flow reminder triggered' };
+  }
+
+  @Post('candidate-hired/:processingId')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark processing complete and mark candidate as HIRED (final)' })
+  @ApiParam({ name: 'processingId', type: 'string' })
+  @ApiBody({ type: CompleteProcessingDto, required: false, description: 'Optional body: { notes?: string } — only `notes` is accepted' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Processing completed and candidate marked as hired' })
+  async candidateHired(@Param('processingId') processingId: string, @Body() body: CompleteProcessingDto, @Req() req: any) {
+    const data = await this.processingService.completeProcessing(processingId, req.user.id, body);
+    return { success: true, data, message: 'Processing completed and candidate marked as hired' };
   }
 }

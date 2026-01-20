@@ -55,6 +55,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateApprovedForClientInterview(job);
         case 'CandidateTransferredToProcessing':
           return await this.handleCandidateTransferredToProcessing(job);
+        case 'CandidateHired':
+          return await this.handleCandidateHired(job);
         case 'CandidateFailedScreening':
           return await this.handleCandidateFailedScreening(job);
         default:
@@ -1267,6 +1269,67 @@ export class NotificationsProcessor extends WorkerHost {
         error.stack,
       );
       throw error;
+    }
+  }
+
+  /**
+   * Notify recruiter when a candidate is hired (created from CandidateHired outbox event).
+   */
+  async handleCandidateHired(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing candidate hired event: ${eventId}`);
+
+    try {
+      const {
+        processingCandidateId,
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        recruiterId,
+        changedBy,
+        notes,
+      } = payload as {
+        processingCandidateId: string;
+        candidateId: string;
+        projectId: string;
+        candidateProjectMapId: string;
+        recruiterId?: string | null;
+        changedBy?: string | null;
+        notes?: string | null;
+      };
+
+      if (!recruiterId) {
+        this.logger.log(`No recruiter configured for candidateProjectMap ${candidateProjectMapId}; skipping recruiter notification`);
+        return;
+      }
+
+      const [candidate, project, actor] = await Promise.all([
+        this.prisma.candidate.findUnique({ where: { id: candidateId }, select: { firstName: true, lastName: true } }),
+        this.prisma.project.findUnique({ where: { id: projectId }, select: { title: true } }),
+        changedBy ? this.prisma.user.findUnique({ where: { id: changedBy }, select: { name: true } }) : Promise.resolve(null),
+      ]);
+
+      if (!candidate || !project) {
+        this.logger.warn(`Candidate or project missing for CandidateHired event ${eventId}`);
+        return;
+      }
+
+      const idemKey = `${eventId}:candidate_hired:${candidateProjectMapId}:${recruiterId}`;
+
+      await this.notificationsService.createNotification({
+        userId: recruiterId,
+        type: 'candidate_hired',
+        title: 'Candidate Marked Hired',
+        message: `${candidate.firstName} ${candidate.lastName} has been marked hired for "${project.title}" by ${actor?.name || 'System'}. ${notes ? `Notes: ${notes}` : ''}`.trim(),
+        link: `/candidate-projects/${candidateProjectMapId}`,
+        meta: { processingCandidateId, candidateId, projectId, candidateProjectMapId, notes },
+        idemKey,
+      });
+
+      this.logger.log(`Candidate hired notification created for recruiter ${recruiterId}`);
+    } catch (err) {
+      this.logger.error(`Failed to process CandidateHired event ${eventId}: ${err?.message || err}`, err?.stack);
+      throw err;
     }
   }
 

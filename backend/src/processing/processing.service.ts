@@ -2818,6 +2818,110 @@ export class ProcessingService {
     return txResult;
   }
 
+  /**
+   * Mark entire processing flow as complete and mark candidate as HIRED (final).
+   * - Updates CandidateProjects main/sub status to final/hired
+   * - Updates Candidate.currentStatus -> working
+   * - Creates CandidateProjectStatusHistory, CandidateStatusHistory and ProcessingHistory entries
+   * - Idempotent (no-op if already hired / already working)
+   */
+  async completeProcessing(processingCandidateId: string, userId: string, dto?: { notes?: string }) {
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true, role: true, candidateProjectMap: true },
+    });
+    if (!pc) throw new NotFoundException('Processing candidate not found');
+
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({ where: { name: 'final' } });
+    const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({ where: { name: 'hired' } });
+    if (!mainStatus || !subStatus) throw new BadRequestException('Final/Hired status not configured in DB');
+
+    const candidateProjectMap = pc.candidateProjectMap;
+    if (!candidateProjectMap) throw new NotFoundException('Associated candidate-project mapping not found');
+
+    // Idempotent: if already hired, return current state
+    if (candidateProjectMap.subStatusId === subStatus.id) {
+      return { success: true, message: 'Candidate already marked as hired' };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1) Update processing candidate
+      await tx.processingCandidate.update({
+        where: { id: processingCandidateId },
+        data: { processingStatus: 'completed', step: 'completed', notes: dto?.notes || null },
+      });
+
+      // 2) Update candidate-project status
+      await tx.candidateProjects.update({
+        where: { id: candidateProjectMap.id },
+        data: { mainStatusId: mainStatus.id, subStatusId: subStatus.id },
+      });
+
+      // 3) Create candidate project status history
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true } });
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId: candidateProjectMap.id,
+          changedById: userId,
+          changedByName: user?.name || null,
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          mainStatusSnapshot: mainStatus.label,
+          subStatusSnapshot: subStatus.label,
+          reason: 'Processing completed — candidate hired',
+          notes: dto?.notes || null,
+        },
+      });
+
+      // 4) Ensure candidate.currentStatus -> WORKING and create CandidateStatusHistory
+      const workingStatus = await tx.candidateStatus.findFirst({ where: { statusName: { equals: 'working', mode: 'insensitive' } } });
+      if (workingStatus) {
+        const candidateRecord = await tx.candidate.findUnique({ where: { id: pc.candidate.id }, select: { id: true, currentStatusId: true } });
+        if (candidateRecord && candidateRecord.currentStatusId !== workingStatus.id) {
+          await tx.candidate.update({ where: { id: pc.candidate.id }, data: { currentStatusId: workingStatus.id } });
+
+          await tx.candidateStatusHistory.create({
+            data: {
+              candidateId: pc.candidate.id,
+              changedById: userId,
+              changedByName: user?.name ?? 'System',
+              statusId: workingStatus.id,
+              statusNameSnapshot: workingStatus.statusName,
+              statusUpdatedAt: new Date(),
+              reason: 'Candidate hired — set to working',
+              notificationCount: 0,
+            },
+          });
+        }
+      }
+
+      // 5) Create processing history entry
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId,
+          status: 'completed',
+          step: 'processing_completed',
+          changedById: userId,
+          notes: dto ? JSON.stringify({ action: 'complete_processing', notes: dto.notes || null }) : 'Processing completed',
+        },
+      });
+
+      // 6) Publish outbox event so notifications / integrations can react (done inside tx)
+      await this.outbox.publishCandidateHired(
+        processingCandidateId,
+        pc.candidate.id,
+        pc.project.id,
+        candidateProjectMap.id,
+        candidateProjectMap.recruiterId || null,
+        userId || null,
+        dto?.notes || null,
+        tx,
+      );
+    });
+
+    return { success: true, message: 'Processing completed and candidate marked as hired' };
+  }
+
   async attachDocumentToStep(processingStepId: string, documentId: string, uploadedBy?: string) {
     // 1. Get the processing step to find the candidate and project
     const step = await this.prisma.processingStep.findUnique({

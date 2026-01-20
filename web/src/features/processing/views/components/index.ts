@@ -12,6 +12,8 @@ export type { OfferLetterDocument, DocumentVerification } from "./ProcessingOffe
 export { HrdModal } from "./HrdModal";
 export { BiometricModal } from "./BiometricModal";
 export { VisaModal } from "./VisaModal";
+export { TicketModal } from "./TicketModal";
+export { HireModal } from "./HireModal";
 export { EmigrationModal } from "./EmigrationModal";
 export { CouncilRegistrationModal } from "./CouncilRegistrationModal";
 export { DocumentAttestationModal } from "./DocumentAttestationModal";

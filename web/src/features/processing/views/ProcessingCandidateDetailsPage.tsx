@@ -21,12 +21,14 @@ import {
   HrdModal,
   BiometricModal,
   VisaModal,
+  TicketModal,
   CouncilRegistrationModal,
   PrometricModal,
   EligibilityModal,
   DocumentAttestationModal,
   MedicalModal,
   EmigrationModal,
+  HireModal,
 } from "./components";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
 
@@ -37,6 +39,8 @@ export default function ProcessingCandidateDetailsPage() {
   const [showHrdModal, setShowHrdModal] = useState(false);
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [showVisaModal, setShowVisaModal] = useState(false);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
   const [showEmigrationModal, setShowEmigrationModal] = useState(false);
   const [showCouncilRegistrationModal, setShowCouncilRegistrationModal] = useState(false);
   const [showDocumentAttestationModal, setShowDocumentAttestationModal] = useState(false);
@@ -188,6 +192,8 @@ export default function ProcessingCandidateDetailsPage() {
               maxHeight="450px"
               offerLetterStatus={offerLetterStatus}
               onOfferLetterClick={() => setShowOfferLetterModal(true)}
+              onOpenHire={() => setShowHireModal(true)}
+              isHired={data?.candidateProjectMap?.subStatus?.name === "hired"}
               onStepClick={(stepKey) => {
                 const k = String(stepKey || "").replace(/[_-]/g, "").toLowerCase();
                 if (k === "hrd") {
@@ -204,6 +210,12 @@ export default function ProcessingCandidateDetailsPage() {
                 // Visa step (accept common variants)
                 if (k === "visa" || k === "visas" || k.startsWith("visa")) {
                   setShowVisaModal(true);
+                  return;
+                }
+
+                // Ticket step (accept common variants)
+                if (k === "ticket" || k === "tickets" || k.startsWith("ticket")) {
+                  setShowTicketModal(true);
                   return;
                 }
 
@@ -353,6 +365,26 @@ export default function ProcessingCandidateDetailsPage() {
         }}
         processingId={data.id}
         onComplete={handleStepComplete}
+      />
+
+      {/* Ticket Modal */}
+      <TicketModal
+        isOpen={showTicketModal}
+        onClose={() => {
+          setShowTicketModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
+      />
+
+      {/* Hire Modal */}
+      <HireModal
+        isOpen={showHireModal}
+        onClose={() => { setShowHireModal(false); refetchCandidateDetails(); }}
+        processingId={data.id}
+        candidateName={`${data.candidate?.firstName || ""} ${data.candidate?.lastName || ""}`.trim()}
+        onComplete={async () => { await handleStepComplete(); setShowHireModal(false); }}
       />
 
       {/* Emigration Modal */}

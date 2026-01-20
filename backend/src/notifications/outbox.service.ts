@@ -292,6 +292,36 @@ export class OutboxService {
   }
 
   /**
+   * Publish candidate hired event so notifications (and downstream integrations)
+   * can react to a placement. Intended to be called inside the same DB transaction
+   * that marks the candidate as hired (ensures consistency).
+   */
+  async publishCandidateHired(
+    processingCandidateId: string,
+    candidateId: string,
+    projectId: string,
+    candidateProjectMapId: string,
+    recruiterId: string | null,
+    changedBy: string | null,
+    notes?: string | null,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateHired',
+      {
+        processingCandidateId,
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        recruiterId,
+        changedBy,
+        notes,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate failed screening event
    * Notifies recruiter and team head when candidate fails screening
    */
