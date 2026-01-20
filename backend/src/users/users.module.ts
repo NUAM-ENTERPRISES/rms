@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { UsersController } from './users.controller';
+import { RecruitersController } from './recruiters.controller';
 import { UsersService } from './users.service';
 import { PrismaService } from '../database/prisma.service';
 import { AuditModule } from '../common/audit/audit.module';
@@ -8,7 +9,7 @@ import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [AuditModule, AuthModule, UploadModule],
-  controllers: [UsersController],
+  controllers: [UsersController, RecruitersController],
   providers: [UsersService, PrismaService],
   exports: [UsersService],
 })

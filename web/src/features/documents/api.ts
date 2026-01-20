@@ -555,6 +555,26 @@ export const documentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["DocumentVerification", "VerificationCandidates"],
     }),
+
+    getProfessionalAnalytics: builder.query<
+      {
+        success: boolean;
+        data: Array<{
+          id: string;
+          candidateName: string;
+          status: "verified" | "pending" | "rejected";
+          docType: string;
+          rejectionReason: string | null;
+          verifiedBy: string | null;
+          createdAt: string;
+        }>;
+        message: string;
+      },
+      void
+    >({
+      query: () => "/documents/analytics/professional",
+      providesTags: ["Document"],
+    }),
   }),
 });
 
@@ -563,6 +583,7 @@ export const {
   useGetRecruiterDocumentsQuery,
   useGetRecruiterVerifiedRejectedDocumentsQuery,
   useGetDocumentByIdQuery,
+  useGetProfessionalAnalyticsQuery,
   useCreateDocumentMutation,
   useUpdateDocumentMutation,
   useDeleteDocumentMutation,

@@ -306,7 +306,6 @@ export default function ProfilePage() {
             <Tabs defaultValue="personal" className="space-y-6">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="personal">Personal</TabsTrigger>
-                <TabsTrigger value="professional">Professional</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
               </TabsList>
 
@@ -430,7 +429,7 @@ export default function ProfilePage() {
               </TabsContent>
 
               {/* Professional Information Tab */}
-              <TabsContent value="professional" className="space-y-6">
+              {/* <TabsContent value="professional" className="space-y-6">
                 <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
@@ -500,7 +499,7 @@ export default function ProfilePage() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </TabsContent> */}
 
               {/* Security Tab */}
               <TabsContent value="security" className="space-y-6">

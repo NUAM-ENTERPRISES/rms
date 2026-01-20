@@ -647,4 +647,5 @@ export class UsersController {
       message: 'User permissions retrieved successfully',
     };
   }
+
 }

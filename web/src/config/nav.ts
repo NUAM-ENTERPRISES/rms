@@ -12,7 +12,7 @@ import {
   Briefcase,
   ClipboardCheck,
   BookOpen,
-  Settings,
+  BarChart3,
 } from "lucide-react";
 
 export interface NavItem {
@@ -60,6 +60,48 @@ export const navigationConfig: NavItem[] = [
   //     variant: "default",
   //   },
   // },
+   {
+  id: "candidate-analytics",
+  label: "Analytics",
+  path: "/analytics/candidates",
+  icon: BarChart3,
+  roles: ["CEO", "Director", "Manager"],
+  badge: {
+    text: "Insights",
+    variant: "default",
+  },
+  children: [
+  {
+    id: "candidate-analytics-overview",
+    label: "Recruiter Analytics",
+    path: "/analytics/candidates",
+    icon: Users,
+    roles: ["CEO", "Director", "Manager"],
+  },
+  {
+    id: "candidate-analytics-time",
+    label: "Documents Analytics",
+    path: "/analytics/candidates/time",
+    icon: FileText,
+    roles: ["CEO", "Director", "Manager"],
+  },
+  {
+    id: "candidate-analytics-funnel",
+    label: "Interview Analytics",
+    path: "/analytics/candidates/funnel",
+    icon: BarChart3,
+    roles: ["CEO", "Director", "Manager"],
+  },
+//   {
+//   id: "candidate-analytics-time",
+//   label: "Screening Analytics",
+//   path: "/analytics/candidates/screening",
+//   icon: Clock,
+//   roles: ["CEO", "Director", "Manager"],
+// },
+
+  ],
+},
   {
     id: "projects",
     label: "Projects",
@@ -239,6 +281,7 @@ export const navigationConfig: NavItem[] = [
       },
     ],
   },
+
   // {
   //   id: "settings",
   //   label: "Settings",
