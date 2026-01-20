@@ -17,7 +17,9 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
+import { CompleteProcessingStepDto } from './dto/complete-processing-step.dto';
 import { ProcessingService } from './processing.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
@@ -277,6 +279,42 @@ export class ProcessingController {
     return { success: true, data, message: 'HRD requirements retrieved' };
   }
 
+  @Get('steps/:processingId/council-registration-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Council Registration requirements for a processing candidate', description: "Merged global + country Council Registration document rules and existing processing_documents. Same response shape as HRD." })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getCouncilRegistrationRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getCouncilRegistrationRequirements(processingId, docType);
+    return { success: true, data, message: 'Council Registration requirements retrieved' };
+  }
+
+  @Get('steps/:processingId/document-attestation-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Document Attestation requirements for a processing candidate', description: 'Merged global + country Document Attestation document rules and existing processing_documents. Same response shape as HRD.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getDocumentAttestationRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getDocumentAttestationRequirements(processingId, docType);
+    return { success: true, data, message: 'Document Attestation requirements retrieved' };
+  }
+
+  @Get('steps/:processingId/medical-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Medical requirements for a processing candidate', description: 'Merged global + country Medical document rules and existing processing_documents. Same response shape as HRD.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getMedicalRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getMedicalRequirements(processingId, docType);
+    return { success: true, data, message: 'Medical requirements retrieved' };
+  }
+
+  @Get('steps/:processingId/biometric-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Biometric requirements for a processing candidate', description: 'Merged global + country Biometric document rules and existing processing_documents. Same response shape as HRD.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getBiometricRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getBiometricRequirements(processingId, docType);
+    return { success: true, data, message: 'Biometric requirements retrieved' };
+  }
+
   @Get('steps/:processingId/eligibility-requirements')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({ summary: 'Get Eligibility requirements for a processing candidate', description: 'Merged global + country Eligibility document rules and existing processing_documents. Same response shape as HRD/Data Flow.' })
@@ -306,7 +344,8 @@ export class ProcessingController {
   @Post('steps/:stepId/complete')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @ApiOperation({ summary: 'Mark a processing step as complete and move to next step' })
-  async completeStep(@Param('stepId') stepId: string, @Body() body: import('./dto/complete-processing-step.dto').CompleteProcessingStepDto, @Req() req: any) {
+  @ApiBody({ type: CompleteProcessingStepDto, description: 'When completing a medical step provide `isMedicalPassed` (required). Optional: `mofaNumber` and `notes` (stored in processing history or used as cancellation reason).' })
+  async completeStep(@Param('stepId') stepId: string, @Body() body: CompleteProcessingStepDto, @Req() req: any) {
     const data = await this.processingService.completeProcessingStep(stepId, req.user.id, body);
     return { success: true, data, message: 'Processing step completed and advanced to next step' };
   }

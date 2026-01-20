@@ -1,44 +1,38 @@
-import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
-import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
-import { toast } from "sonner";
-
-import {
-  useGetEligibilityRequirementsQuery,
-  useCompleteStepMutation,
-  useReuploadProcessingDocumentMutation,
-  useVerifyProcessingDocumentMutation,
-  useSubmitHrdDateMutation,
-  useCancelStepMutation,
-} from "@/services/processingApi";
-import { useUploadDocumentMutation } from "@/features/candidates/api";
-import { useCreateDocumentMutation } from "@/services/documentsApi";
-import { useReuseDocumentMutation } from "@/features/documents/api";
-
+import { PDFViewer } from "@/components/molecules/PDFViewer";
+import React, { useState, useMemo } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
+const ConfirmMedicalModal = React.lazy(() => import("./ConfirmMedicalModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
+import { useGetMedicalRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useUploadDocumentMutation } from "@/features/candidates/api";
+import { useCreateDocumentMutation } from "@/services/documentsApi";
+import { useReuseDocumentMutation } from "@/features/documents/api";
+import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface EligibilityModalProps {
+interface MedicalModalProps {
   isOpen: boolean;
   onClose: () => void;
   processingId: string;
   onComplete?: () => void | Promise<void>;
 }
 
-export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: EligibilityModalProps) {
-  const { data, isLoading, error, refetch } = useGetEligibilityRequirementsQuery(processingId, {
+export function MedicalModal({ isOpen, onClose, processingId, onComplete }: MedicalModalProps) {
+  const { data, isLoading, error, refetch } = useGetMedicalRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
 
@@ -48,14 +42,20 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
-  const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [submitMedicalDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  // Submission date state
-  const [submissionDate, setSubmissionDate] = useState<Date | undefined>(undefined);
+  // Medical submission date state
+  const [medicalSubmissionDate, setMedicalSubmissionDate] = useState<Date | undefined>(undefined);
+
+  // Medical result + MOFA + notes
+  // isMedicalPassed: null = not selected, true = passed, false = failed
+  const [isMedicalPassed, setIsMedicalPassed] = useState<boolean | null>(null);
+  const [mofaNumber, setMofaNumber] = useState<string>("");
+  const [medicalNotes, setMedicalNotes] = useState<string>("");
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -71,7 +71,9 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
 
   // Confirmation modal state
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  // Submit date confirmation modal
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  // Edit existing submitted date modal
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
 
@@ -85,11 +87,20 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   const requiredDocuments: any[] = data?.requiredDocuments || [];
   const uploads: any[] = data?.uploads || [];
 
-  // Completion flag from API — prefer specific `isEligibilityCompleted` if present
-  const isEligibilityCompleted = data?.isEligibilityCompleted ?? data?.isCompleted ?? false;
+  // Completion flag from API (support both HRD-shaped responses and explicit medical flag)
+  const isMedicalCompleted = data?.isMedicalCompleted ?? data?.isHrdCompleted ?? false;
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
+
+  // Initialize form state from API when modal opens (preserve user edits otherwise)
+  React.useEffect(() => {
+    if (!isOpen || !data) return;
+    const apiPassed = (data?.step?.isMedicalPassed !== undefined) ? data.step.isMedicalPassed : (data?.isMedicalPassed ?? null);
+    setIsMedicalPassed(apiPassed ?? null);
+    setMofaNumber(data?.step?.mofaNumber ?? data?.mofaNumber ?? "");
+    setMedicalNotes(data?.step?.notes ?? data?.notes ?? "");
+  }, [isOpen, data]);
 
   const uploadsByDocType = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -100,6 +111,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
     return map;
   }, [uploads]);
 
+  // Candidate-level documents and processing-level documents from API
   const candidateDocs = data?.candidateDocuments || [];
   const processingDocs = data?.processing_documents || [];
 
@@ -115,27 +127,15 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   const processingDocsByDocType = useMemo(() => {
     const map: Record<string, any[]> = {};
     processingDocs.forEach((d: any) => {
-      // API can nest the actual document in several places: d.document, d.processingDocument.document,
-      // d.verification.document (observed in eligibility payload), or sometimes at the root `d`.
-      const nestedDoc = d.document || d.processingDocument?.document || d.verification?.document || d;
+      const doc = d.document || d.processingDocument?.document || d;
+      const docType = doc?.docType || d.docType || d.processingDocument?.docType;
+      const status = d.processingDocument?.status || d.processingDocument?.processingStatus || doc?.status || d.status;
+      const fileName = d.document?.fileName || doc?.fileName;
+      const fileUrl = d.document?.fileUrl || doc?.fileUrl;
+      const mimeType = d.document?.mimeType || doc?.mimeType;
+      const id = d.document?.id || d.processingDocument?.id || d.id;
 
-      const docType = nestedDoc?.docType || d.docType || d.processingDocument?.docType || d.verification?.document?.docType;
-
-      // status can live on different levels as well
-      const status =
-        d.processingDocument?.status ||
-        d.processingDocument?.processingStatus ||
-        nestedDoc?.status ||
-        d.status ||
-        d.verification?.status ||
-        d.verification?.document?.status;
-
-      const fileName = nestedDoc?.fileName || d.document?.fileName || d.processingDocument?.fileName || d.verification?.document?.fileName;
-      const fileUrl = nestedDoc?.fileUrl || d.document?.fileUrl || d.processingDocument?.fileUrl || d.verification?.document?.fileUrl;
-      const mimeType = nestedDoc?.mimeType || d.document?.mimeType || d.processingDocument?.mimeType || d.verification?.document?.mimeType;
-      const id = nestedDoc?.id || d.document?.id || d.processingDocument?.id || d.verification?.document?.id || d.id;
-
-      if (!docType) return; // skip malformed entries
+      if (!docType) return;
 
       const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id };
 
@@ -187,7 +187,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   const handleVerifyClick = (docType: string, label?: string, roleCatalog?: string, roleLabel?: string) => {
     const pdocs = processingDocsByDocType[docType] || [];
     if (pdocs.length > 0) {
-      // Already present in processing. Nothing to do here (backend action expected later)
       toast.success("Document already in processing");
       return;
     }
@@ -196,7 +195,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
     const cdoc = cdocs[cdocs.length - 1];
 
     if (!cdoc) {
-      // No candidate-level document: prompt upload flow so user can add & then verify
       toast("No candidate document found. Please upload a document to verify.");
       setSelectedDocType(docType);
       setSelectedDocLabel(label || "");
@@ -206,7 +204,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
       return;
     }
 
-    // Candidate doc exists - Open verification modal
     setVerifyDocId(cdoc.id);
     setVerifyDocLabel(label || "Document");
     setVerifyModalOpen(true);
@@ -248,20 +245,16 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
     }
 
     try {
-      // Build FormData to send as multipart/form-data
       const formData = new FormData();
       formData.append("file", file);
       formData.append("docType", selectedDocType);
       if (selectedRoleCatalog) {
         formData.append("roleCatalogId", selectedRoleCatalog);
-      } else {
-        console.warn("⚠️ No roleCatalogId to add to FormData");
       }
 
       const uploadResp = await uploadDocument({ candidateId: candidate.candidate.id, formData }).unwrap();
       const uploadData = uploadResp.data;
 
-      // If this is a re-upload (replace) operation, call processing reupload endpoint
       if (replaceOldDocumentId) {
         if (!replaceCandidateProjectMapId) {
           toast.error("Missing nomination id (candidateProjectMapId) for re-upload");
@@ -281,13 +274,11 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
           };
 
           const resp = await reuploadProcessingDocument(payload).unwrap();
-          console.log("🔁 Reupload processing response", resp);
           toast.success(resp?.message || "File re-uploaded and sent for processing");
         } catch (reErr: any) {
           console.error("Processing reupload failed", reErr);
           toast.error(reErr?.data?.message || reErr?.error || "Failed to reupload document for processing");
         } finally {
-          // clear reupload context
           setReplaceOldDocumentId(null);
           setReplaceCandidateProjectMapId(null);
           setUploadModalOpen(false);
@@ -297,7 +288,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
         return;
       }
 
-      // Normal create document flow
       const createResp = await createDocument({
         candidateId: candidate.candidate.id,
         docType: selectedDocType,
@@ -316,14 +306,13 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
         toast.success("File uploaded and reused successfully");
       } catch (reuseErr: any) {
         console.error("Document reuse failed", reuseErr);
-        // Non-fatal: show a warning but continue
         toast.warning(reuseErr?.data?.message || "Uploaded but reuse failed");
       }
 
       setUploadModalOpen(false);
       await refetch();
     } catch (err: any) {
-      console.error("Eligibility upload error", err);
+      console.error("Medical upload error", err);
       toast.error(err?.data?.message || "Failed to upload and attach document");
     }
   };
@@ -351,20 +340,23 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   const handleMarkComplete = async () => {
     if (!activeStep?.id) return;
 
-    // If there are missing mandatory docs, show that message
     if (statMissing > 0) {
       const missingSummary = missingDocs.length > 2 ? `${missingDocs.slice(0,2).join(', ')} +${missingDocs.length - 2} more` : missingDocs.join(', ');
       toast.error(`Cannot complete — Missing: ${missingSummary}`);
       return;
     }
 
-    // Require all documents to be verified
-    if (!allVerified) {
-      toast.error("Cannot complete — All documents must be verified");
+    // Require medical pass/fail selection
+    if (isMedicalPassed === null) {
+      toast.error("Please select Medical result (Passed or Failed)");
       return;
     }
 
-    // Require submittedAt to be set before allowing completion
+    if (!allVerified) {
+      toast.error("Cannot complete — All mandatory documents must be verified");
+      return;
+    }
+
     if (!hasSubmittedAt) {
       toast.error("Cannot complete — Submission date not set");
       return;
@@ -374,23 +366,36 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   };
 
   const handleConfirmComplete = async () => {
-    if (!activeStep?.id) return;
+    if (!activeStep?.id) return false;
 
     try {
-      await completeStep({ stepId: activeStep.id }).unwrap();
-      toast.success("Eligibility step marked complete");
+      const payload: any = { stepId: activeStep.id, isMedicalPassed };
+      if (mofaNumber) payload.mofaNumber = mofaNumber;
+      if (medicalNotes) payload.notes = medicalNotes;
+
+      // Call the complete-step API for Medical and surface success / errors
+      await completeStep(payload).unwrap();
+
+      if (isMedicalPassed) {
+        toast.success("Medical step marked complete");
+      } else {
+        toast.success("Medical marked failed — processing cancelled");
+      }
+
       setCompleteModalOpen(false);
       await refetch();
-      
+
       if (onComplete) {
         await onComplete();
       }
-      
+
       onClose();
+      return true;
     } catch (err: any) {
-      console.error("Mark Eligibility complete failed", err);
-      const msg = err?.data?.message || err?.error || "Failed to complete Eligibility step";
+      console.error("Mark Medical complete failed", err);
+      const msg = err?.data?.message || err?.error || "Failed to complete Medical step";
       toast.error(msg);
+      return false;
     }
   };
 
@@ -417,13 +422,13 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
     }
   };
 
-  const handleSubmitDate = async (date?: Date): Promise<boolean> => {
+  const handleSubmitMedicalDate = async (date?: Date): Promise<boolean> => {
     if (!activeStep?.id) {
       toast.error("No active step found");
       return false;
     }
 
-    const payloadDate = date ?? submissionDate;
+    const payloadDate = date ?? medicalSubmissionDate;
 
     if (!payloadDate) {
       toast.error("Please select a date and time");
@@ -431,16 +436,16 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
     }
 
     try {
-      await submitHrdDate({
+      await submitMedicalDate({
         stepId: activeStep.id,
         submittedAt: payloadDate.toISOString(),
       }).unwrap();
-      toast.success("Eligibility submission date saved successfully");
+      toast.success("Medical submission date saved successfully");
       await refetch();
       return true;
     } catch (err: any) {
-      console.error("Submit Eligibility date failed", err);
-      toast.error(err?.data?.message || "Failed to save Eligibility submission date");
+      console.error("Submit Medical date failed", err);
+      toast.error(err?.data?.message || "Failed to save Medical submission date");
       return false;
     }
   };
@@ -449,18 +454,19 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   const computedStats = getDocStats();
   const missingDocs = getMissingMandatory();
 
-  const statTotal = apiCounts?.totalRequired ?? computedStats.total;
+  const statTotal = apiCounts?.totalMandatory ?? computedStats.mandatory;
   const statVerified = apiCounts?.verifiedCount ?? computedStats.verified;
   const statMissing = apiCounts?.missingCount ?? missingDocs.length;
 
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
-  const canMarkComplete = allVerified && hasSubmittedAt;
+  const canMarkComplete = allVerified && hasSubmittedAt && isMedicalPassed !== null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+        {/* Header */}
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -468,8 +474,8 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white">Eligibility Requirements</DialogTitle>
-                <DialogDescription className="text-sm text-white/70">Upload and verify required documents</DialogDescription>
+                <DialogTitle className="text-lg font-bold text-white">Medical Attestation</DialogTitle>
+                <DialogDescription className="text-sm text-white/70">Upload and verify required medical documents</DialogDescription>
               </div>
             </div>
             {candidate?.candidate && (
@@ -491,7 +497,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load Eligibility requirements.</div>
+              <div className="text-sm text-slate-600">Could not load Medical requirements.</div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -526,12 +532,12 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                 </div>
               </div>
 
-              {/* Eligibility Submission Date Section (compact) */}
+              {/* Submission Date Section */}
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    Eligibility Submission Date & Time
+                    Medical Submission Date & Time
                   </h4>
                 </div>
                 <div className="p-3">
@@ -546,7 +552,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                             <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
                           </div>
 
-                          {!isEligibilityCompleted && !isStepCancelled && (
+                          {!isMedicalCompleted && !isStepCancelled && (
                             <div className="flex items-center">
                               <Button
                                 variant="ghost"
@@ -563,20 +569,20 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                       ) : (
                         <>
                           <DatePicker
-                            value={submissionDate}
-                            onChange={setSubmissionDate}
+                            value={medicalSubmissionDate}
+                            onChange={setMedicalSubmissionDate}
                             placeholder="Pick date and time"
-                            disabled={isEligibilityCompleted}
+                            disabled={isMedicalCompleted}
                             className="w-full sm:min-w-[220px] h-8"
                             compact
                           />
 
                           {!activeStep?.submittedAt && (
                             <div className="mt-1">
-                              {submissionDate ? (
+                              {medicalSubmissionDate ? (
                                 <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
                               ) : (
-                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Eligibility</p>
+                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Medical</p>
                               )}
                             </div>
                           )}
@@ -588,7 +594,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                         <Button
                           size="sm"
                           onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !submissionDate || isEligibilityCompleted || isStepCancelled}
+                          disabled={isSubmittingDate || !medicalSubmissionDate || isMedicalCompleted || isStepCancelled}
                           className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           {isSubmittingDate ? (
@@ -601,10 +607,91 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                       )}
                     </div>
                   </div>
-                  {isEligibilityCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">Eligibility is completed. Submission date cannot be modified.</p>
+                  {isMedicalCompleted && (
+                    <p className="text-xs text-slate-500 mt-2">Medical is completed. Submission date cannot be modified.</p>
                   )}
                 </div>
+              </div>
+
+              {/* Medical result + MOFA (user story) */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-slate-100 px-4 py-2 border-b">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Medical result</h4>
+                </div>
+
+                {/* Show persisted/read-only result when API contains an explicit boolean OR step is completed/cancelled */}
+                {( (data?.step?.isMedicalPassed === true || data?.step?.isMedicalPassed === false) || isMedicalCompleted || isStepCancelled) ? (
+                  <div className="p-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold ${isMedicalPassed ? 'bg-emerald-600 text-white' : 'bg-rose-100 text-rose-700'}`}>
+                        {isMedicalPassed ? 'Passed' : 'Failed'}
+                      </div>
+
+                      <div className="text-sm text-slate-700">{isMedicalPassed ? 'Candidate passed Medical' : 'Candidate failed Medical'}</div>
+
+                      {mofaNumber && (
+                        <div className="ml-auto text-xs text-slate-500">MOFA: <span className="font-medium text-slate-700">{mofaNumber}</span></div>
+                      )}
+                    </div>
+
+                    {medicalNotes && (
+                      <div className="mt-3 text-xs text-slate-500">Notes: <span className="font-medium text-slate-700">{medicalNotes}</span></div>
+                    )}
+
+                    {activeStep?.rejectionReason && (
+                      <div className="mt-3 text-xs text-rose-600">Reason: <span className="font-medium text-rose-700">{activeStep.rejectionReason}</span></div>
+                    )}
+
+                    <div className="mt-3 text-xs text-slate-500">Status: <span className="font-medium">{activeStep?.status || (isMedicalPassed ? 'completed' : 'cancelled')}</span></div>
+                  </div>
+                ) : (
+                  <div className="p-3 flex flex-col gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="text-sm text-slate-700 font-medium">Result</div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-pressed={isMedicalPassed === true}
+                          onClick={() => setIsMedicalPassed(true)}
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold ${isMedicalPassed === true ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-700'}`}
+                        >
+                          Passed
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-pressed={isMedicalPassed === false}
+                          onClick={() => { setIsMedicalPassed(false); setMofaNumber(''); }}
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold ${isMedicalPassed === false ? 'bg-rose-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-700'}`}
+                        >
+                          Failed
+                        </button>
+                      </div>
+
+                      <div className="ml-auto text-xs text-slate-500">Required — select Passed or Failed before completing</div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                      <div className="sm:col-span-2">
+                        <label className="text-xs text-slate-600 mb-1 block">MOFA number (optional)</label>
+                        <Input
+                          value={mofaNumber}
+                          onChange={(e) => setMofaNumber(e.target.value)}
+                          placeholder="Enter MOFA number"
+                          disabled={isMedicalPassed === false}
+                          aria-disabled={isMedicalPassed === false}
+                          className="h-9"
+                        />
+                        <p className="text-xs text-slate-400 mt-1">Optional — add when candidate passed (will be persisted with the Medical result)</p>
+                      </div>
+
+                      {isMedicalPassed === false && (
+                        <div className="text-sm text-rose-600 font-medium">Marking as <span className="font-black">Failed</span> will cancel processing for this candidate.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Document List */}
@@ -683,8 +770,8 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                             </Button>
                           )}
 
-                          {isEligibilityCompleted ? (
-                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Eligibility Completed</Badge>
+                          {isMedicalCompleted ? (
+                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Medical Completed</Badge>
                           ) : isStepCancelled ? (
                             <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
                           ) : (
@@ -749,7 +836,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                   })}
                 </div>
               </div>
-
             </div>
           )}
         </div>
@@ -773,14 +859,14 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                 <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
               </Button>
 
-              {!isEligibilityCompleted && !isStepCancelled && (
+              {!isMedicalCompleted && !isStepCancelled && (
                 <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
                   {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
                 </Button>
               )}
 
-              {isEligibilityCompleted ? (
-                <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Eligibility Completed ✓</Badge>
+              {isMedicalCompleted ? (
+                <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Medical Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
               ) : (
@@ -790,12 +876,12 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                       <TooltipTrigger asChild>
                         <div>
                           <Button size="sm" disabled className="opacity-80" aria-disabled>
-                            {'Mark Eligibility Complete'}
+                            {'Mark Medical Complete'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>All documents must be verified before marking Eligibility complete. Verified {statVerified}/{statTotal}</p>
+                        <p>All mandatory documents must be verified before marking Medical complete. Verified {statVerified}/{statTotal}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -811,12 +897,27 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                             className="opacity-80"
                             aria-disabled={true}
                           >
-                            {'Mark Eligibility Complete'}
+                            {'Mark Medical Complete'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Submission date required to complete Eligibility. Please select and submit a date.</p>
+                        <p>Submission date required to complete Medical. Please select and submit a date.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : isMedicalPassed === null ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button size="sm" disabled className="opacity-80" aria-disabled>
+                            {'Mark Medical Complete'}
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Please select the Medical result (Passed or Failed) before completing.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -828,7 +929,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
                     aria-disabled={isCompletingStep || !canMarkComplete}
                   >
-                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Eligibility Complete'}
+                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Medical Complete'}
                   </Button>
                 )
               )}
@@ -867,9 +968,9 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
         <ConfirmSubmitDateModal
           isOpen={submitConfirmOpen}
           onClose={() => setSubmitConfirmOpen(false)}
-          date={submissionDate}
+          date={medicalSubmissionDate}
           onConfirm={async () => {
-            const ok = await handleSubmitDate();
+            const ok = await handleSubmitMedicalDate();
             if (ok) setSubmitConfirmOpen(false);
           }}
           isSubmitting={isSubmittingDate}
@@ -883,7 +984,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
           onClose={() => setEditSubmitOpen(false)}
           existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt}
           onConfirm={async (newDate: Date) => {
-            const ok = await handleSubmitDate(newDate);
+            const ok = await handleSubmitMedicalDate(newDate);
             return ok;
           }}
           isSubmitting={isSubmittingDate}
@@ -900,20 +1001,19 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
         />
       </React.Suspense>
 
-      {/* Complete Step Confirmation Modal */}
+      {/* Confirm Medical Result Modal (replaces generic confirmation for Medical step) */}
       <React.Suspense fallback={null}>
-        <CompleteProcessingStepModal
+        <ConfirmMedicalModal
           isOpen={completeModalOpen}
           onClose={() => setCompleteModalOpen(false)}
+          isMedicalPassed={isMedicalPassed}
+          mofaNumber={mofaNumber}
+          notes={medicalNotes}
+          onNotesChange={setMedicalNotes}
+          isSubmitting={isCompletingStep}
           onConfirm={handleConfirmComplete}
-          isCompleting={isCompletingStep}
-          requiredDocuments={requiredDocuments}
-          uploadsByDocType={uploadsByDocType}
-          candidateDocsByDocType={candidateDocsByDocType}
-          processingDocsByDocType={processingDocsByDocType}
-          onViewDocument={handleViewDocument}
         />
-      </React.Suspense>
+      </React.Suspense> 
 
       {/* Inline Viewer: PDF or Image */}
       {viewerUrl && viewerMimeType && viewerMimeType.includes("pdf") && (
@@ -950,5 +1050,4 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   );
 }
 
-export default EligibilityModal;
-
+export default MedicalModal;

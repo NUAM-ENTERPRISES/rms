@@ -1557,6 +1557,8 @@ model ProcessingStep {
   /// Prometric outcome for this step. Nullable for backwards compatibility.
   /// Allowed values: PASSED | FAILED | PENDING
   prometricResult       PrometricResult?
+  mofaNumber            String?
+  isMedicalPassed       Boolean?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

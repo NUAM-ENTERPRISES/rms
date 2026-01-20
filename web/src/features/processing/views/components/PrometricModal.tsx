@@ -475,7 +475,8 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
   // Require all MANDATORY documents verified, submission date exists, and a prometric result selected before allowing completion
-  const allVerified = statTotal > 0 ? statVerified === statTotal : statMissing === 0;
+  // accept verifiedCount >= totalMandatory because API may include optional docs in the verified count
+  const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt && Boolean(prometricResult);
 
 
@@ -646,9 +647,9 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                     disabled={isPrometricCompleted || isStepCancelled}
                   >
                     <option value="">-- select result --</option>
-                    <option value="passed">Passed</option>
-                    <option value="failed">Failed</option>
-                    <option value="absent">Absent / No-show</option>
+                    <option value="PASSED">Passed</option>
+                    <option value="FAILED">Failed</option>
+                    <option value="PENDING">Pending</option>
                   </select>
 
                   <input

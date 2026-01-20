@@ -19,8 +19,12 @@ import {
   ProcessingOfferLetterModal,
   DataFlowModal,
   HrdModal,
+  BiometricModal,
+  CouncilRegistrationModal,
   PrometricModal,
   EligibilityModal,
+  DocumentAttestationModal,
+  MedicalModal,
 } from "./components";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
 
@@ -29,6 +33,10 @@ export default function ProcessingCandidateDetailsPage() {
   const navigate = useNavigate();
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [showCouncilRegistrationModal, setShowCouncilRegistrationModal] = useState(false);
+  const [showDocumentAttestationModal, setShowDocumentAttestationModal] = useState(false);
+  const [showMedicalModal, setShowMedicalModal] = useState(false);
   const [showPrometricModal, setShowPrometricModal] = useState(false);
   const [showDataFlowModal, setShowDataFlowModal] = useState(false);
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
@@ -183,6 +191,27 @@ export default function ProcessingCandidateDetailsPage() {
                   return;
                 }
 
+                // accept both "biometric" and "biometrics" (API uses `biometrics` in some deployments)
+                if (k === "biometric" || k === "biometrics" || k.startsWith("biometric")) {
+                  setShowBiometricModal(true);
+                  return;
+                }
+
+                if (k === "councilregistration") {
+                  setShowCouncilRegistrationModal(true);
+                  return;
+                }
+
+                if (k === "documentattestation") {
+                  setShowDocumentAttestationModal(true);
+                  return;
+                }
+
+                if (k === "medical") {
+                  setShowMedicalModal(true);
+                  return;
+                }
+
                 if (k === "prometric") {
                   setShowPrometricModal(true);
                   return;
@@ -286,6 +315,50 @@ export default function ProcessingCandidateDetailsPage() {
         }}
         processingId={data.id}
         onComplete={handleHrdComplete}
+      />
+
+      {/* Biometric Modal */}
+      <BiometricModal
+        isOpen={showBiometricModal}
+        onClose={() => {
+          setShowBiometricModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
+      />
+
+      {/* Council Registration Modal */}
+      <CouncilRegistrationModal
+        isOpen={showCouncilRegistrationModal}
+        onClose={() => {
+          setShowCouncilRegistrationModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
+      />
+
+      {/* Document Attestation Modal */}
+      <DocumentAttestationModal
+        isOpen={showDocumentAttestationModal}
+        onClose={() => {
+          setShowDocumentAttestationModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
+      />
+
+      {/* Medical Modal */}
+      <MedicalModal
+        isOpen={showMedicalModal}
+        onClose={() => {
+          setShowMedicalModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
       />
 
       {/* Prometric Modal */}

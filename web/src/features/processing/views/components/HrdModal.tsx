@@ -463,7 +463,8 @@ export function HrdModal({ isOpen, onClose, processingId, onComplete }: HrdModal
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
   // Require all MANDATORY documents verified AND submitted date exists before allowing completion
-  const allVerified = statTotal > 0 ? statVerified === statTotal : statMissing === 0;
+  // treat verifiedCount >= totalMandatory as satisfied (API may include optional docs in verifiedCount)
+  const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
 
 

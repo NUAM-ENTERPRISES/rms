@@ -148,12 +148,64 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Get Council Registration requirements and uploads for a processing candidate (same shape as HRD)
+    getCouncilRegistrationRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/council-registration-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    // Get Document Attestation requirements and uploads for a processing candidate (same shape as HRD)
+    getDocumentAttestationRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/document-attestation-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    // Get Medical requirements and uploads for a processing candidate (same shape as HRD)
+    getMedicalRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/medical-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Get Prometric requirements and uploads for a processing candidate
     getPrometricRequirements: builder.query<
       any,
       string
     >({
       query: (processingId) => `/processing/steps/${processingId}/prometric-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    // Get Biometric requirements and uploads for a processing candidate (mirrors HRD shape)
+    getBiometricRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/biometric-requirements`,
       transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
       providesTags: (_result, _error, processingId) => [
         { type: "ProcessingSteps", id: processingId },
@@ -292,7 +344,11 @@ export const {
   useUpdateStepStatusMutation,
   useCompleteStepMutation,
   useGetHrdRequirementsQuery,
+  useGetCouncilRegistrationRequirementsQuery,
+  useGetDocumentAttestationRequirementsQuery,
+  useGetMedicalRequirementsQuery,
   useGetPrometricRequirementsQuery,
+  useGetBiometricRequirementsQuery,
   useGetDataFlowRequirementsQuery,
   useGetEligibilityRequirementsQuery,
   useAttachDocumentToStepMutation,

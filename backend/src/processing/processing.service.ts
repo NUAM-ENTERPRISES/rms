@@ -625,6 +625,823 @@ export class ProcessingService {
     };
   }
 
+  async getCouncilRegistrationRequirements(processingCandidateId: string, docType?: string) {
+    // Ensure steps exist
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true, role: { include: { roleCatalog: true } } },
+    });
+    if (!pc) throw new NotFoundException(`Processing candidate ${processingCandidateId} not found`);
+
+    const country = pc.project?.countryCode || pc.candidate?.countryCode || null;
+
+    const councilTemplate = await this.prisma.processingStepTemplate.findUnique({ where: { key: 'council_registration' } });
+    if (!councilTemplate) throw new NotFoundException(`Council Registration step template not found`);
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: councilTemplate.id,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    // Merge rules: country wins
+    const map: Record<string, any> = {};
+    for (const r of rules) {
+      if (!map[r.docType] || r.countryCode !== 'ALL') map[r.docType] = r;
+    }
+
+    let requiredDocuments = Object.values(map).map((r: any) => ({
+      docType: r.docType,
+      label: r.label,
+      mandatory: r.mandatory,
+      source: r.countryCode,
+    }));
+
+    const activeDocTypes = requiredDocuments.map((d) => d.docType);
+
+    if (docType) {
+      requiredDocuments = requiredDocuments.filter((d) => d.docType === docType);
+    }
+
+    const councilStep = await this.prisma.processingStep.findFirst({
+      where: { processingCandidateId, templateId: councilTemplate.id },
+      include: {
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: {
+              include: {
+                document: true,
+                roleCatalog: true,
+                candidateProjectMap: {
+                  include: {
+                    project: true,
+                    roleNeeded: {
+                      select: {
+                        id: true,
+                        projectId: true,
+                        roleCatalogId: true,
+                        designation: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const filterDocTypes = docType ? [docType] : activeDocTypes;
+
+    let processing_documents = (councilStep?.documents || [])
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        return {
+          processingStepDocumentId: d.id,
+          processingDocument: {
+            id: d.id,
+            status: d.status,
+            notes: d.notes || null,
+            uploadedBy: d.uploadedBy || null,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+          },
+          verification: ver
+            ? {
+                id: ver.id,
+                status: ver.status,
+                notes: ver.notes || null,
+                rejectionReason: ver.rejectionReason || null,
+                resubmissionRequested: ver.resubmissionRequested || false,
+                roleCatalog: ver.roleCatalog || null,
+                candidateProjectMap: ver.candidateProjectMap || null,
+                createdAt: ver.createdAt,
+                updatedAt: ver.updatedAt,
+              }
+            : null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+
+    const candidateDocuments = await this.prisma.document.findMany({
+      where: {
+        candidateId: pc.candidate.id,
+        isDeleted: false,
+        docType: { in: filterDocTypes },
+        OR: [
+          { roleCatalogId: pc.role?.roleCatalogId || null },
+          { roleCatalogId: null },
+        ],
+      },
+      include: {
+        verifications: {
+          include: {
+            candidateProjectMap: {
+              include: {
+                project: true,
+                roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+              },
+            },
+            roleCatalog: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const mandatoryDocTypes = requiredDocuments
+      .filter((d) => d.mandatory)
+      .map((d) => d.docType);
+
+    const uploadedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => {
+      if (pd.document?.docType) uploadedDocTypes.add(pd.document.docType);
+    });
+    candidateDocuments.forEach((d: any) => {
+      if (d.docType) uploadedDocTypes.add(d.docType);
+    });
+
+    const uploadedCount = uploadedDocTypes.size;
+
+    const verifiedCount = processing_documents.filter(
+      (pd: any) => pd.verification && pd.verification.status === 'verified',
+    ).length;
+
+    const missingCount = mandatoryDocTypes.filter(
+      (docType) => !uploadedDocTypes.has(docType),
+    ).length;
+
+    const isCouncilRegistrationCompleted = !!councilStep && councilStep.status === 'completed';
+
+    const step = councilStep
+      ? (() => {
+          const { documents, ...rest } = councilStep as any;
+          return rest;
+        })()
+      : null;
+
+    return {
+      isCouncilRegistrationCompleted,
+      step,
+      processingCandidate: {
+        id: pc.id,
+        processingStatus: pc.processingStatus,
+        candidate: {
+          id: pc.candidate?.id || null,
+          firstName: pc.candidate?.firstName || null,
+          lastName: pc.candidate?.lastName || null,
+          email: pc.candidate?.email || null,
+          mobileNumber: pc.candidate?.mobileNumber || null,
+          countryCode: pc.candidate?.countryCode || null,
+        },
+        project: {
+          id: pc.project?.id || null,
+          title: pc.project?.title || null,
+          countryCode: pc.project?.countryCode || null,
+          description: pc.project?.description || null,
+          clientId: pc.project?.clientId || null,
+          teamId: pc.project?.teamId || null,
+        },
+        role: pc.role
+          ? {
+              id: pc.role.id,
+              designation: pc.role.designation,
+              roleCatalog: pc.role.roleCatalog || null,
+            }
+          : null,
+      },
+      requiredDocuments,
+      processing_documents,
+      candidateDocuments,
+      counts: {
+        totalConfigured: requiredDocuments.length,
+        totalMandatory: mandatoryDocTypes.length,
+        uploadedCount,
+        verifiedCount,
+        missingCount,
+      },
+    };
+  }
+
+  async getDocumentAttestationRequirements(processingCandidateId: string, docType?: string) {
+    // Ensure steps exist
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true, role: { include: { roleCatalog: true } } },
+    });
+    if (!pc) throw new NotFoundException(`Processing candidate ${processingCandidateId} not found`);
+
+    const country = pc.project?.countryCode || pc.candidate?.countryCode || null;
+
+    const attestationTemplate = await this.prisma.processingStepTemplate.findUnique({ where: { key: 'document_attestation' } });
+    if (!attestationTemplate) throw new NotFoundException(`Document Attestation step template not found`);
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: attestationTemplate.id,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    // Merge rules: country wins
+    const map: Record<string, any> = {};
+    for (const r of rules) {
+      if (!map[r.docType] || r.countryCode !== 'ALL') map[r.docType] = r;
+    }
+
+    let requiredDocuments = Object.values(map).map((r: any) => ({
+      docType: r.docType,
+      label: r.label,
+      mandatory: r.mandatory,
+      source: r.countryCode,
+    }));
+
+    const activeDocTypes = requiredDocuments.map((d) => d.docType);
+
+    if (docType) {
+      requiredDocuments = requiredDocuments.filter((d) => d.docType === docType);
+    }
+
+    const attestationStep = await this.prisma.processingStep.findFirst({
+      where: { processingCandidateId, templateId: attestationTemplate.id },
+      include: {
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: {
+              include: {
+                document: true,
+                roleCatalog: true,
+                candidateProjectMap: {
+                  include: {
+                    project: true,
+                    roleNeeded: {
+                      select: {
+                        id: true,
+                        projectId: true,
+                        roleCatalogId: true,
+                        designation: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const filterDocTypes = docType ? [docType] : activeDocTypes;
+
+    let processing_documents = (attestationStep?.documents || [])
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        return {
+          processingStepDocumentId: d.id,
+          processingDocument: {
+            id: d.id,
+            status: d.status,
+            notes: d.notes || null,
+            uploadedBy: d.uploadedBy || null,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+          },
+          verification: ver
+            ? {
+                id: ver.id,
+                status: ver.status,
+                notes: ver.notes || null,
+                rejectionReason: ver.rejectionReason || null,
+                resubmissionRequested: ver.resubmissionRequested || false,
+                roleCatalog: ver.roleCatalog || null,
+                candidateProjectMap: ver.candidateProjectMap || null,
+                createdAt: ver.createdAt,
+                updatedAt: ver.updatedAt,
+              }
+            : null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+
+    const candidateDocuments = await this.prisma.document.findMany({
+      where: {
+        candidateId: pc.candidate.id,
+        isDeleted: false,
+        docType: { in: filterDocTypes },
+        OR: [
+          { roleCatalogId: pc.role?.roleCatalogId || null },
+          { roleCatalogId: null },
+        ],
+      },
+      include: {
+        verifications: {
+          include: {
+            candidateProjectMap: {
+              include: {
+                project: true,
+                roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+              },
+            },
+            roleCatalog: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const mandatoryDocTypes = requiredDocuments
+      .filter((d) => d.mandatory)
+      .map((d) => d.docType);
+
+    const uploadedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => {
+      if (pd.document?.docType) uploadedDocTypes.add(pd.document.docType);
+    });
+    candidateDocuments.forEach((d: any) => {
+      if (d.docType) uploadedDocTypes.add(d.docType);
+    });
+
+    const uploadedCount = uploadedDocTypes.size;
+
+    const verifiedCount = processing_documents.filter(
+      (pd: any) => pd.verification && pd.verification.status === 'verified',
+    ).length;
+
+    const missingCount = mandatoryDocTypes.filter(
+      (docType) => !uploadedDocTypes.has(docType),
+    ).length;
+
+    const isDocumentAttestationCompleted = !!attestationStep && attestationStep.status === 'completed';
+
+    const step = attestationStep
+      ? (() => {
+          const { documents, ...rest } = attestationStep as any;
+          return rest;
+        })()
+      : null;
+
+    return {
+      isDocumentAttestationCompleted,
+      step,
+      processingCandidate: {
+        id: pc.id,
+        processingStatus: pc.processingStatus,
+        candidate: {
+          id: pc.candidate?.id || null,
+          firstName: pc.candidate?.firstName || null,
+          lastName: pc.candidate?.lastName || null,
+          email: pc.candidate?.email || null,
+          mobileNumber: pc.candidate?.mobileNumber || null,
+          countryCode: pc.candidate?.countryCode || null,
+        },
+        project: {
+          id: pc.project?.id || null,
+          title: pc.project?.title || null,
+          countryCode: pc.project?.countryCode || null,
+          description: pc.project?.description || null,
+          clientId: pc.project?.clientId || null,
+          teamId: pc.project?.teamId || null,
+        },
+        role: pc.role
+          ? {
+              id: pc.role.id,
+              designation: pc.role.designation,
+              roleCatalog: pc.role.roleCatalog || null,
+            }
+          : null,
+      },
+      requiredDocuments,
+      processing_documents,
+      candidateDocuments,
+      counts: {
+        totalConfigured: requiredDocuments.length,
+        totalMandatory: mandatoryDocTypes.length,
+        uploadedCount,
+        verifiedCount,
+        missingCount,
+      },
+    };
+  }
+
+  async getMedicalRequirements(processingCandidateId: string, docType?: string) {
+    // Ensure steps exist
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true, role: { include: { roleCatalog: true } } },
+    });
+    if (!pc) throw new NotFoundException(`Processing candidate ${processingCandidateId} not found`);
+
+    const country = pc.project?.countryCode || pc.candidate?.countryCode || null;
+
+    const medicalTemplate = await this.prisma.processingStepTemplate.findUnique({ where: { key: 'medical' } });
+    if (!medicalTemplate) throw new NotFoundException(`Medical step template not found`);
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: medicalTemplate.id,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    // Merge rules: country wins
+    const map: Record<string, any> = {};
+    for (const r of rules) {
+      if (!map[r.docType] || r.countryCode !== 'ALL') map[r.docType] = r;
+    }
+
+    let requiredDocuments = Object.values(map).map((r: any) => ({
+      docType: r.docType,
+      label: r.label,
+      mandatory: r.mandatory,
+      source: r.countryCode,
+    }));
+
+    const activeDocTypes = requiredDocuments.map((d) => d.docType);
+
+    if (docType) {
+      requiredDocuments = requiredDocuments.filter((d) => d.docType === docType);
+    }
+
+    const medicalStep = await this.prisma.processingStep.findFirst({
+      where: { processingCandidateId, templateId: medicalTemplate.id },
+      include: {
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: {
+              include: {
+                document: true,
+                roleCatalog: true,
+                candidateProjectMap: {
+                  include: {
+                    project: true,
+                    roleNeeded: {
+                      select: {
+                        id: true,
+                        projectId: true,
+                        roleCatalogId: true,
+                        designation: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const filterDocTypes = docType ? [docType] : activeDocTypes;
+
+    let processing_documents = (medicalStep?.documents || [])
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        return {
+          processingStepDocumentId: d.id,
+          processingDocument: {
+            id: d.id,
+            status: d.status,
+            notes: d.notes || null,
+            uploadedBy: d.uploadedBy || null,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+          },
+          verification: ver
+            ? {
+                id: ver.id,
+                status: ver.status,
+                notes: ver.notes || null,
+                rejectionReason: ver.rejectionReason || null,
+                resubmissionRequested: ver.resubmissionRequested || false,
+                roleCatalog: ver.roleCatalog || null,
+                candidateProjectMap: ver.candidateProjectMap || null,
+                createdAt: ver.createdAt,
+                updatedAt: ver.updatedAt,
+              }
+            : null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+
+    const candidateDocuments = await this.prisma.document.findMany({
+      where: {
+        candidateId: pc.candidate.id,
+        isDeleted: false,
+        docType: { in: filterDocTypes },
+        OR: [
+          { roleCatalogId: pc.role?.roleCatalogId || null },
+          { roleCatalogId: null },
+        ],
+      },
+      include: {
+        verifications: {
+          include: {
+            candidateProjectMap: {
+              include: {
+                project: true,
+                roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+              },
+            },
+            roleCatalog: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const mandatoryDocTypes = requiredDocuments
+      .filter((d) => d.mandatory)
+      .map((d) => d.docType);
+
+    const uploadedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => {
+      if (pd.document?.docType) uploadedDocTypes.add(pd.document.docType);
+    });
+    candidateDocuments.forEach((d: any) => {
+      if (d.docType) uploadedDocTypes.add(d.docType);
+    });
+
+    const uploadedCount = uploadedDocTypes.size;
+
+    const verifiedCount = processing_documents.filter(
+      (pd: any) => pd.verification && pd.verification.status === 'verified',
+    ).length;
+
+    const missingCount = mandatoryDocTypes.filter(
+      (docType) => !uploadedDocTypes.has(docType),
+    ).length;
+
+    const isMedicalCompleted = !!medicalStep && medicalStep.status === 'completed';
+
+    const step = medicalStep
+      ? (() => {
+          const { documents, ...rest } = medicalStep as any;
+          return rest;
+        })()
+      : null;
+
+    return {
+      isMedicalCompleted,
+      step,
+      processingCandidate: {
+        id: pc.id,
+        processingStatus: pc.processingStatus,
+        candidate: {
+          id: pc.candidate?.id || null,
+          firstName: pc.candidate?.firstName || null,
+          lastName: pc.candidate?.lastName || null,
+          email: pc.candidate?.email || null,
+          mobileNumber: pc.candidate?.mobileNumber || null,
+          countryCode: pc.candidate?.countryCode || null,
+        },
+        project: {
+          id: pc.project?.id || null,
+          title: pc.project?.title || null,
+          countryCode: pc.project?.countryCode || null,
+          description: pc.project?.description || null,
+          clientId: pc.project?.clientId || null,
+          teamId: pc.project?.teamId || null,
+        },
+        role: pc.role
+          ? {
+              id: pc.role.id,
+              designation: pc.role.designation,
+              roleCatalog: pc.role.roleCatalog || null,
+            }
+          : null,
+      },
+      requiredDocuments,
+      processing_documents,
+      candidateDocuments,
+      counts: {
+        totalConfigured: requiredDocuments.length,
+        totalMandatory: mandatoryDocTypes.length,
+        uploadedCount,
+        verifiedCount,
+        missingCount,
+      },
+    };
+  }
+
+  // --- Biometric requirements (HRD-shaped response) ---
+  async getBiometricRequirements(processingCandidateId: string, docType?: string) {
+    // Ensure steps exist
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true, role: { include: { roleCatalog: true } } },
+    });
+    if (!pc) throw new NotFoundException(`Processing candidate ${processingCandidateId} not found`);
+
+    const country = pc.project?.countryCode || pc.candidate?.countryCode || null;
+
+    const biometricTemplate = await this.prisma.processingStepTemplate.findUnique({ where: { key: 'biometrics' } });
+    if (!biometricTemplate) throw new NotFoundException(`Biometric step template not found`);
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: biometricTemplate.id,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    // Merge rules: country wins
+    const map: Record<string, any> = {};
+    for (const r of rules) {
+      if (!map[r.docType] || r.countryCode !== 'ALL') map[r.docType] = r;
+    }
+
+    let requiredDocuments = Object.values(map).map((r: any) => ({
+      docType: r.docType,
+      label: r.label,
+      mandatory: r.mandatory,
+      source: r.countryCode,
+    }));
+
+    const activeDocTypes = requiredDocuments.map((d) => d.docType);
+
+    if (docType) {
+      requiredDocuments = requiredDocuments.filter((d) => d.docType === docType);
+    }
+
+    const biometricStep = await this.prisma.processingStep.findFirst({
+      where: { processingCandidateId, templateId: biometricTemplate.id },
+      include: {
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: {
+              include: {
+                document: true,
+                roleCatalog: true,
+                candidateProjectMap: {
+                  include: {
+                    project: true,
+                    roleNeeded: {
+                      select: {
+                        id: true,
+                        projectId: true,
+                        roleCatalogId: true,
+                        designation: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const filterDocTypes = docType ? [docType] : activeDocTypes;
+
+    let processing_documents = (biometricStep?.documents || [])
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        return {
+          processingStepDocumentId: d.id,
+          processingDocument: {
+            id: d.id,
+            status: d.status,
+            notes: d.notes || null,
+            uploadedBy: d.uploadedBy || null,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+          },
+          verification: ver
+            ? {
+                id: ver.id,
+                status: ver.status,
+                notes: ver.notes || null,
+                rejectionReason: ver.rejectionReason || null,
+                resubmissionRequested: ver.resubmissionRequested || false,
+                roleCatalog: ver.roleCatalog || null,
+                candidateProjectMap: ver.candidateProjectMap || null,
+                createdAt: ver.createdAt,
+                updatedAt: ver.updatedAt,
+              }
+            : null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+
+    const candidateDocuments = await this.prisma.document.findMany({
+      where: {
+        candidateId: pc.candidate.id,
+        isDeleted: false,
+        docType: { in: filterDocTypes },
+        OR: [
+          { roleCatalogId: pc.role?.roleCatalogId || null },
+          { roleCatalogId: null },
+        ],
+      },
+      include: {
+        verifications: {
+          include: {
+            candidateProjectMap: {
+              include: {
+                project: true,
+                roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+              },
+            },
+            roleCatalog: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const mandatoryDocTypes = requiredDocuments
+      .filter((d) => d.mandatory)
+      .map((d) => d.docType);
+
+    const uploadedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => {
+      if (pd.document?.docType) uploadedDocTypes.add(pd.document.docType);
+    });
+    candidateDocuments.forEach((d: any) => {
+      if (d.docType) uploadedDocTypes.add(d.docType);
+    });
+
+    const uploadedCount = uploadedDocTypes.size;
+
+    const verifiedCount = processing_documents.filter(
+      (pd: any) => pd.verification && pd.verification.status === 'verified',
+    ).length;
+
+    const missingCount = mandatoryDocTypes.filter(
+      (docType) => !uploadedDocTypes.has(docType),
+    ).length;
+
+    const isBiometricCompleted = !!biometricStep && biometricStep.status === 'completed';
+
+    const step = biometricStep
+      ? (() => {
+          const { documents, ...rest } = biometricStep as any;
+          return rest;
+        })()
+      : null;
+
+    return {
+      isBiometricCompleted,
+      step,
+      processingCandidate: {
+        id: pc.id,
+        processingStatus: pc.processingStatus,
+        candidate: {
+          id: pc.candidate?.id || null,
+          firstName: pc.candidate?.firstName || null,
+          lastName: pc.candidate?.lastName || null,
+          email: pc.candidate?.email || null,
+          mobileNumber: pc.candidate?.mobileNumber || null,
+          countryCode: pc.candidate?.countryCode || null,
+        },
+        project: {
+          id: pc.project?.id || null,
+          title: pc.project?.title || null,
+          countryCode: pc.project?.countryCode || null,
+          description: pc.project?.description || null,
+          clientId: pc.project?.clientId || null,
+          teamId: pc.project?.teamId || null,
+        },
+        role: pc.role
+          ? {
+              id: pc.role.id,
+              designation: pc.role.designation,
+              roleCatalog: pc.role.roleCatalog || null,
+            }
+          : null,
+      },
+      requiredDocuments,
+      processing_documents,
+      candidateDocuments,
+      counts: {
+        totalConfigured: requiredDocuments.length,
+        totalMandatory: mandatoryDocTypes.length,
+        uploadedCount,
+        verifiedCount,
+        missingCount,
+      },
+    };
+  }
+
   async getEligibilityRequirements(processingCandidateId: string, docType?: string) {
     // Ensure steps exist
     await this.createStepsForProcessingCandidate(processingCandidateId);
@@ -1232,6 +2049,33 @@ export class ProcessingService {
       }
     }
 
+    // MEDICAL step: require isMedicalPassed in request body; persist mofaNumber/isMedicalPassed
+    // - If isMedicalPassed === false -> persist flags then cancel the processing (single cancellation path)
+    if (step.template?.key === 'medical') {
+      const isMedicalPassed = opts && typeof (opts as any).isMedicalPassed !== 'undefined' ? (opts as any).isMedicalPassed : undefined;
+      const mofaNumber = opts && (opts as any).mofaNumber;
+      const notes = opts && (opts as any).notes;
+
+      if (typeof isMedicalPassed === 'undefined') {
+        throw new BadRequestException('isMedicalPassed is required when completing a medical step');
+      }
+
+      if (isMedicalPassed === false) {
+        // persist medical result then reuse cancellation routine
+        // cast `data` to `any` because some environments may have an out-of-sync generated Prisma client
+        await this.prisma.processingStep.update({
+          where: { id: stepId },
+          data: { mofaNumber: mofaNumber || null, isMedicalPassed: false },
+        });
+
+        const cancelReason = notes ? `Medical failed: ${String(notes).trim()}` : 'Medical failed';
+        const cancelResult = await this.cancelProcessingStep(stepId, userId, cancelReason);
+        return Object.assign({}, cancelResult, { isMedicalPassed: false });
+      }
+
+      // if passed -> allow normal completion flow but ensure flags will be persisted in the transaction below
+    }
+
     const txResult = await this.prisma.$transaction(async (tx) => {
       // 1. Mark current step as completed
       // build typed update payload to satisfy Prisma's enum typing
@@ -1242,6 +2086,16 @@ export class ProcessingService {
       if (opts && opts.prometricResult) {
         // cast to Prisma enum type so TS accepts it
         updateData.prometricResult = opts.prometricResult as any;
+      }
+
+      // Persist medical-specific fields when completing a medical step
+      if (step.template?.key === 'medical' && opts) {
+        if (typeof (opts as any).isMedicalPassed !== 'undefined') {
+          updateData.isMedicalPassed = (opts as any).isMedicalPassed;
+        }
+        if ((opts as any).mofaNumber) {
+          updateData.mofaNumber = (opts as any).mofaNumber;
+        }
       }
 
       await tx.processingStep.update({
@@ -1260,9 +2114,14 @@ export class ProcessingService {
       });
       const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
 
-      const historyNotes = opts && opts.prometricResult
+      let historyNotes = opts && opts.prometricResult
         ? `Step "${step.template.label}" marked as completed (Prometric result: ${opts.prometricResult})`
         : `Step "${step.template.label}" marked as completed`;
+
+      // Append optional note provided by caller (keeps existing behaviour when none provided)
+      if (opts && (opts as any).notes) {
+        historyNotes = `${historyNotes} — ${String((opts as any).notes).trim()}`;
+      }
 
       await tx.processingHistory.create({
         data: {

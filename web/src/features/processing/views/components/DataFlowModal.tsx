@@ -421,7 +421,7 @@ export function DataFlowModal({ isOpen, onClose, processingId, onComplete }: Dat
 
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
-  const allVerified = statTotal > 0 ? statVerified === statTotal : statMissing === 0;
+  const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
 
   return (
