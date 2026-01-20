@@ -220,6 +220,195 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     }
   }
 
+  // --- Global Council Registration Documents ---
+  // Seed global Council Registration requirements mapped to processing step template 'council_registration'
+  const councilTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'council_registration' } });
+  if (!councilTemplate) {
+    console.warn("ProcessingStepTemplate with key='council_registration' not found — skipping Council Registration global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const councilDocs = [
+      { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
+      { docType: DOCUMENT_TYPE.TRANSCRIPT, label: 'Academic Transcript / Mark Sheet', mandatory: true },
+      { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE, label: 'Experience Certificate(s)', mandatory: true },
+      { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
+      { docType: DOCUMENT_TYPE.PASSPORT_PHOTO, label: 'Passport Size Photo (White Background)', mandatory: true },
+      // optional
+      { docType: DOCUMENT_TYPE.DATAFLOW_REPORT, label: 'Dataflow Report', mandatory: false },
+      { docType: DOCUMENT_TYPE.PROMETRIC_RESULT, label: 'Prometric Result', mandatory: false },
+      { docType: DOCUMENT_TYPE.GOOD_STANDING_CERTIFICATE, label: 'Good Standing Certificate', mandatory: false },
+      { docType: DOCUMENT_TYPE.NAME_CHANGE_AFFIDAVIT, label: 'Name Change Affidavit', mandatory: false },
+    ];
+
+    for (const doc of councilDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: councilTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: councilTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: councilTemplate.id,
+        },
+      });
+    }
+  }
+
+  // --- Global Document Attestation Documents ---
+  // Seed global Document Attestation requirements mapped to processing step template 'document_attestation'
+  const attestationTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'document_attestation' } });
+  if (!attestationTemplate) {
+    console.warn("ProcessingStepTemplate with key='document_attestation' not found — skipping Document Attestation global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const attestationDocs = [
+      // core (mandatory)
+      { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
+      { docType: DOCUMENT_TYPE.TRANSCRIPT, label: 'Academic Transcript / Mark Sheet', mandatory: true },
+      { docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE, label: 'Registration Certificate', mandatory: true },
+      { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
+      // optional
+      { docType: DOCUMENT_TYPE.DATAFLOW_REPORT, label: 'Dataflow Report', mandatory: false },
+      { docType: DOCUMENT_TYPE.PROMETRIC_RESULT, label: 'Prometric Result', mandatory: false },
+      { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE, label: 'Experience Certificate', mandatory: false },
+      { docType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE, label: 'Marriage Certificate', mandatory: false },
+      { docType: DOCUMENT_TYPE.NAME_CHANGE_AFFIDAVIT, label: 'Name Change Affidavit', mandatory: false },
+    ];
+
+    for (const doc of attestationDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: attestationTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: attestationTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: attestationTemplate.id,
+        },
+      });
+    }
+  }
+
+  // --- Global Medical Documents ---
+  // Seed medical output/requirements mapped to processing step template 'medical'
+  const medicalTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'medical' } });
+  if (!medicalTemplate) {
+    console.warn("ProcessingStepTemplate with key='medical' not found — skipping Medical global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const medicalDocs = [
+      { docType: DOCUMENT_TYPE.MEDICAL_FITNESS, label: 'Medical Fitness Certificate', mandatory: true },
+    ];
+
+    for (const doc of medicalDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: medicalTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: medicalTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: medicalTemplate.id,
+        },
+      });
+    }
+  }
+
+  // --- Global Biometric Documents ---
+  // Seed biometric input/requirements mapped to processing step template 'biometrics'
+  const biometricTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'biometrics' } });
+  if (!biometricTemplate) {
+    console.warn("ProcessingStepTemplate with key='biometrics' not found — skipping Biometric global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const biometricDocs = [
+      { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
+      { docType: DOCUMENT_TYPE.MEDICAL_FITNESS, label: 'Medical Fitness Certificate', mandatory: true },
+      { docType: DOCUMENT_TYPE.BIOMETRIC_ACKNOWLEDGEMENT, label: 'Biometric Acknowledgement', mandatory: false },
+    ];
+
+    for (const doc of biometricDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: biometricTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: biometricTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: biometricTemplate.id,
+        },
+      });
+    }
+  }
+
   console.log('Country document requirements seeded successfully.');
 }
 
