@@ -708,7 +708,7 @@ export class UsersService {
         const statusNames = await this.prisma.candidateStatus.findMany({
           select: { id: true, statusName: true },
         });
-        const statusMap = new Map(
+        const statusIdMap = new Map(
           statusNames.map((s) => [s.statusName, s.id]),
         );
 
@@ -737,7 +737,7 @@ export class UsersService {
         const calculateAvgDays = (
           targetStatusName: string,
         ): number => {
-          const targetStatusId = statusMap.get(targetStatusName);
+          const targetStatusId = statusIdMap.get(targetStatusName);
           if (!targetStatusId) return 0;
 
           const times: number[] = [];
@@ -938,7 +938,7 @@ export class UsersService {
     });
 
     // If no assignments, return empty array
-    if (!earliestAssignment) {
+    if (!earliestAssignment || !earliestAssignment.assignedAt) {
       return [];
     }
 
