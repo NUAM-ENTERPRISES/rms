@@ -213,6 +213,32 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Get Visa requirements and uploads for a processing candidate (mirrors HRD shape)
+    getVisaRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/visa-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    // Get Emigration requirements (no documents expected; returns step + counts)
+    getEmigrationRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/emigration-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Get Data Flow requirements and uploads for a processing candidate (mirrors HRD endpoint but for data flow)
     getDataFlowRequirements: builder.query<
       any,
@@ -349,6 +375,8 @@ export const {
   useGetMedicalRequirementsQuery,
   useGetPrometricRequirementsQuery,
   useGetBiometricRequirementsQuery,
+  useGetVisaRequirementsQuery,
+  useGetEmigrationRequirementsQuery,
   useGetDataFlowRequirementsQuery,
   useGetEligibilityRequirementsQuery,
   useAttachDocumentToStepMutation,

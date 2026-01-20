@@ -279,6 +279,24 @@ export class ProcessingController {
     return { success: true, data, message: 'HRD requirements retrieved' };
   }
 
+  @Get('steps/:processingId/visa-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Visa requirements for a processing candidate', description: "Merged global + country Visa document rules and existing processing_documents. Same response shape as HRD." })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getVisaRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getVisaRequirements(processingId, docType);
+    return { success: true, data, message: 'Visa requirements retrieved' };
+  }
+
+  @Get('steps/:processingId/emigration-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Emigration requirements for a processing candidate', description: "Merged global + country Emigration document rules and existing processing_documents. Same response shape as HRD." })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getEmigrationRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getEmigrationRequirements(processingId, docType);
+    return { success: true, data, message: 'Emigration requirements retrieved' };
+  }
+
   @Get('steps/:processingId/council-registration-requirements')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({ summary: 'Get Council Registration requirements for a processing candidate', description: "Merged global + country Council Registration document rules and existing processing_documents. Same response shape as HRD." })
@@ -344,7 +362,7 @@ export class ProcessingController {
   @Post('steps/:stepId/complete')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @ApiOperation({ summary: 'Mark a processing step as complete and move to next step' })
-  @ApiBody({ type: CompleteProcessingStepDto, description: 'When completing a medical step provide `isMedicalPassed` (required). Optional: `mofaNumber` and `notes` (stored in processing history or used as cancellation reason).' })
+  @ApiBody({ type: CompleteProcessingStepDto, description: 'When completing a medical step provide `isMedicalPassed` (required). When completing an emigration step provide `emigrationStatus` (required). Optional: `mofaNumber` and `notes` (stored in processing history or used as cancellation reason).' })
   async completeStep(@Param('stepId') stepId: string, @Body() body: CompleteProcessingStepDto, @Req() req: any) {
     const data = await this.processingService.completeProcessingStep(stepId, req.user.id, body);
     return { success: true, data, message: 'Processing step completed and advanced to next step' };
@@ -357,6 +375,15 @@ export class ProcessingController {
   async getPrometricRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
     const data = await this.processingService.getPrometricRequirements(processingId, docType);
     return { success: true, data, message: 'Prometric requirements retrieved' };
+  }
+
+  @Get('steps/:processingId/ticket-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Ticket requirements for a processing candidate', description: "Merged global + country Ticket document rules and existing processing_documents. Same response shape as HRD." })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getTicketRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getTicketRequirements(processingId, docType);
+    return { success: true, data, message: 'Ticket requirements retrieved' };
   }
 
   @Post('steps/:stepId/cancel')

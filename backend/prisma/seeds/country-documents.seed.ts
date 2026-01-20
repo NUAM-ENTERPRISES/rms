@@ -409,6 +409,92 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     }
   }
 
+  // --- Global Visa Documents ---
+  // Seed visa-related requirements mapped to processing step template 'visa'
+  const visaTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'visa' } });
+  if (!visaTemplate) {
+    console.warn("ProcessingStepTemplate with key='visa' not found — skipping Visa global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const visaDocs = [
+      { docType: DOCUMENT_TYPE.PASSPORT_ORIGINAL, label: 'Original Passport (presented)', mandatory: true },
+      { docType: DOCUMENT_TYPE.E_VISA, label: 'e-Visa', mandatory: true },
+      { docType: DOCUMENT_TYPE.VISA_STAMP, label: 'Visa Stamp (if applicable)', mandatory: false },
+    ];
+
+    for (const doc of visaDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: visaTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: visaTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: visaTemplate.id,
+        },
+      });
+    }
+  }
+
+  // --- Global Ticket Documents ---
+  // Seed ticket-related requirements mapped to processing step template 'ticket'
+  const ticketTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'ticket' } });
+  if (!ticketTemplate) {
+    console.warn("ProcessingStepTemplate with key='ticket' not found — skipping Ticket global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const ticketDocs = [
+      { docType: DOCUMENT_TYPE.FLIGHT_TICKET, label: 'Flight Ticket / e-ticket', mandatory: false },
+    ];
+
+    for (const doc of ticketDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: ticketTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: ticketTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: ticketTemplate.id,
+        },
+      });
+    }
+  }
+
   console.log('Country document requirements seeded successfully.');
 }
 

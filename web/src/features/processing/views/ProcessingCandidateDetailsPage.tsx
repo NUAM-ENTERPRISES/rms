@@ -20,11 +20,13 @@ import {
   DataFlowModal,
   HrdModal,
   BiometricModal,
+  VisaModal,
   CouncilRegistrationModal,
   PrometricModal,
   EligibilityModal,
   DocumentAttestationModal,
   MedicalModal,
+  EmigrationModal,
 } from "./components";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
 
@@ -34,6 +36,8 @@ export default function ProcessingCandidateDetailsPage() {
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);
   const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [showVisaModal, setShowVisaModal] = useState(false);
+  const [showEmigrationModal, setShowEmigrationModal] = useState(false);
   const [showCouncilRegistrationModal, setShowCouncilRegistrationModal] = useState(false);
   const [showDocumentAttestationModal, setShowDocumentAttestationModal] = useState(false);
   const [showMedicalModal, setShowMedicalModal] = useState(false);
@@ -197,6 +201,18 @@ export default function ProcessingCandidateDetailsPage() {
                   return;
                 }
 
+                // Visa step (accept common variants)
+                if (k === "visa" || k === "visas" || k.startsWith("visa")) {
+                  setShowVisaModal(true);
+                  return;
+                }
+
+                // Emigration step (accept common variants)
+                if (k === "emigration" || k === "emigrations" || k.startsWith("emigration")) {
+                  setShowEmigrationModal(true);
+                  return;
+                }
+
                 if (k === "councilregistration") {
                   setShowCouncilRegistrationModal(true);
                   return;
@@ -322,6 +338,28 @@ export default function ProcessingCandidateDetailsPage() {
         isOpen={showBiometricModal}
         onClose={() => {
           setShowBiometricModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
+      />
+
+      {/* Visa Modal */}
+      <VisaModal
+        isOpen={showVisaModal}
+        onClose={() => {
+          setShowVisaModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
+      />
+
+      {/* Emigration Modal */}
+      <EmigrationModal
+        isOpen={showEmigrationModal}
+        onClose={() => {
+          setShowEmigrationModal(false);
           refetchCandidateDetails();
         }}
         processingId={data.id}
