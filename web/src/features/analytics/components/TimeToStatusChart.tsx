@@ -9,10 +9,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Area,
+  AreaChart,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Clock, Timer, Zap, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
 /* Types */
@@ -39,25 +42,19 @@ type TimeToStatusChartProps = {
   formatDuration: (days: number) => string;
 };
 
-/* ------------------------------------------------------------------ */
-/* Tailwind-safe color map */
-/* ------------------------------------------------------------------ */
 const COLOR_MAP = {
-  blue: { bg: "bg-blue-600", text: "text-blue-600" },
-  green: { bg: "bg-green-600", text: "text-green-600" },
-  red: { bg: "bg-red-600", text: "text-red-600" },
-  orange: { bg: "bg-orange-600", text: "text-orange-600" },
-  purple: { bg: "bg-purple-600", text: "text-purple-600" },
-  indigo: { bg: "bg-indigo-600", text: "text-indigo-600" },
-  amber: { bg: "bg-amber-600", text: "text-amber-600" },
-  pink: { bg: "bg-pink-600", text: "text-pink-600" },
-  violet: { bg: "bg-violet-600", text: "text-violet-600" },
-  cyan: { bg: "bg-cyan-600", text: "text-cyan-600" },
+  blue: "stroke-blue-500 fill-blue-50 text-blue-600 bg-blue-50 border-blue-100",
+  green: "stroke-emerald-500 fill-emerald-50 text-emerald-600 bg-emerald-50 border-emerald-100",
+  red: "stroke-rose-500 fill-rose-50 text-rose-600 bg-rose-50 border-rose-100",
+  orange: "stroke-orange-500 fill-orange-50 text-orange-600 bg-orange-50 border-orange-100",
+  purple: "stroke-purple-500 fill-purple-50 text-purple-600 bg-purple-50 border-purple-100",
+  indigo: "stroke-indigo-500 fill-indigo-50 text-indigo-600 bg-indigo-50 border-indigo-100",
+  amber: "stroke-amber-500 fill-amber-50 text-amber-600 bg-amber-50 border-amber-100",
+  pink: "stroke-pink-500 fill-pink-50 text-pink-600 bg-pink-50 border-pink-100",
+  violet: "stroke-violet-500 fill-violet-50 text-violet-600 bg-violet-50 border-violet-100",
+  cyan: "stroke-cyan-500 fill-cyan-50 text-cyan-600 bg-cyan-50 border-cyan-100",
 } as const;
 
-/* ------------------------------------------------------------------ */
-/* Breakdown config */
-/* ------------------------------------------------------------------ */
 const breakdownItems = [
   { label: "First Touch", valueKey: "avgTimeToFirstTouch", color: "blue" },
   { label: "Interested", valueKey: "avgDaysToInterested", color: "green" },
@@ -71,107 +68,142 @@ const breakdownItems = [
   { label: "Working", valueKey: "avgDaysToWorking", color: "cyan" },
 ] as const;
 
-/* ------------------------------------------------------------------ */
-/* Component */
-/* ------------------------------------------------------------------ */
 export const TimeToStatusChart: React.FC<TimeToStatusChartProps> = ({
   recruiter,
   formatDuration,
 }) => {
-  const chartData: TimeToStatusData[] = [
-    { status: "First Touch", ProcessingTime: recruiter.avgTimeToFirstTouch },
-    { status: "Interested", ProcessingTime: recruiter.avgDaysToInterested },
-    { status: "Not Interested", ProcessingTime: recruiter.avgDaysToNotInterested },
-    { status: "Not Eligible", ProcessingTime: recruiter.avgDaysToNotEligible },
-    { status: "Other Enquiry", ProcessingTime: recruiter.avgDaysToOtherEnquiry },
-    { status: "Future", ProcessingTime: recruiter.avgDaysToFuture },
-    { status: "On Hold", ProcessingTime: recruiter.avgDaysToOnHold },
-    { status: "RNR", ProcessingTime: recruiter.avgDaysToRNR },
-    { status: "Qualified", ProcessingTime: recruiter.avgDaysToQualified },
-    { status: "Working", ProcessingTime: recruiter.avgDaysToWorking },
-  ];
+  const chartData: TimeToStatusData[] = breakdownItems.map(item => ({
+    status: item.label,
+    ProcessingTime: recruiter[item.valueKey as keyof typeof recruiter] as number,
+  }));
 
   return (
-    <Card className="max-w-6xl mx-auto shadow-xl border-0 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Time from Untouched → Status
-        </CardTitle>
-        <p className="text-xs sm:text-sm mt-1 text-gray-500">
-          Avg. time for <span className="font-bold text-1xl text-black">{recruiter.name}</span>
-        </p>
+    <Card className="overflow-hidden border border-slate-200/70 bg-white/90 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-2xl">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/60 p-5 sm:p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-200/60">
+              <Timer className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-extrabold text-slate-900 tracking-tight">
+                Processing Velocity
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Response speed for <span className="text-indigo-600 font-medium">{recruiter.name}</span>
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="w-fit px-3 py-1 rounded-full bg-white border-slate-200 text-slate-600 text-xs font-semibold">
+            Avg First Touch: {formatDuration(recruiter.avgTimeToFirstTouch)}
+          </Badge>
+        </div>
       </CardHeader>
 
-      <CardContent className="pt-4 pb-6">
-        {/* Chart */}
-        <div className="w-full h-[340px]">
+      <CardContent className="p-5 sm:p-6">
+        {/* Chart Area – reduced height & padding */}
+        <div className="w-full h-[280px] mb-8 p-3 rounded-2xl bg-slate-50/60 border border-slate-100/70 shadow-sm">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 20, right: 30, left: 10, bottom: 70 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="status"
-                angle={-30}
-                textAnchor="end"
-                interval={0}
-                height={80}
-                tick={{ fontSize: 11 }}
+            <AreaChart data={chartData} margin={{ top: 16, right: 20, left: 0, bottom: 16 }}>
+              <defs>
+                <linearGradient id="colorTime" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.12}/>
+                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="status" 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fontWeight: 600, fill: '#6b7280' }}
+                dy={8}
               />
-              <YAxis
-                tick={{ fontSize: 12 }}
+              <YAxis 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fontWeight: 600, fill: '#6b7280' }}
                 tickFormatter={(v) => `${Math.round(v)}d`}
               />
               <Tooltip
-                formatter={(value: number) => formatDuration(value)}
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100 text-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
+                          {payload[0].payload.status}
+                        </p>
+                        <p className="text-lg font-bold text-indigo-600">
+                          {formatDuration(payload[0].value as number)}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="ProcessingTime"
-                stroke="#2563eb"
+                stroke="#4f46e5"
                 strokeWidth={3}
-                dot={{ r: 5 }}
-                activeDot={{ r: 7 }}
+                fillOpacity={1}
+                fill="url(#colorTime)"
+                dot={{ r: 5, fill: '#4f46e5', strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 7, strokeWidth: 0 }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Detailed Breakdown */}
-      {/* Detailed Breakdown */}
-<div className="mt-5 border-t pt-3">
-  <h3 className="text-sm sm:text-base font-semibold text-center mb-3 text-gray-700 dark:text-gray-300">
-    Detailed Breakdown
-  </h3>
+        {/* Breakdown Grid – smaller cards */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+              Velocity Breakdown
+            </h3>
+            <div className="h-px flex-1 bg-slate-100" />
+          </div>
 
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-    {breakdownItems.map((item) => {
-      const color = COLOR_MAP[item.color];
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            {breakdownItems.map((item) => {
+              const colorClasses = COLOR_MAP[item.color];
+              const value = recruiter[item.valueKey as keyof typeof recruiter] as number;
 
-      return (
-        <div
-          key={item.label}
-          className="flex flex-col items-center p-2 rounded-md bg-white dark:bg-gray-800 shadow-sm hover:shadow transition-shadow"
-        >
-          <Badge
-            className={`mb-1 px-2 py-0.5 text-[10px] font-medium ${color.bg}`}
-          >
-            {item.label}
-          </Badge>
+              return (
+                <div
+                  key={item.label}
+                  className={cn(
+                    "group flex flex-col p-4 rounded-2xl border transition-all hover:shadow-md hover:-translate-y-1",
+                    colorClasses
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white shadow-sm">
+                      <Zap className="h-3.5 w-3.5" />
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1.5 transition-all group-hover:opacity-40 group-hover:translate-x-0" />
+                  </div>
 
-          <p className={`text-base font-semibold leading-tight ${color.text}`}>
-            {formatDuration(recruiter[item.valueKey])}
-          </p>
-
-          <p className="text-[10px] text-gray-500 mt-0.5">avg time</p>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest opacity-70 mb-1">
+                      {item.label}
+                    </span>
+                    <span className="text-lg font-extrabold tracking-tight leading-none">
+                      {formatDuration(value)}
+                    </span>
+                    <div className="mt-2.5 h-1 w-full bg-white/60 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-current opacity-45" 
+                        style={{ width: `${Math.min(100, (value / 30) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      );
-    })}
-  </div>
-</div>
-
       </CardContent>
     </Card>
   );

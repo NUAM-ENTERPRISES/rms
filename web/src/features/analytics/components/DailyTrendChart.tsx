@@ -69,7 +69,7 @@ export function DailyTrendChart({
             <Tooltip />
             <Legend />
             <Area dataKey="verified" stackId="1" fill="#22c55e" stroke="#22c55e" />
-            <Area dataKey="pending" stackId="1" fill="#f59e0b" stroke="#f59e0b" />
+            {/* <Area dataKey="pending" stackId="1" fill="#f59e0b" stroke="#f59e0b" /> */}
             <Area dataKey="rejected" stackId="1" fill="#ef4444" stroke="#ef4444" />
           </AreaChart>
         </ResponsiveContainer>

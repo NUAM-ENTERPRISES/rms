@@ -50,7 +50,7 @@ export const CandidateStatusChart: React.FC<CandidateStatusChartProps> = ({ data
             <Tooltip />
             <Legend />
             <Bar dataKey="verified" stackId="a" fill="#22c55e" name="Verified" />
-            <Bar dataKey="pending" stackId="a" fill="#f59e0b" name="Pending" />
+            {/* <Bar dataKey="pending" stackId="a" fill="#f59e0b" name="Pending" /> */}
             <Bar dataKey="rejected" stackId="a" fill="#ef4444" name="Rejected" />
           </BarChart>
         </ResponsiveContainer>

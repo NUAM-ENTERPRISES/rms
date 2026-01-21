@@ -39,7 +39,6 @@ export default function ProfessionalDocumentationDashboard() {
 
   const [selectedVerifier, setSelectedVerifier] = useState<string>("");
 
-  // Fetch documents from API using RTK Query
   const {
     data: analyticsData,
     isLoading: loading,
@@ -53,7 +52,7 @@ export default function ProfessionalDocumentationDashboard() {
       : "Failed to load documents"
     : null;
 
-  // Extract unique verifiers (only those who actually verified something)
+  // Extract unique verifiers — no "All Verifiers"
   const verifiers = useMemo(() => {
     const unique = Array.from(
       new Set(documents.map((d) => d.verifiedBy).filter(Boolean))
@@ -61,39 +60,29 @@ export default function ProfessionalDocumentationDashboard() {
     return unique.sort();
   }, [documents]);
 
-  // Auto-select first verifier when verifiers load
+  // Auto-select FIRST verifier when list is available
   useEffect(() => {
     if (verifiers.length > 0 && !selectedVerifier) {
-      setSelectedVerifier(verifiers[0]);
+      setSelectedVerifier(verifiers[0]); // ← first real verifier becomes default
     } else if (verifiers.length === 0 && selectedVerifier) {
-      // Clear selection if no verifiers available
       setSelectedVerifier("");
     }
   }, [verifiers, selectedVerifier]);
 
-  // Filter documents by date range and selected verifier
+  // Filter documents — always by selected verifier (no "all" fallback)
   const docs = useMemo(() => {
-    if (documents.length === 0) return [];
-    
-    // If no verifier selected, show all documents in date range
-    if (!selectedVerifier) {
-      return documents.filter((d) => {
-        const docDate = startOfDay(parseISO(d.createdAt));
-        const fromDate = startOfDay(dateRange.from);
-        const toDate = startOfDay(dateRange.to);
-
-        return docDate >= fromDate && docDate <= toDate;
-      });
-    }
+    if (documents.length === 0 || !selectedVerifier) return [];
 
     return documents.filter((d) => {
-      if (!d.verifiedBy || d.verifiedBy !== selectedVerifier) return false;
-
       const docDate = startOfDay(parseISO(d.createdAt));
       const fromDate = startOfDay(dateRange.from);
       const toDate = startOfDay(dateRange.to);
 
-      return docDate >= fromDate && docDate <= toDate;
+      return (
+        docDate >= fromDate &&
+        docDate <= toDate &&
+        d.verifiedBy === selectedVerifier
+      );
     });
   }, [documents, dateRange, selectedVerifier]);
 
@@ -175,7 +164,6 @@ export default function ProfessionalDocumentationDashboard() {
     { label: "Total Processed", value: total, icon: FileText, color: "purple" },
   ];
 
-  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen">
@@ -194,52 +182,75 @@ export default function ProfessionalDocumentationDashboard() {
     );
   }
 
-  // Error State - Show error banner but still render components
   const hasError = !!error;
 
   return (
     <div className="min-h-screen">
       <div className="mx-auto w-full space-y-6 py-2">
         {/* Header */}
-        <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
-          <div className="p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
-                  <FileSearch className="h-5 w-5 text-white" />
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:shadow-[0_20px_50px_rgba(79,70,229,0.07)]">
+          <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl" />
+          
+          <div className="p-6 sm:p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="relative group">
+                  <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 opacity-25 blur transition duration-1000 group-hover:opacity-50" />
+                  <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 shadow-xl">
+                    <FileSearch className="h-6 w-6 text-indigo-400" />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                    Analytics Dashboard
-                  </p>
-                  <h2 className="text-xl font-semibold text-slate-900">
+                
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-600 ring-1 ring-inset ring-blue-700/10">
+                      Active
+                    </span>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                      Analytics Dashboard
+                    </p>
+                  </div>
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">
                     Documentation Analysis
                   </h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Advanced analytics for the Documentation Team
+                  <p className="text-sm font-medium text-slate-500/80">
+                    Advanced analytics for the <span className="text-indigo-600 font-semibold">Documentation Team</span>
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <DateRangePicker date={dateRange} setDate={setDateRange} />
-                <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" /> Export Report
-                </Button>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 mr-1">Analysis Period</span>
+                  <div className="bg-white/50 p-1 rounded-xl border border-slate-200 shadow-sm flex items-center">
+                    <DateRangePicker date={dateRange} setDate={setDateRange} />
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-bold uppercase text-transparent select-none">Spacer</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-[42px] rounded-xl border-slate-200 bg-white/80 px-4 font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-900 hover:text-white hover:border-slate-900 active:scale-95"
+                  >
+                    <Download className="mr-2 h-4 w-4" /> 
+                    Export Report
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Error Banner */}
         {hasError && (
           <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4">
-            <div className="text-sm font-medium text-red-800 dark:text-red-200">
+            <div className="text-sm font-medium text-red-800">
               Error loading data: {error}
             </div>
           </div>
         )}
 
-        {/* KPI Cards */}
         <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
           <div className="p-5">
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -250,7 +261,6 @@ export default function ProfessionalDocumentationDashboard() {
           </div>
         </div>
 
-        {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <DailyTrendChart
             data={dailyTrend}

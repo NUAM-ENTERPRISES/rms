@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, AlertTriangle, CheckCircle, PhoneOff, Clock, MessageCircle, XCircle, Pause } from "lucide-react";
+import { Users, UserCheck, AlertTriangle, CheckCircle, PhoneOff, Clock, MessageCircle, XCircle, Pause,
+  ArrowUp, ArrowDown
+ } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type RecruiterStats = {
@@ -203,137 +205,138 @@ export const CandidateMetrics: React.FC<CandidateMetricsProps> = ({
     },
   ];
 
-  return (
-    <Card className="shadow-xl border-0">
-      <CardHeader>
-        <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-          <Users className="h-5 w-5 text-indigo-600" />
-          Candidate-Level Analytics
-        </CardTitle>
-        <p className="text-sm text-gray-500 mt-1">
-          Overall candidate engagement and relationship metrics for {recruiter.name}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg border bg-white">
-            <div className="text-xs font-medium text-gray-500 mb-1">
-              Total Candidates
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {recruiter.totalCandidates}
-            </div>
-            {metrics.vsAverage.totalCandidates !== 0 && (
-              <div
-                className={cn(
-                  "text-xs mt-1",
-                  metrics.vsAverage.totalCandidates > 0
-                    ? "text-green-600"
-                    : "text-gray-600"
-                )}
-              >
-                {metrics.vsAverage.totalCandidates > 0 ? "+" : ""}
-                {Math.round(metrics.vsAverage.totalCandidates)} vs average
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 rounded-lg border bg-white">
-            <div className="text-xs font-medium text-gray-500 mb-1">
-              Candidate Conversion
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {metrics.candidateConversionRate}%
-            </div>
-            {metrics.vsAverage.conversion !== 0 && (
-              <div
-                className={cn(
-                  "text-xs mt-1 flex items-center gap-1",
-                  metrics.vsAverage.conversion > 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                )}
-              >
-                {metrics.vsAverage.conversion > 0 ? "+" : ""}
-                {Math.abs(Math.round(metrics.vsAverage.conversion))}% vs average
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 rounded-lg border bg-white">
-            <div className="text-xs font-medium text-gray-500 mb-1">
-              Engagement Rate
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {metrics.engagementRate}%
-            </div>
-            {metrics.vsAverage.engagement !== 0 && (
-              <div
-                className={cn(
-                  "text-xs mt-1 flex items-center gap-1",
-                  metrics.vsAverage.engagement > 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                )}
-              >
-                {metrics.vsAverage.engagement > 0 ? "+" : ""}
-                {Math.abs(Math.round(metrics.vsAverage.engagement))}% vs average
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 rounded-lg border bg-white">
-            <div className="text-xs font-medium text-gray-500 mb-1">
-              RNR Rate
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {metrics.rnrRate}%
-            </div>
-            {metrics.vsAverage.rnr !== 0 && (
-              <div
-                className={cn(
-                  "text-xs mt-1 flex items-center gap-1",
-                  metrics.vsAverage.rnr < 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                )}
-              >
-                {metrics.vsAverage.rnr < 0 ? "" : "+"}
-                {Math.abs(Math.round(metrics.vsAverage.rnr))}% vs average
-              </div>
-            )}
-          </div>
+ return (
+  <Card className="overflow-hidden border border-slate-200/70 bg-white/90 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-2xl">
+  {/* Premium Header Section – smaller */}
+  <CardHeader className="border-b border-slate-100 bg-slate-50/60 p-6 sm:p-7">
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center gap-4">
+        <div className="relative group flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200/60 transition-transform hover:scale-105">
+          <Users className="h-6 w-6 text-white" />
+          <div className="absolute -inset-0.5 rounded-xl bg-indigo-600 opacity-20 blur-sm group-hover:opacity-35 transition-opacity" />
         </div>
-
-        {/* Status Breakdown */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            Candidate Status Breakdown
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {statusItems.map((item, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "p-3 rounded-lg border flex flex-col items-center",
-                  item.bgColor,
-                  item.borderColor
-                )}
-              >
-                <item.icon className={cn("h-5 w-5 mb-2", item.color)} />
-                <div className={cn("text-lg font-bold mb-1", item.color)}>
-                  {item.value}
-                </div>
-                <div className="text-xs font-medium text-gray-600 text-center">
-                  {item.label}
-                </div>
-              </div>
-            ))}
-          </div>
+          <CardTitle className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+            Candidate-Level Analytics
+          </CardTitle>
+          <p className="text-sm text-slate-600 mt-0.5 leading-snug">
+            Overall engagement and relationship health for{' '}
+            <span className="text-indigo-600 underline decoration-indigo-200/70 underline-offset-3">
+              {recruiter.name}
+            </span>
+          </p>
         </div>
-      </CardContent>
-    </Card>
-  );
+      </div>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-6 sm:p-7 space-y-8">
+    {/* Key Metrics Dashboard – reduced padding & text */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      {[
+        { 
+          label: "Total Candidates", 
+          value: recruiter.totalCandidates, 
+          diff: metrics.vsAverage.totalCandidates, 
+          isPercent: false,
+          isInverse: false 
+        },
+        { 
+          label: "Conversion Rate", 
+          value: `${metrics.candidateConversionRate}%`, 
+          diff: metrics.vsAverage.conversion, 
+          isPercent: true,
+          isInverse: false 
+        },
+        { 
+          label: "Engagement", 
+          value: `${metrics.engagementRate}%`, 
+          diff: metrics.vsAverage.engagement, 
+          isPercent: true,
+          isInverse: false 
+        },
+        { 
+          label: "RNR Rate", 
+          value: `${metrics.rnrRate}%`, 
+          diff: metrics.vsAverage.rnr, 
+          isPercent: true,
+          isInverse: true 
+        },
+      ].map((item, idx) => {
+        const isPositive = item.isInverse ? item.diff < 0 : item.diff > 0;
+        
+        return (
+          <div 
+            key={idx} 
+            className="group relative flex flex-col p-5 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow hover:border-indigo-100/70"
+          >
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500 mb-1.5">
+              {item.label}
+            </div>
+            <div className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              {item.value}
+            </div>
+            
+            {item.diff !== 0 && (
+              <div className={cn(
+                "mt-2.5 inline-flex items-center gap-1.5 w-fit px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors",
+                isPositive
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-100 group-hover:bg-emerald-100/80" 
+                  : "bg-rose-50 text-rose-700 border-rose-100 group-hover:bg-rose-100/80"
+              )}>
+                {item.diff > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                <span>
+                  {Math.abs(Math.round(item.diff))}{item.isPercent ? "%" : ""} vs avg
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+
+    {/* Pipeline Status Breakdown – smaller */}
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <h3 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
+          Pipeline Distribution
+        </h3>
+        <div className="h-px flex-1 bg-gradient-to-r from-slate-100 via-slate-200 to-transparent" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {statusItems.map((item, index) => (
+          <div
+            key={index}
+            className={cn(
+              "group relative flex flex-col items-center p-5 rounded-2xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
+              item.bgColor,
+              item.borderColor,
+              "shadow-sm hover:shadow-md"
+            )}
+          >
+            {/* Animated Icon Container – smaller */}
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow transition-transform group-hover:rotate-3 group-hover:scale-105">
+              <item.icon className={cn("h-5.5 w-5.5", item.color)} />
+            </div>
+            
+            <div className={cn("text-2xl font-extrabold tracking-tight mb-1", item.color)}>
+              {item.value}
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600 opacity-90 text-center leading-tight">
+              {item.label}
+            </div>
+            
+            {/* Subtle decorative ring – kept but smaller effect */}
+            <div className={cn(
+              "absolute inset-0 rounded-2xl border-2 border-white/30 pointer-events-none opacity-0 group-hover:opacity-70 transition-opacity"
+            )} />
+          </div>
+        ))}
+      </div>
+    </div>
+  </CardContent>
+</Card>
+);
 };
 

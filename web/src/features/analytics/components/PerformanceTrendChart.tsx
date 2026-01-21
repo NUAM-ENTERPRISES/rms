@@ -1,21 +1,16 @@
-// src/components/recruiter-dashboard/PerformanceTrendChart.tsx
+"use client";
+
 import React, { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from "recharts";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -23,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TrendingUp, Activity } from "lucide-react";
 
 type MonthlyPerformance = {
   month: string;
@@ -48,13 +44,13 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({
   const [timeFilter, setTimeFilter] = useState<"1y" | "2y" | "3y" | "all">("1y");
 
   const trendData = useMemo(() => {
-    // Format month labels with year for display
+    // 1. Format labels exactly like your existing logic
     const formattedData = performanceData.map((item) => ({
       ...item,
       monthLabel: `${item.month} ${item.year}`,
     }));
 
-    // Filter data based on time range
+    // 2. Apply your existing time filtering logic
     let filtered: typeof formattedData;
     if (timeFilter === "1y") {
       filtered = formattedData.slice(-12);
@@ -63,11 +59,10 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({
     } else if (timeFilter === "3y") {
       filtered = formattedData.slice(-36);
     } else {
-      // "all" - return all data
       filtered = formattedData;
     }
 
-    // For long time ranges (>3 years), use shorter labels
+    // 3. Apply your short-label logic for long ranges
     const useShortLabels = filtered.length > 36;
     return filtered.map((item) => ({
       ...item,
@@ -78,20 +73,28 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({
   }, [performanceData, timeFilter]);
 
   return (
-    <Card className="max-w-7xl mx-auto shadow-xl border-0">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="text-xl sm:text-2xl">
-            Performance Trend Over Time
-            <span className="text-lg font-normal text-gray-600 dark:text-gray-400 ml-2">
-              — {recruiterName}
-            </span>
-          </CardTitle>
+    <Card className="overflow-hidden border-slate-200/60 bg-white/95 backdrop-blur-xl shadow-2xl rounded-[2.5rem]">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/30 p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-black text-slate-900 tracking-tight">
+                Performance Evolution
+              </CardTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                Historical Trends for <span className="text-indigo-600">{recruiterName}</span>
+              </p>
+            </div>
+          </div>
+
           <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-48 rounded-2xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm transition-all hover:border-indigo-400">
               <SelectValue placeholder="Select time range" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-2xl">
               <SelectItem value="1y">Last 1 Year</SelectItem>
               <SelectItem value="2y">Last 2 Years</SelectItem>
               <SelectItem value="3y">Last 3 Years</SelectItem>
@@ -100,74 +103,98 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({
           </Select>
         </div>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart
-            data={trendData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="monthLabel"
-              angle={-45}
-              textAnchor="end"
-              height={80}
-              tick={{ fontSize: trendData.length > 60 ? 9 : 11 }}
-              interval={
-                trendData.length > 60 
-                  ? Math.floor(trendData.length / 12) // Show ~12 labels for 10+ years
-                  : trendData.length > 36 
-                    ? 2 // Show every 2nd month for 3+ years
-                    : trendData.length > 12 
-                      ? 1 // Show every month for 1-2 years
-                      : 0 // Show all months for <1 year
-              }
-            />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="assigned"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={false}
-              name="Assigned"
-            />
-            <Line
-              type="monotone"
-              dataKey="screening"
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              name="In Screening"
-            />
-            <Line
-              type="monotone"
-              dataKey="interview"
-              stroke="#f59e0b"
-              strokeWidth={2}
-              dot={false}
-              name="In Interview"
-            />
-            <Line
-              type="monotone"
-              dataKey="selected"
-              stroke="#8b5cf6"
-              strokeWidth={2}
-              dot={false}
-              name="Selected"
-            />
-            <Line
-              type="monotone"
-              dataKey="joined"
-              stroke="#06b6d4"
-              strokeWidth={3}
-              dot={{ r: 4 }}
-              name="Joined"
-            />
-          </LineChart>
-        </ResponsiveContainer>
+
+      <CardContent className="p-8">
+        {/* Custom Legend for clearer understanding */}
+        <div className="flex flex-wrap gap-6 mb-8 justify-center lg:justify-start">
+          {[
+            { label: "Assigned", color: "#6366f1", type: "solid" },
+            { label: "Screening", color: "#10b981", type: "dashed" },
+            { label: "Interview", color: "#f59e0b", type: "dashed" },
+            { label: "Selected", color: "#8b5cf6", type: "solid" },
+            { label: "Joined", color: "#06b6d4", type: "bold" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-2">
+              <div 
+                className="h-1 w-4 rounded-full" 
+                style={{ 
+                  backgroundColor: item.color, 
+                  border: item.type === "dashed" ? "1px dashed white" : "none",
+                  opacity: item.type === "dashed" ? 0.6 : 1
+                }} 
+              />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{item.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="w-full h-[450px]">
+          {trendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorAssigned" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorJoined" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                
+                <XAxis 
+                  dataKey="monthLabel" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                  interval={trendData.length > 36 ? 2 : trendData.length > 12 ? 1 : 0}
+                  dy={10}
+                />
+                
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
+                
+                <Tooltip 
+                  cursor={{ stroke: '#6366f1', strokeWidth: 2, strokeDasharray: '5 5' }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white p-4 rounded-2xl shadow-2xl border border-slate-100 min-w-[180px]">
+                          <p className="text-[10px] font-black text-slate-400 uppercase mb-3 border-b pb-2">{label}</p>
+                          <div className="space-y-2">
+                            {payload.map((entry: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                  <span className="text-[11px] font-bold text-slate-600">{entry.name}</span>
+                                </div>
+                                <span className="text-xs font-black text-slate-900">{entry.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+
+                <Area type="monotone" dataKey="assigned" name="Assigned" stroke="#6366f1" strokeWidth={2} fill="url(#colorAssigned)" isAnimationActive={true} />
+                <Area type="monotone" dataKey="screening" name="Screening" stroke="#10b981" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
+                <Area type="monotone" dataKey="interview" name="Interview" stroke="#f59e0b" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
+                <Area type="monotone" dataKey="selected" name="Selected" stroke="#8b5cf6" strokeWidth={2} fill="transparent" />
+                <Area type="monotone" dataKey="joined" name="Joined" stroke="#06b6d4" strokeWidth={4} fill="url(#colorJoined)" dot={{ r: 4, fill: '#06b6d4', strokeWidth: 2, stroke: '#fff' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center text-slate-400">
+              <Activity className="h-12 w-12 mb-4 opacity-20" />
+              <p className="text-sm font-medium italic">No performance data available for this recruiter</p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

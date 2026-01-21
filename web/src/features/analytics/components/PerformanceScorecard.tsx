@@ -174,196 +174,155 @@ export const PerformanceScorecard: React.FC<PerformanceScorecardProps> = ({
   };
 
   return (
-    <Card className="shadow-xl border-0">
-      <CardHeader>
-        <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-          <Award className="h-5 w-5 text-indigo-600" />
-          Performance Scorecard
-        </CardTitle>
-        <p className="text-sm text-gray-500 mt-1">
-          Comprehensive performance analysis for {recruiter.name}
+<Card className="overflow-hidden border border-slate-200/70 bg-white/90 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-2xl">
+  {/* Premium Header – compacted */}
+  <CardHeader className="border-b border-slate-100 bg-slate-50/60 p-6 sm:p-7">
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center gap-4">
+        <div className="relative group flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200/60 transition-transform hover:scale-105">
+          <Award className="h-6 w-6 text-white" />
+          <div className="absolute -inset-0.5 rounded-xl bg-indigo-600 opacity-20 blur-sm group-hover:opacity-35 transition-opacity" />
+        </div>
+        <div>
+          <CardTitle className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+            Performance Scorecard
+          </CardTitle>
+          <p className="text-sm text-slate-600 mt-0.5">
+            Comprehensive performance analysis for{' '}
+            <span className="text-indigo-600 underline decoration-indigo-200/70 underline-offset-3">
+              {recruiter.name}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-6 sm:p-7 space-y-8">
+    {/* Overall Score Centerpiece – smaller */}
+    <div className="relative overflow-hidden text-center p-7 rounded-2xl border border-indigo-100/80 bg-gradient-to-br from-indigo-50/40 via-purple-50/20 to-white shadow-sm">
+      {/* Subtle background decorative shapes – reduced size & blur */}
+      <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 bg-indigo-500/5 rounded-full blur-2xl" />
+      <div className="absolute bottom-0 left-0 -ml-8 -mb-8 h-32 w-32 bg-purple-500/5 rounded-full blur-2xl" />
+
+      <div className="relative z-10">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-indigo-500 mb-3">
+          Recruiter Efficiency Index
         </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Overall Score */}
-        <div className="text-center p-6 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50">
-          <div className="text-sm font-medium text-gray-600 mb-2">
-            Overall Performance Score
+        
+        {recruiter.assigned === 0 ? (
+          <div className="py-5">
+            <div className="text-3xl font-extrabold text-slate-300 mb-2">
+              No Data Found
+            </div>
+            <p className="text-sm text-slate-500 max-w-xs mx-auto">
+              No project assignments found for this evaluation period
+            </p>
           </div>
-          {recruiter.assigned === 0 ? (
-            <>
-              <div className="text-3xl font-bold text-gray-400 mb-2">
-                No Data
-              </div>
-              <div className="text-sm text-gray-500">
-                No project assignments found for this period
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className={cn(
-                  "text-5xl font-bold mb-2",
-                  getScoreColor(metrics.performanceScore)
-                )}
-              >
-                {metrics.performanceScore}/100
-              </div>
-              <div className="text-lg font-semibold text-gray-700">
-                {getScoreLabel(metrics.performanceScore)}
-              </div>
-              <div className="mt-3 text-sm text-gray-600">
-                Ranked #{metrics.rank} out of {metrics.totalRecruiters} recruiters
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-lg border bg-white">
-            <div className="text-xs font-medium text-gray-500 mb-1">
-              Conversion Rate
+        ) : (
+          <>
+            <div className={cn(
+              "text-6xl font-extrabold tracking-tighter mb-2 drop-shadow",
+              getScoreColor(metrics.performanceScore)
+            )}>
+              {metrics.performanceScore}<span className="text-xl opacity-60">/100</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {metrics.conversionRate}%
+            <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-white border border-slate-100 shadow-sm text-base font-extrabold text-slate-700 mb-3">
+              {getScoreLabel(metrics.performanceScore)}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Joined / Assigned
+            <div className="flex items-center justify-center gap-2 text-sm font-semibold text-slate-600">
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-100 text-indigo-600 text-[10px] font-bold">#{metrics.rank}</span>
+              Ranked out of {metrics.totalRecruiters} team members
             </div>
-            {metrics.vsAverage.conversion !== 0 && recruiter.assigned > 0 && (
-              <div
-                className={cn(
-                  "text-xs mt-1 flex items-center gap-1",
-                  metrics.vsAverage.conversion > 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                )}
-              >
-                {metrics.vsAverage.conversion > 0 ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
-                {Math.abs(Math.round(metrics.vsAverage.conversion))}% vs average
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 rounded-lg border bg-white">
-            <div className="text-xs font-medium text-gray-500 mb-1">
-              Pipeline Health
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {metrics.pipelineHealth}%
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Active pipeline momentum
-            </div>
-            <div className="text-xs text-gray-400 mt-0.5">
-              % of assigned candidates progressing through pipeline
-            </div>
-            <div className="text-xs text-gray-400 mt-0.5 italic">
-              (Screening + Interview + Selected stages)
-            </div>
-            {metrics.vsAverage.pipeline !== 0 && recruiter.assigned > 0 && (
-              <div
-                className={cn(
-                  "text-xs mt-1 flex items-center gap-1",
-                  metrics.vsAverage.pipeline > 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                )}
-              >
-                {metrics.vsAverage.pipeline > 0 ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
-                {Math.abs(Math.round(metrics.vsAverage.pipeline))}% vs average
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 rounded-lg border bg-white">
-            <div className="text-xs font-medium text-gray-500 mb-1">
-              Untouched Rate
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {metrics.untouchedRate}%
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Not yet progressed
-            </div>
-            {metrics.vsAverage.untouched !== 0 && recruiter.assigned > 0 && (
-              <div
-                className={cn(
-                  "text-xs mt-1 flex items-center gap-1",
-                  metrics.vsAverage.untouched < 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                )}
-              >
-                {metrics.vsAverage.untouched < 0 ? (
-                  <TrendingDown className="h-3 w-3" />
-                ) : (
-                  <TrendingUp className="h-3 w-3" />
-                )}
-                {Math.abs(Math.round(metrics.vsAverage.untouched))}% vs average
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Strengths & Improvements - Only show if there's data */}
-        {recruiter.assigned > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg border border-green-200 bg-green-50">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <h3 className="font-semibold text-green-900">Strengths</h3>
-              </div>
-              <ul className="space-y-2">
-                {metrics.strengths.filter(s => s !== "").length > 0 ? (
-                  metrics.strengths.filter(s => s !== "").map((strength, index) => (
-                    <li key={index} className="text-sm text-green-800 flex items-start gap-2">
-                      <span className="text-green-600 mt-0.5">•</span>
-                      <span>{strength}</span>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-sm text-green-700 italic">No significant strengths identified</li>
-                )}
-              </ul>
-            </div>
-
-            <div className="p-4 rounded-lg border border-amber-200 bg-amber-50">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
-                <h3 className="font-semibold text-amber-900">
-                  Areas for Improvement
-                </h3>
-              </div>
-              <ul className="space-y-2">
-                {metrics.improvements.filter(i => i !== "").length > 0 ? (
-                  metrics.improvements.filter(i => i !== "").map((improvement, index) => (
-                    <li
-                      key={index}
-                      className="text-sm text-amber-800 flex items-start gap-2"
-                    >
-                      <span className="text-amber-600 mt-0.5">•</span>
-                      <span>{improvement}</span>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-sm text-amber-700 italic">Performance is on track</li>
-                )}
-              </ul>
-            </div>
-          </div>
+          </>
         )}
-      </CardContent>
-    </Card>
-  );
+      </div>
+    </div>
+
+    {/* Key Metrics Dashboard – tighter */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {[
+        { label: "Conversion Rate", value: `${metrics.conversionRate}%`, sub: "Joined / Assigned", diff: metrics.vsAverage.conversion, type: "default" },
+        { label: "Pipeline Health", value: `${metrics.pipelineHealth}%`, sub: "Active Momentum", diff: metrics.vsAverage.pipeline, type: "default" },
+        { label: "Untouched Rate", value: `${metrics.untouchedRate}%`, sub: "Inactivity Level", diff: metrics.vsAverage.untouched, type: "untouched" },
+      ].map((item, idx) => {
+        const isGood = item.type === "untouched" ? item.diff < 0 : item.diff > 0;
+        
+        return (
+          <div 
+            key={idx} 
+            className="group p-5 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow hover:border-indigo-100/70"
+          >
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">{item.label}</div>
+            <div className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">{item.value}</div>
+            <div className="text-[10px] font-semibold text-slate-500 mb-3">{item.sub}</div>
+            
+            {item.diff !== 0 && recruiter.assigned > 0 && (
+              <div className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors",
+                isGood 
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-100 group-hover:bg-emerald-100/80" 
+                  : "bg-rose-50 text-rose-700 border-rose-100 group-hover:bg-rose-100/80"
+              )}>
+                {item.diff > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                {Math.abs(Math.round(item.diff))}% vs avg
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+
+    {/* Strengths & Improvements – more compact */}
+    {recruiter.assigned > 0 && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Strengths Card */}
+        <div className="relative group p-5 rounded-2xl border border-emerald-100/80 bg-emerald-50/25 transition-all hover:bg-emerald-50/40">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-sm border border-emerald-100 text-emerald-600">
+              <CheckCircle className="h-4 w-4" />
+            </div>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-emerald-900">Core Strengths</h3>
+          </div>
+          <ul className="space-y-2.5">
+            {metrics.strengths.filter(s => s !== "").length > 0 ? (
+              metrics.strengths.filter(s => s !== "").map((strength, index) => (
+                <li key={index} className="text-sm font-medium text-emerald-800 flex items-start gap-2.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-200/70 text-emerald-700 text-[10px]">✓</span>
+                  <span>{strength}</span>
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-emerald-600/80 italic">No significant strengths identified</li>
+            )}
+          </ul>
+        </div>
+
+        {/* Improvements Card */}
+        <div className="relative group p-5 rounded-2xl border border-amber-100/80 bg-amber-50/25 transition-all hover:bg-amber-50/40">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-sm border border-amber-100 text-amber-600">
+              <AlertCircle className="h-4 w-4" />
+            </div>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-amber-900">Focus Areas</h3>
+          </div>
+          <ul className="space-y-2.5">
+            {metrics.improvements.filter(i => i !== "").length > 0 ? (
+              metrics.improvements.filter(i => i !== "").map((improvement, index) => (
+                <li key={index} className="text-sm font-medium text-amber-800 flex items-start gap-2.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200/70 text-amber-700 text-[10px]">!</span>
+                  <span>{improvement}</span>
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-amber-600/80 italic">Performance fully optimized</li>
+            )}
+          </ul>
+        </div>
+      </div>
+    )}
+  </CardContent>
+</Card>
+);
 };
 
