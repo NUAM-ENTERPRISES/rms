@@ -1219,9 +1219,8 @@ export default function CandidatesPage() {
                 <TableBody>
                   {Array.isArray(paginatedCandidates) &&
                     paginatedCandidates.map((candidate) => {
-                      const statusInfo = getStatusInfo(
-                        candidate.currentStatus.statusName
-                      );
+                      const statusName = candidate.currentStatus?.statusName ?? "";
+                      const statusInfo = getStatusInfo(statusName);
                       const StatusIcon = statusInfo.icon;
 
                       return (
@@ -1302,6 +1301,7 @@ export default function CandidatesPage() {
                               {/* Colored Badge – looks premium */}
                               <Badge
                                 variant="outline"
+                                title={candidate.currentStatus?.statusName || "Unknown"}
                                 className={`
                         ${statusInfo.textColor} 
                         ${statusInfo.bgColor} 
@@ -1312,7 +1312,7 @@ export default function CandidatesPage() {
                         px-2.5 py-1
                       `}
                               >
-                                {candidate.currentStatus.statusName}
+                                {candidate.currentStatus?.statusName || "Unknown"}
                               </Badge>
                             </div>
                           </TableCell>
