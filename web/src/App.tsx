@@ -393,6 +393,20 @@ function App() {
                     }
                   />
 
+                  {/* Support direct link to a specific candidate within project (many places navigate to /recruiter-docs/:projectId/:candidateId) */}
+                  <Route
+                    path="/recruiter-docs/:projectId/:candidateId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                          <AppLayout>
+                            <RecruiterDocsDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
                   <Route
                     path="/candidates"
                     element={
