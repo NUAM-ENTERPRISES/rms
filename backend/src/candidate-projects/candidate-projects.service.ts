@@ -1882,7 +1882,7 @@ export class CandidateProjectsService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
-    const age = this.calculateAge(new Date(candidate.dateOfBirth));
+    const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
     const candidateGender = candidate.gender?.toLowerCase();
     let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
     // If explicit experience is missing/zero, derive from work history when available
@@ -1918,7 +1918,12 @@ export class CandidateProjectsService {
       }
 
       // Age Check
-      if (age < role.minAge || age > role.maxAge) {
+      if (age === null) {
+        flags.age = false;
+        reasons.push(
+          `Age is required for this role (${role.minAge} to ${role.maxAge} years) but candidate date of birth is not provided.`,
+        );
+      } else if (age < role.minAge || age > role.maxAge) {
         flags.age = false;
         reasons.push(
           `Age mismatch: Candidate is ${age} years old, but role requires ${role.minAge} to ${role.maxAge} years.`,
@@ -1989,7 +1994,7 @@ export class CandidateProjectsService {
     });
 
     const results = candidates.map((candidate) => {
-      const age = this.calculateAge(new Date(candidate.dateOfBirth));
+      const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
       const candidateGender = candidate.gender?.toLowerCase();
       let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
       if ((!candidateExp || candidateExp === 0) && Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0) {
@@ -2024,7 +2029,12 @@ export class CandidateProjectsService {
         }
 
         // Age Check
-        if (age < role.minAge || age > role.maxAge) {
+        if (age === null) {
+          flags.age = false;
+          reasons.push(
+            `Age is required for this role (${role.minAge} to ${role.maxAge} years) but candidate date of birth is not provided.`,
+          );
+        } else if (age < role.minAge || age > role.maxAge) {
           flags.age = false;
           reasons.push(
             `Age mismatch: Candidate is ${age} years old, but role requires ${role.minAge} to ${role.maxAge} years.`,
