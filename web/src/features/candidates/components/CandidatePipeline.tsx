@@ -189,8 +189,8 @@ const statusConfig: Record<string, any> = {
 };
 
 // Get status configuration
-const getStatusConfig = (statusName: string) => {
-  const lowerStatus = statusName.toLowerCase().trim();
+const getStatusConfig = (statusName?: string) => {
+  const lowerStatus = (statusName || "").toLowerCase().trim();
   return statusConfig[lowerStatus] || statusConfig.default;
 };
 
@@ -254,8 +254,9 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
   }
 
   const currentStatus = pipeline[pipeline.length - 1];
-  const currentConfig = getStatusConfig(currentStatus.statusName);
-  const totalDuration = calculateDuration(pipeline[0].enteredAt, currentStatus.exitedAt);
+  const currentStatusName = currentStatus?.statusName ?? "";
+  const currentConfig = getStatusConfig(currentStatusName);
+  const totalDuration = calculateDuration(pipeline[0].enteredAt, currentStatus?.exitedAt ?? null);
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -283,7 +284,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-lg font-bold text-slate-900">
-                  Current Status: {currentStatus.statusName}
+                  Current Status: {currentStatusName || "Unknown"}
                 </h3>
                 <span className={cn(
                   "px-2 py-0.5 rounded-full text-xs font-medium",

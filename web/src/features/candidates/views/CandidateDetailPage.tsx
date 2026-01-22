@@ -287,9 +287,9 @@ export default function CandidateDetailPage() {
             </h1>
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Status:</span>
-              <StatusBadge status={candidate.currentStatus.statusName} />
+              <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
               <span className="text-sm text-slate-600">
-                {statusConfig[candidate.currentStatus.statusName]?.description}
+                {statusConfig[candidate.currentStatus?.statusName ?? ""]?.description}
               </span>
               {canWriteCandidates && (
                 <Button
@@ -1341,7 +1341,7 @@ export default function CandidateDetailPage() {
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
         candidateId={id!}
-        currentStatus={candidate.currentStatus.statusName}
+        currentStatus={candidate.currentStatus?.statusName ?? ""}
         candidateName={`${candidate.firstName} ${candidate.lastName}`}
       />
 

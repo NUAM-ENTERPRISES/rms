@@ -315,7 +315,7 @@ export default function CandidateNominationPage() {
                           </div>
                         </div>
                         <CandidateStatusBadge
-                          status={candidate.currentStatus.statusName}
+                          status={candidate.currentStatus?.statusName ?? ""}
                         />
                       </div>
 
