@@ -112,7 +112,7 @@ export function StatusUpdateModal({
               <FormLabel>Current Status</FormLabel>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">
-                  {currentStatus}
+                  {currentStatus || "Unknown"}
                 </Badge>
               </div>
             </div>
@@ -144,7 +144,7 @@ export function StatusUpdateModal({
                       ) : (
                         statuses.map((status) => (
                           <SelectItem key={status.id} value={status.id.toString()}>
-                            {status.statusName}
+                            {status.statusName || status.label || "Unknown"}
                           </SelectItem>
                         ))
                       )}

@@ -195,7 +195,7 @@ export default function SubmittedCandidatesSection({
               <SelectItem value="all">All Statuses</SelectItem>
               {projectStatuses.map((status) => (
                 <SelectItem key={status.id} value={status.id.toString()}>
-                  {status.label || status.statusName}
+                  {status.label || status.statusName || "Unknown"}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -343,7 +343,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                     
                     {displayStatuses.map((stage, localIndex) => {
                       const actualIndex = isEvenRow ? startIdx + localIndex : endIdx - 1 - localIndex;
-                      const config = getStatusConfig(stage.statusName);
+                      const config = getStatusConfig(stage.statusName ?? "");
                       const IconComponent = config.icon;
                       const isLastInRow = localIndex === displayStatuses.length - 1;
                       const isLastOverall = actualIndex === pipeline.length - 1;
@@ -424,7 +424,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                 "font-bold mb-1 leading-tight",
                                 isCurrent ? "text-base text-slate-900" : "text-sm text-slate-700"
                               )}>
-                                {stage.statusName}
+                                {stage.statusName || "Unknown"}
                               </h5>
                               <p className="text-xs text-slate-500 leading-tight">
                                 {config.description}
