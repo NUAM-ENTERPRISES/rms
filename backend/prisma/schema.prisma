@@ -289,7 +289,7 @@ model Candidate {
   id                   String                         @id @default(cuid())
   email                String?
   source               String                         @default("manual")
-  dateOfBirth          DateTime
+  dateOfBirth          DateTime?
   gender               Gender?
   currentStatusId      Int?
   currentStatus        CandidateStatus?               @relation(fields: [currentStatusId], references: [id])
@@ -312,6 +312,7 @@ model Candidate {
   university           String?
   countryCode          String
   mobileNumber         String
+  candidateContacts    Json                           @default("[]") @map("candidate_contacts")
   referralCompanyName  String?
   referralCountryCode  String?
   referralEmail        String?
@@ -328,6 +329,9 @@ model Candidate {
   statusHistories      CandidateStatusHistory[]       @relation("CandidateToHistory")
   rnrReminders         RNRReminder[]
   processingTasks      ProcessingCandidate[]
+  
+  // Meta leads received for this candidate (incoming lead forms)
+  metaLeads            MetaLead[]
 
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
@@ -752,6 +756,48 @@ model OutboxEvent {
   @@index([type])
   @@index([processed])
   @@map("outbox_events")
+}
+
+enum MetaLeadStatus {
+  pending
+  linked
+  skipped
+  fraud
+  review
+  processed
+}
+
+model MetaLead {
+  id                 String         @id @default(cuid())
+  leadId             String         @unique
+  formId             String?
+  campaignId         String?
+  adsetId            String?
+  adId               String?
+  fullName           String?
+  firstName          String?
+  lastName           String?
+  email              String?        @db.VarChar(254)
+  countryCode        String?
+  phoneNumber        String?
+  formSubmissionTime DateTime?
+  rawPayload         Json
+  status             MetaLeadStatus @default(pending)
+  source             String?        @default("meta")
+  consentGiven       Boolean?       @default(false)
+  consentAt          DateTime?
+  candidateId        String?
+  processingNote     String?
+  createdAt          DateTime       @default(now())
+  processedAt        DateTime?
+  erasedAt           DateTime?
+
+  candidate Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([countryCode, phoneNumber])
+  @@index([status])
+  @@map("meta_leads")
 }
 
 model TeamTransferRequest {

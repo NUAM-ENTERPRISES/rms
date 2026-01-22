@@ -14,7 +14,7 @@ import { Public } from 'src/auth/decorators/public.decorator';
 @Controller('meta/webhook')
 export class MetaController {
     private readonly logger = new Logger(MetaController.name);
-    private readonly VERIFY_TOKEN = 'my_secret_token_123';
+    private readonly VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'my_secret_token_123';
 
     constructor(private readonly metaService: MetaService) { }
 
