@@ -29,5 +29,19 @@ describe("ImageViewer", () => {
 
     const img = await screen.findByAltText(/^John Appleseed$/i);
     expect(img).toHaveAttribute("src", src);
+    // dialog image has intrinsic dimensions to avoid layout shift
+    expect(img).toHaveAttribute("width");
+    expect(img).toHaveAttribute("height");
+  });
+
+  it("positions hover preview on the left when hoverPosition='left'", async () => {
+    const src = "https://example.com/photo.jpg";
+    render(<ImageViewer title="Left Test" src={src} hoverPosition="left" />);
+
+    const avatar = screen.getByRole("button", { name: /view full image for left test/i });
+    await userEvent.hover(avatar);
+
+    const preview = await screen.findByAltText(/left test preview/i);
+    expect(preview.parentElement).toHaveClass("right-full");
   });
 });

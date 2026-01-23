@@ -22,6 +22,8 @@ export interface ImageViewerProps {
   ariaLabel?: string;
   /** Whether to show the desktop hover preview */
   enableHoverPreview?: boolean;
+  /** Hover preview placement relative to the avatar (desktop) */
+  hoverPosition?: "right" | "left";
 }
 
 /**
@@ -40,6 +42,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   className = "h-16 w-16",
   ariaLabel,
   enableHoverPreview = true,
+  hoverPosition = "right",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showHover, setShowHover] = useState(false);
@@ -52,6 +55,14 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
     .toUpperCase();
 
   const imageSrc = src || fallbackSrc || "";
+
+  const previewPlacementClass = hoverPosition === "left"
+    ? "right-full mr-4 origin-top-right"
+    : "left-full ml-4 origin-top-left";
+
+  const previewShowClass = showHover
+    ? "opacity-100 scale-100 translate-x-0"
+    : "opacity-0 scale-95 -translate-x-2";
 
   return (
     <>
@@ -85,16 +96,16 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         {/* Hover preview (desktop) */}
         {enableHoverPreview && (
           <div
-            className={`pointer-events-none hidden md:block absolute z-50 top-0 left-full ml-4 w-56 h-56 rounded-lg overflow-hidden bg-white shadow-2xl transition-all duration-200 transform origin-top-left ` +
-              (showHover
-                ? "opacity-100 scale-100 translate-x-0"
-                : "opacity-0 scale-95 -translate-x-2")}
+            className={`pointer-events-none hidden md:block absolute z-50 top-0 ${previewPlacementClass} w-56 h-56 rounded-lg overflow-hidden bg-white shadow-2xl transition-all duration-200 transform ` +
+              previewShowClass}
             aria-hidden={!showHover}
           >
             {imageSrc ? (
               <img
                 src={imageSrc}
                 alt={`${title} preview`}
+                width={224}
+                height={224}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -125,17 +136,22 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           </DialogHeader>
 
           <div className="flex items-center justify-center bg-slate-50 p-6">
-            {imageSrc ? (
-              <img
-                src={imageSrc}
-                alt={title}
-                className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-lg"
-              />
-            ) : (
-              <div className="w-full h-64 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg">
-                <div className="text-2xl font-semibold text-slate-700">{initials}</div>
-              </div>
-            )}
+            {/* Fixed-size responsive container prevents dialog resizing between images */}
+            <div className="w-full max-w-3xl h-[64vh] max-h-[80vh] flex items-center justify-center">
+              {imageSrc ? (
+                <img
+                  src={imageSrc}
+                  alt={title}
+                  width={1200}
+                  height={800}
+                  className="max-h-[64vh] max-w-full object-contain rounded-lg shadow-lg"
+                />
+              ) : (
+                <div className="w-full h-64 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg">
+                  <div className="text-2xl font-semibold text-slate-700">{initials}</div>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

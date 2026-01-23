@@ -67,7 +67,6 @@ import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { StatusHistoryTable } from "../components/StatusHistoryTable";
 import { useStatusConfig } from "../hooks/useStatusConfig";
 import { useAppSelector } from "@/app/hooks";
-import { RotateCcw } from "lucide-react";
 import type {
   CandidateQualification,
   WorkExperience,

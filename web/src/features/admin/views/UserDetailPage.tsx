@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DeleteConfirmationDialog } from "@/components/ui";
-import { UpdatePasswordDialog } from "@/components/molecules";
+import { UpdatePasswordDialog, ImageViewer } from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
@@ -392,17 +392,16 @@ export default function UserDetailPage() {
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardContent className="pt-4">
                 <div className="flex flex-col items-center text-center">
-                  {user.profileImage ? (
-                    <img
-                      src={user.profileImage}
-                      alt={user.name}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-blue-100 shadow-lg mb-3"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl mb-3">
-                      {user.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <ImageViewer
+                    title={user.name}
+                    src={user.profileImage || null}
+                    fallbackSrc={"https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"}
+                    className="w-16 h-16 rounded-full border-2 border-blue-100 shadow-lg mb-3"
+                    ariaLabel={`View full image for ${user.name}`}
+                    enableHoverPreview={true}
+                    hoverPosition="left"
+                  />
+
                   <h3 className="font-semibold text-slate-800 text-sm">
                     {user.name}
                   </h3>
