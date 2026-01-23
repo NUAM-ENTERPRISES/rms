@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
   ArrowLeft,
   Edit,
@@ -59,7 +60,7 @@ import {
 } from "@/features/candidates";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
-import { CandidateResumeList } from "@/components/molecules";
+import { CandidateResumeList, ImageViewer } from "@/components/molecules";
 import { DocumentUploadSection } from "../components/DocumentUploadSection";
 import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
@@ -92,7 +93,11 @@ const formatCurrency = (amount?: number) => {
   }).format(amount);
 };
 
-export default function CandidateDetailPage() {
+// Fallback avatar used when candidate has no profileImage
+const DEFAULT_PROFILE_IMAGE =
+  "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
+
+export default function CandidateDetailPage() { 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
@@ -115,6 +120,8 @@ export default function CandidateDetailPage() {
   // Status update modal state
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const { statusConfig } = useStatusConfig();
+
+  // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
   // Status badge component
   const StatusBadge = ({ status }: { status?: string }) => {
@@ -282,25 +289,36 @@ export default function CandidateDetailPage() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-              {candidate.firstName} {candidate.lastName}
-            </h1>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Status:</span>
-              <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-              <span className="text-sm text-slate-600">
-                {statusConfig[candidate.currentStatus?.statusName ?? ""]?.description}
-              </span>
-              {canWriteCandidates && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsStatusModalOpen(true)}
-                  className="h-6 w-6 p-0 hover:bg-slate-100"
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
-              )}
+            <ImageViewer
+              title={`${candidate.firstName} ${candidate.lastName}`}
+              src={candidate.profileImage || null}
+              fallbackSrc={DEFAULT_PROFILE_IMAGE}
+              className="h-16 w-16"
+              ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
+            /> 
+
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                {candidate.firstName} {candidate.lastName}
+              </h1>
+
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm text-slate-500">Status:</span>
+                <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+                <span className="text-sm text-slate-600">
+                  {statusConfig[candidate.currentStatus?.statusName ?? ""]?.description}
+                </span>
+                {canWriteCandidates && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsStatusModalOpen(true)}
+                    className="h-6 w-6 p-0 hover:bg-slate-100"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

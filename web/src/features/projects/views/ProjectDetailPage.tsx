@@ -581,6 +581,11 @@ export default function ProjectDetailPage() {
       ? Boolean((project as { requiredScreening?: boolean }).requiredScreening)
       : false;
 
+  // normalize document requirements to a safe array so we never read .length on undefined
+  const documentRequirements = Array.isArray(project.documentRequirements)
+    ? project.documentRequirements
+    : [];
+
   // Access control
   if (!canReadProjects) {
     return (
@@ -865,7 +870,7 @@ export default function ProjectDetailPage() {
             </Card>
 
             {/* Other Cards — Same Compact & Responsive Style */}
-            {project.documentRequirements?.length > 0 && (
+            {documentRequirements.length > 0 && (
               <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
                 <CardHeader className="pb-2 px-3">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -873,7 +878,7 @@ export default function ProjectDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-3 pb-3 space-y-2">
-                  {project.documentRequirements?.map((req: any, i: number) => (
+                  {documentRequirements.map((req: any, i: number) => (
                     <div
                       key={i}
                       className="p-2.5 bg-orange-50/30 rounded-lg border border-orange-100/50 space-y-1.5"
@@ -975,25 +980,28 @@ export default function ProjectDetailPage() {
                     {/* Benefits & Type */}
                     <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
                       <div className="flex gap-2">
-                        {role.accommodation && (
-                          <Home
-                            className="h-3 w-3 text-emerald-600"
-                            title="Accommodation provided"
-                          />
-                        )}
-                        {role.food && (
-                          <Utensils
-                            className="h-3 w-3 text-orange-600"
-                            title="Food provided"
-                          />
-                        )}
-                        {role.transport && (
-                          <Bus
-                            className="h-3 w-3 text-blue-600"
-                            title="Transport provided"
-                          />
-                        )}
-                      </div>
+                          {role.accommodation && (
+                            <Home
+                              className="h-3 w-3 text-emerald-600"
+                              aria-label="Accommodation provided"
+                              role="img"
+                            />
+                          )}
+                          {role.food && (
+                            <Utensils
+                              className="h-3 w-3 text-orange-600"
+                              aria-label="Food provided"
+                              role="img"
+                            />
+                          )}
+                          {role.transport && (
+                            <Bus
+                              className="h-3 w-3 text-blue-600"
+                              aria-label="Transport provided"
+                              role="img"
+                            />
+                          )}
+                        </div>
                       <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                         {role.employmentType || "Permanent"}
                       </span>

@@ -8,6 +8,7 @@ export { DatePicker } from "./DatePicker";
 export { RoleSelect } from "./RoleSelect";
 export { UpdatePasswordDialog } from "./UpdatePasswordDialog";
 export { ProfileImageUpload } from "./ProfileImageUpload";
+export { ImageViewer } from "./ImageViewer";
 export { DocumentUpload } from "./DocumentUpload";
 export { WorkExperienceForm } from "./WorkExperienceForm";
 export { default as CandidateQualificationSelect } from "./CandidateQualificationSelect";

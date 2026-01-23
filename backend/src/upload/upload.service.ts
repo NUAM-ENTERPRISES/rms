@@ -243,7 +243,8 @@ export class UploadService {
     );
 
     // Store only the relative path in database (better approach)
-    const relativePath = `${folder}/${uploadResult.fileName}`;
+    // const relativePath = `${folder}/${uploadResult.fileName}`;
+    const relativePath = uploadResult.fileUrl;
 
     if (entityType === 'user') {
       await this.prisma.user.update({

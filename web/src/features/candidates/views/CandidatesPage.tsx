@@ -19,13 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -51,8 +44,8 @@ import {
   XCircle,
   AlertCircle,
   Users,
-  TrendingUp,
 } from "lucide-react";
+import { ImageViewer } from "@/components/molecules";
 import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
@@ -66,7 +59,9 @@ import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { toast } from "sonner";
-import { RotateCcw } from "lucide-react";
+
+
+
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
@@ -1232,16 +1227,16 @@ export default function CandidatesPage() {
                           <TableCell className="px-6 py-5">
                             <div className="flex items-center gap-4">
                               {/* FULL VIBRANT COLOR AVATAR */}
-                              <div
-                                className={`
-      h-11 w-11 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md
-      bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500
-      ring-4 ring-purple-500/20
-    `}
-                              >
-                                {candidate.firstName.charAt(0).toUpperCase()}
-                                {candidate.lastName.charAt(0).toUpperCase()}
-                              </div>
+                              <ImageViewer
+                                title={`${candidate.firstName} ${candidate.lastName}`}
+                                src={candidate.profileImage || null}
+                                fallbackSrc={
+                                  "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
+                                }
+                                className="h-11 w-11 rounded-full"
+                                ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
+                                enableHoverPreview={true} /* show hover preview on desktop */
+                              />
 
                               <div className="flex-1">
                                 <button

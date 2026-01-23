@@ -24,8 +24,16 @@ export interface Candidate {
     name: string;
     email: string;
   };
+
+  // Referral fields (optional)
+  referralCompanyName?: string | null;
+  referralEmail?: string | null;
+  referralCountryCode?: string | null;
+  referralPhone?: string | null;
+  referralDescription?: string | null;
+
   projects: CandidateProjectMap[];
-}
+} 
 
 export interface CandidateProjectMap {
   id: string;
@@ -66,6 +74,13 @@ export interface CreateCandidateRequest {
   currentEmployer?: string;
   expectedSalary?: number;
   assignedTo?: string;
+
+  // Optional referral data
+  referralCompanyName?: string;
+  referralEmail?: string;
+  referralCountryCode?: string;
+  referralPhone?: string;
+  referralDescription?: string;
 }
 
 export interface UpdateCandidateRequest {
@@ -79,4 +94,11 @@ export interface UpdateCandidateRequest {
   currentEmployer?: string;
   expectedSalary?: number;
   assignedTo?: string;
-}
+
+  // Optional referral updates
+  referralCompanyName?: string | null;
+  referralEmail?: string | null;
+  referralCountryCode?: string | null;
+  referralPhone?: string | null;
+  referralDescription?: string | null;
+} 

@@ -20,8 +20,16 @@ interface Candidate {
     name: string;
     email: string;
   };
+
+  // Referral fields
+  referralCompanyName?: string | null;
+  referralEmail?: string | null;
+  referralCountryCode?: string | null;
+  referralPhone?: string | null;
+  referralDescription?: string | null;
+
   projects: CandidateProjectMap[];
-}
+} 
 
 interface CandidateProjectMap {
   id: string;
@@ -61,6 +69,12 @@ interface CreateCandidateRequest {
   currentEmployer?: string;
   expectedSalary?: number;
   assignedTo?: string;
+
+  referralCompanyName?: string;
+  referralEmail?: string;
+  referralCountryCode?: string;
+  referralPhone?: string;
+  referralDescription?: string;
 }
 
 interface UpdateCandidateRequest {
@@ -74,6 +88,12 @@ interface UpdateCandidateRequest {
   currentEmployer?: string;
   expectedSalary?: number;
   assignedTo?: string;
+
+  referralCompanyName?: string | null;
+  referralEmail?: string | null;
+  referralCountryCode?: string | null;
+  referralPhone?: string | null;
+  referralDescription?: string | null;
 }
 
 interface GetMyAssignedCandidatesParams {
