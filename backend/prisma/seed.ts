@@ -730,7 +730,7 @@ async function seedCandidateStatus() {
     'On Hold',
     'RNR',
     'Qualified',
-    'Working',
+    'Deployed',
   ];
 
   for (const statusName of statuses) {

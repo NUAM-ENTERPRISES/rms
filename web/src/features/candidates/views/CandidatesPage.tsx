@@ -515,7 +515,7 @@ export default function CandidatesPage() {
       color: "from-blue-500 to-cyan-500",
     },
     {
-      label: "Available Today",
+      label: "Untouched",
       value: derivedCounts.untouched,
       subtitle: "Wants to work today",
       icon: UserCheck,
@@ -612,7 +612,7 @@ export default function CandidatesPage() {
         color: "from-blue-500 to-cyan-500",
       },
       {
-        label: "Available Today",
+        label: "Untouched",
         value: untouchedCount,
         subtitle: "Wants to work today",
         icon: UserCheck,
@@ -660,11 +660,11 @@ export default function CandidatesPage() {
         color: "from-indigo-500 to-violet-500",
       },
       {
-        label: "Working",
+        label: "Deployed",
         value: workingCount,
-        subtitle: "Currently working",
+        subtitle: "Currently deployed",
         icon: Briefcase,
-        statusFilter: "working",
+        statusFilter: "deployed",
         color: "from-fuchsia-500 to-pink-400",
       },
       {
@@ -710,7 +710,7 @@ export default function CandidatesPage() {
           statusFilter: "all",
         },
         {
-          label: "Available Today",
+          label: "Untouched",
           value: untouchedCount,
           subtitle: "Wants to work today",
           icon: UserCheck,
@@ -758,7 +758,7 @@ export default function CandidatesPage() {
           color: "from-indigo-500 to-violet-500",
         },
         {
-          label: "Working",
+          label: "Deployed",
           value: workingCount,
           subtitle: "Currently working",
           icon: Briefcase,
@@ -803,7 +803,7 @@ export default function CandidatesPage() {
   const getTableTitle = () => {
     switch (filters.status) {
       case "untouched":
-        return "Available Today";
+        return "Untouched";
       case "rnr":
         return "Call Back (RNR)";
       case "interested":
@@ -816,8 +816,8 @@ export default function CandidatesPage() {
         return "Qualified";
       case "future":
         return "Future Follow-ups";
-      case "working":
-        return "Working";
+      case "Deployed":
+        return "Deployed";
       case "on_hold":
         return "On Hold";
       case "all":
@@ -842,7 +842,7 @@ export default function CandidatesPage() {
         return "Candidates who passed screening";
       case "future":
         return "Candidates to follow up later";
-      case "working":
+      case "deployed":
         return "Candidates currently placed/working";
       case "on_hold":
         return "Candidates on hold needing follow-up";
@@ -1201,7 +1201,7 @@ export default function CandidatesPage() {
                       Candidate
                     </TableHead>
                     <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                      Contact
+                      Recruiter
                     </TableHead>
                     {/* Skills column removed */}
                     <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
@@ -1229,40 +1229,33 @@ export default function CandidatesPage() {
                           className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0"
                         >
                           {/* Candidate */}
-                          <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-4">
-                              {/* FULL VIBRANT COLOR AVATAR */}
-                              <div
-                                className={`
-      h-11 w-11 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md
-      bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500
-      ring-4 ring-purple-500/20
-    `}
-                              >
-                                {candidate.firstName.charAt(0).toUpperCase()}
-                                {candidate.lastName.charAt(0).toUpperCase()}
-                              </div>
-
-                              <div className="flex-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
-                                >
-                                  {candidate.firstName} {candidate.lastName}
-                                </button>
-                                <div className="text-sm text-slate-500 mt-1 font-medium">
-                                  {candidate.currentRole || ""}
-                                </div>
-                              </div>
+                        <TableCell className="px-6 py-5">
+                          <div className="flex items-start gap-4">
+                            {/* Avatar */}
+                            <div
+                              className={`
+                                h-11 w-11 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md
+                                bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500
+                                ring-4 ring-purple-500/20
+                              `}
+                            >
+                              {candidate.firstName?.charAt(0)?.toUpperCase() || "?"}
+                              {candidate.lastName?.charAt(0)?.toUpperCase() || ""}
                             </div>
-                          </TableCell>
 
-                          {/* Contact */}
-                          <TableCell className="px-6 py-5">
-                            <div className="space-y-1.5 text-sm">
+                            <div className="flex-1 min-w-0">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/candidates/${candidate.id}`);
+                                }}
+                                className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 block truncate"
+                              >
+                                {candidate.firstName} {candidate.lastName}
+                              </button>
+
+                              {/* Recruiter name and email – handle both response formats */}
+                               <div className="space-y-1.5 text-sm">
                               {candidate.email && (
                                 <div className="flex items-center gap-2">
                                   <Mail className="h-3.5 w-3.5 text-gray-400" />
@@ -1278,6 +1271,68 @@ export default function CandidatesPage() {
                                 </span>
                               </div>
                             </div>
+                            </div>
+                          </div>
+                          </TableCell>
+
+                          {/* Contact */}
+                          <TableCell className="px-6 py-5">
+                            <div className="mt-1 text-xs text-slate-500">
+                                {(() => {
+                                  // Case 1: recruiterAssignments array (recruiter-specific endpoint)
+                                  const activeAssignment = candidate.recruiterAssignments?.find(
+                                    (a: any) => a.isActive
+                                  );
+
+                                  if (activeAssignment?.recruiter) {
+                                    const rec = activeAssignment.recruiter;
+                                    return (
+                                      <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5">
+                                          <Users className="h-3.5 w-3.5 text-slate-400" />
+                                          <span className="font-medium text-slate-600 truncate">
+                                            {rec.name || "—"}
+                                          </span>
+                                        </div>
+                                        {rec.email && (
+                                          <div className="flex items-center gap-1.5 mt-0.5">
+                                            <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                            <span className="truncate">{rec.email}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+
+                                  // Case 2: flat recruiter object (general /candidates endpoint)
+                                  if (candidate.recruiter) {
+                                    const rec = candidate.recruiter;
+                                    return (
+                                      <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5">
+                                          <Users className="h-3.5 w-3.5 text-slate-400" />
+                                          <span className="font-medium text-slate-600 truncate">
+                                            {rec.name || "—"}
+                                          </span>
+                                        </div>
+                                        {rec.email && (
+                                          <div className="flex items-center gap-1.5 mt-0.5">
+                                            <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                            <span className="truncate">{rec.email}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+
+                                  // Fallback
+                                  return (
+                                    <div className="italic text-slate-400">
+                                      No recruiter assigned
+                                    </div>
+                                  );
+                                })()}
+                              </div>
                           </TableCell>
 
                           {/* Skills cell removed */}
@@ -1544,3 +1599,6 @@ export default function CandidatesPage() {
     </div>
   );
 }
+
+
+

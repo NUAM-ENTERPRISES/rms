@@ -2888,7 +2888,7 @@ export class ProcessingService {
               statusId: workingStatus.id,
               statusNameSnapshot: workingStatus.statusName,
               statusUpdatedAt: new Date(),
-              reason: 'Candidate hired — set to working',
+              reason: 'Candidate hired — set to deployed',
               notificationCount: 0,
             },
           });

@@ -199,7 +199,7 @@ export const RequirementCriteriaStep: React.FC<
               </div>
 
               {/* Visa Type */}
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-700">
                   Visa Type *
                 </Label>
@@ -232,10 +232,10 @@ export const RequirementCriteriaStep: React.FC<
                     {errors.rolesNeeded[index].visaType?.message}
                   </span>
                 )}
-              </div>
+              </div> */}
 
               {/* Contract Duration (only for contract visa) */}
-              {role.visaType === "contract" && (
+              {/* {role.visaType === "contract" && (
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Contract Duration (years) *
@@ -261,7 +261,7 @@ export const RequirementCriteriaStep: React.FC<
                     </span>
                   )}
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         ))}

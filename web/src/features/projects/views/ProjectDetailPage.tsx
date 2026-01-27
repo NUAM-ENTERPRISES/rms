@@ -8,10 +8,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+
+import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog, ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
 import {
   Select,
   SelectTrigger,
@@ -20,28 +30,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Edit,
-  Trash2,
-  Calendar,
-  Building2,
-  Target,
-  Clock,
-  MapPin,
-  UserCheck,
-  User,
-  FileText,
-  Send,
   AlertCircle,
-  UserPlus,
-  Layers,
   Briefcase,
+  Building2,
+  Bus,
+  Calendar,
   CheckCircle2,
+  Clock,
+  Edit,
+  FileText,
+  Globe,
+  GraduationCap,
+  Home,
+  Layers,
+  MapPin,
+  Send,
+  ShieldCheck,
+  Target,
+  Trash2,
+  User,
+  UserCheck,
+  UserPlus,
   Users,
   Utensils,
-  Home,
-  Bus,
-  GraduationCap,
+  XCircle,
+  Settings
 } from "lucide-react";
+
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
   useGetProjectQuery,
@@ -71,7 +86,46 @@ const formatDate = (dateString?: string) => {
     year: "numeric",
   });
 };
+// Helper components for modal
+const OverviewItem = ({ icon: Icon, label, value, sub, badge }: {
+  icon: any;
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  badge?: boolean;
+}) => (
+  <div className="p-2 bg-white border rounded-lg shadow-sm">
+    <div className="flex items-start gap-3">
+      <div className="p-2 rounded-md bg-slate-100 text-slate-600">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs sm:text-sm font-medium text-slate-500 uppercase tracking-wide">{label}</p>
+        {badge ? (
+          <div className="mt-1">{value}</div>
+        ) : (
+          <p className="mt-0.5 text-base font-semibold text-slate-900 truncate">{value}</p>
+        )}
+        {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  </div>
+);
 
+const SettingItem = ({ label, active, value }: { label: string; active?: boolean; value?: string }) => (
+  <div className="p-2 bg-white border rounded-lg text-center shadow-sm">
+    <p className="text-xs sm:text-sm font-medium text-slate-500 uppercase tracking-wide mb-2">{label}</p>
+    {typeof active === 'boolean' ? (
+      active ? (
+        <CheckCircle2 className="h-6 w-6 mx-auto text-green-600" />
+      ) : (
+        <XCircle className="h-6 w-6 mx-auto text-slate-400" />
+      )
+    ) : (
+      <p className="text-base font-semibold text-slate-800">{value || "—"}</p>
+    )}
+  </div>
+);
 // Helper function to format datetime
 const formatDateTime = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -135,6 +189,10 @@ export default function ProjectDetailPage() {
   const canReadProjects = useCan("read:projects");
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
+  
+
+    // view details project
+    const [showProjectDetailsModal, setShowProjectDetailsModal] = useState(false);
 
   // RTK Query hooks
   const {
@@ -605,71 +663,225 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
-          <CardContent className="p-6 lg:p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              {/* Left Side — Title (Black) + Country */}
-              <div className="flex items-center gap-5 flex-1 min-w-0">
-                <div className="flex-1">
-                  {/* Title — Strong Black Text */}
-                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
-                    {project.title}
-                  </h1>
+     <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
+  <CardContent className="p-6 lg:p-8">
+    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      {/* Left Side — Title + Country */}
+      <div className="flex items-center gap-5 flex-1 min-w-0">
+        <div className="flex-1">
+          <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
+            {project.title}
+          </h1>
 
-                  {/* Optional Subtitle (Client Name) */}
-                  {project.client && (
-                    <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-slate-500" />
-                      {project.client.name}
+          {project.client && (
+            <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-slate-500" />
+              {project.client.name}
+            </p>
+          )}
+        </div>
+
+        <div className="flex-shrink-0">
+          <ProjectCountryCell
+            countryCode={project.countryCode}
+            size="4xl"
+            fallbackText="Not specified"
+            className="shadow-lg ring-4 ring-white/90 rounded-full"
+          />
+        </div>
+      </div>
+
+      {/* Right Side — Action Buttons */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* View Project Details - now opens modal */}
+        <Button
+          size="md"
+          onClick={() => setShowProjectDetailsModal(true)}
+          className="font-medium text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-4 py-2"
+        >
+          View Details
+        </Button>
+
+        {canManageProjects && !isProcessingExecutive && (
+          <>
+            {/* Edit */}
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => navigate(`/projects/${project.id}/edit`)}
+              className="font-medium text-sm border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-sm transition-all duration-200 px-3 py-2"
+            >
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              Edit
+            </Button>
+
+            {/* Delete */}
+            <Button
+              variant="destructive"
+              size="md"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200 px-3 py-2"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+
+    {/* Bottom Accent */}
+    <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70" />
+  </CardContent>
+</Card>
+              {/* Project Details Modal */}
+<Dialog open={showProjectDetailsModal} onOpenChange={setShowProjectDetailsModal}>
+  <DialogContent className="w-full max-w-5xl lg:max-w-6xl max-h-[70vh] p-0 overflow-hidden rounded-xl border border-slate-200 shadow-xl bg-white">
+    {/* Header - Compact */}
+    <div className="px-5 py-3 border-b bg-slate-50">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <DialogTitle className="text-lg sm:text-xl font-semibold text-slate-900 leading-tight truncate">
+            {project.title}
+          </DialogTitle>
+          <DialogDescription className="mt-1.5 text-sm text-slate-600 flex items-center gap-3 flex-wrap">
+            {project.countryCode ? (
+              <ProjectCountryCell
+                countryCode={project.countryCode}
+                size="md"
+                fallbackText="No country"
+                className="inline-flex items-center text-sm"
+              />
+            ) : (
+              <span className="text-slate-500 text-sm">No country specified</span>
+            )}
+            <span className="hidden sm:inline text-slate-400 text-sm">•</span>
+            <Badge variant="outline" className="text-xs px-3 py-0.5 bg-white">
+              {project.status?.toUpperCase() || "ACTIVE"}
+            </Badge>
+          </DialogDescription>
+        </div>
+      </div>
+    </div>
+
+    {/* Content */}
+    <ScrollArea className="max-h-[calc(70vh-90px)] px-5 py-4 sm:px-6 sm:py-5 bg-white">
+      <div className="space-y-5">
+
+        {/* Overview */}
+        <section>
+          <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-blue-600" />
+            Overview
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+            <div><span className="text-xs text-slate-500">Client:</span> {project.client?.name || "—"}</div>
+            <div><span className="text-xs text-slate-500">Created by:</span> {project.creator?.name || "—"}</div>
+            <div><span className="text-xs text-slate-500">Deadline:</span> {formatDate(project.deadline)}</div>
+            <div><span className="text-xs text-slate-500">Created:</span> {formatDate(project.createdAt)}</div>
+            <div><span className="text-xs text-slate-500">Priority:</span> {project.priority?.toUpperCase() || "MEDIUM"}</div>
+            <div><span className="text-xs text-slate-500">Status:</span> {project.status}</div>
+          </div>
+        </section>
+
+        {/* Settings */}
+        <section>
+          <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <Settings className="h-4 w-4 text-indigo-600" />
+            Settings
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+              Resume Editable: {project.resumeEditable ? "Yes" : "No"}
+            </div>
+            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+              Hide Contact: {project.hideContactInfo ? "Yes" : "No"}
+            </div>
+            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+              Screening: {project.requiredScreening ? "Required" : "No"}
+            </div>
+            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+              Grooming: {project.groomingRequired || "—"}
+            </div>
+            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+              Type: {project.projectType || "Private"}
+            </div>
+          </div>
+        </section>
+
+        {/* Roles - Grid layout */}
+        {project.rolesNeeded?.length > 0 && (
+          <section>
+            <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4 text-purple-600" />
+              Roles ({project.rolesNeeded.length})
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {project.rolesNeeded.map((role: any) => (
+                <div key={role.id} className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex flex-col">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                    <h4 className="text-base font-semibold text-slate-900 truncate">{role.designation}</h4>
+                    <Badge variant="outline" className="text-xs px-3 py-0.5 w-fit">
+                      {role.quantity} pos
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><strong>Exp:</strong> {role.minExperience}–{role.maxExperience || "Any"}</div>
+                    <div><strong>Age:</strong> {role.ageRequirement || "—"}</div>
+                    <div><strong>Gender:</strong> {role.genderRequirement || "All"}</div>
+                    <div><strong>Visa:</strong> {role.visaType || "Any"}</div>
+                  </div>
+                  {role.notes && (
+                    <p className="mt-2 text-xs text-slate-600 italic">
+                      Note: {role.notes}
                     </p>
                   )}
                 </div>
-
-                {/* Country Flag — Clean & Elevated */}
-                <div className="flex-shrink-0">
-                  <ProjectCountryCell
-                    countryCode={project.countryCode}
-                    size="4xl"
-                    fallbackText="Not specified"
-                    className="shadow-lg ring-4 ring-white/90 rounded-full"
-                  />
-                </div>
-              </div>
-
-              {/* Right Side — Action Buttons */}
-              <div className="flex items-center gap-3">
-                {canManageProjects && !isProcessingExecutive && (
-                  <>
-                    {/* Edit Button — Clean & Professional */}
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => navigate(`/projects/${project.id}/edit`)}
-                      className="font-semibold border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-md transition-all duration-200"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Project
-                    </Button>
-
-                    {/* Delete Button — Strong but Clean */}
-                    <Button
-                      variant="destructive"
-                      size="lg"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </div>
+              ))}
             </div>
+          </section>
+        )}
 
-            {/* Clean Bottom Accent Line */}
-            <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70"></div>
-          </CardContent>
-        </Card>
+        {/* Documents - Grid layout */}
+        {project.documentRequirements?.length > 0 && (
+          <section>
+            <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-amber-600" />
+              Documents
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {project.documentRequirements.map((doc: any) => (
+                <div key={doc.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 truncate">{doc.docType}</p>
+                    {doc.description && <p className="text-xs text-slate-600 mt-1 line-clamp-2">{doc.description}</p>}
+                  </div>
+                  <Badge variant={doc.mandatory ? "default" : "secondary"} className="text-xs px-3 py-0.5 mt-2 w-fit">
+                    {doc.mandatory ? "Mandatory" : "Optional"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </ScrollArea>
+
+    {/* Footer */}
+    <div className="px-5 py-3 border-t bg-slate-50 flex justify-end">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowProjectDetailsModal(false)}
+        className="min-w-[90px]"
+      >
+        Close
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
+
+
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Candidates */}
@@ -1025,7 +1237,7 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </div>
-
+                  
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={showDeleteConfirm}
