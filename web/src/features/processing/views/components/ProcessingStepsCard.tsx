@@ -90,7 +90,8 @@ interface TransformedStep {
   notes?: string;
   updatedAt?: string;
   submittedAt?: string;
-  hasSubSteps?: boolean;
+  completedAt?: string;
+  hasSubSteps?: boolean; 
   subStepStatuses?: {
     key: string;
     label: string;
@@ -149,7 +150,7 @@ export function ProcessingStepsCard({
   const [openSubmittedEditorKey, setOpenSubmittedEditorKey] = useState<string | null>(null);
   const [editingDate, setEditingDate] = useState<string>(""); // yyyy-mm-dd format
   const [submittedDates, setSubmittedDates] = useState<Record<string, string | null>>({});
-  const [savingSubmittedDate, setSavingSubmittedDate] = useState(false);
+  const [, setSavingSubmittedDate] = useState(false);
   // Confirmation modal state (reuse HRD confirm modals)
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [confirmEditOpen, setConfirmEditOpen] = useState(false);
@@ -256,6 +257,7 @@ export function ProcessingStepsCard({
         notes: step.rejectionReason || undefined,
         updatedAt: step.updatedAt,
         submittedAt: (step as any).submittedAt || null,
+        completedAt: (step as any).completedAt || null,
         stepId: step.id,
         hasDocuments: step.template.hasDocuments,
         documents: step.documents,
@@ -551,6 +553,7 @@ export function ProcessingStepsCard({
                   onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
                   onStepClick={onStepClick}
                   submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
+                  completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
                 />
               ))}
@@ -569,6 +572,7 @@ export function ProcessingStepsCard({
                   isEnabled={true}
                   onStepClick={onStepClick}
                   submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
+                  completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
                 />
               ))}
@@ -615,29 +619,42 @@ export function ProcessingStepsCard({
 
                   {/* Show submitted date and edit control in the details modal */}
                   {!selected.key.startsWith("offer_letter") && (
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="text-xs text-slate-500">Submitted: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}</div>
+                    <div className="mt-3">
+                      {selected.status === 'completed' ? (
+                        <div className="w-full flex items-start justify-between gap-4">
+                          <div className="text-xs">
+                            <div className="text-[10px] text-slate-400">Submitted at</div>
+                            <div className="text-sm font-semibold">{formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt) || '—'}</div>
+                          </div>
 
-                      {/* Only show edit button when step is not completed */}
-                      {selected.status !== 'completed' ? (
-                        <div>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"
-                                  onClick={() => openEditSubmitted(selected.stepId, submittedDates[selected.stepId] ?? selected.submittedAt)}
-                                >
-                                  <Edit3 className={`h-4 w-4 ${statusCfg.color}`} />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Edit submitted date</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <div className="text-xs text-right">
+                            <div className="text-[10px] text-slate-400">Completed at</div>
+                            <div className={`text-sm font-semibold ${statusCfg.color}`}>{formatDisplayDate(selected.completedAt ?? submittedDates[selected.stepId] ?? selected.submittedAt) || '—'}</div>
+                          </div>
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-slate-500">Submitted: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}</div>
+
+                          <div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"
+                                    onClick={() => openEditSubmitted(selected.stepId, submittedDates[selected.stepId] ?? selected.submittedAt)}
+                                  >
+                                    <Edit3 className={`h-4 w-4 ${statusCfg.color}`} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Edit submitted date</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}  
 
@@ -718,6 +735,7 @@ function StepItem({
   onOfferLetterClick,
   onStepClick,
   submittedAt,
+  completedAt,
   onEditSubmitted,
 }: {
   step: {
@@ -751,6 +769,7 @@ function StepItem({
   onOfferLetterClick?: () => void;
   onStepClick?: (stepKey: string) => void;
   submittedAt?: string | null;
+  completedAt?: string | null;
   onEditSubmitted?: () => void;
 }) {
   const statusConfig = getStatusConfig(step.status);
@@ -947,41 +966,56 @@ function StepItem({
         </div>
 
         {/* Footer */}
-        {!isOfferLetterStep && (
-          <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs">
-              <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
-                <Calendar className="h-4 w-4" />
-                <span className="text-xs" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
-                  {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
-                </span>
+        <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs">
+            {!isOfferLetterStep ? (
+              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                <span className="text-[10px] text-slate-400">Submitted at</span>
+                <div className="inline-flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
+                    {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+                  </span>
+                </div>
               </span>
-            </div>
-
-            {/* Only show edit action when step is not completed */}
-            {!stepCompleted && (
-              <div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
-                        className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
-                        aria-label="Edit submitted date"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                        <span>Set date</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Set or edit submitted date</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+            ) : (
+              <div className="text-xs text-slate-500">&nbsp;</div>
             )}
           </div>
-        )}   
+
+          {/* Offer letter shows only completed date; other steps show completed or edit */}
+          {isOfferLetterStep ? (
+            <div className="text-xs text-right">
+              <div className="text-[10px] text-slate-400">Completed at</div>
+              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
+            </div>
+          ) : stepCompleted ? (
+            <div className="text-xs text-right">
+              <div className="text-[10px] text-slate-400">Completed at</div>
+              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "—")}</div>
+            </div>
+          ) : (
+            <div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
+                      className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
+                      aria-label="Edit submitted date"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      <span>Set date</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Set or edit submitted date</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+        </div>     
       </div>
     );
   }
@@ -1162,40 +1196,54 @@ function StepItem({
       </div>
 
       {/* Footer */}
-      {!isOfferLetterStep && (
-        <div className="mt-2 px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
-              <Calendar className="h-4 w-4" />
-              <span className="text-xs" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
-                {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
-              </span>
+      <div className="mt-2 px-3 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs">
+          {!isOfferLetterStep ? (
+            <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+              <span className="text-[10px] text-slate-400">Submitted at</span>
+              <div className="inline-flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
+                  {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+                </span>
+              </div>
             </span>
-          </div>
-
-          {/* Only show edit when step is not completed */}
-          {!stepCompleted && (
-            <div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
-                      className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100"
-                      aria-label="Edit submitted date"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Edit submitted date</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          ) : (
+            <div className="text-xs text-slate-500">&nbsp;</div>
           )}
         </div>
-      )} 
+
+        {isOfferLetterStep ? (
+          <div className="text-xs text-right">
+            <div className="text-[10px] text-slate-400">Completed at</div>
+            <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
+          </div>
+        ) : stepCompleted ? (
+          <div className="text-xs text-right">
+            <div className="text-[10px] text-slate-400">Completed at</div>
+            <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "—")}</div>
+          </div>
+        ) : (
+          <div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
+                    className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100"
+                    aria-label="Edit submitted date"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit submitted date</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+      </div>   
     </div>
   );
 }
