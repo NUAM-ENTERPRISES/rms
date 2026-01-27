@@ -560,7 +560,7 @@ export function ProcessingStepsCard({
             </div>
             {/* Right Column */}
             <div className="divide-y divide-slate-100">
-              {mergedSteps.slice(6, 12).map((step, index) => (
+              {mergedSteps.slice(6).map((step, index) => (
                 <StepItem 
                   key={step.key} 
                   step={step} 
@@ -786,7 +786,8 @@ function StepItem({
   const isInProgress = step.status === "in_progress";
 
   // Use isCompleted and step states to determine styling
-  const stepCompleted = isCompleted || offerLetterVerified;
+  // Consider the step's actual status as well — mark completed when API reports 'completed' or when `completedAt` is present
+  const stepCompleted = isCompleted || offerLetterVerified || step.status === 'completed' || !!completedAt;
   const stepEnabled = isEnabled || stepCompleted || isPending || isInProgress; // enable pending/in-progress steps by default
 
   // Card border color based on status

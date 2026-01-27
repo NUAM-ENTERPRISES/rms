@@ -148,6 +148,19 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Get Document Received requirements and uploads for a processing candidate (same shape as HRD)
+    getDocumentReceivedRequirements: builder.query<
+      any,
+      string
+    >({
+      query: (processingId) => `/processing/steps/${processingId}/document-received-requirements`,
+      transformResponse: (response: { success: boolean; data: any; message: string }) => response.data,
+      providesTags: (_result, _error, processingId) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Get Council Registration requirements and uploads for a processing candidate (same shape as HRD)
     getCouncilRegistrationRequirements: builder.query<
       any,
@@ -399,6 +412,7 @@ export const {
   useUpdateStepStatusMutation,
   useCompleteStepMutation,
   useGetHrdRequirementsQuery,
+  useGetDocumentReceivedRequirementsQuery,
   useGetCouncilRegistrationRequirementsQuery,
   useGetDocumentAttestationRequirementsQuery,
   useGetMedicalRequirementsQuery,

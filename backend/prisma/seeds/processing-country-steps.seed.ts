@@ -4,6 +4,7 @@ const gulfCountries = ['SA', 'OM', 'QA', 'AE', 'KW', 'BH'];
 
 const gulfPlanKeys = [
   'offer_letter',
+  'document_received',
   'hrd',
   'data_flow',
   'eligibility',
@@ -21,6 +22,7 @@ const gulfPlanKeys = [
 
 const indiaPlanKeys = [
   'offer_letter',
+  'document_received',
   'hrd',
   'document_attestation',
   'biometrics',

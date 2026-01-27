@@ -280,6 +280,15 @@ export class ProcessingController {
     return { success: true, data, message: 'HRD requirements retrieved' };
   }
 
+  @Get('steps/:processingId/document-received-requirements')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get Documents Received requirements for a processing candidate', description: 'Merged global + country Documents Received document rules and existing processing_documents. Same response shape as HRD.' })
+  @ApiQuery({ name: 'docType', required: false, description: 'Optional document type to filter required documents, processing_documents and candidate documents' })
+  async getDocumentReceivedRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
+    const data = await this.processingService.getDocumentReceivedRequirements(processingId, docType);
+    return { success: true, data, message: 'Documents Received requirements retrieved' };
+  }
+
   @Get('steps/:processingId/visa-requirements')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({ summary: 'Get Visa requirements for a processing candidate', description: "Merged global + country Visa document rules and existing processing_documents. Same response shape as HRD." })

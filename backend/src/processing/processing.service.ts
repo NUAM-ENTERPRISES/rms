@@ -763,6 +763,158 @@ export class ProcessingService {
     };
   }
 
+  async getDocumentReceivedRequirements(processingCandidateId: string, docType?: string) {
+    // Ensure steps exist
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true, role: { include: { roleCatalog: true } } },
+    });
+    if (!pc) throw new Error('Processing candidate not found');
+
+    const country = pc.project?.countryCode || pc.candidate?.countryCode || null;
+
+    const documentReceivedTemplate = await this.prisma.processingStepTemplate.findUnique({ where: { key: 'document_received' } });
+    if (!documentReceivedTemplate) throw new Error("ProcessingStepTemplate 'document_received' not found");
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: documentReceivedTemplate.id,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    // Merge rules: country wins
+    const map: Record<string, any> = {};
+    for (const r of rules) {
+      map[`${r.countryCode}:${r.docType}`] = r;
+    }
+
+    let requiredDocuments = Object.values(map).map((r: any) => ({
+      docType: r.docType,
+      label: r.label,
+      mandatory: r.mandatory,
+      source: r.countryCode,
+    }));
+
+    const activeDocTypes = requiredDocuments.map((d) => d.docType);
+
+    if (docType) requiredDocuments = requiredDocuments.filter((d) => d.docType === docType);
+
+    const documentReceivedStep = await this.prisma.processingStep.findFirst({
+      where: { processingCandidateId, templateId: documentReceivedTemplate.id },
+      include: {
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: {
+              include: {
+                document: true,
+                roleCatalog: true,
+                candidateProjectMap: {
+                  include: {
+                    project: true,
+                    roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const filterDocTypes = docType ? [docType] : activeDocTypes;
+
+    let processing_documents = (documentReceivedStep?.documents || [])
+      .map((d: any) => ({
+        id: d.id,
+        processingStepId: d.processingStepId,
+        uploadedAt: d.createdAt,
+        documentId: d.candidateProjectDocumentVerification?.documentId || null,
+        verification: d.candidateProjectDocumentVerification || null,
+        document: d.candidateProjectDocumentVerification?.document || null,
+      }))
+      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+
+    const candidateDocuments = await this.prisma.document.findMany({
+      where: {
+        candidateId: pc.candidate.id,
+        isDeleted: false,
+        docType: { in: filterDocTypes },
+        OR: [{ roleCatalogId: pc.role?.roleCatalogId || null }, { roleCatalogId: null }],
+      },
+      include: {
+        verifications: {
+          include: {
+            candidateProjectMap: {
+              include: {
+                project: true,
+                roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+              },
+            },
+            roleCatalog: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const mandatoryDocTypes = requiredDocuments.filter((d) => d.mandatory).map((d) => d.docType);
+
+    const uploadedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => pd.document && uploadedDocTypes.add(pd.document.docType));
+    candidateDocuments.forEach((d: any) => d.docType && uploadedDocTypes.add(d.docType));
+
+    const uploadedCount = uploadedDocTypes.size;
+    const verifiedCount = processing_documents.filter((pd: any) => pd.verification && pd.verification.status === 'verified').length;
+    const missingCount = mandatoryDocTypes.filter((docType) => !uploadedDocTypes.has(docType)).length;
+
+    const isDocumentReceivedCompleted = !!documentReceivedStep && documentReceivedStep.status === 'completed';
+
+    const step = documentReceivedStep ? (() => {
+      const { documents, ...rest } = documentReceivedStep as any;
+      return rest;
+    })() : null;
+
+    return {
+      isDocumentReceivedCompleted,
+      step,
+      processingCandidate: {
+        id: pc.id,
+        processingStatus: pc.processingStatus,
+        candidate: {
+          id: pc.candidate?.id || null,
+          firstName: pc.candidate?.firstName || null,
+          lastName: pc.candidate?.lastName || null,
+          email: pc.candidate?.email || null,
+          mobileNumber: pc.candidate?.mobileNumber || null,
+          countryCode: pc.candidate?.countryCode || null,
+        },
+        project: {
+          id: pc.project?.id || null,
+          title: pc.project?.title || null,
+          countryCode: pc.project?.countryCode || null,
+          description: pc.project?.description || null,
+          clientId: pc.project?.clientId || null,
+          teamId: pc.project?.teamId || null,
+        },
+        role: pc.role ? { id: pc.role.id, designation: pc.role.designation, roleCatalog: pc.role.roleCatalog || null } : null,
+      },
+      requiredDocuments,
+      processing_documents,
+      candidateDocuments,
+      counts: {
+        totalConfigured: requiredDocuments.length,
+        totalMandatory: mandatoryDocTypes.length,
+        uploadedCount,
+        verifiedCount,
+        missingCount,
+      },
+    };
+  }
+
   /**
    * Emigration requirements (HRD-shaped response)
    * - Merges global ('ALL') + country rules for processingStepTemplate key = 'emigration'

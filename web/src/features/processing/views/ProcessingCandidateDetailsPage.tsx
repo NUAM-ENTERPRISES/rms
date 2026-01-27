@@ -30,6 +30,7 @@ import {
   EmigrationModal,
   HireModal,
 } from "./components";
+import DocumentReceivedModal from "./components/DocumentReceivedModal";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
 
 export default function ProcessingCandidateDetailsPage() {
@@ -48,6 +49,7 @@ export default function ProcessingCandidateDetailsPage() {
   const [showPrometricModal, setShowPrometricModal] = useState(false);
   const [showDataFlowModal, setShowDataFlowModal] = useState(false);
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
+  const [showDocumentReceivedModal, setShowDocumentReceivedModal] = useState(false);
 
   const { data: apiResponse, isLoading, error, refetch: refetchCandidateDetails } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
@@ -253,6 +255,12 @@ export default function ProcessingCandidateDetailsPage() {
                 if (k === "dataflow") {
                   setShowDataFlowModal(true);
                 }
+
+                // Document Received
+                if (k === "documentreceived" || k === "documentsreceived" || k.startsWith("documentreceived")) {
+                  setShowDocumentReceivedModal(true);
+                  return;
+                }
               }}
             />
 
@@ -343,6 +351,14 @@ export default function ProcessingCandidateDetailsPage() {
         }}
         processingId={data.id}
         onComplete={handleHrdComplete}
+      />
+
+      {/* Document Received Modal */}
+      <DocumentReceivedModal
+        isOpen={showDocumentReceivedModal}
+        onClose={() => { setShowDocumentReceivedModal(false); refetchCandidateDetails(); }}
+        processingId={data.id}
+        onComplete={handleStepComplete}
       />
 
       {/* Biometric Modal */}

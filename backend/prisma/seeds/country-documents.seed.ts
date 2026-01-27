@@ -495,6 +495,57 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     }
   }
 
+  // --- Global Documents Received Documents ---
+  // Seed global "Documents Received" requirements mapped to processing step template 'document_received'
+  const documentReceivedTemplate = await prisma.processingStepTemplate.findUnique({ where: { key: 'document_received' } });
+  if (!documentReceivedTemplate) {
+    console.warn("ProcessingStepTemplate with key='document_received' not found — skipping Documents Received global seed");
+  } else {
+    // Ensure sentinel global country exists for 'ALL' to attach global rules
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    const documentReceivedDocs = [
+      // required
+      { docType: DOCUMENT_TYPE.PASSPORT_ORIGINAL, label: 'Original Passport (presented)', mandatory: true },
+      { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ORIGINAL, label: 'Degree Certificate (Original)', mandatory: true },
+      { docType: DOCUMENT_TYPE.TRANSCRIPT_ORIGINAL, label: 'Academic Transcript (Original)', mandatory: true },
+      { docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ORIGINAL, label: 'Registration Certificate (Original)', mandatory: true },
+      // optional
+      { docType: DOCUMENT_TYPE.OFFER_LETTER_ORIGINAL, label: 'Offer Letter (Original)', mandatory: false },
+      { docType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL, label: 'Marriage Certificate (Original)', mandatory: false },
+      { docType: DOCUMENT_TYPE.BIRTH_CERTIFICATE_ORIGINAL, label: 'Birth Certificate (Original)', mandatory: false },
+      { docType: DOCUMENT_TYPE.PCC_ORIGINAL, label: 'Police Clearance Certificate (Original)', mandatory: false },
+    ];
+
+    for (const doc of documentReceivedDocs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: documentReceivedTemplate.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: documentReceivedTemplate.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: documentReceivedTemplate.id,
+        },
+      });
+    }
+  }
+
   console.log('Country document requirements seeded successfully.');
 }
 
