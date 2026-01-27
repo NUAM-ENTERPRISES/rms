@@ -133,7 +133,7 @@ interface ProcessingStepsCardProps {
 
 export function ProcessingStepsCard({
   steps,
-  maxHeight = "500px",
+  maxHeight = "950px",
   offerLetterStatus,
   onOfferLetterClick,
   currentStep,
@@ -379,7 +379,7 @@ export function ProcessingStepsCard({
   };
 
   return (
-    <Card className="border-0 shadow-xl overflow-hidden bg-white">
+    <Card className="min-h-[950px] border-0 shadow-xl overflow-hidden bg-white">
 
 
       <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-4">
@@ -533,8 +533,8 @@ export function ProcessingStepsCard({
 
       <CardContent className="p-0">
         <div 
-          className="overflow-auto scrollbar-thin scrollbar-thumb-slate-200"
-          style={{ maxHeight }}
+          className="overflow-visible"
+          style={{ minHeight: maxHeight }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
             {/* Left Column */}
