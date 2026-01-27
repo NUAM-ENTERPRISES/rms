@@ -26,8 +26,13 @@ import {
   ScrollText,
   Ticket,
   Stamp,
+  Calendar,
+  Edit3,
 } from "lucide-react";
 import type { ProcessingStep as ApiProcessingStep } from "@/services/processingApi";
+import { useSubmitHrdDateMutation } from "@/services/processingApi";
+import ConfirmSubmitDateModal from "@/features/processing/components/ConfirmSubmitDateModal";
+import ConfirmEditSubmitDateModal from "@/features/processing/components/ConfirmEditSubmitDateModal";
 
 // Icon mapping for different step keys
 const STEP_ICON_MAP: Record<string, typeof FileText> = {
@@ -84,6 +89,7 @@ interface TransformedStep {
   apiStatus?: string; // raw API status (e.g., 'cancelled')
   notes?: string;
   updatedAt?: string;
+  submittedAt?: string;
   hasSubSteps?: boolean;
   subStepStatuses?: {
     key: string;
@@ -120,6 +126,8 @@ interface ProcessingStepsCardProps {
   isHired?: boolean;
   /** Optional handler to finalize the entire processing once every step is completed (fallback) */
   onCompleteProcessing?: () => void | Promise<void>;
+  /** Optional handler to update a step's submitted date */
+  onUpdateSubmittedDate?: (stepId: string, submittedAt: string | null) => void | Promise<void>;
 }
 
 export function ProcessingStepsCard({
@@ -132,9 +140,85 @@ export function ProcessingStepsCard({
   onOpenHire,
   isHired = false,
   onCompleteProcessing,
+  onUpdateSubmittedDate,
 }: ProcessingStepsCardProps) {
   const [openStepKey, setOpenStepKey] = useState<string | null>(null);
   const [localCompleting, setLocalCompleting] = useState(false);
+
+  // Submitted date editor state: store local overrides and the open editor step id
+  const [openSubmittedEditorKey, setOpenSubmittedEditorKey] = useState<string | null>(null);
+  const [editingDate, setEditingDate] = useState<string>(""); // yyyy-mm-dd format
+  const [submittedDates, setSubmittedDates] = useState<Record<string, string | null>>({});
+  const [savingSubmittedDate, setSavingSubmittedDate] = useState(false);
+  // Confirmation modal state (reuse HRD confirm modals)
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+  const [confirmEditOpen, setConfirmEditOpen] = useState(false);
+  const [confirmSubmitting, setConfirmSubmitting] = useState(false);
+
+  // RTK Query mutation to save submitted date (API name: submitHrdDate)
+  const [submitHrdDate] = useSubmitHrdDateMutation();
+
+  const formatDisplayDate = (iso?: string | null) => {
+    if (!iso) return "Not submitted";
+    try {
+      const dt = new Date(iso);
+      return dt.toLocaleString();
+    } catch (err) {
+      return iso;
+    }
+  };
+
+  const toInputDate = (iso?: string | null) => {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      // produce yyyy-mm-dd for date input
+      return d.toISOString().slice(0, 10);
+    } catch (err) {
+      return "";
+    }
+  };
+
+  const openEditSubmitted = (stepKey: string, currentIso?: string | null) => {
+    // Open the HRD-style Edit Submission Date modal directly (prefill if currentIso available)
+    setOpenSubmittedEditorKey(stepKey);
+    setEditingDate(toInputDate(currentIso));
+    setConfirmEditOpen(true);
+  };
+
+  const saveSubmitted = async (stepId: string, date?: Date | null) => {
+    // Save locally and call optional callback later
+    setSavingSubmittedDate(true);
+    try {
+      const iso = date ? date.toISOString() : (editingDate ? new Date(editingDate).toISOString() : null);
+      setSubmittedDates((s) => ({ ...s, [stepId]: iso }));
+
+      // Try calling API mutation (submitHrdDate) if available
+      try {
+        await submitHrdDate({ stepId, submittedAt: iso ?? "" }).unwrap();
+      } catch (apiErr) {
+        // If API fails, we still keep local optimistic state and log error
+        console.error("submitHrdDate API failed", apiErr);
+      }
+
+      // If parent wants to handle API save, call `onUpdateSubmittedDate` if provided
+      if (typeof onUpdateSubmittedDate === "function") {
+        try {
+          await onUpdateSubmittedDate(stepId, iso ?? null);
+        } catch (err) {
+          console.error("Parent onUpdateSubmittedDate failed", err);
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Failed to save submitted date", err);
+      return false;
+    } finally {
+      setSavingSubmittedDate(false);
+      setOpenSubmittedEditorKey(null);
+    }
+  }; 
 
   // Transform API steps into component structure with parent-child relationships
   const mergedSteps = useMemo(() => {
@@ -171,6 +255,7 @@ export function ProcessingStepsCard({
         apiStatus: step.status,
         notes: step.rejectionReason || undefined,
         updatedAt: step.updatedAt,
+        submittedAt: (step as any).submittedAt || null,
         stepId: step.id,
         hasDocuments: step.template.hasDocuments,
         documents: step.documents,
@@ -220,59 +305,34 @@ export function ProcessingStepsCard({
       };
     }
     
-    // Special handling for Offer Letter step
-    if (activeStep?.key === "offer_letter") {
-      if (offerLetterStatus) {
-        if (offerLetterStatus.status === "not_uploaded") {
-          return {
-            message: "Offer Letter not uploaded. Please request recruiter to upload.",
-            type: "warning" as const,
-          };
-        }
-        if (offerLetterStatus.status === "pending") {
-          return {
-            message: "Offer Letter uploaded. Please verify to proceed.",
-            type: "info" as const,
-          };
-        }
-        if (offerLetterStatus.status === "rejected") {
-          return {
-            message: "Offer Letter rejected. Waiting for resubmission.",
-            type: "hold" as const,
-          };
-        }
-        if (offerLetterStatus.status === "verified") {
-          return {
-            message: "Offer Letter verified. Proceed to next step.",
-            type: "success" as const,
-          };
-        }
-      }
-      return {
-        message: "Offer Letter not verified. Please start from this step.",
-        type: "warning" as const,
-      };
-    }
-    
+    // Show concise status messages per active step — pending, in progress, or on hold
     if (activeStep) {
-      if (activeStep.status === "not_started" || activeStep.status === "in_progress") {
+      if (activeStep.status === "not_started") {
         return {
-          message: `${activeStep.label} - Please complete this step to proceed.`,
+          message: `${activeStep.label} — Pending`,
           type: "warning" as const,
         };
       }
+
+      if (activeStep.status === "in_progress") {
+        return {
+          message: `${activeStep.label} — In progress`,
+          type: "info" as const,
+        };
+      }
+
       if (activeStep.status === "on_hold") {
         return {
-          message: `${activeStep.label} is on hold. Please resolve pending issues.`,
+          message: `${activeStep.label} — On hold`,
           type: "hold" as const,
         };
       }
     }
-    
+
     return {
-      message: "Start processing by verifying the Offer Letter.",
-      type: "warning" as const,
-    };
+      message: "Processing steps overview",
+      type: "info" as const,
+    }; 
   };
 
   const statusMessage = getStatusMessage();
@@ -292,7 +352,7 @@ export function ProcessingStepsCard({
         color: "text-blue-600",
         bg: "bg-blue-100",
         icon: PlayCircle,
-        label: "Active",
+        label: "In Progress",
       },
       on_hold: {
         color: "text-amber-600",
@@ -318,35 +378,7 @@ export function ProcessingStepsCard({
 
   return (
     <Card className="border-0 shadow-xl overflow-hidden bg-white">
-      {/* CSS for blinking animation */}
-      <style>{`
-        @keyframes blink-orange {
-          0%, 100% {
-            background-color: rgb(255, 237, 213);
-            border-color: rgb(251, 146, 60);
-          }
-          50% {
-            background-color: rgb(254, 215, 170);
-            border-color: rgb(249, 115, 22);
-          }
-        }
-        .blink-orange {
-          animation: blink-orange 1.5s ease-in-out infinite;
-          border-width: 2px;
-          border-style: solid;
-        }
-        @keyframes pulse-glow {
-          0%, 100% {
-            box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.4);
-          }
-          50% {
-            box-shadow: 0 0 12px 4px rgba(251, 146, 60, 0.6);
-          }
-        }
-        .pulse-glow {
-          animation: pulse-glow 1.5s ease-in-out infinite;
-        }
-      `}</style>
+
 
       <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-4">
         <div className="flex items-center justify-between">
@@ -491,7 +523,7 @@ export function ProcessingStepsCard({
           </div>
         </div>
         {activeStep && (activeStep.status === "not_started" || activeStep.status === "in_progress") && (
-          <Badge className="bg-orange-500 text-white text-[10px] uppercase font-bold animate-pulse">
+          <Badge className="bg-orange-500 text-white text-[10px] uppercase font-bold">
             Action Required
           </Badge>
         )}
@@ -502,7 +534,7 @@ export function ProcessingStepsCard({
           className="overflow-auto scrollbar-thin scrollbar-thumb-slate-200"
           style={{ maxHeight }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
             {/* Left Column */}
             <div className="divide-y divide-slate-100">
               {mergedSteps.slice(0, 6).map((step, index) => (
@@ -512,13 +544,14 @@ export function ProcessingStepsCard({
                   index={index} 
                   getStatusConfig={getStatusConfig} 
                   onOpen={() => setOpenStepKey(step.key)}
-                  isCurrentStep={activeStepIndex === index}
-                  // If all steps are completed, treat every step as completed and enabled so the eye/button remain visible
+                  // If all steps are completed, treat every step as completed; enable all steps so uploads are always possible
                   isCompleted={completedCount === totalSteps ? true : index < activeStepIndex}
-                  isEnabled={completedCount === totalSteps ? true : index <= activeStepIndex}
+                  isEnabled={true}
                   offerLetterStatus={step.key === "offer_letter" ? offerLetterStatus : undefined}
                   onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
                   onStepClick={onStepClick}
+                  submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
+                  onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
                 />
               ))}
             </div>
@@ -531,11 +564,12 @@ export function ProcessingStepsCard({
                   index={index + 6} 
                   getStatusConfig={getStatusConfig} 
                   onOpen={() => setOpenStepKey(step.key)}
-                  isCurrentStep={activeStepIndex === index + 6}
                   // Show completed state + eye button for all steps when everything is completed
                   isCompleted={completedCount === totalSteps ? true : index + 6 < activeStepIndex}
-                  isEnabled={completedCount === totalSteps ? true : index + 6 <= activeStepIndex}
+                  isEnabled={true}
                   onStepClick={onStepClick}
+                  submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
+                  onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
                 />
               ))}
             </div>
@@ -555,8 +589,8 @@ export function ProcessingStepsCard({
               <div>
                 <DialogHeader>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                      <SelectedIcon className="h-5 w-5 text-slate-700" />
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${selected.status === 'completed' ? 'bg-emerald-50' : selected.status === 'not_started' ? 'bg-orange-50' : selected.status === 'in_progress' ? 'bg-blue-50' : 'bg-slate-100'}`}>
+                      <SelectedIcon className={`h-5 w-5 ${statusCfg.color}`} />
                     </div>
                     <div className="flex-1">
                       <DialogTitle className="text-lg font-bold text-slate-900">{selected.label}</DialogTitle>
@@ -578,6 +612,34 @@ export function ProcessingStepsCard({
                   {selected.updatedAt && (
                     <p className="mt-3 text-xs text-slate-400">Updated: {selected.updatedAt}</p>
                   )}
+
+                  {/* Show submitted date and edit control in the details modal */}
+                  {!selected.key.startsWith("offer_letter") && (
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="text-xs text-slate-500">Submitted: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}</div>
+
+                      {/* Only show edit button when step is not completed */}
+                      {selected.status !== 'completed' ? (
+                        <div>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"
+                                  onClick={() => openEditSubmitted(selected.stepId, submittedDates[selected.stepId] ?? selected.submittedAt)}
+                                >
+                                  <Edit3 className={`h-4 w-4 ${statusCfg.color}`} />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit submitted date</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}  
 
                   {selected.subStepStatuses && (
                     <div className="mt-4">
@@ -602,6 +664,45 @@ export function ProcessingStepsCard({
           })()}
         </DialogContent>
       </Dialog>
+
+
+
+      {/* Confirm modals (reuse HRD confirm dialogs) */}
+      <ConfirmSubmitDateModal
+        isOpen={confirmSubmitOpen}
+        onClose={() => setConfirmSubmitOpen(false)}
+        date={editingDate ? new Date(editingDate) : null}
+        isSubmitting={confirmSubmitting}
+        onConfirm={async () => {
+          if (!openSubmittedEditorKey) return;
+          setConfirmSubmitting(true);
+          try {
+            await saveSubmitted(openSubmittedEditorKey);
+          } finally {
+            setConfirmSubmitting(false);
+            setConfirmSubmitOpen(false);
+          }
+        }}
+      />
+
+      <ConfirmEditSubmitDateModal
+        isOpen={confirmEditOpen}
+        onClose={() => setConfirmEditOpen(false)}
+        existingDate={openSubmittedEditorKey ? (submittedDates[openSubmittedEditorKey] ?? mergedSteps.find(s => s.stepId === openSubmittedEditorKey)?.submittedAt) : undefined}
+        initialDate={editingDate ? new Date(editingDate).toISOString() : undefined}
+        isSubmitting={confirmSubmitting}
+        onConfirm={async (newDate: Date) => {
+          if (!openSubmittedEditorKey) return false;
+          setConfirmSubmitting(true);
+          try {
+            const ok = await saveSubmitted(openSubmittedEditorKey, newDate);
+            return ok;
+          } finally {
+            setConfirmSubmitting(false);
+            setConfirmEditOpen(false);
+          }
+        }}
+      />
     </Card>
   );
 }
@@ -611,12 +712,13 @@ function StepItem({
   index,
   getStatusConfig,
   onOpen,
-  isCurrentStep,
   isCompleted,
   isEnabled,
   offerLetterStatus,
   onOfferLetterClick,
   onStepClick,
+  submittedAt,
+  onEditSubmitted,
 }: {
   step: {
     key: string;
@@ -643,12 +745,13 @@ function StepItem({
     icon: typeof CheckCircle2;
     label: string;
   };
-  isCurrentStep?: boolean;
   isCompleted?: boolean;
   isEnabled?: boolean;
   offerLetterStatus?: OfferLetterStatus;
   onOfferLetterClick?: () => void;
   onStepClick?: (stepKey: string) => void;
+  submittedAt?: string | null;
+  onEditSubmitted?: () => void;
 }) {
   const statusConfig = getStatusConfig(step.status);
 
@@ -659,11 +762,25 @@ function StepItem({
   const offerLetterRejected = isOfferLetterStep && offerLetterStatus?.status === "rejected";
   const offerLetterNotUploaded = isOfferLetterStep && (!offerLetterStatus || offerLetterStatus.status === "not_uploaded");
 
-  // Use isCompleted and isCurrentStep to determine styling
+  // Determine general step states
+  const isPending = step.status === "not_started";
+  const isInProgress = step.status === "in_progress";
+
+  // Use isCompleted and step states to determine styling
   const stepCompleted = isCompleted || offerLetterVerified;
-  const shouldBlink = isCurrentStep && !stepCompleted;
-  const stepEnabled = isEnabled || stepCompleted;
-  
+  const stepEnabled = isEnabled || stepCompleted || isPending || isInProgress; // enable pending/in-progress steps by default
+
+  // Card border color based on status
+  const cardBorderClass = stepCompleted
+    ? 'border-2 border-emerald-300'
+    : isPending
+    ? 'border border-orange-200'
+    : isInProgress
+    ? 'border border-blue-200'
+    : offerLetterRejected
+    ? 'border border-rose-200'
+    : 'border border-slate-100';
+
   // Override status display for offer letter based on document status
   const getOfferLetterBadgeText = () => {
     if (offerLetterVerified) return "Verified";
@@ -684,23 +801,29 @@ function StepItem({
   // Check if this is the Medical step with sub-steps
   if (step.hasSubSteps && step.subStepStatuses) {
     return (
-      <div className={`${stepCompleted ? "bg-emerald-50/50" : ""} ${shouldBlink ? "blink-orange pulse-glow rounded-lg m-1" : ""} ${!stepEnabled ? "opacity-90" : ""}`}>
+      <div className={cn(
+        "m-2 rounded-lg overflow-hidden flex flex-col bg-white",
+        cardBorderClass,
+        stepCompleted ? "ring-1 ring-emerald-200" : ""
+      )}>
         {/* Main Step Header */}
-        <div className={`flex items-center gap-3 p-3 border-b border-slate-100 ${
+        <div className={`flex items-center gap-3 p-3 ${
           stepCompleted 
             ? "bg-gradient-to-r from-emerald-50 to-emerald-100/50" 
-            : shouldBlink 
-            ? "bg-transparent" 
-            : !stepEnabled
-            ? "bg-slate-100/50"
-            : "bg-gradient-to-r from-rose-50 to-pink-50"
+            : isPending
+            ? "bg-white"
+            : isInProgress
+            ? "bg-blue-50"
+            : "bg-white"
         }`}>
           <div
             className={`h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
               stepCompleted
                 ? "bg-emerald-500 text-white"
-                : shouldBlink
+                : isPending
                 ? "bg-orange-500 text-white"
+                : isInProgress
+                ? "bg-blue-100 text-blue-600"
                 : !stepEnabled
                 ? "bg-slate-200 text-slate-500"
                 : "bg-rose-100 text-rose-500"
@@ -716,8 +839,10 @@ function StepItem({
             <h4 className={`font-black text-sm ${
               stepCompleted 
                 ? "text-emerald-700" 
-                : shouldBlink 
-                ? "text-orange-700" 
+                : isPending
+                ? "text-orange-700"
+                : isInProgress
+                ? "text-blue-700"
                 : !stepEnabled
                 ? "text-slate-600"
                 : "text-rose-700"
@@ -725,8 +850,10 @@ function StepItem({
             <p className={`text-xs ${
               stepCompleted 
                 ? "text-emerald-500" 
-                : shouldBlink 
-                ? "text-orange-500" 
+                : isPending
+                ? "text-orange-500"
+                : isInProgress
+                ? "text-blue-500"
                 : !stepEnabled
                 ? "text-slate-500"
                 : "text-rose-400"
@@ -748,16 +875,20 @@ function StepItem({
               className={`p-1.5 rounded-full hover:bg-white/50 ml-2 transition-colors ${
                 stepCompleted 
                   ? "bg-emerald-100 hover:bg-emerald-200" 
-                  : shouldBlink 
+                  : isPending 
                   ? "bg-orange-100 hover:bg-orange-200" 
+                  : isInProgress
+                  ? "bg-blue-100 hover:bg-blue-200"
                   : "bg-rose-100/80 hover:bg-rose-100"
               }`}
             >
               <Eye className={`h-4 w-4 ${
                 stepCompleted 
                   ? "text-emerald-600" 
-                  : shouldBlink 
+                  : isPending 
                   ? "text-orange-600" 
+                  : isInProgress
+                  ? "text-blue-600"
                   : "text-rose-600"
               }`} />
             </button>
@@ -766,13 +897,15 @@ function StepItem({
           <Badge className={`text-[9px] uppercase font-black tracking-wider shrink-0 border-0 px-2 py-0.5 ${
             stepCompleted
               ? "bg-emerald-500 text-white"
-              : shouldBlink
-              ? "bg-orange-500 text-white animate-pulse"
+              : isPending
+              ? "bg-orange-500 text-white"
+              : isInProgress
+              ? "bg-blue-500 text-white"
               : !stepEnabled
               ? "bg-slate-200 text-slate-400"
               : "bg-rose-100 text-rose-600"
           }`}>
-            {stepCompleted ? "Done" : shouldBlink ? "Start" : !stepEnabled ? "Locked" : statusConfig.label}
+            {stepCompleted ? "Done" : isPending ? "Start" : isInProgress ? "In Progress" : !stepEnabled ? "Locked" : statusConfig.label}
           </Badge>
         </div>
 
@@ -812,166 +945,257 @@ function StepItem({
             );
           })}
         </div>
+
+        {/* Footer */}
+        {!isOfferLetterStep && (
+          <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                <Calendar className="h-4 w-4" />
+                <span className="text-xs" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
+                  {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+                </span>
+              </span>
+            </div>
+
+            {/* Only show edit action when step is not completed */}
+            {!stepCompleted && (
+              <div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
+                        className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
+                        aria-label="Edit submitted date"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        <span>Set date</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Set or edit submitted date</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+          </div>
+        )}   
       </div>
     );
   }
 
   // Regular step without sub-steps
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 p-3 transition-colors group",
-        stepCompleted
-          ? "bg-emerald-50/50 hover:bg-emerald-50"
-          : shouldBlink
-          ? "blink-orange pulse-glow rounded-lg m-1"
-          : offerLetterRejected
-          ? "bg-red-50/50 hover:bg-red-50"
-          : step.apiStatus === 'cancelled'
-          ? "bg-rose-50/50 hover:bg-rose-50"
-          : !stepEnabled
-          ? "bg-slate-100/30 opacity-90"
-          : "hover:bg-slate-50",
-        stepEnabled ? "cursor-pointer" : "cursor-not-allowed"
-      )}
-      onClick={() => {
-        if (!stepEnabled) return;
-        if (isOfferLetterStep && onOfferLetterClick) {
-          onOfferLetterClick();
-        } else if (onStepClick) {
-          onStepClick(step.key);
-        }
-      }}
-    >
-      {/* Step Number */}
+    <div className={cn("m-2 rounded-lg overflow-hidden flex flex-col bg-white", cardBorderClass, stepCompleted ? "ring-1 ring-emerald-200" : "") }>
       <div
         className={cn(
-          "h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0",
+          "flex items-center gap-3 p-3 transition-colors group",
           stepCompleted
-            ? "bg-emerald-500 text-white"
-            : shouldBlink
-            ? "bg-orange-500 text-white"
-            : offerLetterPending
-            ? "bg-blue-100 text-blue-600"
+            ? "bg-emerald-50/50 hover:bg-emerald-50"
+            : isPending
+            ? "bg-white"
+            : isInProgress
+            ? "bg-blue-50/50 hover:bg-blue-50"
             : offerLetterRejected
-            ? "bg-red-100 text-red-600"
+            ? "bg-red-50/50 hover:bg-red-50"
+            : step.apiStatus === 'cancelled'
+            ? "bg-rose-50/50 hover:bg-rose-50"
             : !stepEnabled
-            ? "bg-slate-200 text-slate-500"
-            : "bg-slate-100 text-slate-400"
+            ? "bg-slate-100/30 opacity-90"
+            : "hover:bg-slate-50",
+          stepEnabled ? "cursor-pointer" : "cursor-not-allowed"
         )}
+        onClick={() => {
+          if (!stepEnabled) return;
+          if (isOfferLetterStep && onOfferLetterClick) {
+            onOfferLetterClick();
+          } else if (onStepClick) {
+            onStepClick(step.key);
+          }
+        }}
       >
-        {stepCompleted ? (
-          <CheckCircle2 className="h-4 w-4" />
-        ) : (
-          index + 1
-        )}
-      </div>
-
-      {/* Step Info */}
-      <div className="flex-1 min-w-0">
-        <h4 className={cn(
-          "font-bold text-sm truncate",
-          stepCompleted
-            ? "text-emerald-700"
-            : shouldBlink
-            ? "text-orange-700"
-            : offerLetterPending
-            ? "text-blue-700"
-            : offerLetterRejected
-            ? "text-red-700"
-            : !stepEnabled
-            ? "text-slate-600"
-            : "text-slate-700"
-        )}>
-          {step.label}
-        </h4>
-        <p className={cn(
-          "text-xs truncate",
-          stepCompleted
-            ? "text-emerald-500"
-            : shouldBlink
-            ? "text-orange-500"
-            : offerLetterPending
-            ? "text-blue-500"
-            : offerLetterRejected
-            ? "text-red-500"
-            : !stepEnabled
-            ? "text-slate-500"
-            : "text-slate-400"
-        )}>
-          {isOfferLetterStep ? getOfferLetterDescription() : (step.apiStatus === 'cancelled' ? `Processing cancelled — ${step.notes || 'No reason provided'}` : step.description)}
-        </p>
-      </div>
-
-      {/* View details button - only show for enabled steps */}
-      {stepEnabled && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isOfferLetterStep && onOfferLetterClick) {
-              onOfferLetterClick();
-            } else if (onStepClick) {
-              onStepClick(step.key);
-            } else {
-              onOpen && onOpen();
-            }
-          }}
-          aria-label={`View ${step.label} details`}
+        {/* Step Number */}
+        <div
           className={cn(
-            "p-1.5 rounded-full transition-colors",
+            "h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0",
             stepCompleted
-              ? "bg-emerald-100 hover:bg-emerald-200"
-              : shouldBlink || offerLetterPending
-              ? "bg-orange-100 hover:bg-orange-200"
+              ? "bg-emerald-500 text-white"
+              : isPending
+              ? "bg-orange-500 text-white"
+              : isInProgress
+              ? "bg-blue-100 text-blue-600"
+              : offerLetterPending
+              ? "bg-blue-100 text-blue-600"
               : offerLetterRejected
-              ? "bg-red-100 hover:bg-red-200"
-              : "bg-slate-100 hover:bg-slate-200"
+              ? "bg-red-100 text-red-600"
+              : !stepEnabled
+              ? "bg-slate-200 text-slate-500"
+              : "bg-slate-100 text-slate-400"
           )}
         >
-          <Eye className={cn(
-            "h-4 w-4",
-            stepCompleted
-              ? "text-emerald-600"
-              : shouldBlink || offerLetterPending
-              ? "text-orange-600"
-              : offerLetterRejected
-              ? "text-red-600"
-              : "text-slate-600"
-          )} />
-        </button>
-      )}
+          {stepCompleted ? (
+            <CheckCircle2 className="h-4 w-4" />
+          ) : (
+            index + 1
+          )}
+        </div>
 
-      {/* Status Badge */}
-      <Badge
-        className={cn(
-          "text-[9px] uppercase font-black tracking-wider shrink-0 border-0 px-2 py-0.5",
-          stepCompleted
-            ? "bg-emerald-500 text-white"
-            : shouldBlink && !offerLetterPending
-            ? "bg-orange-500 text-white animate-pulse"
-            : offerLetterPending
-            ? "bg-blue-500 text-white animate-pulse"
-            : offerLetterRejected
-            ? "bg-red-500 text-white"
-            : step.apiStatus === 'cancelled'
-            ? "bg-rose-500 text-white"
-            : !stepEnabled
-            ? "bg-slate-200 text-slate-400"
-            : `${statusConfig.bg} ${statusConfig.color}`
+        {/* Step Info */}
+        <div className="flex-1 min-w-0">
+          <h4 className={cn(
+            "font-bold text-sm truncate",
+            stepCompleted
+              ? "text-emerald-700"
+              : isPending
+              ? "text-orange-700"
+              : isInProgress
+              ? "text-blue-700"
+              : offerLetterPending
+              ? "text-blue-700"
+              : offerLetterRejected
+              ? "text-red-700"
+              : !stepEnabled
+              ? "text-slate-600"
+              : "text-slate-700"
+          )}>
+            {step.label}
+          </h4>
+          <p className={cn(
+            "text-xs truncate",
+            stepCompleted
+              ? "text-emerald-500"
+              : isPending
+              ? "text-orange-500"
+              : isInProgress
+              ? "text-blue-500"
+              : offerLetterPending
+              ? "text-blue-500"
+              : offerLetterRejected
+              ? "text-red-500"
+              : !stepEnabled
+              ? "text-slate-500"
+              : "text-slate-400"
+          )}>
+            {isOfferLetterStep ? getOfferLetterDescription() : (step.apiStatus === 'cancelled' ? `Processing cancelled — ${step.notes || 'No reason provided'}` : step.description)}
+          </p>
+        </div>
+
+        {/* View details button - only show for enabled steps */}
+        {stepEnabled && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isOfferLetterStep && onOfferLetterClick) {
+                onOfferLetterClick();
+              } else if (onStepClick) {
+                onStepClick(step.key);
+              } else {
+                onOpen && onOpen();
+              }
+            }}
+            aria-label={`View ${step.label} details`}
+            className={cn(
+              "p-1.5 rounded-full transition-colors",
+              stepCompleted
+                ? "bg-emerald-100 hover:bg-emerald-200"
+                : isPending
+                ? "bg-orange-100 hover:bg-orange-200"
+                : isInProgress || offerLetterPending
+                ? "bg-blue-100 hover:bg-blue-200"
+                : offerLetterRejected
+                ? "bg-red-100 hover:bg-red-200"
+                : "bg-slate-100 hover:bg-slate-200"
+            )}
+          >
+            <Eye className={cn(
+              "h-4 w-4",
+              stepCompleted
+                ? "text-emerald-600"
+                : isPending
+                ? "text-orange-600"
+                : isInProgress || offerLetterPending
+                ? "text-blue-600"
+                : offerLetterRejected
+                ? "text-red-600"
+                : "text-slate-600"
+            )} />
+          </button>
         )}
-      >
+
+        {/* Status Badge */}
+        <Badge
+          className={cn(
+            "text-[9px] uppercase font-black tracking-wider shrink-0 border-0 px-2 py-0.5",
+            stepCompleted
+              ? "bg-emerald-500 text-white"
+              : isPending
+              ? "bg-orange-500 text-white"
+              : isInProgress
+              ? "bg-blue-500 text-white"
+              : offerLetterPending
+              ? "bg-blue-500 text-white"
+              : offerLetterRejected
+              ? "bg-red-500 text-white"
+              : step.apiStatus === 'cancelled'
+              ? "bg-rose-500 text-white"
+              : !stepEnabled
+              ? "bg-slate-200 text-slate-400"
+              : `${statusConfig.bg} ${statusConfig.color}`
+          )}
+        >
         {isOfferLetterStep 
           ? getOfferLetterBadgeText()
           : step.apiStatus === 'cancelled'
           ? "Cancelled"
           : stepCompleted 
           ? "Done" 
-          : shouldBlink 
-          ? "Start" 
+          : isPending
+          ? "Start"
+          : isInProgress
+          ? "In Progress"
           : !stepEnabled
           ? "Locked"
           : statusConfig.label}
       </Badge>
+      </div>
+
+      {/* Footer */}
+      {!isOfferLetterStep && (
+        <div className="mt-2 px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+              <Calendar className="h-4 w-4" />
+              <span className="text-xs" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
+                {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+              </span>
+            </span>
+          </div>
+
+          {/* Only show edit when step is not completed */}
+          {!stepCompleted && (
+            <div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
+                      className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100"
+                      aria-label="Edit submitted date"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Edit submitted date</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+        </div>
+      )} 
     </div>
   );
 }

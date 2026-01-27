@@ -425,6 +425,16 @@ export class ProcessingController {
     return { success: true, data: reminder, message: 'Data Flow reminder triggered' };
   }
 
+  @Post('steps/:processingId/sync-status')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sync processing step statuses for a processing candidate', description: 'Scan steps and update status to `in_progress` if any verified documents are present, or `pending` if none are present.' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Processing steps synced successfully' })
+  async syncProcessingStepStatuses(@Param('processingId') processingId: string, @Req() req: any) {
+    const data = await this.processingService.syncProcessingStepStatuses(processingId, req.user.id);
+    return { success: true, data, message: 'Processing step statuses synced successfully' };
+  }
+
   @Post('candidate-hired/:processingId')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @HttpCode(HttpStatus.OK)

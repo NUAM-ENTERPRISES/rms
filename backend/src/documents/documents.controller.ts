@@ -92,7 +92,7 @@ export class DocumentsController {
   @ApiOperation({
     summary: 'Verify an offer letter and move to processing',
     description:
-      'Verify an offer letter document, update status to processing_in_progress and set processing step to HRD. Only for processing users.',
+      'Verify an offer letter document and set the offer_letter step to completed. HRD will not be auto-started; HRD starts only when HRD step documents are verified. Only for processing users.',
   })
   @ApiResponse({
     status: 200,

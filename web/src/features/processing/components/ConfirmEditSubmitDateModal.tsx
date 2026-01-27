@@ -10,18 +10,21 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   existingDate?: string | null;
+  initialDate?: string | null; // optional prefill for the 'New date' picker
   onConfirm: (newDate: Date) => Promise<boolean>;
   isSubmitting?: boolean;
 }
 
-export default function ConfirmEditSubmitDateModal({ isOpen, onClose, existingDate, onConfirm, isSubmitting }: Props) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(existingDate ? new Date(existingDate) : undefined);
+export default function ConfirmEditSubmitDateModal({ isOpen, onClose, existingDate, initialDate, onConfirm, isSubmitting }: Props) {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate ? new Date(initialDate) : existingDate ? new Date(existingDate) : undefined);
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedDate(existingDate ? new Date(existingDate) : undefined);
+      // Prefer an explicitly provided initial date (for example, when the user already picked a date in a smaller editor),
+      // otherwise fall back to the stored existing date.
+      setSelectedDate(initialDate ? new Date(initialDate) : existingDate ? new Date(existingDate) : undefined);
     }
-  }, [isOpen, existingDate]);
+  }, [isOpen, existingDate, initialDate]);
 
   const handleConfirm = async () => {
     if (!selectedDate) return;

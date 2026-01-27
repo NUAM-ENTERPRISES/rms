@@ -304,32 +304,16 @@ export class ProcessingService {
       },
     });
 
-    // Attach requiredDocuments for each step
-    const stepsWithRules = steps.map((s) => {
-      // country-specific step rules (highest priority)
-      const stepSpecificCountry = countryRules.filter((r) => r.processingStepTemplateId === s.templateId && r.countryCode !== 'ALL');
-      // global step rules defined for ALL
-      const stepSpecificGlobal = countryRules.filter((r) => r.processingStepTemplateId === s.templateId && r.countryCode === 'ALL');
-      // legacy/global rules with no template (generic rules)
-      const genericGlobal = countryRules.filter((r) => r.processingStepTemplateId === null);
-
-      // merge, preferring country-specific -> global step-level -> generic global
-      const merged: any[] = [];
-      const seen = new Set<string>();
-      for (const r of [...stepSpecificCountry, ...stepSpecificGlobal, ...genericGlobal]) {
-        if (!seen.has(r.docType)) {
-          merged.push(r);
-          seen.add(r.docType);
-        }
-      }
-
-      return {
-        ...s,
-        requiredDocuments: merged,
-      };
+    // Return step list WITHOUT documents or requiredDocuments — these are heavy and unnecessary
+    // for the basic steps endpoint. Frontend should use the dedicated requirements endpoints
+    // (e.g., /steps/:processingId/hrd-requirements) when it needs rule/requirement details.
+    const stepsWithoutDocs = steps.map((s) => {
+      // omit `documents` by destructuring
+      const { documents, ...rest } = s as any;
+      return rest;
     });
 
-    return stepsWithRules;
+    return stepsWithoutDocs;
   }
 
   // -----------------
@@ -2386,7 +2370,14 @@ export class ProcessingService {
     const newSubmittedAt = submittedAt ? new Date(submittedAt) : new Date();
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.processingStep.update({ where: { id: stepId }, data: { submittedAt: newSubmittedAt } });
+      // Update submittedAt and set step to in_progress (unless final)
+      const updates: any = { submittedAt: newSubmittedAt };
+      if (!['completed', 'rejected'].includes(step.status) && step.status !== 'in_progress') {
+        updates.status = 'in_progress';
+        updates.startedAt = step.startedAt || new Date();
+      }
+
+      await tx.processingStep.update({ where: { id: stepId }, data: updates });
 
       // Find recruiter from candidate_projects (to attach to history) if available
       let recruiterId: string | undefined = undefined;
@@ -2406,15 +2397,15 @@ export class ProcessingService {
       // determine action text
       const action = step.submittedAt ? 'changed' : 'submitted';
 
-      // create processing history entry
+      // create processing history entry — record new status (in_progress if we set it)
       await tx.processingHistory.create({
         data: {
           processingCandidateId: step.processingCandidateId,
-          status: step.status,
+          status: updates.status || step.status,
           step: step.template.key,
           changedById: userId,
           recruiterId: recruiterId,
-          notes: `HRD submitted date ${action}`,
+          notes: `${step.template?.key || 'Step'} submitted date ${action}`,
         },
       });
     });
@@ -3124,6 +3115,7 @@ export class ProcessingService {
             candidate: true,
           },
         },
+        template: true,
       },
     });
 
@@ -3231,6 +3223,26 @@ export class ProcessingService {
         },
       });
 
+      // 7. Ensure the processing step is marked as in_progress when a document is verified
+      const currentStep = await tx.processingStep.findUnique({ where: { id: processingStepId } });
+      if (currentStep && !['in_progress', 'completed', 'rejected'].includes(currentStep.status)) {
+        await tx.processingStep.update({
+          where: { id: processingStepId },
+          data: { status: 'in_progress', startedAt: currentStep.startedAt || new Date() },
+        });
+
+        await tx.processingHistory.create({
+          data: {
+            processingCandidateId: step.processingCandidateId,
+            status: 'in_progress',
+            step: step.template?.key || step.templateId || null,
+            changedById: userId,
+            recruiterId: candidateProjectMap.recruiterId || null,
+            notes: 'Document verified — step marked in_progress',
+          },
+        });
+      }
+
       return { success: true, verificationId: verification.id };
     });
 
@@ -3245,6 +3257,66 @@ export class ProcessingService {
     }
 
     return txResult;
+  }
+
+  /**
+   * Sync processing step statuses for a given processing candidate
+   * - Marks steps as `in_progress` if they have any verified processing documents
+   * - Reverts steps to `pending` if they have no verified documents
+   */
+  async syncProcessingStepStatuses(processingCandidateId: string, userId?: string) {
+    const steps = await this.prisma.processingStep.findMany({
+      where: { processingCandidateId },
+      include: { documents: { include: { candidateProjectDocumentVerification: true } }, template: true },
+    });
+
+    const changes: Array<{ stepId: string; oldStatus: string; newStatus: string }> = [];
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const s of steps) {
+        // Do not change already finalized steps
+        if (['completed', 'rejected'].includes(s.status)) continue;
+
+        const hasVerifiedDocument = (s.documents || []).some(
+          (d: any) => d.status === 'verified' || (d.candidateProjectDocumentVerification && d.candidateProjectDocumentVerification.status === 'verified'),
+        );
+
+        if (hasVerifiedDocument && s.status !== 'in_progress') {
+          await tx.processingStep.update({
+            where: { id: s.id },
+            data: { status: 'in_progress', startedAt: s.startedAt || new Date() },
+          });
+
+          await tx.processingHistory.create({
+            data: {
+              processingCandidateId,
+              status: 'in_progress',
+              step: s.template?.key || s.templateId || null,
+              changedById: userId || null,
+              notes: 'Step marked in_progress due to verified document(s)',
+            },
+          });
+
+          changes.push({ stepId: s.id, oldStatus: s.status, newStatus: 'in_progress' });
+        } else if (!hasVerifiedDocument && s.status !== 'pending') {
+          await tx.processingStep.update({ where: { id: s.id }, data: { status: 'pending', startedAt: null } });
+
+          await tx.processingHistory.create({
+            data: {
+              processingCandidateId,
+              status: 'pending',
+              step: s.template?.key || s.templateId || null,
+              changedById: userId || null,
+              notes: 'Step reverted to pending (no verified documents)',
+            },
+          });
+
+          changes.push({ stepId: s.id, oldStatus: s.status, newStatus: 'pending' });
+        }
+      }
+    });
+
+    return { updated: changes.length, changes };
   }
 
   /**

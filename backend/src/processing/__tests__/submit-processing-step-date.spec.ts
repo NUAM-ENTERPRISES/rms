@@ -3,6 +3,7 @@ import { ProcessingService } from '../processing.service';
 import { PrismaService } from '../../database/prisma.service';
 import { OutboxService } from '../../notifications/outbox.service';
 import { HrdRemindersService } from '../../hrd-reminders/hrd-reminders.service';
+import { DataFlowRemindersService } from '../../data-flow-reminders/data-flow-reminders.service';
 
 describe('ProcessingService - submitProcessingStepDate', () => {
   let service: ProcessingService;
@@ -15,6 +16,7 @@ describe('ProcessingService - submitProcessingStepDate', () => {
         PrismaService,
         OutboxService,
         { provide: HrdRemindersService, useValue: { createHRDReminder: jest.fn() } },
+        { provide: DataFlowRemindersService, useValue: { createDataFlowReminder: jest.fn() } },
       ],
     }).compile();
 
@@ -49,14 +51,16 @@ describe('ProcessingService - submitProcessingStepDate', () => {
 
     await service.submitProcessingStepDate('step-1', { submittedAt: '2026-01-16T00:00:00.000Z' }, 'user-1');
 
+    expect(txMock.processingStep.update).toHaveBeenCalledWith({ where: { id: 'step-1' }, data: expect.objectContaining({ submittedAt: expect.any(Date), status: 'in_progress' }) });
+
     expect(txMock.processingHistory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         processingCandidateId: 'pc-1',
-        status: 'pending',
+        status: 'in_progress',
         step: 'hrd',
         changedById: 'user-1',
         recruiterId: 'recr-1',
-        notes: 'HRD submitted date submitted',
+        notes: 'hrd submitted date submitted',
       }),
     });
   });

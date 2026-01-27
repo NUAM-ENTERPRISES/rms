@@ -1287,40 +1287,16 @@ export class DocumentsService {
           });
         }
 
-        // Advance HRD step to in_progress (if exists)
-        const hrdStep = await tx.processingStep.findFirst({
-          where: {
-            processingCandidateId: processingCandidate.id,
-            template: { key: 'hrd' },
-          },
-          include: { template: true },
-        });
+        // Do NOT auto-start HRD step here. A step should only be set to `in_progress`
+        // when a document that belongs to *that* step is verified. Offer letter
+        // verification completes the 'offer_letter' step but should not start HRD.
 
-        if (hrdStep) {
-          await tx.processingStep.update({
-            where: { id: hrdStep.id },
-            data: { status: 'in_progress', startedAt: new Date() },
-          });
-
-          await tx.processingHistory.create({
-            data: {
-              processingCandidateId: processingCandidate.id,
-              status: 'in_progress',
-              step: 'hrd',
-              changedById: userId,
-              recruiterId: candidateProjectMap.recruiterId,
-              notes: 'Offer letter verified. HRD step started.',
-            },
-          });
-        }
-
-        // Update overall processing candidate status
-        await tx.processingCandidate.update({ where: { id: processingCandidate.id }, data: { processingStatus: 'in_progress', step: 'hrd' } });
+        // (Note: other flows that verify HRD documents will set the HRD step to in_progress.)
       }
 
       return {
         success: true,
-        message: 'Offer letter verified and status updated to processing',
+        message: 'Offer letter verified (processing step updated). HRD will only start when an HRD document is verified.',
         documentId,
         candidateProjectMapId,
       };
