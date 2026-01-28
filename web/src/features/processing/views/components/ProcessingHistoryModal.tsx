@@ -104,7 +104,7 @@ export function ProcessingHistoryModal({ processingId }: ProcessingHistoryModalP
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="!max-w-[95vw] !w-[95vw] !h-[70vh] !max-h-[70vh] overflow-hidden flex flex-col">
+      <DialogContent className="!max-w-[95vw] !w-[95vw] !h-[88vh] !max-h-[88vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-4 border-b border-slate-100">
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
