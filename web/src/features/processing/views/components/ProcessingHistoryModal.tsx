@@ -15,8 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { History, Calendar } from "lucide-react";
+import { History, Calendar, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+import { useGetCandidateHistoryPaginatedQuery } from "@/features/processing/data/processing.endpoints";
 
 interface HistoryItem {
   id: string;
@@ -39,10 +41,18 @@ interface HistoryItem {
 }
 
 interface ProcessingHistoryModalProps {
-  history: HistoryItem[];
+  processingId: string;
 }
 
-export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps) {
+export function ProcessingHistoryModal({ processingId }: ProcessingHistoryModalProps) {
+  const [page, setPage] = useState(1);
+  const limit = 10;
+
+  const { data, isLoading, error, refetch } = useGetCandidateHistoryPaginatedQuery(
+    { processingId, page, limit },
+    { skip: !processingId }
+  );
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       in_progress: "bg-blue-100 text-blue-700 border-blue-200",
@@ -74,6 +84,9 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
     return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
+  const items = data?.data?.items || [];
+  const pagination = data?.data?.pagination;
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -83,13 +96,14 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
         >
           <History className="h-4 w-4" />
           View Processing History
-          {history.length > 0 && (
+          {pagination?.total ? (
             <Badge className="ml-auto bg-violet-100 text-violet-700 border-0 text-xs">
-              {history.length}
+              {pagination.total}
             </Badge>
-          )}
+          ) : null}
         </Button>
       </DialogTrigger>
+
       <DialogContent className="!max-w-[95vw] !w-[95vw] !h-[70vh] !max-h-[70vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-4 border-b border-slate-100">
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
@@ -98,68 +112,45 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
             </div>
             Processing History
             <Badge className="ml-2 bg-slate-100 text-slate-600 border-0 font-bold">
-              {history.length} events
+              {pagination?.total ? `${pagination.total} events` : "—"}
             </Badge>
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto mt-4">
-          {history && history.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-emerald-600" /></div>
+          ) : error ? (
+            <div className="p-6"><div className="text-sm text-rose-600">Failed to load history.</div></div>
+          ) : items && items.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 hover:bg-slate-50">
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[50px]">
-                    #
-                  </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[180px]">
-                    Status
-                  </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
-                    Step
-                  </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider min-w-[300px]">
-                    Notes
-                  </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">
-                    Changed By
-                  </TableHead> 
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">
-                    Recruiter
-                  </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">
-                    Assigned To
-                  </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
-                    Date & Time
-                  </TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[50px]">#</TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[180px]">Status</TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Step</TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider min-w-[300px]">Notes</TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">Changed By</TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">Recruiter</TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[200px]">Assigned To</TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Date & Time</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {history.map((item, index) => {
+                {items.map((item, index) => {
                   const changedByName = item.changedBy?.name || "System";
                   const recruiterName = item.recruiter?.name || "—";
                   const assignedToName = item.assignedTo?.name || "—";
-                  
+
                   return (
-                    <TableRow
-                      key={item.id}
-                      className={`hover:bg-slate-50 ${index === 0 ? "bg-violet-50/50" : ""}`}
-                    >
-                      <TableCell className="font-bold text-slate-400">
-                        {index + 1}
-                      </TableCell>
+                    <TableRow key={item.id} className={`hover:bg-slate-50 ${index === 0 ? "bg-violet-50/50" : ""}`}>
+                      <TableCell className="font-bold text-slate-400">{(page - 1) * limit + index + 1}</TableCell>
                       <TableCell>
-                        <Badge
-                          className={`uppercase tracking-wider text-[10px] font-black border ${getStatusBadge(item.status)}`}
-                        >
-                          {displayStatus(item.status)}
-                        </Badge>
+                        <Badge className={`uppercase tracking-wider text-[10px] font-black border ${getStatusBadge(item.status)}`}>{displayStatus(item.status)}</Badge>
                       </TableCell>
                       <TableCell className="min-w-[300px]">
                         {item.step ? (
-                          <Badge className="uppercase tracking-wider text-[10px] font-black border-0 bg-rose-50 text-rose-700">
-                            {formatStepLabel(item.step)}
-                          </Badge>
+                          <Badge className="uppercase tracking-wider text-[10px] font-black border-0 bg-rose-50 text-rose-700">{formatStepLabel(item.step)}</Badge>
                         ) : (
                           <span className="text-sm text-slate-400">—</span>
                         )}
@@ -167,18 +158,7 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
 
                       <TableCell className="min-w-[300px]">
                         {item.notes ? (
-                          <div
-                            title={item.notes}
-                            className="text-sm text-slate-700 break-words"
-                            style={{
-                              display: "-webkit-box",
-                              WebkitLineClamp: 10,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {item.notes}
-                          </div>
+                          <div title={item.notes} className="text-sm text-slate-700 break-words" style={{display: "-webkit-box", WebkitLineClamp: 10, WebkitBoxOrient: "vertical", overflow: "hidden"}}>{item.notes}</div>
                         ) : (
                           <span className="text-sm text-slate-400">—</span>
                         )}
@@ -186,21 +166,18 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
 
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center text-xs font-bold text-amber-700 border border-amber-100">
-                            {changedByName[0]}
-                          </div> 
+                          <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center text-xs font-bold text-amber-700 border border-amber-100">{changedByName[0]}</div>
                           <div>
                             <p className="text-sm font-bold text-slate-700">{changedByName}</p>
                             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">Executor</p>
                           </div>
                         </div>
                       </TableCell>
+
                       <TableCell>
                         {item.recruiter ? (
                           <div className="flex items-center gap-2">
-                             <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-xs font-bold text-indigo-700 border border-indigo-100">
-                              {recruiterName[0]}
-                            </div>
+                             <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-xs font-bold text-indigo-700 border border-indigo-100">{recruiterName[0]}</div>
                             <div>
                               <p className="text-sm font-bold text-indigo-900">{recruiterName}</p>
                               <p className="text-[10px] text-indigo-400 font-medium uppercase tracking-tighter">Recruiter</p>
@@ -210,12 +187,11 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
                           <span className="text-sm text-slate-400">—</span>
                         )}
                       </TableCell>
+
                       <TableCell>
                         {item.assignedTo ? (
                           <div className="flex items-center gap-2">
-                             <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center text-xs font-bold text-emerald-700 border border-emerald-100">
-                              {assignedToName[0]}
-                            </div>
+                             <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center text-xs font-bold text-emerald-700 border border-emerald-100">{assignedToName[0]}</div>
                             <div>
                               <p className="text-sm font-bold text-emerald-900">{assignedToName}</p>
                               <p className="text-[10px] text-emerald-400 font-medium uppercase tracking-tighter">Support</p>
@@ -225,6 +201,7 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
                           <span className="text-sm text-slate-400">—</span>
                         )}
                       </TableCell>
+
                       <TableCell>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500">
                           <Calendar className="h-3.5 w-3.5" />
@@ -247,6 +224,22 @@ export function ProcessingHistoryModal({ history }: ProcessingHistoryModalProps)
               <p className="text-sm mt-1">Processing history will appear here</p>
             </div>
           )}
+        </div>
+
+        {/* Pagination controls */}
+        <div className="border-t p-4 flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            Showing {(page - 1) * limit + (items.length ? 1 : 0)} - {(page - 1) * limit + items.length} of {pagination?.total || 0}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => { setPage((p) => Math.max(1, p - 1)); refetch(); }}>
+              Prev
+            </Button>
+            <div className="text-sm">{page} / {pagination?.pages || Math.ceil((pagination?.total || 0) / limit)}</div>
+            <Button size="sm" variant="ghost" disabled={!pagination || (pagination && page >= (pagination.pages || Math.ceil((pagination.total || 0) / limit)))} onClick={() => { setPage((p) => p + 1); refetch(); }}>
+              Next
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

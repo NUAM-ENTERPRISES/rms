@@ -1,11 +1,12 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useState, useMemo } from "react";
-import { useGetCandidateProcessingDetailsQuery } from "@/features/processing/data/processing.endpoints";
+import { useState, useEffect, useMemo } from "react";
+import { useGetCandidateProcessingDetailsQuery, useGetCandidateDocumentsQuery, useGetCandidateHistoryPaginatedQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProcessingStepsQuery } from "@/services/processingApi";
 import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -59,15 +60,59 @@ export default function ProcessingCandidateDetailsPage() {
   const { data: processingSteps = [], isLoading: isLoadingSteps, refetch: refetchProcessingSteps } = useGetProcessingStepsQuery(processingId || "", {
     skip: !processingId,
   });
-  
+
+  // --- New: paginated documents and history ---
+  const [docsPage, setDocsPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+
+  const effectiveProcessingId = processingId || apiResponse?.data?.id || "";
+
+  const { data: docsResponse, isLoading: isLoadingDocs, refetch: refetchCandidateDocuments } = useGetCandidateDocumentsQuery(
+    { processingId: effectiveProcessingId, page: docsPage, limit: 10 },
+    { skip: !effectiveProcessingId }
+  );
+
+  const { data: historyResponse, refetch: refetchCandidateHistory } = useGetCandidateHistoryPaginatedQuery(
+    { processingId: effectiveProcessingId, page: historyPage, limit: 10 },
+    { skip: !effectiveProcessingId }
+  );
+
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
+
+  // Map paginated documents to UI shape expected by DocumentVerificationCard
+  const docsTotal = docsResponse?.data?.pagination?.total || 0;
+  const docsPages = docsResponse?.data?.pagination?.pages || Math.ceil(docsTotal / 10) || 1;
+  const documentsForUi = (docsResponse?.data?.items || []).map((it: any) => ({
+    id: (it.id as string) || it.document?.id || it.documentId,
+    status: it.status,
+    notes: it.notes,
+    rejectionReason: it.rejectionReason,
+    resubmissionRequested: it.resubmissionRequested || false,
+    document: {
+      id: it.document.id,
+      docType: it.document.docType,
+      fileName: it.document.fileName,
+      fileUrl: it.document.fileUrl,
+      status: it.document.status,
+      mimeType: it.document.mimeType,
+      fileSize: it.document.fileSize,
+    },
+  }));
+
+  // Reset paging when processing id changes
+  useEffect(() => {
+    setDocsPage(1);
+    setHistoryPage(1);
+  }, [effectiveProcessingId]);
 
   // Handler to refresh all data when a processing step is completed
   const handleStepComplete = async () => {
     await Promise.all([
       refetchCandidateDetails(),
-      refetchProcessingSteps()
+      refetchProcessingSteps(),
+      refetchCandidateDocuments(),
+      refetchCandidateHistory(),
     ]);
   };
 
@@ -76,12 +121,10 @@ export default function ProcessingCandidateDetailsPage() {
   const handleDataFlowComplete = handleStepComplete;
   const handleEligibilityComplete = handleStepComplete;
 
-  // Extract offer letter status from document verifications
+  // Extract offer letter status from the paginated documents
   const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
-    const verifications = data?.candidateProjectMap?.documentVerifications || [];
-    const offerLetterDoc = verifications.find(
-      (v) => v.document?.docType === "offer_letter"
-    );
+    const verifications = (docsResponse?.data?.items || []) as any[];
+    const offerLetterDoc = verifications.find((v) => v.document?.docType === "offer_letter");
 
     if (!offerLetterDoc) {
       return {
@@ -104,16 +147,16 @@ export default function ProcessingCandidateDetailsPage() {
       } as OfferLetterStatus,
       offerLetterVerification: offerLetterDoc,
     };
-  }, [data?.candidateProjectMap?.documentVerifications]);
+  }, [docsResponse?.data?.items]);
 
   // If processing was cancelled, find the most recent cancellation history entry to show the reason
   const cancellationEntry = useMemo(() => {
-    const history = data?.history || [];
+    const history = (historyResponse?.data?.items || []) as any[];
     if (!history.length) return null;
 
     const sorted = [...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return sorted.find((h) => h.status === "cancelled") || null;
-  }, [data?.history]);
+  }, [historyResponse?.data?.items]);
 
   if (isLoading || isLoadingSteps) {
     return (
@@ -286,14 +329,43 @@ export default function ProcessingCandidateDetailsPage() {
             <CandidateInfoCard candidate={data.candidate} />
 
             {/* Document Verifications - third */}
-            <DocumentVerificationCard
-              verifications={data.candidateProjectMap?.documentVerifications || []}
-              maxHeight="280px"
-            />
+            <div>
+              {isLoadingDocs ? (
+                <Card className="border-0 shadow-xl overflow-hidden bg-white">
+                  <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-100 py-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <FileCheck className="h-4 w-4 text-emerald-600" />
+                        Documents
+                      </CardTitle>
+                      <Badge className="bg-emerald-100 text-emerald-700 border-0 font-bold text-xs">—/—</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-emerald-600" /></div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <DocumentVerificationCard
+                    verifications={documentsForUi}
+                    maxHeight="280px"
+                    pagination={{
+                      page: docsPage,
+                      pages: docsPages,
+                      total: docsTotal,
+                      pageSize: 10,
+                      onPrev: () => setDocsPage((p) => Math.max(1, p - 1)),
+                      onNext: () => setDocsPage((p) => Math.min(docsPages, p + 1)),
+                    }}
+                  />
+                </>
+              )}
+            </div>
 
             {/* History Modal Button + Processing Notes stacked */}
             <div className="flex flex-col gap-3">
-              <ProcessingHistoryModal history={data.history || []} />
+              <ProcessingHistoryModal processingId={data.id} />
               
               {data.notes && (
                 <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-l-amber-400 p-3">

@@ -72,7 +72,7 @@ export const processingApi = baseApi.injectEndpoints({
     >({
       query: (params) => ({
         url: "/processing/all-candidates",
-        params,
+        params: params ?? undefined,
       }),
       providesTags: ["ProcessingSummary"],
     }),
@@ -90,7 +90,7 @@ export const processingApi = baseApi.injectEndpoints({
     >({
       query: (params) => ({
         url: "/processing/candidates-to-transfer",
-        params,
+        params: params ?? undefined,
       }),
       providesTags: ["ProcessingSummary"],
     }),
@@ -315,45 +315,7 @@ export const processingApi = baseApi.injectEndpoints({
             color?: string;
             order?: number;
           };
-          documentVerifications?: Array<{
-            id: string;
-            candidateProjectMapId: string;
-            documentId: string;
-            roleCatalogId?: string;
-            status: string;
-            notes?: string | null;
-            rejectionReason?: string | null;
-            resubmissionRequested?: boolean;
-            document: {
-              id: string;
-              candidateId: string;
-              docType: string;
-              fileName: string;
-              fileUrl: string;
-              status: string;
-              notes?: string | null;
-              mimeType?: string;
-              fileSize?: number;
-            };
-          }>;
         };
-        history: Array<{
-          id: string;
-          processingCandidateId: string;
-          status: string;
-          changedById?: string;
-          recruiterId?: string;
-          notes?: string;
-          createdAt: string;
-          changedBy?: {
-            id: string;
-            name: string;
-          };
-          recruiter?: {
-            id: string;
-            name: string;
-          };
-        }>;
       }>,
       string
     >({
@@ -361,6 +323,71 @@ export const processingApi = baseApi.injectEndpoints({
         url: `/processing/candidate-processing-details/${processingId}`,
       }),
       providesTags: (_, __, id) => [{ type: "Processing", id }],
+    }),
+
+    // New: Paginated candidate documents (all project documents)
+    getCandidateDocuments: builder.query<
+      ApiResponse<Paginated<{
+        id: string | null;
+        candidateProjectMapId: string | null;
+        documentId: string;
+        roleCatalogId?: string | null;
+        status: string;
+        notes?: string | null;
+        createdAt: string;
+        updatedAt: string;
+        document: {
+          id: string;
+          candidateId: string;
+          docType: string;
+          fileName: string;
+          fileUrl: string;
+          uploadedBy?: string;
+          verifiedBy?: string | null;
+          status: string;
+          createdAt: string;
+          updatedAt: string;
+          fileSize?: number;
+          mimeType?: string;
+          roleCatalogId?: string | null;
+          verifiedAt?: string | null;
+        };
+      }>>,
+      { processingId: string; page?: number; limit?: number; search?: string }
+    >({
+      query: ({ processingId, page = 1, limit = 20, search }) => ({
+        url: `/processing/candidate/${processingId}/all-project-documents`,
+        params: { page, limit, search },
+      }),
+      providesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingDocuments", id: processingId },
+      ],
+    }),
+
+    // New: Paginated processing history for a processing candidate
+    getCandidateHistoryPaginated: builder.query<
+      ApiResponse<Paginated<{
+        id: string;
+        processingCandidateId: string;
+        status: string;
+        step: string;
+        changedById?: string;
+        recruiterId?: string;
+        notes?: string | null;
+        createdAt: string;
+        changedBy?: { id: string; name: string };
+        recruiter?: { id: string; name: string };
+        assignedTo?: { id: string; name: string } | null;
+      }>>,
+      { processingId: string; page?: number; limit?: number; search?: string }
+    >({
+      query: ({ processingId, page = 1, limit = 20, search }) => ({
+        url: `/processing/candidate/${processingId}/history`,
+        params: { page, limit, search },
+      }),
+      providesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingHistory", id: processingId },
+      ],
     }),
   }),
 });
@@ -376,5 +403,7 @@ export const {
   useUpdateProcessingStepMutation,
   useTransferToProcessingMutation,
   useGetCandidateHistoryQuery,
+  useGetCandidateDocumentsQuery,
+  useGetCandidateHistoryPaginatedQuery,
   useGetCandidateProcessingDetailsQuery,
 } = processingApi;

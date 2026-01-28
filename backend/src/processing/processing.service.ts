@@ -4082,48 +4082,17 @@ export class ProcessingService {
             },
             mainStatus: true,
             subStatus: true,
-            documentVerifications: {
-              where: { isDeleted: false },
-              include: {
-                document: true,
-              },
-              orderBy: { createdAt: 'desc' },
-            },
+            // documentVerifications intentionally omitted for performance; use dedicated endpoint
           },
         },
-        history: {
-          include: {
-            changedBy: {
-              select: { id: true, name: true },
-            },
-            recruiter: {
-              select: { id: true, name: true },
-            },
-            processingCandidate: {
-              select: {
-                assignedTo: {
-                  select: { id: true, name: true },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
+        // history intentionally omitted for performance; use dedicated endpoint
+
       },
     });
 
     if (!processingCandidate) {
       throw new NotFoundException(`Processing record with ID ${id} not found`);
     }
-
-    // Map history to include assignedTo at the same level as other relations
-    const mappedHistory = processingCandidate.history.map((h: any) => ({
-      ...h,
-      assignedTo: h.processingCandidate?.assignedTo || null,
-      processingCandidate: undefined,
-    }));
 
     // Attach country flag and combined flag-name for project country
     if (processingCandidate.project && processingCandidate.project.country) {
@@ -4143,7 +4112,170 @@ export class ProcessingService {
       (processingCandidate.project as any).genderRequirement = (processingCandidate.role as any).genderRequirement;
     }
 
-    return { ...processingCandidate, history: mappedHistory };
+    return processingCandidate;
+  }
+
+  /**
+   * Get verified project document verifications and common candidate documents for a processing candidate
+   */
+  async getCandidateAllProjectDocuments(
+    processingId: string,
+    opts?: { page?: number; limit?: number; search?: string },
+  ) {
+    const page = Math.max(1, opts?.page || 1);
+    const limit = Math.min(100, Math.max(1, opts?.limit || 20));
+    const search = opts?.search?.trim() || null;
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingId },
+      include: { candidate: true, project: true, role: { include: { roleCatalog: true } } },
+    });
+    if (!pc) throw new NotFoundException(`Processing record with ID ${processingId} not found`);
+
+    const candidateId = pc.candidateId;
+    const projectId = pc.projectId;
+    const roleCatalogId = pc.role?.roleCatalogId || null;
+
+    // Find candidate project mapping for this project
+    const cpm = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
+
+    // Build search conditions
+    const docSearchCondition: any = search
+      ? {
+          OR: [
+            { document: { fileName: { contains: search, mode: 'insensitive' } } },
+            { document: { docType: { contains: search, mode: 'insensitive' } } },
+          ],
+        }
+      : {};
+
+    let projectVerifications: any[] = [];
+    if (cpm) {
+      projectVerifications = await this.prisma.candidateProjectDocumentVerification.findMany({
+        where: { candidateProjectMapId: cpm.id, status: 'verified', isDeleted: false, ...(search ? docSearchCondition : {}) } as any,
+        include: { document: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // Common doc types that should always be included even if not tied to a roleCatalog
+    const commonDocTypes = ['pan_card', 'aadhaar', 'passport_copy'];
+
+    // Candidate documents that are verified and either belong to the roleCatalog or are common types
+    const docWhere: any = {
+      candidateId,
+      isDeleted: false,
+      status: 'verified',
+      AND: [
+        {
+          OR: [
+            { roleCatalogId: roleCatalogId },
+            { roleCatalogId: null, docType: { in: commonDocTypes } },
+          ],
+        },
+      ],
+    };
+
+    if (search) {
+      docWhere.AND.push({ OR: [{ fileName: { contains: search, mode: 'insensitive' } }, { docType: { contains: search, mode: 'insensitive' } }] });
+    }
+
+    const candidateDocs = await this.prisma.document.findMany({
+      where: docWhere as any,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Map candidate documents to a verification-like shape so frontend can consume similar structure
+    const standalone = candidateDocs.map((doc: any) => ({
+      id: null,
+      candidateProjectMapId: null,
+      documentId: doc.id,
+      roleCatalogId: doc.roleCatalogId,
+      status: doc.status,
+      notes: doc.notes || null,
+      rejectionReason: null,
+      resubmissionRequested: false,
+      isDeleted: doc.isDeleted,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+      document: doc,
+    }));
+
+    // Merge project verifications and standalone docs, prefer project verifications when both exist for the same document
+    const map = new Map<string, any>();
+    for (const v of projectVerifications) map.set(v.documentId, v);
+    for (const s of standalone) if (!map.has(s.documentId)) map.set(s.documentId, s);
+
+    // Convert to array and sort by createdAt desc
+    const all = Array.from(map.values()).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const total = all.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const start = (page - 1) * limit;
+    const items = all.slice(start, start + limit);
+
+    return {
+      items,
+      pagination: { page, limit, total, totalPages },
+    };
+  }
+
+  /**
+   * Get processing history entries for a processing candidate (paginated by date desc)
+   */
+  async getProcessingCandidateHistory(processingId: string, opts?: { page?: number; limit?: number; search?: string }) {
+    const page = Math.max(1, opts?.page || 1);
+    const limit = Math.min(200, Math.max(1, opts?.limit || 20));
+    const search = opts?.search?.trim() || null;
+
+    // Build where clause with optional search across notes, status, step and related names
+    const where: any = { processingCandidateId: processingId };
+    if (search) {
+      where.AND = [
+        {
+          OR: [
+            { notes: { contains: search, mode: 'insensitive' } },
+            { step: { contains: search, mode: 'insensitive' } },
+            { status: { contains: search, mode: 'insensitive' } },
+            { changedBy: { name: { contains: search, mode: 'insensitive' } } },
+            { recruiter: { name: { contains: search, mode: 'insensitive' } } },
+            { processingCandidate: { assignedTo: { name: { contains: search, mode: 'insensitive' } } } },
+          ],
+        },
+      ];
+    }
+
+    const total = await this.prisma.processingHistory.count({ where });
+
+    const histories = await this.prisma.processingHistory.findMany({
+      where,
+      include: {
+        changedBy: { select: { id: true, name: true } },
+        recruiter: { select: { id: true, name: true } },
+        processingCandidate: {
+          include: { assignedTo: { select: { id: true, name: true } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const items = histories.map((h: any) => ({
+      ...h,
+      assignedTo: h.processingCandidate?.assignedTo || null,
+      processingCandidate: undefined,
+    }));
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
   }
 
   private getCountryFlagEmoji(code?: string): string | null {

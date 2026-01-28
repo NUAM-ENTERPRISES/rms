@@ -97,7 +97,7 @@ export class ProcessingController {
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({
     summary: 'Get comprehensive processing details for a candidate by processing ID',
-    description: 'Retrieve all details including candidate info, project info, role info, document verifications, and processing history.',
+    description: 'Retrieve all details including candidate info, project info, role info. Note: document verifications and processing history are excluded for performance; use dedicated endpoints: /processing/candidate/:processingId/all-project-documents and /processing/candidate/:processingId/history.',
   })
   @ApiParam({ name: 'processingId', type: 'string', description: 'The ID of the processing candidate record' })
   @ApiResponse({
@@ -110,6 +110,52 @@ export class ProcessingController {
       success: true,
       data,
       message: 'Processing details retrieved successfully',
+    };
+  }
+
+  @Get('candidate/:processingId/all-project-documents')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get verified documents for a processing candidate',
+    description: 'Retrieve verified documents for the candidate and project; includes project document verifications and common candidate documents (e.g., PAN, Aadhaar). Supports pagination and search.',
+  })
+  @ApiParam({ name: 'processingId', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term to match document fileName or docType' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Candidate documents retrieved successfully',
+  })
+  async getCandidateAllProjectDocuments(@Param('processingId') processingId: string, @Query('page') page?: number, @Query('limit') limit?: number, @Query('search') search?: string) {
+    const data = await this.processingService.getCandidateAllProjectDocuments(processingId, { page, limit, search });
+    return {
+      success: true,
+      data,
+      message: 'Candidate documents retrieved successfully',
+    };
+  }
+
+  @Get('candidate/:processingId/history')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get processing history for a processing candidate',
+    description: 'Retrieve processing history entries for the given processing candidate id. Supports pagination and search across notes, step, status and performer names.',
+  })
+  @ApiParam({ name: 'processingId', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term to match notes, step, status or performer names' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Processing history retrieved successfully',
+  })
+  async getProcessingCandidateHistory(@Param('processingId') processingId: string, @Query('page') page?: number, @Query('limit') limit?: number, @Query('search') search?: string) {
+    const data = await this.processingService.getProcessingCandidateHistory(processingId, { page, limit, search });
+    return {
+      success: true,
+      data,
+      message: 'Processing history retrieved successfully',
     };
   }
 

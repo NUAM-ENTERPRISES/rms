@@ -44,6 +44,7 @@ export const baseApi = createApi({
     "ProcessingDetails",
     "ProcessingSummary",
     "ProcessingHistory",
+    "ProcessingDocuments",
   ],
   endpoints: () => ({}),
 });
