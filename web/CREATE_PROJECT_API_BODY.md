@@ -118,8 +118,8 @@ Bearer Token Required
       
       "contractDurationYears": 2,       // ⚪ OPTIONAL - For contract roles only (1-10 years)
       
-      "visaType": "contract",           // ⚪ OPTIONAL - Default: "contract"
-                                        // Options: "contract" | "permanent"
+      "visaType": "direct_visa",           // ⚪ OPTIONAL - Default: "direct_visa"
+                                        // Options: "direct_visa" | "company_visa"
       
       // --- Candidate Requirements ---
       "genderRequirement": "all",       // ⚪ OPTIONAL - Default: "all"
@@ -256,7 +256,7 @@ Bearer Token Required
       "benefits": "Tax-free salary, accommodation, flight tickets, health insurance, 30 days annual leave",
       "employmentType": "contract",
       "contractDurationYears": 2,
-      "visaType": "contract",
+      "visaType": "direct_visa",
       "genderRequirement": "all",
       "candidateStates": "[\"Kerala\", \"Tamil Nadu\", \"Karnataka\", \"Maharashtra\"]",
       "candidateReligions": "[\"all\"]",
@@ -405,7 +405,7 @@ If you omit optional fields, these defaults will be used:
 - `relocationAssistance`: `false` (in roles)
 - `employmentType`: `"permanent"` (in roles)
 - `genderRequirement`: `"all"` (in roles)
-- `visaType`: `"contract"` (in roles)
+- `visaType`: `"direct_visa"` (project-level)
 
 ### 4. **Validation Rules**
 - `title`: Minimum 2 characters

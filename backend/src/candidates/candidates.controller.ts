@@ -192,7 +192,7 @@ export class CandidatesController {
                     otherEnquiry: { type: 'number', example: 6 },
                 qualified: { type: 'number', example: 7 },
                 future: { type: 'number', example: 12 },
-                working: { type: 'number', example: 3 },
+                deployed: { type: 'number', example: 3 },
               },
             },
           pagination: {
@@ -230,7 +230,7 @@ export class CandidatesController {
       otherEnquiry: number;
       qualified: number;
       future: number;
-      working: number;
+      deployed: number;
     };
     pagination: any;
     message: string;
@@ -362,7 +362,7 @@ export class CandidatesController {
                 otherEnquiry: { type: 'number', example: 6 },
                 qualified: { type: 'number', example: 12 },
                 future: { type: 'number', example: 15 },
-                working: { type: 'number', example: 3 },
+                deployed: { type: 'number', example: 3 },
               },
             },
           },

@@ -146,7 +146,7 @@ export const CandidateMetrics: React.FC<CandidateMetricsProps> = ({
       borderColor: "border-blue-200",
     },
     {
-      label: "Working",
+      label: "Deployed",
       value: recruiter.candidatesWorking,
       icon: CheckCircle,
       color: "text-emerald-600",

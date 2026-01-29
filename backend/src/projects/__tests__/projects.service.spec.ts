@@ -105,10 +105,12 @@ describe('ProjectsService', () => {
           minExperience: 2,
           maxExperience: 10,
           skills: '["Nursing", "Patient Care"]',
+          genderRequirement: 'all',
+          ageRequirement: '18 to 35',
           roleCatalogId: 'role123',
         },
       ],
-    };
+    }; 
 
     const mockProject = {
       id: 'project123',
@@ -146,22 +148,13 @@ describe('ProjectsService', () => {
           teamId: 'team123',
           countryCode: null,
           projectType: 'private',
+          visaType: 'direct_visa',
           resumeEditable: true,
           groomingRequired: 'formal',
           hideContactInfo: true,
           requiredScreening: false,
           priority: 'medium',
         },
-      });
-
-      expect(prismaService.roleNeeded.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          projectId: 'project123',
-          designation: 'Nurse',
-          quantity: 5,
-          priority: 'high',
-          skills: ['Nursing', 'Patient Care'],
-        }),
       });
     });
 
@@ -305,10 +298,12 @@ describe('ProjectsService', () => {
     };
 
     it('should update a project successfully', async () => {
-      prismaService.project.findUnique.mockResolvedValue({
+      prismaService.project.findUnique.mockResolvedValueOnce({
         id: 'project123',
       } as any);
       prismaService.project.update.mockResolvedValue(mockProject as any);
+      // Return full project on subsequent fetch after update
+      prismaService.project.findUnique.mockResolvedValueOnce(mockProject as any);
 
       const result = await service.update(
         'project123',

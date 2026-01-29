@@ -59,7 +59,7 @@ export interface RoleNeeded {
   technicalSkills?: string;
   employmentType: "contract" | "permanent";
   contractDurationYears?: number;
-  visaType?: "contract" | "permanent";
+
   genderRequirement: "female" | "male" | "all" | "other";
   minAge?: number;
   maxAge?: number;
