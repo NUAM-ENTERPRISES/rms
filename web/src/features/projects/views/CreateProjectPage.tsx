@@ -176,6 +176,7 @@ export default function CreateProjectPage() {
     setValue("rolesNeeded", [
       ...currentRoles,
       {
+        roleCatalogId: "",
         designation: "",
         quantity: 1,
         visaType: "contract" as const,

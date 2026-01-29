@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -148,6 +148,10 @@ export default function ProjectDetailPage() {
   // Board filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+
+  // Lazy-loaded project details modal (code-split)
+  const ProjectDetailsModal = React.lazy(() => import("@/components/molecules/ProjectDetailsModal"));
+  const [showDetails, setShowDetails] = useState(false);
 
   // Get project statuses for filter options
   const { data: statusesData } = useGetCandidateProjectStatusesQuery();
@@ -630,8 +634,17 @@ export default function ProjectDetailPage() {
                   )}
                 </div>
 
-                {/* Country Flag — Clean & Elevated */}
-                <div className="flex-shrink-0">
+                {/* Country Flag & View Details — Clean & Elevated */}
+                <div className="flex-shrink-0 flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowDetails(true)}
+                    className="font-semibold"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View details
+                  </Button>
                   <ProjectCountryCell
                     countryCode={project.countryCode}
                     size="2xl"
@@ -1033,6 +1046,15 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Project Details Modal (code-split) */}
+      <Suspense fallback={<div className="px-4 py-6">Loading details...</div>}>
+        <ProjectDetailsModal
+          isOpen={showDetails}
+          onClose={() => setShowDetails(false)}
+          project={projectData?.data}
+        />
+      </Suspense>
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
