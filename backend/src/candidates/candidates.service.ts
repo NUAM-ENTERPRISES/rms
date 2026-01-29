@@ -511,7 +511,7 @@ export class CandidatesService {
       where: { statusName: { equals: 'future', mode: 'insensitive' } },
     });
     const workingStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'deployed', mode: 'insensitive' } },
+      where: { statusName: { equals: 'working', mode: 'insensitive' } },
     });
 
     // Get all candidates for counting
@@ -531,7 +531,7 @@ export class CandidatesService {
         if (c.currentStatusId === otherEnquiryStatus?.id) acc.otherEnquiry += 1;
         if (c.currentStatusId === qualifiedStatus?.id) acc.qualified += 1;
         if (c.currentStatusId === futureStatus?.id) acc.future += 1;
-        if (c.currentStatusId === workingStatus?.id) acc.deployed += 1;
+        if (c.currentStatusId === workingStatus?.id) acc.working += 1;
         return acc;
       },
       {
@@ -544,7 +544,7 @@ export class CandidatesService {
         otherEnquiry: 0,
         qualified: 0,
         future: 0,
-        deployed: 0,
+        working: 0,
       },
     );
 

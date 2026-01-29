@@ -178,6 +178,7 @@ export default function CreateProjectPage() {
       {
         designation: "",
         quantity: 1,
+        visaType: "contract" as const,
         genderRequirement: "all" as const,
         requiredSkills: [],
         candidateStates: [],
@@ -516,7 +517,60 @@ export default function CreateProjectPage() {
                       />
                     </div>
 
+                    {/* Visa Type */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">
+                        Visa Type *
+                      </Label>
+                      <Select
+                        value={role.visaType || "contract"}
+                        onValueChange={(value) =>
+                          updateRole(index, "visaType", value)
+                        }
+                      >
+                        <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="permanent">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              Permanent
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="contract">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              Contract
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
+                    {/* Contract Duration (only for contract roles) */}
+                    {role.visaType === "contract" && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Contract Duration (years) *
+                        </Label>
+                        <Input
+                          type="number"
+                          value={role.contractDurationYears || ""}
+                          onChange={(e) =>
+                            updateRole(
+                              index,
+                              "contractDurationYears",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          min="1"
+                          max="10"
+                          placeholder="e.g., 2"
+                          className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      </div>
+                    )}
 
                     {/* Gender Requirement */}
                     <div className="space-y-2">
@@ -894,6 +948,11 @@ export default function CreateProjectPage() {
                           <Badge variant="secondary" className="text-xs">
                             Qty: {role.quantity}
                           </Badge>
+                          {role.visaType && (
+                            <Badge variant="outline" className="text-xs">
+                              {role.visaType}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-600">
@@ -903,6 +962,7 @@ export default function CreateProjectPage() {
                           </span>
                         )}
                         {role.shiftType && <span>Shift: {role.shiftType}</span>}
+                        {role.visaType && <span>Visa: {role.visaType}</span>}
                       </div>
                       {/* Education Requirements */}
                       {role.educationRequirementsList &&
