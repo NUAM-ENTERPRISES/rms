@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -8,20 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Badge } from "@/components/ui/badge";
 
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog, ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
+
 import {
   Select,
   SelectTrigger,
@@ -39,13 +32,11 @@ import {
   Clock,
   Edit,
   FileText,
-  Globe,
   GraduationCap,
   Home,
   Layers,
   MapPin,
   Send,
-  ShieldCheck,
   Target,
   Trash2,
   User,
@@ -58,6 +49,8 @@ import {
 } from "lucide-react";
 
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
+
+const ProjectDetailsModal = React.lazy(() => import("../components/ProjectDetailsModal"));
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -126,6 +119,7 @@ const SettingItem = ({ label, active, value }: { label: string; active?: boolean
     )}
   </div>
 );
+
 // Helper function to format datetime
 const formatDateTime = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -734,154 +728,16 @@ export default function ProjectDetailPage() {
     <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70" />
   </CardContent>
 </Card>
+
+
               {/* Project Details Modal */}
-<Dialog open={showProjectDetailsModal} onOpenChange={setShowProjectDetailsModal}>
-  <DialogContent className="w-full max-w-5xl lg:max-w-6xl max-h-[70vh] p-0 overflow-hidden rounded-xl border border-slate-200 shadow-xl bg-white">
-    {/* Header - Compact */}
-    <div className="px-5 py-3 border-b bg-slate-50">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <DialogTitle className="text-lg sm:text-xl font-semibold text-slate-900 leading-tight truncate">
-            {project.title}
-          </DialogTitle>
-          <DialogDescription className="mt-1.5 text-sm text-slate-600 flex items-center gap-3 flex-wrap">
-            {project.countryCode ? (
-              <ProjectCountryCell
-                countryCode={project.countryCode}
-                size="md"
-                fallbackText="No country"
-                className="inline-flex items-center text-sm"
-              />
-            ) : (
-              <span className="text-slate-500 text-sm">No country specified</span>
-            )}
-            <span className="hidden sm:inline text-slate-400 text-sm">•</span>
-            <Badge variant="outline" className="text-xs px-3 py-0.5 bg-white">
-              {project.status?.toUpperCase() || "ACTIVE"}
-            </Badge>
-          </DialogDescription>
-        </div>
-      </div>
-    </div>
-
-    {/* Content */}
-    <ScrollArea className="max-h-[calc(70vh-90px)] px-5 py-4 sm:px-6 sm:py-5 bg-white">
-      <div className="space-y-5">
-
-        {/* Overview */}
-        <section>
-          <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-blue-600" />
-            Overview
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
-            <div><span className="text-xs text-slate-500">Client:</span> {project.client?.name || "—"}</div>
-            <div><span className="text-xs text-slate-500">Created by:</span> {project.creator?.name || "—"}</div>
-            <div><span className="text-xs text-slate-500">Deadline:</span> {formatDate(project.deadline)}</div>
-            <div><span className="text-xs text-slate-500">Created:</span> {formatDate(project.createdAt)}</div>
-            <div><span className="text-xs text-slate-500">Priority:</span> {project.priority?.toUpperCase() || "MEDIUM"}</div>
-            <div><span className="text-xs text-slate-500">Status:</span> {project.status}</div>
-          </div>
-        </section>
-
-        {/* Settings */}
-        <section>
-          <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <Settings className="h-4 w-4 text-indigo-600" />
-            Settings
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
-              Resume Editable: {project.resumeEditable ? "Yes" : "No"}
-            </div>
-            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
-              Hide Contact: {project.hideContactInfo ? "Yes" : "No"}
-            </div>
-            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
-              Screening: {project.requiredScreening ? "Required" : "No"}
-            </div>
-            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
-              Grooming: {project.groomingRequired || "—"}
-            </div>
-            <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
-              Type: {project.projectType || "Private"}
-            </div>
-          </div>
-        </section>
-
-        {/* Roles - Grid layout */}
-        {project.rolesNeeded?.length > 0 && (
-          <section>
-            <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
-              <Users className="h-4 w-4 text-purple-600" />
-              Roles ({project.rolesNeeded.length})
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {project.rolesNeeded.map((role: any) => (
-                <div key={role.id} className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex flex-col">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                    <h4 className="text-base font-semibold text-slate-900 truncate">{role.designation}</h4>
-                    <Badge variant="outline" className="text-xs px-3 py-0.5 w-fit">
-                      {role.quantity} pos
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><strong>Exp:</strong> {role.minExperience}–{role.maxExperience || "Any"}</div>
-                    <div><strong>Age:</strong> {role.ageRequirement || "—"}</div>
-                    <div><strong>Gender:</strong> {role.genderRequirement || "All"}</div>
-                    <div><strong>Visa:</strong> {role.visaType || "Any"}</div>
-                  </div>
-                  {role.notes && (
-                    <p className="mt-2 text-xs text-slate-600 italic">
-                      Note: {role.notes}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Documents - Grid layout */}
-        {project.documentRequirements?.length > 0 && (
-          <section>
-            <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-amber-600" />
-              Documents
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {project.documentRequirements.map((doc: any) => (
-                <div key={doc.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
-                  <div className="flex-1">
-                    <p className="font-medium text-slate-900 truncate">{doc.docType}</p>
-                    {doc.description && <p className="text-xs text-slate-600 mt-1 line-clamp-2">{doc.description}</p>}
-                  </div>
-                  <Badge variant={doc.mandatory ? "default" : "secondary"} className="text-xs px-3 py-0.5 mt-2 w-fit">
-                    {doc.mandatory ? "Mandatory" : "Optional"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-      </div>
-    </ScrollArea>
-
-    {/* Footer */}
-    <div className="px-5 py-3 border-t bg-slate-50 flex justify-end">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setShowProjectDetailsModal(false)}
-        className="min-w-[90px]"
-      >
-        Close
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
-
-
+        <Suspense fallback={<div className="p-6">Loading project details...</div>}>
+          <ProjectDetailsModal
+            open={showProjectDetailsModal}
+            onOpenChange={setShowProjectDetailsModal}
+            project={project}
+          />
+        </Suspense>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Candidates */}

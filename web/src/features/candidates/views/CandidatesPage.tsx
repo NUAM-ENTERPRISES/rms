@@ -762,7 +762,7 @@ export default function CandidatesPage() {
           value: workingCount,
           subtitle: "Currently working",
           icon: Briefcase,
-          statusFilter: "working",
+          statusFilter: "deployed",
           color: "from-fuchsia-500 to-pink-400",
         },
         {
@@ -816,7 +816,7 @@ export default function CandidatesPage() {
         return "Qualified";
       case "future":
         return "Future Follow-ups";
-      case "Deployed":
+      case "deployed":
         return "Deployed";
       case "on_hold":
         return "On Hold";

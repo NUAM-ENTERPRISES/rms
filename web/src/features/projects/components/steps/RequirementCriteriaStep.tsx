@@ -44,7 +44,6 @@ export const RequirementCriteriaStep: React.FC<
         roleCatalogId: "",
         designation: "",
         quantity: 1,
-        visaType: "contract",
         genderRequirement: "all",
         requiredSkills: [],
         candidateStates: [],
@@ -198,70 +197,9 @@ export const RequirementCriteriaStep: React.FC<
                 )}
               </div>
 
-              {/* Visa Type */}
-              {/* <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">
-                  Visa Type *
-                </Label>
-                <Select
-                  value={role.visaType || "contract"}
-                  onValueChange={(value) =>
-                    updateRole(index, "visaType", value)
-                  }
-                >
-                  <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contract">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                        Contract
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="permanent">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        Permanent
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.rolesNeeded?.[index]?.visaType && (
-                  <span className="text-sm text-red-600">
-                    {errors.rolesNeeded[index].visaType?.message}
-                  </span>
-                )}
-              </div> */}
 
-              {/* Contract Duration (only for contract visa) */}
-              {/* {role.visaType === "contract" && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">
-                    Contract Duration (years) *
-                  </Label>
-                  <Input
-                    type="number"
-                    value={role.contractDurationYears || ""}
-                    onChange={(e) =>
-                      updateRole(
-                        index,
-                        "contractDurationYears",
-                        parseInt(e.target.value)
-                      )
-                    }
-                    min="1"
-                    max="10"
-                    placeholder="e.g., 2"
-                    className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.rolesNeeded?.[index]?.contractDurationYears && (
-                    <span className="text-sm text-red-600">
-                      {errors.rolesNeeded[index].contractDurationYears?.message}
-                    </span>
-                  )}
-                </div>
-              )} */}
+
+
             </div>
           </div>
         ))}
