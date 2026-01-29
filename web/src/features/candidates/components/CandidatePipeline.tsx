@@ -115,13 +115,13 @@ const statusConfig: Record<string, any> = {
     animation: 'https://lottie.host/5cdfb2aa-272f-48bd-b4a9-2beb4b179343/MM6t6RYOjD.lottie',
     description: "Qualified candidate",
   },
-  deployed: { 
+  working: { 
     color: 'from-blue-400 to-blue-600',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-300',
     icon: Briefcase,
     animation: 'https://lottie.host/b9ab373a-6e93-4979-a51d-c7d125934846/xBU65diZEL.lottie',
-    description: "Currently deployed",
+    description: "Currently working",
   },
   selected: {
     icon: CheckCircle,

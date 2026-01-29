@@ -68,7 +68,7 @@ const breakdownItems = [
   { label: "On Hold", valueKey: "avgDaysToOnHold", color: "amber" },
   { label: "RNR", valueKey: "avgDaysToRNR", color: "pink" },
   { label: "Qualified", valueKey: "avgDaysToQualified", color: "violet" },
-  { label: "Deployed", valueKey: "avgDaysToDeployed", color: "cyan" },
+  { label: "Working", valueKey: "avgDaysToWorking", color: "cyan" },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -88,7 +88,7 @@ export const TimeToStatusChart: React.FC<TimeToStatusChartProps> = ({
     { status: "On Hold", ProcessingTime: recruiter.avgDaysToOnHold },
     { status: "RNR", ProcessingTime: recruiter.avgDaysToRNR },
     { status: "Qualified", ProcessingTime: recruiter.avgDaysToQualified },
-    { status: "deployed", ProcessingTime: recruiter.avgDaysToWorking },
+    { status: "Working", ProcessingTime: recruiter.avgDaysToWorking },
   ];
 
   return (

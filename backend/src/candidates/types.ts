@@ -53,7 +53,7 @@ export interface PaginatedCandidates {
     otherEnquiry: number;
     qualified: number;
     future: number;
-    deployed: number;
+    working: number;
   };
 }
 

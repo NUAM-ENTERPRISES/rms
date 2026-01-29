@@ -108,7 +108,6 @@ export default function EditProjectPage() {
         priority:
           (project.priority as "low" | "medium" | "high" | "urgent") ??
           "medium",
-        visaType: project.visaType ?? "direct_visa",
         rolesNeeded: project.rolesNeeded.map((role) => ({
           designation: role.designation,
           // Ensure quantity is numeric and fallback to 1 if null/invalid
@@ -280,6 +279,7 @@ export default function EditProjectPage() {
           drugScreeningRequired: true,
           onCallRequired: false,
           relocationAssistance: false,
+          visaType: "contract",
           genderRequirement: "all",
           requiredSkills: [],
           candidateStates: [],

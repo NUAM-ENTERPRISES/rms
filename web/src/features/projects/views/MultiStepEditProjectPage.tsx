@@ -98,7 +98,6 @@ export default function MultiStepEditProjectPage() {
         groomingRequired: (project as any).groomingRequired ?? "formal",
         hideContactInfo: (project as any).hideContactInfo ?? true,
         requiredScreening: (project as any).requiredScreening ?? false,
-        visaType: (project as any).visaType ?? "direct_visa",
             rolesNeeded:
           project.rolesNeeded?.map((role: any) => ({
             roleCatalogId: role.roleCatalogId || "",
@@ -173,6 +172,11 @@ export default function MultiStepEditProjectPage() {
               role.shiftType === "flexible"
                 ? role.shiftType
                 : undefined,
+            visaType:
+              (role as any).visaType === "contract" ||
+              (role as any).visaType === "permanent"
+                ? (role as any).visaType
+                : "contract",
             requiredSkills: Array.isArray((role as any).requiredSkills)
               ? (role as any).requiredSkills
               : (role as any).requiredSkills

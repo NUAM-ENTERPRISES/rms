@@ -288,7 +288,14 @@ export class CreateRoleNeededDto {
   @IsInt()
   target?: number;
 
-  // NOTE: `visaType` moved to project-level. Role-level visaType removed.
+  @ApiPropertyOptional({
+    description: 'Visa type for this role',
+    enum: ['contract', 'permanent'],
+    default: 'contract',
+  })
+  @IsOptional()
+  @IsEnum(['contract', 'permanent'])
+  visaType?: string = 'contract';
 
   @ApiPropertyOptional({
     description: 'Required skills as JSON array',
@@ -443,15 +450,6 @@ export class CreateProjectDto {
   @IsOptional()
   @IsEnum(['private', 'ministry'])
   projectType?: string = 'private';
-
-  @ApiPropertyOptional({
-    description: 'Visa type for this project',
-    enum: ['direct_visa', 'company_visa'],
-    default: 'direct_visa',
-  })
-  @IsOptional()
-  @IsEnum(['direct_visa', 'company_visa'])
-  visaType?: string = 'direct_visa';
 
   @ApiPropertyOptional({
     description: 'Whether resume can be edited according to requirements',
