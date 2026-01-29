@@ -511,7 +511,7 @@ export default function CandidatesPage() {
       color: "from-blue-500 to-cyan-500",
     },
     {
-      label: "Available Today",
+      label: "Untouched",
       value: derivedCounts.untouched,
       subtitle: "Wants to work today",
       icon: UserCheck,
@@ -608,7 +608,7 @@ export default function CandidatesPage() {
         color: "from-blue-500 to-cyan-500",
       },
       {
-        label: "Available Today",
+        label: "Untouched",
         value: untouchedCount,
         subtitle: "Wants to work today",
         icon: UserCheck,
@@ -706,7 +706,7 @@ export default function CandidatesPage() {
           statusFilter: "all",
         },
         {
-          label: "Available Today",
+          label: "Untouched",
           value: untouchedCount,
           subtitle: "Wants to work today",
           icon: UserCheck,
@@ -799,7 +799,7 @@ export default function CandidatesPage() {
   const getTableTitle = () => {
     switch (filters.status) {
       case "untouched":
-        return "Available Today";
+        return "Untouched";
       case "rnr":
         return "Call Back (RNR)";
       case "interested":

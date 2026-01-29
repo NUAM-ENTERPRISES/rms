@@ -34,7 +34,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ImageViewer } from "@/components/molecules";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation } from "../api";
@@ -197,6 +198,9 @@ export default function PassedCandidatesPage() {
 
   // Is the selected candidate's offer letter already verified by processing?
   const selectedIsOfferVerified = selected ? isOfferLetterVerified(selected) : false;
+
+  // Convenience reference to the selected candidate object
+  const selectedCandidate = selected ? (selected.candidateProjectMap?.candidate || selected.candidate) : null;
 
   const handleTransfer = async () => {
     setTransferModalOpen(true);
@@ -471,9 +475,13 @@ export default function PassedCandidatesPage() {
                       >
                         <div className="flex items-center gap-2">
                           <Avatar className="h-10 w-10 shrink-0">
-                            <AvatarFallback className="text-sm font-bold bg-emerald-500 text-white">
-                              {candidate ? `${candidate.firstName?.[0]}${candidate.lastName?.[0]}` : "??"}
-                            </AvatarFallback>
+                            {candidate?.profileImage ? (
+                              <AvatarImage src={candidate.profileImage} alt={`${candidate.firstName} ${candidate.lastName}`} />
+                            ) : (
+                              <AvatarFallback className="text-sm font-bold bg-emerald-500 text-white">
+                                {candidate ? `${candidate.firstName?.[0]}${candidate.lastName?.[0]}` : "??"}
+                              </AvatarFallback>
+                            )}
                           </Avatar>
                           <div className="flex-1 min-w-0 overflow-hidden">
                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -703,10 +711,26 @@ export default function PassedCandidatesPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                         <div className="space-y-4 min-w-0 overflow-hidden">
                           <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Full Name</p>
-                            <p className="font-bold text-xl text-slate-800 dark:text-slate-200 truncate">
-                              {(selected.candidateProjectMap?.candidate || selected.candidate)?.firstName} {(selected.candidateProjectMap?.candidate || selected.candidate)?.lastName}
-                            </p>
+                            <div className="flex items-center gap-4">
+                              <ImageViewer
+                                src={selectedCandidate?.profileImage}
+                                title={`${selectedCandidate?.firstName || ''} ${selectedCandidate?.lastName || ''}`.trim()}
+                                className="h-18 w-18"
+                                ariaLabel={`View profile image for ${selectedCandidate?.firstName || ''} ${selectedCandidate?.lastName || ''}`}
+                                enableHoverPreview
+                                hoverPosition="right"
+                              />
+
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Full Name</p>
+                                <p className="font-bold text-xl text-slate-800 dark:text-slate-200 truncate">
+                                  {selectedCandidate?.firstName} {selectedCandidate?.lastName}
+                                </p>
+                                {selectedCandidate?.currentRole || selectedCandidate?.email ? (
+                                  <p className="text-sm text-muted-foreground truncate mt-1">{selectedCandidate?.currentRole || selectedCandidate?.email}</p>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
