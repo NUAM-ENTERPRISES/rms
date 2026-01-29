@@ -9,7 +9,6 @@ export const projectFormSchema = z.object({
   deadline: z.date({ message: "Deadline is required" }),
   priority: z.enum(["low", "medium", "high", "urgent"]),
   projectType: z.enum(["private", "ministry"]),
-  visaType: z.enum(["direct_visa", "company_visa"]).optional(),
   resumeEditable: z.boolean(),
   groomingRequired: z.enum(["formal", "casual", "not_specified"]),
   hideContactInfo: z.boolean(),
@@ -73,7 +72,8 @@ export const projectFormSchema = z.object({
         drugScreeningRequired: z.boolean().optional(),
         additionalRequirements: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
-
+        // Changed from employmentType to visaType
+        visaType: z.enum(["contract", "permanent"]),
         contractDurationYears: z
           .union([z.number().min(1).max(10), z.undefined()])
           .optional(),
@@ -129,7 +129,6 @@ export type ProjectFormData = z.infer<typeof projectFormSchema>;
 export const defaultProjectValues = {
   priority: "medium" as const,
   projectType: "private" as const,
-  visaType: "direct_visa" as const,
   resumeEditable: true,
   groomingRequired: "formal" as const,
   hideContactInfo: true, // Default to hide contact info for private projects
@@ -146,7 +145,7 @@ export const defaultProjectValues = {
       drugScreeningRequired: true,
       onCallRequired: false,
       relocationAssistance: false,
-
+      visaType: "contract" as const,
       genderRequirement: "all" as const,
       ageRequirement: undefined,
       accommodation: false,

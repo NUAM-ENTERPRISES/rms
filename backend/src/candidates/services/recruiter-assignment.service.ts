@@ -514,7 +514,7 @@ export class RecruiterAssignmentService {
     const workingStatus = await this.prisma.candidateStatus.findFirst({
       where: {
         statusName: {
-          equals: 'deployed',
+          equals: 'working',
           mode: 'insensitive',
         },
       },
@@ -543,7 +543,7 @@ export class RecruiterAssignmentService {
         if (c.currentStatusId === otherEnquiryId) acc.otherEnquiry += 1;
         if (c.currentStatusId === qualifiedId) acc.qualified += 1;
         if (c.currentStatusId === futureId) acc.future += 1;
-        if (c.currentStatusId === workingId) acc.deployed += 1;
+        if (c.currentStatusId === workingId) acc.working += 1;
         return acc;
       },
       {
@@ -556,7 +556,7 @@ export class RecruiterAssignmentService {
         otherEnquiry: 0,
         qualified: 0,
         future: 0,
-        deployed: 0,
+        working: 0,
       },
     );
 
@@ -745,7 +745,7 @@ export class RecruiterAssignmentService {
         otherEnquiry: countsMap.otherEnquiry,
         qualified: countsMap.qualified,
         future: countsMap.future,
-        deployed: countsMap.deployed,
+        working: countsMap.working,
       },
       pagination: {
         page,

@@ -181,12 +181,11 @@ export class ProjectsService {
           countryCode: createProjectDto.countryCode ?? null,
           // New project-level fields
           projectType: createProjectDto.projectType || 'private',
-          visaType: createProjectDto.visaType || 'direct_visa',
           resumeEditable: createProjectDto.resumeEditable ?? true,
           groomingRequired: createProjectDto.groomingRequired || 'formal',
           hideContactInfo: createProjectDto.hideContactInfo ?? true,
           requiredScreening: createProjectDto.requiredScreening ?? false,
-        } as any,
+        },
       });
 
       // Create roles needed if provided
@@ -258,6 +257,7 @@ export class ProjectsService {
               employmentType: role.employmentType || 'permanent',
               contractDurationYears: role.contractDurationYears,
               genderRequirement: (role.genderRequirement || 'all') as any,
+              visaType: role.visaType || 'contract',
               requiredSkills: role.requiredSkills
                 ? JSON.parse(role.requiredSkills)
                 : [],
@@ -704,8 +704,6 @@ export class ProjectsService {
     // New project-level fields
     if (updateProjectDto.projectType !== undefined)
       updateData.projectType = updateProjectDto.projectType;
-    if (updateProjectDto.visaType !== undefined)
-      updateData.visaType = updateProjectDto.visaType;
     if (updateProjectDto.resumeEditable !== undefined)
       updateData.resumeEditable = updateProjectDto.resumeEditable;
     if (updateProjectDto.groomingRequired !== undefined)
@@ -843,6 +841,7 @@ export class ProjectsService {
           employmentType: role.employmentType || 'permanent',
           contractDurationYears: role.contractDurationYears,
           genderRequirement: (role.genderRequirement || 'all') as any,
+          visaType: role.visaType || 'contract',
           requiredSkills: role.requiredSkills ? JSON.parse(role.requiredSkills) : [],
           candidateStates: role.candidateStates ? JSON.parse(role.candidateStates) : [],
           candidateReligions: role.candidateReligions ? JSON.parse(role.candidateReligions) : [],

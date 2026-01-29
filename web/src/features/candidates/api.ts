@@ -400,7 +400,7 @@ export interface RecruiterMyCandidatesResponse {
     interested: number;
     qualified: number;
     future: number;
-    deployed: number;
+    working: number;
     notInterested: number;
     otherEnquiry: number;
   };
@@ -435,7 +435,7 @@ export interface AllCandidatesResponse {
     interested?: number;
     qualified?: number;
     future?: number;
-    deployed?: number;
+    working?: number;
     notInterested?: number;
     otherEnquiry?: number;
   };
@@ -558,7 +558,7 @@ export const candidatesApi = baseApi.injectEndpoints({
           otherEnquiry?: number;
           qualified?: number;
           future?: number;
-          deployed?: number;
+          working?: number;
         };
       },
       GetCandidatesParams | void

@@ -213,7 +213,6 @@ model Project {
   priority             String                @default("medium")
   countryCode          String?
   projectType          String                @default("private") // "private" or "ministry"
-  visaType             String                @default("direct_visa") // "direct_visa" | "company_visa"
   resumeEditable       Boolean               @default(true) // Whether resume can be edited according to requirements
   groomingRequired     String                @default("formal") // "formal", "casual", "not_specified"
   hideContactInfo      Boolean               @default(true) // Hide email and mobile in resume for private projects
@@ -269,6 +268,7 @@ model RoleNeeded {
   transport                 Boolean?
   target                    Int?
   technicalSkills           Json?
+  visaType                  String                           @default("contract") // "contract", "permanent", "work_permit", "student"
   requiredSkills            Json                             @default("[]") // Array of required skills
   candidateStates           Json                             @default("[]") // Array of allowed states for candidates
   candidateReligions        Json                             @default("[]") // Array of allowed religions for candidates
