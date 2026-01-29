@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -8,10 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+
 import { Badge } from "@/components/ui/badge";
+
+import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog, ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
+
 import {
   Select,
   SelectTrigger,
@@ -20,29 +23,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Edit,
-  Trash2,
-  Calendar,
-  Building2,
-  Target,
-  Clock,
-  MapPin,
-  UserCheck,
-  User,
-  FileText,
-  Send,
   AlertCircle,
-  UserPlus,
-  Layers,
   Briefcase,
+  Building2,
+  Bus,
+  Calendar,
   CheckCircle2,
+  Clock,
+  Edit,
+  FileText,
+  GraduationCap,
+  Home,
+  Layers,
+  MapPin,
+  Send,
+  Target,
+  Trash2,
+  User,
+  UserCheck,
+  UserPlus,
   Users,
   Utensils,
-  Home,
-  Bus,
-  GraduationCap,
+  XCircle,
+  Settings
 } from "lucide-react";
+
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
+
+const ProjectDetailsModal = React.lazy(() => import("../components/ProjectDetailsModal"));
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -71,6 +79,46 @@ const formatDate = (dateString?: string) => {
     year: "numeric",
   });
 };
+// Helper components for modal
+const OverviewItem = ({ icon: Icon, label, value, sub, badge }: {
+  icon: any;
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  badge?: boolean;
+}) => (
+  <div className="p-2 bg-white border rounded-lg shadow-sm">
+    <div className="flex items-start gap-3">
+      <div className="p-2 rounded-md bg-slate-100 text-slate-600">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs sm:text-sm font-medium text-slate-500 uppercase tracking-wide">{label}</p>
+        {badge ? (
+          <div className="mt-1">{value}</div>
+        ) : (
+          <p className="mt-0.5 text-base font-semibold text-slate-900 truncate">{value}</p>
+        )}
+        {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  </div>
+);
+
+const SettingItem = ({ label, active, value }: { label: string; active?: boolean; value?: string }) => (
+  <div className="p-2 bg-white border rounded-lg text-center shadow-sm">
+    <p className="text-xs sm:text-sm font-medium text-slate-500 uppercase tracking-wide mb-2">{label}</p>
+    {typeof active === 'boolean' ? (
+      active ? (
+        <CheckCircle2 className="h-6 w-6 mx-auto text-green-600" />
+      ) : (
+        <XCircle className="h-6 w-6 mx-auto text-slate-400" />
+      )
+    ) : (
+      <p className="text-base font-semibold text-slate-800">{value || "—"}</p>
+    )}
+  </div>
+);
 
 // Helper function to format datetime
 const formatDateTime = (dateString?: string) => {
@@ -135,6 +183,10 @@ export default function ProjectDetailPage() {
   const canReadProjects = useCan("read:projects");
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
+  
+
+    // view details project
+    const [showProjectDetailsModal, setShowProjectDetailsModal] = useState(false);
 
   // RTK Query hooks
   const {
@@ -610,25 +662,23 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
-          <CardContent className="p-6 lg:p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              {/* Left Side — Title (Black) + Country */}
-              <div className="flex items-center gap-5 flex-1 min-w-0">
-                <div className="flex-1">
-                  {/* Title — Strong Black Text */}
-                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
-                    {project.title}
-                  </h1>
+     <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
+  <CardContent className="p-6 lg:p-8">
+    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      {/* Left Side — Title + Country */}
+      <div className="flex items-center gap-5 flex-1 min-w-0">
+        <div className="flex-1">
+          <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
+            {project.title}
+          </h1>
 
-                  {/* Optional Subtitle (Client Name) */}
-                  {project.client && (
-                    <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-slate-500" />
-                      {project.client.name}
-                    </p>
-                  )}
-                </div>
+          {project.client && (
+            <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-slate-500" />
+              {project.client.name}
+            </p>
+          )}
+        </div>
 
                 {/* Country Flag — Clean & Elevated */}
                 <div className="flex-shrink-0">
@@ -640,41 +690,69 @@ export default function ProjectDetailPage() {
                   />
                 </div>
               </div>
+        <div className="flex-shrink-0">
+          <ProjectCountryCell
+            countryCode={project.countryCode}
+            size="4xl"
+            fallbackText="Not specified"
+            className="shadow-lg ring-4 ring-white/90 rounded-full"
+          />
+        </div>
+      </div>
 
-              {/* Right Side — Action Buttons */}
-              <div className="flex items-center gap-3">
-                {canManageProjects && !isProcessingExecutive && (
-                  <>
-                    {/* Edit Button — Clean & Professional */}
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => navigate(`/projects/${project.id}/edit`)}
-                      className="font-semibold border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-md transition-all duration-200"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Project
-                    </Button>
+      {/* Right Side — Action Buttons */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* View Project Details - now opens modal */}
+        <Button
+          size="md"
+          onClick={() => setShowProjectDetailsModal(true)}
+          className="font-medium text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-4 py-2"
+        >
+          View Details
+        </Button>
 
-                    {/* Delete Button — Strong but Clean */}
-                    <Button
-                      variant="destructive"
-                      size="lg"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
+        {canManageProjects && !isProcessingExecutive && (
+          <>
+            {/* Edit */}
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => navigate(`/projects/${project.id}/edit`)}
+              className="font-medium text-sm border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-sm transition-all duration-200 px-3 py-2"
+            >
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              Edit
+            </Button>
 
-            {/* Clean Bottom Accent Line */}
-            <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70"></div>
-          </CardContent>
-        </Card>
+            {/* Delete */}
+            <Button
+              variant="destructive"
+              size="md"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200 px-3 py-2"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+
+    {/* Bottom Accent */}
+    <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70" />
+  </CardContent>
+</Card>
+
+
+              {/* Project Details Modal */}
+        <Suspense fallback={<div className="p-6">Loading project details...</div>}>
+          <ProjectDetailsModal
+            open={showProjectDetailsModal}
+            onOpenChange={setShowProjectDetailsModal}
+            project={project}
+          />
+        </Suspense>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Candidates */}
@@ -1033,7 +1111,7 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </div>
-
+                  
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={showDeleteConfirm}

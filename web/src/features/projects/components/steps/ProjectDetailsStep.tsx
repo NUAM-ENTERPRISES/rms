@@ -270,7 +270,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
         </div>
 
         {/* New Project-Specific Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-slate-200">
           {/* Resume Editable */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-slate-700">
@@ -385,6 +385,33 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
             />
             {errors.hideContactInfo && (
               <span className="text-sm text-red-600">{errors.hideContactInfo.message}</span>
+            )}
+          </div>
+
+          {/* Project-level Visa Type */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">Visa Type</Label>
+            <Controller
+              name="visaType"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="direct_visa">
+                      <div className="flex items-center gap-2">Direct Visa</div>
+                    </SelectItem>
+                    <SelectItem value="company_visa">
+                      <div className="flex items-center gap-2">Company Visa</div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.visaType && (
+              <span className="text-sm text-red-600">{errors.visaType.message}</span>
             )}
           </div>
         </div>

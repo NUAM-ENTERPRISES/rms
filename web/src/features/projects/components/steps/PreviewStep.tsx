@@ -209,13 +209,9 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
                   <Badge variant="secondary" className="text-xs">
                     Positions: {role.quantity}
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {role.visaType === "contract" && role.contractDurationYears
-                      ? `Contract (${role.contractDurationYears} years)`
-                      : role.visaType === "contract"
-                      ? "Contract"
-                      : "Permanent"}
-                  </Badge>
+                  {role.contractDurationYears && (
+                    <Badge variant="outline" className="text-xs">{`Contract (${role.contractDurationYears} years)`}</Badge>
+                  )}
                 </div>
               </div>
 
