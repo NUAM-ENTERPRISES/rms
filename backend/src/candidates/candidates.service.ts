@@ -933,24 +933,8 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    // Generate pipeline data for each project
-    const pipelineData = this.pipelineService.generatePipelinesForCandidate(
-      candidate.projects,
-    );
-
-    // Add pipeline data to the candidate object
-    return {
-      ...candidate,
-      pipeline: {
-        projects: pipelineData,
-        overallProgress: this.calculateOverallProgress(pipelineData),
-      },
-    } as CandidateWithRelations & {
-      pipeline: {
-        projects: any[];
-        overallProgress: number;
-      };
-    };
+    // Pipeline data removed from response to reduce payload
+    return candidate;
   }
 
   /**

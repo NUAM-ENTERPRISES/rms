@@ -418,7 +418,7 @@ export class ProcessingController {
   @Post('steps/:stepId/complete')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @ApiOperation({ summary: 'Mark a processing step as complete and move to next step' })
-  @ApiBody({ type: CompleteProcessingStepDto, description: 'When completing a medical step provide `isMedicalPassed` (required). When completing an emigration step provide `emigrationStatus` (required). Optional: `mofaNumber` and `notes` (stored in processing history or used as cancellation reason).' })
+  @ApiBody({ type: CompleteProcessingStepDto, description: 'When completing a medical step provide `isMedicalPassed` (required). Optional: `mofaNumber` and `notes` (stored in processing history or used as cancellation reason).' })
   async completeStep(@Param('stepId') stepId: string, @Body() body: CompleteProcessingStepDto, @Req() req: any) {
     const data = await this.processingService.completeProcessingStep(stepId, req.user.id, body);
     return { success: true, data, message: 'Processing step completed and advanced to next step' };

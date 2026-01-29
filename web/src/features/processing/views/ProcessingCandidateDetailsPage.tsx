@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
-import { useGetCandidateProcessingDetailsQuery, useGetCandidateDocumentsQuery, useGetCandidateHistoryPaginatedQuery } from "@/features/processing/data/processing.endpoints";
+import { useGetCandidateProcessingDetailsQuery, useGetCandidateDocumentsQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProcessingStepsQuery } from "@/services/processingApi";
 import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +63,7 @@ export default function ProcessingCandidateDetailsPage() {
 
   // --- New: paginated documents and history ---
   const [docsPage, setDocsPage] = useState(1);
-  const [historyPage, setHistoryPage] = useState(1);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   const effectiveProcessingId = processingId || apiResponse?.data?.id || "";
 
@@ -72,10 +72,7 @@ export default function ProcessingCandidateDetailsPage() {
     { skip: !effectiveProcessingId }
   );
 
-  const { data: historyResponse, refetch: refetchCandidateHistory } = useGetCandidateHistoryPaginatedQuery(
-    { processingId: effectiveProcessingId, page: historyPage, limit: 10 },
-    { skip: !effectiveProcessingId }
-  );
+  // History is intentionally fetched by the `ProcessingHistoryModal` only; a `refreshKey` is used to signal refreshes when needed.
 
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
@@ -103,7 +100,8 @@ export default function ProcessingCandidateDetailsPage() {
   // Reset paging when processing id changes
   useEffect(() => {
     setDocsPage(1);
-    setHistoryPage(1);
+    // history page is managed within the modal; signal it to refresh/reset when processing id changes
+    setHistoryRefreshKey((k) => k + 1);
   }, [effectiveProcessingId]);
 
   // Handler to refresh all data when a processing step is completed
@@ -112,8 +110,9 @@ export default function ProcessingCandidateDetailsPage() {
       refetchCandidateDetails(),
       refetchProcessingSteps(),
       refetchCandidateDocuments(),
-      refetchCandidateHistory(),
     ]);
+    // signal the history modal to refresh if it's open
+    setHistoryRefreshKey((k) => k + 1);
   };
 
   // Backwards compatible HRD handler
@@ -150,13 +149,9 @@ export default function ProcessingCandidateDetailsPage() {
   }, [docsResponse?.data?.items]);
 
   // If processing was cancelled, find the most recent cancellation history entry to show the reason
-  const cancellationEntry = useMemo(() => {
-    const history = (historyResponse?.data?.items || []) as any[];
-    if (!history.length) return null;
-
-    const sorted = [...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return sorted.find((h) => h.status === "cancelled") || null;
-  }, [historyResponse?.data?.items]);
+  // We intentionally avoid fetching history on page load. The history modal fetches history when opened.
+  // Keep a typed placeholder for cancellation entry so TypeScript is happy — we fetch details from history modal when needed.
+  const cancellationEntry: { notes?: string; createdAt?: string; changedBy?: { name?: string } } | null = null;
 
   if (isLoading || isLoadingSteps) {
     return (
@@ -218,9 +213,9 @@ export default function ProcessingCandidateDetailsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-rose-700">Processing Cancelled</h3>
-                <p className="text-sm text-slate-700 mt-1">{cancellationEntry?.notes || "No reason provided"}</p>
-                {cancellationEntry?.createdAt && (
-                  <div className="text-xs text-slate-400 mt-2">Cancelled by {cancellationEntry?.changedBy?.name || "System"} on {format(new Date(cancellationEntry.createdAt), "PPP p")}</div>
+                <p className="text-sm text-slate-700 mt-1">{(cancellationEntry as any)?.notes || "No reason provided"}</p>
+                {(cancellationEntry as any)?.createdAt && (
+                  <div className="text-xs text-slate-400 mt-2">Cancelled by {(cancellationEntry as any)?.changedBy?.name || "System"} on {format(new Date((cancellationEntry as any).createdAt), "PPP p")}</div>
                 )}
               </div>
             </div>
@@ -365,7 +360,7 @@ export default function ProcessingCandidateDetailsPage() {
 
             {/* History Modal Button + Processing Notes stacked */}
             <div className="flex flex-col gap-3">
-              <ProcessingHistoryModal processingId={data.id} />
+              <ProcessingHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
               
               {data.notes && (
                 <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-l-amber-400 p-3">
@@ -403,9 +398,14 @@ export default function ProcessingCandidateDetailsPage() {
               ...verifyData,
               notes: verifyData.notes || "Offer letter verified by processing team"
             }).unwrap();
-            
+
             toast.success("Offer letter verified successfully");
-            await refetchCandidateDetails();
+
+            // Refresh candidate details and documents so UI updates immediately
+            await Promise.all([
+              refetchCandidateDetails(),
+              refetchCandidateDocuments(),
+            ]);
           } catch (error: any) {
             console.error("Verification error:", error);
             toast.error(error?.data?.message || "Failed to verify offer letter");

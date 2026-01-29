@@ -332,7 +332,7 @@ export const projectsApi = baseApi.injectEndpoints({
       ApiResponse<EligibleCandidate[]>,
       string
     >({
-      query: (projectId) => `/projects/${projectId}/eligible-candidates`,
+      query: (projectId) => `/projects/${projectId}/eligible-candidates?limit=10`,
       providesTags: ["Candidate"],
     }),
 

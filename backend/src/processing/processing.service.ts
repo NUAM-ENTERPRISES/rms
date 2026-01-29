@@ -2580,7 +2580,7 @@ export class ProcessingService {
   /**
    * Mark a processing step as completed and auto-advance to next step
    */
-  async completeProcessingStep(stepId: string, userId: string, opts?: { prometricResult?: string }) {
+  async completeProcessingStep(stepId: string, userId: string, opts?: any) {
     const step = await this.prisma.processingStep.findUnique({
       where: { id: stepId },
       include: {
@@ -2601,30 +2601,7 @@ export class ProcessingService {
       await this.ensureHrdCanComplete(step.id);
     }
 
-    // If this is a prometric step, the caller must supply a valid prometricResult
-    if (step.template?.key === 'prometric') {
-      if (!opts || !opts.prometricResult) {
-        throw new BadRequestException('prometricResult is required when completing a prometric step');
-      }
-      opts.prometricResult = String(opts.prometricResult).toUpperCase();
-      if (!['PASSED', 'FAILED', 'PENDING'].includes(opts.prometricResult)) {
-        throw new BadRequestException('prometricResult must be one of PASSED, FAILED or PENDING');
-      }
 
-      // Business rule: if Prometric result is FAILED -> cancel the processing (preserve prometricResult)
-      if (opts.prometricResult === 'FAILED') {
-        // persist the prometricResult first, then cancel using existing routine so we keep single cancellation path
-        await this.prisma.processingStep.update({
-          where: { id: stepId },
-          data: ({ prometricResult: 'FAILED' } as any),
-        });
-
-        // Reuse existing cancellation logic (creates history, cancels other steps, updates processing candidate)
-        const cancelReason = 'Prometric failed';
-        const cancelResult = await this.cancelProcessingStep(stepId, userId, cancelReason);
-        return Object.assign({}, cancelResult, { prometricResult: 'FAILED' });
-      }
-    }
 
     // MEDICAL step: require isMedicalPassed in request body; persist mofaNumber/isMedicalPassed
     // - If isMedicalPassed === false -> persist flags then cancel the processing (single cancellation path)
@@ -2653,31 +2630,7 @@ export class ProcessingService {
       // if passed -> allow normal completion flow but ensure flags will be persisted in the transaction below
     }
 
-    // EMIGRATION step: require emigrationStatus in request body; validate and persist
-    if (step.template?.key === 'emigration') {
-      const emigrationStatus = opts && typeof (opts as any).emigrationStatus !== 'undefined' ? (opts as any).emigrationStatus : undefined;
-      const allowed = ['PENDING', 'FAILED', 'COMPLETED'];
 
-      if (typeof emigrationStatus === 'undefined') {
-        throw new BadRequestException('emigrationStatus is required when completing an emigration step');
-      }
-      if (!allowed.includes(emigrationStatus)) {
-        throw new BadRequestException(`emigrationStatus must be one of: ${allowed.join(', ')}`);
-      }
-
-      // If emigrationStatus indicates failure, persist then cancel the processing (same single cancellation path used for medical/prometric)
-      if (emigrationStatus === 'FAILED') {
-        const notes = opts && (opts as any).notes;
-        // persist emigrationStatus first so the column reflects the failure
-        await this.prisma.processingStep.update({ where: { id: stepId }, data: { emigrationStatus: 'FAILED' } as any });
-
-        const cancelReason = notes ? `Emigration failed: ${String(notes).trim()}` : 'Emigration failed';
-        const cancelResult = await this.cancelProcessingStep(stepId, userId, cancelReason);
-        return Object.assign({}, cancelResult, { emigrationStatus: 'FAILED' });
-      }
-
-      // allow normal completion flow but ensure emigrationStatus is persisted below
-    }
 
     const txResult = await this.prisma.$transaction(async (tx) => {
       // 1. Mark current step as completed
@@ -2686,10 +2639,7 @@ export class ProcessingService {
         status: 'completed',
         completedAt: new Date(),
       };
-      if (opts && opts.prometricResult) {
-        // cast to Prisma enum type so TS accepts it
-        updateData.prometricResult = opts.prometricResult as any;
-      }
+
 
       // Persist medical-specific fields when completing a medical step
       if (step.template?.key === 'medical' && opts) {
@@ -2701,10 +2651,7 @@ export class ProcessingService {
         }
       }
 
-      // Persist emigration-specific field when completing an emigration step
-      if (step.template?.key === 'emigration' && opts && typeof (opts as any).emigrationStatus !== 'undefined') {
-        updateData.emigrationStatus = (opts as any).emigrationStatus;
-      }
+
 
       await tx.processingStep.update({
         where: { id: stepId },
@@ -2722,9 +2669,7 @@ export class ProcessingService {
       });
       const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
 
-      let historyNotes = opts && opts.prometricResult
-        ? `Step "${step.template.label}" marked as completed (Prometric result: ${opts.prometricResult})`
-        : `Step "${step.template.label}" marked as completed`;
+      let historyNotes = `Step "${step.template.label}" marked as completed`;
 
       // Append optional note provided by caller (keeps existing behaviour when none provided)
       if (opts && (opts as any).notes) {

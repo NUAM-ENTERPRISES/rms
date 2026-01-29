@@ -875,23 +875,29 @@ export class ProjectsController {
     description: 'Project ID',
     example: 'proj_123abc',
   })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name, email, mobile or skills' })
+  @ApiQuery({ name: 'sortBy', required: false, description: "Sort by: 'matchScore' | 'experience' | 'firstName' | 'createdAt'", example: 'matchScore' })
+  @ApiQuery({ name: 'sortOrder', required: false, description: "Sort order: 'asc' | 'desc'", example: 'desc' })
   @ApiResponse({
     status: 200,
-    description: 'Eligible candidates retrieved successfully',
+    description: 'Eligible candidates retrieved successfully (paginated)',
   })
   @ApiResponse({
     status: 404,
     description: 'Project not found',
   })
-  async getEligibleCandidates(@Param('id') id: string, @Request() req) {
-    const candidates = await this.projectsService.getEligibleCandidates(
+  async getEligibleCandidates(@Param('id') id: string, @Request() req, @Query() query: any) {
+    const result = await this.projectsService.getEligibleCandidates(
       id,
       req.user.id,
       req.user.roles,
+      query,
     );
     return {
       success: true,
-      data: candidates,
+      data: result,
     };
   }
 

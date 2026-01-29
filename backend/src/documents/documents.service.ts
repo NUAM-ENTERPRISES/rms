@@ -1356,6 +1356,7 @@ export class DocumentsService {
               email: true,
               mobileNumber: true,
               countryCode: true,
+              profileImage: true,
             },
           },
           project: {
@@ -2102,7 +2103,7 @@ export class DocumentsService {
           candidateProjectMap: {
             include: {
               candidate: {
-                select: { id: true, firstName: true, lastName: true, email: true, mobileNumber: true },
+                select: { id: true, firstName: true, lastName: true, email: true, mobileNumber: true, profileImage: true },
               },
               project: {
                 select: {
@@ -2261,6 +2262,7 @@ export class DocumentsService {
               email: true,
               mobileNumber: true,
               countryCode: true,
+              profileImage: true,
             },
           },
           project: {
@@ -2545,6 +2547,7 @@ export class DocumentsService {
               email: true,
               mobileNumber: true,
               countryCode: true,
+              profileImage: true,
             },
           },
           project: {

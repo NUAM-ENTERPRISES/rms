@@ -1,4 +1,5 @@
-import { ReactNode, useMemo, useEffect, useState } from "react";
+import { ReactNode, useMemo, ComponentType, useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,7 +12,6 @@ import {
 import {
   Search,
   Filter,
-  UserPlus,
   Trophy,
   ShieldCheck,
   Users2,
@@ -355,6 +355,12 @@ const ProjectCandidatesBoard = ({
     [managerAssignments]
   );
 
+  const PAGE_SIZE = 10;
+
+  const [nominatedPage, setNominatedPage] = useState(1);
+  const [eligiblePage, setEligiblePage] = useState(1);
+  const [allPage, setAllPage] = useState(1);
+
   const sanitizedNominated = useMemo(
     () =>
       nominatedCandidates.map((candidate: CandidateRecord) =>
@@ -362,6 +368,13 @@ const ProjectCandidatesBoard = ({
       ),
     [nominatedCandidates, hideContactInfo]
   );
+
+  // Reset pagination when search term changes
+  useEffect(() => {
+    setNominatedPage(1);
+    setEligiblePage(1);
+    setAllPage(1);
+  }, [searchTerm]);
 
 
   const filteredEligible = useMemo(
@@ -406,7 +419,14 @@ const ProjectCandidatesBoard = ({
       );
     }
 
-    return sanitizedNominated.map((candidate) => {
+    const totalNominated = sanitizedNominated.length;
+    const nominatedTotalPages = Math.max(1, Math.ceil(totalNominated / PAGE_SIZE));
+    const nominatedSlice = sanitizedNominated.slice(
+      (nominatedPage - 1) * PAGE_SIZE,
+      nominatedPage * PAGE_SIZE
+    );
+
+    const items = nominatedSlice.map((candidate) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
@@ -414,82 +434,107 @@ const ProjectCandidatesBoard = ({
         assignedToProjectIds
       );
 
-      const candidateId = candidate.candidateId || candidate.id;
-      if (!candidateId) return null;
-
-      // Ensure candidate has project info for document requirements if missing
-      const candidateWithProject = {
-        ...candidate,
-        project: candidate.project || project
-      };
-
-      const subStatusName =
-        candidate.projectSubStatus?.name ||
-        candidate.projectSubStatus?.statusName ||
-        "";
-      
-      const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
-
-      const isVerificationInProgress =
-        subStatusName === "verification_in_progress_document";
-      const showVerifyButton = subStatusName === "nominated_initial";
-      const showInterviewButton = subStatusName === "documents_verified";
-      const hasProject = Boolean(candidate.project);
-
-      const actions = [];
-
-      return (
-        <CandidateCard
-          key={`nominated-${candidateId}`}
-          candidate={candidateWithProject}
-          projectId={projectId}
-          isRecruiter={isRecruiter}
-          onView={() => onViewCandidate(candidateId)}
-          onAction={(id, action) => {
-            if (action === "assign") {
-              onAssignCandidate(
-                id,
-                `${candidate.firstName} ${candidate.lastName}`
-              );
-            }
-          }}
-          actions={actions}
-          projectStatus={
-            candidate.projectSubStatus?.label ||
-            candidate.projectSubStatus?.name ||
-            candidate.currentProjectStatus?.statusName ||
-            candidate.projectStatus?.statusName ||
-            "nominated"
-          }
-          showMatchScore={
-            candidate.matchScore !== undefined && candidate.matchScore !== null
-          }
-          matchScore={candidate.matchScore}
-          showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
-          onVerify={() =>
-            onVerifyCandidate(
-              candidateId,
-              `${candidate.firstName} ${candidate.lastName}`
-            )
-          }
-          showAssignButton={!hasProject}
-          onAssignToProject={(id) =>
-            onAssignCandidate(
-              id,
-              `${candidate.firstName} ${candidate.lastName}`
-            )
-          }
-          showSkipDocumentVerification={shouldSkipDocVerification}
-          skipDocumentVerificationMessage={
-            "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
-          }
-          showInterviewButton={showInterviewButton}
-          onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
-          isAlreadyInProject={hasProject}
-          eligibilityData={eligibilityMap.get(candidateId)}
-        />
-      );
+      return { candidate, assignmentInfo };
     });
+
+    return (
+      <div className="space-y-3">
+        {items.map(({ candidate, assignmentInfo }) => {
+          const candidateId = candidate.candidateId || candidate.id;
+          if (!candidateId) return null; 
+
+          const candidateWithProject = {
+            ...candidate,
+            project: candidate.project || project,
+          };
+
+          const subStatusName =
+            candidate.projectSubStatus?.name ||
+            candidate.projectSubStatus?.statusName ||
+            "";
+
+          const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
+
+          const showVerifyButton = subStatusName === "nominated_initial";
+          const showInterviewButton = subStatusName === "documents_verified";
+          const hasProject = Boolean(candidate.project);
+
+          const actions: {
+            label: string;
+            action: string;
+            variant?:
+              | "default"
+              | "outline"
+              | "secondary"
+              | "ghost"
+              | "destructive";
+            icon?: ComponentType<{ className?: string }>;
+          }[] = [];
+
+          return (
+            <CandidateCard
+              key={`nominated-${candidateId}`}
+              candidate={candidateWithProject}
+              projectId={projectId}
+              isRecruiter={isRecruiter}
+              onView={() => onViewCandidate(candidateId)}
+              onAction={(id, action) => {
+                if (action === "assign") {
+                  onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`);
+                }
+              }}
+              actions={actions}
+              projectStatus={
+                candidate.projectSubStatus?.label ||
+                candidate.projectSubStatus?.name ||
+                candidate.currentProjectStatus?.statusName ||
+                candidate.projectStatus?.statusName ||
+                "nominated"
+              }
+              showMatchScore={
+                candidate.matchScore !== undefined && candidate.matchScore !== null
+              }
+              matchScore={candidate.matchScore}
+              showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
+              onVerify={() =>
+                onVerifyCandidate(candidateId, `${candidate.firstName} ${candidate.lastName}`)
+              }
+              showAssignButton={!hasProject}
+              onAssignToProject={(id) =>
+                onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)
+              }
+              showSkipDocumentVerification={shouldSkipDocVerification}
+              skipDocumentVerificationMessage={
+                "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
+              }
+              showInterviewButton={showInterviewButton}
+              onSendForInterview={(id) =>
+                onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
+              }
+              isAlreadyInProject={hasProject}
+              eligibilityData={eligibilityMap.get(candidateId)}
+            />
+          );
+        })}
+
+        {nominatedTotalPages > 1 && (
+          <div className="flex items-center justify-between px-3 py-2">
+            <div className="text-xs text-slate-500">
+              Showing {Math.min((nominatedPage - 1) * PAGE_SIZE + 1, totalNominated)} - {Math.min(nominatedPage * PAGE_SIZE, totalNominated)} of {totalNominated}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setNominatedPage((p) => Math.max(1, p - 1))} disabled={nominatedPage === 1}>
+                Prev
+              </Button>
+              <div className="text-sm">{nominatedPage} / {nominatedTotalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => setNominatedPage((p) => Math.min(nominatedTotalPages, p + 1))} disabled={nominatedPage === nominatedTotalPages}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderEligibleColumn = () => {
@@ -514,108 +559,112 @@ const ProjectCandidatesBoard = ({
       );
     }
 
-    return filteredEligible.map((candidate) => {
+    const totalEligible = filteredEligible.length;
+    const eligibleTotalPages = Math.max(1, Math.ceil(totalEligible / PAGE_SIZE));
+    const eligibleSlice = filteredEligible.slice((eligiblePage - 1) * PAGE_SIZE, eligiblePage * PAGE_SIZE);
+
+    const eligibleItems = eligibleSlice.map((candidate) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
         managerAssignments,
         assignedToProjectIds
       );
-
-      const sanitized = sanitizeCandidate(candidate, hideContactInfo);
-      const candidateWithProject = {
-        ...sanitized,
-        project: sanitized.project || project
-      };
-
-      const actions = !assignmentInfo.isAssigned
-        ? [
-            ...(requiredScreening
-              ? [
-                  {
-                    label: "Send for Direct Screening",
-                    action: "send_for_screening",
-                    variant: "default" as const,
-                    icon: Send,
-                  },
-                ]
-              : []),
-          ]
-        : [];
-
-      const showVerifyButton =
-        assignmentInfo.isAssigned && assignmentInfo.isNominated;
-      
-      const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
-
-      // Show the interview button for candidates whose project sub-status
-      // is documents_verified even if they're not yet assigned to the project.
-      const showInterviewButton =
-        candidate.projectSubStatus?.name === "documents_verified" ||
-        candidate.projectSubStatus?.statusName === "documents_verified";
-
-      
-
-      // DEBUG: log candidate substatus in tests to help identify why
-      // the interview button might not be rendering in some cases.
-      /* istanbul ignore next */
-      if (process.env.NODE_ENV === "test") {
-        // eslint-disable-next-line no-console
-        console.log("DBG: all-candidates candidate.projectSubStatus", candidate.projectSubStatus, "showInterviewButton", showInterviewButton);
-      }
-
-      return (
-        <CandidateCard
-          key={`eligible-${assignmentInfo.candidateId}`}
-          candidate={candidateWithProject}
-          projectId={projectId}
-          isRecruiter={isRecruiter}
-          onView={() => onViewCandidate(assignmentInfo.candidateId)}
-          onAction={(id, action) => {
-            if (action === "assign") {
-              onAssignCandidate(
-                id,
-                `${candidate.firstName} ${candidate.lastName}`
-              );
-            }
-            if (action === "send_for_screening") {
-              onSendForScreening?.(
-                id,
-                `${candidate.firstName} ${candidate.lastName}`
-              );
-            }
-          }}
-          actions={actions}
-          projectStatus={assignmentInfo.projectStatus}
-          showMatchScore
-          matchScore={candidate.matchScore}
-          showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
-          onVerify={() =>
-            onVerifyCandidate(
-              assignmentInfo.candidateId,
-              `${candidate.firstName} ${candidate.lastName}`
-            )
-          }
-          showAssignButton={!assignmentInfo.isAssigned}
-          onAssignToProject={(id) =>
-            onAssignCandidate(
-              id,
-              `${candidate.firstName} ${candidate.lastName}`
-            )
-          }
-          showSkipDocumentVerification={shouldSkipDocVerification}
-          skipDocumentVerificationMessage={
-            "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
-          }
-          showInterviewButton={showInterviewButton}
-          onSendForInterview={(id) =>
-            onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
-          }
-          isAlreadyInProject={assignmentInfo.isAssigned}          showDocumentStatus={false}
-          eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
-        />
-      );
+      return { candidate, assignmentInfo };
     });
+
+    return (
+      <div className="space-y-3">
+        {eligibleItems.map(({ candidate, assignmentInfo }) => {
+          const sanitized = sanitizeCandidate(candidate, hideContactInfo);
+          const candidateWithProject = {
+            ...sanitized,
+            project: sanitized.project || project,
+          };
+
+          const actions = !assignmentInfo.isAssigned
+            ? [
+                ...(requiredScreening
+                  ? [
+                      {
+                        label: "Send for Direct Screening",
+                        action: "send_for_screening",
+                        variant: "default" as const,
+                        icon: Send,
+                      },
+                    ]
+                  : []),
+              ]
+            : [];
+
+          const showVerifyButton =
+            assignmentInfo.isAssigned && assignmentInfo.isNominated;
+
+          const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
+
+          const showInterviewButton =
+            candidate.projectSubStatus?.name === "documents_verified" ||
+            candidate.projectSubStatus?.statusName === "documents_verified";
+
+          return (
+            <CandidateCard
+              key={`eligible-${assignmentInfo.candidateId}`}
+              candidate={candidateWithProject}
+              projectId={projectId}
+              isRecruiter={isRecruiter}
+              onView={() => onViewCandidate(assignmentInfo.candidateId)}
+              onAction={(id, action) => {
+                if (action === "assign") {
+                  onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`);
+                }
+                if (action === "send_for_screening") {
+                  onSendForScreening?.(id, `${candidate.firstName} ${candidate.lastName}`);
+                }
+              }}
+              actions={actions}
+              projectStatus={assignmentInfo.projectStatus}
+              showMatchScore
+              matchScore={candidate.matchScore}
+              showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
+              onVerify={() =>
+                onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
+              }
+              showAssignButton={!assignmentInfo.isAssigned}
+              onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
+              showSkipDocumentVerification={shouldSkipDocVerification}
+              skipDocumentVerificationMessage={
+                "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
+              }
+              showInterviewButton={showInterviewButton}
+              onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
+              isAlreadyInProject={assignmentInfo.isAssigned}
+              showDocumentStatus={false}
+              eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
+            />
+          );
+        })}
+
+        {eligibleTotalPages > 1 && (
+          <div className="flex items-center justify-between px-3 py-2">
+            <div className="text-xs text-slate-500">
+              Showing {Math.min((eligiblePage - 1) * PAGE_SIZE + 1, totalEligible)} - {Math.min(eligiblePage * PAGE_SIZE, totalEligible)} of {totalEligible}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEligiblePage((p) => Math.max(1, p - 1))} disabled={eligiblePage === 1}>
+                Prev
+              </Button>
+              <div className="text-sm">{eligiblePage} / {eligibleTotalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => setEligiblePage((p) => Math.min(eligibleTotalPages, p + 1))} disabled={eligiblePage === eligibleTotalPages}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+
+
+
   };
 
   const renderAllCandidatesColumn = () => {
@@ -643,102 +692,111 @@ const ProjectCandidatesBoard = ({
       );
     }
 
-    return filteredAllCandidates.map((candidate) => {
+    const totalAll = filteredAllCandidates.length;
+    const allTotalPages = Math.max(1, Math.ceil(totalAll / PAGE_SIZE));
+    const allSlice = filteredAllCandidates.slice((allPage - 1) * PAGE_SIZE, allPage * PAGE_SIZE);
+
+    const allItems = allSlice.map((candidate) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
         managerAssignments,
         assignedToProjectIds
       );
-
-      const sanitized = sanitizeCandidate(candidate, hideContactInfo);
-      const candidateWithProject = {
-        ...sanitized,
-        project: sanitized.project || project
-      };
-      const actions = !assignmentInfo.isAssigned
-        ? [
-            ...(requiredScreening
-              ? [
-                  {
-                    label: "Send for Direct Screening",
-                    action: "send_for_screening",
-                    variant: "default" as const,
-                    icon: Send,
-                  },
-                ]
-              : []),
-          ]
-        : [];
-
-      const showVerifyButton =
-        assignmentInfo.isAssigned &&
-        assignmentInfo.isNominated &&
-        !assignmentInfo.isVerificationInProgress;
-
-      // If the candidate is linked to this project and the project indicates
-      // it should skip document verification (direct screening), hide the
-      // verify button and show the tooltip/icon instead.
-      const shouldSkipDocVerification = Boolean(
-        assignmentInfo.shouldSkipDocumentVerification === true
-      );
-      // Show the interview button for candidates whose project sub-status
-      // is documents_verified even if they're not yet assigned to the project.
-      const showInterviewButton =
-        candidate.projectSubStatus?.name === "documents_verified" ||
-        candidate.projectSubStatus?.statusName === "documents_verified";
-
-      return (
-        <CandidateCard
-          key={`all-${assignmentInfo.candidateId}`}
-          candidate={candidateWithProject}
-          projectId={projectId}
-          isRecruiter={isRecruiter}
-          onView={() => onViewCandidate(assignmentInfo.candidateId)}
-          onAction={(id, action) => {
-            if (action === "assign") {
-              onAssignCandidate(
-                id,
-                `${candidate.firstName} ${candidate.lastName}`
-              );
-            }
-            if (action === "send_for_screening") {
-              onSendForScreening?.(
-                id,
-                `${candidate.firstName} ${candidate.lastName}`
-              );
-            }
-          }}
-          actions={actions}
-          projectStatus={assignmentInfo.projectStatus}
-          showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
-          onVerify={() =>
-            onVerifyCandidate(
-              assignmentInfo.candidateId,
-              `${candidate.firstName} ${candidate.lastName}`
-            )
-          }
-          showAssignButton={!assignmentInfo.isAssigned}
-          onAssignToProject={(id) =>
-            onAssignCandidate(
-              id,
-              `${candidate.firstName} ${candidate.lastName}`
-            )
-          }
-          showSkipDocumentVerification={shouldSkipDocVerification}
-          skipDocumentVerificationMessage={
-            "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
-          }
-          showInterviewButton={showInterviewButton}
-          onSendForInterview={(id) =>
-            onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
-          }
-          isAlreadyInProject={assignmentInfo.isAssigned}
-          showDocumentStatus={assignmentInfo.isAssigned}
-          eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
-        />
-      );
+      return { candidate, assignmentInfo };
     });
+
+    return (
+      <div className="space-y-3">
+        {allItems.map(({ candidate, assignmentInfo }) => {
+          const sanitized = sanitizeCandidate(candidate, hideContactInfo);
+          const candidateWithProject = {
+            ...sanitized,
+            project: sanitized.project || project,
+          };
+          const actions = !assignmentInfo.isAssigned
+            ? [
+                ...(requiredScreening
+                  ? [
+                      {
+                        label: "Send for Direct Screening",
+                        action: "send_for_screening",
+                        variant: "default" as const,
+                        icon: Send,
+                      },
+                    ]
+                  : []),
+              ]
+            : [];
+
+          const showVerifyButton =
+            assignmentInfo.isAssigned &&
+            assignmentInfo.isNominated &&
+            !assignmentInfo.isVerificationInProgress;
+
+          const shouldSkipDocVerification = Boolean(
+            assignmentInfo.shouldSkipDocumentVerification === true
+          );
+          const showInterviewButton =
+            candidate.projectSubStatus?.name === "documents_verified" ||
+            candidate.projectSubStatus?.statusName === "documents_verified";
+
+          return (
+            <CandidateCard
+              key={`all-${assignmentInfo.candidateId}`}
+              candidate={candidateWithProject}
+              projectId={projectId}
+              isRecruiter={isRecruiter}
+              onView={() => onViewCandidate(assignmentInfo.candidateId)}
+              onAction={(id, action) => {
+                if (action === "assign") {
+                  onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`);
+                }
+                if (action === "send_for_screening") {
+                  onSendForScreening?.(id, `${candidate.firstName} ${candidate.lastName}`);
+                }
+              }}
+              actions={actions}
+              projectStatus={assignmentInfo.projectStatus}
+              showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
+              onVerify={() =>
+                onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
+              }
+              showAssignButton={!assignmentInfo.isAssigned}
+              onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
+              showSkipDocumentVerification={shouldSkipDocVerification}
+              skipDocumentVerificationMessage={
+                "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
+              }
+              showInterviewButton={showInterviewButton}
+              onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
+              isAlreadyInProject={assignmentInfo.isAssigned}
+              showDocumentStatus={assignmentInfo.isAssigned}
+              eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
+            />
+          );
+        })}
+
+        {allTotalPages > 1 && (
+          <div className="flex items-center justify-between px-3 py-2">
+            <div className="text-xs text-slate-500">
+              Showing {Math.min((allPage - 1) * PAGE_SIZE + 1, totalAll)} - {Math.min(allPage * PAGE_SIZE, totalAll)} of {totalAll}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setAllPage((p) => Math.max(1, p - 1))} disabled={allPage === 1}>
+                Prev
+              </Button>
+              <div className="text-sm">{allPage} / {allTotalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => setAllPage((p) => Math.min(allTotalPages, p + 1))} disabled={allPage === allTotalPages}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+
+
   };
 
   const columns: Array<{

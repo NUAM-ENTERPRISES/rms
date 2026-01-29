@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
@@ -296,7 +296,12 @@ export default function EligibleCandidatesTab({
               // Show verify button if: In project and nominated AND not already in verification
               const showVerifyBtn = isAssignedToProject && isNominated && !isVerificationInProgress;
 
-              const actions = [];
+              const actions: {
+                label: string;
+                action: string;
+                variant?: "default" | "outline" | "secondary" | "ghost" | "destructive";
+                icon?: ComponentType<{ className?: string }>;
+              }[] = [];
 
               return (
                 <CandidateCard

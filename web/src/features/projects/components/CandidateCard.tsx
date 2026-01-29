@@ -185,7 +185,16 @@ interface CandidateCardProps {
     icon?: React.ComponentType<{ className?: string }>;
   }>;
   showMatchScore?: boolean;
-  matchScore?: number;
+  matchScore?:
+    | number
+    | {
+        roleId?: string;
+        roleName?: string;
+        roleCatalogId?: string;
+        roleDepartmentName?: string;
+        roleDepartmentLabel?: string;
+        score?: number;
+      };
   projectStatus?: string;
   showVerifyButton?: boolean;
   onVerify?: (candidateId: string) => void;
@@ -815,7 +824,7 @@ const CandidateCard = memo(function CandidateCard({
                     <span>Not Eligible for Project</span>
                   </div>
                   <div className="space-y-1.5">
-                    {eligibilityData.roleEligibility.map((role, rIdx) => (
+                    {(eligibilityData?.roleEligibility || []).map((role, rIdx) => (
                       <div key={rIdx} className="space-y-1">
                         <div className="text-[11px] font-semibold text-slate-700">{role.designation}</div>
                         <ul className="list-disc list-inside space-y-0.5">

@@ -75,7 +75,7 @@ export default function DocumentVerificationPage() {
       status: statusFilter === "all" ? undefined : statusFilter,
       search: searchTerm || undefined,
       page: 1,
-      limit: 50,
+      limit: 10,
       recruiterId: isStrictRecruiter ? user?.id : undefined,
     },
     { skip: statusFilter !== "verification_in_progress_document" }
@@ -92,7 +92,7 @@ export default function DocumentVerificationPage() {
         : undefined,
     search: searchTerm || undefined,
     page: 1,
-    limit: 50,
+    limit: 10,
     recruiterId: isStrictRecruiter ? user?.id : undefined,
   });
 
@@ -506,9 +506,17 @@ export default function DocumentVerificationPage() {
               {/* Candidate — ONLY THIS ICON BACKGROUND CHANGED */}
               <TableCell className="px-6 py-5">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/20 text-sm font-medium text-white">
-                    {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
-                  </div>
+                  {candidateProject.candidate.profileImage ? (
+                    <img
+                      src={candidateProject.candidate.profileImage}
+                      alt={`${candidateProject.candidate.firstName || ''} ${candidateProject.candidate.lastName || ''}`.trim()}
+                      className="h-10 w-10 rounded-full object-cover shadow-lg"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/20 text-sm font-medium text-white">
+                      {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
+                    </div>
+                  )}
                   <div>
                     <button
                       onClick={() =>

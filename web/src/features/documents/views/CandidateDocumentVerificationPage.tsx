@@ -68,10 +68,7 @@ import {
   useCreateDocumentMutation,
   useRequestResubmissionMutation,
 } from "@/features/documents";
-import {
-  useGetProjectQuery,
-  useGetNominatedCandidatesQuery,
-} from "@/features/projects";
+import { useGetProjectQuery } from "@/features/projects";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
@@ -195,16 +192,7 @@ export default function CandidateDocumentVerificationPage() {
       skip: !selectedProject?.project?.id,
     });
 
-    const { refetch: refetchNominated } = useGetNominatedCandidatesQuery(
-      {
-        projectId: selectedProject?.project?.id || "",
-        search: undefined,
-        statusId: undefined,
-        page: 1,
-        limit: 100,
-      },
-      { skip: !selectedProject?.project?.id }
-    );
+
 
   // Auto-select first project
   useEffect(() => {
@@ -512,7 +500,7 @@ export default function CandidateDocumentVerificationPage() {
       }
 
       try {
-        await refetchNominated?.();
+        await refetchProject?.();
       } catch (e) {
         // best-effort
       }
@@ -542,12 +530,6 @@ export default function CandidateDocumentVerificationPage() {
       // pick up the updated status immediately
       try {
         await refetchProject?.();
-      } catch (e) {
-        // best-effort
-      }
-
-      try {
-        await refetchNominated?.();
       } catch (e) {
         // best-effort
       }
@@ -786,19 +768,7 @@ export default function CandidateDocumentVerificationPage() {
           </div>
         </div>
 
-        {/* Project Switcher - Tiny */}
-        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-          <SelectTrigger className="h-9 text-xs rounded-lg border-white/30 bg-white/70 backdrop-blur shadow-sm">
-            <SelectValue placeholder="Switch" />
-          </SelectTrigger>
-          <SelectContent className="rounded-lg">
-            {projectsData.data.map((project: any) => (
-              <SelectItem key={project.project.id} value={project.project.id} className="text-xs">
-                {project.project.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
 
         {/* Meta Pills - Ultra Compact */}
         <div className="flex flex-wrap gap-2">

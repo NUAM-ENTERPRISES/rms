@@ -1229,12 +1229,7 @@ enum PrometricResult {
   PENDING
 }
 
-/// Emigration step result values
-enum EmigrationStatus {
-  PENDING
-  FAILED
-  COMPLETED
-}
+
 
 model Religion {
   id        String   @id @default(cuid())
@@ -1607,13 +1602,7 @@ model ProcessingStep {
   submittedAt           DateTime?
   rejectionReason       String?
   meta                  Json?
-  /// Prometric outcome for this step. Nullable for backwards compatibility.
-  /// Allowed values: PASSED | FAILED | PENDING
-  prometricResult       PrometricResult?
   mofaNumber            String?
-  // Emigration status for the processing step (nullable)
-  // Use enum for stricter values: PENDING | FAILED | COMPLETED
-  emigrationStatus      EmigrationStatus?
   isMedicalPassed       Boolean?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt

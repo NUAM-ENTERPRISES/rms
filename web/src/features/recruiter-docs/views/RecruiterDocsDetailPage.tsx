@@ -97,7 +97,7 @@ import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, Ca
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
-import { DOCUMENT_TYPE } from "@/constants/document-types";
+
 
 const CandidateUploadDocumentModal = React.lazy(() => import("../components/CandidateUploadDocumentModal"));
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
@@ -105,6 +105,7 @@ import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
+import { ImageViewer } from "@/components/molecules";
 
 // Minimal colorful badge classes for match scores
 const getMinimalScoreBadgeClass = (score?: number) => {
@@ -243,7 +244,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const [createDocument, { isLoading: isCreating }] = useCreateDocumentMutation();
   const [reuseDocument, { isLoading: isReusing }] = useReuseDocumentMutation();
   const [sendForVerification, { isLoading: isSendingVerification }] = useSendForVerificationMutation();
-  const [reuploadDocument, { isLoading: isReuploading }] = useReuploadDocumentMutation();
+  const [reuploadDocument] = useReuploadDocumentMutation();
 
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [showReuseDialog, setShowReuseDialog] = React.useState(false);
@@ -1158,9 +1159,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
             {candidate ? (
               <>
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                    {candidate.firstName?.[0]}{candidate.lastName?.[0]}
-                  </div>
+                  <ImageViewer
+                    src={candidate.profileImage || null}
+                    title={`${candidate.firstName || ''} ${candidate.lastName || ''}`}
+                    className="h-12 w-12"
+                    ariaLabel={`View profile image for ${candidate.firstName || ''} ${candidate.lastName || ''}`}
+                    enableHoverPreview={true}
+                    hoverPosition="left"
+                  />
+
                   <div>
                     <h3 className="font-bold text-lg leading-none">{candidate.firstName} {candidate.lastName}</h3>
                     <Badge variant="outline" className="mt-2 bg-blue-50 text-blue-700 border-blue-100">

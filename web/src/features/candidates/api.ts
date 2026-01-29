@@ -234,46 +234,7 @@ export interface UpdateWorkExperienceRequest {
   achievements?: string;
 }
 
-// Create / Update candidate requests may include referral details
-export interface CreateCandidateRequest {
-  firstName: string;
-  lastName: string;
-  contact: string;
-  email?: string;
-  source?: string;
-  dateOfBirth?: string;
-  experience?: number;
-  skills?: string[];
-  currentEmployer?: string;
-  expectedSalary?: number;
-  assignedTo?: string;
 
-  referralCompanyName?: string;
-  referralEmail?: string;
-  referralCountryCode?: string;
-  referralPhone?: string;
-  referralDescription?: string;
-}
-
-export interface UpdateCandidateRequest {
-  id: string;
-  firstName?: string;
-  lastName?: string;
-  contact?: string;
-  email?: string;
-  currentStatus?: string;
-  experience?: number;
-  skills?: string[];
-  currentEmployer?: string;
-  expectedSalary?: string | number;
-  assignedTo?: string;
-
-  referralCompanyName?: string | null;
-  referralEmail?: string | null;
-  referralCountryCode?: string | null;
-  referralPhone?: string | null;
-  referralDescription?: string | null;
-}
 
 export interface CandidateProjectMap {
   id: string;
@@ -703,7 +664,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: { candidateId, projectId, roleNeededId, recruiterId, notes },
       }),
-      invalidatesTags: (_, __, { projectId, candidateId }) => [
+      invalidatesTags: (_, __, { projectId }) => [
         "Candidate",
         { type: "Project", id: projectId },
         "ProjectCandidates",
@@ -743,7 +704,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       { success: boolean; data: Candidate[] },
       string
     >({
-      query: (projectId) => `/projects/${projectId}/eligible-candidates`,
+      query: (projectId) => `/projects/${projectId}/eligible-candidates?limit=10`,
       providesTags: ["Candidate"],
     }),
 

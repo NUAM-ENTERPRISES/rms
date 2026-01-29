@@ -2086,7 +2086,11 @@ export class ProjectsService {
     projectId: string,
     userId: string,
     userRoles: string[],
-  ): Promise<any[]> {
+    query: { page?: number; limit?: number; search?: string; sortBy?: string; sortOrder?: string } = {},
+  ): Promise<{
+    candidates: any[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }> {
     // --------------------------------
     // 1. GET PROJECT WITH REQUIREMENTS
     // --------------------------------
@@ -2275,7 +2279,14 @@ export class ProjectsService {
     // --------------------------------
     // 5. RETURN MATCH SCORE (TOP ROLE ONLY)
     // --------------------------------
-    return matchedCandidates.map((candidate) => {
+    const page = Number(query.page || 1);
+    const limit = Number(query.limit || 20);
+    const search = (query.search || '').toString().trim().toLowerCase();
+    const sortBy = query.sortBy || 'matchScore';
+    const sortOrder = (query.sortOrder || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
+
+    // Build full items with matchScore
+    let items = matchedCandidates.map((candidate) => {
       const roleMatches = project.rolesNeeded.map((role) => ({
         roleId: role.id,
         designation: role.designation,
@@ -2285,12 +2296,10 @@ export class ProjectsService {
         score: this.calculateRoleMatchScore(candidate, role),
       }));
 
-      // pick top role by score
       const top = roleMatches.reduce((best, cur) => (cur.score > (best?.score ?? -1) ? cur : best), null as any);
 
       return {
         ...candidate,
-        // matchScore is now an object describing the top role match
         matchScore: top
           ? {
               roleId: top.roleId,
@@ -2301,9 +2310,51 @@ export class ProjectsService {
               score: top.score,
             }
           : { roleId: null, roleName: null, score: 0 },
-        // NOTE: intentionally do not include full roleMatches array (avoids showing all roles)
       };
     });
+
+    // Apply search filter if provided
+    if (search) {
+      items = items.filter((it) => {
+        const skillsText = Array.isArray(it.skills) ? it.skills.join(' ') : String(it.skills || '');
+        const hay = `${it.firstName || ''} ${it.lastName || ''} ${it.email || ''} ${it.mobileNumber || ''} ${skillsText} ${it.university || ''}`.toLowerCase();
+        return hay.includes(search);
+      });
+    }
+
+    // Sorting
+    if (sortBy === 'matchScore') {
+      items.sort((a, b) => {
+        const aScore = a.matchScore?.score ?? 0;
+        const bScore = b.matchScore?.score ?? 0;
+        return sortOrder === 'desc' ? bScore - aScore : aScore - bScore;
+      });
+    } else if (sortBy === 'experience') {
+      items.sort((a, b) => (sortOrder === 'desc' ? (b.totalExperience || b.experience || 0) - (a.totalExperience || a.experience || 0) : (a.totalExperience || a.experience || 0) - (b.totalExperience || b.experience || 0)));
+    } else if (sortBy === 'firstName') {
+      items.sort((a, b) => (sortOrder === 'desc' ? b.firstName.localeCompare(a.firstName) : a.firstName.localeCompare(b.firstName)));
+    } else if (sortBy === 'createdAt') {
+      items.sort((a, b) => {
+        const aDate = new Date(a.createdAt || 0).getTime();
+        const bDate = new Date(b.createdAt || 0).getTime();
+        return sortOrder === 'desc' ? bDate - aDate : aDate - bDate;
+      });
+    }
+
+    const total = items.length;
+    const totalPages = Math.ceil(total / limit) || 1;
+    const start = (page - 1) * limit;
+    const paginated = items.slice(start, start + limit);
+
+    return {
+      candidates: paginated,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
   }
 
   /**

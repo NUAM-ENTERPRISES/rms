@@ -347,10 +347,19 @@ export default function CreateCandidatePage() {
       const result = await createCandidate(payload).unwrap();
 
       if (result) {
-        const candidateId = result.id;
+        // The backend sometimes returns the created candidate directly, and
+        // sometimes wraps it in a { success, data, message } envelope. Be
+        // defensive and extract the id from either shape.
+        const candidateId =
+          (result as any).id || (result as any).data?.id || (result as any).data?.candidate?.id;
 
-        // Upload profile image if selected
-        if (selectedImage) {
+        if (!candidateId) {
+          console.warn("Could not determine created candidate ID from response:", result);
+          toast.warning("Candidate created but profile image could not be uploaded (missing id)");
+        }
+
+        // Upload profile image if selected and we have a valid id
+        if (selectedImage && candidateId) {
           try {
             await uploadProfileImage({
               candidateId,

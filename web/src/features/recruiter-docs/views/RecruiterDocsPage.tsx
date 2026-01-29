@@ -40,6 +40,7 @@ import {
 import { useDebounce } from "@/hooks/useDebounce";
 import { getStatusConfig, CandidateProjectStatus } from "@/constants/statuses";
 import * as Icons from "lucide-react";
+import { ImageViewer } from "@/components/molecules";
 
 const RecruiterDocsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -288,9 +289,13 @@ const RecruiterDocsPage: React.FC = () => {
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                            {item.candidate.firstName?.[0] || ""}{item.candidate.lastName?.[0] || ""}
-                          </div>
+                          <ImageViewer
+                            src={item.candidate.profileImage || null}
+                            title={`${item.candidate.firstName || ''} ${item.candidate.lastName || ''}`}
+                            className="h-9 w-9"
+                            ariaLabel={`View profile image for ${item.candidate.firstName || ''} ${item.candidate.lastName || ''}`}
+                            enableHoverPreview={true}
+                          />
                           <div className="flex flex-col">
                             <span className="text-sm font-semibold">{item.candidate.firstName} {item.candidate.lastName}</span>
                             <span className="text-xs text-muted-foreground">{item.candidate.email}</span>

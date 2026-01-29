@@ -208,7 +208,7 @@ export default function ProjectDetailPage() {
         search: searchTerm || undefined,
         statusId: selectedStatus !== "all" ? selectedStatus : undefined,
         page: 1,
-        limit: 100,
+        limit: 10, // default to 10 for nominated candidates
       },
       { skip: !shouldLoadNominated }
     );
@@ -634,7 +634,7 @@ export default function ProjectDetailPage() {
                 <div className="flex-shrink-0">
                   <ProjectCountryCell
                     countryCode={project.countryCode}
-                    size="4xl"
+                    size="2xl"
                     fallbackText="Not specified"
                     className="shadow-lg ring-4 ring-white/90 rounded-full"
                   />

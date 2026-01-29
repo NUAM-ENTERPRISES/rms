@@ -45,6 +45,9 @@ export const baseApi = createApi({
     "ProcessingSummary",
     "ProcessingHistory",
     "ProcessingDocuments",
+    "VerificationCandidates",
+    "Eligibility",
+    "Matchmaking",
   ],
   endpoints: () => ({}),
 });

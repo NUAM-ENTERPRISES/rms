@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { History, Calendar, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGetCandidateHistoryPaginatedQuery } from "@/features/processing/data/processing.endpoints";
 
 interface HistoryItem {
@@ -42,16 +42,25 @@ interface HistoryItem {
 
 interface ProcessingHistoryModalProps {
   processingId: string;
+  refreshKey?: number;
 }
 
-export function ProcessingHistoryModal({ processingId }: ProcessingHistoryModalProps) {
+export function ProcessingHistoryModal({ processingId, refreshKey }: ProcessingHistoryModalProps) {
   const [page, setPage] = useState(1);
+  const [open, setOpen] = useState(false);
   const limit = 10;
 
   const { data, isLoading, error, refetch } = useGetCandidateHistoryPaginatedQuery(
     { processingId, page, limit },
-    { skip: !processingId }
+    { skip: !processingId || !open }
   );
+
+  // If parent signals a refresh (e.g. a step completed), refetch when modal is open
+  useEffect(() => {
+    if (open) {
+      refetch?.();
+    }
+  }, [refreshKey, open, refetch]);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -88,7 +97,7 @@ export function ProcessingHistoryModal({ processingId }: ProcessingHistoryModalP
   const pagination = data?.data?.pagination;
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (val) { setPage(1); } }}>
       <DialogTrigger asChild>
         <Button
           variant="outline"

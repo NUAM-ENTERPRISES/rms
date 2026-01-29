@@ -128,6 +128,7 @@ export interface RecruiterDocumentItem {
     email: string;
     mobileNumber: string;
     countryCode: string;
+    profileImage?: string;
   };
   project: {
     id: string;
