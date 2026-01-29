@@ -14,7 +14,7 @@ type RecruiterStats = {
   candidatesNotInterested: number;
   candidatesRNR: number;
   candidatesQualified: number;
-  candidatesWorking: number;
+  candidatesDeployed: number;
   candidatesOnHold: number;
   candidatesOtherEnquiry: number;
   candidatesFuture: number;
@@ -34,15 +34,15 @@ export const CandidateMetrics: React.FC<CandidateMetricsProps> = ({
     // Calculate candidate-level conversion rate
     const candidateConversionRate =
       recruiter.totalCandidates > 0
-        ? (recruiter.candidatesWorking / recruiter.totalCandidates) * 100
+        ? (recruiter.candidatesDeployed / recruiter.totalCandidates) * 100
         : 0;
 
-    // Calculate engagement rate (interested + qualified + working)
+    // Calculate engagement rate (interested + qualified + deployed)
     const engagementRate =
       recruiter.totalCandidates > 0
         ? ((recruiter.candidatesInterested +
             recruiter.candidatesQualified +
-            recruiter.candidatesWorking) /
+            recruiter.candidatesDeployed) /
             recruiter.totalCandidates) *
           100
         : 0;
@@ -72,7 +72,7 @@ export const CandidateMetrics: React.FC<CandidateMetricsProps> = ({
             (sum, r) =>
               sum +
               (r.totalCandidates > 0
-                ? (r.candidatesWorking / r.totalCandidates) * 100
+                ? ((r.candidatesDeployed ?? r.candidatesWorking) / r.totalCandidates) * 100
                 : 0),
             0
           ) / allRecruiters.length
@@ -146,13 +146,14 @@ export const CandidateMetrics: React.FC<CandidateMetricsProps> = ({
       borderColor: "border-blue-200",
     },
     {
-      label: "Working",
-      value: recruiter.candidatesWorking,
+      label: "Deployed",
+      value: recruiter.candidatesDeployed,
       icon: CheckCircle,
       color: "text-emerald-600",
       bgColor: "bg-emerald-50",
       borderColor: "border-emerald-200",
     },
+
     {
       label: "RNR",
       value: recruiter.candidatesRNR,

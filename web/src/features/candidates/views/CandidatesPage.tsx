@@ -346,7 +346,8 @@ export default function CandidatesPage() {
           bgColor: "bg-green-100",
           borderColor: "border-green-300",
         };
-      case "working":
+      case "deployed":
+      case "working": // legacy key - treat as deployed
         return {
           variant: "default" as const,
           icon: Briefcase,
@@ -495,7 +496,7 @@ export default function CandidatesPage() {
     interested: serverCounts?.interested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
     qualified: serverCounts?.qualified ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "qualified").length,
     future: serverCounts?.future ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "future").length,
-    working: serverCounts?.working ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "working").length,
+    deployed: serverCounts?.deployed ?? serverCounts?.working ?? filteredCandidates.filter((c: any) => ((c?.currentStatus?.statusName || "").toLowerCase() === "deployed") || ((c?.currentStatus?.statusName || "").toLowerCase() === "working")).length,
     notInterested: serverCounts?.notInterested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not interested" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_interested").length,
     otherEnquiry: serverCounts?.otherEnquiry ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "other enquiry" || (c?.currentStatus?.statusName || "").toLowerCase() === "other_enquiry").length,
   };
@@ -558,11 +559,11 @@ export default function CandidatesPage() {
       color: "from-indigo-500 to-violet-500",
     },
     {
-      label: "Working",
-      value: derivedCounts.working,
-      subtitle: "Currently working",
+      label: "Deployed",
+      value: derivedCounts.deployed,
+      subtitle: "Currently deployed",
       icon: Briefcase,
-      statusFilter: "working",
+      statusFilter: "deployed",
       color: "from-fuchsia-500 to-pink-400",
     },
     {
@@ -655,11 +656,11 @@ export default function CandidatesPage() {
         color: "from-indigo-500 to-violet-500",
       },
       {
-        label: "Working",
-        value: workingCount,
-        subtitle: "Currently working",
+        label: "Deployed",
+        value: workingCount || 0,
+        subtitle: "Currently deployed",
         icon: Briefcase,
-        statusFilter: "working",
+        statusFilter: "deployed",
         color: "from-fuchsia-500 to-pink-400",
       },
       {
@@ -753,11 +754,11 @@ export default function CandidatesPage() {
           color: "from-indigo-500 to-violet-500",
         },
         {
-          label: "Working",
+          label: "Deployed",
           value: workingCount,
-          subtitle: "Currently working",
+          subtitle: "Currently deployed",
           icon: Briefcase,
-          statusFilter: "working",
+          statusFilter: "deployed",
           color: "from-fuchsia-500 to-pink-400",
         },
         {
@@ -811,8 +812,9 @@ export default function CandidatesPage() {
         return "Qualified";
       case "future":
         return "Future Follow-ups";
-      case "working":
-        return "Working";
+      case "deployed":
+      case "working": // legacy
+        return "Deployed";
       case "on_hold":
         return "On Hold";
       case "all":
@@ -837,8 +839,9 @@ export default function CandidatesPage() {
         return "Candidates who passed screening";
       case "future":
         return "Candidates to follow up later";
+      case "deployed":
       case "working":
-        return "Candidates currently placed/working";
+        return "Candidates currently deployed";
       case "on_hold":
         return "Candidates on hold needing follow-up";
       case "all":
@@ -1196,7 +1199,7 @@ export default function CandidatesPage() {
                       Candidate
                     </TableHead>
                     <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                      Contact
+                      Recruiter
                     </TableHead>
                     {/* Skills column removed */}
                     <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
@@ -1217,6 +1220,10 @@ export default function CandidatesPage() {
                       const statusName = candidate.currentStatus?.statusName ?? "";
                       const statusInfo = getStatusInfo(statusName);
                       const StatusIcon = statusInfo.icon;
+
+                      // Determine active recruiter assignment
+                      const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
+                      const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
 
                       return (
                         <TableRow
@@ -1251,27 +1258,40 @@ export default function CandidatesPage() {
                                 <div className="text-sm text-slate-500 mt-1 font-medium">
                                   {candidate.currentRole || ""}
                                 </div>
+
+                                {/* Contact moved below profile */}
+                                <div className="text-sm text-slate-500 mt-2 space-y-1">
+                                  {candidate.email && (
+                                    <div className="flex items-center gap-2">
+                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                      <span className="text-gray-700">{candidate.email}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                    <span className="text-gray-700">{candidate.countryCode} {candidate.mobileNumber}</span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </TableCell>
 
-                          {/* Contact */}
+                          {/* Recruiter */}
                           <TableCell className="px-6 py-5">
-                            <div className="space-y-1.5 text-sm">
-                              {candidate.email && (
-                                <div className="flex items-center gap-2">
-                                  <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                  <span className="text-gray-700">
-                                    {candidate.email}
-                                  </span>
+                            <div className="text-sm">
+                              {recruiter ? (
+                                <div className="space-y-1">
+                                  <div className="font-medium text-slate-900">{recruiter.name}</div>
+                                  {recruiter.email && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                      <span>{recruiter.email}</span>
+                                    </div>
+                                  )}
                                 </div>
+                              ) : (
+                                <span className="text-slate-500">Unassigned</span>
                               )}
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                <span className="text-gray-700">
-                                  {candidate.countryCode} {candidate.mobileNumber} 
-                                </span>
-                              </div>
                             </div>
                           </TableCell>
 

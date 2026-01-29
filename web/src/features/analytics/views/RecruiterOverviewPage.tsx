@@ -50,8 +50,8 @@ type RecruiterStats = {
   candidatesNotInterested: number;
   candidatesRNR: number;
   candidatesQualified: number;
-  candidatesWorking: number;
-  candidatesOnHold: number;
+  candidatesDeployed: number;
+  candidatesOnHold: number; // added deployed field (was working)
   candidatesOtherEnquiry: number;
   candidatesFuture: number;
   candidatesNotEligible: number;
@@ -66,7 +66,8 @@ type RecruiterStats = {
   avgDaysToOnHold: number;
   avgDaysToRNR: number;
   avgDaysToQualified: number;
-  avgDaysToWorking: number;
+  avgDaysToDeployed?: number;
+  avgDaysToWorking?: number; // legacy
 };
 
 type MonthlyPerformance = {

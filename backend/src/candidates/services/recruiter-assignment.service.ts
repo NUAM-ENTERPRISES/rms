@@ -510,14 +510,9 @@ export class RecruiterAssignmentService {
       select: { id: true, statusName: true },
     });
 
-    // 'working' status may exist in DB with different naming; try case-insensitive lookup
-    const workingStatus = await this.prisma.candidateStatus.findFirst({
-      where: {
-        statusName: {
-          equals: 'working',
-          mode: 'insensitive',
-        },
-      },
+    // 'deployed' status lookup
+    const deployedStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: CANDIDATE_STATUS.DEPLOYED, mode: 'insensitive' } },
       select: { id: true, statusName: true },
     });
 
@@ -528,7 +523,7 @@ export class RecruiterAssignmentService {
     const interestedId = interestedStatus?.id ?? null;
     const qualifiedId = qualifiedStatus?.id ?? null;
     const futureId = futureStatus?.id ?? null;
-    const workingId = workingStatus?.id ?? null;
+    const deployedId = deployedStatus?.id ?? null;
     const notInterestedId = notInterestedStatus?.id ?? null;
     const otherEnquiryId = otherEnquiryStatus?.id ?? null;
 
@@ -543,7 +538,7 @@ export class RecruiterAssignmentService {
         if (c.currentStatusId === otherEnquiryId) acc.otherEnquiry += 1;
         if (c.currentStatusId === qualifiedId) acc.qualified += 1;
         if (c.currentStatusId === futureId) acc.future += 1;
-        if (c.currentStatusId === workingId) acc.working += 1;
+        if (c.currentStatusId === deployedId) acc.working += 1;
         return acc;
       },
       {

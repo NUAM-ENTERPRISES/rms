@@ -400,7 +400,8 @@ export interface RecruiterMyCandidatesResponse {
     interested: number;
     qualified: number;
     future: number;
-    working: number;
+    deployed: number; // new backend key
+    working?: number; // legacy
     notInterested: number;
     otherEnquiry: number;
   };
@@ -435,7 +436,8 @@ export interface AllCandidatesResponse {
     interested?: number;
     qualified?: number;
     future?: number;
-    working?: number;
+    deployed?: number; // preferred new key
+    working?: number; // legacy
     notInterested?: number;
     otherEnquiry?: number;
   };

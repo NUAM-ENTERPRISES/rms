@@ -327,9 +327,10 @@ const CandidateCard = memo(function CandidateCard({
           label: "Qualified",
           color: "bg-green-100 text-green-800 border-green-200",
         };
-      case "working":
+      case "deployed":
+      case "working": // legacy
         return {
-          label: "Working",
+          label: "Deployed",
           color: "bg-emerald-100 text-emerald-800 border-emerald-200",
         };
       // Project statuses

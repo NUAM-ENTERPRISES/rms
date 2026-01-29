@@ -3,7 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
 import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
-import { DOCUMENT_TYPE, DOCUMENT_STATUS } from '../common/constants';
+import { DOCUMENT_TYPE, DOCUMENT_STATUS, CANDIDATE_STATUS } from '../common/constants';
 import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
 import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
@@ -2961,22 +2961,24 @@ export class ProcessingService {
         },
       });
 
-      // 4) Ensure candidate.currentStatus -> WORKING and create CandidateStatusHistory
-      const workingStatus = await tx.candidateStatus.findFirst({ where: { statusName: { equals: 'working', mode: 'insensitive' } } });
-      if (workingStatus) {
+      // 4) Ensure candidate.currentStatus -> DEPLOYED and create CandidateStatusHistory
+      const deployedStatus = await tx.candidateStatus.findFirst({
+        where: { statusName: { equals: CANDIDATE_STATUS.DEPLOYED, mode: 'insensitive' } },
+      });
+      if (deployedStatus) {
         const candidateRecord = await tx.candidate.findUnique({ where: { id: pc.candidate.id }, select: { id: true, currentStatusId: true } });
-        if (candidateRecord && candidateRecord.currentStatusId !== workingStatus.id) {
-          await tx.candidate.update({ where: { id: pc.candidate.id }, data: { currentStatusId: workingStatus.id } });
+        if (candidateRecord && candidateRecord.currentStatusId !== deployedStatus.id) {
+          await tx.candidate.update({ where: { id: pc.candidate.id }, data: { currentStatusId: deployedStatus.id } });
 
           await tx.candidateStatusHistory.create({
             data: {
               candidateId: pc.candidate.id,
               changedById: userId,
               changedByName: user?.name ?? 'System',
-              statusId: workingStatus.id,
-              statusNameSnapshot: workingStatus.statusName,
+              statusId: deployedStatus.id,
+              statusNameSnapshot: deployedStatus.statusName,
               statusUpdatedAt: new Date(),
-              reason: 'Candidate hired — set to working',
+              reason: 'Candidate hired — set to deployed',
               notificationCount: 0,
             },
           });

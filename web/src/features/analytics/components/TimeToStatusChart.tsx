@@ -34,7 +34,9 @@ type TimeToStatusChartProps = {
     avgDaysToOnHold: number;
     avgDaysToRNR: number;
     avgDaysToQualified: number;
-    avgDaysToWorking: number;
+    // New backend field: avgDaysToDeployed. Keep avgDaysToWorking for backward compatibility.
+    avgDaysToDeployed?: number;
+    avgDaysToWorking?: number;
   };
   formatDuration: (days: number) => string;
 };
@@ -68,7 +70,7 @@ const breakdownItems = [
   { label: "On Hold", valueKey: "avgDaysToOnHold", color: "amber" },
   { label: "RNR", valueKey: "avgDaysToRNR", color: "pink" },
   { label: "Qualified", valueKey: "avgDaysToQualified", color: "violet" },
-  { label: "Working", valueKey: "avgDaysToWorking", color: "cyan" },
+  { label: "Deployed", valueKey: "avgDaysToDeployed", color: "cyan" },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -88,7 +90,7 @@ export const TimeToStatusChart: React.FC<TimeToStatusChartProps> = ({
     { status: "On Hold", ProcessingTime: recruiter.avgDaysToOnHold },
     { status: "RNR", ProcessingTime: recruiter.avgDaysToRNR },
     { status: "Qualified", ProcessingTime: recruiter.avgDaysToQualified },
-    { status: "Working", ProcessingTime: recruiter.avgDaysToWorking },
+    { status: "Deployed", ProcessingTime: recruiter.avgDaysToDeployed ?? recruiter.avgDaysToWorking ?? 0 },
   ];
 
   return (
@@ -162,7 +164,7 @@ export const TimeToStatusChart: React.FC<TimeToStatusChartProps> = ({
           </Badge>
 
           <p className={`text-base font-semibold leading-tight ${color.text}`}>
-            {formatDuration(recruiter[item.valueKey])}
+            {formatDuration((recruiter as any)[item.valueKey] ?? recruiter.avgDaysToDeployed ?? recruiter.avgDaysToWorking ?? 0)}
           </p>
 
           <p className="text-[10px] text-gray-500 mt-0.5">avg time</p>

@@ -196,7 +196,7 @@ export const usersApi = baseApi.injectEndpoints({
           candidatesNotInterested: number;
           candidatesRNR: number;
           candidatesQualified: number;
-          candidatesWorking: number;
+          candidatesDeployed: number; // renamed from candidatesWorking
           candidatesOnHold: number;
           candidatesOtherEnquiry: number;
           candidatesFuture: number;
@@ -212,7 +212,8 @@ export const usersApi = baseApi.injectEndpoints({
           avgDaysToOnHold: number;
           avgDaysToRNR: number;
           avgDaysToQualified: number;
-          avgDaysToWorking: number;
+          avgDaysToDeployed?: number; // new preferred metric
+          avgDaysToWorking?: number; // legacy
         }>
       >,
       { year?: number }

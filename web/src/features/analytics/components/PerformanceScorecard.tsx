@@ -22,8 +22,8 @@ type RecruiterStats = {
   candidatesNotInterested: number;
   candidatesRNR: number;
   candidatesQualified: number;
-  candidatesWorking: number;
-  candidatesOnHold: number;
+  candidatesDeployed: number;
+  candidatesOnHold: number; // renamed from candidatesWorking
   candidatesOtherEnquiry: number;
   candidatesFuture: number;
   candidatesNotEligible: number;

@@ -698,7 +698,7 @@ export class UsersService {
         const candidatesNotInterested = statusMap.get('not_interested') || 0;
         const candidatesRNR = statusMap.get('rnr') || 0;
         const candidatesQualified = statusMap.get('qualified') || 0;
-        const candidatesWorking = statusMap.get('working') || 0;
+        const candidatesWorking = (statusMap.get('deployed') || statusMap.get('Deployed') || 0);
         const candidatesOnHold = statusMap.get('on_hold') || 0;
         const candidatesOtherEnquiry = statusMap.get('other_enquiry') || 0;
         const candidatesFuture = statusMap.get('future') || 0;
@@ -866,7 +866,7 @@ export class UsersService {
         const avgDaysToOnHold = calculateAvgDays('on hold');
         const avgDaysToRNR = calculateAvgDays('rnr');
         const avgDaysToQualified = calculateAvgDays('qualified');
-        const avgDaysToWorking = calculateAvgDays('working');
+        const avgDaysToWorking = calculateAvgDays('deployed') || calculateAvgDays('Deployed');
         const avgScreeningDays = calculateAvgScreeningDays();
 
         return {
