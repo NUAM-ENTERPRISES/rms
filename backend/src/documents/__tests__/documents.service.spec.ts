@@ -43,7 +43,7 @@ describe('DocumentsService - verifyOfferLetter', () => {
       documentVerificationHistory: { create: jest.fn().mockResolvedValue(undefined) },
       candidateProjects: { update: jest.fn().mockResolvedValue(undefined) },
       candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue(undefined) },
-      processingCandidate: { findFirst: jest.fn().mockResolvedValue({ id: 'pc-1' }) },
+      processingCandidate: { findFirst: jest.fn().mockResolvedValue({ id: 'pc-1' }), update: jest.fn().mockResolvedValue({ id: 'pc-1', processingStatus: 'in_progress' }) },
       processingStep: {
         findFirst: jest.fn().mockImplementation(({ where }) => {
           if (where && where.template && where.template.key === 'offer_letter') return { id: 'step-offer', template: { key: 'offer_letter' } };
@@ -65,6 +65,12 @@ describe('DocumentsService - verifyOfferLetter', () => {
     // Ensure processingHistory recorded offer_letter completion
     expect(txMock.processingHistory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ processingCandidateId: 'pc-1', status: 'completed', step: 'offer_letter' }),
+    });
+
+    // Ensure we updated the processing candidate to in_progress (processing started)
+    expect(txMock.processingCandidate.update).toHaveBeenCalledWith({
+      where: { id: 'pc-1' },
+      data: { processingStatus: 'in_progress', step: 'offer_letter' },
     });
 
     // Ensure we did NOT mark HRD as in_progress

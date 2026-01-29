@@ -15,12 +15,15 @@ interface AssignmentCardProps {
     email?: string;
   };
   processingStatus: string;
+  /** Optional explicit progress percentage from API (0-100) */
+  progressCount?: number;
 }
 
 export function AssignmentCard({
   assignedTo,
   recruiter,
   processingStatus,
+  progressCount,
 }: AssignmentCardProps) {
   const getProgressPercentage = () => {
     switch (processingStatus) {
@@ -37,7 +40,13 @@ export function AssignmentCard({
     }
   };
 
-  const progress = getProgressPercentage();
+  // Prefer explicit progressCount from API when available, otherwise use heuristic
+  const pct = typeof progressCount === "number"
+    ? Math.min(100, Math.max(0, Math.round(progressCount)))
+    : getProgressPercentage();
+
+  // Keep a small visible bar for non-zero values (but allow 0 to show empty)
+  const barWidth = pct === 0 ? 0 : Math.max(pct, 5);
 
   return (
     <Card className="border-0 shadow-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 text-white overflow-hidden">
@@ -77,11 +86,11 @@ export function AssignmentCard({
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Progress</span>
-            <span className="text-lg font-black">{progress}%</span>
+            <span className="text-lg font-black">{pct}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
             <div
-              style={{ width: `${Math.max(progress, 5)}%` }}
+              style={{ width: `${barWidth}%` }}
               className="h-full rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-500"
             />
           </div>

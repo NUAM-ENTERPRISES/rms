@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Copy, Eye, Calendar, Send, Edit2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -93,13 +93,24 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
 
-  // Initialize form state from API when modal opens (preserve user edits otherwise)
+  // Initialize form state from API when modal opens (only once per open — preserves user edits during session)
+  const initializedRef = React.useRef(false);
   React.useEffect(() => {
-    if (!isOpen || !data) return;
+    if (!isOpen) {
+      // Reset initialization flag when modal closes so next open rehydrates from API
+      initializedRef.current = false;
+      return;
+    }
+
+    // Only initialize once after opening and when API data is available
+    if (!data || initializedRef.current) return;
+
     const apiPassed = (data?.step?.isMedicalPassed !== undefined) ? data.step.isMedicalPassed : (data?.isMedicalPassed ?? null);
     setIsMedicalPassed(apiPassed ?? null);
     setMofaNumber(data?.step?.mofaNumber ?? data?.mofaNumber ?? "");
     setMedicalNotes(data?.step?.notes ?? data?.notes ?? "");
+
+    initializedRef.current = true;
   }, [isOpen, data]);
 
   const uploadsByDocType = useMemo(() => {
@@ -352,6 +363,12 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
       return;
     }
 
+    // MOFA number is required for both Passed and Failed
+    if (!mofaNumber || !mofaNumber.trim()) {
+      toast.error("Please enter MOFA number");
+      return;
+    }
+
     if (!allVerified) {
       toast.error("Cannot complete — All mandatory documents must be verified");
       return;
@@ -369,8 +386,7 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
     if (!activeStep?.id) return false;
 
     try {
-      const payload: any = { stepId: activeStep.id, isMedicalPassed };
-      if (mofaNumber) payload.mofaNumber = mofaNumber;
+      const payload: any = { stepId: activeStep.id, isMedicalPassed, mofaNumber };
       if (medicalNotes) payload.notes = medicalNotes;
 
       // Call the complete-step API for Medical and surface success / errors
@@ -449,6 +465,21 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
       return false;
     }
   };
+
+  // Helper: copy MOFA number to clipboard with feedback
+  const handleCopyMofa = async () => {
+    if (!mofaNumber) {
+      toast.error("No MOFA number to copy");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(mofaNumber);
+      toast.success("MOFA copied");
+    } catch (err) {
+      console.error("Copy MOFA failed", err);
+      toast.error("Failed to copy MOFA");
+    }
+  }; 
 
   const apiCounts = data?.counts;
   const computedStats = getDocStats();
@@ -610,6 +641,38 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
                   {isMedicalCompleted && (
                     <p className="text-xs text-slate-500 mt-2">Medical is completed. Submission date cannot be modified.</p>
                   )}
+
+
+                </div>
+              </div>
+
+              {/* MOFA number panel (left-aligned, outside Submission Date) */}
+              <div className="mt-3">
+                <div className="w-full sm:w-1/2">
+                  {isMedicalCompleted || isStepCancelled ? (
+                    <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-3 rounded-md border border-amber-200 border-l-4 border-amber-400 shadow-sm">
+                      <div className="text-xs text-amber-700 font-semibold">MOFA number</div>
+                      <div className="mt-1 flex items-center gap-3">
+                        <div className="font-medium text-amber-900">{mofaNumber || '—'}</div>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleCopyMofa} title="Copy MOFA">
+                          <Copy className="h-4 w-4 text-amber-700" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-3 rounded-md border border-amber-200 border-l-4 border-amber-400 shadow-sm">
+                      <label className="text-xs text-amber-700 mb-1 block">MOFA number</label>
+                      <Input
+                        value={mofaNumber}
+                        onChange={(e) => setMofaNumber(e.target.value)}
+                        placeholder="Enter MOFA number"
+                        className="h-9"
+                        required
+                        aria-required="true"
+                      />
+                      <p className="text-xs text-amber-600 mt-1">Required — MOFA number is required for both Passed and Failed results.</p>
+                    </div>
+                  )} 
                 </div>
               </div>
 
@@ -629,9 +692,17 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
 
                       <div className="text-sm text-slate-700">{isMedicalPassed ? 'Candidate passed Medical' : 'Candidate failed Medical'}</div>
 
-                      {mofaNumber && (
-                        <div className="ml-auto text-xs text-slate-500">MOFA: <span className="font-medium text-slate-700">{mofaNumber}</span></div>
-                      )}
+                      <div className="mt-3 w-full">
+                        <div className="flex items-center justify-between bg-amber-50 p-2 rounded-md border border-amber-100">
+                          <div className="text-xs text-amber-700 font-semibold">MOFA number</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-amber-900">{mofaNumber || '—'}</div>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleCopyMofa} title="Copy MOFA">
+                              <Copy className="h-4 w-4 text-amber-700" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {medicalNotes && (
@@ -662,7 +733,7 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
                         <button
                           type="button"
                           aria-pressed={isMedicalPassed === false}
-                          onClick={() => { setIsMedicalPassed(false); setMofaNumber(''); }}
+                          onClick={() => { setIsMedicalPassed(false); }}
                           className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold ${isMedicalPassed === false ? 'bg-rose-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-700'}`}
                         >
                           Failed
@@ -672,24 +743,9 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
                       <div className="ml-auto text-xs text-slate-500">Required — select Passed or Failed before completing</div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                      <div className="sm:col-span-2">
-                        <label className="text-xs text-slate-600 mb-1 block">MOFA number (optional)</label>
-                        <Input
-                          value={mofaNumber}
-                          onChange={(e) => setMofaNumber(e.target.value)}
-                          placeholder="Enter MOFA number"
-                          disabled={isMedicalPassed === false}
-                          aria-disabled={isMedicalPassed === false}
-                          className="h-9"
-                        />
-                        <p className="text-xs text-slate-400 mt-1">Optional — add when candidate passed (will be persisted with the Medical result)</p>
-                      </div>
-
                       {isMedicalPassed === false && (
                         <div className="text-sm text-rose-600 font-medium">Marking as <span className="font-black">Failed</span> will cancel processing for this candidate.</div>
                       )}
-                    </div>
                   </div>
                 )}
               </div>
@@ -918,6 +974,21 @@ export function MedicalModal({ isOpen, onClose, processingId, onComplete }: Medi
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Please select the Medical result (Passed or Failed) before completing.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : !mofaNumber ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button size="sm" disabled className="opacity-80" aria-disabled>
+                            {'Mark Medical Complete'}
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>MOFA number is required. Please enter MOFA number before completing.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

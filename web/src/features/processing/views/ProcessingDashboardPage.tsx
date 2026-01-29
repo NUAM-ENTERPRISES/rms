@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ImageViewer } from "@/components/molecules";
 import { 
   Users, 
   XCircle, 
@@ -385,7 +386,7 @@ export default function ProcessingDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-auto max-h-[600px] scrollbar-thin scrollbar-thumb-slate-200">
+            <div className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
               <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/80 hover:bg-slate-50">
@@ -430,13 +431,21 @@ export default function ProcessingDashboardPage() {
                     >
                       <TableCell className="py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-black text-white shadow-md">
-                            {procCandidate.candidate.firstName[0]}{procCandidate.candidate.lastName[0]}
-                          </div>
+                          <ImageViewer
+                            title={`${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`}
+                            src={procCandidate.candidate.profileImage || null}
+                            className="h-9 w-9 rounded-full"
+                            ariaLabel={`View full image for ${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`}
+                            enableHoverPreview={true}
+                          />
                           <div className="min-w-0">
-                            <p className="font-bold text-sm text-slate-900 truncate">
+                            <button
+                              className="font-bold text-sm text-slate-900 truncate text-left hover:text-violet-600 transition-colors"
+                              onClick={(e) => { e.stopPropagation(); navigate(`/processingCandidateDetails/${procCandidate.id}`); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/processingCandidateDetails/${procCandidate.id}`); } }}
+                            >
                               {procCandidate.candidate.firstName} {procCandidate.candidate.lastName}
-                            </p>
+                            </button>
                             <p className="text-xs text-slate-500 truncate flex items-center gap-1">
                               <Users className="h-3 w-3" /> {procCandidate.assignedTo?.name || "Unassigned"}
                             </p>
@@ -487,19 +496,19 @@ export default function ProcessingDashboardPage() {
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="space-y-1.5">
-                          {/* Progress is not in the list API, showing a placeholder or deriving if possible */}
-                          <span className="text-xs font-black text-slate-700">
-                            {procCandidate.processingStatus === 'completed' ? '100%' : '0%'}
-                          </span>
-                          <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                procCandidate.processingStatus === 'completed' 
-                                  ? 'bg-emerald-500 w-full' 
-                                  : 'bg-amber-500 w-0'
-                              }`}
-                            />
-                          </div>
+                          {/* Use progressCount from API if available (interpreted as a percent 0-100). Fall back to status-based value. */}
+                          {(() => {
+                            const raw = (procCandidate as any).progressCount;
+                            const pct = typeof raw === 'number' ? Math.min(100, Math.max(0, raw)) : (procCandidate.processingStatus === 'completed' ? 100 : 0);
+                            return (
+                              <>
+                                <span className="text-xs font-black text-slate-700">{pct}%</span>
+                                <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
+                                  <div style={{ width: `${pct}%` }} className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="py-4 text-center">

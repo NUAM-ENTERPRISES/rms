@@ -318,6 +318,7 @@ export default function ProcessingCandidateDetailsPage() {
               assignedTo={data.assignedTo}
               recruiter={data.candidateProjectMap?.recruiter}
               processingStatus={data.processingStatus}
+              progressCount={(data as any).progressCount}
             />
 
             {/* Candidate Info Card - second */}
@@ -401,10 +402,11 @@ export default function ProcessingCandidateDetailsPage() {
 
             toast.success("Offer letter verified successfully");
 
-            // Refresh candidate details and documents so UI updates immediately
+            // Refresh candidate details, documents, and processing steps so UI updates immediately
             await Promise.all([
               refetchCandidateDetails(),
               refetchCandidateDocuments(),
+              refetchProcessingSteps(),
             ]);
           } catch (error: any) {
             console.error("Verification error:", error);

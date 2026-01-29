@@ -6,13 +6,12 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   prometricResult: string;
-  prometricNotes?: string;
   isSubmitting?: boolean;
   onConfirm: () => Promise<boolean> | void;
   onRequestCancel?: () => void;
 }
 
-export default function ConfirmPrometricResultModal({ isOpen, onClose, prometricResult, prometricNotes, isSubmitting, onConfirm, onRequestCancel }: Props) {
+export default function ConfirmPrometricResultModal({ isOpen, onClose, prometricResult, isSubmitting, onConfirm, onRequestCancel }: Props) {
   const isFailed = prometricResult === "failed";
   const isPassed = prometricResult === "passed";
 
@@ -53,10 +52,6 @@ export default function ConfirmPrometricResultModal({ isOpen, onClose, prometric
                   <div className="text-sm font-semibold text-slate-700">No result selected</div>
                   <p className="text-xs text-slate-500 mt-2">Please select a Prometric result before saving.</p>
                 </div>
-              )}
-
-              {prometricNotes && (
-                <div className="mt-3 text-xs text-slate-500">Notes: <span className="font-medium text-slate-700">{prometricNotes}</span></div>
               )}
             </div>
           </div>

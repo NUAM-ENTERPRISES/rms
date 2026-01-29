@@ -15,8 +15,6 @@ import ConfirmEditSubmitDateModal from "../../components/ConfirmEditSubmitDateMo
 import ConfirmCancelStepModal from "../../components/ConfirmCancelStepModal";
 import ConfirmEmigrationModal from "./ConfirmEmigrationModal";
 
-type EmigrationStatus = "PENDING" | "FAILED" | "COMPLETED";
-
 interface EmigrationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -31,7 +29,6 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
 
-  const [emigrationStatus, setEmigrationStatus] = useState<EmigrationStatus | "">("");
   const [emigrationSubmissionDate, setEmigrationSubmissionDate] = useState<Date | undefined>(undefined);
 
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
@@ -39,7 +36,6 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
-  const [emigrationNotes, setEmigrationNotes] = useState<string>("");
 
   const activeStep = data?.step;
 
@@ -66,34 +62,25 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
   };
 
   const canComplete = () => {
-    return Boolean(activeStep?.id) && (hasSubmittedAt || emigrationSubmissionDate) && emigrationStatus && !isEmigrationCompleted && !isStepCancelled;
+    return Boolean(activeStep?.id) && (hasSubmittedAt || emigrationSubmissionDate) && !isEmigrationCompleted && !isStepCancelled;
   };
 
   const handleConfirmComplete = async (notes?: string) => {
     if (!activeStep?.id) return false;
-    if (!emigrationStatus) { toast.error("Please select an emigration status"); return false; }
     if (!hasSubmittedAt && !emigrationSubmissionDate) { toast.error("Please set a submission date"); return false; }
 
     try {
-      if (emigrationStatus === "FAILED") {
-        // when failed => cancel the processing step (reason required)
-        await cancelStep({ stepId: activeStep.id, reason: notes ?? "Emigration failed" }).unwrap();
-        toast.success("Processing step cancelled");
-      } else {
-        // completed (or other success statuses) -> complete step
-        await completeStep({ stepId: activeStep.id, emigrationStatus, notes }).unwrap();
-        toast.success("Emigration step updated");
-      }
+      await completeStep({ stepId: activeStep.id, notes }).unwrap();
+      toast.success("Emigration step marked complete");
 
       setCompleteConfirmOpen(false);
-      setEmigrationNotes("");
       await refetch();
       if (onComplete) await onComplete();
       onClose();
       return true;
     } catch (err: any) {
-      console.error("Complete/Cancel emigration failed", err);
-      toast.error(err?.data?.message || (emigrationStatus === "FAILED" ? "Failed to cancel step" : "Failed to complete emigration step"));
+      console.error("Complete emigration failed", err);
+      toast.error(err?.data?.message || "Failed to complete emigration step");
       return false;
     }
   };
@@ -195,24 +182,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                 </div>
               </div>
 
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-xs text-slate-600 mb-2 block">Emigration Status (required)</Label>
-                <div className="flex items-center gap-3">
-                  <select
-                    value={emigrationStatus}
-                    onChange={(e) => setEmigrationStatus(e.target.value as any)}
-                    className="rounded-md border px-3 py-2 text-sm bg-white"
-                    disabled={isEmigrationCompleted || isStepCancelled}
-                    aria-label="Emigration status"
-                  >
-                    <option value="">Select status</option>
-                    {/* <option value="PENDING">PENDING</option> */}
-                    <option value="FAILED">FAILED</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                  </select>
-                  <div className="text-sm text-slate-500">Choose the emigration outcome before marking complete.</div>
-                </div>
-              </div>
+
 
             </div>
           )}
@@ -234,7 +204,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
               ) : (
-                (!emigrationStatus || !hasSubmittedAt) ? (
+                (!hasSubmittedAt) ? (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -243,7 +213,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{!emigrationStatus ? 'Emigration status required.' : 'Submission date required.'}</p>
+                        <p>Submission date required.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -265,13 +235,10 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
       {/* Emigration confirmation — requires notes when status=FAILED */}
       <ConfirmEmigrationModal
         isOpen={!!completeConfirmOpen}
-        onClose={() => { setCompleteConfirmOpen(false); setEmigrationNotes(""); }}
-        emigrationStatus={emigrationStatus as any}
-        notes={emigrationNotes}
-        onNotesChange={setEmigrationNotes}
-        isSubmitting={emigrationStatus === 'FAILED' ? isCancelling : isCompletingStep}
+        onClose={() => { setCompleteConfirmOpen(false); }}
+        isSubmitting={isCompletingStep}
         onConfirm={async () => {
-          const ok = await handleConfirmComplete(emigrationNotes);
+          const ok = await handleConfirmComplete();
           return ok;
         }}
       />

@@ -14,7 +14,7 @@ const CompleteProcessingStepModal = React.lazy(() => import("../../components/Co
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-const ConfirmPrometricResultModal = React.lazy(() => import("../../components/ConfirmPrometricResultModal"));
+
 import { useGetPrometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
@@ -49,9 +49,7 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
   // Prometric submission date state (re-using HRD submit-date endpoint)
   const [prometricSubmissionDate, setPrometricSubmissionDate] = useState<Date | undefined>(undefined);
 
-  // Prometric result (required when completing)
-  const [prometricResult, setPrometricResult] = useState<string>("");
-  const [prometricNotes, setPrometricNotes] = useState<string>("");
+
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -67,8 +65,6 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
 
   // Confirmation modal state
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
-  // Prometric-specific confirmation UI
-  const [confirmPrometricOpen, setConfirmPrometricOpen] = useState(false);
   // Submit date confirmation modal
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   // Edit existing submitted date modal
@@ -376,21 +372,15 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
       return;
     }
 
-    // Prometric-specific: require a result to be selected
-    if (!prometricResult) {
-      toast.error("Please select a Prometric result before completing the step");
-      return;
-    }
-
-    // Open Prometric-specific confirmation modal (shows pass/fail messaging)
-    setConfirmPrometricOpen(true);
+    // Open the generic completion confirmation modal
+    setCompleteModalOpen(true);
   };
 
   const handleConfirmComplete = async () => {
     if (!activeStep?.id) return;
 
     try {
-      await completeStep({ stepId: activeStep.id, prometricResult }).unwrap();
+      await completeStep({ stepId: activeStep.id }).unwrap();
       toast.success("Prometric step marked complete");
       setCompleteModalOpen(false);
       await refetch();
@@ -477,7 +467,7 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
   // Require all MANDATORY documents verified, submission date exists, and a prometric result selected before allowing completion
   // accept verifiedCount >= totalMandatory because API may include optional docs in the verified count
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
-  const canMarkComplete = allVerified && hasSubmittedAt && Boolean(prometricResult);
+  const canMarkComplete = allVerified && hasSubmittedAt;
 
 
 
@@ -635,36 +625,7 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                 </div>
               </div>
 
-              {/* Prometric Result selector - required to complete */}
-              <div className="border rounded-lg p-3 bg-slate-50">
-                <Label className="text-xs text-slate-600 mb-1 block">Prometric result</Label>
-                <div className="flex items-center gap-3">
-                  <select
-                    aria-label="Prometric result"
-                    value={prometricResult}
-                    onChange={(e) => setPrometricResult(e.target.value)}
-                    className="rounded-md border px-3 py-2 text-sm bg-white"
-                    disabled={isPrometricCompleted || isStepCancelled}
-                  >
-                    <option value="">-- select result --</option>
-                    <option value="PASSED">Passed</option>
-                    <option value="FAILED">Failed</option>
-                    <option value="PENDING">Pending</option>
-                  </select>
 
-                  <input
-                    placeholder="Optional notes"
-                    className="flex-1 rounded-md border px-3 py-2 text-sm bg-white"
-                    value={prometricNotes}
-                    onChange={(e) => setPrometricNotes(e.target.value)}
-                    disabled={isPrometricCompleted || isStepCancelled}
-                  />
-                </div>
-                <p className="text-xs text-slate-400 mt-2">The selected result will be submitted with the completion request.</p>
-                {prometricResult === 'failed' && (
-                  <p className="text-xs text-rose-600 mt-2">If the result is <strong>Failed</strong>, processing should be stopped — consider cancelling the step.</p>
-                )}
-              </div>
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
@@ -863,21 +824,6 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                ) : !prometricResult ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Button size="sm" disabled className="opacity-80" aria-disabled>
-                            {'Save Prometric'}
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Prometric result required to save Prometric. Please select a result.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                 ) : !hasSubmittedAt ? (
                   <TooltipProvider>
                     <Tooltip>
@@ -969,25 +915,7 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
         />
       </React.Suspense>
 
-      {/* Prometric confirmation modal (shows pass / fail messaging) */}
-      <React.Suspense fallback={null}>
-        <ConfirmPrometricResultModal
-          isOpen={confirmPrometricOpen}
-          onClose={() => setConfirmPrometricOpen(false)}
-          prometricResult={prometricResult}
-          prometricNotes={prometricNotes}
-          isSubmitting={isCompletingStep}
-          onConfirm={async () => {
-            await handleConfirmComplete();
-            return true;
-          }}
-          onRequestCancel={() => {
-            // surface the cancel-step flow when user requests stop-processing from the confirm modal
-            setConfirmPrometricOpen(false);
-            setCancelOpen(true);
-          }}
-        />
-      </React.Suspense>
+
 
       {/* Confirm Cancel Step Modal */}
       <React.Suspense fallback={null}>

@@ -3782,8 +3782,46 @@ export class ProcessingService {
       return c;
     });
 
+    // Compute progress percentage for each candidate based on processing steps
+    const processingCandidateIds = candidatesWithCountry.map((c: any) => c.id);
+
+    const stepTotalsMap: Record<string, number> = {};
+    const completedStepsMap: Record<string, number> = {};
+
+    if (processingCandidateIds.length > 0) {
+      const [totals, completed] = await Promise.all([
+        this.prisma.processingStep.groupBy({
+          by: ['processingCandidateId'],
+          where: { processingCandidateId: { in: processingCandidateIds } },
+          _count: { _all: true },
+        }),
+        this.prisma.processingStep.groupBy({
+          by: ['processingCandidateId'],
+          where: { processingCandidateId: { in: processingCandidateIds }, status: 'completed' },
+          _count: { _all: true },
+        }),
+      ]);
+
+      totals.forEach((t: any) => {
+        stepTotalsMap[t.processingCandidateId] = t._count._all;
+      });
+      completed.forEach((c: any) => {
+        completedStepsMap[c.processingCandidateId] = c._count._all;
+      });
+    }
+
+    const candidatesWithProgress = candidatesWithCountry.map((c: any) => {
+      const total = stepTotalsMap[c.id] || 0;
+      const completed = completedStepsMap[c.id] || 0;
+      const progressCount = total === 0 ? 0 : Math.round((completed / total) * 100);
+      return {
+        ...c,
+        progressCount,
+      };
+    });
+
     return {
-      candidates: candidatesWithCountry,
+      candidates: candidatesWithProgress,
       counts,
       pagination: {
         page,
@@ -4057,7 +4095,18 @@ export class ProcessingService {
       (processingCandidate.project as any).genderRequirement = (processingCandidate.role as any).genderRequirement;
     }
 
-    return processingCandidate;
+    // Compute progress percentage for this processing candidate
+    const [totalSteps, completedSteps] = await Promise.all([
+      this.prisma.processingStep.count({ where: { processingCandidateId: id } }),
+      this.prisma.processingStep.count({ where: { processingCandidateId: id, status: 'completed' } }),
+    ]);
+
+    const progressCount = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100);
+
+    return {
+      ...processingCandidate,
+      progressCount,
+    };
   }
 
   /**

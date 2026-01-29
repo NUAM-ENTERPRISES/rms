@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Briefcase, Phone, Mail } from "lucide-react";
+import { ImageViewer } from "@/components/molecules";
 
 interface ProcessingCandidateHeaderProps {
   candidate: {
@@ -13,6 +14,7 @@ interface ProcessingCandidateHeaderProps {
     dateOfBirth?: string;
     gender?: string;
     totalExperience?: number;
+    profileImage?: string | null;
   };
   project: {
     title: string;
@@ -69,10 +71,13 @@ export function ProcessingCandidateHeader({
           <ArrowLeft className="h-5 w-5" />
         </Button>
 
-        <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xl font-black text-white shadow-lg shrink-0">
-          {candidate.firstName[0]}
-          {candidate.lastName[0]}
-        </div>
+        <ImageViewer
+          title={`${candidate.firstName} ${candidate.lastName}`}
+          src={candidate.profileImage || null}
+          className="h-14 w-14 rounded-xl"
+          ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
+          enableHoverPreview={true}
+        />
 
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

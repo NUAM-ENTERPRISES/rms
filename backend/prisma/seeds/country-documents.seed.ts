@@ -423,8 +423,8 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     });
 
     const visaDocs = [
-      { docType: DOCUMENT_TYPE.PASSPORT_ORIGINAL, label: 'Original Passport (presented)', mandatory: true },
-      { docType: DOCUMENT_TYPE.E_VISA, label: 'e-Visa', mandatory: true },
+      { docType: DOCUMENT_TYPE.PASSPORT_ORIGINAL, label: 'Original Passport (presented)', mandatory: false },
+      { docType: DOCUMENT_TYPE.E_VISA, label: 'e-Visa', mandatory: false },
       { docType: DOCUMENT_TYPE.VISA_STAMP, label: 'Visa Stamp (if applicable)', mandatory: false },
     ];
 
@@ -467,7 +467,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     });
 
     const ticketDocs = [
-      { docType: DOCUMENT_TYPE.FLIGHT_TICKET, label: 'Flight Ticket / e-ticket', mandatory: false },
+      { docType: DOCUMENT_TYPE.FLIGHT_TICKET, label: 'Flight Ticket / e-ticket', mandatory: true },
     ];
 
     for (const doc of ticketDocs) {

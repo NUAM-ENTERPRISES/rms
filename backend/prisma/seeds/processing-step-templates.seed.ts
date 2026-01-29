@@ -18,7 +18,7 @@ export async function seedProcessingStepTemplates() {
     { key: 'biometrics', label: 'Biometrics', order: 10, hasDocuments: true },
     { key: 'visa', label: 'Visa', order: 11, hasDocuments: true },
     { key: 'emigration', label: 'Emigration', order: 12, hasDocuments: false },
-    { key: 'ticket', label: 'Ticket', order: 13, hasDocuments: false },
+    { key: 'ticket', label: 'Ticket', order: 13, hasDocuments: true },
   ];
 
   // First create or upsert parents without parentId

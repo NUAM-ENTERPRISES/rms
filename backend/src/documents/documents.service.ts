@@ -1279,10 +1279,19 @@ export class DocumentsService {
             data: {
               processingCandidateId: processingCandidate.id,
               status: 'completed',
-              step: 'offer_letter',
+              step: 'offer_letter_verified',
               changedById: userId,
               recruiterId: candidateProjectMap.recruiterId,
               notes: 'Offer letter verified and step completed.',
+            },
+          });
+
+          // g. Mark processing candidate as in_progress (processing has officially started)
+          await tx.processingCandidate.update({
+            where: { id: processingCandidate.id },
+            data: {
+              processingStatus: 'in_progress',
+              step: 'offer_letter_verified',
             },
           });
         }

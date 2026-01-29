@@ -9,6 +9,7 @@ import {
   Phone,
   Mail,
 } from "lucide-react";
+import { ImageViewer } from "@/components/molecules";
 
 interface CandidateInfoCardProps {
   candidate: {
@@ -30,6 +31,7 @@ interface CandidateInfoCardProps {
     referralEmail?: string | null;
     referralPhone?: string | null;
     referralDescription?: string | null;
+    profileImage?: string | null;
     qualifications?: Array<{
       id: string;
       university?: string;
@@ -57,6 +59,21 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
+        {/* Header: profile image + name */}
+        <div className="flex items-center gap-3">
+          <ImageViewer
+            title={`${candidate.firstName} ${candidate.lastName}`}
+            src={candidate.profileImage || null}
+            className="h-14 w-14 rounded-xl"
+            ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
+            enableHoverPreview={true}
+          />
+          <div className="min-w-0">
+            <p className="text-lg font-black text-slate-900 truncate">{candidate.firstName} {candidate.lastName}</p>
+            <p className="text-xs text-slate-500">{candidate.currentRole || candidate.highestEducation || "Profile"}</p>
+          </div>
+        </div>
+
         {/* Referral Quick View - shows at top for fast access */}
         {candidate.source === 'referral' && (
           <div className="p-3 rounded-lg bg-amber-50 border-l-4 border-amber-400">
