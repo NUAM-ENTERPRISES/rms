@@ -463,7 +463,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
 
               <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>{isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step</Button>
 
-              <Button size="sm" onClick={handleMarkComplete} disabled={isCompletingStep || statMissing > 0}>{isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Step Complete'}</Button>
+              <Button size="sm" onClick={handleMarkComplete} disabled={isCompletingStep || statMissing > 0 || !hasSubmittedAt}>{isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Step Complete'}</Button>
             </div>
           </div>
         )}

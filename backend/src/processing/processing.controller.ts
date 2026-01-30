@@ -84,12 +84,33 @@ export class ProcessingController {
     status: HttpStatus.OK,
     description: 'Processing candidates retrieved successfully',
   })
-  async getAllProcessingCandidates(@Query() query: QueryAllProcessingCandidatesDto) {
-    const data = await this.processingService.getAllProcessingCandidates(query);
+  async getAllProcessingCandidates(@Query() query: QueryAllProcessingCandidatesDto, @Req() req: any) {
+    const data = await this.processingService.getAllProcessingCandidates(query, req.user?.id);
     return {
       success: true,
       data,
       message: 'Processing candidates retrieved successfully',
+    };
+  }
+
+  @Get('admin/all-candidates')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Admin: Get all processing candidates across users with additional filters',
+    description: 'Admin view: Retrieve processing candidates across all users. Supports filters: status (assigned,in_progress,completed,cancelled,all), filterType (visa_stamped, total_processing), search, projectId, roleCatalogId, page and limit.',
+  })
+  @ApiQuery({ name: 'filterType', required: false, description: "Optional special filters: 'visa_stamped' returns candidates whose visa step is completed; 'total_processing' is equivalent to 'all'" })
+  @ApiQuery({ name: 'status', required: false, enum: ['assigned','in_progress','completed','cancelled','all','visa_stamped'], description: 'Filter by processing status or special visa_stamped', example: 'all' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Admin processing candidates retrieved successfully',
+  })
+  async getAllProcessingCandidatesAdmin(@Query() query: QueryAllProcessingCandidatesDto) {
+    const data = await this.processingService.getAllProcessingCandidatesAdmin(query as any);
+    return {
+      success: true,
+      data,
+      message: 'Admin processing candidates retrieved successfully',
     };
   }
 

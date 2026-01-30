@@ -202,6 +202,9 @@ const ProcessingDashboardPage = lazy(
 const ProcessingCandidateDetailsPage = lazy(
   () => import("@/features/processing/views/ProcessingCandidateDetailsPage")
 );
+const ProcessingAdminDashboardPage = lazy(
+  () => import("@/features/processing/views/ProcessingAdminDashboardPage")
+);
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -309,6 +312,19 @@ function App() {
                         <ProtectedRoute roles={["Processing Executive"]}>
                           <AppLayout>
                             <ProcessingDashboardPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/processing-admin"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={["CEO", "Director", "Manager", "System Admin"]}>
+                          <AppLayout>
+                            <ProcessingAdminDashboardPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

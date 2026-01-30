@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNumber, IsOptional, IsEnum, IsIn } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class QueryAllProcessingCandidatesDto {
@@ -29,13 +29,23 @@ export class QueryAllProcessingCandidatesDto {
 
   @ApiProperty({
     description: 'Filter by processing status',
-    enum: ['assigned', 'in_progress', 'completed', 'cancelled'],
+    enum: ['assigned', 'in_progress', 'completed', 'cancelled', 'all', 'visa_stamped'],
     default: 'assigned',
     required: false,
   })
   @IsString()
   @IsOptional()
   status?: string = 'assigned';
+
+  @ApiPropertyOptional({
+    description: "Optional admin-only filter: 'visa_stamped' or 'total_processing'",
+    enum: ['visa_stamped', 'total_processing'],
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['visa_stamped', 'total_processing'])
+  filterType?: 'visa_stamped' | 'total_processing';
 
   @ApiProperty({
     description: 'Page number for pagination',

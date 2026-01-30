@@ -28,7 +28,7 @@ export type ProcessingCandidatesQuery = {
   search?: string;
   projectId?: string;
   roleCatalogId?: string;
-  status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all";
+  status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all" | "visa_stamped";
   page?: number;
   limit?: number;
 };
@@ -72,6 +72,34 @@ export const processingApi = baseApi.injectEndpoints({
     >({
       query: (params) => ({
         url: "/processing/all-candidates",
+        params: params ?? undefined,
+      }),
+      providesTags: ["ProcessingSummary"],
+    }),
+
+    // Admin endpoint: GET /processing/admin/all-candidates
+    getAllProcessingCandidatesAdmin: builder.query<
+      ApiResponse<{
+        candidates: ProcessingCandidate[];
+        counts: {
+          all: number;
+          assigned: number;
+          in_progress: number;
+          completed: number;
+          cancelled: number;
+          visa_stamped?: number;
+        };
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages?: number;
+        };
+      }>,
+      ProcessingCandidatesQuery & { filterType?: "visa_stamped" | "total_processing" }
+    >({
+      query: (params) => ({
+        url: "/processing/admin/all-candidates",
         params: params ?? undefined,
       }),
       providesTags: ["ProcessingSummary"],
@@ -397,6 +425,8 @@ export const {
   useLazyGetProcessingCandidatesQuery,
   useGetAllProcessingCandidatesQuery,
   useLazyGetAllProcessingCandidatesQuery,
+  useGetAllProcessingCandidatesAdminQuery,
+  useLazyGetAllProcessingCandidatesAdminQuery,
   useGetCandidatesToTransferQuery,
   useGetProcessingDetailQuery,
   useGetProcessingHistoryQuery,

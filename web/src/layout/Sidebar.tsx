@@ -145,7 +145,6 @@ function NavItemComponent({
   depth?: number;
 }) {
   const location = useLocation();
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const hasChildren = item.children && item.children.length > 0;
   const isActive = location.pathname === item.path;
@@ -155,6 +154,17 @@ function NavItemComponent({
       (child) => child.path && location.pathname.startsWith(child.path)
     );
   const isCurrentlyActive = isActive || isChildActive;
+
+  // Initialize expansion based on whether any child is active so that
+  // navigating directly to a child keeps the parent open. Also sync
+  // expansion when the active child changes (collapses when navigating away).
+  const [isExpanded, setIsExpanded] = useState<boolean>(isChildActive);
+
+  useEffect(() => {
+    if (hasChildren) {
+      setIsExpanded(isChildActive);
+    }
+  }, [isChildActive, hasChildren]);
 
   const iconColors = getIconColor(item.id);
 

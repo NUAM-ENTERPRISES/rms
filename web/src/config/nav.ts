@@ -49,6 +49,7 @@ export const navigationConfig: NavItem[] = [
     roles: ["Processing Executive"],
     // Dedicated dashboard for Processing Executives
   },
+
   // {
   //   id: "dashboard",
   //   label: "Dashboard",
@@ -60,48 +61,48 @@ export const navigationConfig: NavItem[] = [
   //     variant: "default",
   //   },
   // },
-   {
-  id: "candidate-analytics",
-  label: "Analytics",
-  path: "/analytics/candidates",
-  icon: BarChart3,
-  roles: ["CEO", "Director", "Manager"],
-  badge: {
-    text: "Insights",
-    variant: "default",
-  },
-  children: [
   {
-    id: "candidate-analytics-overview",
-    label: "Recruiter Analytics",
+    id: "candidate-analytics",
+    label: "Analytics",
     path: "/analytics/candidates",
-    icon: Users,
-    roles: ["CEO", "Director", "Manager"],
-  },
-  {
-    id: "candidate-analytics-time",
-    label: "Documents Analytics",
-    path: "/analytics/candidates/time",
-    icon: FileText,
-    roles: ["CEO", "Director", "Manager"],
-  },
-  {
-    id: "candidate-analytics-funnel",
-    label: "Interview Analytics",
-    path: "/analytics/candidates/funnel",
     icon: BarChart3,
     roles: ["CEO", "Director", "Manager"],
-  },
-//   {
-//   id: "candidate-analytics-time",
-//   label: "Screening Analytics",
-//   path: "/analytics/candidates/screening",
-//   icon: Clock,
-//   roles: ["CEO", "Director", "Manager"],
-// },
+    badge: {
+      text: "Insights",
+      variant: "default",
+    },
+    children: [
+      {
+        id: "candidate-analytics-overview",
+        label: "Recruiter Analytics",
+        path: "/analytics/candidates",
+        icon: Users,
+        roles: ["CEO", "Director", "Manager"],
+      },
+      {
+        id: "candidate-analytics-time",
+        label: "Documents Analytics",
+        path: "/analytics/candidates/time",
+        icon: FileText,
+        roles: ["CEO", "Director", "Manager"],
+      },
+      {
+        id: "candidate-analytics-funnel",
+        label: "Interview Analytics",
+        path: "/analytics/candidates/funnel",
+        icon: BarChart3,
+        roles: ["CEO", "Director", "Manager"],
+      },
+      //   {
+      //   id: "candidate-analytics-time",
+      //   label: "Screening Analytics",
+      //   path: "/analytics/candidates/screening",
+      //   icon: Clock,
+      //   roles: ["CEO", "Director", "Manager"],
+      // },
 
-  ],
-},
+    ],
+  },
   {
     id: "projects",
     label: "Projects",
@@ -135,7 +136,7 @@ export const navigationConfig: NavItem[] = [
       "CRE",
     ],
   },
-    {
+  {
     id: "recruiter-docs",
     label: "Recruiter Docs",
     path: "/recruiter-docs",
@@ -218,7 +219,7 @@ export const navigationConfig: NavItem[] = [
         path: "/screenings/templates",
         permissions: ["read:interview_templates"],
       },
-      
+
     ],
   },
   {
@@ -230,12 +231,29 @@ export const navigationConfig: NavItem[] = [
     hiddenForRoles: ["Interview Coordinator", "Recruiter"],
   },
   {
-    id: "ready-for-processing",
-    label: "Ready for Processing",
-    path: "/ready-for-processing",
-    icon: UserCheck,
+    id: "processing",
+    label: "Processing",
+    icon: ClipboardCheck,
     roles: ["CEO", "Director", "Manager", "System Admin"],
+    children: [
+
+      {
+        id: "processing-admin-dashboard",
+        label: "Dashboard",
+        path: "/processing-admin",
+        roles: ["CEO", "Director", "Manager", "System Admin"],
+      },
+
+      {
+        id: "ready-for-processing",
+        label: "Ready for Processing",
+        path: "/ready-for-processing",
+        roles: ["CEO", "Director", "Manager", "System Admin"],
+      },
+
+    ]
   },
+
   // {
   //   id: "notifications",
   //   label: "Notifications",

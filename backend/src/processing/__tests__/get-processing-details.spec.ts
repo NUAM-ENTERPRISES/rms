@@ -46,4 +46,28 @@ describe('ProcessingService - getProcessingDetailsById progressCount', () => {
     expect(result).toBeDefined();
     expect(result.progressCount).toBe(50);
   });
+
+  it('forces progressCount to 100 when processingStatus is completed', async () => {
+    const proc = {
+      id: 'pc-1',
+      candidateId: 'cand-1',
+      projectId: 'proj-1',
+      role: { id: 'r-1' },
+      project: { country: { code: 'US', name: 'United States' } },
+      updatedAt: new Date(),
+      processingStatus: 'completed',
+    };
+
+    jest.spyOn(prisma.processingCandidate, 'findUnique' as any).mockResolvedValue(proc);
+
+    // total steps = 12, completed = 11 => ~92 but should be reported as 100
+    jest.spyOn(prisma.processingStep, 'count' as any)
+      .mockImplementationOnce(async () => 12)
+      .mockImplementationOnce(async () => 11);
+
+    const result = await service.getProcessingDetailsById('pc-1');
+
+    expect(result).toBeDefined();
+    expect(result.progressCount).toBe(100);
+  });
 });

@@ -3617,7 +3617,7 @@ export class ProcessingService {
   /**
    * Get all processing candidates with filters, search and pagination
    */
-  async getAllProcessingCandidates(query: QueryAllProcessingCandidatesDto) {
+  async getAllProcessingCandidates(query: QueryAllProcessingCandidatesDto, userId?: string) {
     const {
       search,
       projectId,
@@ -3630,6 +3630,11 @@ export class ProcessingService {
     const skip = (page - 1) * limit;
 
     const where: any = {};
+
+    // Restrict to assigned processing user if provided
+    if (userId) {
+      where.assignedProcessingTeamUserId = userId;
+    }
 
     // Filter by project
     if (projectId) {
@@ -3666,6 +3671,14 @@ export class ProcessingService {
           },
         },
       ];
+    }
+
+    const countsWhere: any = {
+      ...(projectId ? { projectId } : {}),
+      ...(roleCatalogId ? { role: { roleCatalogId: roleCatalogId } } : {}),
+    };
+    if (userId) {
+      countsWhere.assignedProcessingTeamUserId = userId;
     }
 
     const [candidates, total, statusCounts] = await Promise.all([
@@ -3727,14 +3740,7 @@ export class ProcessingService {
       this.prisma.processingCandidate.count({ where }),
       this.prisma.processingCandidate.groupBy({
         by: ['processingStatus'],
-        where: {
-          projectId: projectId,
-          ...(roleCatalogId && {
-            role: {
-              roleCatalogId: roleCatalogId,
-            },
-          }),
-        },
+        where: countsWhere,
         _count: {
           _all: true,
         },
@@ -3759,14 +3765,7 @@ export class ProcessingService {
     counts.all = Object.values(counts).reduce((a, b) => a + b, 0) - counts.all;
     // Recalculate total for 'all' correctly
     const allCount = await this.prisma.processingCandidate.count({
-      where: {
-        projectId: projectId,
-        ...(roleCatalogId && {
-          role: {
-            roleCatalogId: roleCatalogId,
-          },
-        }),
-      },
+      where: countsWhere,
     });
     counts.all = allCount;
 
@@ -3822,8 +3821,278 @@ export class ProcessingService {
       };
     });
 
+    const finalCandidates = candidatesWithProgress.map((c: any) => {
+      if (c.processingStatus === 'completed' && c.progressCount !== 100) {
+        return { ...c, progressCount: 100 };
+      }
+      return c;
+    });
+
     return {
-      candidates: candidatesWithProgress,
+      candidates: finalCandidates,
+      counts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Admin: Get all processing candidates across users with extra filters
+   * Supports filterType = 'visa_stamped' to show processing candidates whose VISA step is completed
+   */
+  async getAllProcessingCandidatesAdmin(query: QueryAllProcessingCandidatesDto & { filterType?: string }) {
+    const {
+      search,
+      projectId,
+      roleCatalogId,
+      status = 'all',
+      filterType,
+      page = 1,
+      limit = 10,
+    } = query as any;
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    // Filter by project
+    if (projectId) {
+      where.projectId = projectId;
+    }
+
+    // Filter by processing status (unless 'all' or `total_processing` filter is requested)
+    if (filterType !== 'total_processing') {
+      if (status && status !== 'all' && status !== 'visa_stamped') {
+        where.processingStatus = status;
+      }
+    }
+
+    // Filter by role catalog (via roleNeeded mapping)
+    if (roleCatalogId) {
+      where.role = {
+        roleCatalogId: roleCatalogId,
+      };
+    }
+
+    // Special filterType: visa_stamped
+    if (filterType === 'visa_stamped' || status === 'visa_stamped') {
+      // Find processing candidates where the 'visa' step exists and is completed
+      where.processingSteps = {
+        some: {
+          template: { key: 'visa' },
+          status: 'completed',
+        },
+      };
+    }
+
+    // Search functionality
+    if (search) {
+      where.OR = [
+        {
+          candidate: {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        },
+        {
+          project: {
+            title: { contains: search, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    // Base counts respect only project/role filters so `counts.*` stays stable regardless of other filters
+    const baseCountsWhere: any = {
+      ...(projectId ? { projectId } : {}),
+      ...(roleCatalogId ? { role: { roleCatalogId: roleCatalogId } } : {}),
+    };
+
+    // Status grouping should be computed over the base (project/role) set so counts.assigned/in_progress/etc are stable
+    const statusGroupByWhere: any = { ...baseCountsWhere };
+
+    // Note: visa_stamped is computed separately (visaCountsWhere), so we do not inject visa conditions here.
+    // Also, total_processing should not apply status-based filtering to counts (that's what baseCountsWhere ensures).
+
+    // Provide a countsWhere alias (pointing to baseCountsWhere) so existing groupBy call uses the base set
+    const countsWhere: any = baseCountsWhere;
+
+    const [candidates, total, statusCounts] = await Promise.all([
+      this.prisma.processingCandidate.findMany({
+        where,
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              mobileNumber: true,
+              profileImage: true,
+              countryCode: true,
+              experience: true,
+              highestEducation: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+              country: { select: { code: true, name: true } },
+            },
+          },
+          role: {
+            select: {
+              id: true,
+              projectId: true,
+              roleCatalogId: true,
+              designation: true,
+            },
+          },
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          candidateProjectMap: {
+            include: {
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.processingCandidate.count({ where }),
+      this.prisma.processingCandidate.groupBy({
+        by: ['processingStatus'],
+        where: countsWhere,
+        _count: {
+          _all: true,
+        },
+      }),
+    ]);
+
+    const counts = {
+      all: 0,
+      assigned: 0,
+      in_progress: 0,
+      completed: 0,
+      cancelled: 0,
+      visa_stamped: 0,
+    };
+
+    // Recompute status counts over the base set (project/role only) so counts are stable
+    const stableStatusCounts = await this.prisma.processingCandidate.groupBy({
+      by: ['processingStatus'],
+      where: statusGroupByWhere,
+      _count: { _all: true },
+    });
+
+    stableStatusCounts.forEach((sc) => {
+      const statusKey = sc.processingStatus as keyof typeof counts;
+      if (counts.hasOwnProperty(statusKey)) {
+        counts[statusKey] = sc._count._all;
+      }
+    });
+
+    // Calculate all count based on the base set (project/role only) so it does not change with status/filterType
+    const allCount = await this.prisma.processingCandidate.count({ where: baseCountsWhere });
+    counts.all = allCount;
+
+    // Compute count of visa_stamped (visa step completed) for admin view
+    const visaCountsWhere: any = {
+      ...(projectId ? { projectId } : {}),
+      ...(roleCatalogId ? { role: { roleCatalogId: roleCatalogId } } : {}),
+      processingSteps: {
+        some: {
+          template: { key: 'visa' },
+          status: 'completed',
+        },
+      },
+    };
+
+    const visaStampedCount = await this.prisma.processingCandidate.count({ where: visaCountsWhere });
+    counts.visa_stamped = visaStampedCount;
+
+    // Attach country flag and display name for each candidate's project (if present)
+    const candidatesWithCountry = candidates.map((c: any) => {
+      if (c.project && c.project.country) {
+        const country = c.project.country as any;
+        const flag = this.getCountryFlagEmoji(country.code);
+        c.project.country = {
+          ...country,
+          flag,
+          flagName: flag ? `${flag} ${country.name}` : country.name,
+        };
+      }
+      return c;
+    });
+
+    // Compute progress percentage for each candidate based on processing steps
+    const processingCandidateIds = candidatesWithCountry.map((c: any) => c.id);
+
+    const stepTotalsMap: Record<string, number> = {};
+    const completedStepsMap: Record<string, number> = {};
+
+    if (processingCandidateIds.length > 0) {
+      const [totals, completed] = await Promise.all([
+        this.prisma.processingStep.groupBy({
+          by: ['processingCandidateId'],
+          where: { processingCandidateId: { in: processingCandidateIds } },
+          _count: { _all: true },
+        }),
+        this.prisma.processingStep.groupBy({
+          by: ['processingCandidateId'],
+          where: { processingCandidateId: { in: processingCandidateIds }, status: 'completed' },
+          _count: { _all: true },
+        }),
+      ]);
+
+      totals.forEach((t: any) => {
+        stepTotalsMap[t.processingCandidateId] = t._count._all;
+      });
+      completed.forEach((c: any) => {
+        completedStepsMap[c.processingCandidateId] = c._count._all;
+      });
+    }
+
+    const candidatesWithProgress = candidatesWithCountry.map((c: any) => {
+      const total = stepTotalsMap[c.id] || 0;
+      const completed = completedStepsMap[c.id] || 0;
+      const progressCount = total === 0 ? 0 : Math.round((completed / total) * 100);
+      return {
+        ...c,
+        progressCount,
+      };
+    });
+
+    const finalCandidates = candidatesWithProgress.map((c: any) => {
+      if (c.processingStatus === 'completed' && c.progressCount !== 100) {
+        return { ...c, progressCount: 100 };
+      }
+      return c;
+    });
+
+    return {
+      candidates: finalCandidates,
       counts,
       pagination: {
         page,
@@ -4103,7 +4372,11 @@ export class ProcessingService {
       this.prisma.processingStep.count({ where: { processingCandidateId: id, status: 'completed' } }),
     ]);
 
-    const progressCount = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100);
+    let progressCount = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100);
+    // If the processing flow is marked completed, force 100% for progress
+    if ((processingCandidate as any).processingStatus === 'completed' && totalSteps > 0) {
+      progressCount = 100;
+    }
 
     return {
       ...processingCandidate,
