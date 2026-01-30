@@ -34,6 +34,13 @@ export class NotificationsService {
         return this.mapToResponseDto(existingNotification);
       }
 
+      // Ensure target user exists to avoid foreign key violations
+      const targetUser = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+      if (!targetUser) {
+        this.logger.warn(`User ${dto.userId} not found; cannot create notification`);
+        throw new Error(`User ${dto.userId} not found`);
+      }
+
       const notification = await this.prisma.notification.create({
         data: {
           userId: dto.userId,

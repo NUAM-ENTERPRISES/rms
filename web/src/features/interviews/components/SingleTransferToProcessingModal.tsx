@@ -128,7 +128,10 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="flex justify-between items-center px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800">
+          
+          {/* removal of upload option */}
+
+          {/* <div className="flex justify-between items-center px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800">
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Offer Letter</span>
@@ -178,7 +181,8 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
                 </Button>
               )}
             </div>
-          </div>
+          </div> */}
+
           {recruiterName && (
             <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
               <span className="text-muted-foreground">Assigned Recruiter:</span>

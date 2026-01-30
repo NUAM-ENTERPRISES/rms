@@ -765,19 +765,26 @@ export class NotificationsProcessor extends WorkerHost {
 
       const idemKey = `${eventId}:${assignedToExecutive}:candidate_sent_for_verification`;
 
-      await this.notificationsService.createNotification({
-        userId: assignedToExecutive,
-        type: 'candidate_sent_for_verification',
-        title: 'New Candidate for Document Verification',
-        message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been assigned to you for document verification for project ${candidateProjectMap.project.title}.`,
-        link: `/candidates/${candidateProjectMap.candidate.id}/documents/${candidateProjectMap.project.id}`,
-        meta: {
-          candidateProjectMapId,
-          candidateId: candidateProjectMap.candidate.id,
-          projectId: candidateProjectMap.project.id,
-        },
-        idemKey,
-      });
+      if (!assignedToExecutive) {
+        // No executive was selected — skip creating notification to avoid foreign key violation
+        this.logger.debug(
+          `No executive assigned for candidateProjectMap ${candidateProjectMapId}; skipping notification`,
+        );
+      } else {
+        await this.notificationsService.createNotification({
+          userId: assignedToExecutive,
+          type: 'candidate_sent_for_verification',
+          title: 'New Candidate for Document Verification',
+          message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been assigned to you for document verification for project ${candidateProjectMap.project.title}.`,
+          link: `/candidates/${candidateProjectMap.candidate.id}/documents/${candidateProjectMap.project.id}`,
+          meta: {
+            candidateProjectMapId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+          },
+          idemKey,
+        });
+      }
 
       this.logger.log(
         `Candidate sent for verification notification created for executive ${assignedToExecutive}`,

@@ -4484,9 +4484,6 @@ export class ProcessingService {
     const projectId = pc.projectId;
     const roleCatalogId = pc.role?.roleCatalogId || null;
 
-    // Find candidate project mapping for this project
-    const cpm = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
-
     // Build search conditions
     const docSearchCondition: any = search
       ? {
@@ -4497,62 +4494,44 @@ export class ProcessingService {
         }
       : {};
 
+    // We only want documents that are tied to the project for the specific roleCatalog used by this processing candidate.
+    // Resolve the processing candidate's roleCatalogId and find RoleNeeded(s) in this project that reference that roleCatalog.
+
     let projectVerifications: any[] = [];
-    if (cpm) {
-      projectVerifications = await this.prisma.candidateProjectDocumentVerification.findMany({
-        where: { candidateProjectMapId: cpm.id, status: 'verified', isDeleted: false, ...(search ? docSearchCondition : {}) } as any,
-        include: { document: true },
-        orderBy: { createdAt: 'desc' },
-      });
+
+    if (roleCatalogId) {
+      // Find roleNeeded entries for this project that reference the same roleCatalog
+      const roleNeededEntries = await this.prisma.roleNeeded.findMany({ where: { projectId, roleCatalogId }, select: { id: true } });
+      const roleNeededIds = roleNeededEntries.map((r) => r.id);
+
+      if (roleNeededIds.length > 0) {
+        // Find candidateProject maps for this candidate/project that match those roleNeeded entries
+        const cpms = await this.prisma.candidateProjects.findMany({ where: { candidateId, projectId, roleNeededId: { in: roleNeededIds } }, select: { id: true } });
+        const cpmIds = cpms.map((c) => c.id);
+
+        if (cpmIds.length > 0) {
+          projectVerifications = await this.prisma.candidateProjectDocumentVerification.findMany({
+            where: { candidateProjectMapId: { in: cpmIds }, status: 'verified', isDeleted: false, ...(search ? docSearchCondition : {}) } as any,
+            include: { document: true },
+            orderBy: { createdAt: 'desc' },
+          });
+        }
+      }
+    } else {
+      // No roleCatalog in processing candidate: fallback to any candidateProject map for candidate+project
+      const cpm = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
+      if (cpm) {
+        projectVerifications = await this.prisma.candidateProjectDocumentVerification.findMany({
+          where: { candidateProjectMapId: cpm.id, status: 'verified', isDeleted: false, ...(search ? docSearchCondition : {}) } as any,
+          include: { document: true },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
     }
 
-    // Common doc types that should always be included even if not tied to a roleCatalog
-    const commonDocTypes = ['pan_card', 'aadhaar', 'passport_copy'];
-
-    // Candidate documents that are verified and either belong to the roleCatalog or are common types
-    const docWhere: any = {
-      candidateId,
-      isDeleted: false,
-      status: 'verified',
-      AND: [
-        {
-          OR: [
-            { roleCatalogId: roleCatalogId },
-            { roleCatalogId: null, docType: { in: commonDocTypes } },
-          ],
-        },
-      ],
-    };
-
-    if (search) {
-      docWhere.AND.push({ OR: [{ fileName: { contains: search, mode: 'insensitive' } }, { docType: { contains: search, mode: 'insensitive' } }] });
-    }
-
-    const candidateDocs = await this.prisma.document.findMany({
-      where: docWhere as any,
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // Map candidate documents to a verification-like shape so frontend can consume similar structure
-    const standalone = candidateDocs.map((doc: any) => ({
-      id: null,
-      candidateProjectMapId: null,
-      documentId: doc.id,
-      roleCatalogId: doc.roleCatalogId,
-      status: doc.status,
-      notes: doc.notes || null,
-      rejectionReason: null,
-      resubmissionRequested: false,
-      isDeleted: doc.isDeleted,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
-      document: doc,
-    }));
-
-    // Merge project verifications and standalone docs, prefer project verifications when both exist for the same document
+    // Only include project-level verifications (exclude standalone candidate-level docs with null candidateProjectMapId)
     const map = new Map<string, any>();
     for (const v of projectVerifications) map.set(v.documentId, v);
-    for (const s of standalone) if (!map.has(s.documentId)) map.set(s.documentId, s);
 
     // Convert to array and sort by createdAt desc
     const all = Array.from(map.values()).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
