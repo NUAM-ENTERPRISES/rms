@@ -804,7 +804,7 @@ function StepItem({
   // Override status display for offer letter based on document status
   const getOfferLetterBadgeText = () => {
     if (offerLetterVerified) return "Verified";
-    if (offerLetterPending) return "Verify";
+    if (offerLetterPending) return "Please verify";
     if (offerLetterRejected) return "Rejected";
     if (offerLetterNotUploaded) return "Not Uploaded";
     return statusConfig.label;
@@ -812,7 +812,7 @@ function StepItem({
 
   const getOfferLetterDescription = () => {
     if (offerLetterVerified) return "Offer letter verified ✓";
-    if (offerLetterPending) return "Uploaded - Click to verify";
+    if (offerLetterPending) return "Uploaded - Please verify";
     if (offerLetterRejected) return "Rejected - Awaiting resubmission";
     if (offerLetterNotUploaded) return "Not uploaded yet";
     return step.description;

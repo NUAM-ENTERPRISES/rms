@@ -287,7 +287,7 @@ export class ProcessingService {
     await this.createStepsForProcessingCandidate(processingCandidateId);
 
     // Resolve candidate country for document rules
-    const pc = await this.prisma.processingCandidate.findUnique({ where: { id: processingCandidateId }, include: { candidate: true, project: true } });
+    const pc = await this.prisma.processingCandidate.findUnique({ where: { id: processingCandidateId }, include: { candidate: true, project: true, role: true } });
     const country = pc?.project?.countryCode || pc?.candidate?.countryCode || null;
 
     // Fetch all country document rules for this country + global ('ALL')
@@ -307,9 +307,88 @@ export class ProcessingService {
     // Return step list WITHOUT documents or requiredDocuments — these are heavy and unnecessary
     // for the basic steps endpoint. Frontend should use the dedicated requirements endpoints
     // (e.g., /steps/:processingId/hrd-requirements) when it needs rule/requirement details.
+    // However, include only candidate-level offer letter documents that belong to the same project+role
+
+    // Find the candidateProjectMap for this candidate-project-role (if any)
+    const candidateProjectMap = pc?.candidate?.id && pc?.project?.id
+      ? await this.prisma.candidateProjects.findFirst({
+          where: {
+            candidateId: pc.candidate.id,
+            projectId: pc.project.id,
+            ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+          },
+        })
+      : null;
+
+    // Pre-fetch candidate-level offer_letter documents filtered to the current project+role
+    // If we have an exact candidateProjectMap, prefer documents that have a verification for that map.
+    // Otherwise, fall back to roleCatalogId match (if role present) to find relevant offer letters.
+    let candidateOfferDocuments: any[] = [];
+    if (pc?.candidate?.id) {
+      if (candidateProjectMap) {
+        candidateOfferDocuments = await this.prisma.document.findMany({
+          where: {
+            candidateId: pc.candidate.id,
+            isDeleted: false,
+            docType: 'offer_letter',
+            verifications: { some: { candidateProjectMapId: candidateProjectMap.id } },
+          },
+          include: { verifications: { include: { candidateProjectMap: { select: { id: true, projectId: true, roleNeededId: true } }, roleCatalog: { select: { id: true } } } } },
+          orderBy: { createdAt: 'desc' },
+        });
+      } else if (pc.role?.roleCatalogId) {
+        candidateOfferDocuments = await this.prisma.document.findMany({
+          where: {
+            candidateId: pc.candidate.id,
+            isDeleted: false,
+            docType: 'offer_letter',
+            verifications: { some: { roleCatalogId: pc.role.roleCatalogId } },
+          },
+          include: { verifications: { include: { candidateProjectMap: { select: { id: true, projectId: true, roleNeededId: true } }, roleCatalog: { select: { id: true } } } } },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+    }
+
     const stepsWithoutDocs = steps.map((s) => {
       // omit `documents` by destructuring
       const { documents, ...rest } = s as any;
+
+      // If this is the offer_letter step, expose only candidate-level offer letter documents and minimal verifications
+      if (s.template?.key === 'offer_letter') {
+        // Use the most recent matching offer letter (if any) rather than returning an array
+        const first = (candidateOfferDocuments || [])[0] || null;
+        const candidateDocument = first
+          ? {
+              id: first.id,
+              fileName: first.fileName,
+              fileUrl: first.fileUrl,
+              uploadedAt: first.createdAt,
+              uploadedBy: first.uploadedBy,
+              docType: first.docType,
+              // Minimize verification shape to only relevant fields (no nested candidateProjectMap/project/role objects)
+              verifications: (first.verifications || [])
+                .map((v: any) => ({
+                  id: v.id,
+                  status: v.status,
+                  documentId: v.documentId,
+                  candidateProjectMapId: v.candidateProjectMapId || (v.candidateProjectMap && v.candidateProjectMap.id) || null,
+                  roleCatalogId: v.roleCatalogId || (v.roleCatalog && v.roleCatalog.id) || null,
+                  createdAt: v.createdAt,
+                  notes: v.notes || null,
+                  rejectionReason: v.rejectionReason || null,
+                }))
+                .filter((v: any) => {
+                  if (!candidateProjectMap) return true;
+                  return v.candidateProjectMapId === candidateProjectMap.id;
+                }),
+            }
+          : null;
+
+        // Return only a single candidate document for offer_letter (or null)
+        return { ...rest, offerLetters: { candidateDocument } };
+      }
+
       return rest;
     });
 

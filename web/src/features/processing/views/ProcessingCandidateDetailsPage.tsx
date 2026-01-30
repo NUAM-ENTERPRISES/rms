@@ -125,7 +125,61 @@ export default function ProcessingCandidateDetailsPage() {
     const verifications = (docsResponse?.data?.items || []) as any[];
     const offerLetterDoc = verifications.find((v) => v.document?.docType === "offer_letter");
 
+    // If not found in paginated documents, fall back to processing steps payload which may contain offerLetters
     if (!offerLetterDoc) {
+      const stepOffer = (processingSteps || []).find((s: any) => s.template?.key === "offer_letter");
+      // stepOffer may not have types for offerLetters on the ProcessingStep type, cast to any to avoid TS error
+      const candidateDoc = (stepOffer as any)?.offerLetters?.candidateDocument;
+      if (candidateDoc) {
+        // We have an uploaded offer letter in the processing steps; treat it as pending verification
+        // Construct a DocumentVerification-like object so the offer-letter modal can show the existing document
+        const verification = (candidateDoc.verifications && candidateDoc.verifications[0]) || null;
+        const constructedVerification = verification
+          ? {
+              id: verification.id,
+              candidateProjectMapId: verification.candidateProjectMapId,
+              documentId: candidateDoc.id,
+              roleCatalogId: verification.roleCatalogId || "",
+              status: verification.status,
+              notes: verification.notes || null,
+              rejectionReason: verification.rejectionReason || null,
+              resubmissionRequested: verification.resubmissionRequested || false,
+              document: {
+                id: candidateDoc.id,
+                candidateId: data?.candidate?.id || "",
+                docType: candidateDoc.docType || "offer_letter",
+                fileName: candidateDoc.fileName,
+                fileUrl: candidateDoc.fileUrl,
+                uploadedBy: candidateDoc.uploadedBy || "",
+                verifiedBy: null,
+                status: verification.status,
+                notes: null,
+                createdAt: candidateDoc.uploadedAt || "",
+                updatedAt: candidateDoc.uploadedAt || "",
+                fileSize: candidateDoc.fileSize || 0,
+                mimeType: candidateDoc.mimeType || "application/pdf",
+                roleCatalogId: verification.roleCatalogId || null,
+                rejectedAt: null,
+                rejectedBy: null,
+                rejectionReason: verification.rejectionReason || null,
+                verifiedAt: null,
+              },
+            }
+          : null;
+
+        return {
+          offerLetterStatus: {
+            hasOfferLetter: true,
+            status: "pending",
+            documentId: candidateDoc.id,
+            verificationId: verification?.id,
+            fileUrl: candidateDoc.fileUrl,
+            fileName: candidateDoc.fileName,
+          } as OfferLetterStatus,
+          offerLetterVerification: constructedVerification,
+        };
+      }
+
       return {
         offerLetterStatus: {
           hasOfferLetter: false,
@@ -146,7 +200,7 @@ export default function ProcessingCandidateDetailsPage() {
       } as OfferLetterStatus,
       offerLetterVerification: offerLetterDoc,
     };
-  }, [docsResponse?.data?.items]);
+  }, [docsResponse?.data?.items, processingSteps]);
 
   // If processing was cancelled, find the most recent cancellation history entry to show the reason
   // We intentionally avoid fetching history on page load. The history modal fetches history when opened.
