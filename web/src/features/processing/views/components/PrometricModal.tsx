@@ -26,10 +26,11 @@ interface PrometricModalProps {
   isOpen: boolean;
   onClose: () => void;
   processingId: string;
+  candidateProjectMapId?: string;
   onComplete?: () => void | Promise<void>;
 }
 
-export function PrometricModal({ isOpen, onClose, processingId, onComplete }: PrometricModalProps) {
+export function PrometricModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: PrometricModalProps) {
   const { data, isLoading, error, refetch } = useGetPrometricRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -106,6 +107,12 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
       map[d.docType] = map[d.docType] || [];
       map[d.docType].push(d);
     });
+
+    // Ensure newest document is at index 0
+    Object.keys(map).forEach((type) => {
+      map[type].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    });
+
     return map;
   }, [candidateDocs]);
 
@@ -120,14 +127,21 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
       const fileUrl = d.document?.fileUrl || doc?.fileUrl;
       const mimeType = d.document?.mimeType || doc?.mimeType;
       const id = d.document?.id || d.processingDocument?.id || d.id;
+      const createdAt = d.createdAt || doc?.createdAt;
 
       if (!docType) return; // skip malformed entries
 
-      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id };
+      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id, createdAt };
 
       map[docType] = map[docType] || [];
       map[docType].push(normalized);
     });
+
+    // Ensure newest document is at index 0
+    Object.keys(map).forEach((type) => {
+      map[type].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    });
+
     return map;
   }, [processingDocs]);
 
@@ -140,8 +154,8 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
   const handleViewDocument = (docType: string) => {
     const pdocs = processingDocsByDocType[docType] || [];
     const cdocs = candidateDocsByDocType[docType] || [];
-    const pdoc = pdocs[pdocs.length - 1];
-    const cdoc = cdocs[cdocs.length - 1];
+    const pdoc = pdocs[0];
+    const cdoc = cdocs[0];
     const url = pdoc?.fileUrl || cdoc?.fileUrl;
 
     if (!url) {
@@ -182,7 +196,7 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
     }
 
     const cdocs = candidateDocsByDocType[docType] || [];
-    const cdoc = cdocs[cdocs.length - 1];
+    const cdoc = cdocs[0];
 
     if (!cdoc) {
       // No candidate-level document: prompt upload flow so user can add & then verify
@@ -636,11 +650,11 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                   {requiredDocuments.map((req) => {
 
                     const candidateList = candidateDocsByDocType[req.docType] || [];
-                    const candidateDoc = candidateList[candidateList.length - 1];
+                    const candidateDoc = candidateList[0];
                     const candidateVerified = candidateDoc?.status === 'verified';
 
                     const processingList = processingDocsByDocType[req.docType] || [];
-                    const processingDoc = processingList[processingList.length - 1];
+                    const processingDoc = processingList[0];
                     const processingVerified = processingDoc?.status === 'verified';
 
                     const hasPending = (candidateDoc?.status === 'pending') || (processingDoc?.status === 'pending');
@@ -712,20 +726,18 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                             <>
                               {!hasProcessing ? (
                                 <>
-                                  {/* Re-upload only when candidate doc is in pending state */}
-                                  {candidateDoc?.status === 'pending' && (
+                                  {candidateDoc && (
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-8 text-xs"
+                                      className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                                       onClick={() => handleUploadClick(
                                         req.docType,
                                         req.label,
                                         candidate?.role?.roleCatalog?.id,
                                         candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
                                         candidateDoc?.id,
-                                        // pick latest verification's candidateProjectMapId if available
-                                        candidateDoc?.verifications?.length ? candidateDoc.verifications[candidateDoc.verifications.length - 1].candidateProjectMapId : undefined
+                                        candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
                                       )}
                                     >
                                       <Upload className="h-3 w-3 mr-1" />
@@ -733,7 +745,6 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                                     </Button>
                                   )}
 
-                                  {/* Upload only when there is no candidate doc */}
                                   {!candidateDoc && (
                                     <Button
                                       size="sm"
@@ -746,7 +757,6 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                                     </Button>
                                   )}
 
-                                  {/* Show Verify only when a candidate document exists (and there's no processing doc) */}
                                   {candidateDoc && (
                                     <Button
                                       size="sm"
@@ -761,9 +771,27 @@ export function PrometricModal({ isOpen, onClose, processingId, onComplete }: Pr
                                 processingVerified ? (
                                   <div className="flex items-center gap-2">
                                     <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
+
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                      onClick={() => handleUploadClick(
+                                        req.docType,
+                                        req.label,
+                                        candidate?.role?.roleCatalog?.id,
+                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                        processingDoc?.id,
+                                        candidateProjectMapId || processingDoc?.candidateProjectMapId
+                                      )}
+                                    >
+                                      <Upload className="h-3 w-3 mr-1" />
+                                      Re-upload
+                                    </Button>
+
                                   </div>
                                 ) : (
-                                  <div className="text-xs text-slate-500">In processing</div>
+                                  <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
                                 )
                               )}
                             </>

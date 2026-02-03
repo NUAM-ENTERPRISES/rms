@@ -897,6 +897,9 @@ model CandidateProjectDocumentVerification {
   rejectionReason       String?
   resubmissionRequested Boolean @default(false)
 
+  isUploadedByProcessingTeam Boolean @default(false)
+  isProcessingReplaced       Boolean @default(false)
+
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
 

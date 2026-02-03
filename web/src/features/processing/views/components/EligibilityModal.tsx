@@ -34,10 +34,11 @@ interface EligibilityModalProps {
   isOpen: boolean;
   onClose: () => void;
   processingId: string;
+  candidateProjectMapId?: string;
   onComplete?: () => void | Promise<void>;
 }
 
-export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: EligibilityModalProps) {
+export function EligibilityModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: EligibilityModalProps) {
   const { data, isLoading, error, refetch } = useGetEligibilityRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -109,6 +110,12 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
       map[d.docType] = map[d.docType] || [];
       map[d.docType].push(d);
     });
+
+    // Ensure newest document is at index 0
+    Object.keys(map).forEach((type) => {
+      map[type].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    });
+
     return map;
   }, [candidateDocs]);
 
@@ -134,14 +141,25 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
       const fileUrl = nestedDoc?.fileUrl || d.document?.fileUrl || d.processingDocument?.fileUrl || d.verification?.document?.fileUrl;
       const mimeType = nestedDoc?.mimeType || d.document?.mimeType || d.processingDocument?.mimeType || d.verification?.document?.mimeType;
       const id = nestedDoc?.id || d.document?.id || d.processingDocument?.id || d.verification?.document?.id || d.id;
+      const createdAt = d.createdAt || nestedDoc?.createdAt || d.processingDocument?.createdAt || d.verification?.createdAt;
 
       if (!docType) return; // skip malformed entries
 
-      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id };
+      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id, createdAt };
 
       map[docType] = map[docType] || [];
       map[docType].push(normalized);
     });
+
+    // Ensure newest document is at index 0
+    Object.keys(map).forEach((type) => {
+      map[type].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+    });
+
     return map;
   }, [processingDocs]);
 
@@ -154,8 +172,8 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
   const handleViewDocument = (docType: string) => {
     const pdocs = processingDocsByDocType[docType] || [];
     const cdocs = candidateDocsByDocType[docType] || [];
-    const pdoc = pdocs[pdocs.length - 1];
-    const cdoc = cdocs[cdocs.length - 1];
+    const pdoc = pdocs[0];
+    const cdoc = cdocs[0];
     const url = pdoc?.fileUrl || cdoc?.fileUrl;
 
     if (!url) {
@@ -193,7 +211,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
     }
 
     const cdocs = candidateDocsByDocType[docType] || [];
-    const cdoc = cdocs[cdocs.length - 1];
+    const cdoc = cdocs[0];
 
     if (!cdoc) {
       // No candidate-level document: prompt upload flow so user can add & then verify
@@ -691,18 +709,18 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                             <>
                               {!hasProcessing ? (
                                 <>
-                                  {candidateDoc?.status === 'pending' && (
+                                  {candidateDoc && (
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-8 text-xs"
+                                      className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                                       onClick={() => handleUploadClick(
                                         req.docType,
                                         req.label,
                                         candidate?.role?.roleCatalog?.id,
                                         candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
                                         candidateDoc?.id,
-                                        candidateDoc?.verifications?.length ? candidateDoc.verifications[candidateDoc.verifications.length - 1].candidateProjectMapId : undefined
+                                        candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
                                       )}
                                     >
                                       <Upload className="h-3 w-3 mr-1" />
@@ -726,6 +744,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                                     <Button
                                       size="sm"
                                       variant="default"
+                                      className="h-8 text-xs"
                                       onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
                                     >
                                       Verify
@@ -736,9 +755,26 @@ export function EligibilityModal({ isOpen, onClose, processingId, onComplete }: 
                                 processingVerified ? (
                                   <div className="flex items-center gap-2">
                                     <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
+
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                      onClick={() => handleUploadClick(
+                                        req.docType,
+                                        req.label,
+                                        candidate?.role?.roleCatalog?.id,
+                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                        processingDoc?.id,
+                                        candidateProjectMapId || processingDoc?.candidateProjectMapId
+                                      )}
+                                    >
+                                      <Upload className="h-3 w-3 mr-1" />
+                                      Re-upload
+                                    </Button>
                                   </div>
                                 ) : (
-                                  <div className="text-xs text-slate-500">In processing</div>
+                                  <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
                                 )
                               )}
                             </>

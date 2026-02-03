@@ -25,10 +25,11 @@ interface VisaModalProps {
   isOpen: boolean;
   onClose: () => void;
   processingId: string;
+  candidateProjectMapId?: string;
   onComplete?: () => void | Promise<void>;
 }
 
-export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaModalProps) {
+export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: VisaModalProps) {
   const { data, isLoading, error, refetch } = useGetVisaRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -103,6 +104,12 @@ export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaMod
       map[d.docType] = map[d.docType] || [];
       map[d.docType].push(d);
     });
+
+    // Ensure newest document is at index 0
+    Object.keys(map).forEach((type) => {
+      map[type].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    });
+
     return map;
   }, [candidateDocs]);
 
@@ -117,14 +124,25 @@ export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaMod
       const fileUrl = d.document?.fileUrl || doc?.fileUrl;
       const mimeType = d.document?.mimeType || doc?.mimeType;
       const id = d.document?.id || d.processingDocument?.id || d.id;
+      const createdAt = d.createdAt || doc?.createdAt || d.processingDocument?.createdAt;
 
       if (!docType) return; // skip malformed entries
 
-      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id };
+      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id, createdAt };
 
       map[docType] = map[docType] || [];
       map[docType].push(normalized);
     });
+
+    // Ensure newest document is at index 0
+    Object.keys(map).forEach((type) => {
+      map[type].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+    });
+
     return map;
   }, [processingDocs]);
 
@@ -137,8 +155,8 @@ export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaMod
   const handleViewDocument = (docType: string) => {
     const pdocs = processingDocsByDocType[docType] || [];
     const cdocs = candidateDocsByDocType[docType] || [];
-    const pdoc = pdocs[pdocs.length - 1];
-    const cdoc = cdocs[cdocs.length - 1];
+    const pdoc = pdocs[0];
+    const cdoc = cdocs[0];
     const url = pdoc?.fileUrl || cdoc?.fileUrl;
 
     if (!url) {
@@ -179,7 +197,7 @@ export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaMod
     }
 
     const cdocs = candidateDocsByDocType[docType] || [];
-    const cdoc = cdocs[cdocs.length - 1];
+    const cdoc = cdocs[0];
 
     if (!cdoc) {
       // No candidate-level document: prompt upload flow so user can add & then verify
@@ -627,11 +645,11 @@ export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaMod
                   {requiredDocuments.map((req) => {
 
                     const candidateList = candidateDocsByDocType[req.docType] || [];
-                    const candidateDoc = candidateList[candidateList.length - 1];
+                    const candidateDoc = candidateList[0];
                     const candidateVerified = candidateDoc?.status === 'verified';
 
                     const processingList = processingDocsByDocType[req.docType] || [];
-                    const processingDoc = processingList[processingList.length - 1];
+                    const processingDoc = processingList[0];
                     const processingVerified = processingDoc?.status === 'verified';
 
                     const hasPending = (candidateDoc?.status === 'pending') || (processingDoc?.status === 'pending');
@@ -715,8 +733,7 @@ export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaMod
                                         candidate?.role?.roleCatalog?.id,
                                         candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
                                         candidateDoc?.id,
-                                        // pick latest verification's candidateProjectMapId if available
-                                        candidateDoc?.verifications?.length ? candidateDoc.verifications[candidateDoc.verifications.length - 1].candidateProjectMapId : undefined
+                                        candidateProjectMapId
                                       )}
                                     >
                                       <Upload className="h-3 w-3 mr-1" />
@@ -749,13 +766,31 @@ export function VisaModal({ isOpen, onClose, processingId, onComplete }: VisaMod
                                   )}
                                 </>
                               ) : (
-                                processingVerified ? (
-                                  <div className="flex items-center gap-2">
-                                    <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
-                                  </div>
-                                ) : (
-                                  <div className="text-xs text-slate-500">In processing</div>
-                                )
+                                <div className="flex items-center gap-2">
+                                  {processingVerified ? (
+                                    <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2 border-emerald-200">Verified</Badge>
+                                  ) : (
+                                    <>
+                                      <div className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">In processing</div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          processingDoc.id,
+                                          candidateProjectMapId
+                                        )}
+                                      >
+                                        <RefreshCw className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               )}
                             </>
                           )}

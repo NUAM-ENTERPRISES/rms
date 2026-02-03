@@ -1635,7 +1635,11 @@ export class DocumentsService {
     // GET ALL VERIFICATIONS (full list of uploaded docs for this project)
     const allVerifications =
       await this.prisma.candidateProjectDocumentVerification.findMany({
-        where: { candidateProjectMapId: candidateProject.id, isDeleted: false } as any,
+        where: {
+          candidateProjectMapId: candidateProject.id,
+          isDeleted: false,
+          isUploadedByProcessingTeam: false,
+        } as any,
         include: {
           document: {
             select: {
@@ -1671,7 +1675,17 @@ export class DocumentsService {
 
     // GET ALL candidate documents (global history)
     const allCandidateDocuments = await this.prisma.document.findMany({
-      where: { candidateId },
+      where: {
+        candidateId,
+        NOT: {
+          verifications: {
+            some: {
+              candidateProjectMapId: candidateProject.id,
+              isUploadedByProcessingTeam: true,
+            },
+          },
+        },
+      } as any,
       select: {
         id: true,
         docType: true,

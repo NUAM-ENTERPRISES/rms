@@ -478,6 +478,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleHrdComplete}
       />
 
@@ -486,6 +487,7 @@ export default function ProcessingCandidateDetailsPage() {
         isOpen={showDocumentReceivedModal}
         onClose={() => { setShowDocumentReceivedModal(false); refetchCandidateDetails(); }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -497,6 +499,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -508,6 +511,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -519,6 +523,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -539,6 +544,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -550,6 +556,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -561,6 +568,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -572,6 +580,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -583,6 +592,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
@@ -594,6 +604,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleEligibilityComplete}
       />
 
@@ -605,6 +616,7 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
+        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleDataFlowComplete}
       />
     </div>

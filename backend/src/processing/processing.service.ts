@@ -331,9 +331,14 @@ export class ProcessingService {
             candidateId: pc.candidate.id,
             isDeleted: false,
             docType: 'offer_letter',
-            verifications: { some: { candidateProjectMapId: candidateProjectMap.id } },
+            verifications: { some: { candidateProjectMapId: candidateProjectMap.id, isProcessingReplaced: false } },
           },
-          include: { verifications: { include: { candidateProjectMap: { select: { id: true, projectId: true, roleNeededId: true } }, roleCatalog: { select: { id: true } } } } },
+          include: { 
+            verifications: { 
+              where: { isProcessingReplaced: false, isDeleted: false },
+              include: { candidateProjectMap: { select: { id: true, projectId: true, roleNeededId: true } }, roleCatalog: { select: { id: true } } } 
+            } 
+          },
           orderBy: { createdAt: 'desc' },
         });
       } else if (pc.role?.roleCatalogId) {
@@ -342,9 +347,14 @@ export class ProcessingService {
             candidateId: pc.candidate.id,
             isDeleted: false,
             docType: 'offer_letter',
-            verifications: { some: { roleCatalogId: pc.role.roleCatalogId } },
+            verifications: { some: { roleCatalogId: pc.role.roleCatalogId, isProcessingReplaced: false } },
           },
-          include: { verifications: { include: { candidateProjectMap: { select: { id: true, projectId: true, roleNeededId: true } }, roleCatalog: { select: { id: true } } } } },
+          include: { 
+            verifications: { 
+              where: { isProcessingReplaced: false, isDeleted: false },
+              include: { candidateProjectMap: { select: { id: true, projectId: true, roleNeededId: true } }, roleCatalog: { select: { id: true } } } 
+            } 
+          },
           orderBy: { createdAt: 'desc' },
         });
       }
@@ -552,6 +562,9 @@ export class ProcessingService {
     let processing_documents = (hrdStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
+        // Skip if verification was replaced by a newer processing upload
+        if (ver?.isProcessingReplaced) return null;
+        
         return {
           processingStepDocumentId: d.id,
           processingDocument: {
@@ -574,12 +587,14 @@ export class ProcessingService {
                 candidateProjectMap: ver.candidateProjectMap || null,
                 createdAt: ver.createdAt,
                 updatedAt: ver.updatedAt,
+                isUploadedByProcessingTeam: ver.isUploadedByProcessingTeam,
+                isProcessingReplaced: ver.isProcessingReplaced,
               }
             : null,
           document: ver?.document || null,
         };
       })
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     // Include candidate's own documents of relevant doc types and their verifications
     const candidateDocuments = await this.prisma.document.findMany({
@@ -591,9 +606,28 @@ export class ProcessingService {
           { roleCatalogId: pc.role?.roleCatalogId || null },
           { roleCatalogId: null },
         ],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -618,6 +652,9 @@ export class ProcessingService {
     processing_documents.forEach((pd: any) => {
       if (pd.document?.docType) uploadedDocTypes.add(pd.document.docType);
     });
+    
+    // We already filtered candidateDocuments.verifications in the query 
+    // to isProcessingReplaced: false and matching CPM.
     candidateDocuments.forEach((d: any) => {
       if (d.docType) uploadedDocTypes.add(d.docType);
     });
@@ -758,15 +795,33 @@ export class ProcessingService {
     const filterDocTypes = docType ? [docType] : activeDocTypes;
 
     let processing_documents = (visaStep?.documents || [])
-      .map((d: any) => ({
-        id: d.id,
-        processingStepId: d.processingStepId,
-        uploadedAt: d.createdAt,
-        documentId: d.candidateProjectDocumentVerification?.documentId || null,
-        verification: d.candidateProjectDocumentVerification || null,
-        document: d.candidateProjectDocumentVerification?.document || null,
-      }))
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        // Skip if verification was replaced by a newer processing upload
+        if (ver?.isProcessingReplaced) return null;
+
+        return {
+          id: d.id,
+          processingStepId: d.processingStepId,
+          uploadedAt: d.createdAt,
+          documentId: ver?.documentId || null,
+          verification: ver ? {
+            id: ver.id,
+            status: ver.status,
+            notes: ver.notes || null,
+            rejectionReason: ver.rejectionReason || null,
+            resubmissionRequested: ver.resubmissionRequested || false,
+            roleCatalog: ver.roleCatalog || null,
+            candidateProjectMap: ver.candidateProjectMap || null,
+            createdAt: ver.createdAt,
+            updatedAt: ver.updatedAt,
+            isUploadedByProcessingTeam: ver.isUploadedByProcessingTeam,
+            isProcessingReplaced: ver.isProcessingReplaced,
+          } : null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -774,9 +829,28 @@ export class ProcessingService {
         isDeleted: false,
         docType: { in: filterDocTypes },
         OR: [{ roleCatalogId: pc.role?.roleCatalogId || null }, { roleCatalogId: null }],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -907,15 +981,20 @@ export class ProcessingService {
     const filterDocTypes = docType ? [docType] : activeDocTypes;
 
     let processing_documents = (documentReceivedStep?.documents || [])
-      .map((d: any) => ({
-        id: d.id,
-        processingStepId: d.processingStepId,
-        uploadedAt: d.createdAt,
-        documentId: d.candidateProjectDocumentVerification?.documentId || null,
-        verification: d.candidateProjectDocumentVerification || null,
-        document: d.candidateProjectDocumentVerification?.document || null,
-      }))
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
+
+        return {
+          id: d.id,
+          processingStepId: d.processingStepId,
+          uploadedAt: d.createdAt,
+          documentId: ver?.documentId || null,
+          verification: ver || null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -923,9 +1002,28 @@ export class ProcessingService {
         isDeleted: false,
         docType: { in: filterDocTypes },
         OR: [{ roleCatalogId: pc.role?.roleCatalogId || null }, { roleCatalogId: null }],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -1064,15 +1162,20 @@ export class ProcessingService {
     const filterDocTypes = docType ? [docType] : activeDocTypes;
 
     const processing_documents = (emigrationStep?.documents || [])
-      .map((d: any) => ({
-        id: d.id,
-        processingStepId: d.processingStepId,
-        uploadedAt: d.createdAt,
-        documentId: d.candidateProjectDocumentVerification?.documentId || null,
-        verification: d.candidateProjectDocumentVerification || null,
-        document: d.candidateProjectDocumentVerification?.document || null,
-      }))
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
+
+        return {
+          id: d.id,
+          processingStepId: d.processingStepId,
+          uploadedAt: d.createdAt,
+          documentId: ver?.documentId || null,
+          verification: ver || null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -1080,9 +1183,28 @@ export class ProcessingService {
         isDeleted: false,
         docType: { in: filterDocTypes },
         OR: [{ roleCatalogId: pc.role?.roleCatalogId || null }, { roleCatalogId: null }],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -1224,6 +1346,7 @@ export class ProcessingService {
     let processing_documents = (councilStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
         return {
           processingStepDocumentId: d.id,
           processingDocument: {
@@ -1250,7 +1373,7 @@ export class ProcessingService {
           document: ver?.document || null,
         };
       })
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -1261,9 +1384,28 @@ export class ProcessingService {
           { roleCatalogId: pc.role?.roleCatalogId || null },
           { roleCatalogId: null },
         ],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -1428,6 +1570,7 @@ export class ProcessingService {
     let processing_documents = (attestationStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
         return {
           processingStepDocumentId: d.id,
           processingDocument: {
@@ -1454,7 +1597,7 @@ export class ProcessingService {
           document: ver?.document || null,
         };
       })
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -1465,9 +1608,28 @@ export class ProcessingService {
           { roleCatalogId: pc.role?.roleCatalogId || null },
           { roleCatalogId: null },
         ],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -1632,6 +1794,7 @@ export class ProcessingService {
     let processing_documents = (medicalStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
         return {
           processingStepDocumentId: d.id,
           processingDocument: {
@@ -1658,7 +1821,7 @@ export class ProcessingService {
           document: ver?.document || null,
         };
       })
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -1669,9 +1832,28 @@ export class ProcessingService {
           { roleCatalogId: pc.role?.roleCatalogId || null },
           { roleCatalogId: null },
         ],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -1837,6 +2019,7 @@ export class ProcessingService {
     let processing_documents = (biometricStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
         return {
           processingStepDocumentId: d.id,
           processingDocument: {
@@ -1863,7 +2046,7 @@ export class ProcessingService {
           document: ver?.document || null,
         };
       })
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -1874,9 +2057,28 @@ export class ProcessingService {
           { roleCatalogId: pc.role?.roleCatalogId || null },
           { roleCatalogId: null },
         ],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -2034,14 +2236,18 @@ export class ProcessingService {
     const filterDocTypes = docType ? [docType] : activeDocTypes;
 
     let processing_documents = (elStep?.documents || [])
-      .map((d: any) => ({
-        id: d.id,
-        uploadedBy: d.uploadedBy,
-        status: d.status,
-        uploadedAt: d.createdAt,
-        verification: d.candidateProjectDocumentVerification || null,
-      }))
-      .filter((u) => u.verification && filterDocTypes.includes(u.verification.document?.docType));
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
+        return {
+          id: d.id,
+          uploadedBy: d.uploadedBy,
+          status: d.status,
+          uploadedAt: d.createdAt,
+          verification: ver || null,
+        };
+      })
+      .filter((u) => u !== null && u.verification && filterDocTypes.includes(u.verification.document?.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -2049,9 +2255,28 @@ export class ProcessingService {
         isDeleted: false,
         docType: { in: filterDocTypes },
         OR: [ { roleCatalogId: pc.role?.roleCatalogId || null }, { roleCatalogId: null } ],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: { include: { project: true, roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } } } },
             roleCatalog: true,
@@ -2194,6 +2419,7 @@ export class ProcessingService {
     let processing_documents = (dfStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
         return {
           processingStepDocumentId: d.id,
           processingDocument: {
@@ -2220,7 +2446,7 @@ export class ProcessingService {
           document: ver?.document || null,
         };
       })
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -2231,9 +2457,28 @@ export class ProcessingService {
           { roleCatalogId: pc.role?.roleCatalogId || null },
           { roleCatalogId: null },
         ],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -2369,6 +2614,7 @@ export class ProcessingService {
     const processing_documents = (prometricStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
         return {
           processingStepDocumentId: d.id,
           processingDocument: { id: d.id, status: d.status, notes: d.notes || null, uploadedBy: d.uploadedBy || null, createdAt: d.createdAt, updatedAt: d.updatedAt },
@@ -2376,7 +2622,7 @@ export class ProcessingService {
           document: ver?.document || null,
         };
       })
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -2384,8 +2630,34 @@ export class ProcessingService {
         isDeleted: false,
         docType: { in: filterDocTypes },
         OR: [{ roleCatalogId: pc.role?.roleCatalogId || null }, { roleCatalogId: null }],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
-      include: { verifications: { include: { candidateProjectMap: { include: { project: true, roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } } } }, roleCatalog: true } } },
+      include: {
+        verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
+          include: {
+            candidateProjectMap: { include: { project: true, roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } } } },
+            roleCatalog: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -2481,15 +2753,19 @@ export class ProcessingService {
     const filterDocTypes = docType ? [docType] : activeDocTypes;
 
     const processing_documents = (ticketStep?.documents || [])
-      .map((d: any) => ({
-        id: d.id,
-        processingStepId: d.processingStepId,
-        uploadedAt: d.createdAt,
-        documentId: d.candidateProjectDocumentVerification?.documentId || null,
-        verification: d.candidateProjectDocumentVerification || null,
-        document: d.candidateProjectDocumentVerification?.document || null,
-      }))
-      .filter((u) => u.document && filterDocTypes.includes(u.document.docType));
+      .map((d: any) => {
+        const ver = d.candidateProjectDocumentVerification;
+        if (ver?.isProcessingReplaced) return null;
+        return {
+          id: d.id,
+          processingStepId: d.processingStepId,
+          uploadedAt: d.createdAt,
+          documentId: ver?.documentId || null,
+          verification: ver || null,
+          document: ver?.document || null,
+        };
+      })
+      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
 
     const candidateDocuments = await this.prisma.document.findMany({
       where: {
@@ -2497,9 +2773,28 @@ export class ProcessingService {
         isDeleted: false,
         docType: { in: filterDocTypes },
         OR: [{ roleCatalogId: pc.role?.roleCatalogId || null }, { roleCatalogId: null }],
+        verifications: {
+          none: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: true,
+          },
+        },
       },
       include: {
         verifications: {
+          where: {
+            candidateProjectMap: {
+              candidateId: pc.candidate.id,
+              projectId: pc.project.id,
+              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+            },
+            isProcessingReplaced: false,
+            isDeleted: false,
+          },
           include: {
             candidateProjectMap: {
               include: {
@@ -3183,27 +3478,15 @@ export class ProcessingService {
     // 5. Perform transaction: soft delete old verification(s) + document, add history; create new document + verification + history
     const result = await this.prisma.$transaction(async (tx) => {
       // find existing verifications that link this old document to the nomination
-      const existingVerifications = await tx.candidateProjectDocumentVerification.findMany({ where: { documentId: oldDocumentId, candidateProjectMapId: candidateProjectMapId, isDeleted: false } as any });
+      const existingVerifications = await tx.candidateProjectDocumentVerification.findMany({ where: { documentId: oldDocumentId, candidateProjectMapId: candidateProjectMapId, isProcessingReplaced: false } });
       const verificationIds = existingVerifications.map((v) => v.id);
 
-      // soft delete verifications
+      // Mark old verifications as replaced by processing team
       if (verificationIds.length > 0) {
-        await tx.candidateProjectDocumentVerification.updateMany({ where: { id: { in: verificationIds } } as any, data: { isDeleted: true, deletedAt: new Date() } as any });
-      }
-
-      // soft delete the old document
-      await tx.document.updateMany({ where: { id: oldDocumentId, isDeleted: false } as any, data: { isDeleted: true, deletedAt: new Date() } as any });
-
-      // add history entries for the replaced (soft-deleted) verification(s)
-      if (verificationIds.length > 0) {
-        const historyEntries = verificationIds.map((id) => ({
-          verificationId: id,
-          action: 'replaced',
-          performedBy: userId,
-          performedByName: user?.name || 'System',
-          notes: 'Old document replaced by processing re-upload',
-        }));
-        await tx.documentVerificationHistory.createMany({ data: historyEntries });
+        await tx.candidateProjectDocumentVerification.updateMany({ 
+          where: { id: { in: verificationIds } }, 
+          data: { isProcessingReplaced: true } 
+        });
       }
 
       // create the new document
@@ -3222,14 +3505,24 @@ export class ProcessingService {
         status: DOCUMENT_STATUS.PENDING,
       } });
 
-      // create verification for the new document
+      // create verification for the new document with processing flags
       const newVerification = await tx.candidateProjectDocumentVerification.create({ data: {
         candidateProjectMapId: candidateProjectMapId,
         documentId: newDocument.id,
         roleCatalogId: roleCatalogId || oldDocument.roleCatalogId || null,
         status: DOCUMENT_STATUS.PENDING,
         notes,
-      } as any });
+        isUploadedByProcessingTeam: true,
+        isProcessingReplaced: false,
+      } });
+
+      // Update any existing processing step documents to point to the new verification
+      if (verificationIds.length > 0) {
+        await tx.processingStepDocument.updateMany({
+          where: { candidateProjectDocumentVerificationId: { in: verificationIds } },
+          data: { candidateProjectDocumentVerificationId: newVerification.id }
+        });
+      }
 
       // create history entry for new verification (processing re-upload)
       await tx.documentVerificationHistory.create({ data: {
@@ -3237,7 +3530,7 @@ export class ProcessingService {
         action: 'reuploaded',
         performedBy: userId,
         performedByName: user?.name || null,
-        notes: 'reuploaded',
+        notes: 'Document re-uploaded by processing team',
       } });
 
       return { oldDocumentId, newDocument, newVerification };
@@ -3245,9 +3538,9 @@ export class ProcessingService {
 
     // 6. Update candidate project status similar to DocumentsService
     // Recompute summary counts to determine new status
-    const totalSubmitted = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isDeleted: false } as any });
-    const totalPending = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isDeleted: false, status: 'pending' } as any });
-    const totalRejected = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isDeleted: false, status: 'rejected' } as any });
+    const totalSubmitted = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isProcessingReplaced: false, isDeleted: false } as any });
+    const totalPending = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isProcessingReplaced: false, isDeleted: false, status: 'pending' } as any });
+    const totalRejected = await this.prisma.candidateProjectDocumentVerification.count({ where: { candidateProjectMapId: candidateProjectMapId, isProcessingReplaced: false, isDeleted: false, status: 'rejected' } as any });
 
     const totalRequired = await this.prisma.documentRequirement.count({ where: { projectId: candidateProjectMap.projectId, isDeleted: false } as any });
 
@@ -3456,7 +3749,9 @@ export class ProcessingService {
         if (['completed', 'rejected'].includes(s.status)) continue;
 
         const hasVerifiedDocument = (s.documents || []).some(
-          (d: any) => d.status === 'verified' || (d.candidateProjectDocumentVerification && d.candidateProjectDocumentVerification.status === 'verified'),
+          (d: any) => 
+            (d.status === 'verified' || (d.candidateProjectDocumentVerification && d.candidateProjectDocumentVerification.status === 'verified')) &&
+            !d.candidateProjectDocumentVerification?.isProcessingReplaced,
         );
 
         if (hasVerifiedDocument && s.status !== 'in_progress') {
@@ -4511,7 +4806,7 @@ export class ProcessingService {
 
         if (cpmIds.length > 0) {
           projectVerifications = await this.prisma.candidateProjectDocumentVerification.findMany({
-            where: { candidateProjectMapId: { in: cpmIds }, status: 'verified', isDeleted: false, ...(search ? docSearchCondition : {}) } as any,
+            where: { candidateProjectMapId: { in: cpmIds }, status: 'verified', isDeleted: false, isProcessingReplaced: false, ...(search ? docSearchCondition : {}) } as any,
             include: { document: true },
             orderBy: { createdAt: 'desc' },
           });
@@ -4522,7 +4817,7 @@ export class ProcessingService {
       const cpm = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
       if (cpm) {
         projectVerifications = await this.prisma.candidateProjectDocumentVerification.findMany({
-          where: { candidateProjectMapId: cpm.id, status: 'verified', isDeleted: false, ...(search ? docSearchCondition : {}) } as any,
+          where: { candidateProjectMapId: cpm.id, status: 'verified', isDeleted: false, isProcessingReplaced: false, ...(search ? docSearchCondition : {}) } as any,
           include: { document: true },
           orderBy: { createdAt: 'desc' },
         });

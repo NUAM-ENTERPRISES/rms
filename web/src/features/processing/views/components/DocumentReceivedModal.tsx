@@ -18,17 +18,18 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
-import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useSubmitHrdDateMutation, useReuploadProcessingDocumentMutation } from "@/services/processingApi";
 
 interface DocumentReceivedModalProps {
   isOpen: boolean;
   onClose: () => void;
   processingId: string;
+  candidateProjectMapId?: string;
   onComplete?: () => void | Promise<void>;
 
 }
 
-export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplete }: DocumentReceivedModalProps) {
+export function DocumentReceivedModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: DocumentReceivedModalProps) {
   // Use RTK Query to fetch requirements (ensures auth & caching)
   const { data, isLoading, error, refetch: refetchRequirements } = useGetDocumentReceivedRequirementsQuery(processingId, { skip: !isOpen || !processingId });
 
@@ -49,6 +50,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
   const [reuseDocument, { isLoading: isReusing }] = useReuseDocumentMutation();
 
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
+  const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
@@ -58,6 +60,10 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+
+  // Reupload context (when replacing an existing document)
+  const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
+  const [replaceCandidateProjectMapId, setReplaceCandidateProjectMapId] = useState<string | null>(null);
 
 
 
@@ -82,6 +88,10 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
       map[d.docType] = map[d.docType] || [];
       map[d.docType].push(d);
     });
+    // Sort each list by createdAt descending
+    Object.keys(map).forEach(type => {
+      map[type].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    });
     return map;
   }, [candidateDocs]);
 
@@ -96,10 +106,16 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
       const fileUrl = d.document?.fileUrl || doc?.fileUrl;
       const mimeType = d.document?.mimeType || doc?.mimeType;
       const id = d.document?.id || d.processingDocument?.id || d.id;
+      const createdAt = d.document?.createdAt || doc?.createdAt || d.createdAt;
+      
       if (!docType) return;
-      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id };
+      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id, createdAt };
       map[docType] = map[docType] || [];
       map[docType].push(normalized);
+    });
+    // Sort each list by createdAt descending
+    Object.keys(map).forEach(type => {
+      map[type].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     });
     return map;
   }, [processingDocs]);
@@ -108,8 +124,8 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
   const handleViewDocument = (docType: string) => {
     const pdocs = processingDocsByDocType[docType] || [];
     const cdocs = candidateDocsByDocType[docType] || [];
-    const pdoc = pdocs[pdocs.length - 1];
-    const cdoc = cdocs[cdocs.length - 1];
+    const pdoc = pdocs[0];
+    const cdoc = cdocs[0];
     const url = pdoc?.fileUrl || cdoc?.fileUrl;
     if (!url) { toast('No document available to view'); return; }
     let mime = pdoc?.mimeType || cdoc?.mimeType;
@@ -129,20 +145,22 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
   };
 
   // Upload handlers (reuse existing flows)
-  const handleUploadClick = (docType: string, docLabel: string, roleCatalog?: string, roleLabel?: string) => {
+  const handleUploadClick = (docType: string, docLabel: string, roleCatalog?: string, roleLabel?: string, oldDocumentId?: string, candidateProjectMapId?: string) => {
     setSelectedDocType(docType);
     setSelectedDocLabel(docLabel);
     setSelectedRoleCatalog(roleCatalog);
     setSelectedRoleLabel(roleLabel);
+    setReplaceOldDocumentId(oldDocumentId ?? null);
+    setReplaceCandidateProjectMapId(candidateProjectMapId ?? null);
     setUploadModalOpen(true);
   };
 
   const handleUploadFile = async (file: File) => {
-    if (!candidate?.candidate?.id && !candidate?.id) {
+    const candidateId = candidate?.candidate?.id || candidate?.id;
+    if (!candidateId) {
       toast.error('Missing candidate id');
       return;
     }
-    const candidateId = candidate?.candidate?.id || candidate?.id;
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -150,6 +168,42 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
       if (selectedRoleCatalog) formData.append('roleCatalogId', selectedRoleCatalog);
       const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
       const uploadData = uploadResp.data;
+
+      // If this is a re-upload (replace) operation, call processing reupload endpoint
+      if (replaceOldDocumentId) {
+        if (!replaceCandidateProjectMapId) {
+          toast.error("Missing nomination id (candidateProjectMapId) for re-upload");
+          return;
+        }
+
+        try {
+          const payload: any = {
+            oldDocumentId: replaceOldDocumentId,
+            candidateProjectMapId: replaceCandidateProjectMapId,
+            fileName: uploadData?.fileName || file.name,
+            fileUrl: uploadData?.fileUrl || "",
+            fileSize: uploadData?.fileSize || file.size,
+            mimeType: uploadData?.mimeType || file.type || undefined,
+            ...(selectedRoleCatalog && { roleCatalogId: selectedRoleCatalog }),
+            ...(selectedDocType && { docType: selectedDocType }),
+          };
+
+          const resp = await reuploadProcessingDocument(payload).unwrap();
+          toast.success(resp?.message || "File re-uploaded and sent for processing");
+        } catch (reErr: any) {
+          console.error("Processing reupload failed", reErr);
+          toast.error(reErr?.data?.message || reErr?.error || "Failed to reupload document for processing");
+        } finally {
+          // clear reupload context
+          setReplaceOldDocumentId(null);
+          setReplaceCandidateProjectMapId(null);
+          setUploadModalOpen(false);
+          await refetchRequirements();
+        }
+
+        return;
+      }
+
       // Create processing document entry
       const createResp = await createDocument({ candidateId, docType: selectedDocType, fileName: uploadData?.fileName || file.name, fileUrl: uploadData?.fileUrl || '' }).unwrap();
       const documentId = createResp.data.id;
@@ -175,6 +229,34 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [verifyDocId, setVerifyDocId] = useState<string>('');
   const [verifyDocLabel, setVerifyDocLabel] = useState<string>('');
+
+  const handleVerifyClick = (docType: string, label?: string, roleCatalog?: string, roleLabel?: string) => {
+    const pdocs = processingDocsByDocType[docType] || [];
+    if (pdocs.length > 0) {
+      // Already present in processing. Nothing to do here (backend action expected later)
+      toast.success("Document already in processing");
+      return;
+    }
+
+    const cdocs = candidateDocsByDocType[docType] || [];
+    const cdoc = cdocs[0];
+
+    if (!cdoc) {
+      // No candidate-level document: prompt upload flow so user can add & then verify
+      toast("No candidate document found. Please upload a document to verify.");
+      setSelectedDocType(docType);
+      setSelectedDocLabel(label || "");
+      setSelectedRoleCatalog(roleCatalog);
+      setSelectedRoleLabel(roleLabel);
+      setUploadModalOpen(true);
+      return;
+    }
+
+    // Candidate doc exists - Open verification modal
+    setVerifyDocId(cdoc.id);
+    setVerifyDocLabel(label || "Document");
+    setVerifyModalOpen(true);
+  };
 
   const handleConfirmVerify = async (notes: string) => {
     if (!activeStep?.id || !verifyDocId) return;
@@ -384,9 +466,9 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req: any) => {
                     const candidateList = candidateDocsByDocType[req.docType] || [];
-                    const candidateDoc = candidateList[candidateList.length - 1];
+                    const candidateDoc = candidateList[0];
                     const processingList = processingDocsByDocType[req.docType] || [];
-                    const processingDoc = processingList[processingList.length - 1];
+                    const processingDoc = processingList[0];
 
                     const processingVerified = processingDoc?.status === 'verified';
                     const hasPending = (candidateDoc?.status === 'pending') || (processingDoc?.status === 'pending');
@@ -418,11 +500,51 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, onComplet
 
                           {!hasProcessing ? (
                             <>
-                              {candidateDoc?.status === 'pending' && (<Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}><Upload className="h-3 w-3 mr-1" />Re-upload</Button>)}
+                              {/* Re-upload when candidate doc exists (even if verified) */}
+                              {candidateDoc && (candidateDoc.status === 'pending' || candidateDoc.status === 'verified') && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 text-xs font-semibold border-slate-200 hover:bg-slate-50"
+                                  onClick={() => handleUploadClick(
+                                    req.docType,
+                                    req.label,
+                                    candidate?.role?.roleCatalog?.id,
+                                    candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                    candidateDoc?.id,
+                                    candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
+                                  )}
+                                >
+                                  <Upload className="h-3.5 w-3.5 mr-1.5" />
+                                  Re-upload
+                                </Button>
+                              )}
                               {!candidateDoc && (<Button size="sm" variant="default" className="h-8 text-xs" onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}><Upload className="h-3 w-3 mr-1" />Upload</Button>)}
-                              {candidateDoc && (<Button size="sm" variant="default" onClick={() => { setVerifyDocId(candidateDoc.id); setVerifyDocLabel(req.label || 'Document'); setVerifyModalOpen(true); }}>Verify</Button>)}
+                              {candidateDoc && (<Button size="sm" variant="default" onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>Verify</Button>)}
                             </>
-                          ) : processingVerified ? (<Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>) : (<div className="text-xs text-slate-500">In processing</div>)}
+                          ) : processingVerified ? (
+                            <div className="flex items-center gap-2">
+                              <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                onClick={() => handleUploadClick(
+                                  req.docType,
+                                  req.label,
+                                  candidate?.role?.roleCatalog?.id,
+                                  candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                  processingDoc?.id,
+                                  candidateProjectMapId || processingDoc?.candidateProjectMapId
+                                )}
+                              >
+                                <Upload className="h-3 w-3 mr-1" />
+                                Re-upload
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
+                          )}
                         </div>
                       </div>
                     );
