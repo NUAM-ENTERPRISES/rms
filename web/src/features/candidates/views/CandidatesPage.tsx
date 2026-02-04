@@ -1422,7 +1422,10 @@ export default function CandidatesPage() {
                       filters.status === "all" &&
                       filters.experience === "all" &&
                       canWriteCandidates && (
-                        <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+                        <Button
+                          onClick={() => navigate("/candidates/create")}
+                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                        >
                           <Plus className="mr-2 h-4 w-4" />
                           Add Your First Candidate
                         </Button>

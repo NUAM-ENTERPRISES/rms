@@ -255,6 +255,10 @@ const ProjectCandidatesBoard = ({
     eligibleResponse?.data
   )
     ? (eligibleResponse.data as CandidateRecord[])
+    : eligibleResponse?.data && typeof eligibleResponse.data === "object"
+    ? (eligibleResponse.data as any).candidates ||
+      (eligibleResponse.data as any).data ||
+      []
     : [];
 
   // Extract candidates data - matching original RecruiterCandidatesTab pattern

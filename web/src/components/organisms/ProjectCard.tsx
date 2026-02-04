@@ -41,11 +41,11 @@ export default function ProjectCard({
   const isWarning = daysUntilDeadline <= 14 && daysUntilDeadline > 7;
 
   // Calculate total positions needed
-  const totalPositions = project.rolesNeeded.reduce(
+  const totalPositions = (project.rolesNeeded || []).reduce(
     (sum, role) => sum + role.quantity,
     0
   );
-  const filledPositions = project.candidateProjects.length;
+  const filledPositions = project.candidateProjects?.length || 0;
   const openPositions = totalPositions - filledPositions;
 
   // Get status color and icon
@@ -206,7 +206,7 @@ export default function ProjectCard({
 
               {/* Role Requirements */}
               <div className="space-y-1">
-                {project.rolesNeeded.slice(0, 3).map((role) => (
+                {(project.rolesNeeded || []).slice(0, 3).map((role) => (
                   <div
                     key={role.id}
                     className="flex items-center justify-between text-xs"
@@ -219,9 +219,9 @@ export default function ProjectCard({
                     </span>
                   </div>
                 ))}
-                {project.rolesNeeded.length > 3 && (
+                {(project.rolesNeeded?.length || 0) > 3 && (
                   <div className="text-xs text-gray-500">
-                    +{project.rolesNeeded.length - 3} more roles
+                    +{(project.rolesNeeded?.length || 0) - 3} more roles
                   </div>
                 )}
               </div>

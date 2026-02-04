@@ -61,6 +61,7 @@ model User {
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
+  documentForwards            DocumentForwardHistory[]
 
   @@unique([countryCode, mobileNumber])
   @@index([email])
@@ -225,6 +226,8 @@ model Project {
   team                 Team?                 @relation(fields: [teamId], references: [id])
   rolesNeeded          RoleNeeded[]
   processingTasks      ProcessingCandidate[]
+  mergedDocuments      MergedDocument[]
+  documentForwards     DocumentForwardHistory[]
 
   @@map("projects")
 }
@@ -332,6 +335,8 @@ model Candidate {
   
   // Meta leads received for this candidate (incoming lead forms)
   metaLeads            MetaLead[]
+  mergedDocuments      MergedDocument[]
+  documentForwards     DocumentForwardHistory[]
 
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
@@ -978,6 +983,8 @@ model RoleCatalog {
   documents                 Document[]
   // Work experiences linked to this role catalog
   workExperiences           WorkExperience[]
+  mergedDocuments           MergedDocument[]
+  documentForwards          DocumentForwardHistory[]
 
   @@index([roleDepartmentId])
   @@index([isActive])
@@ -1691,4 +1698,54 @@ model ProcessingHistory {
   @@index([changedById])
   @@index([recruiterId])
   @@map("processing_history")
+}
+
+model MergedDocument {
+  id            String    @id @default(cuid())
+  candidateId   String
+  projectId     String
+  roleCatalogId String?
+  fileUrl       String
+  fileName      String
+  fileSize      Int
+  mimeType      String    @default("application/pdf")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  candidate     Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  roleCatalog   RoleCatalog? @relation(fields: [roleCatalogId], references: [id], onDelete: SetNull)
+
+  @@unique([candidateId, projectId, roleCatalogId])
+  @@index([candidateId])
+  @@index([projectId])
+  @@index([roleCatalogId])
+  @@map("merged_documents")
+}
+
+model DocumentForwardHistory {
+  id              String   @id @default(cuid())
+  senderId        String
+  recipientEmail  String
+  candidateId     String
+  projectId       String
+  roleCatalogId   String?
+  sendType        String   // "merged" or "individual"
+  documentDetails Json     // Array of object with {id, fileName, fileUrl}
+  status          String   @default("pending") // "pending", "sent", "failed"
+  error           String?
+  notes           String?
+  sentAt          DateTime @default(now())
+
+  sender         User          @relation(fields: [senderId], references: [id])
+  candidate      Candidate     @relation(fields: [candidateId], references: [id])
+  project        Project       @relation(fields: [projectId], references: [id])
+  roleCatalog    RoleCatalog?  @relation(fields: [roleCatalogId], references: [id])
+
+  @@index([senderId])
+  @@index([candidateId])
+  @@index([projectId])
+  @@index([roleCatalogId])
+  @@index([status])
+  @@map("document_forward_history")
 }

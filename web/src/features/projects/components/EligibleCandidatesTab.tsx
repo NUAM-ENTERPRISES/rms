@@ -89,7 +89,11 @@ export default function EligibleCandidatesTab({
   const [sendForVerification] = useSendForVerificationMutation();
   const [assignToProject, { isLoading: isAssigning }] = useAssignToProjectMutation();
 
-  const eligibleCandidates = candidatesData?.data || [];
+  const eligibleCandidates = Array.isArray(candidatesData)
+    ? candidatesData
+    : candidatesData && typeof candidatesData === "object"
+    ? (candidatesData as any).candidates || (candidatesData as any).data || []
+    : [];
   const projectCandidates = projectCandidatesData?.data || [];
   const assignedToProjectIds = projectCandidates.map((c) => c.candidateId);
 

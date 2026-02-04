@@ -158,8 +158,12 @@ export default function ProjectDetailPage() {
 
   // Get eligible candidates
   const { data: eligibleResponse } = useGetEligibleCandidatesQuery(projectId!);
-  const eligibleCandidates = Array.isArray(eligibleResponse?.data)
+  const eligibleCandidates: any[] = Array.isArray(eligibleResponse?.data)
     ? eligibleResponse.data
+    : eligibleResponse?.data && typeof eligibleResponse.data === "object"
+    ? (eligibleResponse.data as any).candidates ||
+      (eligibleResponse.data as any).data ||
+      []
     : [];
 
   // Get all candidates based on user role

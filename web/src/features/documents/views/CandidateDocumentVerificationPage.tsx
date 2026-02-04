@@ -54,10 +54,22 @@ import {
   X,
   FileX,
   CheckCircle2,
+  Briefcase,
+  MapPin,
+  Users,
+  FileCheck,
+  Building2,
+  Shield,
+  Scissors,
+  Phone,
+  ClipboardList,
+  Mail,
+  Cake,
+  Code,
+  Send,
 } from "lucide-react";
 import { CANDIDATE_PROJECT_STATUS } from "@/constants/statuses";
 import {
-  useGetCandidateProjectsQuery,
   useGetCandidateProjectRequirementsQuery,
   useGetCandidateEligibilityQuery,
   useGetMatchmakingProcessQuery,
@@ -69,10 +81,13 @@ import {
   useRequestResubmissionMutation,
 } from "@/features/documents";
 import { useGetProjectQuery } from "@/features/projects";
+import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { MergeVerifiedModal } from "../components/MergeVerifiedModal";
+import { SendToClientModal } from "../components/SendToClientModal";
 // import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
 import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
@@ -129,13 +144,26 @@ export default function CandidateDocumentVerificationPage() {
   const [selectedVerification, setSelectedVerification] = useState<any>(null);
   // Local optimistic statuses so UI updates immediately
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
 
   // API Queries
   const {
-    data: projectsData,
+    data: projectResponse,
     isLoading: projectsLoading,
     error: projectsError,
-  } = useGetCandidateProjectsQuery(candidateId!);
+  } = useGetProjectQuery(selectedProjectId || routeProjectId || "", {
+    skip: !selectedProjectId && !routeProjectId,
+  });
+
+  const {
+    data: candidate,
+    isLoading: candidateLoading,
+    error: candidateError,
+  } = useGetCandidateByIdQuery(candidateId!, {
+    skip: !candidateId,
+  });
 
   const { data: requirementsData, isLoading: requirementsLoading, refetch: refetchRequirements } =
     useGetCandidateProjectRequirementsQuery(
@@ -143,17 +171,25 @@ export default function CandidateDocumentVerificationPage() {
       { skip: !selectedProjectId }
     );
 
-  // selectedProject should be the candidateProject mapping object. The
-  // `selectedProjectId` normally stores the project's `project.id`, but
-  // deep links may pass a candidateProjectMap id instead. Allow either
-  // to match here so the UI can render even if the URL contained the
-  // candidateProjectMap id.
-  const selectedProject = projectsData?.data?.find((p: any) => {
-    return (
-      p.project?.id === selectedProjectId || // when selectedProjectId is the project id
-      p.id === selectedProjectId // or when selectedProjectId is the candidateProjectMap id
-    );
+  // selectedProject should be the candidateProject mapping object.
+  const candidateProjectMapping = projectResponse?.data?.candidateProjects?.find((p: any) => {
+    const mappingCandidateId = p.candidateId?.id || p.candidateId;
+    return String(mappingCandidateId) === String(candidateId);
   });
+
+  const selectedProject = projectResponse?.data ? {
+    ...(candidateProjectMapping || {}),
+    id: candidateProjectMapping?.id, // Ensure ID is explicitly set
+    project: projectResponse.data,
+    // Add compatibility for roleNeeded if missing
+    roleNeeded: (candidateProjectMapping as any)?.roleNeeded || projectResponse.data.rolesNeeded?.[0], 
+    // Add compatibility for firstName/lastName if only name is present
+    candidate: candidateProjectMapping?.candidate ? {
+      ...candidateProjectMapping.candidate,
+      firstName: candidateProjectMapping.candidate.firstName || candidateProjectMapping.candidate.name?.split(' ')[0] || "",
+      lastName: candidateProjectMapping.candidate.lastName || candidateProjectMapping.candidate.name?.split(' ').slice(1).join(' ') || ""
+    } : undefined
+  } : null;
 
   // Eligibility and Matchmaking data
   const { data: eligibilityData } = useGetCandidateEligibilityQuery(
@@ -194,47 +230,39 @@ export default function CandidateDocumentVerificationPage() {
 
 
 
-  // Auto-select first project
+  // Auto-select or validate project
   useEffect(() => {
-    // If a route project id exists prefer that (ensures direct deep links work),
-    // otherwise fall back to the first project in the list.
-    if (routeProjectId) {
-      // If the route passed an id that is actually a candidateProjectMap id
-      // (top-level `p.id`) we want to normalise to the underlying
-      // project.id so requirements load correctly. If the route already
-      // contains a project.id we'll use that directly.
-      if (projectsData?.data && projectsData.data.length > 0) {
-        const match = projectsData.data.find(
-          (p: any) => p.project?.id === routeProjectId || p.id === routeProjectId
-        );
-
-        if (match) {
-          const projectId = match.project?.id || match.id || routeProjectId;
-          if (selectedProjectId !== projectId) setSelectedProjectId(projectId);
-          return;
-        }
-      }
-
-      // No projects loaded yet that match the route id — still set the route
-      // value so subsequent requests that assume projectId are guarded below.
-      if (selectedProjectId !== routeProjectId) setSelectedProjectId(routeProjectId);
-      return;
+    if (routeProjectId && selectedProjectId !== routeProjectId) {
+      setSelectedProjectId(routeProjectId);
+    } else if (projectResponse?.data && !selectedProjectId) {
+      setSelectedProjectId(projectResponse.data.id);
     }
-
-    if (
-      projectsData?.data &&
-      projectsData.data.length > 0 &&
-      !selectedProjectId
-    ) {
-      setSelectedProjectId(projectsData.data[0].project.id);
-    }
-  }, [projectsData, selectedProjectId, routeProjectId]);
+  }, [projectResponse, selectedProjectId, routeProjectId]);
 
   const requirements = requirementsData?.data?.requirements || [];
   const verifications = requirementsData?.data?.verifications || [];
   const allCandidateDocuments =
     requirementsData?.data?.allCandidateDocuments || [];
   const summary = requirementsData?.data?.summary || {};
+
+  // Documents that are verified and have a file URL
+  const verifiedDocuments = verifications
+    .filter((v: any) => v.status === "verified" && v.document?.fileUrl)
+    .map((v: any) => ({ 
+      id: v.document.id, // Use the actual Document ID, not the Verification ID
+      verificationId: v.id,
+      docType: v.document.docType, 
+      fileUrl: v.document.fileUrl, 
+      fileName: v.document.fileName || v.document.docType 
+    }));
+  const verifiedCount = verifiedDocuments.length;
+
+  // Source of truth for candidate-project mapping ID
+  const candidateProjectMapId = 
+    summary.candidateProjectMapId || 
+    selectedProject?.id || 
+    candidateProjectMapping?.id ||
+    verifications?.[0]?.candidateProjectMapId;
 
   // Derived flag: are all submitted documents rejected?
   const allRejected =
@@ -243,10 +271,17 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle document verification
   const handleVerifyDocument = async (verification: any) => {
+    const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
+    
+    if (!effectiveMapId) {
+      toast.error("No candidate-project mapping found for this candidate and project");
+      return;
+    }
+
     try {
       await verifyDocument({
         documentId: verification.document.id,
-        candidateProjectMapId: selectedProject?.id || "",
+        candidateProjectMapId: effectiveMapId,
         roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
         status: "verified",
         notes: verificationNotes,
@@ -262,10 +297,17 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle document rejection
   const handleRejectDocument = async (verification: any) => {
+    const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
+
+    if (!effectiveMapId) {
+      toast.error("No candidate-project mapping found for this candidate and project");
+      return;
+    }
+
     try {
       await verifyDocument({
         documentId: verification.document.id,
-        candidateProjectMapId: selectedProject?.id || "",
+        candidateProjectMapId: effectiveMapId,
         roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
         status: "rejected",
         notes: verificationNotes,
@@ -282,8 +324,8 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle verify all documents
   const handleVerifyAllDocuments = async () => {
-    if (!selectedProject?.id) {
-      toast.error("No project selected");
+    if (!candidateProjectMapId) {
+      toast.error("No candidate-project mapping found");
       return;
     }
 
@@ -303,7 +345,7 @@ export default function CandidateDocumentVerificationPage() {
       const verifyPromises = pendingVerifications.map((verification: any) =>
         verifyDocument({
           documentId: verification.document.id,
-          candidateProjectMapId: selectedProject.id,
+          candidateProjectMapId,
           roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
           status: "verified",
           notes: "Bulk verification",
@@ -325,8 +367,8 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle reject all documents
   const handleRejectAllDocuments = async () => {
-    if (!selectedProject?.id) {
-      toast.error("No project selected");
+    if (!candidateProjectMapId) {
+      toast.error("No candidate-project mapping found");
       return;
     }
 
@@ -346,7 +388,7 @@ export default function CandidateDocumentVerificationPage() {
       const rejectPromises = pendingVerifications.map((verification: any) =>
         verifyDocument({
           documentId: verification.document.id,
-          candidateProjectMapId: selectedProject.id,
+          candidateProjectMapId,
           roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
           status: "rejected",
           notes: "Bulk rejection",
@@ -393,10 +435,17 @@ export default function CandidateDocumentVerificationPage() {
       return;
     }
 
+    const effectiveMapId = selectedResubmitVerification?.candidateProjectMapId || candidateProjectMapId;
+
     try {
+      if (!effectiveMapId) {
+        toast.error("No candidate-project mapping found");
+        return;
+      }
+
       await requestResubmission({
         documentId: selectedResubmitVerification.document.id,
-        candidateProjectMapId: selectedProject?.id || "",
+        candidateProjectMapId: effectiveMapId,
         reason: resubmitReason,
         roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
       }).unwrap();
@@ -482,23 +531,21 @@ export default function CandidateDocumentVerificationPage() {
       return;
     }
 
+    if (!candidateProjectMapId) {
+      toast.error("No candidate-project mapping found");
+      return;
+    }
+
     try {
       await completeVerification({
-        candidateProjectMapId: selectedProject?.id,
+        candidateProjectMapId,
       }).unwrap();
       toast.success("Document verification completed!");
-      navigate("/documents/verification");
       // Ensure UI updates immediately
       refetchRequirements();
 
       // Trigger project and nominated candidates refetch so other pages (e.g., ProjectDetail)
       // pick up the updated status immediately
-      try {
-        await refetchProject?.();
-      } catch (e) {
-        // best-effort
-      }
-
       try {
         await refetchProject?.();
       } catch (e) {
@@ -516,13 +563,17 @@ export default function CandidateDocumentVerificationPage() {
       return;
     }
 
+    if (!candidateProjectMapId) {
+      toast.error("No candidate-project mapping found");
+      return;
+    }
+
     try {
       await rejectVerification({
-        candidateProjectMapId: selectedProject?.id,
+        candidateProjectMapId,
         reason: completionNotes || "Bulk rejection",
       }).unwrap();
       toast.success("Document rejection completed!");
-      navigate("/documents/verification");
       // Ensure UI updates immediately
       refetchRequirements();
 
@@ -650,23 +701,23 @@ export default function CandidateDocumentVerificationPage() {
     }
   };
 
-  if (projectsLoading) {
+  if (projectsLoading || candidateLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex items-center space-x-2">
           <RefreshCw className="h-4 w-4 animate-spin" />
-          <span>Loading candidate projects...</span>
+          <span>Loading details...</span>
         </div>
       </div>
     );
   }
 
-  if (projectsError || !projectsData?.data) {
+  if (projectsError || !projectResponse?.data || candidateError || !candidate) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-          <p className="text-destructive">Failed to load candidate projects</p>
+          <p className="text-destructive">Failed to load details</p>
                         <Button
             onClick={() => navigate("/documents/verification")}
             className="mt-2"
@@ -681,136 +732,283 @@ export default function CandidateDocumentVerificationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="container mx-auto px-1 pb-4 space-y-6">
-        {/* Candidate & Project Info */}
-      <motion.div
-  initial={{ opacity: 0, y: 12 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5, ease: "easeOut" }}
-  className="relative overflow-hidden rounded-xl border border-white/25 bg-white/85 backdrop-blur-xl shadow-xl"
->
-  {/* Minimal glow */}
-  <div className="absolute inset-0 bg-gradient-to-br from-blue-400/6 to-purple-400/4 pointer-events-none" />
-
-  <div className="p-4"> {/* Tiny padding */}
-    {selectedProject && (
-      <div className="space-y-3"> {/* Minimal spacing */}
-
-        {/* Header - Super Compact */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Left: Avatar + Name */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-blue-600 p-0.5 shadow-md flex-shrink-0">
-              <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                <User className="h-5 w-5 text-blue-600" />
+      <div className="container mx-auto px-1 pb-4 space-y-4">
+        {/* Candidate Details Header */}
+        {candidate && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="relative rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg border-l-4 border-l-blue-500 overflow-hidden"
+          >
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <User className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    {candidate.firstName} {candidate.lastName}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Candidate ID: {candidate.id}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Bulk Actions moved here */}
+                {canVerifyDocuments && !summary.isDocumentationReviewed && (
+                  <div className="flex gap-2 mr-2">
+                    {summary.totalSubmitted > 0 && summary.totalVerified < summary.totalSubmitted && (
+                      <Button
+                        size="sm"
+                        onClick={() => { setBulkAction("verify"); setIsBulkConfirmationOpen(true); }}
+                        disabled={isVerifyingAll}
+                        className="h-8 px-3 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg"
+                      >
+                        {isVerifyingAll ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+                        Verify All
+                      </Button>
+                    )}
+                    {summary.totalSubmitted > 0 && (summary.totalRejected || 0) < (summary.totalSubmitted || 0) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { setBulkAction("reject"); setIsBulkConfirmationOpen(true); }}
+                        disabled={isRejectingAll}
+                        className="h-8 px-3 text-xs border-red-400 text-red-600 hover:bg-red-50 rounded-lg"
+                      >
+                        {isRejectingAll ? <RefreshCw className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3 mr-1" />}
+                        Reject All
+                      </Button>
+                    )}
+                  </div>
+                )}
+                <Badge className="bg-blue-100 text-blue-700 text-xs font-semibold">
+                  {candidate.currentStatus?.statusName || "N/A"}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {candidate.gender || "Gender N/A"}
+                </Badge>
               </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-base font-bold text-slate-900 truncate">
-                {selectedProject.candidate?.firstName} {selectedProject.candidate?.lastName}
-              </h3>
-              <p className="text-xs text-blue-600 font-medium truncate">
-                {selectedProject.roleNeeded?.designation}
-              </p>
+
+            <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Email</p>
+                  <p className="font-semibold text-slate-700 truncate max-w-[150px]">
+                    {candidate.email || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Phone</p>
+                  <p className="font-semibold text-slate-700">
+                    {candidate.countryCode && `+${candidate.countryCode} `}
+                    {candidate.mobileNumber || candidate.contact || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Experience</p>
+                  <p className="font-semibold text-slate-700">
+                    {candidate.totalExperience || candidate.experience || 0} Years
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Current Employer</p>
+                  <p className="font-semibold text-slate-700 truncate max-w-[120px]">
+                    {candidate.currentEmployer || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Cake className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">DOB</p>
+                  <p className="font-semibold text-slate-700">
+                    {candidate.dateOfBirth
+                      ? new Date(candidate.dateOfBirth).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Source</p>
+                  <p className="font-semibold text-slate-700 capitalize">
+                    {candidate.source || "N/A"}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Right: Flag + Title + Actions */}
-          <div className="flex items-center gap-2">
-            <FlagIcon
-              countryCode={selectedProject.project?.countryCode || "UN"}
-              className="w-7 h-7 rounded shadow-sm ring-1 ring-white/70 flex-shrink-0"
-            />
-            <p className="text-sm font-semibold text-slate-800 max-w-[120px] truncate">
-              {selectedProject.project?.title}
-            </p>
-
-            {/* Tiny Action Buttons */}
-            {canVerifyDocuments && !summary.isDocumentationReviewed && (
-              <div className="flex gap-1.5">
-                {summary.totalSubmitted > 0 && summary.totalVerified < summary.totalSubmitted && (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setBulkAction("verify");
-                      setIsBulkConfirmationOpen(true);
-                    }}
-                    disabled={isVerifyingAll}
-                    className="h-8 px-3 text-xs font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow"
-                  >
-                    {isVerifyingAll ? (
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Check className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
-                {summary.totalSubmitted > 0 && (summary.totalRejected || 0) < (summary.totalSubmitted || 0) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setBulkAction("reject");
-                      setIsBulkConfirmationOpen(true);
-                    }}
-                    disabled={isRejectingAll}
-                    className="h-8 px-3 text-xs border-red-400/40 bg-red-500/10 text-red-600 hover:bg-red-500/20 rounded-lg"
-                  >
-                    {isRejectingAll ? (
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <X className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
+            {candidate.skills && candidate.skills.length > 0 && (
+              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Code className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-600">
+                    Skills ({candidate.skills.length})
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {candidate.skills.map((skill: string, idx: number) => (
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className="text-[10px] py-0 bg-white"
+                    >
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
-          </div>
-        </div>
+          </motion.div>
+        )}
 
-
-
-        {/* Meta Pills - Ultra Compact */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            {
-              icon: Calendar,
-              value: new Date(selectedProject.project.createdAt).toLocaleDateString("en-GB", {
-                month: "short",
-                day: "numeric",
-              }),
-            },
-            {
-              icon: UserCheck,
-              value: selectedProject.recruiter?.name?.split(" ")[0] || "—",
-            },
-            {
-              icon: Clock,
-              value: new Date(selectedProject.project.deadline).toLocaleDateString("en-GB", {
-                month: "short",
-                day: "numeric",
-              }),
-              urgent: new Date(selectedProject.project.deadline) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-          ].map((item) => (
-            <div
-              key={item.value}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium backdrop-blur",
-                item.urgent
-                  ? "bg-red-100/80 text-red-700"
-                  : "bg-blue-100/70 text-blue-700"
-              )}
-            >
-              <item.icon className="h-3.5 w-3.5" />
-              <span>{item.value}</span>
+        {/* Project Info Header - Minimal */}
+        {projectResponse?.data && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="relative rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg overflow-hidden"
+          >
+            {/* Priority accent */}
+            <div className={cn(
+              "absolute inset-y-0 left-0 w-1",
+              projectResponse.data.priority === "urgent" ? "bg-rose-500" :
+              projectResponse.data.priority === "high" ? "bg-amber-500" :
+              projectResponse.data.priority === "medium" ? "bg-sky-500" :
+              "bg-slate-300"
+            )} />
+            {/* Top Bar - Project Title & Status */}
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FlagIcon
+                  countryCode={projectResponse.data.countryCode || "UN"}
+                  className="w-8 h-8 rounded shadow-sm ring-1 ring-white/70"
+                />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">{projectResponse.data.title}</h2>
+                  <p className="text-xs text-slate-500">
+                    Created by {projectResponse.data.creator?.name || "Unknown"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className={cn(
+                  "text-xs font-semibold",
+                  projectResponse.data.status === "active" ? "bg-green-100 text-green-700" :
+                  projectResponse.data.status === "completed" ? "bg-blue-100 text-blue-700" :
+                  "bg-slate-100 text-slate-700"
+                )}>
+                  {projectResponse.data.status}
+                </Badge>
+                <Badge className={cn(
+                  "text-xs font-semibold",
+                  projectResponse.data.priority === "urgent" ? "bg-red-100 text-red-700" :
+                  projectResponse.data.priority === "high" ? "bg-orange-100 text-orange-700" :
+                  projectResponse.data.priority === "medium" ? "bg-yellow-100 text-yellow-700" :
+                  "bg-slate-100 text-slate-700"
+                )}>
+                  {projectResponse.data.priority}
+                </Badge>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-</motion.div>
+
+            {/* Info Grid - Compact */}
+            <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Deadline</p>
+                  <p className="font-semibold text-slate-700">
+                    {new Date(projectResponse.data.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Type</p>
+                  <p className="font-semibold text-slate-700 capitalize">{projectResponse.data.projectType}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Scissors className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Grooming</p>
+                  <p className="font-semibold text-slate-700 capitalize">{projectResponse.data.groomingRequired || "N/A"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <FileCheck className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Resume Edit</p>
+                  <p className="font-semibold text-slate-700">{projectResponse.data.resumeEditable ? "Yes" : "No"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Hide Contact</p>
+                  <p className="font-semibold text-slate-700">{projectResponse.data.hideContactInfo ? "Yes" : "No"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="h-3.5 w-3.5 text-slate-400" />
+                <div>
+                  <p className="text-slate-400">Screening</p>
+                  <p className="font-semibold text-slate-700">{projectResponse.data.requiredScreening ? "Required" : "Not Required"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Roles Needed - Compact Horizontal */}
+            {projectResponse.data.rolesNeeded && projectResponse.data.rolesNeeded.length > 0 && (
+              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-600">Roles ({projectResponse.data.rolesNeeded.length})</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {projectResponse.data.rolesNeeded.map((role: any) => (
+                    <div key={role.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 text-xs">
+                      <span className="font-medium text-slate-800">{role.designation}</span>
+                      <span className="text-slate-400">×{role.quantity}</span>
+                      <span className="text-slate-400">|</span>
+                      <span className="text-slate-500">{role.minExperience}-{role.maxExperience}yr</span>
+                      <span className="text-slate-400">|</span>
+                      <span className="text-slate-500 capitalize">{role.genderRequirement}</span>
+                      {role.ageRequirement && (
+                        <>
+                          <span className="text-slate-400">|</span>
+                          <span className="text-slate-500">{role.ageRequirement}y</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Document Requirements */}
        {selectedProjectId && (
@@ -1027,10 +1225,37 @@ export default function CandidateDocumentVerificationPage() {
             </Table>
           </div>
 
-          {/* Final Complete/Reject Buttons */}
-          {(summary.allDocumentsVerified || allRejected) && canVerifyDocuments && !summary.isDocumentationReviewed && (
+          {/* Final Actions */}
+          {((summary.allDocumentsVerified && canVerifyDocuments) || (allRejected && canVerifyDocuments && !summary.isDocumentationReviewed)) && (
        <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
-  {summary.allDocumentsVerified && (
+
+  {summary.allDocumentsVerified && canVerifyDocuments && (
+    <div className="flex gap-3">
+      <Button
+        size="sm"
+        className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[260px] flex items-center justify-center gap-3"
+        onClick={() => setIsMergeModalOpen(true)}
+        disabled={isGeneratingPDF || verifiedCount === 0}
+      >
+        {isGeneratingPDF ? <RefreshCw className="h-6 w-6 animate-spin" /> : <FileText className="h-6 w-6" />}
+        <span>Generate Unified PDF</span>
+      </Button>
+
+      {summary.isDocumentationReviewed && (summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified") && (
+        <Button
+          size="sm"
+          className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[260px] flex items-center justify-center gap-3"
+          onClick={() => setIsSendModalOpen(true)}
+          disabled={verifiedCount === 0}
+        >
+          <Send className="h-6 w-6" />
+          <span>Send to Client</span>
+        </Button>
+      )}
+    </div>
+  )}
+
+  {summary.allDocumentsVerified && !summary.isDocumentationReviewed && (
     <Button
       size="sm"
       className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
@@ -1041,7 +1266,8 @@ export default function CandidateDocumentVerificationPage() {
       <span>Complete Verification</span>
     </Button>
   )}
-  {allRejected && (
+
+  {allRejected && !summary.isDocumentationReviewed && (
     <Button
       size="sm"
       variant="destructive"
@@ -1393,6 +1619,31 @@ export default function CandidateDocumentVerificationPage() {
           cancelText="Cancel"
           variant="default"
           isLoading={isRequestingResubmission}
+        />
+
+        {/* Merge Verified Documents Modal */}
+        <MergeVerifiedModal
+          isOpen={isMergeModalOpen}
+          onOpenChange={setIsMergeModalOpen}
+          candidateId={candidateId!}
+          projectId={selectedProjectId}
+          roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          documents={verifiedDocuments}
+          onViewDocument={handleOpenPDF}
+          onMergeStart={() => setIsGeneratingPDF(true)}
+          onMergeEnd={() => setIsGeneratingPDF(false)}
+        />
+
+        {/* Send to Client Modal */}
+        <SendToClientModal
+          isOpen={isSendModalOpen}
+          onOpenChange={setIsSendModalOpen}
+          candidateId={candidateId!}
+          projectId={selectedProjectId}
+          roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          documents={verifiedDocuments}
+          clientData={projectResponse?.data?.client}
+          candidateName={`${candidate?.firstName} ${candidate?.lastName}`}
         />
       </div>
     </div>

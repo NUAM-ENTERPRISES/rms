@@ -148,6 +148,47 @@ export class UploadService {
   }
 
   /**
+   * Upload external buffer to DigitalOcean Spaces
+   */
+  async uploadBuffer(
+    buffer: Buffer,
+    folder: string,
+    fileName: string,
+    mimeType: string,
+  ): Promise<UploadResult> {
+    try {
+      const key = `${folder}/${fileName}`;
+
+      // Upload to Spaces
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: buffer,
+        ACL: 'public-read',
+        ContentType: mimeType,
+        CacheControl: 'max-age=31536000',
+      });
+
+      await this.s3Client.send(command);
+
+      // Generate file URL
+      const fileUrl = this.cdnUrl
+        ? `${this.cdnUrl}/${key}`
+        : `${this.endpoint}/${this.bucketName}/${key}`;
+
+      return {
+        fileUrl,
+        fileName,
+        fileSize: buffer.length,
+        mimeType,
+      };
+    } catch (error) {
+      console.error('Buffer upload error:', error);
+      throw new InternalServerErrorException('Failed to upload buffer');
+    }
+  }
+
+  /**
    * Delete file from DigitalOcean Spaces
    * @param fileUrl - Full URL of the file to delete
    */
@@ -215,6 +256,47 @@ export class UploadService {
     return this.cdnUrl
       ? `${this.cdnUrl}/${relativePath}`
       : `${this.endpoint}/${this.bucketName}/${relativePath}`;
+  }
+
+  /**
+   * Get file from DigitalOcean Spaces as a Buffer
+   */
+  async getFile(fileUrl: string): Promise<Buffer> {
+    try {
+      // Extract key from URL
+      // If using CDN: https://cdn.example.com/folder/file.pdf -> folder/file.pdf
+      // If using endpoint: https://bucket.endpoint/folder/file.pdf -> folder/file.pdf
+      let key = '';
+      if (this.cdnUrl && fileUrl.startsWith(this.cdnUrl)) {
+        key = fileUrl.replace(`${this.cdnUrl}/`, '');
+      } else {
+        // Fallback or general case
+        const urlObj = new URL(fileUrl);
+        // The pathname usually starts with /bucketName/ if it's the endpoint URL
+        // or just / if it's a subdomain or CDN
+        key = urlObj.pathname.startsWith(`/${this.bucketName}/`)
+          ? urlObj.pathname.replace(`/${this.bucketName}/`, '')
+          : urlObj.pathname.substring(1);
+      }
+
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      const response = await this.s3Client.send(command);
+      const stream = response.Body as any;
+      
+      return new Promise((resolve, reject) => {
+        const chunks: any[] = [];
+        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('error', reject);
+        stream.on('end', () => resolve(Buffer.concat(chunks)));
+      });
+    } catch (error) {
+      console.error('Error fetching file from S3:', error);
+      throw new InternalServerErrorException(`Failed to retrieve file: ${fileUrl}`);
+    }
   }
 
   /**

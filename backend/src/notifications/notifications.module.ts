@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -6,14 +6,18 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { OutboxService } from './outbox.service';
+import { EmailService } from './email.service';
 import { NotificationsProcessor } from '../jobs/notifications.processor';
 import { OutboxProcessor } from '../jobs/outbox.processor';
+import { DocumentForwardProcessor } from '../jobs/document-forward.processor';
 import { PrismaModule } from '../database/prisma.module';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
     PrismaModule,
     ConfigModule,
+    forwardRef(() => UploadModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -39,15 +43,20 @@ import { PrismaModule } from '../database/prisma.module';
     BullModule.registerQueue({
       name: 'notifications',
     }),
+    BullModule.registerQueue({
+      name: 'document-forward',
+    }),
   ],
   controllers: [NotificationsController],
   providers: [
     NotificationsService,
     NotificationsGateway,
     OutboxService,
+    EmailService,
     NotificationsProcessor,
     OutboxProcessor,
+    DocumentForwardProcessor,
   ],
-  exports: [NotificationsService, NotificationsGateway, OutboxService],
+  exports: [NotificationsService, NotificationsGateway, OutboxService, EmailService, BullModule],
 })
 export class NotificationsModule {}

@@ -1,14 +1,24 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { DocumentsService } from './documents.service';
 import { DocumentsController } from './documents.controller';
 import { PrismaModule } from '../database/prisma.module';
-import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingModule } from '../processing/processing.module';
+import { UploadModule } from '../upload/upload.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, ProcessingModule],
+  imports: [
+    PrismaModule,
+    ProcessingModule,
+    forwardRef(() => UploadModule),
+    forwardRef(() => NotificationsModule),
+    BullModule.registerQueue({
+      name: 'document-forward',
+    }),
+  ],
   controllers: [DocumentsController],
-  providers: [DocumentsService, OutboxService],
+  providers: [DocumentsService],
   exports: [DocumentsService],
 })
 export class DocumentsModule {}

@@ -278,6 +278,94 @@ export interface RecruiterDocumentsParams {
   status?: string;
 }
 
+export interface MergedDocumentResponse {
+  id: string;
+  candidateId: string;
+  projectId: string;
+  roleCatalogId?: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  updatedAt: string;
+  candidate: {
+    firstName: string;
+    lastName: string;
+  };
+  project: {
+    title: string;
+  };
+  roleCatalog?: {
+    name: string;
+    label: string;
+  };
+}
+
+export interface GetMergedDocumentParams {
+  candidateId: string;
+  projectId: string;
+  roleCatalogId?: string;
+}
+
+export interface ForwardToClientRequest {
+  recipientEmail: string;
+  candidateId: string;
+  projectId: string;
+  roleCatalogId?: string;
+  sendType: "merged" | "individual";
+  documentIds?: string[];
+  notes?: string;
+}
+
+export interface ForwardingHistoryItem {
+  id: string;
+  senderId: string;
+  recipientEmail: string;
+  candidateId: string;
+  projectId: string;
+  roleCatalogId?: string;
+  sendType: "merged" | "individual";
+  documentDetails: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    type: string;
+  }>;
+  notes?: string;
+  status: string;
+  sentAt?: string;
+  error?: string | null;
+  createdAt: string;
+  sender: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface ForwardingHistoryResponse {
+  items: Array<{
+    id: string;
+    recipientEmail: string;
+    status: string;
+    sendType: "merged" | "individual";
+    createdAt: string;
+    sentAt?: string;
+    error?: string | null;
+    notes?: string;
+    sender: {
+      name: string;
+      email: string;
+    };
+  }>;
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 // ==================== API ====================
 
 export const documentsApi = baseApi.injectEndpoints({
@@ -576,6 +664,65 @@ export const documentsApi = baseApi.injectEndpoints({
       query: () => "/documents/analytics/professional",
       providesTags: ["Document"],
     }),
+
+    // Get existing merged document (if any)
+    getMergedDocument: builder.query<
+      { success: boolean; data: MergedDocumentResponse | null },
+      GetMergedDocumentParams
+    >({
+      query: ({ candidateId, projectId, roleCatalogId }) => {
+        const params = new URLSearchParams({ candidateId, projectId });
+        if (roleCatalogId) {
+          params.append("roleCatalogId", roleCatalogId);
+        }
+        return `/documents/merged?${params.toString()}`;
+      },
+      providesTags: ["MergedDocument"],
+    }),
+
+    getLatestForwarding: builder.query<
+      { success: boolean; data: ForwardingHistoryItem | null },
+      { candidateId: string; projectId: string; roleCatalogId?: string }
+    >({
+      query: ({ candidateId, projectId, roleCatalogId }) => {
+        const params = new URLSearchParams({ candidateId, projectId });
+        if (roleCatalogId) {
+          params.append("roleCatalogId", roleCatalogId);
+        }
+        return `/documents/forward-latest?${params.toString()}`;
+      },
+      providesTags: ["ForwardingHistory"],
+    }),
+
+    getForwardingHistory: builder.query<
+      { success: boolean; data: ForwardingHistoryResponse },
+      { 
+        candidateId: string; 
+        projectId: string; 
+        roleCatalogId?: string;
+        page?: number;
+        limit?: number;
+        search?: string;
+      }
+    >({
+      query: (params) => ({
+        url: "/documents/forward-history",
+        params,
+      }),
+      providesTags: ["ForwardingHistory"],
+    }),
+
+    forwardToClient: builder.mutation<
+      { success: boolean; message: string },
+      ForwardToClientRequest
+    >({
+      query: (data) => ({
+        url: "/documents/forward-to-client",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["ForwardingHistory"],
+    }),
   }),
 });
 
@@ -602,4 +749,8 @@ export const {
   useReuseDocumentMutation,
   useCompleteVerificationMutation,
   useRejectVerificationMutation,
+  useGetMergedDocumentQuery,
+  useGetLatestForwardingQuery,
+  useGetForwardingHistoryQuery,
+  useForwardToClientMutation,
 } = documentsApi;

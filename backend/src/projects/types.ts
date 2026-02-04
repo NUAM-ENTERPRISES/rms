@@ -20,8 +20,9 @@ export interface ProjectWithRelations extends Project {
       isActive?: boolean;
       roleDepartment?: { id: string; name: string; shortName?: string | null } | null;
     } | null;
+    educationRequirementsList?: any[];
   })[];
-  candidateProjects: (CandidateProjects & {
+  candidateProjects?: (CandidateProjects & {
     candidate: {
       id: string;
       firstName: string;

@@ -4,7 +4,12 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Inject,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { PDFDocument } from 'pdf-lib';
+import axios from 'axios';
 import { PrismaService } from '../database/prisma.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
@@ -14,6 +19,7 @@ import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
+import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
 import {
   DocumentWithRelations,
   PaginatedDocuments,
@@ -38,6 +44,7 @@ export class DocumentsService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly processingService: ProcessingService,
+    @InjectQueue('document-forward') private readonly documentForwardQueue: Queue,
   ) { }
 
   /**
@@ -2084,10 +2091,25 @@ export class DocumentsService {
           ? ['rejected']
           : ['verified', 'rejected'];
 
+    // completed nomination sub-statuses
+    const completedStatuses =
+      status === 'verified'
+        ? ['documents_verified']
+        : status === 'rejected'
+          ? ['rejected_documents']
+          : ['documents_verified', 'rejected_documents'];
+
     // Base where clause applied to counts and list
     const baseWhere: any = {
       status: { in: statuses },
       isDeleted: false,
+      candidateProjectMap: {
+        is: {
+          subStatus: {
+            name: { in: completedStatuses },
+          },
+        },
+      },
     };
 
     if (recruiterId) {
@@ -2108,7 +2130,7 @@ export class DocumentsService {
     const countBase: any = {};
     if (recruiterId) countBase.recruiterId = recruiterId;
 
-    const [items, total, verifiedDistinctRows, rejectedDistinctRows, pendingCount] = await Promise.all([
+    const [items, total, pendingCount, verifiedCount, rejectedCount] = await Promise.all([
       this.prisma.candidateProjectDocumentVerification.findMany({
         where: baseWhere,
         include: {
@@ -2173,27 +2195,25 @@ export class DocumentsService {
         take: Number(limit),
       }),
       this.prisma.candidateProjectDocumentVerification.count({ where: baseWhere }),
-      // Use distinct candidateProjectMapId so counts represent unique candidate-projects
-      this.prisma.candidateProjectDocumentVerification.findMany({
-        where: { ...baseWhere, status: 'verified' },
-        select: { candidateProjectMapId: true },
-        distinct: ['candidateProjectMapId'],
-      }),
-      this.prisma.candidateProjectDocumentVerification.findMany({
-        where: { ...baseWhere, status: 'rejected' },
-        select: { candidateProjectMapId: true },
-        distinct: ['candidateProjectMapId'],
-      }),
       this.prisma.candidateProjects.count({
         where: {
           ...countBase,
           subStatus: { name: 'verification_in_progress_document' },
         },
       }),
+      this.prisma.candidateProjects.count({
+        where: {
+          ...countBase,
+          subStatus: { name: 'documents_verified' },
+        },
+      }),
+      this.prisma.candidateProjects.count({
+        where: {
+          ...countBase,
+          subStatus: { name: 'rejected_documents' },
+        },
+      }),
     ]);
-
-    const verifiedCount = verifiedDistinctRows.length;
-    const rejectedCount = rejectedDistinctRows.length;
 
     const itemsWithProgress = items.map((item) => {
       const cp = item.candidateProjectMap;
@@ -2810,5 +2830,380 @@ export class DocumentsService {
         createdAt: verification.document.createdAt.toISOString().split('T')[0], // Format as YYYY-MM-DD
       };
     });
+  }
+
+  /**
+   * Merge all verified documents for a candidate in a specific project and role into a single PDF
+   */
+  async mergeVerifiedDocuments(
+    candidateId: string,
+    projectId: string,
+    roleCatalogId?: string,
+  ): Promise<Buffer> {
+    // 1. Find the candidate project mapping first to ensure it's valid
+    const cpMap = await this.prisma.candidateProjects.findFirst({
+      where: {
+        candidateId,
+        projectId,
+        roleNeeded: roleCatalogId ? { roleCatalogId } : undefined,
+      },
+    });
+
+    if (!cpMap) {
+      throw new NotFoundException(
+        'Candidate project nomination not found for the specified candidate, project, and role.',
+      );
+    }
+
+    // 2. Fetch all verified verifications for this mapping
+    // We include documents that are either generic (null role) or match the specific role requested
+    const verifications = await this.prisma.candidateProjectDocumentVerification.findMany({
+      where: {
+        candidateProjectMapId: cpMap.id,
+        status: DOCUMENT_STATUS.VERIFIED,
+        isDeleted: false,
+        OR: roleCatalogId ? [{ roleCatalogId: roleCatalogId }, { roleCatalogId: null }] : undefined,
+      },
+      include: {
+        document: true,
+      },
+      orderBy: {
+        document: {
+          createdAt: 'asc',
+        },
+      },
+    });
+
+    if (verifications.length === 0) {
+      throw new NotFoundException('No verified documents found for this candidate nomination.');
+    }
+
+    // 3. Filter to keep only the latest document per docType (to avoid duplicates if any)
+    const latestDocsMap = new Map<string, any>();
+    for (const v of verifications) {
+      const type = v.document.docType;
+      if (
+        !latestDocsMap.has(type) ||
+        new Date(v.document.createdAt) > new Date(latestDocsMap.get(type).document.createdAt)
+      ) {
+        latestDocsMap.set(type, v);
+      }
+    }
+
+    const docsToMerge = Array.from(latestDocsMap.values());
+
+    const mergedPdf = await PDFDocument.create();
+
+    for (const v of docsToMerge) {
+      const doc = v.document;
+      try {
+        const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
+        const contentType = response.headers['content-type']?.toLowerCase();
+        const fileBuffer = response.data as any;
+
+        if (contentType === 'application/pdf' || doc.fileName.toLowerCase().endsWith('.pdf')) {
+          const pdfDoc = await PDFDocument.load(fileBuffer);
+          const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+          copiedPages.forEach((page) => mergedPdf.addPage(page));
+        } else if (
+          contentType === 'image/jpeg' ||
+          contentType === 'image/jpg' ||
+          doc.fileName.toLowerCase().endsWith('.jpg') ||
+          doc.fileName.toLowerCase().endsWith('.jpeg')
+        ) {
+          const image = await mergedPdf.embedJpg(fileBuffer);
+          const page = mergedPdf.addPage([image.width, image.height]);
+          page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+        } else if (contentType === 'image/png' || doc.fileName.toLowerCase().endsWith('.png')) {
+          const image = await mergedPdf.embedPng(fileBuffer);
+          const page = mergedPdf.addPage([image.width, image.height]);
+          page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+        }
+      } catch (error) {
+        this.logger.error(`Failed to fetch or process document ${doc.id}: ${error.message}`);
+      }
+    }
+
+    const pdfBytes = await mergedPdf.save();
+    return Buffer.from(pdfBytes);
+  }
+
+  /**
+   * Save or update merged document record
+   */
+  async saveMergedDocument(data: {
+    candidateId: string;
+    projectId: string;
+    roleCatalogId?: string;
+    fileUrl: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+  }) {
+    // We use findFirst instead of upsert directly because of how nulls are handled in unique constraints
+    const existing = await this.prisma.mergedDocument.findFirst({
+      where: {
+        candidateId: data.candidateId,
+        projectId: data.projectId,
+        roleCatalogId: data.roleCatalogId || null,
+      },
+    });
+
+    if (existing) {
+      return this.prisma.mergedDocument.update({
+        where: { id: existing.id },
+        data: {
+          fileUrl: data.fileUrl,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          mimeType: data.mimeType,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return this.prisma.mergedDocument.create({
+      data: {
+        candidateId: data.candidateId,
+        projectId: data.projectId,
+        roleCatalogId: data.roleCatalogId || null,
+        fileUrl: data.fileUrl,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+        mimeType: data.mimeType,
+      },
+    });
+  }
+
+  /**
+   * Get merged documents for a candidate or project
+   */
+  async getMergedDocuments(filters: {
+    candidateId?: string;
+    projectId?: string;
+    roleCatalogId?: string;
+  }) {
+    return this.prisma.mergedDocument.findFirst({
+      where: {
+        ...(filters.candidateId && { candidateId: filters.candidateId }),
+        ...(filters.projectId && { projectId: filters.projectId }),
+        ...(filters.roleCatalogId && { roleCatalogId: filters.roleCatalogId }),
+      },
+      include: {
+        candidate: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+        project: {
+          select: {
+            title: true,
+          },
+        },
+        roleCatalog: {
+          select: {
+            name: true,
+            label: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Forward documents to client via email
+   */
+  async forwardToClient(forwardDto: ForwardToClientDto, senderId: string) {
+    const { 
+      candidateId, 
+      projectId, 
+      recipientEmail, 
+      sendType, 
+      documentIds, 
+      notes, 
+      roleCatalogId 
+    } = forwardDto;
+
+    // 1. Validate candidate and project
+    const [candidate, project] = await Promise.all([
+      this.prisma.candidate.findUnique({ where: { id: candidateId } }),
+      this.prisma.project.findUnique({ where: { id: projectId } }),
+    ]);
+
+    if (!candidate) throw new NotFoundException('Candidate not found');
+    if (!project) throw new NotFoundException('Project not found');
+
+    let attachments: any[] = [];
+
+    if (sendType === SendType.MERGED) {
+      // 2. Locate latest merged PDF
+      const mergedDoc = await this.prisma.mergedDocument.findFirst({
+        where: { candidateId, projectId, roleCatalogId: roleCatalogId || null },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (!mergedDoc) {
+        throw new BadRequestException('No merged document found. Please generate it first.');
+      }
+      
+      attachments.push({
+        id: mergedDoc.id,
+        fileName: mergedDoc.fileName,
+        fileUrl: mergedDoc.fileUrl,
+        mimeType: mergedDoc.mimeType,
+      });
+    } else {
+      // 3. Individual Documents
+      if (!documentIds || documentIds.length === 0) {
+        throw new BadRequestException('No document IDs provided for individual sending.');
+      }
+
+      const docs = await this.prisma.document.findMany({
+        where: {
+          id: { in: documentIds },
+          candidateId,
+          status: 'verified',
+        },
+      });
+
+      if (docs.length === 0) {
+        throw new BadRequestException('No valid verified documents found.');
+      }
+
+      attachments = docs.map(d => ({
+        id: d.id,
+        fileName: d.fileName,
+        fileUrl: d.fileUrl,
+        mimeType: d.mimeType,
+      }));
+    }
+
+    // 4. Create Audit Trail Entry (History)
+    const history = await this.prisma.documentForwardHistory.create({
+      data: {
+        senderId,
+        recipientEmail,
+        candidateId,
+        projectId,
+        roleCatalogId: roleCatalogId || null,
+        sendType: sendType,
+        documentDetails: attachments as any,
+        notes,
+        status: 'pending',
+      },
+    });
+
+    // 5. Queue the job
+    await this.documentForwardQueue.add('send-documents', {
+      historyId: history.id,
+    }, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+      removeOnComplete: true,
+    });
+
+    return {
+      success: true,
+      message: `Documents successfully queued for delivery to ${recipientEmail}`,
+    };
+  }
+
+  /**
+   * Get the latest document forward request for a specific candidate, project, and role
+   */
+  async getLatestDocumentForward(query: {
+    candidateId: string;
+    projectId: string;
+    roleCatalogId?: string;
+  }) {
+    const { candidateId, projectId, roleCatalogId } = query;
+
+    const latest = await this.prisma.documentForwardHistory.findFirst({
+      where: {
+        candidateId,
+        projectId,
+        ...(roleCatalogId && { roleCatalogId }),
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        sentAt: 'desc',
+      },
+    });
+
+    return latest;
+  }
+
+  /**
+   * Get history of document forwardings with search and pagination
+   */
+  async getDocumentForwardHistory(query: {
+    candidateId: string;
+    projectId: string;
+    roleCatalogId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { candidateId, projectId, roleCatalogId, search, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      candidateId,
+      projectId,
+      ...(roleCatalogId && { roleCatalogId }),
+    };
+
+    if (search) {
+      where.OR = [
+        { recipientEmail: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.documentForwardHistory.count({ where }),
+      this.prisma.documentForwardHistory.findMany({
+        where,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          sentAt: 'desc',
+        },
+        skip,
+        take: Number(limit),
+      }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

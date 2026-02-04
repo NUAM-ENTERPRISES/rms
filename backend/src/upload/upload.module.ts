@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigModule } from '@nestjs/config';
 import { UploadService } from './upload.service';
@@ -10,7 +10,7 @@ import { DocumentsModule } from '../documents/documents.module';
   imports: [
     ConfigModule,
     PrismaModule,
-    DocumentsModule,
+    forwardRef(() => DocumentsModule),
     MulterModule.register({
       storage: undefined, // Use memory storage (file.buffer)
       limits: {

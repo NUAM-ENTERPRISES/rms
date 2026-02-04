@@ -341,25 +341,6 @@ export class ProjectsService {
             },
           },
         },
-        candidateProjects: {
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                countryCode: true,
-                mobileNumber: true,
-                email: true,
-                currentStatus: {
-                  select: {
-                    statusName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
         documentRequirements: {
           where: { isDeleted: false },
         },
@@ -460,6 +441,19 @@ export class ProjectsService {
         team: true,
         rolesNeeded: {
           include: {
+            educationRequirementsList: {
+              include: {
+                qualification: {
+                  select: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                    level: true,
+                    field: true,
+                  },
+                },
+              },
+            },
             roleCatalog: {
               select: {
                 id: true,
@@ -468,22 +462,6 @@ export class ProjectsService {
                 shortName: true,
                 isActive: true,
                 roleDepartment: { select: { id: true, name: true, shortName: true } },
-              },
-            },
-          },
-        },
-        candidateProjects: {
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                countryCode: true,
-                mobileNumber: true,
-                email: true,
-                gender: true,
-                currentStatus: true,
               },
             },
           },
@@ -554,22 +532,6 @@ export class ProjectsService {
                 label: true,
                 shortName: true,
                 roleDepartment: { select: { id: true, name: true, shortName: true } },
-              },
-            },
-          },
-        },
-        candidateProjects: {
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                countryCode: true,
-                mobileNumber: true,
-                email: true,
-                gender: true,
-                currentStatus: true,
               },
             },
           },
@@ -908,19 +870,14 @@ export class ProjectsService {
                 },
               },
             },
-          },
-        },
-        candidateProjects: {
-          include: {
-            candidate: {
+            roleCatalog: {
               select: {
                 id: true,
-                firstName: true,
-                lastName: true,
-                countryCode: true,
-                mobileNumber: true,
-                email: true,
-                currentStatus: true,
+                name: true,
+                label: true,
+                shortName: true,
+                isActive: true,
+                roleDepartment: { select: { id: true, name: true, shortName: true } },
               },
             },
           },
@@ -1069,19 +1026,14 @@ export class ProjectsService {
                 },
               },
             },
-          },
-        },
-        candidateProjects: {
-          include: {
-            candidate: {
+            roleCatalog: {
               select: {
                 id: true,
-                firstName: true,
-                lastName: true,
-                countryCode: true,
-                mobileNumber: true,
-                email: true,
-                currentStatus: true,
+                name: true,
+                label: true,
+                shortName: true,
+                isActive: true,
+                roleDepartment: { select: { id: true, name: true, shortName: true } },
               },
             },
           },

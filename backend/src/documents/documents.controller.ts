@@ -10,7 +10,10 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -29,14 +32,19 @@ import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
+import { ForwardToClientDto } from './dto/forward-to-client.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
+import { UploadService } from '../upload/upload.service';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
 @Controller('documents')
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(
+    private readonly documentsService: DocumentsService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   @Post()
   @Permissions('write:documents')
@@ -282,6 +290,152 @@ export class DocumentsController {
     return {
       success: true,
       data: summary,
+    };
+  }
+
+  @Get('merged')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get list of merged documents',
+    description: 'Retrieve list of all merged PDFs generated for candidates.',
+  })
+  @ApiQuery({ name: 'candidateId', required: false })
+  @ApiQuery({ name: 'projectId', required: false })
+  @ApiQuery({ name: 'roleCatalogId', required: false })
+  async getMergedDocuments(
+    @Query('candidateId') candidateId?: string,
+    @Query('projectId') projectId?: string,
+    @Query('roleCatalogId') roleCatalogId?: string,
+  ) {
+    const data = await this.documentsService.getMergedDocuments({ 
+      candidateId, 
+      projectId,
+      roleCatalogId
+    });
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Get('merge-verified')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Merge all verified documents into a single PDF',
+    description:
+      'Downloads all verified documents for a candidate in a specific project and role and merges them into one PDF file.',
+  })
+  @ApiQuery({ name: 'candidateId', required: true, description: 'Candidate ID' })
+  @ApiQuery({ name: 'projectId', required: true, description: 'Project ID' })
+  @ApiQuery({
+    name: 'roleCatalogId',
+    required: false,
+    description: 'Optional Role Catalog ID to filter documents by role',
+  })
+  @ApiResponse({ status: 200, description: 'Merged PDF file' })
+  async mergeVerifiedDocuments(
+    @Query('candidateId') candidateId: string,
+    @Query('projectId') projectId: string,
+    @Query('roleCatalogId') roleCatalogId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const buffer = await this.documentsService.mergeVerifiedDocuments(
+      candidateId,
+      projectId,
+      roleCatalogId,
+    );
+
+    // 1. Upload the merged PDF to storage
+    const fileName = `merged_${candidateId}_${projectId}_${roleCatalogId || 'all'}.pdf`;
+    const uploadResult = await this.uploadService.uploadBuffer(
+      buffer,
+      `merged-documents/${candidateId}`,
+      fileName,
+      'application/pdf',
+    );
+
+    // 2. Save/Update record in DB
+    await this.documentsService.saveMergedDocument({
+      candidateId,
+      projectId,
+      roleCatalogId,
+      fileUrl: uploadResult.fileUrl,
+      fileName: uploadResult.fileName,
+      fileSize: uploadResult.fileSize,
+      mimeType: uploadResult.mimeType,
+    });
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${uploadResult.fileName}"`,
+      'Content-Length': buffer.length,
+    });
+
+    return new StreamableFile(buffer);
+  }
+
+  @Post('forward-to-client')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Forward documents to client via email',
+    description: 'Send merged or individual verified documents to a client email address using a template.',
+  })
+  @ApiResponse({ status: 200, description: 'Documents queued for delivery' })
+  @ApiResponse({ status: 400, description: 'No merged document found or invalid document IDs' })
+  async forwardToClient(
+    @Body() forwardDto: ForwardToClientDto,
+    @Request() req,
+  ) {
+    return this.documentsService.forwardToClient(forwardDto, req.user.sub);
+  }
+
+  @Get('forward-latest')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get latest document forward record',
+    description: 'Retrieve the most recent email forwarding status for a candidate/project/role combination.',
+  })
+  async getDocmentForwardClient(
+    @Query('candidateId') candidateId: string,
+    @Query('projectId') projectId: string,
+    @Query('roleCatalogId') roleCatalogId?: string,
+  ) {
+    const data = await this.documentsService.getLatestDocumentForward({
+      candidateId,
+      projectId,
+      roleCatalogId,
+    });
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Get('forward-history')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get document forward history',
+    description: 'Retrieve paginated history of email forwarding for a candidate/project.',
+  })
+  async getDocuemntForwardClientHistory(
+    @Query('candidateId') candidateId: string,
+    @Query('projectId') projectId: string,
+    @Query('roleCatalogId') roleCatalogId?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.documentsService.getDocumentForwardHistory({
+      candidateId,
+      projectId,
+      roleCatalogId,
+      search,
+      page,
+      limit,
+    });
+    return {
+      success: true,
+      data: result,
     };
   }
 
@@ -661,5 +815,4 @@ async rejectVerification(
     message: 'Document verification rejected successfully',
   };
 }
-
 }
