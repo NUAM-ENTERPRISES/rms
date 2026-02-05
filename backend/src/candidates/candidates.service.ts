@@ -25,6 +25,7 @@ import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
+import { WhatsAppService } from '../notifications/whatsapp.service';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
@@ -49,6 +50,7 @@ export class CandidatesService {
     private readonly eligibilityService: UnifiedEligibilityService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
     private readonly rnrRemindersService: RnrRemindersService,
+    private readonly whatsAppService: WhatsAppService,
   ) { }
 
   /**
@@ -2120,6 +2122,59 @@ export class CandidatesService {
       }
     }
     // ===== RNR REMINDER LOGIC END =====
+
+    // ===== WHATSAPP NOTIFICATION START =====
+    // Send WhatsApp notification to candidate about status change
+    try {
+      const phoneNumber = this.whatsAppService.validatePhoneNumber(
+        updatedCandidate.countryCode,
+        updatedCandidate.mobileNumber,
+      );
+
+      if (phoneNumber) {
+        const candidateName = `${updatedCandidate.firstName} ${updatedCandidate.lastName}`;
+        
+        this.logger.log(
+          `Sending WhatsApp notification to candidate ${candidateId} (${phoneNumber}) for status change to ${status.statusName}`,
+        );
+
+        // Send WhatsApp notification (non-blocking)
+        this.whatsAppService
+          .sendCandidateStatusUpdate(
+            candidateName,
+            phoneNumber,
+            status.statusName,
+            updateStatusDto.reason,
+          )
+          .then((result) => {
+            if (result.success) {
+              this.logger.log(
+                `WhatsApp notification sent successfully to ${phoneNumber}. Message ID: ${result.messageId}`,
+              );
+            } else {
+              this.logger.warn(
+                `WhatsApp notification failed for ${phoneNumber}: ${result.message}`,
+              );
+            }
+          })
+          .catch((error) => {
+            this.logger.error(
+              `Error sending WhatsApp notification to ${phoneNumber}:`,
+              error,
+            );
+          });
+      } else {
+        this.logger.debug(
+          `Skipping WhatsApp notification for candidate ${candidateId} - invalid phone number`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error in WhatsApp notification process for candidate ${candidateId}:`,
+        error,
+      );
+    }
+    // ===== WHATSAPP NOTIFICATION END =====
 
     // Check if status requires CRE handling
     if (requiresCREHandling(updateStatusDto.currentStatusId as any)) {

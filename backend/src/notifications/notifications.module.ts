@@ -9,6 +9,7 @@ import { OutboxService } from './outbox.service';
 import { NotificationsProcessor } from '../jobs/notifications.processor';
 import { OutboxProcessor } from '../jobs/outbox.processor';
 import { PrismaModule } from '../database/prisma.module';
+import { WhatsAppService } from './whatsapp.service';
 
 @Module({
   imports: [
@@ -47,7 +48,13 @@ import { PrismaModule } from '../database/prisma.module';
     OutboxService,
     NotificationsProcessor,
     OutboxProcessor,
+    WhatsAppService,
   ],
-  exports: [NotificationsService, NotificationsGateway, OutboxService],
+  exports: [
+    NotificationsService,
+    NotificationsGateway,
+    OutboxService,
+    WhatsAppService,
+  ],
 })
 export class NotificationsModule {}
