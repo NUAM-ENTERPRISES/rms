@@ -1,42 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-
-export interface SendWhatsAppMessageDto {
-  to: string; // Phone number with country code (e.g., "919876543210")
-  templateName: string;
-  languageCode?: string;
-  bodyParameters?: string[]; // Parameters to replace in template body
-  headerParameters?: string[]; // Parameters for header if needed
-}
+import { SendWhatsAppMessageDto } from './dto/send-whatsapp.dto';
+import { WHATSAPP_TEMPLATE_TYPES } from '../common/constants/whatsapp-templates';
 
 @Injectable()
 export class WhatsAppService {
   private readonly logger = new Logger(WhatsAppService.name);
-  private readonly apiUrl: string;
-  private readonly phoneNumberId: string;
-  private readonly accessToken: string;
+  private readonly phoneNumberId: string | undefined;
+  private readonly accessToken: string | undefined;
   private readonly isEnabled: boolean;
+  private readonly apiBaseUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.phoneNumberId =
-      this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID') ||
-      '949404321591561';
+    const config = this.configService.get('whatsapp');
+    this.phoneNumberId = config?.phoneNumberId;
+    this.accessToken = config?.accessToken;
+    this.isEnabled = config?.enabled ?? false;
 
-    this.accessToken = this.configService.get<string>('WHATSAPP_ACCESS_TOKEN') || '';
-
-    this.isEnabled = this.configService.get<string>('WHATSAPP_ENABLED') === 'true';
-
-    // Use template literal correctly
-    this.apiUrl = `https://graph.facebook.com/v22.0/${this.phoneNumberId}/messages`;
+    // Build API URL base
+    const apiBaseUrl = config?.apiUrl || 'https://graph.facebook.com/v22.0/';
+    this.apiBaseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl : `${apiBaseUrl}/`;
 
     if (!this.isEnabled) {
       this.logger.warn('WhatsApp integration is disabled. Set WHATSAPP_ENABLED=true to enable.');
-    } else if (!this.accessToken) {
-      this.logger.warn('WhatsApp access token is not configured. Messages will not be sent.');
+    } else if (!this.accessToken || !this.phoneNumberId) {
+      this.logger.warn('WhatsApp configuration is incomplete. Messages will not be sent.');
     } else {
       this.logger.log('WhatsApp service initialized successfully');
     }
+  }
+
+  /**
+   * Helper to get full API URL
+   */
+  private getApiUrl(): string {
+    return `${this.apiBaseUrl}${this.phoneNumberId}/messages`;
   }
 
   /**
@@ -48,9 +47,9 @@ export class WhatsAppService {
       return { success: false, message: 'WhatsApp is disabled' };
     }
 
-    if (!this.accessToken) {
-      this.logger.error('WhatsApp access token is not configured');
-      return { success: false, message: 'WhatsApp access token not configured' };
+    if (!this.accessToken || !this.phoneNumberId) {
+      this.logger.error('WhatsApp configuration (Access Token or Phone Number ID) is missing');
+      return { success: false, message: 'WhatsApp configuration incomplete' };
     }
 
     // Format phone number → must be digits only + country code, no +
@@ -86,7 +85,7 @@ export class WhatsAppService {
       this.logger.debug(`Payload: ${JSON.stringify(payload, null, 2)}`);
 
       const response = await axios.post<any>(
-        this.apiUrl,
+        this.getApiUrl(),
         payload,
         {
           headers: {
@@ -155,33 +154,6 @@ export class WhatsAppService {
     }
 
     return components;
-  }
-
-  /**
-   * Send candidate status change notification
-   */
-  async sendCandidateStatusUpdate(
-    candidateName: string,
-    phoneNumber: string,
-    statusName: string,
-    additionalInfo?: string,
-  ): Promise<any> {
-    this.logger.log(`Sending status update to ${phoneNumber}: ${candidateName} - ${statusName}`);
-
-    // TODO: After template approval, update:
-    // templateName: 'candidate_status_update'
-    // and enable parameters
-
-    return this.sendTemplateMessage({
-      to: phoneNumber,
-      templateName: 'hello_world', // ← CHANGE THIS after Meta approval
-      languageCode: 'en_US',
-      // bodyParameters: [
-      //   candidateName.split(' ')[0] || candidateName, // First name or full
-      //   statusName,
-      //   additionalInfo || 'No additional info',
-      // ],
-    });
   }
 
   /**

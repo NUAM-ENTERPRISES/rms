@@ -26,6 +26,7 @@ import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
+import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
@@ -51,6 +52,7 @@ export class CandidatesService {
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
     private readonly rnrRemindersService: RnrRemindersService,
     private readonly whatsAppService: WhatsAppService,
+    private readonly whatsappNotificationService: WhatsAppNotificationService,
   ) { }
 
   /**
@@ -2139,7 +2141,7 @@ export class CandidatesService {
         );
 
         // Send WhatsApp notification (non-blocking)
-        this.whatsAppService
+        this.whatsappNotificationService
           .sendCandidateStatusUpdate(
             candidateName,
             phoneNumber,

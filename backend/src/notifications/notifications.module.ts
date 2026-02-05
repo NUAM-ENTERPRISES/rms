@@ -10,6 +10,7 @@ import { NotificationsProcessor } from '../jobs/notifications.processor';
 import { OutboxProcessor } from '../jobs/outbox.processor';
 import { PrismaModule } from '../database/prisma.module';
 import { WhatsAppService } from './whatsapp.service';
+import { WhatsAppNotificationService } from './whatsapp-notification.service';
 
 @Module({
   imports: [
@@ -49,12 +50,14 @@ import { WhatsAppService } from './whatsapp.service';
     NotificationsProcessor,
     OutboxProcessor,
     WhatsAppService,
+    WhatsAppNotificationService,
   ],
   exports: [
     NotificationsService,
     NotificationsGateway,
     OutboxService,
     WhatsAppService,
+    WhatsAppNotificationService,
   ],
 })
 export class NotificationsModule {}

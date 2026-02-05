@@ -2,7 +2,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString, Matches } from 'class-validator';
-import { WHATSAPP_TEMPLATE_TYPES } from '../../common/constants//whatsapp-templates';
+import { WHATSAPP_TEMPLATE_TYPES } from '../../common/constants/whatsapp-templates';
 
 export class SendWhatsAppMessageDto {
   @ApiProperty({
