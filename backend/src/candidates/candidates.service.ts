@@ -2135,36 +2135,46 @@ export class CandidatesService {
 
       if (phoneNumber) {
         const candidateName = `${updatedCandidate.firstName} ${updatedCandidate.lastName}`;
-        
-        this.logger.log(
-          `Sending WhatsApp notification to candidate ${candidateId} (${phoneNumber}) for status change to ${status.statusName}`,
-        );
 
-        // Send WhatsApp notification (non-blocking)
-        this.whatsappNotificationService
-          .sendCandidateStatusUpdate(
-            candidateName,
-            phoneNumber,
-            status.statusName,
-            updateStatusDto.reason,
-          )
-          .then((result) => {
-            if (result.success) {
-              this.logger.log(
-                `WhatsApp notification sent successfully to ${phoneNumber}. Message ID: ${result.messageId}`,
+        // Only send WhatsApp for specific statuses
+        const allowedStatuses = ['Interested', 'Not Interested', 'Qualified', 'Deployed', 'Future'];
+        const normalizedStatus = status.statusName; // Match the casing used in seed
+
+        if (allowedStatuses.includes(normalizedStatus)) {
+          this.logger.log(
+            `Sending WhatsApp notification to candidate ${candidateId} (${phoneNumber}) for status change to ${status.statusName}`,
+          );
+
+          // Send WhatsApp notification (non-blocking)
+          this.whatsappNotificationService
+            .sendCandidateStatusUpdate(
+              candidateName,
+              phoneNumber,
+              status.statusName,
+              updateStatusDto.reason,
+            )
+            .then((result) => {
+              if (result.success) {
+                this.logger.log(
+                  `WhatsApp notification sent successfully to ${phoneNumber}. Message ID: ${result.messageId}`,
+                );
+              } else {
+                this.logger.warn(
+                  `WhatsApp notification failed for ${phoneNumber}: ${result.message}`,
+                );
+              }
+            })
+            .catch((error) => {
+              this.logger.error(
+                `Error sending WhatsApp notification to ${phoneNumber}:`,
+                error,
               );
-            } else {
-              this.logger.warn(
-                `WhatsApp notification failed for ${phoneNumber}: ${result.message}`,
-              );
-            }
-          })
-          .catch((error) => {
-            this.logger.error(
-              `Error sending WhatsApp notification to ${phoneNumber}:`,
-              error,
-            );
-          });
+            });
+        } else {
+          this.logger.debug(
+            `Skipping WhatsApp notification for status: ${normalizedStatus}`,
+          );
+        }
       } else {
         this.logger.debug(
           `Skipping WhatsApp notification for candidate ${candidateId} - invalid phone number`,

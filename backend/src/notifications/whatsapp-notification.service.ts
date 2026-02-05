@@ -19,13 +19,13 @@ export class WhatsAppNotificationService {
   ): Promise<any> {
     this.logger.log(`Sending status update to ${phoneNumber}: ${candidateName} - ${statusName}`);
 
-    // Template: num_account_creation_v1
-    // Body: Hi {{1}}, Your new account has been created successfully. Please verify {{2}} to complete your profile.
+    // Template: candidate_status_update_v1
+    // Body: Hi {{1}}, Your application status has been updated to {{2}}. We will contact you if further action is required.
     
     return this.whatsappService.sendTemplateMessage({
       to: phoneNumber,
-      templateName: WHATSAPP_TEMPLATE_TYPES.NUAM_ACCOUNT_CREATION_V1,
-      languageCode: 'en_US',
+      templateName: WHATSAPP_TEMPLATE_TYPES.CANDIDATE_STATUS_UPDATE_V1,
+      languageCode: 'en',
       bodyParameters: [
         candidateName.split(' ')[0] || candidateName, // {{1}}
         statusName,                                  // {{2}}
