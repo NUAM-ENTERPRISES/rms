@@ -111,7 +111,7 @@ export default function TrainingListPage() {
   // Load interview history for the selected training's candidate-project
   const { data: historyData, isLoading: isLoadingHistory } = useGetCandidateProjectHistoryQuery(
     selectedTraining?.candidateProjectMap?.id
-      ? { candidateProjectMapId: selectedTraining.candidateProjectMap.id, page: 1, limit: 20 }
+      ? { candidateProjectMapId: selectedTraining.candidateProjectMap.id, page: 1, limit: 15 }
       : undefined,
     { skip: !selectedTraining?.candidateProjectMap?.id }
   );

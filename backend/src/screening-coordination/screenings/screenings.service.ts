@@ -231,57 +231,93 @@ export class ScreeningsService {
    * Find all screenings with optional filtering
    */
   async findAll(query: QueryScreeningsDto) {
+    const { page = 1, limit = 10, candidateProjectMapId, coordinatorId, decision, projectId, roleCatalogId } = query;
+    const skip = (page - 1) * limit;
+    const take = limit;
+
     const where: any = {};
 
     // Only return screenings that have been assigned a trainer
     where.isAssignedTrainer = false;
 
-    if (query.candidateProjectMapId) {
-      where.candidateProjectMapId = query.candidateProjectMapId;
+    if (candidateProjectMapId) {
+      where.candidateProjectMapId = candidateProjectMapId;
     }
 
-    if (query.coordinatorId) {
-      where.coordinatorId = query.coordinatorId;
+    if (coordinatorId) {
+      where.coordinatorId = coordinatorId;
     }
 
-    if (query.decision) {
-      where.decision = query.decision;
+    if (decision) {
+      where.decision = decision;
     }
 
-    const items = await this.prisma.screening.findMany({
-      where,
-      include: {
-        candidateProjectMap: {
-          include: {
-            candidate: {
-              select: { id: true, firstName: true, lastName: true },
-            },
-            project: {
-              select: {
-                id: true,
-                title: true,
-                documentRequirements: true,
+    // Support filtering by related candidate-project fields (projectId and roleCatalogId)
+    const cpWhere: any = {};
+    if (projectId) {
+      cpWhere.projectId = projectId;
+    }
+    if (roleCatalogId) {
+      // roleCatalogId exists on RoleNeeded → roleCatalogId
+      cpWhere.roleNeeded = { is: { roleCatalogId: roleCatalogId } };
+    }
+    if (Object.keys(cpWhere).length > 0) {
+      where.candidateProjectMap = { is: cpWhere };
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.screening.count({ where }),
+      this.prisma.screening.findMany({
+        where,
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: { id: true, firstName: true, lastName: true },
               },
-            },
-            roleNeeded: { select: { designation: true } },
-            mainStatus: true,
-            subStatus: true,
-            documentVerifications: {
-              include: {
-                document: true,
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                  documentRequirements: true,
+                },
+              },
+              roleNeeded: { select: { designation: true } },
+              mainStatus: true,
+              subStatus: true,
+              documentVerifications: {
+                include: {
+                  document: true,
+                },
               },
             },
           },
+          checklistItems: {
+            orderBy: { category: 'asc' },
+          },
         },
-        checklistItems: {
-          orderBy: { category: 'asc' },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
 
     // Attach `isDocumentVerificationRequired` flag per item
-    return this.addDocumentVerificationFlag(items);
+    const itemsWithFlags = await this.addDocumentVerificationFlag(items);
+
+    return {
+      success: true,
+      data: {
+        items: itemsWithFlags,
+        pagination: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      message: 'Screenings retrieved successfully',
+    };
   }
 
   /**
@@ -793,7 +829,7 @@ export class ScreeningsService {
    * This ensures the "latest assignment" appears first.
    */
   async getAssignedCandidateProjects(query: any) {
-    const { page = 1, limit = 10, projectId, candidateId, recruiterId, search } = query;
+    const { page = 1, limit = 10, projectId, candidateId, recruiterId, roleCatalogId, search } = query;
 
     const where: any = {
       subStatus: { is: { name: 'screening_assigned' } },
@@ -802,6 +838,10 @@ export class ScreeningsService {
     if (projectId) where.projectId = projectId;
     if (candidateId) where.candidateId = candidateId;
     if (recruiterId) where.recruiterId = recruiterId;
+    // Filter by roleCatalogId via the RoleNeeded relation
+    if (roleCatalogId) {
+      where.roleNeeded = { is: { roleCatalogId: roleCatalogId } };
+    }
 
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const s = search.trim();

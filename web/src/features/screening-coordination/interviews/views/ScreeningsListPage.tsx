@@ -58,7 +58,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAssignToMainScreeningMutation } from "../data";
 import { useSendForVerificationMutation } from "@/features/projects/api";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
-import { useGetCandidateProjectHistoryQuery } from "../data";
+import { useGetCandidateProjectHistoryQuery, useGetAssignedScreeningsQuery } from "../data";
+import { useGetProjectQuery } from "@/features/projects";
 
 export default function ScreeningsListPage() {
   const navigate = useNavigate();
@@ -70,6 +71,8 @@ export default function ScreeningsListPage() {
     mode: "all",
     decision: "all",
     status: "all", // upcoming, completed, all
+    projectId: "all",
+    roleCatalogId: "all"
   });
 
   const [selectedInterviewId, setSelectedInterviewId] = useState<string | null>(
@@ -106,34 +109,76 @@ export default function ScreeningsListPage() {
   const [assignToMainScreening, { isLoading: isAssigningMain }] = useAssignToMainScreeningMutation();
   const [sendForVerification, { isLoading: isSendingVerification }] = useSendForVerificationMutation();
 
-  // Build query params from URL (coordinatorId, candidateProjectMapId, decision, etc.)
-  const rawParams = {
-    coordinatorId: searchParams.get("coordinatorId") || undefined,
-    candidateProjectMapId:
-      searchParams.get("candidateProjectMapId") || undefined,
-    decision: searchParams.get("decision") || undefined,
-    mode: searchParams.get("mode") || undefined,
-    scheduledDate: searchParams.get("scheduledDate") || undefined,
-    conductedDate: searchParams.get("conductedDate") || undefined,
-  };
-  // Remove undefined fields so we don't send empty keys
-  const apiParams = Object.fromEntries(
-    Object.entries(rawParams).filter(([, v]) => v != null)
-  );
+  // Build query params from URL and filters
+  const apiParams = useMemo(() => {
+    const params: any = {
+      coordinatorId: searchParams.get("coordinatorId") || undefined,
+      candidateProjectMapId: searchParams.get("candidateProjectMapId") || undefined,
+      decision: filters.decision === "all" ? (searchParams.get("decision") || undefined) : filters.decision,
+      mode: filters.mode === "all" ? (searchParams.get("mode") || undefined) : filters.mode,
+      projectId: filters.projectId === "all" ? undefined : filters.projectId,
+      roleCatalogId: filters.roleCatalogId === "all" ? undefined : filters.roleCatalogId,
+      scheduledDate: searchParams.get("scheduledDate") || undefined,
+      conductedDate: searchParams.get("conductedDate") || undefined,
+      page: 1,
+      limit: 15,
+    };
+    // Remove undefined
+    return Object.fromEntries(Object.entries(params).filter(([, v]) => v != null));
+  }, [searchParams, filters]);
 
   const { data, isLoading, error, refetch } = useGetScreeningsQuery(
     Object.keys(apiParams).length ? (apiParams as any) : undefined
   );
   const [createTrainingAssignment, { isLoading: isCreatingTraining }] =
     useCreateTrainingAssignmentMutation();
-  // Backend returns array directly or wrapped in { data: [...] }
-  const interviews = Array.isArray(data?.data)
-    ? data.data
-    : Array.isArray(data)
-    ? data
-    : [];
+  // Backend returns array directly or wrapped in { data: [...] } or { data: { items: [...] } }
+  const interviews = useMemo(() => {
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.data?.items)) return data.data.items;
+    if (Array.isArray(data)) return data;
+    return [];
+  }, [data]);
 
-  // Filter interviews
+  // Derive unique projects from the currently loaded screenings
+  const projects = useMemo(() => {
+    const map = new Map();
+    interviews.forEach((it: any) => {
+      const p = it.candidateProjectMap?.project || it.project;
+      if (p && !map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    });
+    // Add currently selected project to ensure it stays in list when filtered
+    if (filters.projectId !== "all" && !map.has(filters.projectId)) {
+      const selectedItem = interviews.find(it => (it.candidateProjectMap?.project?.id || it.project?.id) === filters.projectId);
+      const proj = selectedItem?.candidateProjectMap?.project || selectedItem?.project;
+      if (proj) {
+        map.set(filters.projectId, proj);
+      }
+    }
+    return Array.from(map.values());
+  }, [interviews, filters.projectId]);
+
+  // Fetch roles for selected project (for the filter)
+  const { data: projectForFilterDetails } = useGetProjectQuery(
+    filters.projectId,
+    { skip: filters.projectId === "all" }
+  );
+  const projectFiltersRoles = projectForFilterDetails?.data?.rolesNeeded || [];
+
+  const uniqueRoles = useMemo(() => {
+    const rolesMap = new Map();
+    projectFiltersRoles.forEach((r: any) => {
+      const id = (r.roleCatalogId || r.roleCatalog?.id || r.id).toString();
+      const name = r.designation || r.roleCatalog?.name || "Unknown Role";
+      if (!rolesMap.has(id)) {
+        rolesMap.set(id, { id, name });
+      }
+    });
+    return Array.from(rolesMap.values());
+  }, [projectFiltersRoles]);
+
   const { upcomingInterviews, completedInterviews, allInterviews } =
     useMemo(() => {
       let filtered = interviews;
@@ -206,6 +251,12 @@ export default function ScreeningsListPage() {
     return displayedInterviews[0];
   }, [displayedInterviews, selectedInterviewId]);
 
+  // Fetch project details for the SELECTED interview for detail panel
+  const { data: selectedProjectDetails } = useGetProjectQuery(
+    selectedInterview?.candidateProjectMap?.project?.id || "",
+    { skip: !selectedInterview?.candidateProjectMap?.project?.id }
+  );
+
   const getDocStatus = (interview: any) => {
     if (!interview) return null;
     
@@ -240,7 +291,7 @@ export default function ScreeningsListPage() {
   // Load interview history for the selected interview's candidate-project
   const { data: historyData, isLoading: isLoadingHistory } = useGetCandidateProjectHistoryQuery(
     selectedInterview?.candidateProjectMap?.id
-      ? { candidateProjectMapId: selectedInterview.candidateProjectMap.id, page: 1, limit: 20 }
+      ? { candidateProjectMapId: selectedInterview.candidateProjectMap.id, page: 1, limit: 15 }
       : undefined,
     { skip: !selectedInterview?.candidateProjectMap?.id }
   );
@@ -508,34 +559,73 @@ export default function ScreeningsListPage() {
      <div className="w-full mx-auto pt-4 pb-4 px-4 max-w-7xl overflow-hidden flex-shrink-0">
   <Card className="border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden">
     <CardContent className="p-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {/* Search Bar */}
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <Input
             placeholder="Search candidates, projects, roles..."
             value={filters.search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9 h-10 text-sm rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white transition-colors"
+            className="pl-9 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white transition-colors"
           />
           {filters.search && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md hover:bg-slate-100"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md hover:bg-slate-100"
               onClick={() => handleSearch("")}
             >
-              <X className="h-3.5 w-3.5 text-slate-400" />
+              <X className="h-3 w-3 text-slate-400" />
             </Button>
           )}
         </div>
+
+        {/* Project Filter */}
+        <Select
+          value={filters.projectId}
+          onValueChange={(val) => setFilters(p => ({ ...p, projectId: val, roleCatalogId: "all" }))}
+        >
+          <SelectTrigger className="h-9 w-[160px] text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white">
+            <div className="flex items-center gap-2 truncate">
+              <Briefcase className="h-3.5 w-3.5 text-indigo-500" />
+              <SelectValue placeholder="All Projects" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Projects</SelectItem>
+            {projects.map((p: any) => (
+              <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Role Filter */}
+        <Select
+          value={filters.roleCatalogId}
+          onValueChange={(val) => setFilters(p => ({ ...p, roleCatalogId: val }))}
+          disabled={filters.projectId === "all"}
+        >
+          <SelectTrigger className="h-9 w-[160px] text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white">
+            <div className="flex items-center gap-2 truncate">
+              <Plus className="h-3.5 w-3.5 text-indigo-500" />
+              <SelectValue placeholder="All Roles" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            {uniqueRoles.map((r: any) => (
+              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Decision Filter */}
         <Select
           value={filters.decision}
           onValueChange={(value) => setFilters((prev) => ({ ...prev, decision: value }))}
         >
-          <SelectTrigger className="h-10 w-[150px] border-slate-200 bg-slate-50/50 rounded-lg text-sm">
+          <SelectTrigger className="h-9 w-[140px] border-slate-200 bg-slate-50/50 rounded-lg text-xs">
             <SelectValue placeholder="All Decisions" />
           </SelectTrigger>
           <SelectContent className="rounded-lg">
@@ -543,7 +633,7 @@ export default function ScreeningsListPage() {
               <SelectItem
                 key={option.value}
                 value={option.value}
-                className="text-sm"
+                className="text-xs"
               >
                 {option.label}
               </SelectItem>
@@ -555,21 +645,25 @@ export default function ScreeningsListPage() {
         {(filters.search ||
           filters.mode !== "all" ||
           filters.decision !== "all" ||
-          filters.status !== "all") && (
+          filters.status !== "all" ||
+          filters.projectId !== "all" ||
+          filters.roleCatalogId !== "all") && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-10 px-3 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50"
+            className="h-9 px-3 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50"
             onClick={() =>
               setFilters({
                 search: "",
                 mode: "all",
                 decision: "all",
                 status: "all",
+                projectId: "all",
+                roleCatalogId: "all"
               })
             }
           >
-            <X className="h-4 w-4 mr-1" />
+            <X className="h-3.5 w-3.5 mr-1" />
             Clear
           </Button>
         )}
@@ -1114,7 +1208,7 @@ export default function ScreeningsListPage() {
                 <Briefcase className="h-4 w-4 text-purple-500" />
                 Project & Role
               </h3>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-xs text-slate-400">Project</p>
                   <p className="font-medium text-slate-800">
@@ -1127,6 +1221,43 @@ export default function ScreeningsListPage() {
                     {selectedInterview.candidateProjectMap?.roleNeeded?.designation || "N/A"}
                   </p>
                 </div>
+                {selectedProjectDetails?.data && (
+                  <div className="pt-2 border-t border-slate-100 mt-2 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[11px] text-slate-400">Client</p>
+                      <p className="text-[11px] font-medium text-slate-700">{selectedProjectDetails.data.client?.name || 'N/A'}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-[11px] text-slate-400">Type</p>
+                      <p className="text-[11px] font-medium text-slate-700 capitalize">{selectedProjectDetails.data.projectType || 'N/A'}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-[11px] text-slate-400">Status</p>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize border-slate-200">
+                        {selectedProjectDetails.data.status}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-[11px] text-slate-400">Priority</p>
+                      <Badge className={cn(
+                        "text-[10px] h-4 px-1.5 capitalize border-0",
+                        selectedProjectDetails.data.priority === 'urgent' ? 'bg-red-500 text-white' : 
+                        selectedProjectDetails.data.priority === 'high' ? 'bg-orange-500 text-white' : 
+                        'bg-blue-500 text-white'
+                      )}>
+                        {selectedProjectDetails.data.priority}
+                      </Badge>
+                    </div>
+                    {selectedProjectDetails.data.deadline && (
+                      <div className="flex justify-between items-center">
+                        <p className="text-[11px] text-slate-400">Deadline</p>
+                        <p className="text-[11px] font-medium text-slate-700">
+                          {format(new Date(selectedProjectDetails.data.deadline), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

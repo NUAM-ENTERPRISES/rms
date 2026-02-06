@@ -84,7 +84,7 @@ export default function BasicTrainingPage() {
   // Query basic training assignments (trainingType === "basic" and screeningInterviewId IS NULL)
   const apiParams = {
     page: 1,
-    limit: 20,
+    limit: 15,
     search: filters.search || undefined,
     assignedBy: searchParams.get("assignedBy") || undefined,
     status: filters.status && filters.status !== "all" ? filters.status : undefined,

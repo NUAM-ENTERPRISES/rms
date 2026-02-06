@@ -31,4 +31,9 @@ export class QueryAssignedScreeningsDto {
   @IsOptional()
   @IsString()
   recruiterId?: string;
-}
+
+  @ApiPropertyOptional({ description: 'Filter by RoleCatalog ID (filters candidate-projects by role catalog of the assigned role)' })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
+} 

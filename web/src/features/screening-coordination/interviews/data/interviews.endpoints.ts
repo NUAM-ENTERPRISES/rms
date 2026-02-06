@@ -14,15 +14,15 @@ import type {
 export const screeningsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get all screenings
-    getScreenings: builder.query<ApiResponse<Screening[]>, QueryScreeningsRequest | undefined>({
+    getScreenings: builder.query<PaginatedResponse<Screening>, QueryScreeningsRequest | undefined>({
       query: (params: QueryScreeningsRequest | undefined) => ({
         url: "/screenings",
         params: params as Record<string, any> | undefined,
       }),
       providesTags: (result) =>
-        result?.data && Array.isArray(result.data)
+        result?.data?.items && Array.isArray(result.data.items)
           ? [
-              ...result.data.map(({ id }) => ({ type: "Screening" as const, id })),
+              ...result.data.items.map(({ id }) => ({ type: "Screening" as const, id })),
               { type: "Screening", id: "LIST" },
             ]
           : [{ type: "Screening", id: "LIST" }],
@@ -34,8 +34,8 @@ export const screeningsApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: "Screening", id }],
     }),
 
-    // Create a new screening (schedule)
-    createScreening: builder.mutation<ApiResponse<Screening>, CreateScreeningRequest>({
+    // Create a new screening (schedule) - supports both single and batch
+    createScreening: builder.mutation<any, CreateScreeningRequest | CreateScreeningRequest[]>({
       query: (body) => ({
         url: "/screenings",
         method: "POST",
@@ -104,7 +104,7 @@ export const screeningsApi = baseApi.injectEndpoints({
     getUpcomingScreenings: builder.query<PaginatedResponse<Screening>, Record<string, any> | undefined>({
       query: (params: Record<string, any> | undefined) => ({
         url: "/screenings/upcoming",
-        params: { page: 1, limit: 5, ...(params || {}) },
+        params: { page: 1, limit: 15, ...(params || {}) },
       }),
       providesTags: (result) =>
         result?.data && Array.isArray(result.data.items)

@@ -38,13 +38,13 @@ export class ScreeningsController {
   @Post()
   @Permissions('write:screenings')
   @ApiOperation({
-    summary: 'Schedule a new screening',
+    summary: 'Schedule one or multiple screenings',
     description:
-      'Create and schedule a screening for a candidate-project. Interview Coordinators and Recruiters can schedule.',
+      'Create and schedule a single screening or multiple screenings in one request. Accepts either a single screening object or an array of screening objects. Interview Coordinators and Recruiters can schedule.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Screening scheduled successfully',
+    description: 'Screening(s) scheduled successfully',
   })
   @ApiResponse({
     status: 404,
@@ -52,18 +52,38 @@ export class ScreeningsController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Candidate already has a pending screening',
+    description: 'Candidate already has a pending screening (for any of the provided candidate-projects)',
   })
-  create(@Body() createDto: CreateScreeningDto, @Request() req: any) {
-    return this.screeningsService.create(createDto, req.user?.userId ?? null);
+  async create(@Body() body: CreateScreeningDto | CreateScreeningDto[], @Request() req: any) {
+    const scheduledBy = req.user?.userId ?? null;
+
+    // Support both single object and array (batch scheduling)
+    if (Array.isArray(body)) {
+      // Create all screenings concurrently (each create does its own transaction/validation)
+      const creations = await Promise.all(
+        body.map((dto) => this.screeningsService.create(dto, scheduledBy)),
+      );
+      return {
+        success: true,
+        data: creations,
+        message: 'Screenings scheduled successfully',
+      };
+    }
+
+    const created = await this.screeningsService.create(body, scheduledBy);
+    return {
+      success: true,
+      data: created,
+      message: 'Screening scheduled successfully',
+    };
   }
 
   @Get()
   @Permissions('read:screenings')
   @ApiOperation({
-    summary: 'Get all screenings',
+    summary: 'Get all screenings (paginated)',
     description:
-      'Retrieve all screenings with optional filtering by candidate, coordinator, or decision.',
+      'Retrieve all screenings with pagination and optional filtering by candidate, coordinator, decision, project, or role catalog.',
   })
   @ApiResponse({
     status: 200,
@@ -96,7 +116,7 @@ export class ScreeningsController {
   @Permissions('read:screenings')
   @ApiOperation({
     summary: 'List candidate-project assignments with sub-status screening_assigned ordered by latest assignment',
-    description: 'Return candidate-projects that have been assigned to screenings (latest assignments first). Supports pagination and optional filters.',
+    description: 'Return candidate-projects that have been assigned to screenings (latest assignments first). Supports pagination and optional filters (projectId, candidateId, recruiterId, roleCatalogId) — roleCatalogId filters by the role catalog of the assigned role.',
   })
   @ApiResponse({ status: 200, description: 'Assigned screening candidate-projects retrieved' })
   getAssignedScreenings(@Query() query: QueryAssignedScreeningsDto) {

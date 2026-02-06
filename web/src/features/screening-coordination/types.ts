@@ -151,6 +151,14 @@ export interface CreateScreeningRequest {
   mode?: string;
 }
 
+export type CreateScreeningPayload = CreateScreeningRequest | CreateScreeningRequest[];
+
+export interface BatchScreeningResponse {
+  success: boolean;
+  data: Screening | Screening[];
+  message: string;
+}
+
 export interface UpdateScreeningRequest {
   candidateProjectMapId?: string;
   coordinatorId?: string;
@@ -186,6 +194,10 @@ export interface QueryScreeningsRequest {
   mode?: string;
   scheduledDate?: string;
   conductedDate?: string;
+  projectId?: string;
+  roleCatalogId?: string;
+  page?: number;
+  limit?: number;
 }
 
 // Query params for assigned mock interviews list
@@ -193,6 +205,7 @@ export interface QueryAssignedScreeningsRequest {
   page?: number;
   limit?: number;
   projectId?: string;
+  roleCatalogId?: string;
   candidateId?: string;
   recruiterId?: string;
 }

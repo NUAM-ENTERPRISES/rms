@@ -26,7 +26,7 @@ export default function UpcomingInterviewsListPage() {
     if (s) setSelectedId(s);
   }, [location.state]);
 
-  const { data, isLoading, error } = useGetUpcomingScreeningsQuery({ page: 1, limit: 100 });
+  const { data, isLoading, error } = useGetUpcomingScreeningsQuery({ page: 1, limit: 15 });
   const items = data?.data?.items || [];
 
   const filteredItems = useMemo(() => {

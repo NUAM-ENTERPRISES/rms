@@ -23,7 +23,6 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
 
   const { data, isLoading, isFetching, refetch } = useGetDocumentsQuery({
     candidateId,
-    docType: "resume",
     page,
     limit,
   });

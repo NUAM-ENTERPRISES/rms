@@ -37,7 +37,12 @@ import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 export default function ScreeningsDashboardPage() {
   const navigate = useNavigate();
   const { data, isLoading, error } = useGetScreeningsQuery(undefined);
-  const interviews = data?.data || [];
+  const interviews = useMemo(() => {
+    if (Array.isArray(data?.data?.items)) return data.data.items;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    return [];
+  }, [data]);
 
   // Assigned candidate-projects for mock interviews (these are different
   // from scheduled MockInterview resources). We'll fetch these and merge
@@ -46,7 +51,7 @@ export default function ScreeningsDashboardPage() {
   const { data: assignedData, refetch: refetchAssigned } =
     useGetAssignedScreeningsQuery({
       page: 1,
-      limit: 10,
+      limit: 15,
     });
 
   const assignedItems = assignedData?.data?.items || [];

@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,6 @@ import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
 import { useCreateScreeningMutation } from "../data";
 
 const scheduleSchema = z.object({
-  candidateProjectMapId: z.string().min(1, "Candidate selection is required"),
   coordinatorId: z.string().min(1, "Coordinator is required"),
   scheduledTime: z
     .string()
@@ -37,6 +37,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedAssignment: any | null;
+  selectedAssignments?: any[]; // For batch scheduling
   refetchAssigned?: () => void;
 }
 
@@ -44,10 +45,12 @@ export default function ScheduleScreeningModal({
   open,
   onOpenChange,
   selectedAssignment,
+  selectedAssignments = [],
   refetchAssigned,
 }: Props) {
-  // selectedAssignment may be the candidateProjectMap itself or an object that contains it
-  const candidateProjectMap = selectedAssignment?.candidateProjectMap || selectedAssignment;
+  // Support both single and batch scheduling
+  const isBatch = selectedAssignments.length > 0;
+  const assignments = isBatch ? selectedAssignments : selectedAssignment ? [selectedAssignment] : [];
 
   const [createScreening, createState] = useCreateScreeningMutation();
   const { users, getUsersByRole } = useUsersLookup();
@@ -56,9 +59,7 @@ export default function ScheduleScreeningModal({
     resolver: zodResolver(scheduleSchema),
     mode: "onChange",
     defaultValues: {
-      candidateProjectMapId: candidateProjectMap?.id || "",
       coordinatorId: "",
-      // templateId: undefined,
       scheduledTime: "",
       duration: 60,
       meetingLink: "",
@@ -67,52 +68,76 @@ export default function ScheduleScreeningModal({
   });
 
   useEffect(() => {
-    if (!selectedAssignment) return;
-    // support both scheduledTime (used on scheduled items) or assignedAt (on assigned-but-not-scheduled items)
-    const dateVal = selectedAssignment?.scheduledTime || selectedAssignment?.assignedAt;
-    const initialScheduled = dateVal
-      ? (() => {
-          const iso = new Date(dateVal);
-          const tzOffset = iso.getTimezoneOffset();
-          const local = new Date(iso.getTime() - tzOffset * 60000);
-          return local.toISOString().slice(0, 16);
-        })()
-      : "";
-
+    if (!open) return;
+    // Reset form when dialog opens
     form.reset({
-      candidateProjectMapId: candidateProjectMap?.id || "",
       coordinatorId: "",
-      // templateId: undefined,
-      scheduledTime: initialScheduled,
+      scheduledTime: "",
       duration: 60,
       meetingLink: "",
       mode: "video",
     });
-  }, [selectedAssignment]);
+  }, [open, form]);
 
   const coordinators = getUsersByRole("coordinator").length ? getUsersByRole("coordinator") : users || [];
 
   const onSubmitSchedule = async (values: ScheduleFormValues) => {
     try {
-      const payload: any = { ...values };
-      if (values.scheduledTime) payload.scheduledTime = new Date(values.scheduledTime).toISOString();
+      if (assignments.length === 0) {
+        toast.error("No assignments selected");
+        return;
+      }
 
-      await createScreening(payload).unwrap();
-      toast.success("Screening scheduled");
+      // Build payload(s)
+      const payload = assignments.map((assignment) => {
+        const candidateProjectMap = assignment?.candidateProjectMap || assignment;
+        const basePayload: any = {
+          candidateProjectMapId: candidateProjectMap?.id,
+          coordinatorId: values.coordinatorId,
+          duration: values.duration,
+          meetingLink: values.meetingLink || undefined,
+          mode: values.mode || "video",
+        };
+
+        if (values.scheduledTime) {
+          basePayload.scheduledTime = new Date(values.scheduledTime).toISOString();
+        }
+
+        return basePayload;
+      });
+
+      // Send single or batch request
+      const requestPayload = isBatch ? payload : payload[0];
+
+      await createScreening(requestPayload).unwrap();
+      
+      const successMsg = isBatch 
+        ? `${assignments.length} screenings scheduled successfully`
+        : "Screening scheduled successfully";
+      
+      toast.success(successMsg);
       onOpenChange(false);
       form.reset();
       refetchAssigned?.();
     } catch (err: any) {
       const status = err?.status;
       if (status === 409) {
-        toast.error("Conflict: screening already exists for this assignment.");
+        toast.error("Conflict: one or more screenings already exist for these assignments.");
       } else if (status === 404) {
         toast.error("Resource not found. Please try again.");
       } else {
-        toast.error("Failed to schedule screening. Please try again.");
+        toast.error("Failed to schedule screening(s). Please try again.");
       }
     }
   };
+
+  const candidateSummary = assignments
+    .slice(0, 3)
+    .map((a) => {
+      const candidate = a?.candidate || a?.candidateProjectMap?.candidate;
+      return candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown";
+    })
+    .join(", ");
 
   return (
     <Dialog
@@ -124,27 +149,26 @@ export default function ScheduleScreeningModal({
     >
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl flex items-center gap-3">Schedule Screening</DialogTitle>
+          <DialogTitle className="text-xl flex items-center gap-3">
+            {isBatch ? "Bulk Schedule Screenings" : "Schedule Screening"}
+          </DialogTitle>
           <DialogDescription>
-            Set a date/time, coordinator and optional template for the screening.
+            {isBatch
+              ? `Configure details for ${assignments.length} screenings`
+              : "Set a date/time, coordinator and optional details for the screening."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmitSchedule)} className="space-y-4 pt-4">
-          <div>
-            <Label className="text-sm font-medium">Candidate</Label>
-            <Input
-              disabled
-              value={
-                candidateProjectMap && (candidateProjectMap.candidate || candidateProjectMap?.candidate)
-                  ? `${(candidateProjectMap.candidate || candidateProjectMap?.candidate).firstName} ${
-                      (candidateProjectMap.candidate || candidateProjectMap?.candidate).lastName
-                    } — ${(candidateProjectMap.project || candidateProjectMap?.project)?.title}`
-                  : ""
-              }
-              className="h-11 mt-1 bg-muted/40 text-black"
-            />
-          </div>
+          {/* Candidates Summary - Only show for single scheduling */}
+          {!isBatch && (
+            <div>
+              <Label className="text-sm font-medium">Candidate</Label>
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
+                {candidateSummary}
+              </div>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="coordinatorId" className="text-sm font-medium">Coordinator *</Label>
@@ -192,11 +216,24 @@ export default function ScheduleScreeningModal({
 
           <DialogFooter>
             <div className="flex gap-3 w-full pt-2">
-              <UiButton type="button" variant="outline" onClick={() => { onOpenChange(false); form.reset(); }} className="flex-1" disabled={createState.isLoading}>
+              <UiButton 
+                type="button" 
+                variant="outline" 
+                onClick={() => { onOpenChange(false); form.reset(); }} 
+                className="flex-1" 
+                disabled={createState.isLoading}
+              >
                 Cancel
               </UiButton>
-              <UiButton type="submit" className="flex-1" disabled={createState.isLoading || !form.formState.isValid}>
-                {createState.isLoading ? "Scheduling..." : "Schedule Screening"}
+              <UiButton 
+                type="submit" 
+                className="flex-1" 
+                disabled={createState.isLoading || !form.formState.isValid}
+              >
+                {createState.isLoading 
+                  ? `${isBatch ? "Bulk Scheduling" : "Scheduling"}...` 
+                  : isBatch ? `Bulk Schedule (${assignments.length})` : "Schedule"
+                }
               </UiButton>
             </div>
           </DialogFooter>
