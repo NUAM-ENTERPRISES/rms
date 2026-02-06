@@ -24,8 +24,8 @@ export class WhatsAppNotificationService {
     
     return this.whatsappService.sendTemplateMessage({
       to: phoneNumber,
-      templateName: WHATSAPP_TEMPLATE_TYPES.CANDIDATE_STATUS_UPDATE_V1,
-      languageCode: 'en',
+      templateName: WHATSAPP_TEMPLATE_TYPES.TEST_STATUS,
+      languageCode: 'en_US',
       bodyParameters: [
         candidateName.split(' ')[0] || candidateName, // {{1}}
         statusName,                                  // {{2}}
