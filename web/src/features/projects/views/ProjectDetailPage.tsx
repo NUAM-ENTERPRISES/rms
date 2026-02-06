@@ -50,7 +50,6 @@ import {
   useSendForVerificationMutation,
   useSendForInterviewMutation,
   useSendForScreeningMutation,
-  useGetCandidateProjectStatusesQuery,
   useAssignToProjectMutation,
   useGetEligibleCandidatesQuery,
 } from "@/features/projects";
@@ -125,6 +124,9 @@ const formatWorkExperienceEntry = (exp: any) => {
   return `${parts.join(" ")}${yearsLabel}`.trim();
 };
 
+// Lazy-loaded project details modal (code-split)
+const ProjectDetailsModal = React.lazy(() => import("@/components/molecules/ProjectDetailsModal"));
+
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -147,17 +149,17 @@ export default function ProjectDetailPage() {
 
   // Board filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedRoleCatalogId, setSelectedRoleCatalogId] = useState<string>("all");
 
-  // Lazy-loaded project details modal (code-split)
-  const ProjectDetailsModal = React.lazy(() => import("@/components/molecules/ProjectDetailsModal"));
   const [showDetails, setShowDetails] = useState(false);
 
-  // Get project statuses for filter options
-  const { data: statusesData } = useGetCandidateProjectStatusesQuery();
-
   // Get eligible candidates
-  const { data: eligibleResponse } = useGetEligibleCandidatesQuery(projectId!);
+  const { data: eligibleResponse } = useGetEligibleCandidatesQuery({
+    projectId: projectId!,
+    search: searchTerm || undefined,
+    roleCatalogId:
+      selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
+  });
   const eligibleCandidates: any[] = Array.isArray(eligibleResponse?.data)
     ? eligibleResponse.data
     : eligibleResponse?.data && typeof eligibleResponse.data === "object"
@@ -173,12 +175,26 @@ export default function ProjectDetailPage() {
       ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
     ) ?? false;
 
-  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(undefined, {
-    skip: !isRecruiter || isManager,
-  });
-  const allCandidatesQuery = useGetCandidatesQuery(undefined, {
-    skip: isRecruiter && !isManager,
-  });
+  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
+    {
+      search: searchTerm || undefined,
+      roleCatalogId:
+        selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
+    },
+    {
+      skip: !isRecruiter || isManager,
+    }
+  );
+  const allCandidatesQuery = useGetCandidatesQuery(
+    {
+      search: searchTerm || undefined,
+      roleCatalogId:
+        selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
+    },
+    {
+      skip: isRecruiter && !isManager,
+    }
+  );
 
   const recruiterCandidatesData =
     isRecruiter && !isManager ? recruiterCandidatesQuery.data : undefined;
@@ -214,7 +230,8 @@ export default function ProjectDetailPage() {
       {
         projectId: projectId!,
         search: searchTerm || undefined,
-        statusId: selectedStatus !== "all" ? selectedStatus : undefined,
+        roleCatalogId:
+          selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
         page: 1,
         limit: 10, // default to 10 for nominated candidates
       },
@@ -228,6 +245,65 @@ export default function ProjectDetailPage() {
       useSendForScreeningMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
+
+  // Get data (Moved above early returns to comply with Rules of Hooks)
+  const projectCandidates = React.useMemo(() => {
+    return Array.isArray(projectCandidatesData?.data?.candidates)
+      ? projectCandidatesData?.data?.candidates
+      : [];
+  }, [projectCandidatesData?.data?.candidates]);
+
+  const projectRoles = React.useMemo(() => {
+    const rolesMap = new Map();
+
+    // Helper to add roles to map
+    const addRole = (r: any) => {
+      const id = r.roleCatalogId || r.roleCatalog?.id || r.id || r.roleId;
+      const rawName =
+        r.name ||
+        r.label ||
+        r.designation ||
+        r.roleCatalog?.label ||
+        "Unknown Role";
+      
+      const name = String(rawName).trim();
+      
+      if (id && id !== "undefined") {
+        const stringId = String(id);
+        
+        // Skip if ID already exists
+        if (rolesMap.has(stringId)) return;
+
+        // Skip if Name already exists (to prevent duplicates with different IDs)
+        const alreadyHasName = Array.from(rolesMap.values()).some(
+          (role: any) => role.name.toLowerCase() === name.toLowerCase()
+        );
+        
+        if (!alreadyHasName) {
+          rolesMap.set(stringId, { id: stringId, name });
+        }
+      }
+    };
+
+    // 1. From candidate response
+    const dataObj = projectCandidatesData?.data;
+    if (dataObj && Array.isArray(dataObj.roles)) {
+      dataObj.roles.forEach(addRole);
+    }
+
+    // 2. From project response
+    const project = projectData?.data;
+    if (project && Array.isArray(project.rolesNeeded)) {
+      project.rolesNeeded.forEach(addRole);
+    }
+
+    // 3. Fallback: from candidates themselves if any
+    projectCandidates.forEach((c: any) => {
+      if (c.nominatedRole) addRole(c.nominatedRole);
+    });
+
+    return Array.from(rolesMap.values()) as Array<{ id: string; name: string }>;
+  }, [projectCandidatesData?.data, projectData?.data, projectCandidates]);
 
   // Local state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -506,21 +582,9 @@ export default function ProjectDetailPage() {
     setSearchTerm(value);
   };
 
-  const handleBoardStatusChange = (value: string) => {
-    setSelectedStatus(value);
+  const handleBoardRoleChange = (value: string) => {
+    setSelectedRoleCatalogId(value);
   };
-
-  // Get data
-  const projectCandidates = Array.isArray(
-    projectCandidatesData?.data?.candidates
-  )
-    ? projectCandidatesData?.data?.candidates
-    : [];
-  const pagination = projectCandidatesData?.data?.pagination;
-
-  const projectStatuses = Array.isArray(statusesData?.data?.statuses)
-    ? statusesData.data.statuses
-    : [];
 
   // Loading state
   if (isLoading) {
@@ -572,6 +636,10 @@ export default function ProjectDetailPage() {
   }
 
   const project = projectData.data;
+
+  // Get data
+  const pagination = projectCandidatesData?.data?.pagination;
+
   const projectResumeEditable =
     "resumeEditable" in project
       ? Boolean((project as { resumeEditable?: boolean }).resumeEditable)
@@ -705,10 +773,10 @@ export default function ProjectDetailPage() {
                 nominatedCandidates={projectCandidates}
                 isLoadingNominated={isLoadingCandidates}
                 searchTerm={searchTerm}
-                selectedStatus={selectedStatus}
+                selectedRole={selectedRoleCatalogId}
                 onSearchChange={handleBoardSearchChange}
-                onStatusChange={handleBoardStatusChange}
-                statuses={projectStatuses}
+                onRoleChange={handleBoardRoleChange}
+                roles={projectRoles}
                 onViewCandidate={handleViewCandidate}
                 onAssignCandidate={(candidateId, candidateName) =>
                   showAssignConfirmation(candidateId, candidateName)

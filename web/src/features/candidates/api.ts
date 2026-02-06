@@ -380,6 +380,9 @@ export interface GetCandidatesParams {
   page?: number;
   limit?: number;
   status?: string;
+  search?: string;
+  roleCatalogId?: string;
+  teamId?: string;
 }
 
 export interface GetRecruiterMyCandidatesParams {
@@ -387,6 +390,7 @@ export interface GetRecruiterMyCandidatesParams {
   limit?: number;
   status?: string;
   search?: string;
+  roleCatalogId?: string;
 }
 
 export interface RecruiterMyCandidatesResponse {
@@ -567,13 +571,16 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         if (!params) return "/candidates";
-        
+
         const queryParams = new URLSearchParams();
-        if (params.assignedTo) queryParams.append('assignedTo', params.assignedTo);
-        if (params.page) queryParams.append('page', params.page.toString());
-        if (params.limit) queryParams.append('limit', params.limit.toString());
-        if (params.status) queryParams.append('status', params.status);
-        
+        if (params.assignedTo) queryParams.append("assignedTo", params.assignedTo);
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+        if (params.status) queryParams.append("status", params.status);
+        if (params.search) queryParams.append("search", params.search);
+        if (params.roleCatalogId) queryParams.append("roleCatalogId", params.roleCatalogId);
+        if (params.teamId) queryParams.append("teamId", params.teamId);
+
         const queryString = queryParams.toString();
         return queryString ? `/candidates?${queryString}` : "/candidates";
       },
@@ -703,10 +710,33 @@ export const candidatesApi = baseApi.injectEndpoints({
     }),
 
     getEligibleCandidates: builder.query<
-      { success: boolean; data: Candidate[] },
-      string
+      { success: boolean; data: any[] },
+      {
+        projectId: string;
+        search?: string;
+        roleCatalogId?: string;
+        sortBy?: string;
+        page?: number;
+        limit?: number;
+      }
     >({
-      query: (projectId) => `/projects/${projectId}/eligible-candidates?limit=10`,
+      query: ({
+        projectId,
+        search,
+        roleCatalogId,
+        sortBy,
+        page = 1,
+        limit = 10,
+      }) => ({
+        url: `/projects/${projectId}/eligible-candidates`,
+        params: {
+          search,
+          roleCatalogId,
+          sortBy,
+          page,
+          limit,
+        },
+      }),
       providesTags: ["Candidate"],
     }),
 
@@ -872,15 +902,17 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append('page', params.page.toString());
-        if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.status) queryParams.append('status', params.status);
-        if (params?.search) queryParams.append('search', params.search);
-        
+        if (params?.page) queryParams.append("page", params.page.toString());
+        if (params?.limit) queryParams.append("limit", params.limit.toString());
+        if (params?.status) queryParams.append("status", params.status);
+        if (params?.search) queryParams.append("search", params.search);
+        if (params?.roleCatalogId)
+          queryParams.append("roleCatalogId", params.roleCatalogId);
+
         const queryString = queryParams.toString();
-        return queryString 
-          ? `/candidates/recruiter/my-candidates?${queryString}` 
-          : '/candidates/recruiter/my-candidates';
+        return queryString
+          ? `/candidates/recruiter/my-candidates?${queryString}`
+          : "/candidates/recruiter/my-candidates";
       },
       providesTags: ["Candidate"],
     }),

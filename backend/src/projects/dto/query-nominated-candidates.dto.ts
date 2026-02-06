@@ -54,6 +54,14 @@ export class QueryNominatedCandidatesDto {
   subStatus?: string;
 
   @ApiPropertyOptional({
+    description: 'Filter by Role Catalog ID',
+    example: 'role_123',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
+
+  @ApiPropertyOptional({
     description: 'Page number (1-based)',
     example: 1,
     default: 1,

@@ -330,9 +330,32 @@ export const projectsApi = baseApi.injectEndpoints({
     // Get eligible candidates for a project
     getEligibleCandidates: builder.query<
       ApiResponse<EligibleCandidate[]>,
-      string
+      {
+        projectId: string;
+        search?: string;
+        roleCatalogId?: string;
+        sortBy?: string;
+        page?: number;
+        limit?: number;
+      }
     >({
-      query: (projectId) => `/projects/${projectId}/eligible-candidates?limit=10`,
+      query: ({
+        projectId,
+        search,
+        roleCatalogId,
+        sortBy,
+        page = 1,
+        limit = 10,
+      }) => ({
+        url: `/projects/${projectId}/eligible-candidates`,
+        params: {
+          search,
+          roleCatalogId,
+          sortBy,
+          page,
+          limit,
+        },
+      }),
       providesTags: ["Candidate"],
     }),
 
@@ -505,6 +528,7 @@ export const projectsApi = baseApi.injectEndpoints({
     getNominatedCandidates: builder.query<
       ApiResponse<{
         candidates: Candidate[];
+        roles?: Array<{ id: string; name: string }>;
         pagination: {
           page: number;
           limit: number;
@@ -522,6 +546,7 @@ export const projectsApi = baseApi.injectEndpoints({
         subStatus?: string;
         statusId?: string;
         subStatusId?: string;
+        roleCatalogId?: string;
         page?: number;
         limit?: number;
       }
@@ -533,6 +558,7 @@ export const projectsApi = baseApi.injectEndpoints({
         subStatus,
         statusId,
         subStatusId,
+        roleCatalogId,
         page = 1,
         limit = 20,
       }) => ({
@@ -547,6 +573,7 @@ export const projectsApi = baseApi.injectEndpoints({
           // older clients/backends until rollout completes.
           statusId: status ? undefined : statusId || undefined,
           subStatusId: subStatus ? undefined : subStatusId || undefined,
+          roleCatalogId,
           page,
           limit,
         },

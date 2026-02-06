@@ -42,4 +42,12 @@ export class GetRecruiterCandidatesDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by Role Catalog ID',
+    example: 'role_123',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
 }

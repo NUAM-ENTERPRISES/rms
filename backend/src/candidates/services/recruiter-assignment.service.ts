@@ -356,7 +356,7 @@ export class RecruiterAssignmentService {
     recruiterId: string,
     dto: GetRecruiterCandidatesDto,
   ) {
-    const { page = 1, limit = 10, status, search } = dto;
+    const { page = 1, limit = 10, status, search, roleCatalogId } = dto;
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -428,6 +428,14 @@ export class RecruiterAssignmentService {
           },
         },
       ];
+    }
+
+    if (roleCatalogId) {
+      whereClause.workExperiences = {
+        some: {
+          roleCatalogId: roleCatalogId,
+        },
+      };
     }
 
     // Get total count (for the listing - respects search/status/search filters)

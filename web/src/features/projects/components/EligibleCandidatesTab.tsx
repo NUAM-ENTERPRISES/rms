@@ -75,7 +75,7 @@ export default function EligibleCandidatesTab({
     data: candidatesData,
     isLoading,
     error,
-  } = useGetEligibleCandidatesQuery(projectId);
+  } = useGetEligibleCandidatesQuery({ projectId });
 
   // Get candidates already assigned to this project
   const { data: projectCandidatesData } = useGetProjectCandidatesByRoleQuery({

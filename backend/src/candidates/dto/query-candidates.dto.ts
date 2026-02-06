@@ -105,8 +105,14 @@ export class QueryCandidatesDto {
   @Min(0)
   minSalary?: number;
 
-  @ApiPropertyOptional({
-    description: 'Filter by maximum expected salary',
+  @ApiPropertyOptional({    description: 'Filter by Role Catalog ID',
+    example: 'role_123',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
+
+  @ApiPropertyOptional({    description: 'Filter by maximum expected salary',
     example: 80000,
     minimum: 0,
   })

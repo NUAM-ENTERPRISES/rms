@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import {
   Search,
-  Filter,
+  Briefcase,
   Trophy,
   ShieldCheck,
   Users2,
@@ -67,10 +67,10 @@ interface ProjectCandidatesBoardProps {
   nominatedCandidates: CandidateRecord[];
   isLoadingNominated: boolean;
   searchTerm: string;
-  selectedStatus: string;
+  selectedRole: string;
   onSearchChange: (value: string) => void;
-  onStatusChange: (value: string) => void;
-  statuses: StatusOption[];
+  onRoleChange: (value: string) => void;
+  roles: any[];
   onViewCandidate: (candidateId: string) => void;
   onAssignCandidate: (candidateId: string, candidateName: string) => void;
   onVerifyCandidate: (candidateId: string, candidateName: string) => void;
@@ -217,10 +217,10 @@ const ProjectCandidatesBoard = ({
   nominatedCandidates,
   isLoadingNominated,
   searchTerm,
-  selectedStatus,
+  selectedRole,
   onSearchChange,
-  onStatusChange,
-  statuses,
+  onRoleChange,
+  roles,
   onViewCandidate,
   onAssignCandidate,
   onVerifyCandidate,
@@ -237,14 +237,30 @@ const ProjectCandidatesBoard = ({
     ) ?? false;
 
   const { data: eligibleResponse, isLoading: isLoadingEligible } =
-    useGetEligibleCandidatesQuery(projectId);
+    useGetEligibleCandidatesQuery({
+      projectId,
+      search: searchTerm || undefined,
+      roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
+    });
 
-  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(undefined, {
-    skip: !isRecruiter || isManager,
-  });
-  const allCandidatesQuery = useGetCandidatesQuery(undefined, {
-    skip: isRecruiter && !isManager,
-  });
+  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
+    {
+      search: searchTerm || undefined,
+      roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
+    },
+    {
+      skip: !isRecruiter || isManager,
+    }
+  );
+  const allCandidatesQuery = useGetCandidatesQuery(
+    {
+      search: searchTerm || undefined,
+      roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
+    },
+    {
+      skip: isRecruiter && !isManager,
+    }
+  );
 
   const { data: managerAssignmentsData } = useGetProjectCandidatesByRoleQuery({
     projectId,
@@ -373,12 +389,12 @@ const ProjectCandidatesBoard = ({
     [nominatedCandidates, hideContactInfo]
   );
 
-  // Reset pagination when search term changes
+  // Reset pagination when search term or role filter changes
   useEffect(() => {
     setNominatedPage(1);
     setEligiblePage(1);
     setAllPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, selectedRole]);
 
 
   const filteredEligible = useMemo(
@@ -865,16 +881,16 @@ const ProjectCandidatesBoard = ({
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400" aria-hidden="true" />
-          <Select value={selectedStatus} onValueChange={onStatusChange}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by status" />
+          <Briefcase className="h-4 w-4 text-slate-400" aria-hidden="true" />
+          <Select value={selectedRole} onValueChange={onRoleChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Roles" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {statuses.map((status) => (
-                <SelectItem key={status.id} value={status.id.toString()}>
-                  {status.label || status.statusName || status.name}
+              <SelectItem value="all">All Roles</SelectItem>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id}>
+                  {role.name}
                 </SelectItem>
               ))}
             </SelectContent>

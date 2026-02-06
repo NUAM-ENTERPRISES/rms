@@ -1213,6 +1213,7 @@ export class ProjectsService {
       status?: string;
       /** preferred: sub-status name to match against subStatus.name */
       subStatus?: string;
+      roleCatalogId?: string;
       page?: number;
       limit?: number;
       sortBy?: string;
@@ -1248,6 +1249,7 @@ export class ProjectsService {
       subStatusId,
       status,
       subStatus,
+      roleCatalogId,
       page = 1,
       limit = 10,
       sortBy = 'matchScore',
@@ -1280,6 +1282,12 @@ export class ProjectsService {
       whereClause.AND.push({
         OR: [{ mainStatusId: statusId }, { subStatusId: statusId }],
       });
+    }
+
+    if (roleCatalogId) {
+      whereClause.roleNeeded = {
+        roleCatalogId: roleCatalogId,
+      };
     }
 
     const isRecruiter =
@@ -1687,6 +1695,7 @@ export class ProjectsService {
     // ---------------------------------------------
     return {
       candidates: sorted,
+      roles: project.rolesNeeded,
       pagination: {
         page,
         limit,
@@ -2038,9 +2047,17 @@ export class ProjectsService {
     projectId: string,
     userId: string,
     userRoles: string[],
-    query: { page?: number; limit?: number; search?: string; sortBy?: string; sortOrder?: string } = {},
+    query: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      sortBy?: string;
+      sortOrder?: string;
+      roleCatalogId?: string;
+    } = {},
   ): Promise<{
     candidates: any[];
+    roles: any[];
     pagination: { page: number; limit: number; total: number; totalPages: number };
   }> {
     // --------------------------------
@@ -2089,6 +2106,14 @@ export class ProjectsService {
         some: {
           recruiterId: userId,
           isActive: true,
+        },
+      };
+    }
+
+    if (query.roleCatalogId) {
+      whereClause.workExperiences = {
+        some: {
+          roleCatalogId: query.roleCatalogId,
         },
       };
     }
@@ -2192,8 +2217,12 @@ export class ProjectsService {
     // --------------------------------
     // 4. FILTER MATCHING CANDIDATES
     // --------------------------------
+    const effectiveRoles = query.roleCatalogId
+      ? project.rolesNeeded.filter((r) => r.roleCatalogId === query.roleCatalogId)
+      : project.rolesNeeded;
+
     const matchedCandidates = candidates.filter((candidate) => {
-      return project.rolesNeeded.some((role) => {
+      return effectiveRoles.some((role) => {
         const candidateExperience =
           candidate.totalExperience ?? candidate.experience;
 
@@ -2239,7 +2268,7 @@ export class ProjectsService {
 
     // Build full items with matchScore
     let items = matchedCandidates.map((candidate) => {
-      const roleMatches = project.rolesNeeded.map((role) => ({
+      const roleMatches = effectiveRoles.map((role) => ({
         roleId: role.id,
         designation: role.designation,
         roleCatalogId: role.roleCatalogId ?? null,
@@ -2300,6 +2329,7 @@ export class ProjectsService {
 
     return {
       candidates: paginated,
+      roles: project.rolesNeeded,
       pagination: {
         page,
         limit,

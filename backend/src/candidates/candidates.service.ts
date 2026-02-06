@@ -380,6 +380,7 @@ export class CandidatesService {
       maxSalary,
       dateOfBirthFrom,
       dateOfBirthTo,
+      roleCatalogId,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
@@ -459,6 +460,14 @@ export class CandidatesService {
       if (dateOfBirthTo) {
         where.dateOfBirth.lte = new Date(dateOfBirthTo);
       }
+    }
+
+    if (roleCatalogId) {
+      where.workExperiences = {
+        some: {
+          roleCatalogId: roleCatalogId,
+        },
+      };
     }
 
     // Calculate pagination
