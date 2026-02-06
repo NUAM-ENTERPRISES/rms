@@ -168,15 +168,6 @@ export class CandidatesController {
                     name: { type: 'string' },
                   },
                 },
-                projects: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      isSendedForDocumentVerification: { type: 'boolean', example: false },
-                    },
-                  },
-                },
               },
             },
           },
@@ -328,16 +319,6 @@ export class CandidatesController {
                   expectedSalary: { type: 'number' },
                   recruiter: { type: 'object' },
                   team: { type: 'object' },
-                  // Each project mapping now includes whether candidate was sent for document verification
-                  projects: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        isSendedForDocumentVerification: { type: 'boolean', example: false },
-                      },
-                    },
-                  },
                 },
               },
             },
@@ -614,7 +595,6 @@ export class CandidatesController {
             expectedSalary: { type: 'number' },
             recruiter: { type: 'object' },
             team: { type: 'object' },
-            projects: { type: 'array' },
           },
         },
         message: {

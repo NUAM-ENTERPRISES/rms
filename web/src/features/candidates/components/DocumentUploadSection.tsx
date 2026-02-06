@@ -167,10 +167,16 @@ type UploadFormData = z.infer<typeof uploadSchema>;
 
 interface DocumentUploadSectionProps {
   candidateId: string;
+  data?: any[];
+  isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
 export function DocumentUploadSection({
   candidateId,
+  data: externalDocuments,
+  isLoading: isExternalLoading,
+  onRefresh,
 }: DocumentUploadSectionProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -178,15 +184,22 @@ export function DocumentUploadSection({
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string } | null>(null);
 
+  // If external data is provided, use it. Otherwise fetch (for backward compatibility if needed, though we're refactoring)
   const {
     data: documentsData,
-    isLoading,
+    isLoading: isLocalLoading,
     refetch,
-  } = useGetDocumentsQuery({
-    candidateId,
-    page: 1,
-    limit: 100,
-  });
+  } = useGetDocumentsQuery(
+    {
+      candidateId,
+      page: 1,
+      limit: 100,
+    },
+    { skip: !!externalDocuments }
+  );
+
+  const documents = externalDocuments || documentsData?.data?.documents || [];
+  const isLoading = isExternalLoading || isLocalLoading;
 
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
@@ -233,7 +246,11 @@ export function DocumentUploadSection({
       toast.success("Document uploaded successfully");
       form.reset();
       setSelectedFile(null);
-      refetch();
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        refetch();
+      }
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to upload document");
@@ -285,9 +302,6 @@ export function DocumentUploadSection({
         return <Badge variant="outline">Unknown</Badge>;
     }
   };
-
-  // API returns: { success: true, data: { documents: [...], pagination: ... } }
-  const documents = documentsData?.data?.documents || [];
 
   return (
     <div className="space-y-8">

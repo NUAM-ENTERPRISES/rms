@@ -44,7 +44,7 @@ export function CandidateResumeList({
     useGetDocumentsQuery({
       candidateId,
       docType: "resume",
-      limit: 50, // Get more resumes
+      limit: 10, // Get more resumes
     });
 
   // Upload mutation

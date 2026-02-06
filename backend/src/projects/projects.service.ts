@@ -1284,9 +1284,14 @@ export class ProjectsService {
       });
     }
 
-    if (roleCatalogId) {
-      whereClause.roleNeeded = {
-        roleCatalogId: roleCatalogId,
+    if (roleCatalogId && roleCatalogId !== 'all') {
+      // Filter candidates who HAVE the specific role experience in their profile (Strict Profile Filter)
+      // This ensures that when filtering for "Emergency Staff Nurse", we see candidates who ARE that role.
+      whereClause.candidate = {
+        ...(whereClause.candidate || {}),
+        workExperiences: {
+          some: { roleCatalogId: roleCatalogId },
+        },
       };
     }
 
@@ -1318,6 +1323,7 @@ export class ProjectsService {
     // 🔍 Search filter
     if (search) {
       whereClause.candidate = {
+        ...(whereClause.candidate || {}),
         OR: [
           { firstName: { contains: search, mode: 'insensitive' } },
           { lastName: { contains: search, mode: 'insensitive' } },
@@ -1499,8 +1505,16 @@ export class ProjectsService {
     const candidatesWithScore = assignments.map((assignment) => {
       const c = assignment.candidate;
 
-      // If candidate was nominated for a specific role (roleNeeded), score only that role
+      // If a specific roleCatalogId was requested in the query, we should prioritize showing
+      // the score/metadata for that matching role in the project.
+      const filteredProjectRole = (roleCatalogId && roleCatalogId !== 'all')
+        ? (assignment.project?.rolesNeeded || []).find(r => r.roleCatalogId === roleCatalogId)
+        : null;
+
+      // Use the filtered role if found, otherwise fall back to explicitly nominated role, 
+      // otherwise fall back to assignment.roleNeededId lookup.
       const nominatedRole =
+        filteredProjectRole ||
         (assignment as any).roleNeeded ||
         (assignment.project?.rolesNeeded || []).find(
           (r) => r.id === (assignment as any).roleNeededId,
@@ -1521,9 +1535,15 @@ export class ProjectsService {
           roleCatalogId,
           roleDepartmentName,
           roleDepartmentLabel,
+          roleCatalog: (nominatedRole as any).roleCatalog,
           score,
         };
-        nominatedRoleObj = { id: nominatedRole.id, designation: nominatedRole.designation, score };
+        nominatedRoleObj = {
+          id: nominatedRole.id,
+          designation: nominatedRole.designation,
+          score,
+          roleCatalog: (nominatedRole as any).roleCatalog,
+        };
       } else {
         const roleMatches = (project.rolesNeeded || []).map((role) => ({
           roleId: role.id,
@@ -1531,6 +1551,7 @@ export class ProjectsService {
           roleCatalogId: role.roleCatalogId ?? null,
           roleDepartmentName: (role as any).roleCatalog?.roleDepartment?.name ?? null,
           roleDepartmentLabel: (role as any).roleCatalog?.roleDepartment?.label ?? null,
+          roleCatalog: (role as any).roleCatalog,
           score: this.calculateRoleMatchScore(c, role),
         }));
         const top = roleMatches.reduce((best, cur) => (cur.score > (best?.score ?? -1) ? cur : best), null as any);
@@ -1541,6 +1562,7 @@ export class ProjectsService {
             roleCatalogId: top.roleCatalogId,
             roleDepartmentName: top.roleDepartmentName,
             roleDepartmentLabel: top.roleDepartmentLabel,
+            roleCatalog: top.roleCatalog,
             score: top.score,
           };
         }
@@ -1695,7 +1717,6 @@ export class ProjectsService {
     // ---------------------------------------------
     return {
       candidates: sorted,
-      roles: project.rolesNeeded,
       pagination: {
         page,
         limit,
@@ -2057,7 +2078,6 @@ export class ProjectsService {
     } = {},
   ): Promise<{
     candidates: any[];
-    roles: any[];
     pagination: { page: number; limit: number; total: number; totalPages: number };
   }> {
     // --------------------------------
@@ -2110,12 +2130,15 @@ export class ProjectsService {
       };
     }
 
-    if (query.roleCatalogId) {
-      whereClause.workExperiences = {
-        some: {
-          roleCatalogId: query.roleCatalogId,
+    if (query.roleCatalogId && query.roleCatalogId !== 'all') {
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        workExperiences: {
+          some: {
+            roleCatalogId: query.roleCatalogId,
+          },
         },
-      };
+      });
     }
 
     // --------------------------------
@@ -2222,6 +2245,14 @@ export class ProjectsService {
       : project.rolesNeeded;
 
     const matchedCandidates = candidates.filter((candidate) => {
+      // If a specific role was requested and we matched by experience in DB,
+      // return true to show them (let score reflect the details)
+      if (query.roleCatalogId && query.roleCatalogId !== 'all') {
+        return true;
+      }
+
+      // For the global "All" view, we require at least an experience AND gender match
+      // to avoid showing completely irrelevant candidates for the project.
       return effectiveRoles.some((role) => {
         const candidateExperience =
           candidate.totalExperience ?? candidate.experience;
@@ -2232,28 +2263,13 @@ export class ProjectsService {
           role.maxExperience,
         );
 
-        const skillsMatch = this.matchSkills(
-          candidate.skills as string[],
-          role.skills as string,
-        );
-
-        // Age filter
-        const candidateAge = candidate.dateOfBirth
-          ? this.calculateAge(new Date(candidate.dateOfBirth))
-          : null;
-        const ageMatch =
-          candidateAge !== null
-            ? candidateAge >= role.minAge && candidateAge <= role.maxAge
-            : false;
-
-        // Gender filter
         const genderMatch =
           role.genderRequirement === 'all' ||
           (candidate.gender &&
             candidate.gender.toUpperCase() ===
               role.genderRequirement.toUpperCase());
 
-        return experienceMatch && skillsMatch && ageMatch && genderMatch;
+        return experienceMatch && genderMatch;
       });
     });
 
@@ -2272,12 +2288,18 @@ export class ProjectsService {
         roleId: role.id,
         designation: role.designation,
         roleCatalogId: role.roleCatalogId ?? null,
-        roleDepartmentName: (role as any).roleCatalog?.roleDepartment?.name ?? null,
-        roleDepartmentLabel: (role as any).roleCatalog?.roleDepartment?.label ?? null,
+        roleDepartmentName:
+          (role as any).roleCatalog?.roleDepartment?.name ?? null,
+        roleDepartmentLabel:
+          (role as any).roleCatalog?.roleDepartment?.label ?? null,
+        roleCatalog: (role as any).roleCatalog,
         score: this.calculateRoleMatchScore(candidate, role),
       }));
 
-      const top = roleMatches.reduce((best, cur) => (cur.score > (best?.score ?? -1) ? cur : best), null as any);
+      const top = roleMatches.reduce(
+        (best, cur) => (cur.score > (best?.score ?? -1) ? cur : best),
+        null as any,
+      );
 
       return {
         ...candidate,
@@ -2288,6 +2310,7 @@ export class ProjectsService {
               roleCatalogId: top.roleCatalogId,
               roleDepartmentName: top.roleDepartmentName,
               roleDepartmentLabel: top.roleDepartmentLabel,
+              roleCatalog: top.roleCatalog,
               score: top.score,
             }
           : { roleId: null, roleName: null, score: 0 },
@@ -2329,7 +2352,6 @@ export class ProjectsService {
 
     return {
       candidates: paginated,
-      roles: project.rolesNeeded,
       pagination: {
         page,
         limit,
@@ -2464,11 +2486,18 @@ export class ProjectsService {
 
     if (hasRoleSpecificWorkExp) {
       roleScore += 40;
-    } else if (
-      candidateExperience &&
-      this.matchExperience(candidateExperience, role.minExperience, role.maxExperience)
-    ) {
-      roleScore += 40;
+    } else {
+      // Award partial points (20 instead of 40) if overall experience matches but not specific role
+      const experienceMatch =
+        candidateExperience &&
+        this.matchExperience(
+          candidateExperience,
+          role.minExperience,
+          role.maxExperience,
+        );
+      if (experienceMatch) {
+        roleScore += 20;
+      }
     }
 
     // Skills scoring (30 points)

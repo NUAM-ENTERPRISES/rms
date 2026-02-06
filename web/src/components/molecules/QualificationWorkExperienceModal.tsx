@@ -95,14 +95,25 @@ export default function QualificationWorkExperienceModal({
   const [skills, setSkills] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
-  // API hooks
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  // API hooks - pagination (limit 15)
+  // Only fetch qualifications when the modal is open to avoid calling the API on page load
   const { data: qualificationsData, isLoading: isLoadingQualifications } =
-    useGetQualificationsQuery({
-      q: searchQuery,
-      isActive: true,
-      limit: 100,
-    });
+    useGetQualificationsQuery(
+      {
+        q: searchQuery,
+        isActive: true,
+        page,
+        limit: 15,
+      },
+      { skip: !isOpen }
+    );
   const [createQualification, { isLoading: creatingQualification }] =
     useCreateCandidateQualificationMutation();
   const [updateQualification, { isLoading: updatingQualification }] =
@@ -410,6 +421,20 @@ export default function QualificationWorkExperienceModal({
                           ))
                         )}
                       </ScrollArea>
+                      <DropdownMenuSeparator />
+                      <div className="px-3 py-2 flex items-center justify-between gap-2">
+                        <div className="text-xs text-slate-500">
+                          Page {qualificationsData?.data?.pagination?.page || page} of {qualificationsData?.data?.pagination?.totalPages || 1}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(qualificationsData?.data?.pagination?.page || page) <= 1}>
+                            Prev
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setPage((p) => (qualificationsData?.data?.pagination?.totalPages ? Math.min(qualificationsData?.data?.pagination?.totalPages, p + 1) : p + 1))} disabled={(qualificationsData?.data?.pagination?.page || page) >= (qualificationsData?.data?.pagination?.totalPages || 1)}>
+                            Next
+                          </Button>
+                        </div>
+                      </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}

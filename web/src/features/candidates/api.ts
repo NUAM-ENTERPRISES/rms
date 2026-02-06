@@ -236,6 +236,46 @@ export interface UpdateWorkExperienceRequest {
 
 
 
+export type CandidateProjectItem = {
+  id: string;
+  candidate: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    mobileNumber?: string;
+  };
+  project: {
+    id: string;
+    title: string;
+    status?: string;
+  };
+  roleNeeded?: {
+    id: string;
+    designation: string;
+    minExperience?: number;
+    maxExperience?: number;
+  } | null;
+  recruiter?: {
+    id: string;
+    name: string;
+    email?: string;
+  } | null;
+  currentProjectStatus?: any;
+  assignedAt?: string;
+};
+
+export type CandidateProjectsResponse = {
+  success: boolean;
+  data: CandidateProjectItem[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
 export interface CandidateProjectMap {
   id: string;
   projectId: string;
@@ -821,12 +861,23 @@ export const candidatesApi = baseApi.injectEndpoints({
 
     // Document endpoints
     getDocuments: builder.query<
-      { success: boolean; data: { documents: Document[]; pagination: any } },
-      { candidateId: string; page?: number; limit?: number }
+      {
+        success: boolean;
+        data: {
+          documents: Document[];
+          pagination: {
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+          };
+        };
+      },
+      { candidateId: string; page?: number; limit?: number; docType?: string }
     >({
-      query: ({ candidateId, page = 1, limit = 20 }) => ({
+      query: ({ candidateId, page = 1, limit = 10, docType }) => ({
         url: "/documents",
-        params: { candidateId, page, limit },
+        params: { candidateId, page, limit, docType },
       }),
       providesTags: ["Document"],
     }),
@@ -950,6 +1001,25 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_, __, id) => [{ type: "Candidate", id }, "Candidate"],
     }),
+
+    getCandidateProjects: builder.query<
+      CandidateProjectsResponse,
+      {
+        candidateId?: string;
+        projectId?: string;
+        recruiterId?: string;
+        statusId?: string | number;
+        search?: string;
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: (params) => ({
+        url: "/candidate-projects",
+        params,
+      }),
+      providesTags: ["Candidate"],
+    }),
   }),
 });
 
@@ -983,4 +1053,5 @@ export const {
   useTransferCandidateMutation,
   useTransferBackCandidateMutation,
   useGetOriginalRecruiterQuery,
+  useGetCandidateProjectsQuery,
 } = candidatesApi;

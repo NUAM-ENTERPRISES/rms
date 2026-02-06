@@ -573,7 +573,7 @@ export const documentsApi = baseApi.injectEndpoints({
     }),
 
     // Enhanced Document Verification APIs
-    getCandidateProjects: builder.query<
+    getDocumentsCandidateProjects: builder.query<
       { success: boolean; data: any[]; message: string },
       string
     >({
@@ -742,7 +742,7 @@ export const {
   useGetDocumentSummaryQuery,
   useGetVerificationCandidatesQuery,
   useGetVerifiedRejectedDocumentsQuery,
-  useGetCandidateProjectsQuery,
+  useGetDocumentsCandidateProjectsQuery,
   useGetCandidateProjectRequirementsQuery,
   useGetCandidateEligibilityQuery,
   useGetMatchmakingProcessQuery,

@@ -58,7 +58,7 @@ export default function ProjectQualificationSelect({
     useQualificationsLookup({
       q: searchQuery,
       isActive: true,
-      limit: 50,
+      limit: 10,
     });
 
   const { getQualificationName } = useQualificationValidation();

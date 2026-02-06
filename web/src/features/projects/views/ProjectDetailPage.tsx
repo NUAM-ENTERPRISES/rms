@@ -248,50 +248,67 @@ export default function ProjectDetailPage() {
 
   // Get data (Moved above early returns to comply with Rules of Hooks)
   const projectCandidates = React.useMemo(() => {
-    return Array.isArray(projectCandidatesData?.data?.candidates)
-      ? projectCandidatesData?.data?.candidates
-      : [];
-  }, [projectCandidatesData?.data?.candidates]);
+    // Robust extraction for nominated candidates
+    if (!projectCandidatesData?.data) return [];
+    
+    if (Array.isArray(projectCandidatesData.data)) {
+      return projectCandidatesData.data;
+    }
+    
+    if (typeof projectCandidatesData.data === "object") {
+      const d = projectCandidatesData.data as any;
+      return d.candidates || d.data || d.items || [];
+    }
+    
+    return [];
+  }, [projectCandidatesData?.data]);
 
   const projectRoles = React.useMemo(() => {
     const rolesMap = new Map();
 
     // Helper to add roles to map
     const addRole = (r: any) => {
-      const id = r.roleCatalogId || r.roleCatalog?.id || r.id || r.roleId;
+      // Prioritize roleCatalogId as it's the global filter key
+      // and required for Eligible/All candidates tabs.
+      const id = (r.roleCatalogId || r.roleCatalog?.id || r.id || r.roleId || "").toString().trim();
+      
       const rawName =
-        r.name ||
         r.label ||
+        r.name ||
         r.designation ||
         r.roleCatalog?.label ||
+        r.roleCatalog?.name ||
         "Unknown Role";
       
       const name = String(rawName).trim();
       
-      if (id && id !== "undefined") {
-        const stringId = String(id);
-        
+      if (id && id !== "undefined" && id !== "null") {
         // Skip if ID already exists
-        if (rolesMap.has(stringId)) return;
+        if (rolesMap.has(id)) return;
 
-        // Skip if Name already exists (to prevent duplicates with different IDs)
+        // Skip if Name already exists (case-insensitive deduplication)
+        // This ensures the filter is clean even if different sources give different IDs for the same name
         const alreadyHasName = Array.from(rolesMap.values()).some(
           (role: any) => role.name.toLowerCase() === name.toLowerCase()
         );
         
         if (!alreadyHasName) {
-          rolesMap.set(stringId, { id: stringId, name });
+          rolesMap.set(id, { id, name });
         }
       }
     };
 
-    // 1. From candidate response
+    // 1. From nominated candidates response (current filtered/unfiltered list)
+    // The user's JSON shows roles are returned here.
     const dataObj = projectCandidatesData?.data;
-    if (dataObj && Array.isArray(dataObj.roles)) {
-      dataObj.roles.forEach(addRole);
+    if (dataObj && typeof dataObj === 'object') {
+       const roles = (dataObj as any).roles || (dataObj as any).data?.roles;
+       if (Array.isArray(roles)) {
+         roles.forEach(addRole);
+       }
     }
 
-    // 2. From project response
+    // 2. From project response (Project's defined requirements)
     const project = projectData?.data;
     if (project && Array.isArray(project.rolesNeeded)) {
       project.rolesNeeded.forEach(addRole);

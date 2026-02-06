@@ -78,7 +78,6 @@ describe('CandidatesService', () => {
       email: 'john.doe@example.com',
       recruiter: { id: 'user123', name: 'Test User' },
       team: { id: 'team123', name: 'Test Team' },
-      projects: [],
     };
 
     it('should create a candidate successfully', async () => {
@@ -163,7 +162,6 @@ describe('CandidatesService', () => {
         email: 'john.doe@example.com',
         recruiter: { id: 'user123', name: 'Test User' },
         team: { id: 'team123', name: 'Test Team' },
-        projects: [],
       },
     ];
 
@@ -212,7 +210,6 @@ describe('CandidatesService', () => {
       email: 'john.doe@example.com',
       recruiter: { id: 'user123', name: 'Test User' },
       team: { id: 'team123', name: 'Test Team' },
-      projects: [],
     };
 
     it('should return a candidate by id', async () => {
@@ -250,7 +247,6 @@ describe('CandidatesService', () => {
       currentStatus: 'shortlisted',
       recruiter: { id: 'user123', name: 'Test User' },
       team: { id: 'team123', name: 'Test Team' },
-      projects: [],
     };
 
     it('should update a candidate successfully', async () => {

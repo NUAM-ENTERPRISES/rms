@@ -241,12 +241,14 @@ const ProjectCandidatesBoard = ({
       projectId,
       search: searchTerm || undefined,
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
+      limit: 10,
     });
 
   const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
     {
       search: searchTerm || undefined,
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
+      limit: 10,
     },
     {
       skip: !isRecruiter || isManager,
@@ -256,6 +258,7 @@ const ProjectCandidatesBoard = ({
     {
       search: searchTerm || undefined,
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
+      limit: 10,
     },
     {
       skip: isRecruiter && !isManager,
@@ -791,7 +794,7 @@ const ProjectCandidatesBoard = ({
               showInterviewButton={showInterviewButton}
               onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
               isAlreadyInProject={assignmentInfo.isAssigned}
-              showDocumentStatus={assignmentInfo.isAssigned}
+              showDocumentStatus={false}
               eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
             />
           );

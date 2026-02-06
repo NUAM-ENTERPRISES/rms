@@ -560,7 +560,7 @@ export const projectsApi = baseApi.injectEndpoints({
         subStatusId,
         roleCatalogId,
         page = 1,
-        limit = 20,
+        limit = 10,
       }) => ({
         url: `/projects/${projectId}/nominated-candidates`,
         // Prefer sending readable status/subStatus names. Fall back to IDs for

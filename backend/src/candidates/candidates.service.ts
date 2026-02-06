@@ -462,7 +462,7 @@ export class CandidatesService {
       }
     }
 
-    if (roleCatalogId) {
+    if (roleCatalogId && roleCatalogId !== 'all') {
       where.workExperiences = {
         some: {
           roleCatalogId: roleCatalogId,
@@ -601,145 +601,9 @@ export class CandidatesService {
             qualification: true,
           },
         },
-        projects: {
-          include: {
-            project: {
-              select: {
-                id: true,
-                title: true,
-                status: true,
-                clientId: true,
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                  },
-                },
-                documentRequirements: {
-                  select: {
-                    id: true,
-                    docType: true,
-                    mandatory: true,
-                    description: true,
-                    createdAt: true,
-                    updatedAt: true,
-                  },
-                  orderBy: {
-                    createdAt: 'asc',
-                  },
-                },
-              },
-            },
-            roleNeeded: {
-              select: {
-                id: true,
-                designation: true,
-              },
-            },
-
-            // 🔥 NEW → MAIN STATUS (Nominated / Documents / Interview / Processing)
-            mainStatus: {
-              select: {
-                id: true,
-                name: true,
-                label: true,
-                color: true,
-                icon: true,
-                order: true,
-              },
-            },
-
-            // 🔥 NEW → SUB STATUS (pending_documents / verification / etc.)
-            subStatus: {
-              select: {
-                id: true,
-                name: true,
-                label: true,
-                color: true,
-                icon: true,
-                order: true,
-              },
-            },
-
-            // Document verifications for this candidate-project mapping
-            documentVerifications: {
-              select: {
-                id: true,
-                status: true,
-                notes: true,
-                rejectionReason: true,
-                resubmissionRequested: true,
-                createdAt: true,
-                updatedAt: true,
-                document: {
-                  select: {
-                    id: true,
-                    docType: true,
-                    fileName: true,
-                    fileUrl: true,
-                    status: true,
-                    notes: true,
-                    createdAt: true,
-                    updatedAt: true,
-                  },
-                },
-              },
-              orderBy: {
-                createdAt: 'desc',
-              },
-            },
-
-            recruiter: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
       },
     });
 
-    // --------------------------
-    // Attach isSendedForDocumentVerification flag to project mappings
-    // For performance, collect all candidateProject map ids and query the
-    // CandidateProjectStatusHistory table to check for any "documents"
-    // main status history entries. If present, that mapping has been
-    // sent for document verification at some point.
-    // --------------------------
-    const allCandidateProjectIds: string[] = candidates.flatMap((c) =>
-      (c.projects || []).map((p) => p.id),
-    );
-
-    if (allCandidateProjectIds.length > 0) {
-      const docHistories = await this.prisma.candidateProjectStatusHistory.findMany({
-        where: {
-          candidateProjectMapId: { in: allCandidateProjectIds },
-          mainStatus: {
-            name: 'documents',
-          },
-        },
-        select: {
-          candidateProjectMapId: true,
-        },
-      });
-
-      const sentSet = new Set(docHistories.map((h) => h.candidateProjectMapId));
-
-      // Mutate the returned candidates array to include the boolean flag
-      candidates.forEach((candidate) => {
-        if (!candidate.projects) return;
-        candidate.projects = candidate.projects.map((proj) => ({
-          ...proj,
-          isSendedForDocumentVerification: sentSet.has(proj.id),
-        }));
-      });
-    }
 
     return {
       candidates,
@@ -893,40 +757,6 @@ export class CandidatesService {
           },
         },
         team: true,
-        projects: {
-          include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                  },
-                },
-              },
-            },
-            // Include recruiter information from CandidateProjects
-            recruiter: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            currentProjectStatus: {
-              select: {
-                id: true,
-                statusName: true,
-              },
-            },
-            subStatus: {
-            select: {
-              label: true,  // <---- Include subStatus label here
-            },
-          },
-          },
-        },
         workExperiences: {
           include: {
             roleCatalog: true,

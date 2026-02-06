@@ -12,7 +12,7 @@ import {
 
 export interface CandidateWithRelations extends Candidate {
   team: Team | null;
-  projects: (CandidateProjects & {
+  projects?: (CandidateProjects & {
     project: {
       id: string;
       title: string;
@@ -23,6 +23,31 @@ export interface CandidateWithRelations extends Candidate {
         type: string;
       } | null;
     };
+    roleNeeded?: {
+      id: string;
+      designation: string;
+    } | null;
+    mainStatus?: {
+      id: string;
+      name: string;
+      label: string;
+      color: string | null;
+      icon: string | null;
+      order: number;
+    } | null;
+    subStatus?: {
+      id: string;
+      name: string;
+      label: string;
+      color: string | null;
+      icon: string | null;
+      order: number;
+    } | null;
+    isSendedForDocumentVerification?: boolean;
+    currentProjectStatus?: {
+      id: number;
+      statusName: string;
+    } | null;
     recruiter?: {
       id: string;
       name: string;

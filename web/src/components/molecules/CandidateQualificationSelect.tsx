@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,14 +45,25 @@ export default function CandidateQualificationSelect({
 }: CandidateQualificationSelectProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
-  // Fetch all qualifications for browsing
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  // Fetch qualifications for browsing with pagination (limit 15).
+  // Only fetch when the dropdown is open to avoid unnecessary network calls
   const { data: qualificationsData, isLoading: isLoadingQualifications } =
-    useGetQualificationsQuery({
-      q: searchQuery,
-      isActive: true,
-      limit: 50,
-    });
+    useGetQualificationsQuery(
+      {
+        q: searchQuery,
+        isActive: true,
+        page,
+        limit: 15,
+      },
+      { skip: !isDropdownOpen }
+    );
 
   const qualifications = qualificationsData?.data?.qualifications || [];
 
@@ -310,6 +321,20 @@ export default function CandidateQualificationSelect({
                   ))
                 )}
               </ScrollArea>
+              <DropdownMenuSeparator />
+              <div className="px-3 py-2 flex items-center justify-between gap-2">
+                <div className="text-xs text-slate-500">
+                  Page {qualificationsData?.data?.pagination?.page || page} of {qualificationsData?.data?.pagination?.totalPages || 1}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(qualificationsData?.data?.pagination?.page || page) <= 1}>
+                    Prev
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setPage((p) => (qualificationsData?.data?.pagination?.totalPages ? Math.min(qualificationsData?.data?.pagination?.totalPages, p + 1) : p + 1))} disabled={(qualificationsData?.data?.pagination?.page || page) >= (qualificationsData?.data?.pagination?.totalPages || 1)}>
+                    Next
+                  </Button>
+                </div>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
