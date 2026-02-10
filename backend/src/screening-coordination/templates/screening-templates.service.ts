@@ -91,38 +91,42 @@ export class ScreeningTemplatesService {
    * Find all templates with optional filtering
    */
   async findAll(query: QueryScreeningTemplatesDto) {
+    const { page = 1, limit = 20, roleId, isActive, search } = query as any;
+    const skip = (page - 1) * limit;
+
     const where: any = {};
 
-    if (query.roleId) {
-      where.roleId = query.roleId;
+    if (roleId) where.roleId = roleId;
+    if (isActive !== undefined) where.isActive = isActive;
+
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+      const s = search.trim();
+      where.OR = [
+        { name: { contains: s, mode: 'insensitive' } },
+        { role: { name: { contains: s, mode: 'insensitive' } } },
+        { items: { some: { criterion: { contains: s, mode: 'insensitive' } } } },
+      ];
     }
 
-    if (query.isActive !== undefined) {
-      where.isActive = query.isActive;
-    }
+    const [total, items] = await Promise.all([
+      this.prisma.screeningTemplate.count({ where }),
+      this.prisma.screeningTemplate.findMany({
+        where,
+        include: {
+          role: { select: { id: true, name: true, shortName: true } },
+          items: { orderBy: [{ category: 'asc' }, { order: 'asc' }] },
+          _count: { select: { items: true, screenings: true } },
+        },
+        orderBy: [{ roleId: 'asc' }, { createdAt: 'desc' }],
+        skip,
+        take: limit,
+      }),
+    ]);
 
-    return this.prisma.screeningTemplate.findMany({
-      where,
-      include: {
-        role: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-          },
-        },
-        items: {
-          orderBy: [{ category: 'asc' }, { order: 'asc' }],
-        },
-        _count: {
-          select: {
-            items: true,
-            screenings: true,
-          },
-        },
-      },
-      orderBy: [{ roleId: 'asc' }, { createdAt: 'desc' }],
-    });
+    return {
+      items,
+      pagination: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
   }
 
   /**

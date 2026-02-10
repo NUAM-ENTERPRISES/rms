@@ -2255,7 +2255,15 @@ export class DocumentsService {
    * Includes project details and document upload progress
    */
   async getRecruiterPendingDocuments(query: any) {
-    const { page = 1, limit = 20, search, recruiterId } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      recruiterId,
+      status,
+      projectId,
+      roleCatalogId,
+    } = query;
 
     if (!recruiterId) {
       throw new BadRequestException('Recruiter ID is required');
@@ -2264,17 +2272,51 @@ export class DocumentsService {
     const skip = (page - 1) * limit;
 
     // Build where clause
+    let pendingStatusCondition: any = {
+      OR: [
+        {
+          mainStatus: { name: { in: ['nominated', 'documents'] } },
+          subStatus: { name: { notIn: ['documents_verified', 'rejected_documents'] } },
+        },
+        {
+          mainStatus: { name: { in: ['interview', 'processing', 'final'] } },
+          subStatus: { name: { notIn: ['documents_verified', 'rejected_documents'] } },
+          projectStatusHistory: {
+            none: {
+              subStatus: { name: 'documents_verified' },
+            },
+          },
+        },
+      ],
+    };
+
+    // Add InScreening filter if requested
+    if (status === 'InScreening') {
+      pendingStatusCondition = {
+        subStatus: {
+          name: {
+            in: [
+              'screening_assigned',
+              'screening_scheduled',
+              'screening_completed',
+              'screening_passed',
+              'screening_failed',
+            ],
+          },
+        },
+        // We still need to ensure they are actually "pending" documentation review
+        projectStatusHistory: {
+          none: {
+            subStatus: { name: 'documents_verified' },
+          },
+        },
+      };
+    }
+
     const where: any = {
       // Filter by recruiter
       recruiterId,
-      // Filter for candidates who are in recruitment phases and not yet verified/rejected
-      mainStatus: {
-        name: { in: ['nominated', 'documents'] },
-      },
-      // Exclude candidates who have already completed document verification or are rejected
-      subStatus: {
-        name: { notIn: ['documents_verified', 'rejected_documents'] },
-      },
+      ...pendingStatusCondition,
       // Only include if there are actually documents required for the project
       project: {
         documentRequirements: {
@@ -2283,17 +2325,33 @@ export class DocumentsService {
       },
     };
 
+    // Project and RoleCatalog filters
+    if (projectId) {
+      where.projectId = projectId;
+    }
+    if (roleCatalogId) {
+      where.roleNeeded = {
+        roleCatalogId: roleCatalogId,
+      };
+    }
+
     // Search support
     if (search) {
-      where.OR = [
-        { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
-        { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
-        { project: { title: { contains: search, mode: 'insensitive' } } },
+      delete where.OR; // Remove the OR from pendingStatusCondition to use AND for combined criteria
+      where.AND = [
+        pendingStatusCondition,
+        {
+          OR: [
+            { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
+            { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+            { project: { title: { contains: search, mode: 'insensitive' } } },
+          ],
+        },
       ];
     }
 
     // Fetch candidate projects with requirements and verifications
-    const [candidateProjects, total, verifiedCount, rejectedCount, pendingUploadCount] = await Promise.all([
+    const [candidateProjects, total, verifiedCount, rejectedCount, pendingUploadCount, inScreeningCount] = await Promise.all([
       this.prisma.candidateProjects.findMany({
         where,
         include: {
@@ -2376,7 +2434,14 @@ export class DocumentsService {
           recruiterId,
           OR: [
             { subStatus: { name: 'documents_verified' } },
-            { mainStatus: { name: { in: ['interview', 'processing', 'final'] } } },
+            {
+              mainStatus: { name: { in: ['interview', 'processing', 'final'] } },
+              projectStatusHistory: {
+                some: {
+                  subStatus: { name: 'documents_verified' },
+                },
+              },
+            },
           ],
           project: {
             documentRequirements: {
@@ -2401,6 +2466,32 @@ export class DocumentsService {
           ...where,
           documentVerifications: {
             none: { isDeleted: false } as any,
+          },
+        },
+      }),
+      this.prisma.candidateProjects.count({
+        where: {
+          recruiterId,
+          subStatus: {
+            name: {
+              in: [
+                'screening_assigned',
+                'screening_scheduled',
+                'screening_completed',
+                'screening_passed',
+                'screening_failed',
+              ],
+            },
+          },
+          projectStatusHistory: {
+            none: {
+              subStatus: { name: 'documents_verified' },
+            },
+          },
+          project: {
+            documentRequirements: {
+              some: { isDeleted: false } as any,
+            },
           },
         },
       }),
@@ -2481,6 +2572,7 @@ export class DocumentsService {
         pendingUpload: pendingUploadCount,
         verified: verifiedCount,
         rejected: rejectedCount,
+        inScreening: inScreeningCount,
       },
     };
   }
@@ -2496,6 +2588,8 @@ export class DocumentsService {
       search,
       recruiterId,
       status = 'verified',
+      projectId,
+      roleCatalogId,
     } = query;
 
     if (!recruiterId) {
@@ -2507,12 +2601,21 @@ export class DocumentsService {
     // 1. Define the base where clauses for counts (filtered by recruiter but NOT search)
     const pendingWhereBase: any = {
       recruiterId,
-      mainStatus: {
-        name: { in: ['nominated', 'documents'] },
-      },
-      subStatus: {
-        name: { notIn: ['documents_verified', 'rejected_documents'] },
-      },
+      OR: [
+        {
+          mainStatus: { name: { in: ['nominated', 'documents'] } },
+          subStatus: { name: { notIn: ['documents_verified', 'rejected_documents'] } },
+        },
+        {
+          mainStatus: { name: { in: ['interview', 'processing', 'final'] } },
+          subStatus: { name: { notIn: ['documents_verified', 'rejected_documents'] } },
+          projectStatusHistory: {
+            none: {
+              subStatus: { name: 'documents_verified' },
+            },
+          },
+        },
+      ],
       project: {
         documentRequirements: {
           some: { isDeleted: false } as any,
@@ -2524,7 +2627,14 @@ export class DocumentsService {
       recruiterId,
       OR: [
         { subStatus: { name: 'documents_verified' } },
-        { mainStatus: { name: { in: ['interview', 'processing', 'final'] } } },
+        {
+          mainStatus: { name: { in: ['interview', 'processing', 'final'] } },
+          projectStatusHistory: {
+            some: {
+              subStatus: { name: 'documents_verified' },
+            },
+          },
+        },
       ],
       project: {
         documentRequirements: {
@@ -2543,6 +2653,48 @@ export class DocumentsService {
       },
     };
 
+    const inScreeningWhereBase: any = {
+      recruiterId,
+      subStatus: {
+        name: {
+          in: [
+            'screening_assigned',
+            'screening_scheduled',
+            'screening_completed',
+            'screening_passed',
+            'screening_failed',
+          ],
+        },
+      },
+      projectStatusHistory: {
+        none: {
+          subStatus: { name: 'documents_verified' },
+        },
+      },
+      project: {
+        documentRequirements: {
+          some: { isDeleted: false } as any,
+        },
+      },
+    };
+
+    // Apply Project and RoleCatalog filters to all base where clauses
+    [
+      pendingWhereBase,
+      verifiedWhereBase,
+      rejectedWhereBase,
+      inScreeningWhereBase,
+    ].forEach((where) => {
+      if (projectId) {
+        where.projectId = projectId;
+      }
+      if (roleCatalogId) {
+        where.roleNeeded = {
+          roleCatalogId: roleCatalogId,
+        };
+      }
+    });
+
     // 2. Determine the active where clause for the list based on status
     let activeWhere: any;
     if (status === 'verified') {
@@ -2551,6 +2703,8 @@ export class DocumentsService {
       activeWhere = { ...rejectedWhereBase };
     } else if (status === 'pending_documents') {
       activeWhere = { ...pendingWhereBase };
+    } else if (status === 'InScreening') {
+      activeWhere = { ...inScreeningWhereBase };
     } else {
       // Default to verified or both if needed, but user asked for verified/rejected
       activeWhere = {
@@ -2563,11 +2717,19 @@ export class DocumentsService {
 
     // 3. Apply search to activeWhere for the paginated list
     if (search) {
-      activeWhere.OR = [
+      const searchOR = [
         { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
         { project: { title: { contains: search, mode: 'insensitive' } } },
       ];
+
+      if (activeWhere.OR) {
+        const statusOR = activeWhere.OR;
+        delete activeWhere.OR;
+        activeWhere.AND = [{ OR: statusOR }, { OR: searchOR }];
+      } else {
+        activeWhere.OR = searchOR;
+      }
     }
 
     // 4. Fetch data and counts in parallel
@@ -2578,6 +2740,7 @@ export class DocumentsService {
       verifiedCount,
       rejectedCount,
       pendingUploadCount,
+      inScreeningCount,
     ] = await Promise.all([
       this.prisma.candidateProjects.findMany({
         where: activeWhere,
@@ -2667,6 +2830,7 @@ export class DocumentsService {
           },
         },
       }),
+      this.prisma.candidateProjects.count({ where: inScreeningWhereBase }),
     ]);
 
     // 5. Format items (same structure as getRecruiterPendingDocuments)
@@ -2744,6 +2908,7 @@ export class DocumentsService {
         pendingUpload: pendingUploadCount,
         verified: verifiedCount,
         rejected: rejectedCount,
+        inScreening: inScreeningCount,
       },
     };
   }

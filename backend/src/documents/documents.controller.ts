@@ -191,6 +191,9 @@ export class DocumentsController {
   })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
   @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name or project title' })
+  @ApiQuery({ name: 'status', required: false, description: "Optional filter: 'InScreening' to see candidates in screening phase" })
+  @ApiQuery({ name: 'projectId', required: false, description: 'Filter results by project id' })
+  @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Filter results by role catalog id' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
   async getRecruiterDocuments(@Query() query: any, @Request() req) {
@@ -215,7 +218,9 @@ export class DocumentsController {
   })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
   @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name or project title' })
-  @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'pending_documents'. Defaults to 'verified'." })
+  @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'pending_documents' | 'InScreening'. Defaults to 'verified'." })
+  @ApiQuery({ name: 'projectId', required: false, description: 'Filter results by project id' })
+  @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Filter results by role catalog id' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
   async getRecruiterVerifiedRejectedDocuments(@Query() query: any, @Request() req) {

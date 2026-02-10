@@ -16,6 +16,10 @@ export class QueryUpcomingScreeningsDto {
 
   @IsOptional()
   @IsString()
+  roleCatalogId?: string;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 
   @IsOptional()

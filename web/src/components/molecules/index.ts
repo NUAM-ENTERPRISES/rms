@@ -21,3 +21,5 @@ export { DepartmentSelect } from "./DepartmentSelect";
 export type { UploadedDocument } from "./DocumentUpload";
 export type { CandidateQualification } from "./CandidateQualificationSelect";
 export { default as ReviewInterviewModal } from "./ReviewInterviewModal";
+export { ProjectRoleFilter } from "./ProjectRoleFilter";
+export type { ProjectRoleFilterValue, ProjectRoleFilterProps } from "./ProjectRoleFilter";

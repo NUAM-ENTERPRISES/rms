@@ -554,17 +554,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 )}
               </>
             ) : (
-              verifications.length > 0 && (
-                <Button 
-                  variant="default"
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  onClick={openVerifyModal}
-                  disabled={isSendingVerification}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Send for Verification
-                </Button>
-              )
+              <Button 
+                variant="default"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={openVerifyModal}
+                disabled={isSendingVerification}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send for Verification
+              </Button>
             )}
           </div>
         </div>

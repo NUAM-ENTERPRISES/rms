@@ -1,24 +1,19 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { ClipboardCheck, Search, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, Plus, CheckSquare, Square, Filter } from "lucide-react";
+import { ClipboardCheck, Search, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, Plus, CheckSquare, Square } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import ImageViewer from "@/components/molecules/ImageViewer";
+import ProjectRoleFilter from "@/components/molecules/ProjectRoleFilter";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { getAge } from "@/utils";
 import { toast } from "sonner";
 import { useGetAssignedScreeningsQuery } from "../data";
-import { useGetProjectQuery } from "@/features/projects";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 
 export default function AssignedInterviewsListPage() {
@@ -62,25 +57,7 @@ export default function AssignedInterviewsListPage() {
     return Array.from(map.values());
   }, [items, filters.projectId]);
 
-  // Fetch roles for selected project
-  const { data: projectDetailsResponse } = useGetProjectQuery(
-    filters.projectId,
-    { skip: filters.projectId === "all" }
-  );
-  const projectRoles = projectDetailsResponse?.data?.rolesNeeded || [];
-
-  // Get unique roles from projectDetails
-  const uniqueRoles = useMemo(() => {
-    const rolesMap = new Map();
-    projectRoles.forEach((r: any) => {
-      const id = (r.roleCatalogId || r.roleCatalog?.id || r.id).toString();
-      const name = r.designation || r.roleCatalog?.name || "Unknown Role";
-      if (!rolesMap.has(id)) {
-        rolesMap.set(id, { id, name });
-      }
-    });
-    return Array.from(rolesMap.values());
-  }, [projectRoles]);
+  // Project & role filtering is handled by the `ProjectRoleFilter` component
 
   const { allItems, assigned, others } = useMemo(() => {
     let filtered = items;
@@ -107,6 +84,9 @@ export default function AssignedInterviewsListPage() {
     if (selectedId) return displayed.find((i) => i.id === selectedId) || null;
     return displayed[0] || null;
   }, [displayed, selectedId]);
+
+  // Use project data from the selected item to avoid an extra API call
+  const selectedProjectDetails = selected?.project || null; 
 
   // Toggle batch selection
   const toggleBatchSelect = (id: string) => {
@@ -207,48 +187,11 @@ export default function AssignedInterviewsListPage() {
               />
             </div>
 
-            {/* Project Filter */}
-            <div className="w-48">
-              <Select
-                value={filters.projectId}
-                onValueChange={(val) => setFilters(p => ({ ...p, projectId: val, roleCatalogId: "all" }))}
-              >
-                <SelectTrigger className="h-9 text-xs rounded-xl border-indigo-200/50 bg-white/90 shadow-sm focus:ring-indigo-400">
-                  <div className="flex items-center gap-2 truncate">
-                    <Briefcase className="h-3.5 w-3.5 text-indigo-500" />
-                    <SelectValue placeholder="All Projects" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Role Filter - Only show if project selected */}
-            <div className="w-48">
-              <Select
-                value={filters.roleCatalogId}
-                onValueChange={(val) => setFilters(p => ({ ...p, roleCatalogId: val }))}
-                disabled={filters.projectId === "all"}
-              >
-                <SelectTrigger className="h-9 text-xs rounded-xl border-indigo-200/50 bg-white/90 shadow-sm focus:ring-indigo-400">
-                  <div className="flex items-center gap-2 truncate">
-                    <Filter className="h-3.5 w-3.5 text-indigo-500" />
-                    <SelectValue placeholder="All Roles" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  {uniqueRoles.map((r: any) => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ProjectRoleFilter
+              value={{ projectId: filters.projectId, roleCatalogId: filters.roleCatalogId }}
+              onChange={(v) => setFilters((p) => ({ ...p, projectId: v.projectId, roleCatalogId: v.roleCatalogId }))}
+              className="flex-nowrap min-w-[220px]"
+            />
 
             {selectedBatch.size > 0 && (
               <Button
@@ -344,6 +287,18 @@ export default function AssignedInterviewsListPage() {
                           <Square className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
                         )}
                       </button>
+
+                      {/* Candidate avatar */}
+                      <div className="flex-shrink-0">
+                        <ImageViewer
+                          src={it.candidate?.profileImage}
+                          fallbackSrc={""}
+                          title={candidateName}
+                          className="h-9 w-9 rounded-full"
+                          enableHoverPreview={false}
+                        />
+                      </div>
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1.5">
                           <div className="flex-1 min-w-0">
@@ -352,6 +307,13 @@ export default function AssignedInterviewsListPage() {
                             </p>
                             <p className="text-xs text-slate-500 truncate mt-0.5">
                               {it.roleNeeded?.designation || "Unknown Role"}
+                            </p>
+
+                            {/* Age & gender */}
+                            <p className="text-xs text-slate-400 truncate mt-0.5">
+                              {it.candidate ? (
+                                `${getAge(it.candidate.dateOfBirth) ? `${getAge(it.candidate.dateOfBirth)} yrs` : 'Age N/A'} • ${it.candidate.gender ? (it.candidate.gender.charAt(0) + it.candidate.gender.slice(1).toLowerCase()) : 'Gender N/A'}`
+                              ) : null}
                             </p>
                           </div>
                           <ChevronRight
@@ -416,25 +378,137 @@ export default function AssignedInterviewsListPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-xl overflow-hidden">
+                  <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-xl overflow-visible">
                     <CardContent className="p-4">
                       <h3 className="text-base font-semibold text-indigo-700 mb-3 flex items-center gap-2">
                         <User className="h-4 w-4" />
                         Candidate
                       </h3>
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <p className="text-xs text-slate-500">Name</p>
-                          <p className="font-medium text-slate-900">
-                            {selected.candidate ? `${selected.candidate.firstName} ${selected.candidate.lastName}` : "Unknown"}
-                          </p>
-                        </div>
-                        {selected.candidate?.email && (
+                      <div className="flex items-start gap-4">
+                        <ImageViewer
+                          src={selected.candidate?.profileImage}
+                          fallbackSrc={""}
+                          title={`${selected.candidate?.firstName || ""} ${selected.candidate?.lastName || ""}`.trim() || "Profile image"}
+                          className="h-20 w-20 rounded-lg"
+                          enableHoverPreview={true}
+                          hoverPosition="right"
+                          previewClassName="w-64 h-64"
+                        />
+
+                        <div className="space-y-2 text-xs">
                           <div>
-                            <p className="text-xs text-slate-500">Email</p>
-                            <p className="font-medium break-all text-slate-900">{selected.candidate.email}</p>
+                            <p className="text-xs text-slate-500">Name</p>
+                            <p className="font-medium text-slate-900">
+                              {selected.candidate ? `${selected.candidate.firstName} ${selected.candidate.lastName}` : "Unknown"}
+                            </p>
                           </div>
-                        )}
+                          {selected.candidate?.email && (
+                            <div>
+                              <p className="text-xs text-slate-500">Email</p>
+                              <p className="font-medium break-all text-slate-900">{selected.candidate.email}</p>
+                            </div>
+                          )}
+
+                          {/* Additional candidate details */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 mt-2">
+                            { (selected.candidate?.phone || (selected.candidate?.countryCode && selected.candidate?.mobileNumber)) && (
+                              <div>
+                                <p className="text-xs text-slate-500">Phone</p>
+                                <p className="font-medium text-slate-900">{selected.candidate.phone || `${selected.candidate.countryCode ?? ""} ${selected.candidate.mobileNumber ?? ""}`.trim()}</p>
+                              </div>
+                            ) }
+
+                            { typeof getAge !== 'undefined' && selected.candidate?.dateOfBirth && (
+                              <div>
+                                <p className="text-xs text-slate-500">Age</p>
+                                <p className="font-medium text-slate-900">{getAge(selected.candidate.dateOfBirth) ? `${getAge(selected.candidate.dateOfBirth)} yrs` : 'N/A'}</p>
+                              </div>
+                            ) }
+
+                            { selected.candidate?.gender && (
+                              <div>
+                                <p className="text-xs text-slate-500">Gender</p>
+                                <p className="font-medium text-slate-900">{selected.candidate.gender.charAt(0) + selected.candidate.gender.slice(1).toLowerCase()}</p>
+                              </div>
+                            ) }
+
+                            { selected.candidate?.experience !== undefined && (
+                              <div>
+                                <p className="text-xs text-slate-500">Experience</p>
+                                <p className="font-medium text-slate-900">{selected.candidate.experience} yrs</p>
+                              </div>
+                            ) }
+
+                            { selected.candidate?.totalExperience !== undefined && (
+                              <div>
+                                <p className="text-xs text-slate-500">Total Experience</p>
+                                <p className="font-medium text-slate-900">{selected.candidate.totalExperience} yrs</p>
+                              </div>
+                            ) }
+
+                            { selected.candidate?.dateOfBirth && (
+                              <div>
+                                <p className="text-xs text-slate-500">DOB</p>
+                                <p className="font-medium text-slate-900">{format(new Date(selected.candidate.dateOfBirth), "MMM d, yyyy")}</p>
+                              </div>
+                            ) }
+
+                            { selected.candidate?.currentRole && (
+                              <div>
+                                <p className="text-xs text-slate-500">Current role</p>
+                                <p className="font-medium text-slate-900">{selected.candidate.currentRole}</p>
+                              </div>
+                            ) }
+
+                            { selected.candidate?.currentEmployer && (
+                              <div>
+                                <p className="text-xs text-slate-500">Current employer</p>
+                                <p className="font-medium text-slate-900">{selected.candidate.currentEmployer}</p>
+                              </div>
+                            ) }
+                          </div>
+
+                          {/* Qualifications */}
+                          {selected.candidate?.qualifications?.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs text-slate-500">Qualifications</p>
+                              <ul className="mt-1 space-y-2 text-xs">
+                                {selected.candidate.qualifications.map((q: any) => (
+                                  <li key={q.id} className="text-sm">
+                                    <div className="font-medium text-slate-900">{q.qualification?.shortName || q.qualification?.name || 'Qualification'}</div>
+                                    <div className="text-xs text-slate-500">
+                                      {q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : (q.graduationYear ? `Graduated ${q.graduationYear}` : '')}
+                                      {q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Work experiences (most recent first) */}
+                          {selected.candidate?.workExperiences?.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs text-slate-500">Work experience</p>
+                              <ul className="mt-1 space-y-2 text-xs">
+                                {selected.candidate.workExperiences
+                                  .slice()
+                                  .sort((a: any, b: any) => (new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime()))
+                                  .map((w: any) => (
+                                    <li key={w.id} className="text-sm">
+                                      <div className="font-medium text-slate-900">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
+                                      <div className="text-xs text-slate-500">
+                                        {w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}
+                                        {w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}
+                                      </div>
+                                      {w.description && <div className="text-xs text-slate-500 mt-1">{w.description}</div>}
+                                    </li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
+
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -449,11 +523,61 @@ export default function AssignedInterviewsListPage() {
                         <div>
                           <p className="text-xs text-slate-500">Project</p>
                           <p className="font-medium text-slate-900">{selected.project?.title || "Unknown"}</p>
+
+                          {selectedProjectDetails?.client?.name && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-1">Client</p>
+                              <p className="font-medium text-slate-900">{selectedProjectDetails.client.name}</p>
+                            </>
+                          )}
+
+                          {selectedProjectDetails?.deadline && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-2">Deadline</p>
+                              <p className="font-medium text-slate-900">{format(new Date(selectedProjectDetails.deadline), "MMM d, yyyy")}</p>
+                            </>
+                          )}
+
+                          {selectedProjectDetails?.country?.name && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-2">Country</p>
+                              <p className="font-medium text-slate-900">{selectedProjectDetails.country.name}</p>
+                            </>
+                          )}
+
+                          {typeof selectedProjectDetails?.priority !== 'undefined' && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-2">Priority</p>
+                              <p className="font-medium text-slate-900 capitalize">{selectedProjectDetails.priority || "-"}</p>
+                            </>
+                          )}
+
+                          {typeof selectedProjectDetails?.requiredScreening !== 'undefined' && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-2">Requires screening</p>
+                              <p className="font-medium text-slate-900">{selectedProjectDetails.requiredScreening ? 'Yes' : 'No'}</p>
+                            </>
+                          )}
                         </div>
+
                         <div>
                           <p className="text-xs text-slate-500">Role</p>
                           <p className="font-medium text-slate-900">{selected.roleNeeded?.designation || "Unknown"}</p>
                         </div>
+
+                        {selectedProjectDetails?.documentRequirements?.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs text-slate-500">Document requirements</p>
+                            <ul className="mt-1 space-y-1 text-xs">
+                              {selectedProjectDetails.documentRequirements.map((d: any) => (
+                                <li key={d.id} className="flex items-center gap-2">
+                                  <span className="font-medium text-slate-900">{(d.docType || d.description || d.id).toString().replace(/_/g, ' ')}</span>
+                                  {d.mandatory && <span className="ml-2 text-xxs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Required</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

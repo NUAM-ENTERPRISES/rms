@@ -17,7 +17,6 @@ import {
   ChevronRight,
   X,
   UserPlus,
-  Send,
   Clipboard,
   CalendarCheck,
   Plus,
@@ -48,18 +47,20 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ImageViewer from "@/components/molecules/ImageViewer";
 import { useGetScreeningsQuery } from "../data";
 import { useCreateTrainingAssignmentMutation } from "../../training/data";
 import { SCREENING_MODE, SCREENING_DECISION } from "../../types";
 import { cn } from "@/lib/utils";
 import { AssignToTrainerDialog } from "../../training/components/AssignToTrainerDialog";
+import { NotifyDocumentationModal } from "../components/NotifyDocumentationModal";
+import ProjectRoleFilter from "@/components/molecules/ProjectRoleFilter";
 import { ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssignToMainScreeningMutation } from "../data";
 import { useSendForVerificationMutation } from "@/features/projects/api";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetCandidateProjectHistoryQuery, useGetAssignedScreeningsQuery } from "../data";
-import { useGetProjectQuery } from "@/features/projects";
 
 export default function ScreeningsListPage() {
   const navigate = useNavigate();
@@ -160,12 +161,12 @@ export default function ScreeningsListPage() {
     return Array.from(map.values());
   }, [interviews, filters.projectId]);
 
-  // Fetch roles for selected project (for the filter)
-  const { data: projectForFilterDetails } = useGetProjectQuery(
-    filters.projectId,
-    { skip: filters.projectId === "all" }
-  );
-  const projectFiltersRoles = projectForFilterDetails?.data?.rolesNeeded || [];
+  // Derive roles for selected project from already-loaded projects (avoid extra API call)
+  const projectFiltersRoles = useMemo(() => {
+    if (filters.projectId === "all") return [];
+    const proj = projects.find((p: any) => p.id === filters.projectId);
+    return proj?.rolesNeeded || [];
+  }, [projects, filters.projectId]);
 
   const uniqueRoles = useMemo(() => {
     const rolesMap = new Map();
@@ -251,11 +252,14 @@ export default function ScreeningsListPage() {
     return displayedInterviews[0];
   }, [displayedInterviews, selectedInterviewId]);
 
-  // Fetch project details for the SELECTED interview for detail panel
-  const { data: selectedProjectDetails } = useGetProjectQuery(
-    selectedInterview?.candidateProjectMap?.project?.id || "",
-    { skip: !selectedInterview?.candidateProjectMap?.project?.id }
-  );
+  // Derive selected project details from selected interview or loaded projects (avoid API call)
+  const selectedProjectDetails = useMemo(() => {
+    return (
+      selectedInterview?.candidateProjectMap?.project ||
+      projects.find((p: any) => p.id === selectedInterview?.candidateProjectMap?.project?.id) ||
+      undefined
+    );
+  }, [selectedInterview, projects]);
 
   const getDocStatus = (interview: any) => {
     if (!interview) return null;
@@ -495,6 +499,22 @@ export default function ScreeningsListPage() {
     }
   };
 
+  // Confirmation state and handler for notifying recruiter to upload missing documents
+  const [notifyRecruiterConfirm, setNotifyRecruiterConfirm] = useState<{
+    isOpen: boolean;
+    recruiterId?: string;
+    recruiterName?: string;
+    recruiterEmail?: string;
+    recruiterMobile?: string;
+    candidateId?: string;
+    candidateName?: string;
+    projectId?: string;
+    projectName?: string;
+    projectRole?: string;
+    notes?: string;
+    documentationUserId?: string;
+  }>({ isOpen: false, recruiterId: undefined, recruiterName: undefined, recruiterEmail: undefined, recruiterMobile: undefined, candidateId: undefined, candidateName: undefined, projectId: undefined, projectName: undefined, projectRole: undefined, notes: "", documentationUserId: undefined });
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -581,44 +601,14 @@ export default function ScreeningsListPage() {
           )}
         </div>
 
-        {/* Project Filter */}
-        <Select
-          value={filters.projectId}
-          onValueChange={(val) => setFilters(p => ({ ...p, projectId: val, roleCatalogId: "all" }))}
-        >
-          <SelectTrigger className="h-9 w-[160px] text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white">
-            <div className="flex items-center gap-2 truncate">
-              <Briefcase className="h-3.5 w-3.5 text-indigo-500" />
-              <SelectValue placeholder="All Projects" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Projects</SelectItem>
-            {projects.map((p: any) => (
-              <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Role Filter */}
-        <Select
-          value={filters.roleCatalogId}
-          onValueChange={(val) => setFilters(p => ({ ...p, roleCatalogId: val }))}
-          disabled={filters.projectId === "all"}
-        >
-          <SelectTrigger className="h-9 w-[160px] text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white">
-            <div className="flex items-center gap-2 truncate">
-              <Plus className="h-3.5 w-3.5 text-indigo-500" />
-              <SelectValue placeholder="All Roles" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            {uniqueRoles.map((r: any) => (
-              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Project & Role Filter (replaced by ProjectRoleFilter component) */}
+        <div className="min-w-[220px]">
+          <ProjectRoleFilter
+            value={{ projectId: filters.projectId, roleCatalogId: filters.roleCatalogId }}
+            onChange={(val) => setFilters((p) => ({ ...p, projectId: val.projectId, roleCatalogId: val.roleCatalogId }))}
+            className="w-full"
+          />
+        </div>
 
         {/* Decision Filter */}
         <Select
@@ -755,16 +745,28 @@ export default function ScreeningsListPage() {
 
                 <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
                   <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "font-medium text-sm truncate transition-colors",
-                      isSelected ? "text-indigo-700" : "text-slate-800 group-hover:text-slate-900"
-                    )}>
-                      {candidateName}
-                    </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {role?.designation || "Unknown Role"}
-                    </p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ImageViewer
+                      src={candidate?.profileImage}
+                      fallbackSrc={candidate?.profileImage}
+                      title={candidateName}
+                      className="h-10 w-10 rounded-lg flex-shrink-0"
+                      enableHoverPreview={false}
+                      previewClassName="w-40 h-40"
+                    />
+                    <div className="min-w-0">
+                      <p className={cn(
+                        "font-medium text-sm truncate transition-colors",
+                        isSelected ? "text-indigo-700" : "text-slate-800 group-hover:text-slate-900"
+                      )}>
+                        {candidateName}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {role?.designation || "Unknown Role"}
+                      </p>
+                    </div>
                   </div>
+                </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {interview.decision === SCREENING_DECISION.APPROVED && renderDocStatusIcon(interview)}
@@ -839,83 +841,9 @@ export default function ScreeningsListPage() {
                             <Badge className="text-xs bg-green-100 text-green-700">Verified</Badge>
                           ) : verificationInProgress ? (
                             <Badge className="text-xs bg-amber-100 text-amber-700">Verifying</Badge>
-                          ) : explicitVerificationRequired ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    disabled={!interview.candidateProjectMap?.documentVerifications?.length}
-                                    className={cn(
-                                      "h-6 w-6 rounded-lg",
-                                      interview.candidateProjectMap?.documentVerifications?.length ? "hover:bg-amber-50" : "opacity-50 cursor-not-allowed"
-                                    )}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSendForVerificationConfirm({
-                                        isOpen: true,
-                                        candidateId: interview.candidateProjectMap?.candidate?.id,
-                                        projectId: interview.candidateProjectMap?.project?.id,
-                                        screeningId: interview.id,
-                                        projectName: interview.candidateProjectMap?.project?.title,
-                                        projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
-                                        notes: "",
-                                        roleId: interview.candidateProjectMap?.roleNeededId,
-                                      });
-                                    }}
-                                  >
-                                    <ClipboardCheck className={cn("h-3.5 w-3.5", interview.candidateProjectMap?.documentVerifications?.length ? "text-amber-600" : "text-slate-400")} />
-                                  </Button>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                {interview.candidateProjectMap?.documentVerifications?.length 
-                                  ? "Send for Verification" 
-                                  : "Please upload documents to enable this button"}
-                              </TooltipContent>
-                            </Tooltip>
                           ) : null}
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  disabled={!isAllUploaded}
-                                  className={cn(
-                                    "h-6 w-6 rounded-lg",
-                                    isAllUploaded ? "hover:bg-indigo-50" : "opacity-50 cursor-not-allowed"
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSendForInterviewConfirm({
-                                      isOpen: true,
-                                      candidateId: interview.candidateProjectMap?.candidate?.id,
-                                      candidateName,
-                                      projectId: interview.candidateProjectMap?.project?.id,
-                                      projectName: interview.candidateProjectMap?.project?.title,
-                                      projectRole: interview.candidateProjectMap?.roleNeeded?.designation,
-                                      scheduledTime: interview.scheduledTime,
-                                      overallRating: interview.overallRating,
-                                      decision: interview.decision,
-                                      screeningId: interview.id,
-                                      notes: "",
-                                    });
-                                  }}
-                                  title={isAllUploaded ? "Assign Main Interview" : "Please complete the document verification"}
-                                >
-                                  <Send className={cn("h-3.5 w-3.5", isAllUploaded ? "text-indigo-600" : "text-slate-400")} />
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            {!isAllUploaded && (
-                              <TooltipContent side="top" className="text-xs">
-                                Please complete the document verification
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
+
                         </>
                       );
                     }
@@ -1059,84 +987,48 @@ export default function ScreeningsListPage() {
                       </Badge>
                     ) : selected_explicitVerificationRequired ? (
                       <>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <Button
-                                size="sm"
-                                disabled={!selectedInterview.candidateProjectMap?.documentVerifications?.length}
-                                className="h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50"
-                                onClick={() =>
-                                  setSendForVerificationConfirm({
-                                    isOpen: true,
-                                    candidateId:
-                                      selectedInterview.candidateProjectMap?.candidate?.id,
-                                    projectId:
-                                      selectedInterview.candidateProjectMap?.project?.id,
-                                    screeningId: selectedInterview.id,
-                                    projectName: selectedInterview.candidateProjectMap?.project?.title,
-                                    projectRole:
-                                      selectedInterview.candidateProjectMap?.roleNeeded?.designation,
-                                    notes: "",
-                                    roleId: selectedInterview.candidateProjectMap?.roleNeededId,
-                                  })
-                                }
-                              >
-                                <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
-                                Send for verification
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs">
-                            {selectedInterview.candidateProjectMap?.documentVerifications?.length 
-                              ? "Send for Verification" 
-                              : "Please upload documents to enable this button"}
-                          </TooltipContent>
-                        </Tooltip>
+                        {/* send-for-verification button removed */}
+                        {/* If there are no uploaded documents, allow notifying the recruiter to upload them */}
+                        {!selectedInterview.candidateProjectMap?.documentVerifications?.length && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 text-black text-xs rounded-lg bg-green-600 hover:bg-green-800 hover:text-white"
+                                  onClick={() =>
+                                    setNotifyRecruiterConfirm({
+                                      isOpen: true,
+                                      recruiterId: selectedInterview.candidateProjectMap?.recruiterId,
+                                      recruiterName: selectedInterview.candidateProjectMap?.recruiter?.name,
+                                      recruiterEmail: selectedInterview.candidateProjectMap?.recruiter?.email,
+                                      recruiterMobile: selectedInterview.candidateProjectMap?.recruiter?.mobileNumber,
+                                      candidateId: selectedInterview.candidateProjectMap?.candidate?.id,
+                                      candidateName: selectedInterview.candidateProjectMap?.candidate?.firstName + " " + selectedInterview.candidateProjectMap?.candidate?.lastName,
+                                      projectId: selectedInterview.candidateProjectMap?.project?.id,
+                                      projectName: selectedInterview.candidateProjectMap?.project?.title,
+                                      projectRole: selectedInterview.candidateProjectMap?.roleNeeded?.designation,
+                                      notes: "",
+                                      documentationUserId: selectedInterview?.candidateProjectMap?.project?.coordinatorId || selectedInterview?.candidateProjectMap?.project?.coordinator?.id,
+                                    })
+                                  }
+                                  disabled={!selectedInterview.candidateProjectMap?.recruiterId}
+                                >
+                                  Notify Recruiter/Documentation
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              {selectedInterview.candidateProjectMap?.recruiterId ? "Notify recruiter to upload required documents" : "No recruiter assigned"}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         {renderDocStatusIcon()}
                       </>
                     ) : null}
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Button
-                            size="sm"
-                            disabled={!isAllUploaded}
-                            className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
-                            onClick={() =>
-                              setSendForInterviewConfirm({
-                                isOpen: true,
-                                candidateId:
-                                  selectedInterview.candidateProjectMap?.candidate?.id,
-                                candidateName:
-                                  selectedInterview.candidateProjectMap?.candidate?.firstName +
-                                  " " +
-                                  selectedInterview.candidateProjectMap?.candidate?.lastName,
-                                projectId:
-                                  selectedInterview.candidateProjectMap?.project?.id,
-                                projectName: selectedInterview.candidateProjectMap?.project?.title,
-                                projectRole:
-                                  selectedInterview.candidateProjectMap?.roleNeeded?.designation,
-                                scheduledTime: selectedInterview.scheduledTime,
-                                overallRating: selectedInterview.overallRating,
-                                decision: selectedInterview.decision,
-                                screeningId: selectedInterview.id,
-                                notes: "",
-                              })
-                            }
-                          >
-                            <Send className="h-3.5 w-3.5 mr-1" />
-                            Main Interview
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {!isAllUploaded && (
-                        <TooltipContent side="top" className="text-xs">
-                          Please complete the document verification
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
+
                   </div>
                 );
               }
@@ -1174,29 +1066,71 @@ export default function ScreeningsListPage() {
                 Candidate
               </h3>
               <div className="space-y-2 text-sm">
-                <div>
-                  <p className="text-xs text-slate-400">Name</p>
-                  <p className="font-medium text-slate-800">
-                    {selectedInterview.candidateProjectMap?.candidate?.firstName || ""}{" "}
-                    {selectedInterview.candidateProjectMap?.candidate?.lastName || ""}
-                  </p>
+                <div className="flex items-start gap-4">
+                  <ImageViewer
+                    src={selectedInterview.candidateProjectMap?.candidate?.profileImage}
+                    fallbackSrc={selectedInterview.candidateProjectMap?.candidate?.profileImage}
+                    title={`${selectedInterview.candidateProjectMap?.candidate?.firstName || ""} ${selectedInterview.candidateProjectMap?.candidate?.lastName || ""}`}
+                    className="h-28 w-28 rounded-lg"
+                    previewClassName="w-96 h-96"
+                    enableHoverPreview={true}
+                  />
+                  <div className="flex-1">
+                    <div>
+                      <p className="text-xs text-slate-400">Name</p>
+                      <p className="font-medium text-slate-800">
+                        {selectedInterview.candidateProjectMap?.candidate?.firstName || ""} {selectedInterview.candidateProjectMap?.candidate?.lastName || ""}
+                      </p>
+                    </div>
+
+                    {selectedInterview.candidateProjectMap?.candidate?.email && (
+                      <div className="mt-2">
+                        <p className="text-xs text-slate-400">Email</p>
+                        <p className="text-slate-700 break-all text-sm">{selectedInterview.candidateProjectMap?.candidate?.email}</p>
+                      </div>
+                    )}
+
+                    {selectedInterview.candidateProjectMap?.candidate?.phone && (
+                      <div className="mt-2">
+                        <p className="text-xs text-slate-400">Phone</p>
+                        <p className="text-slate-700 text-sm">{selectedInterview.candidateProjectMap?.candidate?.phone}</p>
+                      </div>
+                    )}
+
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-400">Experience</p>
+                        <p className="font-medium text-slate-800">{selectedInterview.candidateProjectMap?.candidate?.experience ?? '—'} years</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Current Role</p>
+                        <p className="font-medium text-slate-800">{selectedInterview.candidateProjectMap?.candidate?.currentRole || selectedInterview.candidateProjectMap?.candidate?.currentEmployer || '—'}</p>
+                      </div>
+                    </div>
+
+                    {selectedInterview.candidateProjectMap?.candidate?.qualifications?.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-slate-400">Qualifications</p>
+                        <ul className="text-sm text-slate-700 list-disc list-inside mt-1">
+                          {selectedInterview.candidateProjectMap?.candidate?.qualifications.map((q: any) => (
+                            <li key={q.id}>{q.qualification?.name || q.university || q.gpa || "Qualification"}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {selectedInterview.candidateProjectMap?.candidate?.workExperiences?.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-slate-400">Work Experience</p>
+                        <div className="text-sm text-slate-700 mt-1">
+                          {selectedInterview.candidateProjectMap?.candidate?.workExperiences.slice(0,2).map((we: any) => (
+                            <div key={we.id}>{we.jobTitle} @ {we.companyName} ({we.startDate ? new Date(we.startDate).getFullYear() : '?'} - {we.endDate ? new Date(we.endDate).getFullYear() : 'Present'})</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {selectedInterview.candidateProjectMap?.candidate?.email && (
-                  <div>
-                    <p className="text-xs text-slate-400">Email</p>
-                    <p className="text-slate-700 break-all text-xs">
-                      {selectedInterview.candidateProjectMap?.candidate?.email}
-                    </p>
-                  </div>
-                )}
-                {selectedInterview.candidateProjectMap?.candidate?.phone && (
-                  <div>
-                    <p className="text-xs text-slate-400">Phone</p>
-                    <p className="text-slate-700 text-xs">
-                      {selectedInterview.candidateProjectMap?.candidate?.phone}
-                    </p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -1221,39 +1155,69 @@ export default function ScreeningsListPage() {
                     {selectedInterview.candidateProjectMap?.roleNeeded?.designation || "N/A"}
                   </p>
                 </div>
-                {selectedProjectDetails?.data && (
+                {selectedProjectDetails && (
                   <div className="pt-2 border-t border-slate-100 mt-2 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <p className="text-[11px] text-slate-400">Client</p>
-                      <p className="text-[11px] font-medium text-slate-700">{selectedProjectDetails.data.client?.name || 'N/A'}</p>
+                    {selectedProjectDetails.description && (
+                      <div>
+                        <p className="text-xs text-slate-400">Description</p>
+                        <p className="text-sm text-slate-700">{selectedProjectDetails.description}</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-400">Client</p>
+                        <p className="font-medium text-slate-700">{selectedProjectDetails.client?.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Type</p>
+                        <p className="font-medium text-slate-700 capitalize">{selectedProjectDetails.projectType || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Grooming</p>
+                        <p className="font-medium text-slate-700 capitalize">{selectedProjectDetails.groomingRequired || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Country</p>
+                        <p className="font-medium text-slate-700">{selectedProjectDetails.country?.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Creator</p>
+                        <p className="font-medium text-slate-700">{selectedProjectDetails.creator?.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Status</p>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize border-slate-200">{selectedProjectDetails.status}</Badge>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-[11px] text-slate-400">Type</p>
-                      <p className="text-[11px] font-medium text-slate-700 capitalize">{selectedProjectDetails.data.projectType || 'N/A'}</p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-[11px] text-slate-400">Status</p>
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize border-slate-200">
-                        {selectedProjectDetails.data.status}
-                      </Badge>
-                    </div>
+
                     <div className="flex justify-between items-center">
                       <p className="text-[11px] text-slate-400">Priority</p>
                       <Badge className={cn(
                         "text-[10px] h-4 px-1.5 capitalize border-0",
-                        selectedProjectDetails.data.priority === 'urgent' ? 'bg-red-500 text-white' : 
-                        selectedProjectDetails.data.priority === 'high' ? 'bg-orange-500 text-white' : 
+                        selectedProjectDetails.priority === 'urgent' ? 'bg-red-500 text-white' : 
+                        selectedProjectDetails.priority === 'high' ? 'bg-orange-500 text-white' : 
                         'bg-blue-500 text-white'
                       )}>
-                        {selectedProjectDetails.data.priority}
+                        {selectedProjectDetails.priority}
                       </Badge>
                     </div>
-                    {selectedProjectDetails.data.deadline && (
+
+                    {selectedProjectDetails.deadline && (
                       <div className="flex justify-between items-center">
                         <p className="text-[11px] text-slate-400">Deadline</p>
-                        <p className="text-[11px] font-medium text-slate-700">
-                          {format(new Date(selectedProjectDetails.data.deadline), "MMM d, yyyy")}
-                        </p>
+                        <p className="text-[11px] font-medium text-slate-700">{format(new Date(selectedProjectDetails.deadline), "MMM d, yyyy")}</p>
+                      </div>
+                    )}
+
+                    {selectedProjectDetails.documentRequirements?.length > 0 && (
+                      <div>
+                        <p className="text-xs text-slate-400">Document Requirements</p>
+                        <ul className="mt-1 text-sm text-slate-700 list-disc list-inside">
+                          {selectedProjectDetails.documentRequirements.map((dr: any) => (
+                            <li key={dr.id}>{dr.docType.replace(/_/g, ' ')} {dr.mandatory && <span className="text-xs text-red-500">(mandatory)</span>}</li>
+                          ))}
+                        </ul>
                       </div>
                     )}
                   </div>
@@ -1499,6 +1463,21 @@ export default function ScreeningsListPage() {
             }
           } catch (error: any) {
             toast.error(error?.data?.message || "Failed to send candidate for verification");
+          }
+        }}
+      />
+
+      {/* Confirmation for notifying recruiter to upload documents */}
+      <NotifyDocumentationModal
+        isOpen={notifyRecruiterConfirm.isOpen}
+        onClose={() => setNotifyRecruiterConfirm((s) => ({ ...s, isOpen: false }))}
+        data={notifyRecruiterConfirm}
+        setData={setNotifyRecruiterConfirm}
+        onSuccess={() => {
+          try {
+            refetch?.();
+          } catch (e) {
+            // ignore
           }
         }}
       />

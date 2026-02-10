@@ -3,25 +3,21 @@ import { useGetScreeningQuery, useAssignTemplateToScreeningMutation, useComplete
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Calendar, Clock, MapPin, User, CheckCircle2, Circle, Loader2, Link } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertCircle, Calendar, Clock, MapPin, User, CheckCircle2, Circle, Loader2, Link, Search, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
 import type { Screening, ScreeningTemplate } from "../../types";
 import {
   useGetTemplatesByRoleQuery,
   useGetTemplatesQuery,
 } from "../../templates/data/templates.endpoints";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
+import ImageViewer from "@/components/molecules/ImageViewer";
+import { getAge } from "@/utils";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Collapsible,
   CollapsibleContent,
@@ -29,8 +25,10 @@ import {
 } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CompleteScreeningDialog } from "../components/CompleteScreeningDialog";
+import { useDebounce } from "@/hooks";
 import { format } from "date-fns";
 
+const TEMPLATES_PER_PAGE = 10;
 
 export default function ConductScreeningPage() {
   const { screeningId, interviewId } = useParams<{ screeningId?: string; interviewId?: string }>();
@@ -47,7 +45,12 @@ export default function ConductScreeningPage() {
     | string
     | undefined;
 
-  // Templates handling: fetch by role when available, otherwise fetch all active templates
+  // Template search and pagination state
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [templatePage, setTemplatePage] = useState(1);
+  const debouncedTemplateSearch = useDebounce(templateSearch, 300);
+
+  // Templates handling: fetch by role when available, otherwise fetch all active templates with pagination
   // These hooks must be invoked on every render (even while the interview data is loading)
   const { data: templatesByRole, isLoading: isLoadingByRole } = useGetTemplatesByRoleQuery(
     roleIdFromResponse ? { roleId: roleIdFromResponse, isActive: true } : (null as any),
@@ -55,18 +58,33 @@ export default function ConductScreeningPage() {
   );
 
   const { data: allTemplatesData, isLoading: isLoadingAll } = useGetTemplatesQuery(
-    { isActive: true },
+    { isActive: true, search: debouncedTemplateSearch || undefined, page: templatePage, limit: TEMPLATES_PER_PAGE },
     { skip: !!roleIdFromResponse }
   );
 
   // Build the templates list and selection state before any early returns so hooks order remains stable
-  const templates: ScreeningTemplate[] =
-    (templatesByRole?.data as ScreeningTemplate[] | undefined) ??
-    (allTemplatesData?.data as ScreeningTemplate[] | undefined) ??
-    [];
+  // Handle both old format (data is array) and new format (data.items is array with pagination)
+  const templates: ScreeningTemplate[] = (() => {
+    if (templatesByRole?.data) {
+      // Templates by role - could be array or {items: array}
+      const roleData = templatesByRole.data as any;
+      return Array.isArray(roleData) ? roleData : (roleData?.items ?? []);
+    }
+    if (allTemplatesData?.data) {
+      // All templates - could be array or {items: array}
+      const allData = allTemplatesData.data as any;
+      return Array.isArray(allData) ? allData : (allData?.items ?? []);
+    }
+    return [];
+  })();
+
+  // Get pagination meta from response (new format has data.pagination)
+  const templatesMeta = (allTemplatesData?.data as any)?.pagination || (allTemplatesData as any)?.meta || {};
+  const totalTemplates = templatesMeta.total || templates.length;
+  const totalPages = templatesMeta.totalPages || Math.ceil(totalTemplates / TEMPLATES_PER_PAGE) || 1;
 
   const [selectedTemplateId, setSelectedTemplateId] =
-    useState<string | null>(templates?.[0]?.id ?? null);
+    useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
   
@@ -80,13 +98,12 @@ export default function ConductScreeningPage() {
 
   // Keep selected template object in sync when templates change (also declared early)
   const selectedTemplate: ScreeningTemplate | undefined =
-    templates.find((t) => t.id === selectedTemplateId) ?? templates[0];
+    templates.find((t) => t.id === selectedTemplateId);
 
+  // Reset page when search changes
   useEffect(() => {
-    if (!selectedTemplateId && templates?.length) {
-      setSelectedTemplateId(templates[0].id);
-    }
-  }, [templates, selectedTemplateId]);
+    setTemplatePage(1);
+  }, [debouncedTemplateSearch]);
 
   const [assignTemplateToScreening, { isLoading: assignMutationLoading }] = useAssignTemplateToScreeningMutation();
   const [completeScreening, { isLoading: completeMutationLoading }] = useCompleteScreeningMutation();
@@ -280,7 +297,7 @@ export default function ConductScreeningPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
+    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
       {/* Header */}
       <div className="relative">
   {/* Premium Header with Aurora Glow */}
@@ -308,43 +325,276 @@ export default function ConductScreeningPage() {
   </div>
 </div>
 
-      {/* Candidate Details */}
-      <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30">
-  <CardContent className="p-6">
-    <h3 className="text-xl font-bold text-indigo-700 mb-5 flex items-center gap-2">
-      <User className="h-5 w-5" />
-      Candidate Information
-    </h3>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
-      <div>
-        <p className="text-xs text-slate-500 mb-1">Name</p>
-        <p className="font-semibold text-slate-900">
-          {candidate?.firstName} {candidate?.lastName}
-        </p>
+      {/* Candidate & Project Details - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Candidate Details */}
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 h-fit">
+          <CardContent className="p-6">
+            <h3 className="text-xl font-bold text-indigo-700 mb-5 flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Candidate Information
+            </h3>
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <ImageViewer
+                  src={candidate?.profileImage}
+                  fallbackSrc={""}
+                  title={`${candidate?.firstName || ""} ${candidate?.lastName || ""}`.trim() || "Profile image"}
+                  className="h-20 w-20 rounded-lg"
+                  enableHoverPreview={true}
+                  previewClassName="w-72 h-72"
+                  hoverPosition="right"
+                />
+              </div>
+
+              <div className="w-full space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Name</p>
+                    <p className="font-semibold text-slate-900">{candidate?.firstName} {candidate?.lastName}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Email</p>
+                    <p className="font-medium text-slate-900 break-all text-xs">{candidate?.email || "N/A"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Phone</p>
+                    <p className="font-medium text-slate-900">{candidate?.phone || "N/A"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">DOB / Age</p>
+                    <p className="font-medium text-slate-900">
+                      {candidate?.dateOfBirth ? new Date(candidate.dateOfBirth).toLocaleDateString() : 'N/A'}
+                      {candidate?.dateOfBirth && getAge(candidate.dateOfBirth) ? ` (${getAge(candidate.dateOfBirth)} yrs)` : ''}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Gender</p>
+                    <p className="font-medium text-slate-900">{candidate?.gender ? (candidate.gender.charAt(0) + candidate.gender.slice(1).toLowerCase()) : 'N/A'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Position Applied</p>
+                    <p className="font-semibold text-slate-900">{roleNeeded?.designation || roleNeeded?.name || "N/A"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Coordinator</p>
+                    <p className="font-semibold text-slate-900">{coordinator?.name || "Unassigned"}</p>
+                  </div>
+
+                  {candidate?.referralCompanyName && (
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Referral</p>
+                      <p className="font-medium text-slate-900">{candidate.referralCompanyName}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Qualifications */}
+                {candidate?.qualifications?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Qualifications</p>
+                    <ul className="space-y-1 text-sm">
+                      {candidate.qualifications.map((q: any) => (
+                        <li key={q.id} className="text-sm">
+                          <div className="font-medium text-slate-900">{q.qualification?.shortName || q.qualification?.name}</div>
+                          <div className="text-xs text-slate-500">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : ''}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Work experience */}
+                {candidate?.workExperiences?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Work Experience</p>
+                    <ul className="space-y-1 text-sm">
+                      {candidate.workExperiences.slice().sort((a: any, b: any) => (new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime())).slice(0, 3).map((w: any) => (
+                        <li key={w.id} className="text-sm">
+                          <div className="font-medium text-slate-900">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
+                          <div className="text-xs text-slate-500">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}</div>
+                        </li>
+                      ))}
+                      {candidate.workExperiences.length > 3 && (
+                        <li className="text-xs text-indigo-600">+{candidate.workExperiences.length - 3} more</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Candidate contacts */}
+                {candidate?.candidateContacts?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Contacts</p>
+                    <ul className="space-y-1 text-sm">
+                      {candidate.candidateContacts.slice(0, 2).map((c: any) => (
+                        <li key={c.id} className="text-sm">
+                          <div className="font-medium text-slate-900">{c.name || c.type || 'Contact'}</div>
+                          <div className="text-xs text-slate-500">{c.phone ? c.phone : ''}{c.email ? ` • ${c.email}` : ''}{c.relationship ? ` • ${c.relationship}` : ''}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Candidate documents */}
+                {/* {candidate?.documents?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Documents</p>
+                    <div className="flex flex-wrap gap-2">
+                      {candidate.documents.slice(0, 4).map((d: any) => (
+                        <Badge key={d.id} variant="outline" className="text-xs">
+                          {d.docType || d.name || d.id}
+                          {d.url && <a className="ml-1 text-indigo-600 hover:underline" href={d.url} target="_blank" rel="noopener noreferrer">↗</a>}
+                        </Badge>
+                      ))}
+                      {candidate.documents.length > 4 && (
+                        <Badge variant="secondary" className="text-xs">+{candidate.documents.length - 4} more</Badge>
+                      )}
+                    </div>
+                  </div>
+                )} */}
+                
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Project Details */}
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-white/90 to-slate-50 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 h-fit">
+          <CardContent className="p-6">
+            <h3 className="text-xl font-bold text-indigo-700 mb-5 flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Project Information
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Title</p>
+                  <p className="font-semibold text-slate-900">{project?.title || "N/A"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Client</p>
+                  <p className="font-semibold text-slate-900">{project?.client?.name || project?.client || "N/A"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Country</p>
+                  <p className="font-medium text-slate-900">{project?.country?.name || project?.country || "N/A"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Deadline</p>
+                  <p className="font-medium text-slate-900">{project?.deadline ? format(new Date(project.deadline), "MMM d, yyyy") : "N/A"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Priority</p>
+                  <Badge variant={project?.priority === 'HIGH' || project?.priority === 'URGENT' ? 'destructive' : 'secondary'} className="text-xs">
+                    {project?.priority || "N/A"}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Project Type</p>
+                  <p className="font-medium text-slate-900">{project?.projectType || project?.type || "N/A"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Status</p>
+                  <Badge variant="outline" className="text-xs">{project?.status || "N/A"}</Badge>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Grooming</p>
+                  <p className="font-medium text-slate-900">{project?.grooming ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+
+              {project?.description && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Description</p>
+                  <p className="text-sm text-slate-900 whitespace-pre-wrap line-clamp-3">{project.description}</p>
+                </div>
+              )}
+
+              {(project?.clientEmail || project?.clientPhone) && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Client Contacts</p>
+                  <p className="text-sm text-slate-900">
+                    {project?.clientEmail && <a className="text-indigo-600 hover:underline text-xs" href={`mailto:${project.clientEmail}`}>{project.clientEmail}</a>}
+                    {project?.clientPhone && <span className="text-xs">{project?.clientEmail ? ` • ${project.clientPhone}` : project.clientPhone}</span>}
+                  </p>
+                </div>
+              )}
+
+              {/* Role Needed Details */}
+              {roleNeeded && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Role Details</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-indigo-50/50 p-3 rounded-lg">
+                    <div>
+                      <p className="text-xs text-slate-500">Designation</p>
+                      <p className="font-medium text-slate-900">{roleNeeded.designation || roleNeeded.name || "N/A"}</p>
+                    </div>
+                    {roleNeeded.shortName && (
+                      <div>
+                        <p className="text-xs text-slate-500">Short Name</p>
+                        <p className="font-medium text-slate-900">{roleNeeded.shortName}</p>
+                      </div>
+                    )}
+                    {roleNeeded.quantity && (
+                      <div>
+                        <p className="text-xs text-slate-500">Quantity</p>
+                        <p className="font-medium text-slate-900">{roleNeeded.quantity}</p>
+                      </div>
+                    )}
+                    {roleNeeded.salaryRange && (
+                      <div>
+                        <p className="text-xs text-slate-500">Salary Range</p>
+                        <p className="font-medium text-slate-900">{roleNeeded.salaryRange}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            
+              {project?.roleCatalog && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Role Catalog</p>
+                  <p className="text-sm text-slate-900">{project.roleCatalog?.name || project.roleCatalog || "N/A"}</p>
+                </div>
+              )}
+
+              {/* Additional Project Fields */}
+              {(project?.createdAt || project?.updatedAt) && (
+                <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-slate-200">
+                  {project?.createdAt && (
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Created</p>
+                      <p className="text-xs text-slate-700">{format(new Date(project.createdAt), "MMM d, yyyy")}</p>
+                    </div>
+                  )}
+                  {project?.updatedAt && (
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Updated</p>
+                      <p className="text-xs text-slate-700">{format(new Date(project.updatedAt), "MMM d, yyyy")}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <div>
-        <p className="text-xs text-slate-500 mb-1">Email</p>
-        <p className="font-medium text-slate-900 break-all">{candidate?.email || "N/A"}</p>
-      </div>
-      <div>
-        <p className="text-xs text-slate-500 mb-1">Phone</p>
-        <p className="font-medium text-slate-900">{candidate?.phone || "N/A"}</p>
-      </div>
-      <div>
-        <p className="text-xs text-slate-500 mb-1">Position Applied</p>
-        <p className="font-semibold text-slate-900">{roleNeeded?.designation || "N/A"}</p>
-      </div>
-      <div>
-        <p className="text-xs text-slate-500 mb-1">Project</p>
-        <p className="font-semibold text-slate-900">{project?.title || "N/A"}</p>
-      </div>
-      <div>
-        <p className="text-xs text-slate-500 mb-1">Coordinator</p>
-        <p className="font-semibold text-slate-900">{coordinator?.name || "Unassigned"}</p>
-      </div>
-    </div>
-  </CardContent>
-</Card>
 
       {/* Interview Details */}
      <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
@@ -512,9 +762,12 @@ export default function ConductScreeningPage() {
        <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
   <CardHeader className="pb-3 border-b border-indigo-200/50">
     <div className="flex items-center justify-between w-full">
-      <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-        {isUpdatingTemplate ? "Update Template" : "Select Template"}
-      </CardTitle>
+      <div className="space-y-1">
+        <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+          {isUpdatingTemplate ? "Update Template" : "Select Template"}
+        </CardTitle>
+        <p className="text-sm text-slate-500">Choose an interview template to evaluate the candidate</p>
+      </div>
 
       <div className="flex items-center gap-3">
         {isUpdatingTemplate && (
@@ -533,115 +786,228 @@ export default function ConductScreeningPage() {
           size="sm"
           className="h-9 px-5 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
         >
-          {isUpdatingTemplate ? "Update Template" : "Select Template"}
+          {isUpdatingTemplate ? "Update Template" : "Assign Template"}
         </Button>
       </div>
     </div>
   </CardHeader>
 
   <CardContent className="p-6">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-      {/* Left: Selector */}
-      <div className="col-span-1">
-        <Label className="mb-2 text-sm font-medium text-indigo-700">Choose Template</Label>
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+      {/* Left: Template List with Search */}
+      <div className="lg:col-span-2 space-y-4">
+        <div className="space-y-3">
+          <Label className="text-sm font-semibold text-indigo-700">Search Templates</Label>
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search by name..."
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              className="pl-9 h-10 rounded-lg border-indigo-200/50 bg-white/90 focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400"
+            />
+          </div>
+        </div>
 
         {/* Loading State */}
         {(isLoadingByRole || isLoadingAll) && (
-          <div className="flex items-center gap-2 rounded-lg border border-indigo-200/50 bg-white/50 px-4 py-2.5 text-sm shadow-inner">
-            <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-indigo-200/50 bg-white/50 px-4 py-8 text-sm shadow-inner">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
             <span className="text-slate-600">Loading templates...</span>
           </div>
         )}
 
         {/* Empty State */}
         {!isLoadingByRole && !isLoadingAll && templates.length === 0 && (
-          <div className="rounded-lg border border-indigo-200/50 bg-muted/50 p-4 text-sm text-slate-600 shadow-inner">
-            No templates available for this role
+          <div className="rounded-xl border border-indigo-200/50 bg-white/50 p-6 text-center shadow-inner">
+            <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+            <p className="text-sm font-medium text-slate-600">No templates found</p>
+            <p className="text-xs text-slate-400 mt-1">
+              {templateSearch ? "Try a different search term" : "No templates available for this role"}
+            </p>
           </div>
         )}
 
-        {/* Template Selector */}
+        {/* Template List */}
         {!isLoadingByRole && !isLoadingAll && templates.length > 0 && (
-          <Select value={selectedTemplateId ?? undefined} onValueChange={(v) => setSelectedTemplateId(v)}>
-            <SelectTrigger className="h-10 text-sm rounded-lg border-indigo-200/50 bg-white/90 shadow-inner hover:shadow-md focus:shadow-lg transition-all duration-200 focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400">
-              <SelectValue placeholder="Select a template..." />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl text-sm max-h-[320px]">
-              {templates.map((t) => (
-                <SelectItem key={t.id} value={t.id} className="py-2">
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            {templates.map((t) => (
+              <div
+                key={t.id}
+                onClick={() => setSelectedTemplateId(t.id)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+                  selectedTemplateId === t.id
+                    ? 'border-indigo-400 bg-indigo-50/80 ring-2 ring-indigo-400/30 shadow-md'
+                    : 'border-indigo-200/50 bg-white/70 hover:border-indigo-300 hover:bg-white/90 hover:shadow-sm'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText className={`h-4 w-4 flex-shrink-0 ${selectedTemplateId === t.id ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      <p className={`font-semibold truncate ${selectedTemplateId === t.id ? 'text-indigo-700' : 'text-slate-800'}`}>
+                        {t.name}
+                      </p>
+                    </div>
+                    {t.description && (
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">{t.description}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                        {t.items?.length || 0} questions
+                      </Badge>
+                      {t.role && (
+                        <Badge variant="outline" className="text-xs px-2 py-0.5">
+                          {t.role.shortName || t.role.name}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {selectedTemplateId === t.id && (
+                    <CheckCircle2 className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
-        {/* Selected Template Meta */}
-        {selectedTemplate && (
-          <div className="mt-4 p-3 rounded-lg bg-white/70 backdrop-blur-sm border border-indigo-200/50 shadow-sm">
-            <div className="font-medium text-indigo-700 text-sm">{selectedTemplate.name}</div>
-            {selectedTemplate.description && (
-              <div className="mt-1 text-xs text-slate-600">{selectedTemplate.description}</div>
-            )}
+        {/* Pagination */}
+        {!isLoadingByRole && !isLoadingAll && totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 border-t border-indigo-200/50">
+            <p className="text-xs text-slate-500">
+              Page {templatePage} of {totalPages} • {totalTemplates} templates
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplatePage(p => Math.max(1, p - 1))}
+                disabled={templatePage <= 1}
+                className="h-8 w-8 p-0 rounded-lg border-indigo-200/50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (templatePage <= 3) {
+                    pageNum = i + 1;
+                  } else if (templatePage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = templatePage - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={templatePage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setTemplatePage(pageNum)}
+                      className={`h-8 w-8 p-0 rounded-lg text-xs ${
+                        templatePage === pageNum 
+                          ? 'bg-indigo-600 hover:bg-indigo-700' 
+                          : 'border-indigo-200/50'
+                      }`}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplatePage(p => Math.min(totalPages, p + 1))}
+                disabled={templatePage >= totalPages}
+                className="h-8 w-8 p-0 rounded-lg border-indigo-200/50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
       </div>
 
       {/* Right: Items Preview */}
-      <div className="md:col-span-2">
-        <div className="text-sm font-medium text-indigo-700 mb-2">Template Items</div>
+      <div className="lg:col-span-3">
+        <div className="text-sm font-semibold text-indigo-700 mb-3">Template Preview</div>
 
         {!selectedTemplate && (
-          <div className="rounded-lg border border-indigo-200/50 bg-muted/50 p-5 text-sm text-slate-600 shadow-inner">
-            Select a template to preview its items
+          <div className="rounded-xl border border-indigo-200/50 bg-white/50 p-8 text-center shadow-inner">
+            <FileText className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-sm font-medium text-slate-600">No template selected</p>
+            <p className="text-xs text-slate-400 mt-1">Select a template from the list to preview its questions</p>
           </div>
         )}
 
-        {selectedTemplate && selectedTemplate.items?.length === 0 && (
-          <div className="rounded-lg border border-indigo-200/50 bg-muted/50 p-5 text-sm text-slate-600 shadow-inner">
-            No items in this template
-          </div>
-        )}
-
-        {selectedTemplate && (selectedTemplate.items ?? []).length > 0 && (() => {
-          const itemsByCategory = (selectedTemplate.items ?? []).reduce((acc, item) => {
-            if (!acc[item.category]) acc[item.category] = [];
-            (acc[item.category] ??= []).push(item);
-            return acc;
-          }, {} as Record<string, typeof selectedTemplate.items>);
-
-          Object.keys(itemsByCategory).forEach(category => {
-            itemsByCategory[category]!.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-          });
-
-          return (
-            <div className="space-y-5">
-              {Object.entries(itemsByCategory).map(([category, items]) => (
-                <div key={category} className="rounded-xl border border-indigo-200/50 bg-white/60 backdrop-blur-sm p-5 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-indigo-200/50">
-                    <div className="text-base font-semibold text-indigo-700 capitalize">
-                      {category}
-                    </div>
-                    <Badge variant="secondary" className="text-xs px-3 py-1">
-                      {items?.length} {items?.length === 1 ? 'item' : 'items'}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-2">
-                    {items?.map((item) => (
-                      <div key={item.id} className="flex gap-3 text-sm p-2 rounded-lg hover:bg-indigo-50/50 transition-colors">
-                        <span className="font-medium text-indigo-600 min-w-[20px]">
-                          {item.order ?? 0}.
-                        </span>
-                        <span className="flex-1 text-slate-800">{item.criterion}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+        {selectedTemplate && (
+          <div className="rounded-xl border border-indigo-200/50 bg-white/70 backdrop-blur-sm p-5 shadow-sm">
+            {/* Selected Template Header */}
+            <div className="flex items-start justify-between gap-4 pb-4 border-b border-indigo-200/50 mb-4">
+              <div>
+                <h4 className="font-bold text-lg text-indigo-700">{selectedTemplate.name}</h4>
+                {selectedTemplate.description && (
+                  <p className="text-sm text-slate-600 mt-1">{selectedTemplate.description}</p>
+                )}
+              </div>
+              <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200/50">
+                {selectedTemplate.items?.length || 0} Questions
+              </Badge>
             </div>
-          );
-        })()}
+
+            {/* Questions Preview */}
+            {selectedTemplate.items?.length === 0 && (
+              <div className="text-center py-6 text-slate-500">
+                <p className="text-sm">No questions in this template</p>
+              </div>
+            )}
+
+            {(selectedTemplate.items ?? []).length > 0 && (() => {
+              const itemsByCategory = (selectedTemplate.items ?? []).reduce((acc, item) => {
+                if (!acc[item.category]) acc[item.category] = [];
+                (acc[item.category] ??= []).push(item);
+                return acc;
+              }, {} as Record<string, typeof selectedTemplate.items>);
+
+              Object.keys(itemsByCategory).forEach(category => {
+                itemsByCategory[category]!.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+              });
+
+              return (
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                  {Object.entries(itemsByCategory).map(([category, items]) => (
+                    <div key={category} className="rounded-lg border border-indigo-100 bg-indigo-50/30 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm font-semibold text-indigo-700 capitalize flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                          {category.replace(/_/g, ' ')}
+                        </div>
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-white/80">
+                          {items?.length} {items?.length === 1 ? 'question' : 'questions'}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2">
+                        {items?.map((item) => (
+                          <div key={item.id} className="flex gap-2 text-sm p-2 rounded-lg bg-white/60 hover:bg-white/80 transition-colors">
+                            <span className="font-medium text-indigo-500 min-w-[24px]">
+                              {item.order ?? 0}.
+                            </span>
+                            <span className="text-slate-700">{item.criterion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
     </div>
   </CardContent>

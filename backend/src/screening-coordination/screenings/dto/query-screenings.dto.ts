@@ -58,4 +58,9 @@ export class QueryScreeningsDto {
   @IsOptional()
   @IsString()
   roleCatalogId?: string;
+
+  @ApiPropertyOptional({ description: 'Search by candidate name, email, mobile' })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

@@ -191,6 +191,7 @@ export interface RecruiterDocumentsResponse {
     pendingUpload?: number;
     verified: number;
     rejected: number;
+    inScreening?: number;
   };
 }
 
@@ -206,6 +207,7 @@ export interface RecruiterVerifiedRejectedDocumentsResponse {
     pending: number;
     verified: number;
     rejected: number;
+    inScreening?: number;
   };
 }
 
@@ -276,6 +278,8 @@ export interface RecruiterDocumentsParams {
   limit?: number;
   search?: string;
   status?: string;
+  projectId?: string;
+  roleCatalogId?: string;
 }
 
 export interface MergedDocumentResponse {
@@ -418,6 +422,8 @@ export const documentsApi = baseApi.injectEndpoints({
         status?: string;
         search?: string;
         recruiterId?: string;
+        projectId?: string;
+        roleCatalogId?: string;
       }
     >({
       query: (params) => ({

@@ -9,6 +9,8 @@ import type {
   PaginatedResponse,
   AssignedScreeningItem,
   ApiResponse,
+  QueryApprovedScreeningsRequest,
+  ApprovedScreeningItem,
 } from "../../types";
 
 export const screeningsApi = baseApi.injectEndpoints({
@@ -17,6 +19,21 @@ export const screeningsApi = baseApi.injectEndpoints({
     getScreenings: builder.query<PaginatedResponse<Screening>, QueryScreeningsRequest | undefined>({
       query: (params: QueryScreeningsRequest | undefined) => ({
         url: "/screenings",
+        params: params as Record<string, any> | undefined,
+      }),
+      providesTags: (result) =>
+        result?.data?.items && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map(({ id }) => ({ type: "Screening" as const, id })),
+              { type: "Screening", id: "LIST" },
+            ]
+          : [{ type: "Screening", id: "LIST" }],
+    }),
+
+    // Get screening approved candidates with documents
+    getApprovedScreeningDocuments: builder.query<PaginatedResponse<ApprovedScreeningItem>, QueryApprovedScreeningsRequest | undefined>({
+      query: (params: QueryApprovedScreeningsRequest | undefined) => ({
+        url: "/screenings/approved-list",
         params: params as Record<string, any> | undefined,
       }),
       providesTags: (result) =>
@@ -130,6 +147,17 @@ export const screeningsApi = baseApi.injectEndpoints({
       query: (params) => ({ url: `/screenings/candidate-project/${params?.candidateProjectMapId}/history`, params: { page: params?.page ?? 1, limit: params?.limit ?? 20 } }),
       providesTags: (_result, _error, _arg) => (_arg ? [{ type: "Screening", id: _arg.candidateProjectMapId }] : [{ type: "Screening", id: "LIST" }]),
     }),
+
+    // Get screening details for a specific candidate + project + roleCatalog
+    getScreeningDetails: builder.query<ApiResponse<Screening>, { candidateId: string; projectId: string; roleCatalogId: string }>({
+      query: (params) => ({
+        url: "/screenings/details",
+        params,
+      }),
+      providesTags: (_result, _error, arg) => [
+        { type: "Screening", id: `details-${arg.candidateId}-${arg.projectId}` },
+      ],
+    }),
   }),
 });
 
@@ -147,6 +175,8 @@ export const {
   useGetAssignedScreeningsQuery,
   useGetUpcomingScreeningsQuery,
   useGetCandidateProjectHistoryQuery,
+  useGetApprovedScreeningDocumentsQuery,
+  useGetScreeningDetailsQuery,
 } = screeningsApi;
 
 export default screeningsApi;

@@ -225,10 +225,18 @@ export const navigationConfig: NavItem[] = [
   {
     id: "documents",
     label: "Documentation",
-    path: "/documents/verification",
+    path: "/documents",
     icon: FileText,
     permissions: ["read:documents"],
     hiddenForRoles: ["Interview Coordinator", "Recruiter"],
+    children: [
+      {
+        id: "documents-verification",
+        label: "Document Verification",
+        path: "/documents/verification",
+        permissions: ["read:documents"],
+      },
+    ],
   },
   {
     id: "processing",

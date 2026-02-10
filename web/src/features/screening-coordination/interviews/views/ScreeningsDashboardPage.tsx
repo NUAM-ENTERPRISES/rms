@@ -27,6 +27,7 @@ import {
   useGetAssignedScreeningsQuery,
   useGetUpcomingScreeningsQuery,
 } from "../data";
+import ImageViewer from "@/components/molecules/ImageViewer";
 import { SCREENING_DECISION } from "../../types";
 import { startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,26 @@ export default function ScreeningsDashboardPage() {
     });
 
   const assignedItems = assignedData?.data?.items || [];
+
+  const assignedNormalized = useMemo(() => {
+    return assignedItems
+      .filter((it) => it.assignedAt)
+      .map((it) => ({
+        id: `assignment-${it.id}`,
+        scheduledTime: it.assignedAt,
+        candidateProjectMap: {
+          id: it.id,
+          candidate: it.candidate,
+          project: it.project,
+          roleNeeded: it.roleNeeded,
+          recruiter: it.recruiter,
+        },
+        mode: it.subStatus?.label || it.subStatus?.name || "Assigned",
+        subStatusName: it.subStatus?.name,
+        isExpired: Boolean((it as any).isExpired),
+      }))
+      .slice(0, 10);
+  }, [assignedItems]);
 
   // UI state for scheduling modal
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
@@ -342,7 +363,7 @@ return (
                 <div>
                   <CardTitle className="text-xl font-semibold">Assigned For Screening</CardTitle>
                   <CardDescription className="text-sm mt-1">
-                    {upcomingInterviews.length} assigned interview{upcomingInterviews.length !== 1 ? "s" : ""}
+                    {assignedNormalized.length} assigned interview{assignedNormalized.length !== 1 ? "s" : ""}
                   </CardDescription>
                 </div>
               </div>
@@ -358,7 +379,7 @@ return (
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            {upcomingInterviews.length === 0 ? (
+            {assignedNormalized.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="text-base font-medium">No Assigned screenings</p>
@@ -366,7 +387,7 @@ return (
               </div>
             ) : (
               <div className="space-y-3">
-                {upcomingInterviews.map((interview) => {
+                {assignedNormalized.map((interview) => {
                   const candidate = interview.candidateProjectMap?.candidate;
                   const role = interview.candidateProjectMap?.roleNeeded;
                   const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
@@ -375,30 +396,33 @@ return (
                     <div
                       key={interview.id}
                       onClick={() => {
-                        if (
-                          (interview?.id || "").toString().startsWith("assignment-") ||
-                          (typeof interview === "object" && "subStatusName" in interview && (interview as any).subStatusName === "screening_assigned")
-                        ) {
-                          navigate("/screenings/assigned");
-                          return;
-                        }
-                        navigate(`/screenings/${interview.id}/conduct`);
+                        navigate("/screenings/assigned");
                       }}
                       className="relative p-4 rounded-xl border bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
-                            {candidateName}
-                          </p>
-                          <p className="text-sm text-slate-500 truncate mt-0.5">
-                            {role?.designation || "Unknown Role"}
-                          </p>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <ImageViewer
+                            src={candidate?.profileImage}
+                            fallbackSrc={""}
+                            title={candidateName}
+                            className="h-9 w-9 rounded-full"
+                            enableHoverPreview={false}
+                          />
+
+                          <div className="min-w-0">
+                            <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
+                              {candidateName}
+                            </p>
+                            <p className="text-sm text-slate-500 truncate mt-0.5">
+                              {role?.designation || "Unknown Role"}
+                            </p>
+                          </div>
                         </div>
                         <Badge variant="outline" className="text-xs px-3 py-1">
                           {interview.mode}
                         </Badge>
-                      </div>
+                      </div> 
 
                       <div className="flex items-center gap-2 text-xs text-slate-500 mt-3">
                         <Calendar className="h-3.5 w-3.5" />
@@ -410,9 +434,9 @@ return (
                       </div>
 
                       {/* Actions */}
-                      {(typeof interview === "object" && "subStatusName" in interview && (interview as any).subStatusName === "screening_assigned") && (
+                      {interview.subStatusName === "screening_assigned" && (
                         <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                          {(interview as any).isExpired && (
+                          {interview.isExpired && (
                             <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">
                               Expired
                             </div>
@@ -495,13 +519,23 @@ return (
                       className="relative p-4 rounded-xl border bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
-                            {candidateName}
-                          </p>
-                          <p className="text-sm text-slate-500 truncate mt-0.5">
-                            {role?.designation || "Unknown Role"}
-                          </p>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <ImageViewer
+                            src={candidate?.profileImage}
+                            fallbackSrc={""}
+                            title={candidateName}
+                            className="h-9 w-9 rounded-full"
+                            enableHoverPreview={false}
+                          />
+
+                          <div className="min-w-0">
+                            <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
+                              {candidateName}
+                            </p>
+                            <p className="text-sm text-slate-500 truncate mt-0.5">
+                              {role?.designation || "Unknown Role"}
+                            </p>
+                          </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           {getDecisionBadge(interview.decision)}

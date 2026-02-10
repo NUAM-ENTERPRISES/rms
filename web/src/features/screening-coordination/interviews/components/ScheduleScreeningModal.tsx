@@ -15,7 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button as UiButton } from "@/components/ui/button";
-import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useGetUsersQuery } from "@/features/admin";
 import { useCreateScreeningMutation } from "../data";
 
 const scheduleSchema = z.object({
@@ -53,7 +54,6 @@ export default function ScheduleScreeningModal({
   const assignments = isBatch ? selectedAssignments : selectedAssignment ? [selectedAssignment] : [];
 
   const [createScreening, createState] = useCreateScreeningMutation();
-  const { users, getUsersByRole } = useUsersLookup();
 
   const form = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleSchema),
@@ -77,9 +77,31 @@ export default function ScheduleScreeningModal({
       meetingLink: "",
       mode: "video",
     });
+    // reset user list params when dialog opens
+    setUsersPage(1);
+    setSearch("");
   }, [open, form]);
 
-  const coordinators = getUsersByRole("coordinator").length ? getUsersByRole("coordinator") : users || [];
+  // Local state for paginated, searchable users
+  const [usersPage, setUsersPage] = useState<number>(1);
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 400);
+
+  // Fetch users only when modal is open
+  const { data: usersResponse, isLoading: isUsersLoading } = useGetUsersQuery(
+    { page: usersPage, limit: 10, search: debouncedSearch },
+    { skip: !open }
+  );
+
+  const coordinators = (usersResponse?.data?.users || [])
+    .filter((u: any) =>
+      (u.userRoles || []).some((r: any) =>
+        String(r?.role?.name || "").toLowerCase().includes("coordinator")
+      )
+    )
+    .map((u: any) => ({ id: u.id, name: u.name, email: u.email }));
+
+  const usersTotalPages = usersResponse?.data?.totalPages || 1;
 
   const onSubmitSchedule = async (values: ScheduleFormValues) => {
     try {
@@ -172,9 +194,25 @@ export default function ScheduleScreeningModal({
 
           <div>
             <Label htmlFor="coordinatorId" className="text-sm font-medium">Coordinator *</Label>
+
+            {/* Search */}
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setUsersPage(1);
+              }}
+              placeholder="Search coordinators by name or email"
+              className="mt-2 mb-2"
+            />
+
             <select id="coordinatorId" {...form.register("coordinatorId")} className="w-full mt-1 h-11 rounded-md border px-3">
               <option value="">Select coordinator</option>
-              {coordinators.map((c: any) => (
+              {isUsersLoading && <option disabled>Loading...</option>}
+              {!isUsersLoading && coordinators.length === 0 && (
+                <option disabled>No coordinators found</option>
+              )}
+              {!isUsersLoading && coordinators.map((c: any) => (
                 <option key={c.id} value={c.id}>
                   {c.name} {c.email ? `— ${c.email}` : ""}
                 </option>
@@ -183,6 +221,29 @@ export default function ScheduleScreeningModal({
             {form.formState.errors.coordinatorId && (
               <p className="text-sm text-destructive">{form.formState.errors.coordinatorId.message}</p>
             )}
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-xs text-slate-500">Page {usersPage} of {usersTotalPages}</div>
+              <div className="flex items-center gap-2">
+                <UiButton
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                  disabled={usersPage <= 1}
+                >
+                  Prev
+                </UiButton>
+                <UiButton
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setUsersPage((p) => Math.min(usersTotalPages, p + 1))}
+                  disabled={usersPage >= usersTotalPages}
+                >
+                  Next
+                </UiButton>
+              </div>
+            </div>
           </div>
 
           

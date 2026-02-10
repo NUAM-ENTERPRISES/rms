@@ -77,6 +77,9 @@ export class ScreeningTemplatesController {
     required: false,
     description: 'Filter by active status',
   })
+  @ApiQuery({ name: 'search', required: false, description: 'Search by template name, role name, or item criterion' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', schema: { type: 'integer', default: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', schema: { type: 'integer', default: 20 } })
   @ApiResponse({
     status: 200,
     description: 'Templates retrieved successfully',

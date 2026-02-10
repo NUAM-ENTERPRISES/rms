@@ -4,6 +4,9 @@ import { format } from "date-fns";
 import { ClipboardCheck, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import ImageViewer from "@/components/molecules/ImageViewer";
+import ProjectRoleFilter from "@/components/molecules/ProjectRoleFilter";
+import { getAge } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +20,7 @@ export default function UpcomingInterviewsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [filters, setFilters] = useState({ search: "" });
+  const [filters, setFilters] = useState({ search: "", projectId: "all", roleCatalogId: "all" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -26,7 +29,12 @@ export default function UpcomingInterviewsListPage() {
     if (s) setSelectedId(s);
   }, [location.state]);
 
-  const { data, isLoading, error } = useGetUpcomingScreeningsQuery({ page: 1, limit: 15 });
+  const { data, isLoading, error } = useGetUpcomingScreeningsQuery({
+    page: 1,
+    limit: 15,
+    projectId: filters.projectId === "all" ? undefined : filters.projectId,
+    roleCatalogId: filters.roleCatalogId === "all" ? undefined : filters.roleCatalogId,
+  });
   const items = data?.data?.items || [];
 
   const filteredItems = useMemo(() => {
@@ -110,16 +118,22 @@ export default function UpcomingInterviewsListPage() {
               />
             </div>
 
-            {filters.search && (
+            <ProjectRoleFilter
+              value={{ projectId: filters.projectId, roleCatalogId: filters.roleCatalogId }}
+              onChange={(v) => setFilters((p) => ({ ...p, projectId: v.projectId, roleCatalogId: v.roleCatalogId }))}
+              className="flex-nowrap min-w-[220px]"
+            />
+
+            {(filters.search || filters.projectId !== "all" || filters.roleCatalogId !== "all") && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-8 px-3 text-xs rounded-lg hover:bg-indigo-50"
-                onClick={() => setFilters({ search: "" })}
+                onClick={() => setFilters({ search: "", projectId: "all", roleCatalogId: "all" })}
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
-            )}
+            )} 
           </div>
         </div>
       </header>
@@ -156,14 +170,28 @@ export default function UpcomingInterviewsListPage() {
                       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-opacity duration-300" />
 
                       <div className="relative flex items-start justify-between gap-2 mb-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
-                            {candidateName}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate mt-0.5">
-                            {role?.designation || "Unknown Role"}
-                          </p>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <ImageViewer
+                            src={candidate?.profileImage}
+                            fallbackSrc=""
+                            title={candidateName}
+                            className="h-9 w-9 rounded-full"
+                            enableHoverPreview={false}
+                          />
+
+                          <div className="min-w-0">
+                            <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
+                              {candidateName}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate mt-0.5">
+                              {role?.designation || "Unknown Role"}
+                            </p>
+                            <p className="text-xs text-slate-400 truncate mt-0.5">
+                              {candidate ? (`${getAge(candidate.dateOfBirth) ? `${getAge(candidate.dateOfBirth)} yrs` : 'Age N/A'} • ${candidate.gender ? (candidate.gender.charAt(0) + candidate.gender.slice(1).toLowerCase()) : 'Gender N/A'}`) : null}
+                            </p>
+                          </div>
                         </div>
+
                         <ChevronRight
                           className={cn(
                             "h-4 w-4 transition-all duration-200",
@@ -262,29 +290,97 @@ export default function UpcomingInterviewsListPage() {
 
                 {/* Candidate & Project */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-xl overflow-hidden">
+                  <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-xl overflow-visible">
                     <CardContent className="p-4">
                       <h3 className="text-lg font-semibold text-indigo-700 mb-3 flex items-center gap-2">
                         <User className="h-4 w-4" />
                         Candidate
                       </h3>
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <p className="text-xs text-slate-500">Name</p>
-                          <p className="font-medium text-slate-900">
-                            {selected.candidateProjectMap?.candidate
-                              ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}`
-                              : "Unknown"}
-                          </p>
-                        </div>
-                        {selected.candidateProjectMap?.candidate?.email && (
-                          <div>
-                            <p className="text-xs text-slate-500">Email</p>
-                            <p className="font-medium break-all text-slate-900">
-                              {selected.candidateProjectMap.candidate.email}
-                            </p>
+                      <div className="flex items-start gap-4">
+                        <ImageViewer
+                          src={selected.candidateProjectMap?.candidate?.profileImage}
+                          fallbackSrc=""
+                          title={`${selected.candidateProjectMap?.candidate?.firstName || ''} ${selected.candidateProjectMap?.candidate?.lastName || ''}`.trim() || 'Profile image'}
+                          className="h-20 w-20 rounded-lg"
+                          enableHoverPreview={true}
+                          hoverPosition="right"
+                          previewClassName="w-64 h-64"
+                        />
+
+                        <div className="space-y-2 text-xs w-full">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                              <p className="text-xs text-slate-500">Name</p>
+                              <p className="font-medium text-slate-900">{selected.candidateProjectMap?.candidate ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}` : 'Unknown'}</p>
+                            </div>
+
+                            {selected.candidateProjectMap?.candidate?.phone && (
+                              <div>
+                                <p className="text-xs text-slate-500">Phone</p>
+                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.phone}</p>
+                              </div>
+                            )}
+
+                            {selected.candidateProjectMap?.candidate?.dateOfBirth && (
+                              <div>
+                                <p className="text-xs text-slate-500">Age</p>
+                                <p className="font-medium text-slate-900">{getAge(selected.candidateProjectMap.candidate.dateOfBirth) ? `${getAge(selected.candidateProjectMap.candidate.dateOfBirth)} yrs` : 'N/A'}</p>
+                              </div>
+                            )}
+
+                            {selected.candidateProjectMap?.candidate?.gender && (
+                              <div>
+                                <p className="text-xs text-slate-500">Gender</p>
+                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.gender.charAt(0) + selected.candidateProjectMap.candidate.gender.slice(1).toLowerCase()}</p>
+                              </div>
+                            )}
+
+                            {selected.candidateProjectMap?.candidate?.experience !== undefined && (
+                              <div>
+                                <p className="text-xs text-slate-500">Experience</p>
+                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.experience} yrs</p>
+                              </div>
+                            )}
+
+                            {selected.candidateProjectMap?.candidate?.totalExperience !== undefined && (
+                              <div>
+                                <p className="text-xs text-slate-500">Total Experience</p>
+                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.totalExperience} yrs</p>
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {/* Qualifications */}
+                          {selected.candidateProjectMap?.candidate?.qualifications?.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs text-slate-500">Qualifications</p>
+                              <ul className="mt-1 space-y-2 text-xs">
+                                {selected.candidateProjectMap.candidate.qualifications.map((q: any) => (
+                                  <li key={q.id} className="text-sm">
+                                    <div className="font-medium text-slate-900">{q.qualification?.shortName || q.qualification?.name || 'Qualification'}</div>
+                                    <div className="text-xs text-slate-500">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : (q.graduationYear ? `Graduated ${q.graduationYear}` : '')}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}</div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Work experiences */}
+                          {selected.candidateProjectMap?.candidate?.workExperiences?.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs text-slate-500">Work experience</p>
+                              <ul className="mt-1 space-y-2 text-xs">
+                                {selected.candidateProjectMap.candidate.workExperiences.slice().sort((a: any, b: any) => (new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime())).map((w: any) => (
+                                  <li key={w.id} className="text-sm">
+                                    <div className="font-medium text-slate-900">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
+                                    <div className="text-xs text-slate-500">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}</div>
+                                    {w.description && <div className="text-xs text-slate-500 mt-1">{w.description}</div>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -298,15 +394,54 @@ export default function UpcomingInterviewsListPage() {
                       <div className="space-y-2 text-xs">
                         <div>
                           <p className="text-xs text-slate-500">Project</p>
-                          <p className="font-medium text-slate-900">
-                            {selected.candidateProjectMap?.project?.title || "N/A"}
-                          </p>
+                          <p className="font-medium text-slate-900">{selected.candidateProjectMap?.project?.title || "N/A"}</p>
+
+                          {selected.candidateProjectMap?.project?.client?.name && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-1">Client</p>
+                              <p className="font-medium text-slate-900">{selected.candidateProjectMap.project.client.name}</p>
+                            </>
+                          )}
+
+                          {selected.candidateProjectMap?.project?.deadline && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-2">Deadline</p>
+                              <p className="font-medium text-slate-900">{format(new Date(selected.candidateProjectMap.project.deadline), "MMM d, yyyy")}</p>
+                            </>
+                          )}
+
+                          {selected.candidateProjectMap?.project?.country?.name && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-2">Country</p>
+                              <p className="font-medium text-slate-900">{selected.candidateProjectMap.project.country.name}</p>
+                            </>
+                          )}
+
+                          {selected.candidateProjectMap?.project?.priority && (
+                            <>
+                              <p className="text-xs text-slate-500 mt-2">Priority</p>
+                              <p className="font-medium text-slate-900 capitalize">{selected.candidateProjectMap.project.priority}</p>
+                            </>
+                          )}
+
+                          {selected.candidateProjectMap?.project?.documentRequirements?.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs text-slate-500">Document requirements</p>
+                              <ul className="mt-1 space-y-1 text-xs">
+                                {selected.candidateProjectMap.project.documentRequirements.map((d: any) => (
+                                  <li key={d.id} className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-900">{(d.docType || d.description || d.id).toString().replace(/_/g, ' ')}</span>
+                                    {d.mandatory && <span className="ml-2 text-xxs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Required</span>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
+
                         <div>
                           <p className="text-xs text-slate-500">Role</p>
-                          <p className="font-medium text-slate-900">
-                            {selected.candidateProjectMap?.roleNeeded?.designation || "N/A"}
-                          </p>
+                          <p className="font-medium text-slate-900">{selected.candidateProjectMap?.roleNeeded?.designation || "N/A"}</p>
                         </div>
                       </div>
                     </CardContent>

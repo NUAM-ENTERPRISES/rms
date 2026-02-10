@@ -122,6 +122,8 @@ const roles = [
       'read:candidates',
       'write:candidates',
       'read:projects',
+      'read:interviews',
+      'read:screenings',
     ],
   },
   {

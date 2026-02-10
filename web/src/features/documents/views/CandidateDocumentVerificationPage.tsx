@@ -95,6 +95,8 @@ import { FlagIcon } from "@/shared/components/FlagIcon";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Link2 } from "lucide-react";
+import ImageViewer from "@/components/molecules/ImageViewer";
+import { ScreeningDetailsCard } from "../components/ScreeningDetailsCard";
 
 
 export default function CandidateDocumentVerificationPage() {
@@ -743,9 +745,14 @@ export default function CandidateDocumentVerificationPage() {
           >
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <User className="h-6 w-6 text-blue-600" />
-                </div>
+                <ImageViewer
+                  src={candidate.profileImage}
+                  fallbackSrc={candidate.profileImage}
+                  title={`${candidate.firstName} ${candidate.lastName}`}
+                  className="h-20 w-20 rounded-full"
+                  enableHoverPreview={true}
+                  ariaLabel={`View profile image for ${candidate.firstName} ${candidate.lastName}`}
+                />
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">
                     {candidate.firstName} {candidate.lastName}
@@ -1008,6 +1015,20 @@ export default function CandidateDocumentVerificationPage() {
               </div>
             )}
           </motion.div>
+        )}
+
+        {/* Screening Details - Only shown if screening data exists */}
+        {selectedProjectId && candidateId && (
+          <ScreeningDetailsCard
+            candidateId={candidateId}
+            projectId={selectedProjectId}
+            roleCatalogId={
+              selectedProject?.roleNeeded?.roleCatalog?.id ||
+              (selectedProject?.roleNeeded as any)?.roleCatalogId ||
+              projectResponse?.data?.rolesNeeded?.[0]?.roleCatalogId ||
+              ""
+            }
+          />
         )}
 
         {/* Document Requirements */}

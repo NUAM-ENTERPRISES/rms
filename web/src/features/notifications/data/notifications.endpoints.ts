@@ -123,6 +123,38 @@ export const notificationsApi = baseApi.injectEndpoints({
         }
       },
     }),
+
+    // Notify recruiter to upload documents
+    recruiterNotify: builder.mutation<ApiResponse<void>, {
+      recruiterId: string;
+      message: string;
+      title: string;
+      link?: string;
+      meta?: Record<string, any>;
+    }>({
+      query: (body) => ({
+        url: "/notifications/recruiter-notify",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["NotificationBadge", { type: "Notification", id: "LIST" }],
+    }),
+
+    // Notify documentation owner / coordinator to review candidate documents
+    documentationNotify: builder.mutation<ApiResponse<void>, {
+      recipientId: string;
+      message: string;
+      title?: string;
+      link?: string;
+      meta?: Record<string, any>;
+    }>({
+      query: (body) => ({
+        url: "/notifications/documentation-notify",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["NotificationBadge", { type: "Notification", id: "LIST" }],
+    }),
   }),
 });
 
@@ -130,5 +162,7 @@ export const {
   useListNotificationsQuery,
   useGetBadgeQuery,
   useMarkAsReadMutation,
+  useRecruiterNotifyMutation,
+  useDocumentationNotifyMutation,
 } = notificationsApi;
 

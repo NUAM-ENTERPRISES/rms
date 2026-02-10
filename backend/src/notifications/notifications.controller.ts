@@ -24,12 +24,19 @@ import {
   NotificationBadgeResponseDto,
   PaginatedNotificationsResponseDto,
 } from './dto/notification-response.dto';
+import { NotifyRecruiterDto } from './dto/notify-recruiter.dto';
+import { NotifyDocumentationDto } from './dto/notify-documentation.dto';
+import { OutboxService } from './outbox.service';
+import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly outboxService: OutboxService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get user notifications' })
@@ -142,6 +149,60 @@ export class NotificationsController {
       success: true,
       data,
       message: `${data.count} notifications marked as read successfully`,
+    };
+  }
+
+  @Post('recruiter-notify')
+  @Permissions('manage:candidates', 'write:screenings', 'schedule:interviews')
+  @ApiOperation({
+    summary: 'Send a notification to a recruiter',
+    description: 'Sends a custom notification message to a specific recruiter. This is a reusable endpoint for manual notifications.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Notification request published successfully',
+  })
+  async notifyRecruiter(
+    @Body() dto: NotifyRecruiterDto,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.outboxService.publishRecruiterNotification(
+      dto.recruiterId,
+      dto.message,
+      dto.title,
+      dto.link,
+      dto.meta,
+    );
+
+    return {
+      success: true,
+      message: 'Notification sent successfully',
+    };
+  }
+
+  @Post('documentation-notify')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Send a documentation notification',
+    description: 'Sends a custom notification message to a documentation owner/coordinator. Useful for manual triggers related to document review.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Documentation notification request published successfully',
+  })
+  async notifyDocumentation(
+    @Body() dto: NotifyDocumentationDto,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.outboxService.publishDocumentationNotification(
+      dto.recipientId,
+      dto.message,
+      dto.title,
+      dto.link,
+      dto.meta,
+    );
+
+    return {
+      success: true,
+      message: 'Documentation notification sent successfully',
     };
   }
 }

@@ -59,6 +59,10 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateHired(job);
         case 'CandidateFailedScreening':
           return await this.handleCandidateFailedScreening(job);
+        case 'RecruiterNotification':
+          return await this.handleRecruiterNotification(job);
+        case 'DocumentationNotification':
+          return await this.handleDocumentationNotification(job);
         default:
           this.logger.warn(`Unknown notification type: ${type}`);
           return { success: false, message: `Unknown type: ${type}` };
@@ -1428,6 +1432,68 @@ export class NotificationsProcessor extends WorkerHost {
       }
     } catch (error) {
       this.logger.error(`Failed to process candidate failed screening: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  async handleRecruiterNotification(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing recruiter notification event: ${eventId}`);
+
+    try {
+      const { recruiterId, message, title, link, meta } = payload as any;
+
+      const idemKey = `${eventId}:${recruiterId}:recruiter_notification`;
+
+      await this.notificationsService.createNotification({
+        userId: recruiterId as string,
+        type: 'recruiter_notification',
+        title: (title as string) || 'Notification',
+        message: message as string,
+        link: typeof link === 'string' ? link : undefined,
+        meta: meta || undefined,
+        idemKey,
+      });
+
+      this.logger.log(
+        `Recruiter notification created for user ${recruiterId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process recruiter notification: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleDocumentationNotification(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing documentation notification event: ${eventId}`);
+
+    try {
+      const { recipientId, message, title, link, meta } = payload as any;
+
+      const idemKey = `${eventId}:${recipientId}:documentation_notification`;
+
+      await this.notificationsService.createNotification({
+        userId: recipientId as string,
+        type: 'documentation_notification',
+        title: (title as string) || 'Documentation Notification',
+        message: message as string,
+        link: typeof link === 'string' ? link : undefined,
+        meta: meta || undefined,
+        idemKey,
+      });
+
+      this.logger.log(
+        `Documentation notification created for user ${recipientId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process documentation notification: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }

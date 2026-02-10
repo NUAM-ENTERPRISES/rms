@@ -911,30 +911,18 @@ const CandidateCard = memo(function CandidateCard({
         {isRecruiter && showVerifyButton &&
           onVerify && isSendedForVerification === false && projectStatus !== "Verification In Progress" && (
             <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      disabled={isNoneUploaded}
-                      className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onVerify(candidateId);
-                      }}
-                    >
-                      <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-                      Send for Verification
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {isNoneUploaded && (
-                  <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
-                    <p>Please upload documents for this project</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onVerify(candidateId);
+                }}
+              >
+                <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+                Send for Verification
+              </Button>
             </div>
           )
         }

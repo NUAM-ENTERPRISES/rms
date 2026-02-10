@@ -26,6 +26,8 @@ import { QueryScreeningsDto } from './dto/query-screenings.dto';
 import { QueryAssignedScreeningsDto } from './dto/query-assigned-screenings.dto';
 import { QueryUpcomingScreeningsDto } from './dto/query-upcoming-screenings.dto';
 import { UpdateScreeningTemplateDto } from './dto/update-screening-template.dto';
+import { QueryScreeningDetailsDto } from './dto/query-screening-details.dto';
+import { QueryScreeningHistoryDto } from './dto/query-screening-history.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 import { AssignToMainInterviewDto } from './dto/assign-to-main-interview.dto';
 
@@ -93,6 +95,21 @@ export class ScreeningsController {
     return this.screeningsService.findAll(query);
   }
 
+  @Get('approved-list')
+  @Permissions('read:screenings')
+  @ApiOperation({
+    summary: 'Get all approved screenings with candidate document details',
+    description:
+      'Retrieve all approved screenings with documents and verification details. Supports filtering by project, role catalog, and search.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Approved screenings retrieved successfully',
+  })
+  getApprovedList(@Query() query: QueryScreeningsDto) {
+    return this.screeningsService.getApprovedList(query);
+  }
+
   @Get('coordinator/:coordinatorId/stats')
   @Permissions('read:screenings')
   @ApiOperation({
@@ -147,11 +164,25 @@ export class ScreeningsController {
   @ApiResponse({ status: 404, description: 'Candidate-project not found' })
   getScreeningHistory(
     @Param('candidateProjectMapId') candidateProjectMapId: string,
-    @Query('page') page = '1',
-    @Query('limit') limit = '20',
+    @Query() query: QueryScreeningHistoryDto,
   ) {
-    const q = { page: Number(page), limit: Number(limit) };
-    return this.screeningsService.getScreeningHistory(candidateProjectMapId, q);
+    return this.screeningsService.getScreeningHistory(candidateProjectMapId, query);
+  }
+
+  @Get('details')
+  @Permissions('read:screenings')
+  @ApiOperation({
+    summary: 'Get screening details by candidate, project, and role catalog',
+    description: 'Retrieve full screening details using candidate ID, project ID, and role catalog ID.',
+  })
+  @ApiResponse({ status: 200, description: 'Screening retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Screening not found' })
+  findByDetails(@Query() query: QueryScreeningDetailsDto) {
+    return this.screeningsService.findByDetails(
+      query.candidateId,
+      query.projectId,
+      query.roleCatalogId,
+    );
   }
 
   @Get(':id')

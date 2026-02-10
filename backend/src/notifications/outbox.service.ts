@@ -322,6 +322,55 @@ export class OutboxService {
   }
 
   /**
+   * Publish generic recruiter notification event
+   */
+  async publishRecruiterNotification(
+    recruiterId: string,
+    message: string,
+    title: string = 'Recruiter Notification',
+    link?: string,
+    meta?: Record<string, any>,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'RecruiterNotification',
+      {
+        recruiterId,
+        message,
+        title,
+        link,
+        meta,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish documentation notification event
+   * Generic manual notification for documentation owners / coordinators
+   */
+  async publishDocumentationNotification(
+    recipientId: string,
+    message: string,
+    title: string = 'Documentation Notification',
+    link?: string,
+    meta?: Record<string, any>,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'DocumentationNotification',
+      {
+        recipientId,
+        message,
+        title,
+        link,
+        meta,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate failed screening event
    * Notifies recruiter and team head when candidate fails screening
    */

@@ -24,6 +24,8 @@ export interface ImageViewerProps {
   enableHoverPreview?: boolean;
   /** Hover preview placement relative to the avatar (desktop) */
   hoverPosition?: "right" | "left";
+  /** Optional preview size classes for the hover preview container (tailwind) */
+  previewClassName?: string;
 }
 
 /**
@@ -43,6 +45,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   ariaLabel,
   enableHoverPreview = true,
   hoverPosition = "right",
+  previewClassName = "w-56 h-56",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showHover, setShowHover] = useState(false);
@@ -67,7 +70,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   return (
     <>
       <div
-        className={cn("relative inline-block", className)}
+        className={cn("relative inline-block overflow-visible", className)}
         onMouseEnter={() => enableHoverPreview && setShowHover(true)}
         onMouseLeave={() => enableHoverPreview && setShowHover(false)}
       >
@@ -96,7 +99,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         {/* Hover preview (desktop) */}
         {enableHoverPreview && (
           <div
-            className={`pointer-events-none hidden md:block absolute z-50 top-0 ${previewPlacementClass} w-56 h-56 rounded-lg overflow-hidden bg-white shadow-2xl transition-all duration-200 transform ` +
+            className={`pointer-events-none hidden md:block absolute z-50 top-1/2 -translate-y-1/2 ${previewPlacementClass} ${previewClassName} rounded-lg overflow-hidden bg-white shadow-2xl transition-all duration-200 transform ` +
               previewShowClass}
             aria-hidden={!showHover}
           >
@@ -104,8 +107,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
               <img
                 src={imageSrc}
                 alt={`${title} preview`}
-                width={224}
-                height={224}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";

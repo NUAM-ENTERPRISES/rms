@@ -231,7 +231,7 @@ export class ScreeningsService {
    * Find all screenings with optional filtering
    */
   async findAll(query: QueryScreeningsDto) {
-    const { page = 1, limit = 10, candidateProjectMapId, coordinatorId, decision, projectId, roleCatalogId } = query;
+    const { page = 1, limit = 10, candidateProjectMapId, coordinatorId, decision, projectId, roleCatalogId, search } = query;
     const skip = (page - 1) * limit;
     const take = limit;
 
@@ -254,15 +254,30 @@ export class ScreeningsService {
 
     // Support filtering by related candidate-project fields (projectId and roleCatalogId)
     const cpWhere: any = {};
+    const cpAND: any[] = [];
+
     if (projectId) {
-      cpWhere.projectId = projectId;
+      cpAND.push({ projectId });
     }
     if (roleCatalogId) {
       // roleCatalogId exists on RoleNeeded → roleCatalogId
-      cpWhere.roleNeeded = { is: { roleCatalogId: roleCatalogId } };
+      cpAND.push({ roleNeeded: { is: { roleCatalogId: roleCatalogId } } });
     }
-    if (Object.keys(cpWhere).length > 0) {
-      where.candidateProjectMap = { is: cpWhere };
+    if (search) {
+      cpAND.push({
+        candidate: {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { mobileNumber: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      });
+    }
+
+    if (cpAND.length > 0) {
+      where.candidateProjectMap = { is: { AND: cpAND } };
     }
 
     const [total, items] = await Promise.all([
@@ -273,16 +288,55 @@ export class ScreeningsService {
           candidateProjectMap: {
             include: {
               candidate: {
-                select: { id: true, firstName: true, lastName: true },
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  gender: true,
+                  email: true,
+                  profileImage: true,
+                  countryCode: true,
+                  mobileNumber: true,
+                  dateOfBirth: true,
+                  currentRole: true,
+                  currentEmployer: true,
+                  experience: true,
+                  totalExperience: true,
+                  candidateContacts: true,
+                  referralCompanyName: true,
+                  qualifications: {
+                    include: { qualification: { select: { id: true, name: true, shortName: true, level: true } } },
+                  },
+                  workExperiences: {
+                    select: { id: true, companyName: true, jobTitle: true, startDate: true, endDate: true, isCurrent: true, description: true, location: true, skills: true },
+                  },
+                  documents: { where: { isDeleted: false } },
+                },
               },
               project: {
                 select: {
                   id: true,
                   title: true,
+                  description: true,
+                  deadline: true,
+                  priority: true,
+                  groomingRequired: true,
+                  projectType: true,
+                  client: { select: { id: true, name: true, email: true, phone: true } },
+                  country: { select: { code: true, name: true } },
+                  creator: { select: { id: true, name: true } },
                   documentRequirements: true,
                 },
               },
-              roleNeeded: { select: { designation: true } },
+              roleNeeded: { select: { id: true, designation: true, roleCatalogId: true, roleCatalog: { select: { id: true, name: true, label: true, shortName: true } } } },
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  mobileNumber: true,
+                },
+              },
               mainStatus: true,
               subStatus: true,
               documentVerifications: {
@@ -305,10 +359,22 @@ export class ScreeningsService {
     // Attach `isDocumentVerificationRequired` flag per item
     const itemsWithFlags = await this.addDocumentVerificationFlag(items);
 
+    // Add combined phone for candidate and return full candidate/project details
+    const enrichedItems = itemsWithFlags.map((it) => {
+      const cpm = it.candidateProjectMap;
+      if (cpm?.candidate) {
+        cpm.candidate = {
+          ...cpm.candidate,
+          phone: `${cpm.candidate.countryCode ?? ''} ${cpm.candidate.mobileNumber ?? ''}`,
+        };
+      }
+      return it;
+    });
+
     return {
       success: true,
       data: {
-        items: itemsWithFlags,
+        items: enrichedItems,
         pagination: {
           total,
           page: Number(page),
@@ -317,6 +383,114 @@ export class ScreeningsService {
         },
       },
       message: 'Screenings retrieved successfully',
+    };
+  }
+
+  /**
+   * Get all approved screenings with candidate document details
+   */
+  async getApprovedList(query: QueryScreeningsDto) {
+    const { page = 1, limit = 10, search, projectId, roleCatalogId } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      decision: SCREENING_DECISION.APPROVED,
+    };
+
+    const cpAND: any[] = [];
+
+    if (projectId) {
+      cpAND.push({ projectId });
+    }
+
+    if (roleCatalogId) {
+      cpAND.push({
+        roleNeeded: { is: { roleCatalogId: roleCatalogId } }
+      });
+    }
+
+    if (search) {
+      cpAND.push({
+        candidate: {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { mobileNumber: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      });
+    }
+
+    if (cpAND.length > 0) {
+      where.candidateProjectMap = {
+        is: {
+          AND: cpAND,
+        },
+      };
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.screening.count({ where }),
+      this.prisma.screening.findMany({
+        where,
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                include: {
+                  documents: {
+                    where: { isDeleted: false }
+                  }
+                }
+              },
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                  documentRequirements: true,
+                }
+              },
+              documentVerifications: {
+                where: { isDeleted: false },
+                include: {
+                  document: true,
+                },
+              },
+              roleNeeded: {
+                include: {
+                  roleCatalog: true
+                }
+              },
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                }
+              },
+              mainStatus: true,
+              subStatus: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        items,
+        pagination: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      message: 'Approved screenings retrieved successfully',
     };
   }
 
@@ -387,19 +561,55 @@ export class ScreeningsService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  gender: true,
                   email: true,
+                  profileImage: true,
                   countryCode: true,
                   mobileNumber: true,
+                  dateOfBirth: true,
+                  currentRole: true,
+                  currentEmployer: true,
+                  experience: true,
+                  totalExperience: true,
+                  candidateContacts: true,
+                  referralCompanyName: true,
+                  qualifications: {
+                    include: {
+                      qualification: { select: { id: true, name: true, shortName: true, level: true } },
+                    },
+                  },
+                  workExperiences: {
+                    select: {
+                      id: true,
+                      companyName: true,
+                      jobTitle: true,
+                      startDate: true,
+                      endDate: true,
+                      isCurrent: true,
+                      description: true,
+                      location: true,
+                      skills: true,
+                    },
+                  },
+                  documents: { where: { isDeleted: false } },
                 },
               },
               project: {
                 select: {
                   id: true,
                   title: true,
+                  description: true,
+                  deadline: true,
+                  priority: true,
+                  groomingRequired: true,
+                  projectType: true,
+                  client: { select: { id: true, name: true, email: true, phone: true } },
+                  country: { select: { code: true, name: true } },
+                  creator: { select: { id: true, name: true } },
                   documentRequirements: true,
                 },
               },
-              roleNeeded: { select: { id: true, designation: true } },
+              roleNeeded: { select: { id: true, designation: true, roleCatalogId: true, roleCatalog: { select: { id: true, name: true, label: true, shortName: true } } } },
               // Ensure callers get the current main/sub status on the candidate-project map
               mainStatus: true,
               subStatus: true,
@@ -432,14 +642,15 @@ export class ScreeningsService {
       throw new NotFoundException(`Screening with ID "${id}" not found`);
     }
 
-    // Find matching RoleCatalog by matching roleNeeded.designation to roleCatalog.name
+    // Prefer included RoleCatalog if available, otherwise fall back to lookup by designation
     let roleCatalog: {
       id: string;
       name: string;
       label: string;
       shortName?: string | null;
-    } | null = null;
-    if (interview.candidateProjectMap?.roleNeeded?.designation) {
+    } | null = interview.candidateProjectMap?.roleNeeded?.roleCatalog ?? null;
+
+    if (!roleCatalog && interview.candidateProjectMap?.roleNeeded?.designation) {
       roleCatalog = await this.prisma.roleCatalog.findFirst({
         where: {
           name: {
@@ -489,6 +700,33 @@ export class ScreeningsService {
         roleCatalog,
       },
     };
+  }
+
+  /**
+   * Find screening details by candidate, project, and role catalog
+   */
+  async findByDetails(candidateId: string, projectId: string, roleCatalogId: string) {
+    const screening = await this.prisma.screening.findFirst({
+      where: {
+        candidateProjectMap: {
+          candidateId,
+          projectId,
+          roleNeeded: {
+            roleCatalogId,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+
+    if (!screening) {
+      throw new NotFoundException(
+        `No screening found for candidate ${candidateId}, project ${projectId}, and role ${roleCatalogId}`,
+      );
+    }
+
+    return this.findOne(screening.id);
   }
 
   /**
@@ -862,11 +1100,46 @@ export class ScreeningsService {
     const items = await this.prisma.candidateProjects.findMany({
       where,
       include: {
-        candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
-        project: {
+        candidate: {
           select: {
             id: true,
-            title: true,
+            firstName: true,
+            lastName: true,
+            gender: true,
+            email: true,
+            profileImage: true,
+            countryCode: true,
+            mobileNumber: true,
+            dateOfBirth: true,
+            currentRole: true,
+            currentEmployer: true,
+            experience: true,
+            totalExperience: true,
+            qualifications: {
+              include: {
+                qualification: { select: { id: true, name: true, shortName: true, level: true } },
+              },
+            },
+            workExperiences: {
+              select: {
+                id: true,
+                companyName: true,
+                jobTitle: true,
+                startDate: true,
+                endDate: true,
+                isCurrent: true,
+                description: true,
+                location: true,
+                skills: true,
+              },
+            },
+          },
+        },
+        project: {
+          include: {
+            client: { select: { id: true, name: true } },
+            country: { select: { code: true, name: true } },
+            creator: { select: { id: true, name: true } },
             documentRequirements: true,
           },
         },
@@ -885,10 +1158,21 @@ export class ScreeningsService {
       take: limit,
     });
 
+    // Attach a combined phone field to the candidate for easier consumption by the frontend
+    const itemsWithCandidatePhone = items.map((it) => {
+      const candidate = it.candidate
+        ? {
+            ...it.candidate,
+            phone: `${it.candidate.countryCode ?? ''} ${it.candidate.mobileNumber ?? ''}`.trim(),
+          }
+        : null;
+      return { ...it, candidate };
+    });
+
     return {
       success: true,
       data: {
-        items: items.map((it) => ({ ...it, assignedAt: it.assignedAt })),
+        items: itemsWithCandidatePhone.map((it) => ({ ...it, assignedAt: it.assignedAt })),
         pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
       },
       message: 'Assigned candidate-projects for screenings (latest first)',
@@ -899,7 +1183,7 @@ export class ScreeningsService {
   * Return upcoming screenings (status = scheduled) ordered by scheduledTime ASC
    */
   async getUpcoming(query: any) {
-    const { page = 1, limit = 20, coordinatorId, candidateProjectMapId, projectId, search } = query;
+    const { page = 1, limit = 20, coordinatorId, candidateProjectMapId, projectId, roleCatalogId, search } = query;
 
     // Return all scheduled screenings (don't exclude past times).
     // The UI needs to display expired (past) scheduled interviews too, so we'll
@@ -910,7 +1194,14 @@ export class ScreeningsService {
 
     if (coordinatorId) where.coordinatorId = coordinatorId;
     if (candidateProjectMapId) where.candidateProjectMapId = candidateProjectMapId;
-    if (projectId) where.candidateProjectMap = { projectId };
+
+    // Support filtering by project and roleCatalog via candidateProjectMap relation
+    const cpAND: any[] = [];
+    if (projectId) cpAND.push({ projectId });
+    if (roleCatalogId) cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
+    if (cpAND.length > 0) {
+      where.candidateProjectMap = { is: { AND: cpAND } };
+    }
 
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const s = search.trim();
@@ -931,15 +1222,61 @@ export class ScreeningsService {
       include: {
         candidateProjectMap: {
           include: {
-            candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+            candidate: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                gender: true,
+                email: true,
+                profileImage: true,
+                countryCode: true,
+                mobileNumber: true,
+                dateOfBirth: true,
+                currentRole: true,
+                currentEmployer: true,
+                experience: true,
+                totalExperience: true,
+                candidateContacts: true,
+                referralCompanyName: true,
+                qualifications: {
+                  include: {
+                    qualification: { select: { id: true, name: true, shortName: true, level: true } },
+                  },
+                },
+                workExperiences: {
+                  select: {
+                    id: true,
+                    companyName: true,
+                    jobTitle: true,
+                    startDate: true,
+                    endDate: true,
+                    isCurrent: true,
+                    description: true,
+                    location: true,
+                    skills: true,
+                  },
+                },
+                documents: { where: { isDeleted: false } },
+              },
+            },
             project: {
               select: {
                 id: true,
                 title: true,
+                description: true,
+                deadline: true,
+                priority: true,
+                groomingRequired: true,
+                projectType: true,
+                client: { select: { id: true, name: true, email: true, phone: true } },
+                country: { select: { code: true, name: true } },
+                creator: { select: { id: true, name: true } },
                 documentRequirements: true,
               },
             },
-            roleNeeded: { select: { id: true, designation: true } },
+
+            roleNeeded: { select: { id: true, designation: true, roleCatalogId: true } },
             mainStatus: true,
             subStatus: true,
             documentVerifications: {
@@ -964,7 +1301,17 @@ export class ScreeningsService {
     }));
 
     // Attach document flags to upcoming items
-    const itemsWithFlags = await this.addDocumentVerificationFlag(itemsWithExpired);
+    let itemsWithFlags: any[] = await this.addDocumentVerificationFlag(itemsWithExpired);
+
+    // Enrich candidate with combined phone and keep full details
+    itemsWithFlags = itemsWithFlags.map((it) => {
+      const cp = it.candidateProjectMap ?? null;
+      if (!cp) return it;
+      const cand = cp.candidate
+        ? { ...cp.candidate, phone: `${cp.candidate.countryCode ?? ''} ${cp.candidate.mobileNumber ?? ''}`.trim() }
+        : null;
+      return { ...it, candidateProjectMap: { ...cp, candidate: cand } };
+    });
 
     return {
       success: true,

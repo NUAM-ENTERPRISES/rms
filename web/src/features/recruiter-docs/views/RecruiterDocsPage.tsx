@@ -22,8 +22,13 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
+  Filter,
+  RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -33,10 +38,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   useGetRecruiterDocumentsQuery,
   useGetDocumentStatsQuery,
   useGetRecruiterVerifiedRejectedDocumentsQuery,
 } from "@/features/documents/api";
+import { useGetProjectsQuery, useGetProjectQuery } from "@/services/projectsApi";
 import { useDebounce } from "@/hooks/useDebounce";
 import { getStatusConfig, CandidateProjectStatus } from "@/constants/statuses";
 import * as Icons from "lucide-react";
@@ -48,24 +66,60 @@ const RecruiterDocsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [statusFilter, setStatusFilter] = useState("pending_documents");
+  const [showScreeningOnly, setShowScreeningOnly] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("all");
+  
+  // Project filter specific states
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projectPage, setProjectPage] = useState(1);
+  const debouncedProjectSearch = useDebounce(projectSearch, 500);
+  const [isProjectPopoverOpen, setIsProjectPopoverOpen] = useState(false);
+
   const debouncedSearch = useDebounce(search, 500);
+
+  const { data: projectsData } = useGetProjectsQuery({ 
+    limit: 10, 
+    search: debouncedProjectSearch, 
+    page: projectPage 
+  });
+  
+  const { data: projectDetails } = useGetProjectQuery(selectedProjectId, {
+    skip: selectedProjectId === "all",
+  });
+  
+  const roles = projectDetails?.data?.rolesNeeded || [];
 
   const { data: statsData } = useGetDocumentStatsQuery();
   
+  const handleClearFilters = () => {
+    setSearch("");
+    setShowScreeningOnly(false);
+    setSelectedProjectId("all");
+    setSelectedRoleId("all");
+    setProjectSearch("");
+    setProjectPage(1);
+    setPage(1);
+  };
+
   const isVerifiedOrRejected = statusFilter === "documents_verified" || statusFilter === "rejected_documents";
 
   const { data: pendingDocsData, isLoading: isPendingLoading } = useGetRecruiterDocumentsQuery({
     page,
     limit,
     search: debouncedSearch,
-    status: statusFilter === "all" ? undefined : statusFilter,
+    status: showScreeningOnly ? "InScreening" : (statusFilter === "all" ? undefined : statusFilter),
+    projectId: selectedProjectId === "all" ? undefined : selectedProjectId,
+    roleCatalogId: selectedRoleId === "all" ? undefined : selectedRoleId,
   }, { skip: isVerifiedOrRejected });
 
   const { data: verifiedRejectedDocsData, isLoading: isVerifiedRejectedLoading } = useGetRecruiterVerifiedRejectedDocumentsQuery({
     page,
     limit,
     search: debouncedSearch,
-    status: statusFilter === "documents_verified" ? "verified" : "rejected",
+    status: showScreeningOnly ? "InScreening" : (statusFilter === "documents_verified" ? "verified" : "rejected"),
+    projectId: selectedProjectId === "all" ? undefined : selectedProjectId,
+    roleCatalogId: selectedRoleId === "all" ? undefined : selectedRoleId,
   }, { skip: !isVerifiedOrRejected });
 
   const docsData = isVerifiedOrRejected ? verifiedRejectedDocsData : pendingDocsData;
@@ -76,6 +130,7 @@ const RecruiterDocsPage: React.FC = () => {
     pendingDocuments: apiCounts?.pending ?? statsData?.data?.pendingDocuments ?? 0,
     verifiedDocuments: apiCounts?.verified ?? statsData?.data?.verifiedDocuments ?? 0,
     rejectedDocuments: apiCounts?.rejected ?? statsData?.data?.rejectedDocuments ?? 0,
+    inScreening: apiCounts?.inScreening ?? 0,
   };
 
   const items = docsData?.data?.items || [];
@@ -127,9 +182,12 @@ const RecruiterDocsPage: React.FC = () => {
           <Card
             className={cn(
               "border-0 shadow-lg bg-gradient-to-br from-amber-50 to-amber-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-              statusFilter === "pending_documents" ? "ring-2 ring-amber-300" : ""
+              statusFilter === "pending_documents" && !showScreeningOnly ? "ring-2 ring-amber-300" : ""
             )}
-            onClick={() => setStatusFilter("pending_documents")}
+            onClick={() => {
+              setStatusFilter("pending_documents");
+              setShowScreeningOnly(false);
+            }}
           >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -148,6 +206,40 @@ const RecruiterDocsPage: React.FC = () => {
           </Card>
         </motion.div>
 
+        {/* Screening Card - Commented Out
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+        >
+          <Card
+            className={cn(
+              "border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-indigo-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
+              showScreeningOnly ? "ring-2 ring-indigo-300" : ""
+            )}
+            onClick={() => {
+              setShowScreeningOnly(true);
+              setPage(1);
+            }}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-1">In Screening</p>
+                  <h3 className="text-3xl font-bold text-indigo-600">
+                    {stats?.inScreening || 0}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-2">Screening phase</p>
+                </div>
+                <div className="p-3 bg-indigo-200/40 rounded-full">
+                  <Filter className="h-6 w-6 text-indigo-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        */}
+
         {/* Verified Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -157,9 +249,12 @@ const RecruiterDocsPage: React.FC = () => {
           <Card
             className={cn(
               "border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-              statusFilter === "documents_verified" ? "ring-2 ring-green-300" : ""
+              statusFilter === "documents_verified" && !showScreeningOnly ? "ring-2 ring-green-300" : ""
             )}
-            onClick={() => setStatusFilter("documents_verified")}
+            onClick={() => {
+              setStatusFilter("documents_verified");
+              setShowScreeningOnly(false);
+            }}
           >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -187,9 +282,12 @@ const RecruiterDocsPage: React.FC = () => {
           <Card
             className={cn(
               "border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-              statusFilter === "rejected_documents" ? "ring-2 ring-red-300" : ""
+              statusFilter === "rejected_documents" && !showScreeningOnly ? "ring-2 ring-red-300" : ""
             )}
-            onClick={() => setStatusFilter("rejected_documents")}
+            onClick={() => {
+              setStatusFilter("rejected_documents");
+              setShowScreeningOnly(false);
+            }}
           >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -212,34 +310,191 @@ const RecruiterDocsPage: React.FC = () => {
       {/* Project Documents Table */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
+          <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
+            <div className="space-y-1">
               <CardTitle className="text-xl">
-                {statusFilter === "all" ? "All Project Documents" :
+                {showScreeningOnly ? "In Screening Documents" :
+                 statusFilter === "all" ? "All Project Documents" :
                  statusFilter === "pending_documents" ? "Upload Pending Documents" :
                  statusFilter === "documents_verified" ? "Verified Documents" :
                  statusFilter === "rejected_documents" ? "Rejected Documents" :
                  "Project Documents Status"}
               </CardTitle>
               <CardDescription>
-                {statusFilter === "all" ? "Track document submission progress for each of your projects." :
+                {showScreeningOnly ? "Candidates currently in screening phase who have pending documents." :
+                 statusFilter === "all" ? "Track document submission progress for each of your projects." :
                  statusFilter === "pending_documents" ? "Candidates with pending document uploads." :
                  statusFilter === "documents_verified" ? "Candidates with all documents successfully verified." :
                  statusFilter === "rejected_documents" ? "Candidates with rejected documents requiring action." :
                  "Track document submission progress for each of your projects."}
               </CardDescription>
             </div>
-            <div className="relative w-full md:w-72">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search projects or candidates..."
-                className="pl-8 bg-muted/50 border-none focus-visible:ring-1"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
+
+            <div className="flex flex-col gap-4 w-full xl:w-auto">
+              {/* Filters Row */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center space-x-2 bg-slate-100/80 px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
+                  <Checkbox 
+                    id="screening-filter" 
+                    checked={showScreeningOnly}
+                    onCheckedChange={(checked) => {
+                      setShowScreeningOnly(!!checked);
+                      setPage(1);
+                    }}
+                  />
+                  <Label htmlFor="screening-filter" className="text-xs font-semibold text-slate-700 cursor-pointer whitespace-nowrap">
+                    In Screening Only
+                  </Label>
+                </div>
+
+                <Popover open={isProjectPopoverOpen} onOpenChange={setIsProjectPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isProjectPopoverOpen}
+                      className="w-[220px] justify-between bg-white border-slate-200 h-9 shadow-sm font-normal"
+                    >
+                      <span className="truncate">
+                        {selectedProjectId === "all" 
+                          ? "All Projects" 
+                          : projectDetails?.data?.title || "Loading project..."}
+                      </span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <div className="flex flex-col">
+                      <div className="p-2 border-b">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Search projects..."
+                            className="pl-7 h-8 text-xs border-none bg-muted/50 focus-visible:ring-0"
+                            value={projectSearch}
+                            onChange={(e) => {
+                              setProjectSearch(e.target.value);
+                              setProjectPage(1);
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto">
+                        <div
+                          className={cn(
+                            "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                            selectedProjectId === "all" && "bg-accent/50"
+                          )}
+                          onClick={() => {
+                            setSelectedProjectId("all");
+                            setSelectedRoleId("all");
+                            setPage(1);
+                            setIsProjectPopoverOpen(false);
+                          }}
+                        >
+                          All Projects
+                        </div>
+                        {projectsData?.data?.projects?.map((project) => (
+                          <div
+                            key={project.id}
+                            className={cn(
+                              "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                              selectedProjectId === project.id && "bg-accent/50"
+                            )}
+                            onClick={() => {
+                              setSelectedProjectId(project.id);
+                              setSelectedRoleId("all");
+                              setPage(1);
+                              setIsProjectPopoverOpen(false);
+                            }}
+                          >
+                            <span className="truncate">{project.title}</span>
+                          </div>
+                        ))}
+                        {projectsData?.data?.projects?.length === 0 && (
+                          <div className="py-6 text-center text-sm text-muted-foreground">
+                            No projects found.
+                          </div>
+                        )}
+                      </div>
+                      
+                      {projectsData?.data?.pagination && projectsData.data.pagination.totalPages > 1 && (
+                        <div className="flex items-center justify-between p-2 border-t bg-muted/20">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => setProjectPage((p) => Math.max(1, p - 1))}
+                            disabled={Number(projectsData.data.pagination.page) === 1}
+                          >
+                            <ChevronLeft className="h-3 w-3 mr-1" />
+                            Prev
+                          </Button>
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {projectsData.data.pagination.page} / {projectsData.data.pagination.totalPages}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => setProjectPage((p) => Math.min(projectsData.data.pagination.totalPages, p + 1))}
+                            disabled={Number(projectsData.data.pagination.page) === projectsData.data.pagination.totalPages}
+                          >
+                            Next
+                            <ChevronRight className="h-3 w-3 ml-1" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Select
+                  value={selectedRoleId}
+                  onValueChange={(val) => {
+                    setSelectedRoleId(val);
+                    setPage(1);
+                  }}
+                  disabled={selectedProjectId === "all"}
+                >
+                  <SelectTrigger className="w-[180px] bg-white border-slate-200 h-9 shadow-sm">
+                    <SelectValue placeholder="All Roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.roleCatalogId || role.id}>
+                        {role.designation}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Search and Clear Row */}
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 md:w-80">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search projects or candidates..."
+                    className="pl-8 bg-white border-slate-200 h-9 shadow-sm focus-visible:ring-primary"
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-9 px-3 text-slate-500 hover:text-rose-600 hover:bg-rose-50 gap-2 transition-colors border border-transparent hover:border-rose-100"
+                  onClick={handleClearFilters}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Clear Filters</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -275,11 +530,22 @@ const RecruiterDocsPage: React.FC = () => {
                   const StatusIcon = (Icons as any)[statusConfig.icon] || Icons.HelpCircle;
                   const hasResubmission = item.documentDetails?.some(doc => doc.status === "resubmission_required");
                   
+                  const screeningStatuses = [
+                    "screening_assigned",
+                    "screening_scheduled",
+                    "screening_completed",
+                    "screening_passed",
+                    "screening_failed"
+                  ];
+                  const isInScreening = screeningStatuses.includes(item.status.main) || 
+                                       ((item.status as any).sub && screeningStatuses.includes((item.status as any).sub));
+                  
                   return (
                     <TableRow 
                       key={item.candidateProjectMapId}
                       className={cn(
                         "cursor-pointer transition-colors",
+                        isInScreening ? "bg-red-200 hover:bg-red-300/60" :
                         statusFilter === "documents_verified" ? "bg-emerald-50/50 hover:bg-emerald-100/50" :
                         statusFilter === "rejected_documents" ? "bg-rose-50/50 hover:bg-rose-100/50" :
                         hasResubmission ? "bg-amber-100/50 hover:bg-amber-200/50" : 

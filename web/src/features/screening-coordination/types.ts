@@ -64,6 +64,9 @@ export interface UpdateTemplateRequest {
 export interface QueryTemplatesRequest {
   roleId?: string;
   isActive?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
 // ==================== MOCK INTERVIEW TYPES ====================
@@ -208,6 +211,62 @@ export interface QueryAssignedScreeningsRequest {
   roleCatalogId?: string;
   candidateId?: string;
   recruiterId?: string;
+}
+
+export interface QueryApprovedScreeningsRequest {
+  projectId?: string;
+  roleCatalogId?: string;
+  coordinatorId?: string;
+  recruiterId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ApprovedScreeningItem {
+  id: string;
+  candidateProjectMapId: string;
+  coordinatorId: string;
+  status: string;
+  decision: string;
+  conductedAt: string;
+  overallRating: number;
+  remarks: string;
+  candidateProjectMap: {
+    id: string;
+    candidate: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      mobileNumber?: string;
+      profileImage?: string;
+      documents?: any[];
+    };
+    project: {
+      id: string;
+      title: string;
+      clientName?: string;
+      client?: { name: string };
+      documentRequirements?: any[];
+    };
+    roleNeeded: {
+      id: string;
+      designation: string;
+      roleCatalog: {
+        id: string;
+        name: string;
+        label: string;
+      };
+    };
+    documentVerifications: any[];
+    recruiter?: {
+      id: string;
+      name: string;
+    };
+    mainStatus: { name: string };
+    subStatus: { name: string };
+  };
 }
 
 // Item returned by the assigned-mock-interviews endpoint
