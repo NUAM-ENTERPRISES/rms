@@ -57,7 +57,7 @@ export class ScreeningsController {
     description: 'Candidate already has a pending screening (for any of the provided candidate-projects)',
   })
   async create(@Body() body: CreateScreeningDto | CreateScreeningDto[], @Request() req: any) {
-    const scheduledBy = req.user?.userId ?? null;
+    const scheduledBy = req.user?.sub ?? req.user?.userId ?? null;
 
     // Support both single object and array (batch scheduling)
     if (Array.isArray(body)) {
@@ -266,7 +266,7 @@ export class ScreeningsController {
     return this.screeningsService.complete(
       id,
       completeDto,
-      req.user.userId,
+      req.user?.sub ?? req.user?.userId,
     );
   }
 

@@ -1,0 +1,49 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString, IsArray, IsOptional, IsEnum, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { SendType } from './forward-to-client.dto';
+
+export class ForwardSelectionDto {
+  @ApiProperty({ example: 'cand_123' })
+  @IsString()
+  @IsNotEmpty()
+  candidateId: string;
+
+  @ApiProperty({ example: 'role_123', required: false })
+  @IsString()
+  @IsOptional()
+  roleCatalogId?: string;
+
+  @ApiProperty({ enum: SendType, example: 'merged' })
+  @IsEnum(SendType)
+  @IsNotEmpty()
+  sendType: SendType;
+
+  @ApiProperty({ required: false, type: [String], example: ['doc_1', 'doc_2'] })
+  @IsArray()
+  @IsOptional()
+  documentIds?: string[];
+}
+
+export class BulkForwardToClientDto {
+  @ApiProperty({ example: 'client@example.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  recipientEmail: string;
+
+  @ApiProperty({ example: 'proj_456' })
+  @IsString()
+  @IsNotEmpty()
+  projectId: string;
+
+  @ApiProperty({ example: 'Optional notes for the recipient', required: false })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @ApiProperty({ type: [ForwardSelectionDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ForwardSelectionDto)
+  selections: ForwardSelectionDto[];
+}

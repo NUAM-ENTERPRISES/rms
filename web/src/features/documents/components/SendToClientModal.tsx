@@ -98,11 +98,19 @@ export function SendToClientModal({
 
   // Initialize email from client data
   useEffect(() => {
-    if (isOpen && clientData?.email) {
-      setEmail(clientData.email);
+    if (isOpen) {
+      if (clientData?.email) {
+        setEmail(clientData.email);
+        setIsEditingEmail(false);
+      } else if (!clientData?.email) {
+        setIsEditingEmail(true);
+      }
+    } else {
+      // Reset state when modal closes
+      setEmail("");
       setIsEditingEmail(false);
-    } else if (isOpen && !clientData?.email) {
-      setIsEditingEmail(true);
+      setSelectedDocs([]);
+      setNotes("");
     }
   }, [isOpen, clientData]);
 
@@ -161,9 +169,8 @@ export function SendToClientModal({
         notes: notes || `Attached are the verified documents for ${candidateName}`,
       }).unwrap();
 
-      toast.success(`Documents queued for delivery to ${email}. Please allow up to 2 minutes for arrival.`);
+      toast.success("Mail sent successfully and queued. Please wait for 3 minutes.");
       onOpenChange(false);
-      setNotes("");
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to forward documents to client");
     }

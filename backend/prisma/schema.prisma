@@ -535,10 +535,10 @@ model Screening {
   updatedAt DateTime @updatedAt
 
   // Relations
-  candidateProjectMap CandidateProjects        @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  template            ScreeningTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  checklistItems      ScreeningChecklistItem[]
-  trainingAssignments TrainingAssignment[]
+  candidateProjectMap   CandidateProjects        @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  template              ScreeningTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  checklistItems        ScreeningChecklistItem[]
+  trainingAssignments   TrainingAssignment[]
   // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)
 
   @@index([candidateProjectMapId])

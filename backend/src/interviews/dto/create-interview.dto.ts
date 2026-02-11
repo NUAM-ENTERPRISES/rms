@@ -82,4 +82,12 @@ export class CreateInterviewDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional Role Catalog ID',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
 }

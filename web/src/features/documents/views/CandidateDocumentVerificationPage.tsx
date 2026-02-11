@@ -1231,8 +1231,8 @@ export default function CandidateDocumentVerificationPage() {
                             </>
                           ) : (
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline" className="h-8 px-3" onClick={() => setShowReuseDialog(true)}>Link</Button>
-                              <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3" onClick={() => setShowUploadDialog(true)}>
+                              <Button size="sm" variant="outline" className="h-8 px-3" onClick={() => { setUploadDocType(requirement.docType); setShowReuseDialog(true); }}>Link</Button>
+                              <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3" onClick={() => { setUploadDocType(requirement.docType); setUploadFile(null); setShowUploadDialog(true); }}>
                                 <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
                               </Button>
                             </div>
@@ -1438,25 +1438,9 @@ export default function CandidateDocumentVerificationPage() {
             <div className="space-y-4">
               <div>
                 <Label className="text-sm font-medium">Document Type</Label>
-                <Select value={uploadDocType} onValueChange={setUploadDocType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose document type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {requirements.map((req: any) => (
-                      <SelectItem key={req.id} value={req.docType}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{req.docType}</span>
-                          {req.mandatory && (
-                            <span className="text-xs text-red-600">
-                              Required
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="mt-1.5 px-3 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm font-semibold text-slate-700 capitalize">
+                  {uploadDocType ? uploadDocType.replace(/_/g, ' ') : 'None'}
+                </div>
               </div>
               <div>
                 <Label className="text-sm font-medium">File</Label>

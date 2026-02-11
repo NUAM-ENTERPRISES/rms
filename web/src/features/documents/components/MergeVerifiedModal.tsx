@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Eye, FileText, RefreshCw, CheckCircle, FileX, Download, Calendar, HardDrive, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
-import { useGetMergedDocumentQuery } from "../api";
+import { useGetMergedDocumentQuery, useGetCandidateProjectVerificationsQuery } from "../api";
+import { PDFViewer } from "@/components/molecules";
 import { formatDistanceToNow } from "date-fns";
 
 interface MergeVerifiedModalProps {
@@ -19,8 +20,7 @@ interface MergeVerifiedModalProps {
   onOpenChange: (open: boolean) => void;
   candidateId: string;
   projectId: string;
-  roleCatalogId?: string;
-  documents: any[]; // List of verified documents passed from parent
+  roleCatalogId: string;
   onViewDocument: (url: string, name: string) => void;
   onMergeStart?: () => void;
   onMergeEnd?: () => void;
@@ -32,13 +32,29 @@ export function MergeVerifiedModal({
   candidateId,
   projectId,
   roleCatalogId,
-  documents,
   onViewDocument,
   onMergeStart,
   onMergeEnd,
 }: MergeVerifiedModalProps) {
   const [isMerging, setIsMerging] = useState(false);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string>("");
+  const [selectedPdfName, setSelectedPdfName] = useState<string>("");
   const token = useAppSelector((state) => state.auth.accessToken);
+
+  // Fetch candidate project verifications with documents
+  const { data: verificationsResponse, isLoading: isLoadingVerifications, error: verificationsError } = useGetCandidateProjectVerificationsQuery(
+    { candidateId, projectId, roleCatalogId, status: 'verified' },
+    { skip: !isOpen || !candidateId || !projectId || !roleCatalogId }
+  );
+
+  // Extract verified documents
+  const verifiedDocuments = useMemo(() => {
+    if (!verificationsResponse?.data?.verifications) return [];
+    return verificationsResponse.data.verifications
+      .filter(v => v.status === 'verified')
+      .map(v => v.document);
+  }, [verificationsResponse]);
 
   // Check for existing merged document using Redux
   const { data: mergedDocResponse, isLoading: isCheckingMerged, refetch: refetchMerged } = useGetMergedDocumentQuery(
@@ -89,7 +105,7 @@ export function MergeVerifiedModal({
   };
 
   const handleMergeAll = async () => {
-    if (documents.length === 0) {
+    if (verifiedDocuments.length === 0) {
       toast.error("No verified documents found to merge");
       return;
     }
@@ -164,9 +180,10 @@ export function MergeVerifiedModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl md:max-w-5xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
-        <DialogHeader className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+    <>
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-4xl md:max-w-5xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
           <DialogTitle className="text-xl font-bold flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
               <FileText className="h-5 w-5 text-white" />
@@ -176,22 +193,34 @@ export function MergeVerifiedModal({
           <p className="text-blue-100 text-sm mt-1">
             {existingMergedDoc 
               ? "A merged document already exists. Download it or regenerate with latest documents."
-              : `Review the ${documents.length} verified documents that will be combined into a single PDF.`
+              : `Review the ${verifiedDocuments.length} verified documents that will be combined into a single PDF.`
             }
           </p>
         </DialogHeader>
 
         <div className="p-6">
           {/* Loading State */}
-          {isCheckingMerged && (
+          {(isLoadingVerifications || isCheckingMerged) && (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mr-2" />
-              <span className="text-slate-600">Checking for existing merged document...</span>
+              <span className="text-slate-600">
+                {isLoadingVerifications ? "Loading verified documents..." : "Checking for existing merged document..."}
+              </span>
+            </div>
+          )}
+
+          {/* Error State */}
+          {verificationsError && !isLoadingVerifications && (
+            <div className="flex items-center justify-center py-8 px-4">
+              <div className="text-center">
+                <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-2" />
+                <p className="text-slate-600">Failed to load verified documents</p>
+              </div>
             </div>
           )}
 
           {/* Existing Merged Document Card */}
-          {!isCheckingMerged && existingMergedDoc && (
+          {!isLoadingVerifications && !isCheckingMerged && !verificationsError && existingMergedDoc && (
             <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-emerald-100 rounded-lg">
@@ -229,13 +258,13 @@ export function MergeVerifiedModal({
           )}
 
           {/* Documents Table */}
-          {!isCheckingMerged && (
+          {!isLoadingVerifications && !verificationsError && (
             <>
               <div className="flex items-center gap-2 mb-3">
                 <h4 className="font-medium text-slate-700">Source Documents</h4>
-                {existingMergedDoc && (
+                {verifiedDocuments.length > 0 && (
                   <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                    {documents.length} verified documents
+                    {verifiedDocuments.length} verified documents
                   </span>
                 )}
               </div>
@@ -249,7 +278,7 @@ export function MergeVerifiedModal({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {documents.length === 0 ? (
+                    {verifiedDocuments.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center py-12">
                           <div className="flex flex-col items-center gap-2 text-slate-400">
@@ -259,7 +288,7 @@ export function MergeVerifiedModal({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      documents.map((doc, idx) => (
+                      verifiedDocuments.map((doc, idx) => (
                         <TableRow key={idx} className="hover:bg-white transition-colors">
                           <TableCell className="py-4">
                             <div className="flex items-center gap-2">
@@ -275,7 +304,11 @@ export function MergeVerifiedModal({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                              onClick={() => onViewDocument(doc.fileUrl, doc.fileName)}
+                              onClick={() => {
+                                setSelectedPdfUrl(doc.fileUrl);
+                                setSelectedPdfName(doc.fileName);
+                                setPdfViewerOpen(true);
+                              }}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -290,7 +323,7 @@ export function MergeVerifiedModal({
           )}
 
           {/* Regenerate Warning */}
-          {!isCheckingMerged && existingMergedDoc && documents.length > 0 && (
+          {!isCheckingMerged && existingMergedDoc && verifiedDocuments.length > 0 && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-amber-700">
@@ -305,14 +338,14 @@ export function MergeVerifiedModal({
           <Button 
             variant="ghost" 
             onClick={() => onOpenChange(false)} 
-            disabled={isMerging}
+            disabled={isMerging || isLoadingVerifications || isCheckingMerged}
             className="hover:bg-slate-200"
           >
             Cancel
           </Button>
           <Button
             onClick={handleMergeAll}
-            disabled={isMerging || documents.length === 0 || isCheckingMerged}
+            disabled={isMerging || verifiedDocuments.length === 0 || isCheckingMerged || isLoadingVerifications || !!verificationsError}
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 rounded-lg px-8 py-2 font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             {isMerging ? (
@@ -334,6 +367,19 @@ export function MergeVerifiedModal({
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      {/* PDF Viewer Modal */}
+      <PDFViewer
+        fileUrl={selectedPdfUrl}
+        fileName={selectedPdfName}
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+        showDownload={true}
+        showZoomControls={true}
+        showRotationControls={true}
+        showFullscreenToggle={true}
+      />
+    </>
   );
 }

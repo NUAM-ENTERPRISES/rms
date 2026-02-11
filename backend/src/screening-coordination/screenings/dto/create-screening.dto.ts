@@ -134,5 +134,4 @@ export class CreateScreeningDto {
   @IsOptional()
   @IsBoolean()
   isAssignedTrainer?: boolean;
-
 }

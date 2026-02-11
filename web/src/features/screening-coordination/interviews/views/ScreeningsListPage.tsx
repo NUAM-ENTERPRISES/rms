@@ -135,8 +135,9 @@ export default function ScreeningsListPage() {
     useCreateTrainingAssignmentMutation();
   // Backend returns array directly or wrapped in { data: [...] } or { data: { items: [...] } }
   const interviews = useMemo(() => {
-    if (Array.isArray(data?.data)) return data.data;
     if (Array.isArray(data?.data?.items)) return data.data.items;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.items)) return data.items;
     if (Array.isArray(data)) return data;
     return [];
   }, [data]);
@@ -230,10 +231,13 @@ export default function ScreeningsListPage() {
             new Date(a.conductedAt!).getTime()
         );
 
+      const unscheduled = filtered
+        .filter((i) => !i.scheduledTime && !i.conductedAt);
+
       return {
         upcomingInterviews: upcoming,
         completedInterviews: completed,
-        allInterviews: [...upcoming, ...completed],
+        allInterviews: [...upcoming, ...completed, ...unscheduled],
       };
     }, [interviews, filters]);
 
@@ -979,7 +983,7 @@ export default function ScreeningsListPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {selected_docVerified ? (
                       <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
-                        Verified
+                        {selectedInterview.isDocumentVerified ? "Document Verified" : "Verified"}
                       </Badge>
                     ) : selected_verificationInProgress ? (
                       <Badge className="text-xs bg-amber-100 text-amber-700 px-2 py-1">

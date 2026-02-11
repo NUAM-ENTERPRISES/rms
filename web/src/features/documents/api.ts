@@ -311,6 +311,87 @@ export interface GetMergedDocumentParams {
   roleCatalogId?: string;
 }
 
+export interface VerificationDocument {
+  id: string;
+  candidateId: string;
+  docType: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedBy: string;
+  status: DocumentStatus;
+  createdAt: string;
+  roleCatalog?: {
+    id: string;
+    name: string;
+    label: string;
+  };
+}
+
+export interface CandidateProjectVerification {
+  id: string;
+  candidateProjectMapId: string;
+  documentId: string;
+  status: DocumentStatus;
+  notes?: string;
+  roleCatalogId?: string;
+  document: VerificationDocument;
+  roleCatalog?: {
+    id: string;
+    name: string;
+    label: string;
+  };
+}
+
+export interface CandidateProjectRole {
+  id: string;
+  projectId: string;
+  roleCatalogId: string;
+  designation: string;
+  quantity: number;
+  roleCatalog: {
+    id: string;
+    name: string;
+    label: string;
+    description?: string;
+  };
+}
+
+export interface CandidateProjectVerificationsResponse {
+  candidateProject: {
+    id: string;
+    candidateId: string;
+    projectId: string;
+    roleNeededId: string;
+    recruiterId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  roleNeeded: CandidateProjectRole;
+  verifications: CandidateProjectVerification[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: {
+    totalSubmitted: number;
+    totalVerified: number;
+    totalRejected: number;
+    totalPending: number;
+  };
+}
+
+export interface GetCandidateProjectVerificationsParams {
+  candidateId: string;
+  projectId: string;
+  roleCatalogId: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: 'verified' | 'rejected' | 'pending' | 'all';
+}
+
 export interface ForwardToClientRequest {
   recipientEmail: string;
   candidateId: string;
@@ -319,6 +400,18 @@ export interface ForwardToClientRequest {
   sendType: "merged" | "individual";
   documentIds?: string[];
   notes?: string;
+}
+
+export interface BulkForwardToClientRequest {
+  recipientEmail: string;
+  projectId: string;
+  notes?: string;
+  selections: {
+    candidateId: string;
+    roleCatalogId: string;
+    sendType: "merged" | "individual";
+    documentIds?: string[];
+  }[];
 }
 
 export interface ForwardingHistoryItem {
@@ -545,7 +638,16 @@ export const documentsApi = baseApi.injectEndpoints({
         };
         message: string;
       },
-      { page?: number; limit?: number; status?: string; search?: string; recruiterId?: string }
+      { 
+        page?: number; 
+        limit?: number; 
+        status?: string; 
+        search?: string; 
+        recruiterId?: string;
+        projectId?: string;
+        roleCatalogId?: string;
+        screening?: boolean | string;
+      }
     >({
       query: (params = {}) => ({
         url: "/documents/verification-candidates",
@@ -569,7 +671,16 @@ export const documentsApi = baseApi.injectEndpoints({
         };
         message: string;
       },
-      { page?: number; limit?: number; status?: "verified" | "rejected" | "both"; search?: string; recruiterId?: string }
+      { 
+        page?: number; 
+        limit?: number; 
+        status?: "verified" | "rejected" | "both"; 
+        search?: string; 
+        recruiterId?: string;
+        projectId?: string;
+        roleCatalogId?: string;
+        screening?: boolean | string;
+      }
     >({
       query: (params = {}) => ({
         url: "/documents/verified-rejected-documents",
@@ -671,6 +782,23 @@ export const documentsApi = baseApi.injectEndpoints({
       providesTags: ["Document"],
     }),
 
+    // Get candidate project verifications with documents
+    getCandidateProjectVerifications: builder.query<
+      { success: boolean; data: CandidateProjectVerificationsResponse },
+      GetCandidateProjectVerificationsParams
+    >({
+      query: ({ candidateId, projectId, roleCatalogId, page, limit, search, status }) => {
+        const params = new URLSearchParams();
+        params.append('page', (page || 1).toString());
+        params.append('limit', (limit || 20).toString());
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+        
+        return `/documents/candidates/${candidateId}/projects/${projectId}/roles/${roleCatalogId}/verifications?${params.toString()}`;
+      },
+      providesTags: ["CandidateProjectVerifications"],
+    }),
+
     // Get existing merged document (if any)
     getMergedDocument: builder.query<
       { success: boolean; data: MergedDocumentResponse | null },
@@ -729,6 +857,18 @@ export const documentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["ForwardingHistory"],
     }),
+
+    bulkForwardToClient: builder.mutation<
+      { success: boolean; message: string },
+      BulkForwardToClientRequest
+    >({
+      query: (data) => ({
+        url: "/documents/bulk-forward",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["ForwardingHistory", "VerificationCandidates"],
+    }),
   }),
 });
 
@@ -755,8 +895,10 @@ export const {
   useReuseDocumentMutation,
   useCompleteVerificationMutation,
   useRejectVerificationMutation,
+  useGetCandidateProjectVerificationsQuery,
   useGetMergedDocumentQuery,
   useGetLatestForwardingQuery,
   useGetForwardingHistoryQuery,
   useForwardToClientMutation,
+  useBulkForwardToClientMutation,
 } = documentsApi;

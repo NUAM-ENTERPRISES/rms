@@ -58,7 +58,7 @@ export function ProjectRoleFilter({
 
   // Get the selected project details (for displaying the name and getting roles)
   const { data: selectedProjectData } = useGetProjectsQuery(
-    { limit: 1, search: undefined },
+    { limit: 10, search: undefined },
     { skip: value.projectId === "all" }
   );
 

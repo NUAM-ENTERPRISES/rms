@@ -3,8 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Inject,
+  forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { CandidateProjectsService } from '../../candidate-projects/candidate-projects.service';
 import { CreateScreeningDto } from './dto/create-screening.dto';
 import { UpdateScreeningDto } from './dto/update-screening.dto';
 import { CompleteScreeningDto } from './dto/complete-screening.dto';
@@ -17,7 +21,13 @@ import {
 
 @Injectable()
 export class ScreeningsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ScreeningsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => CandidateProjectsService))
+    private readonly candidateProjectsService: CandidateProjectsService,
+  ) {}
 
   /**
    * Create/Schedule a new screening
@@ -438,28 +448,49 @@ export class ScreeningsService {
           candidateProjectMap: {
             include: {
               candidate: {
-                include: {
-                  documents: {
-                    where: { isDeleted: false }
-                  }
+                select: {
+                  id: true,
+                  profileImage: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  mobileNumber: true,
                 }
               },
               project: {
                 select: {
                   id: true,
                   title: true,
-                  documentRequirements: true,
+                  client: {
+                    select: {
+                      id: true,
+                      name: true,
+                      type: true,
+                      email: true,
+                      phone: true,
+                    }
+                  }
                 }
               },
+              // include only verification status for computing docsStatus, but do not return raw verifications
               documentVerifications: {
                 where: { isDeleted: false },
-                include: {
-                  document: true,
+                select: {
+                  status: true,
                 },
               },
               roleNeeded: {
-                include: {
-                  roleCatalog: true
+                select: {
+                  id: true,
+                  designation: true,
+                  roleCatalog: {
+                    select: {
+                      id: true,
+                      name: true,
+                      label: true,
+                      shortName: true,
+                    }
+                  }
                 }
               },
               recruiter: {
@@ -479,10 +510,37 @@ export class ScreeningsService {
       }),
     ]);
 
+    // Compute docsStatus flag per item and remove raw documentVerifications from response
+    const itemsWithDocsStatus = items.map((it) => {
+      const cpm = it.candidateProjectMap ?? null;
+      let docsStatus = 'pending';
+
+      if (cpm && Array.isArray(cpm.documentVerifications)) {
+        const statuses = cpm.documentVerifications.map((v: any) => v.status);
+        if (statuses.includes('rejected')) docsStatus = 'rejected';
+        else if (statuses.length === 0) docsStatus = 'pending';
+        else if (statuses.every((s: string) => s === 'verified')) docsStatus = 'verified';
+        else if (statuses.includes('pending')) docsStatus = 'pending';
+        else if (statuses.includes('verified')) docsStatus = 'verified';
+      }
+
+      if (!cpm) return it;
+
+      // Remove documentVerifications array from the returned object and add docsStatus flag
+      const { documentVerifications, ...rest } = cpm as any;
+      return {
+        ...it,
+        candidateProjectMap: {
+          ...rest,
+          docsStatus,
+        },
+      };
+    });
+
     return {
       success: true,
       data: {
-        items,
+        items: itemsWithDocsStatus,
         pagination: {
           total,
           page: Number(page),
@@ -971,7 +1029,36 @@ export class ScreeningsService {
     });
 
     // Fetch complete result with relations
-    return this.findOne(id);
+    const finalResult = await this.findOne(id);
+
+    // Auto-trigger "send for verification" if approved and no documents assigned yet
+    if (dto.decision === SCREENING_DECISION.APPROVED) {
+      const cpm = finalResult.candidateProjectMap;
+      
+      // Only auto-send if there are no existing document verifications for this candidate/project nomination
+      const hasExistingDocs = (cpm as any)?.documentVerifications?.length > 0;
+      
+      if (!hasExistingDocs && cpm && userId) {
+        try {
+          await this.candidateProjectsService.sendForVerification(
+            {
+              candidateId: cpm.candidateId,
+              projectId: cpm.projectId,
+              roleNeededId: cpm.roleNeededId as string,
+              recruiterId: cpm.recruiterId || undefined,
+              notes: 'Automatically sent for document verification after passing screening assessment.',
+            } as any,
+            userId,
+          );
+          this.logger.log(`Automatically sent candidate ${cpm.candidateId} for verification after passing screening.`);
+        } catch (error) {
+          this.logger.error(`Failed to automatically send for verification: ${error.message}`);
+          // We don't throw here to avoid failing the whole screening completion if verification auto-trigger fails
+        }
+      }
+    }
+
+    return finalResult;
   }
 
   /**

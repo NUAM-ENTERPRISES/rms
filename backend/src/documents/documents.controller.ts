@@ -33,6 +33,7 @@ import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto } from './dto/forward-to-client.dto';
+import { BulkForwardToClientDto } from './dto/bulk-forward-to-client.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { UploadService } from '../upload/upload.service';
@@ -151,6 +152,9 @@ export class DocumentsController {
     description: 'Verification candidates retrieved successfully',
   })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
+  @ApiQuery({ name: 'projectId', required: false, description: 'Optional project id to filter candidates to a specific project' })
+  @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Optional role catalog id to filter by project role' })
+  @ApiQuery({ name: 'screening', required: false, description: 'Filter only candidates with screening data', type: Boolean })
   async getVerificationCandidates(@Query() query: any) {
     const result = await this.documentsService.getVerificationCandidates(query);
     return {
@@ -170,6 +174,9 @@ export class DocumentsController {
   @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'both'. Defaults to 'verified' if omitted." })
   @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name, project title or document file name' })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Optional recruiter id to scope results' })
+  @ApiQuery({ name: 'projectId', required: false, description: 'Optional project id to filter results to a specific project' })
+  @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Optional role catalog id to filter results to a specific role' })
+  @ApiQuery({ name: 'screening', required: false, description: 'Filter only candidates with screening data', type: Boolean })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
   async getVerifiedRejectedDocuments(@Query() query: any) {
@@ -392,6 +399,20 @@ export class DocumentsController {
     @Request() req,
   ) {
     return this.documentsService.forwardToClient(forwardDto, req.user.sub);
+  }
+
+  @Post('bulk-forward')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Forward multiple candidates documents to client in bulk',
+    description: 'Send merged or individual verified documents for multiple candidates to a client email address.',
+  })
+  @ApiResponse({ status: 200, description: 'Bulk documents queued for delivery' })
+  async bulkForward(
+    @Body() bulkForwardDto: BulkForwardToClientDto,
+    @Request() req,
+  ) {
+    return this.documentsService.bulkForwardToClient(bulkForwardDto, req.user.sub);
   }
 
   @Get('forward-latest')
@@ -706,6 +727,39 @@ export class DocumentsController {
       success: true,
       data: result,
       message: 'Project requirements retrieved successfully',
+    };
+  }
+
+  @Get('candidates/:candidateId/projects/:projectId/roles/:roleCatalogId/verifications')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get document verifications and documents for a candidate-project-role',
+    description:
+      'Retrieve candidate_project_document_verifications and related document details for a specific roleCatalog in a project nomination. Supports pagination and search.',
+  })
+  @ApiParam({ name: 'candidateId', description: 'Candidate ID' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'roleCatalogId', description: 'Role Catalog ID' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term for document file name or docType' })
+  @ApiQuery({ name: 'status', required: false, description: "Filter by verification status: 'verified' | 'rejected' | 'pending' | 'all' (default 'all')" })
+  async getCandidateProjectVerificationsByRole(
+    @Param('candidateId') candidateId: string,
+    @Param('projectId') projectId: string,
+    @Param('roleCatalogId') roleCatalogId: string,
+    @Query() query: any,
+  ) {
+    const result = await this.documentsService.getCandidateProjectVerificationsByRole(
+      candidateId,
+      projectId,
+      roleCatalogId,
+      query,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate project verifications retrieved successfully',
     };
   }
 

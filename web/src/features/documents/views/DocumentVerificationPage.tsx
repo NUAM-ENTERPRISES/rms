@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Info,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
@@ -46,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
+import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
 
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
@@ -69,24 +72,57 @@ export default function DocumentVerificationPage() {
   const [verificationNotes, setVerificationNotes] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [screeningFilter, setScreeningFilter] = useState(false);
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",
     roleCatalogId: "all",
   });
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [bulkSendModalOpen, setBulkSendModalOpen] = useState(false);
 
   const handleProjectRoleChange = useCallback((value: ProjectRoleFilterValue) => {
     setProjectRoleFilter(value);
     setCurrentPage(1);
   }, []);
 
+  const handleSelectCandidate = (candidateId: string) => {
+    const newSelected = new Set(selectedCandidateIds);
+    if (newSelected.has(candidateId)) {
+      newSelected.delete(candidateId);
+    } else {
+      newSelected.add(candidateId);
+    }
+    setSelectedCandidateIds(newSelected);
+    setSelectAll(newSelected.size === candidateProjects.length && candidateProjects.length > 0);
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedCandidateIds(new Set());
+      setSelectAll(false);
+    } else {
+      const allIds = new Set(candidateProjects.map((cp: any) => cp.id || cp.candidateProjectMapId));
+      setSelectedCandidateIds(allIds);
+      setSelectAll(true);
+    }
+  };
+
+  const handleBulkSendToClient = () => {
+    setBulkSendModalOpen(true);
+  };
+
   // Pending (verification candidates) query — only call when viewing pending / in-progress
   const verificationCandidatesQuery = useGetVerificationCandidatesQuery(
     {
       status: statusFilter === "all" ? undefined : statusFilter,
+      projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
+      roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
       search: searchTerm || undefined,
       page: currentPage,
       limit: 10,
       recruiterId: isStrictRecruiter ? user?.id : undefined,
+      screening: screeningFilter || undefined,
     },
     { skip: statusFilter !== "verification_in_progress_document" }
   );
@@ -100,10 +136,13 @@ export default function DocumentVerificationPage() {
         : statusFilter === "rejected_documents"
         ? "rejected"
         : undefined,
+    projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
+    roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
     search: searchTerm || undefined,
     page: currentPage,
     limit: 10,
     recruiterId: isStrictRecruiter ? user?.id : undefined,
+    screening: screeningFilter || undefined,
   }, {
     skip: statusFilter === "screening_approved"
   });
@@ -138,9 +177,15 @@ export default function DocumentVerificationPage() {
 
   // Refresh both endpoints to keep counts and lists in sync
   const refetch = () => {
-    verificationCandidatesQuery.refetch?.();
-    verifiedRejectedQuery.refetch?.();
-    approvedScreeningQuery.refetch?.();
+    if (verificationCandidatesQuery.status !== 'uninitialized') {
+      verificationCandidatesQuery.refetch?.();
+    }
+    if (verifiedRejectedQuery.status !== 'uninitialized') {
+      verifiedRejectedQuery.refetch?.();
+    }
+    if (approvedScreeningQuery.status !== 'uninitialized') {
+      approvedScreeningQuery.refetch?.();
+    }
   };
 
   let candidateProjects: any[] = [];
@@ -166,31 +211,68 @@ export default function DocumentVerificationPage() {
     totalPages = approvedScreeningData?.data?.pagination?.totalPages || 1;
   } else {
     // Map verified/rejected items into candidateProject-like rows grouped by candidateProjectMap.id
+    // Support both shapes: 1) flat verification records with `candidateProjectMap` wrapper
+    // and 2) grouped rows already containing `candidate`, `project`, and `documentVerifications`.
     const items = verifiedRejectedData?.data?.items || [];
     const map = new Map<string, any>();
+
     items.forEach((it: any) => {
+      // Case A: verification record with nested candidateProjectMap
       const cpm = it.candidateProjectMap;
-      if (!cpm) return;
-      const id = cpm.id;
-      const existing = map.get(id) || {
-        id,
-        candidate: cpm.candidate,
-        project: cpm.project,
+      if (cpm) {
+        const id = cpm.id;
+        const existing = map.get(id) || {
+          id,
+          candidate: cpm.candidate,
+          project: cpm.project,
+          documentVerifications: [],
+          recruiter: it.recruiter || cpm.recruiter,
+          screening: it.screening || cpm.screening,
+        };
+
+        existing.documentVerifications.push({
+          id: it.id,
+          status: it.status,
+          notes: it.notes,
+          rejectionReason: it.rejectionReason,
+          verifiedAt: it.status === "verified" ? it.updatedAt || it.createdAt : undefined,
+          rejectedAt: it.status === "rejected" ? it.updatedAt || it.createdAt : undefined,
+          document: it.document,
+        });
+
+        map.set(id, existing);
+        return;
+      }
+
+      // Case B: endpoint returns grouped candidateProject-like rows
+      // Use candidateProjectMapId if available, otherwise fall back to a generated key
+      const groupedId = it.candidateProjectMapId || it.id || (it.candidate?.id && it.project?.id ? `${it.candidate.id}-${it.project.id}` : undefined);
+      if (!groupedId) return;
+
+      const existing2 = map.get(groupedId) || {
+        id: groupedId,
+        candidate: it.candidate || null,
+        project: it.project || null,
         documentVerifications: [],
-        recruiter: it.recruiter || cpm.recruiter,
+        recruiter: it.recruiter || null,
+        screening: it.screening || null,
       };
 
-      existing.documentVerifications.push({
-        id: it.id,
-        status: it.status,
-        notes: it.notes,
-        rejectionReason: it.rejectionReason,
-        verifiedAt: it.status === "verified" ? it.updatedAt || it.createdAt : undefined,
-        rejectedAt: it.status === "rejected" ? it.updatedAt || it.createdAt : undefined,
-        document: it.document,
-      });
+      if (Array.isArray(it.documentVerifications) && it.documentVerifications.length > 0) {
+        existing2.documentVerifications = existing2.documentVerifications.concat(it.documentVerifications);
+      } else if (it.document) {
+        existing2.documentVerifications.push({
+          id: it.id,
+          status: it.status,
+          notes: it.notes,
+          rejectionReason: it.rejectionReason,
+          verifiedAt: it.status === "verified" ? it.updatedAt || it.createdAt : undefined,
+          rejectedAt: it.status === "rejected" ? it.updatedAt || it.createdAt : undefined,
+          document: it.document,
+        });
+      }
 
-      map.set(id, existing);
+      map.set(groupedId, existing2);
     });
 
     candidateProjects = Array.from(map.values());
@@ -278,6 +360,15 @@ export default function DocumentVerificationPage() {
 
   const statusCounts = getStatusCounts();
 
+  // Get candidate data for bulk send modal
+  // Only include candidates with verified documents (exclude pending)
+  const selectedCandidatesForModal = useMemo(() => {
+    return candidateProjects.filter(cp => 
+      selectedCandidateIds.has(cp.id || cp.candidateProjectMapId) &&
+      cp.docsStatus !== "pending" // Exclude candidates with pending documents
+    );
+  }, [candidateProjects, selectedCandidateIds]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <div className="max-w-7xl mx-auto space-y-4">
@@ -319,6 +410,8 @@ export default function DocumentVerificationPage() {
               onClick={() => {
                 setStatusFilter("screening_approved");
                 setCurrentPage(1);
+                setSelectedCandidateIds(new Set());
+                setSelectAll(false);
               }}
             >
               <CardContent className="pt-6">
@@ -456,12 +549,35 @@ export default function DocumentVerificationPage() {
               </div>
             </div>
 
-            <ProjectRoleFilter
-              value={projectRoleFilter}
-              onChange={handleProjectRoleChange}
-              showRoleFilter={true}
-              className="flex-1"
-            />
+            <div className="flex-1 flex flex-col md:flex-row gap-4 items-center w-full">
+              <ProjectRoleFilter
+                value={projectRoleFilter}
+                onChange={handleProjectRoleChange}
+                showRoleFilter={true}
+                className="flex-1"
+              />
+              
+              <div className={cn(
+                "flex items-center space-x-2 px-3 py-2 bg-slate-50 rounded-md border border-slate-200 transition-opacity",
+                statusFilter === "screening_approved" ? "opacity-50 pointer-events-none" : "opacity-100"
+              )}>
+                <Checkbox
+                  id="screening-filter"
+                  checked={statusFilter === "screening_approved" ? true : screeningFilter}
+                  onCheckedChange={(checked) => {
+                    setScreeningFilter(checked as boolean);
+                    setCurrentPage(1);
+                  }}
+                  disabled={statusFilter === "screening_approved"}
+                />
+                <label
+                  htmlFor="screening-filter"
+                  className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap"
+                >
+                  Screening Approved
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -499,7 +615,18 @@ export default function DocumentVerificationPage() {
           </p>
         </div>
       </div>
-      {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
+      <div className="flex items-center gap-3">
+        {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
+        {statusFilter === "screening_approved" && selectedCandidateIds.size > 0 && (
+          <Button
+            onClick={handleBulkSendToClient}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            size="sm"
+          >
+            Bulk Send to Client ({selectedCandidateIds.size})
+          </Button>
+        )}
+      </div>
     </div>
   </div>
 
@@ -527,6 +654,15 @@ export default function DocumentVerificationPage() {
     <Table>
       <TableHeader>
         <TableRow className="bg-gray-50/50 border-b border-gray-200">
+          {statusFilter === "screening_approved" && (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600 w-12">
+              <Checkbox
+                checked={selectAll}
+                onCheckedChange={handleSelectAll}
+                className="rounded"
+              />
+            </TableHead>
+          )}
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             Candidate
           </TableHead>
@@ -557,7 +693,7 @@ export default function DocumentVerificationPage() {
           )}
 
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-            Documents
+            {statusFilter === "screening_approved" ? "Docs Status" : "Screening Details"}
           </TableHead>
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             Recruiter
@@ -578,8 +714,30 @@ export default function DocumentVerificationPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: index * 0.03 }}
-              className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors"
+              className={cn(
+                "border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors",
+                statusFilter === "verification_in_progress_document" ? "relative group" : ""
+              )}
+              data-tooltip={statusFilter === "verification_in_progress_document" ? "Please verify the documents" : undefined}
             >
+              {statusFilter === "screening_approved" && (
+                <TableCell className="px-6 py-5 w-12 relative group">
+                  {candidateProject.docsStatus === "pending" ? (
+                    <div className="flex items-center justify-center">
+                      <XCircle className="h-5 w-5 text-red-500" />
+                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 hidden group-hover:block z-50 bg-gray-900 text-white text-xs px-3 py-2 rounded-md whitespace-nowrap pointer-events-none">
+                        Documents still pending
+                      </div>
+                    </div>
+                  ) : (
+                    <Checkbox
+                      checked={selectedCandidateIds.has(candidateProject.id || candidateProject.candidateProjectMapId)}
+                      onCheckedChange={() => handleSelectCandidate(candidateProject.id || candidateProject.candidateProjectMapId)}
+                      className="rounded"
+                    />
+                  )}
+                </TableCell>
+              )}
               <TableCell className="px-6 py-5">
                 <div className="flex items-center gap-4">
                   {candidateProject.candidate.profileImage ? (
@@ -708,12 +866,46 @@ export default function DocumentVerificationPage() {
                 })()}
               </TableCell>
 
-              {/* Documents */}
+              {/* Documents / Screening Details */}
               <TableCell className="px-6 py-5 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-gray-400" />
-                  {((candidateProject.documentVerifications?.length || 0) + (candidateProject.documentRequirements?.length || 0))}
-                </div>
+                {statusFilter === "screening_approved" ? (
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "capitalize",
+                        candidateProject.docsStatus === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        candidateProject.docsStatus === "pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                        candidateProject.docsStatus === "queued" ? "bg-indigo-50 text-indigo-700 border-indigo-200 animate-pulse" :
+                        "bg-slate-50 text-slate-700 border-slate-200"
+                      )}
+                    >
+                      {candidateProject.docsStatus || "—"}
+                    </Badge>
+                  </div>
+                ) : (
+                  <div>
+                    {candidateProject.screening ? (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize bg-blue-50 text-blue-700 border-blue-200 font-semibold ring-0">
+                            {candidateProject.screening.status}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold ring-0">
+                            {candidateProject.screening.decision}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-purple-600">
+                          <div className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                          Rating: {candidateProject.screening.overallRating}%
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">No screening info</span>
+                    )}
+                  </div>
+                )}
               </TableCell>
 
               {/* Recruiter */}
@@ -857,6 +1049,23 @@ export default function DocumentVerificationPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Bulk Send to Client Modal */}
+      <BulkSendToClientModal
+        isOpen={bulkSendModalOpen}
+        onClose={() => {
+          setBulkSendModalOpen(false);
+          setSelectedCandidateIds(new Set());
+          setSelectAll(false);
+        }}
+        candidates={selectedCandidatesForModal}
+        onSuccess={() => {
+          // Reset selection after successful send
+          setSelectedCandidateIds(new Set());
+          setSelectAll(false);
+          refetch();
+        }}
+      />
     </div>
   );
 }
