@@ -2326,7 +2326,7 @@ export class DocumentsService {
             select: {
               id: true,
               title: true,
-              client: { select: { name: true } },
+              client: { select: { name: true, email: true, phone: true } },
               documentRequirements: { where: { isDeleted: false } as any },
             },
           },

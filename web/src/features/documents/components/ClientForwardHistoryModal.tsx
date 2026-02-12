@@ -143,7 +143,7 @@ export function ClientForwardHistoryModal({
                     </div>
                     <div className="flex items-center gap-2 text-slate-600 col-span-2">
                       <Calendar className="h-3.5 w-3.5" />
-                      <span>{safeFormatDate(item.createdAt)}</span>
+                      <span>{safeFormatDate(item.sentAt || item.createdAt)}</span>
                     </div>
                   </div>
 

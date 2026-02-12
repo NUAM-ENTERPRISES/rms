@@ -37,12 +37,14 @@ import {
   CheckCircle2,
   MessageSquare,
   Edit2,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules";
 import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { BulkViewDocumentsModal } from "./BulkViewDocumentsModal";
+import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
 import { useGetMergedDocumentQuery, useBulkForwardToClientMutation } from "../api";
 
 interface BulkSendToClientModalProps {
@@ -104,11 +106,48 @@ export function BulkSendToClientModal({
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
+  // History modal state (opens forwarding history for a single candidate)
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyCandidate, setHistoryCandidate] = useState<any>(null);
+
+  // Local visibility set so user can remove candidates from the batch before sending
+  const [visibleCandidateKeys, setVisibleCandidateKeys] = useState<Set<string>>(new Set());
+
   const [bulkForward, { isLoading: isBulkForwarding }] = useBulkForwardToClientMutation();
 
+  const removeCandidate = (key: string) => {
+    setVisibleCandidateKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+
+      // remove any selected docs for the removed candidate
+      setSelectedDocsByCandidate((prevDocs) => {
+        const copy = { ...prevDocs } as Record<string, string[]>;
+        delete copy[key];
+        return copy;
+      });
+
+      const newSize = next.size;
+      if (newSize === 0) {
+        // close modal if no candidates remain
+        onClose();
+      } else {
+        const newTotalPages = Math.max(1, Math.ceil(newSize / itemsPerPage));
+        setCurrentPage((p) => Math.min(p, newTotalPages));
+      }
+
+      return next;
+    });
+  }
+
   // Initialize recipient email from the first candidate's client if available
+  // Also initialize a local visible-candidates set so users can remove cards locally
   useEffect(() => {
     if (isOpen) {
+      // set visible candidates to incoming list
+      const keys = new Set(candidates.map(c => c.id || c.candidateProjectMapId || ""));
+      setVisibleCandidateKeys(keys);
+
       if (candidates.length > 0) {
         // Find the first candidate that has a client email
         const candidateWithClient = candidates.find(c => c.project.client?.email);
@@ -130,14 +169,21 @@ export function BulkSendToClientModal({
       setSelectedDocsByCandidate({});
       setMergedDocsData({});
       setCurrentPage(1);
+      setVisibleCandidateKeys(new Set());
     }
   }, [isOpen, candidates]);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(candidates.length / itemsPerPage);
+  // Compute visible candidates (allows per-card removal)
+  const visibleCandidates = useMemo(() => {
+    if (visibleCandidateKeys.size === 0) return candidates;
+    return candidates.filter(c => visibleCandidateKeys.has(c.id || c.candidateProjectMapId || ""));
+  }, [candidates, visibleCandidateKeys]);
+
+  // Pagination calculations (based on visible candidates)
+  const totalPages = Math.ceil(visibleCandidates.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentCandidates = candidates.slice(startIndex, endIndex);
+  const currentCandidates = visibleCandidates.slice(startIndex, endIndex);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -188,7 +234,7 @@ export function BulkSendToClientModal({
     setIsFetchingMergedDocs(true);
     try {
       // Prepare selection data as per API reference
-      const selections = candidates.map((candidate) => {
+      const selections = visibleCandidates.map((candidate) => {
         const candidateKey = candidate.id || candidate.candidateProjectMapId || "";
         const selectedDocs = selectedDocsByCandidate[candidateKey] || [];
         
@@ -206,16 +252,16 @@ export function BulkSendToClientModal({
 
       const payload = {
         recipientEmail,
-        projectId: candidates[0]?.project.id,
-        notes: notes || `Attached are the verified documents for ${candidates.length} candidates.`,
+        projectId: visibleCandidates[0]?.project.id,
+        notes: notes || `Attached are the verified documents for ${visibleCandidates.length} candidates.`,
         selections
-      };
+      }; 
 
       console.log("Bulk Forwarding Payload:", payload);
       
       await bulkForward(payload).unwrap();
 
-      toast.success("Mail sent successfully and queued. Please wait for 3 minutes.");
+      toast.success(`Mail sent successfully and queued (${visibleCandidates.length}). Please wait for 3 minutes.`);
       
       onSuccess?.();
       onClose();
@@ -243,11 +289,28 @@ export function BulkSendToClientModal({
                 Bulk Send to Client
               </DialogTitle>
               <DialogDescription className="mt-1">
-                Review and send {candidates.length} candidates to client. All
+                Review and send {visibleCandidates.length} candidates to client. All
                 documents are verified.
               </DialogDescription>
             </div>
             <div className="flex items-center gap-3">
+              {/* History button opens ClientForwardHistoryModal for the first visible candidate */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const first = visibleCandidates[0];
+                  if (!first) return;
+                  setHistoryCandidate(first);
+                  setHistoryOpen(true);
+                }}
+                disabled={visibleCandidates.length === 0}
+                className="h-8 px-2 text-slate-600"
+              >
+                <History className="h-4 w-4 mr-2" />
+                History
+              </Button>
+
               {totalPages > 1 && (
                 <Badge
                   variant="outline"
@@ -260,7 +323,7 @@ export function BulkSendToClientModal({
                 variant="secondary"
                 className="bg-blue-100 text-blue-700 border-blue-200 font-bold px-3 py-1"
               >
-                {candidates.length} Selected
+                {visibleCandidates.length} Selected
               </Badge>
             </div>
           </div>
@@ -395,19 +458,37 @@ export function BulkSendToClientModal({
                   )}
 
                   {/* Selection/Required Indicator Top Right */}
-                  <div className="absolute top-0 right-0 z-10">
-                    {selectedDocsCount > 0 ? (
-                      <div className="flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-bl-lg shadow-sm animate-in fade-in slide-in-from-top-1 duration-300">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {hasMerged ? "Merged" : `${selectedDocsCount} Docs`}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 bg-rose-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-bl-lg shadow-sm animate-in fade-in slide-in-from-top-1 duration-300">
-                        <AlertCircle className="h-3 w-3" />
-                        Documents Required
-                      </div>
-                    )}
-                  </div>
+                  {/* Close / remove from batch button */}
+                <div className="absolute top-2 right-2 z-30">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeCandidate(candidateKey)}
+                        aria-label={`Remove ${candidateName} from batch`}
+                        className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-gray-900 text-white">Remove from batch</TooltipContent>
+                  </Tooltip>
+                </div>
+
+                <div className="absolute top-0 right-8 z-10">
+                  {selectedDocsCount > 0 ? (
+                    <div className="flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-bl-lg shadow-sm animate-in fade-in slide-in-from-top-1 duration-300">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {hasMerged ? "Merged" : `${selectedDocsCount} Docs`}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 bg-rose-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-bl-lg shadow-sm animate-in fade-in slide-in-from-top-1 duration-300">
+                      <AlertCircle className="h-3 w-3" />
+                      Documents Required
+                    </div>
+                  )}
+                </div>
 
                   <CardContent className="p-4 space-y-3">
                     {/* Profile Section */}
@@ -575,12 +656,12 @@ export function BulkSendToClientModal({
             <div className="flex items-center gap-4">
               <div className="flex flex-col">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Reviewing {candidates.length} candidates
+                  Reviewing {visibleCandidates.length} candidates
                 </p>
-                {Object.keys(selectedDocsByCandidate).length < candidates.length && (
+                {Object.keys(selectedDocsByCandidate).length < visibleCandidates.length && (
                   <p className="text-[11px] text-rose-500 font-bold flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    {candidates.length - Object.keys(selectedDocsByCandidate).length} pending document selection
+                    {visibleCandidates.length - Object.keys(selectedDocsByCandidate).length} pending document selection
                   </p>
                 )}
               </div>
@@ -685,6 +766,17 @@ export function BulkSendToClientModal({
       />
     )}
 
+    {/* Client Forwarding History Modal (opens for selected candidate) */}
+    {historyCandidate && (
+      <ClientForwardHistoryModal
+        isOpen={historyOpen}
+        onOpenChange={setHistoryOpen}
+        candidateId={historyCandidate.candidate?.id}
+        projectId={historyCandidate.project?.id}
+        roleCatalogId={historyCandidate.roleNeeded?.roleCatalog?.id}
+        candidateName={`${historyCandidate.candidate?.firstName || ""} ${historyCandidate.candidate?.lastName || ""}`}
+      />
+    )}
     {/* PDF Viewer Modal */}
     <PDFViewer
       fileUrl={selectedPdfUrl}

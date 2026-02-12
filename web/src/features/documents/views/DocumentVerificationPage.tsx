@@ -617,7 +617,7 @@ export default function DocumentVerificationPage() {
       </div>
       <div className="flex items-center gap-3">
         {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
-        {statusFilter === "screening_approved" && selectedCandidateIds.size > 0 && (
+        {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && selectedCandidateIds.size > 0 && (
           <Button
             onClick={handleBulkSendToClient}
             className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -654,7 +654,7 @@ export default function DocumentVerificationPage() {
     <Table>
       <TableHeader>
         <TableRow className="bg-gray-50/50 border-b border-gray-200">
-          {statusFilter === "screening_approved" && (
+          {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600 w-12">
               <Checkbox
                 checked={selectAll}
@@ -720,7 +720,7 @@ export default function DocumentVerificationPage() {
               )}
               data-tooltip={statusFilter === "verification_in_progress_document" ? "Please verify the documents" : undefined}
             >
-              {statusFilter === "screening_approved" && (
+              {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
                 <TableCell className="px-6 py-5 w-12 relative group">
                   {candidateProject.docsStatus === "pending" ? (
                     <div className="flex items-center justify-center">
