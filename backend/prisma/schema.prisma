@@ -1732,6 +1732,7 @@ model DocumentForwardHistory {
   roleCatalogId   String?
   sendType        String   // "merged" or "individual"
   documentDetails Json     // Array of object with {id, fileName, fileUrl}
+  isBulk          Boolean  @default(false)
   status          String   @default("pending") // "pending", "sent", "failed"
   error           String?
   notes           String?

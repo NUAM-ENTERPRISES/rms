@@ -36,24 +36,24 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
-  Info,
+  Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
 import { useGetApprovedScreeningDocumentsQuery } from "@/features/screening-coordination";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
-import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
 import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
+import { BulkSendForInterviewModal } from "../components/BulkSendForInterviewModal";
+import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryModal";
 
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
   const canReadDocuments = useCan("read:documents");
-  const { isRecruiter } = usePermissions();
   const user = useAppSelector((s) => s.auth.user);
   // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
   const isStrictRecruiter = (user?.roles || []).includes("Recruiter");
@@ -80,6 +80,9 @@ export default function DocumentVerificationPage() {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [bulkSendModalOpen, setBulkSendModalOpen] = useState(false);
+  const [bulkInterviewModalOpen, setBulkInterviewModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyModalData, setHistoryModalData] = useState<any>(null);
 
   const handleProjectRoleChange = useCallback((value: ProjectRoleFilterValue) => {
     setProjectRoleFilter(value);
@@ -94,7 +97,10 @@ export default function DocumentVerificationPage() {
       newSelected.add(candidateId);
     }
     setSelectedCandidateIds(newSelected);
-    setSelectAll(newSelected.size === candidateProjects.length && candidateProjects.length > 0);
+    
+    // Check against only selectable candidates
+    const selectableCandidates = candidateProjects.filter(cp => !cp.isInInterview && cp.docsStatus !== "pending");
+    setSelectAll(newSelected.size === selectableCandidates.length && selectableCandidates.length > 0);
   };
 
   const handleSelectAll = () => {
@@ -102,9 +108,13 @@ export default function DocumentVerificationPage() {
       setSelectedCandidateIds(new Set());
       setSelectAll(false);
     } else {
-      const allIds = new Set(candidateProjects.map((cp: any) => cp.id || cp.candidateProjectMapId));
-      setSelectedCandidateIds(allIds);
-      setSelectAll(true);
+      // Only select candidates that are NOT in interview and NOT pending
+      const selectableIds = candidateProjects
+        .filter(cp => !cp.isInInterview && cp.docsStatus !== "pending")
+        .map((cp: any) => cp.id || cp.candidateProjectMapId);
+      
+      setSelectedCandidateIds(new Set(selectableIds));
+      setSelectAll(selectableIds.length > 0);
     }
   };
 
@@ -193,7 +203,7 @@ export default function DocumentVerificationPage() {
   let totalPages = 1;
 
   if (statusFilter === "verification_in_progress_document") {
-    candidateProjects = verificationData?.data?.candidateProjects || [];
+    candidateProjects = verificationData?.data?.items || verificationData?.data?.candidateProjects || [];
     totalCandidates = verificationData?.data?.pagination?.total || candidateProjects.length;
     totalPages = verificationData?.data?.pagination?.totalPages || 1;
   } else if (statusFilter === "screening_approved") {
@@ -205,6 +215,8 @@ export default function DocumentVerificationPage() {
       screeningConductedAt: item.conductedAt,
       screeningRemarks: item.remarks,
       screeningId: item.id,
+      sendToClient: item.sendToClient,
+      isInInterview: item.isInInterview,
       documentRequirements: item.candidateProjectMap?.documentRequirements || item.candidateProjectMap?.project?.documentRequirements || []
     }));
     totalCandidates = approvedScreeningData?.data?.pagination?.total || candidateProjects.length;
@@ -228,18 +240,11 @@ export default function DocumentVerificationPage() {
           documentVerifications: [],
           recruiter: it.recruiter || cpm.recruiter,
           screening: it.screening || cpm.screening,
+          sendToClient: it.sendToClient || cpm.sendToClient,
+          roleNeeded: it.roleNeeded || cpm.roleNeeded,
+          // preserve interview state when present so UI can disable selection
+          isInInterview: (cpm as any).isInInterview || it.isInInterview || false,
         };
-
-        existing.documentVerifications.push({
-          id: it.id,
-          status: it.status,
-          notes: it.notes,
-          rejectionReason: it.rejectionReason,
-          verifiedAt: it.status === "verified" ? it.updatedAt || it.createdAt : undefined,
-          rejectedAt: it.status === "rejected" ? it.updatedAt || it.createdAt : undefined,
-          document: it.document,
-        });
-
         map.set(id, existing);
         return;
       }
@@ -256,6 +261,10 @@ export default function DocumentVerificationPage() {
         documentVerifications: [],
         recruiter: it.recruiter || null,
         screening: it.screening || null,
+        sendToClient: it.sendToClient || null,
+        roleNeeded: it.roleNeeded || null,
+        // ensure interview flag is preserved when backend provides it
+        isInInterview: (it as any).isInInterview || false,
       };
 
       if (Array.isArray(it.documentVerifications) && it.documentVerifications.length > 0) {
@@ -303,12 +312,6 @@ export default function DocumentVerificationPage() {
     );
   }
 
-  const handleVerifyCandidate = (candidateProject: any) => {
-    setSelectedCandidate(candidateProject);
-    setVerificationAction("verify");
-    setVerificationDialog(true);
-  };
-
   const handleRejectCandidate = (candidateProject: any) => {
     setSelectedCandidate(candidateProject);
     setVerificationAction("reject");
@@ -337,8 +340,8 @@ export default function DocumentVerificationPage() {
   const getStatusCounts = () => {
     // Prefer server-supplied counts when available. We merge counts from both
     // the verification (pending) endpoint and the verified/rejected endpoint.
-    const verificationCounts = (verificationData?.data as any)?.counts || {};
-    const verifiedCounts = (verifiedRejectedData?.data as any)?.counts || {};
+    const verificationCounts = (verificationData?.data)?.counts || {};
+    const verifiedCounts = (verifiedRejectedData?.data)?.counts || {};
     const screeningApprovedTotal = (approvedScreeningData?.data as any)?.pagination?.total || 0;
 
     const pending = Number(
@@ -365,7 +368,8 @@ export default function DocumentVerificationPage() {
   const selectedCandidatesForModal = useMemo(() => {
     return candidateProjects.filter(cp => 
       selectedCandidateIds.has(cp.id || cp.candidateProjectMapId) &&
-      cp.docsStatus !== "pending" // Exclude candidates with pending documents
+      cp.docsStatus !== "pending" && // Exclude candidates with pending documents
+      !cp.isInInterview // Exclude candidates already in interview
     );
   }, [candidateProjects, selectedCandidateIds]);
 
@@ -617,14 +621,23 @@ export default function DocumentVerificationPage() {
       </div>
       <div className="flex items-center gap-3">
         {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
-        {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && selectedCandidateIds.size > 0 && (
-          <Button
-            onClick={handleBulkSendToClient}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            size="sm"
-          >
-            Bulk Send to Client ({selectedCandidateIds.size})
-          </Button>
+        {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && selectedCandidatesForModal.length > 0 && (
+          <>
+            <Button
+              onClick={() => setBulkInterviewModalOpen(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              size="sm"
+            >
+              Bulk Send for Interview ({selectedCandidatesForModal.length})
+            </Button>
+            <Button
+              onClick={handleBulkSendToClient}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              size="sm"
+            >
+              Bulk Send to Client ({selectedCandidatesForModal.length})
+            </Button>
+          </>
         )}
       </div>
     </div>
@@ -695,6 +708,11 @@ export default function DocumentVerificationPage() {
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             {statusFilter === "screening_approved" ? "Docs Status" : "Screening Details"}
           </TableHead>
+          {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+              Sent to Client
+            </TableHead>
+          )}
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             Recruiter
           </TableHead>
@@ -722,10 +740,17 @@ export default function DocumentVerificationPage() {
             >
               {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
                 <TableCell className="px-6 py-5 w-12 relative group">
-                  {candidateProject.docsStatus === "pending" ? (
+                  {candidateProject.isInInterview ? (
                     <div className="flex items-center justify-center">
                       <XCircle className="h-5 w-5 text-red-500" />
-                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 hidden group-hover:block z-50 bg-gray-900 text-white text-xs px-3 py-2 rounded-md whitespace-nowrap pointer-events-none">
+                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 hidden group-hover:block z-50 bg-gray-900 text-white text-xs px-3 py-2 rounded-md whitespace-nowrap pointer-events-none shadow-xl border border-gray-800">
+                        Candidate already in interview
+                      </div>
+                    </div>
+                  ) : candidateProject.docsStatus === "pending" ? (
+                    <div className="flex items-center justify-center">
+                      <XCircle className="h-5 w-5 text-red-500" />
+                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 hidden group-hover:block z-50 bg-gray-900 text-white text-xs px-3 py-2 rounded-md whitespace-nowrap pointer-events-none shadow-xl border border-gray-800">
                         Documents still pending
                       </div>
                     </div>
@@ -908,6 +933,55 @@ export default function DocumentVerificationPage() {
                 )}
               </TableCell>
 
+              {/* Sent to Client Column (Screening Approved & Verified only) */}
+              {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
+                <TableCell className="px-6 py-5">
+                  {candidateProject.sendToClient ? (
+                    <div className="flex items-center gap-2 group/sent">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-medium text-gray-900 truncate max-w-[120px]">
+                          {candidateProject.sendToClient.recipientEmail}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <Badge 
+                            variant="secondary" 
+                            className={cn(
+                              "text-[9px] px-1 py-0 uppercase font-bold",
+                              candidateProject.sendToClient.status === 'sent' ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                            )}
+                          >
+                            {candidateProject.sendToClient.status}
+                          </Badge>
+                          {candidateProject.sendToClient.isBulk && (
+                            <Badge className="bg-blue-50 text-blue-700 text-[9px] px-1 py-0 font-bold border-blue-100">
+                              Bulk
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover/sent:opacity-100 transition-opacity"
+                        onClick={() => {
+                          setHistoryModalData({
+                            candidateId: candidateProject.candidate.id,
+                            projectId: candidateProject.project.id,
+                            roleCatalogId: candidateProject.roleNeeded?.roleCatalog?.id,
+                            candidateName: `${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName}`
+                          });
+                          setHistoryModalOpen(true);
+                        }}
+                      >
+                        <Eye className="h-3.5 w-3.5 text-blue-600" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
+                </TableCell>
+              )}
+
               {/* Recruiter */}
               <TableCell className="px-6 py-5 text-sm text-gray-600">
                 {candidateProject.recruiter?.name || "Unassigned"}
@@ -1066,6 +1140,35 @@ export default function DocumentVerificationPage() {
           refetch();
         }}
       />
+
+      {/* Bulk Send for Interview Modal */}
+      <BulkSendForInterviewModal
+        isOpen={bulkInterviewModalOpen}
+        onClose={() => {
+          setBulkInterviewModalOpen(false);
+          setSelectedCandidateIds(new Set());
+          setSelectAll(false);
+        }}
+        candidates={selectedCandidatesForModal}
+        onSuccess={() => {
+          // Reset selection after successful send
+          setSelectedCandidateIds(new Set());
+          setSelectAll(false);
+          refetch();
+        }}
+      />
+
+      {/* Forward History Modal */}
+      {historyModalData && (
+        <ClientForwardHistoryModal
+          isOpen={historyModalOpen}
+          onOpenChange={setHistoryModalOpen}
+          candidateId={historyModalData.candidateId}
+          projectId={historyModalData.projectId}
+          roleCatalogId={historyModalData.roleCatalogId}
+          candidateName={historyModalData.candidateName}
+        />
+      )}
     </div>
   );
 }

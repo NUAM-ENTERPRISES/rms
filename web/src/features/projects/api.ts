@@ -674,6 +674,29 @@ export const projectsApi = baseApi.injectEndpoints({
         params: params || {},
       }),
     }),
+
+    // Bulk send candidates for interview
+    bulkSendForInterview: builder.mutation<
+      ApiResponse<any>,
+      {
+        projectId: string;
+        candidateIds: string[];
+        type: "interview_assigned";
+        notes?: string;
+      }
+    >({
+      query: (data) => ({
+        url: "/candidate-projects/bulk-send-for-interview",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+        "Interview",
+        "Candidate",
+      ],
+    }),
   }),
 });
 
@@ -697,4 +720,5 @@ export const {
   useGetProjectRoleCatalogQuery,
   useCheckBulkCandidateEligibilityQuery,
   useGetRoleDepartmentsQuery,
+  useBulkSendForInterviewMutation,
 } = projectsApi;

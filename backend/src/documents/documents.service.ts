@@ -1454,11 +1454,17 @@ export class DocumentsService {
     // ------------------------------------------------------
 
     // Make counts respect the optional recruiter/project/role filters so that
-    // results reflect the scope requested by the client.
+    // results reflect the scope requested by the client. Also apply the
+    // `screening` filter to the counts when requested so counts match items.
     const countBase: any = {};
     if (recruiterId) countBase.recruiterId = recruiterId;
     if (projectId) countBase.projectId = projectId;
     if (roleCatalogId) countBase.roleNeeded = { roleCatalogId };
+
+    // Apply screening filter to counts when requested
+    if (screening === 'true' || screening === true) {
+      countBase.screenings = { some: { decision: 'approved' } };
+    }
 
     const [pendingCount, verifiedCount, rejectedCount] = await Promise.all([
       this.prisma.candidateProjects.count({
@@ -1495,16 +1501,37 @@ export class DocumentsService {
       };
     });
 
+    // Attach latest `sendToClient` (DocumentForwardHistory) per candidate-project-role
+    const itemsWithSendToClient = await Promise.all(
+      candidateProjectsWithLatestScreening.map(async (cp: any) => {
+        const candidateId = cp.candidate?.id;
+        const projectId = cp.project?.id;
+        const roleCatalogId = cp.roleNeeded?.roleCatalog?.id || null;
+
+        const latestForward = await this.prisma.documentForwardHistory.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleCatalogId: roleCatalogId || null,
+          },
+          orderBy: { sentAt: 'desc' },
+        });
+
+        return {
+          ...cp,
+          sendToClient: latestForward ?? null,
+        };
+      }),
+    );
+
     return {
-      candidateProjects: candidateProjectsWithLatestScreening,
+      items: itemsWithSendToClient,
       pagination: {
         page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
       },
-
-      // NEW SECTION ADDED (frontend won’t break)
       counts: {
         pending: pendingCount,
         verified: verifiedCount,
@@ -2244,13 +2271,43 @@ export class DocumentsService {
           ? ['rejected']
           : ['verified', 'rejected'];
 
-    // completed nomination sub-statuses
+    // completed nomination sub-statuses (include everything verified and beyond for 'verified' status)
+    const verifiedStatuses = [
+      'documents_verified',
+      'interview_assigned',
+      'interview_scheduled',
+      'interview_rescheduled',
+      'interview_completed',
+      'interview_passed',
+      'interview_failed',
+      'screening_assigned',
+      'screening_scheduled',
+      'screening_completed',
+      'screening_passed',
+      'screening_failed',
+      'training_assigned',
+      'training_in_progress',
+      'training_completed',
+      'ready_for_reassessment',
+      'interview_selected',
+      'transfered_to_processing',
+      'processing_in_progress',
+      'processing_completed',
+      'processing_failed',
+      'ready_for_final',
+      'hired',
+      'rejected_interview',
+      'rejected_selection',
+      'withdrawn',
+      'on_hold',
+    ];
+
     const completedStatuses =
       status === 'verified'
-        ? ['documents_verified']
+        ? verifiedStatuses
         : status === 'rejected'
           ? ['rejected_documents']
-          : ['documents_verified', 'rejected_documents'];
+          : [...verifiedStatuses, 'rejected_documents'];
 
     // Base where clause applied to counts and list
     const baseWhere: any = {
@@ -2283,6 +2340,12 @@ export class DocumentsService {
     if (recruiterId) countBase.recruiterId = recruiterId;
     if (projectId) countBase.projectId = projectId;
     if (roleCatalogId) countBase.roleNeeded = { roleCatalogId };
+
+    // Apply screening filter to counts when requested so counts align with the
+    // paginated `candidateProjects` result (screening === 'true').
+    if (screening === 'true' || screening === true) {
+      countBase.screenings = { some: { decision: 'approved' } };
+    }
 
     // Build candidateProjects where (one item per nomination)
     const cpWhere: any = {
@@ -2383,7 +2446,7 @@ export class DocumentsService {
       this.prisma.candidateProjects.count({
         where: {
           ...countBase,
-          subStatus: { name: 'documents_verified' },
+          subStatus: { name: { in: verifiedStatuses } },
         },
       }),
       this.prisma.candidateProjects.count({
@@ -2418,8 +2481,55 @@ export class DocumentsService {
       };
     });
 
+    // Determine `isInInterview` for candidate-projects by checking status history (batched)
+    const cpIds = items.map((it: any) => it.candidateProjectMapId).filter(Boolean);
+    const interviewSubStatuses = [
+      'interview_assigned',
+      'interview_scheduled',
+      'interview_rescheduled',
+      'interview_completed',
+      'interview_passed',
+      'interview_failed',
+    ];
+
+    const interviewHistories = cpIds.length
+      ? await this.prisma.candidateProjectStatusHistory.findMany({
+          where: {
+            candidateProjectMapId: { in: cpIds },
+            subStatus: { name: { in: interviewSubStatuses } },
+          },
+          select: { candidateProjectMapId: true },
+        })
+      : [];
+
+    const inInterviewSet = new Set(interviewHistories.map((h) => h.candidateProjectMapId));
+
+    // Attach latest `sendToClient` (DocumentForwardHistory) per candidate-project-role and the `isInInterview` flag
+    const itemsWithSendToClient = await Promise.all(
+      items.map(async (it) => {
+        const candidateId = it.candidate?.id;
+        const projectId = it.project?.id;
+        const roleCatalogId = it.roleNeeded?.roleCatalog?.id || null;
+
+        const latestForward = await this.prisma.documentForwardHistory.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleCatalogId: roleCatalogId || null,
+          },
+          orderBy: { sentAt: 'desc' },
+        });
+
+        return {
+          ...it,
+          sendToClient: latestForward ?? null,
+          isInInterview: Boolean(inInterviewSet.has(it.candidateProjectMapId)),
+        };
+      }),
+    );
+
     return {
-      items,
+      items: itemsWithSendToClient,
       pagination: {
         page,
         limit: Number(limit),
@@ -3412,7 +3522,8 @@ export class DocumentsService {
           documentIds: selection.documentIds,
           notes,
           roleCatalogId: selection.roleCatalogId,
-          senderId
+          senderId,
+          isBulk: true,
         });
         results.push({ candidateId: selection.candidateId, success: true });
       } catch (error) {
@@ -3447,6 +3558,7 @@ export class DocumentsService {
     notes?: string;
     roleCatalogId?: string;
     senderId: string;
+    isBulk?: boolean;
   }) {
     const { 
       candidateId, 
@@ -3456,7 +3568,8 @@ export class DocumentsService {
       documentIds, 
       notes, 
       roleCatalogId,
-      senderId
+      senderId,
+      isBulk = false,
     } = params;
 
     // 1. Validate candidate
@@ -3514,7 +3627,8 @@ export class DocumentsService {
 
     // 4. Create Audit Trail Entry (History)
     const history = await this.prisma.documentForwardHistory.create({
-      data: {
+      // cast `data` to any to allow `isBulk` until Prisma client types are regenerated
+      data: ({
         senderId,
         recipientEmail,
         candidateId,
@@ -3522,9 +3636,10 @@ export class DocumentsService {
         roleCatalogId: roleCatalogId || null,
         sendType: sendType,
         documentDetails: attachments as any,
+        isBulk: Boolean(isBulk),
         notes,
         status: 'pending',
-      },
+      } as any),
     });
 
     // 5. Queue the job
@@ -3580,6 +3695,80 @@ export class DocumentsService {
   }
 
   /**
+   * Get project-level history of document forwardings (search + pagination)
+   */
+  async getProjectForwardHistory(query: {
+    projectId: string;
+    roleCatalogId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { projectId, roleCatalogId, search, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    // Fetch project once (returned at top-level)
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        title: true,
+        client: { select: { id: true, name: true, email: true, phone: true } },
+      },
+    });
+
+    const where: any = {
+      projectId,
+      ...(roleCatalogId && { roleCatalogId }),
+    };
+
+    if (search) {
+      where.OR = [
+        { recipientEmail: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+        { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
+        { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.documentForwardHistory.count({ where }),
+      this.prisma.documentForwardHistory.findMany({
+        where,
+        include: {
+          sender: { select: { id: true, name: true, email: true } },
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              countryCode: true,
+              mobileNumber: true,
+              profileImage: true,
+            },
+          },
+          roleCatalog: { select: { id: true, label: true } },
+        },
+        orderBy: { sentAt: 'desc' },
+        skip,
+        take: Number(limit),
+      }),
+    ]);
+
+    return {
+      project,
+      items,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
    * Get history of document forwardings with search and pagination
    */
   async getDocumentForwardHistory(query: {
@@ -3616,6 +3805,37 @@ export class DocumentsService {
               id: true,
               name: true,
               email: true,
+            },
+          },
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              countryCode: true,
+              mobileNumber: true,
+              profileImage: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                },
+              },
+            },
+          },
+          roleCatalog: {
+            select: {
+              id: true,
+              label: true,
             },
           },
         },

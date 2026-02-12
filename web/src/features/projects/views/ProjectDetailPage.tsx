@@ -1545,7 +1545,7 @@ export default function ProjectDetailPage() {
                     label: "Interview",
                     description:
                       "Full interview with the hiring team to assess skills and fit.",
-                    disabled: projectRequiredScreening,
+                    // disabled: projectRequiredScreening, // temporarily allow interview even when screening is required
                   },
                   {
                     value: "training",
@@ -1553,7 +1553,7 @@ export default function ProjectDetailPage() {
                     description:
                       "Assign basic training before interviews when candidates need upskilling.",
                   },
-                ].map((opt) => {
+                ].map((opt: { value: string; label: string; description: string; disabled?: boolean }) => {
                   const selected = interviewConfirm.type === opt.value;
                   const isDisabled = opt.disabled || false;
                   return (
@@ -1600,11 +1600,11 @@ export default function ProjectDetailPage() {
                         >
                           {opt.description}
                         </div>
-                        {isDisabled && opt.value === "interview" && projectRequiredScreening && (
+                        {/* {isDisabled && opt.value === "interview" && projectRequiredScreening && (
                           <div className="text-xs text-red-600 mt-1.5 font-medium">
                             ⚠ Screening is required for this project. Please complete screening before interview.
                           </div>
-                        )}
+                        )} */}
                       </div>
                     </label>
                   );

@@ -12,6 +12,7 @@ import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
+import { BulkSendForInterviewDto } from './dto/bulk-send-for-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
@@ -1773,6 +1774,47 @@ export class CandidateProjectsService {
     // Optionally we could publish an outbox event here if needed
 
     return candidateProject;
+  }
+
+  /**
+   * Bulk send candidates for interview
+   * Iterates through candidate IDs and calls sendForInterview for each
+   */
+  async bulkSendForInterview(dto: BulkSendForInterviewDto, userId: string) {
+    const { candidateIds, projectId, type, recruiterId, notes } = dto;
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    for (const candidateId of candidateIds) {
+      try {
+        const result = await this.sendForInterview(
+          {
+            candidateId,
+            projectId,
+            type,
+            recruiterId,
+            notes,
+          },
+          userId,
+        );
+        results.push(result);
+      } catch (error) {
+        this.logger.error(
+          `Failed to send candidate ${candidateId} for interview: ${error.message}`,
+        );
+        errors.push({
+          candidateId,
+          error: error.message,
+        });
+      }
+    }
+
+    return {
+      successCount: results.length,
+      errorCount: errors.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }
 
   /**

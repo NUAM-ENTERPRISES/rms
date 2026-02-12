@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -21,7 +20,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Users,
   User,
   Mail,
   Phone,
@@ -41,11 +39,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { PDFViewer } from "@/components/molecules";
 import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { BulkViewDocumentsModal } from "./BulkViewDocumentsModal";
 import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
-import { useGetMergedDocumentQuery, useBulkForwardToClientMutation } from "../api";
+import { useBulkForwardToClientMutation } from "../api";
 
 interface BulkSendToClientModalProps {
   isOpen: boolean;
@@ -74,6 +71,7 @@ interface BulkSendToClientModalProps {
     };
     roleNeeded?: {
       roleCatalog?: {
+        id: string;
         label: string;
       };
     };
@@ -95,10 +93,6 @@ export function BulkSendToClientModal({
   const [selectedCandidateForMerge, setSelectedCandidateForMerge] = useState<any>(null);
   const [viewDocumentsModalOpen, setViewDocumentsModalOpen] = useState(false);
   const [selectedCandidateForViewDocs, setSelectedCandidateForViewDocs] = useState<any>(null);
-  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
-  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string>("");
-  const [selectedPdfName, setSelectedPdfName] = useState<string>("");
-  const [mergedDocsData, setMergedDocsData] = useState<Record<string, any>>({});
   const [isFetchingMergedDocs, setIsFetchingMergedDocs] = useState(false);
   const [selectedDocsByCandidate, setSelectedDocsByCandidate] = useState<Record<string, string[]>>({});
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -113,7 +107,7 @@ export function BulkSendToClientModal({
   // Local visibility set so user can remove candidates from the batch before sending
   const [visibleCandidateKeys, setVisibleCandidateKeys] = useState<Set<string>>(new Set());
 
-  const [bulkForward, { isLoading: isBulkForwarding }] = useBulkForwardToClientMutation();
+  const [bulkForward] = useBulkForwardToClientMutation();
 
   const removeCandidate = (key: string) => {
     setVisibleCandidateKeys((prev) => {
@@ -167,7 +161,6 @@ export function BulkSendToClientModal({
       setNotes("");
       setIsEditingEmail(false);
       setSelectedDocsByCandidate({});
-      setMergedDocsData({});
       setCurrentPage(1);
       setVisibleCandidateKeys(new Set());
     }
@@ -238,9 +231,9 @@ export function BulkSendToClientModal({
         const candidateKey = candidate.id || candidate.candidateProjectMapId || "";
         const selectedDocs = selectedDocsByCandidate[candidateKey] || [];
         
-        const sendType = selectedDocs.includes("merged") 
+        const sendType = (selectedDocs.includes("merged") 
           ? "merged" 
-          : "individual";
+          : "individual") as "merged" | "individual";
 
         return {
           candidateId: candidate.candidate.id,
@@ -346,7 +339,7 @@ export function BulkSendToClientModal({
                         <p className="text-slate-500 text-[8px] font-bold uppercase tracking-wider">Client Name</p>
                         <p className="text-slate-900 dark:text-white text-xs font-semibold">{commonClient.name || "N/A"}</p>
                       </div>
-                      {commonClient.phone && (
+                      {'phone' in commonClient && commonClient.phone && (
                         <div className="space-y-0.5">
                           <p className="text-slate-500 text-[8px] font-bold uppercase tracking-wider">Contact</p>
                           <p className="text-slate-900 dark:text-white text-xs font-semibold truncate">{commonClient.phone}</p>
@@ -737,7 +730,7 @@ export function BulkSendToClientModal({
         candidateId={selectedCandidateForMerge.candidate.id}
         projectId={selectedCandidateForMerge.project.id}
         roleCatalogId={selectedCandidateForMerge.roleNeeded?.roleCatalog?.id || ""}
-        onViewDocument={(url, name) => {
+        onViewDocument={(url) => {
           window.open(url, '_blank');
         }}
       />
@@ -777,17 +770,6 @@ export function BulkSendToClientModal({
         candidateName={`${historyCandidate.candidate?.firstName || ""} ${historyCandidate.candidate?.lastName || ""}`}
       />
     )}
-    {/* PDF Viewer Modal */}
-    <PDFViewer
-      fileUrl={selectedPdfUrl}
-      fileName={selectedPdfName}
-      isOpen={pdfViewerOpen}
-      onClose={() => setPdfViewerOpen(false)}
-      showDownload={true}
-      showZoomControls={true}
-      showRotationControls={true}
-      showFullscreenToggle={true}
-    />
   </>
   );
 }

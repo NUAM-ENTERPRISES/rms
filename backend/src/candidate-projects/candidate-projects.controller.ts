@@ -25,6 +25,7 @@ import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
 import { QueryCandidateProjectsDto } from './dto/query-candidate-projects.dto';
 import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
+import { BulkSendForInterviewDto } from './dto/bulk-send-for-interview.dto';
 import { SendToScreeningDto } from './dto/send-to-screening.dto';
 import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
@@ -477,6 +478,28 @@ export class CandidateProjectsController {
       success: true,
       data,
       message: 'Candidate sent for interview successfully',
+    };
+  }
+
+  @Post('bulk-send-for-interview')
+  @Permissions('manage:candidates', 'schedule:interviews')
+  @ApiOperation({
+    summary: 'Bulk send candidates for interview (screening or client)',
+    description:
+      "Bulk version of send-for-interview. Creates/updates candidate-project assignments for multiple candidates.",
+  })
+  @ApiResponse({ status: 200, description: 'Bulk operation completed' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  async bulkSendForInterview(@Body() dto: BulkSendForInterviewDto, @Request() req: any) {
+    const result = await this.candidateProjectsService.bulkSendForInterview(
+      dto,
+      req.user.sub,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Bulk interview assignment completed',
     };
   }
 }

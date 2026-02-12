@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,23 +24,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useGetForwardingHistoryQuery } from "../api";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { useDebounce } from "@/hooks/useDebounce";
+import { ImageViewer } from "@/components/molecules/ImageViewer";
 
 interface ClientForwardHistoryModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  candidateId: string;
   projectId: string;
+  candidateId?: string;
   roleCatalogId?: string;
-  candidateName: string;
+  candidateName?: string;
 }
 
 export function ClientForwardHistoryModal({
   isOpen,
   onOpenChange,
-  candidateId,
   projectId,
+  candidateId,
   roleCatalogId,
   candidateName,
 }: ClientForwardHistoryModalProps) {
@@ -50,8 +51,8 @@ export function ClientForwardHistoryModal({
 
   const { data: historyResponse, isLoading } = useGetForwardingHistoryQuery(
     { 
+      projectId,
       candidateId, 
-      projectId, 
       roleCatalogId, 
       page, 
       limit: 5,
@@ -62,6 +63,7 @@ export function ClientForwardHistoryModal({
 
   const history = historyResponse?.data?.items || [];
   const meta = historyResponse?.data?.meta;
+  const project = historyResponse?.data?.project;
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -91,9 +93,16 @@ export function ClientForwardHistoryModal({
             </div>
             Forwarding History
           </DialogTitle>
-          <p className="text-slate-400 text-sm mt-1">
-            Audit trail of documents sent for {candidateName}.
-          </p>
+          <div className="mt-2 space-y-1">
+            {project && (
+              <p className="text-blue-400 text-xs font-bold uppercase tracking-wider">
+                Project: {project.title} {project.client?.name ? `• ${project.client.name}` : ''}
+              </p>
+            )}
+            <p className="text-slate-400 text-sm">
+              Audit trail of documents sent{candidateName ? ` for ${candidateName}` : ' for this project'}.
+            </p>
+          </div>
         </DialogHeader>
 
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex gap-3">
@@ -125,9 +134,24 @@ export function ClientForwardHistoryModal({
               <div key={item.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-slate-400" />
-                      <span className="font-bold text-slate-800 break-all">{item.recipientEmail}</span>
+                    <div className="flex items-center gap-3">
+                      <ImageViewer 
+                        src={item.candidate?.profileImage} 
+                        title={`${item.candidate?.firstName || ''} ${item.candidate?.lastName || ''}`}
+                        className="h-10 w-10 border border-slate-100 shadow-sm"
+                        enableHoverPreview={true}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-800">
+                          {item.candidate?.firstName} {item.candidate?.lastName}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Mail className="h-3 w-3 text-slate-400" />
+                          <span className="text-[11px] text-slate-500 font-medium break-all">
+                            To: <span className="text-slate-700">{item.recipientEmail}</span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     {getStatusBadge(item.status)}
                   </div>
@@ -139,11 +163,21 @@ export function ClientForwardHistoryModal({
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <FileText className="h-3.5 w-3.5" />
-                      <span>Type: <Badge variant="secondary" className="text-[10px] capitalize px-1 py-0">{item.sendType}</Badge></span>
+                      <div className="flex items-center gap-1.5">
+                        <span>Type: <Badge variant="secondary" className="text-[10px] capitalize px-1 py-0">{item.sendType}</Badge></span>
+                        {item.isBulk && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] px-1 py-0 border-blue-200">Bulk</Badge>}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600 col-span-2">
                       <Calendar className="h-3.5 w-3.5" />
-                      <span>{safeFormatDate(item.sentAt || item.createdAt)}</span>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{safeFormatDate(item.sentAt || item.createdAt)}</span>
+                        {item.roleCatalog && (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
+                            {item.roleCatalog.label}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

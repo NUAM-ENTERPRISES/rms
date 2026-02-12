@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -38,31 +37,22 @@ import {
   FileText,
   CheckCircle,
   XCircle,
-  Clock,
   Eye,
   RefreshCw,
   AlertCircle,
-  User,
   Calendar,
-  UserCheck,
   Upload,
   ArrowLeft,
-  ChevronDown,
-  Flag,
   FileIcon,
-  Check,
-  X,
   FileX,
   CheckCircle2,
   Briefcase,
-  MapPin,
   Users,
   FileCheck,
   Building2,
   Shield,
   Scissors,
   Phone,
-  ClipboardList,
   Mail,
   Cake,
   Code,
@@ -71,7 +61,6 @@ import {
 import { CANDIDATE_PROJECT_STATUS } from "@/constants/statuses";
 import {
   useGetCandidateProjectRequirementsQuery,
-  useGetCandidateEligibilityQuery,
   useGetMatchmakingProcessQuery,
   useReuseDocumentMutation,
   useCompleteVerificationMutation,
@@ -120,8 +109,6 @@ export default function CandidateDocumentVerificationPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDocType, setUploadDocType] = useState<string>("");
   // (no reupload optimistic state) we keep uploads simple — user can replace files
-  const [isVerifyingAll, setIsVerifyingAll] = useState(false);
-  const [isRejectingAll, setIsRejectingAll] = useState(false);
   const [isBulkConfirmationOpen, setIsBulkConfirmationOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"verify" | "reject" | null>(null);
   const [bulkNotes, setBulkNotes] = useState("");
@@ -188,20 +175,13 @@ export default function CandidateDocumentVerificationPage() {
     // Add compatibility for firstName/lastName if only name is present
     candidate: candidateProjectMapping?.candidate ? {
       ...candidateProjectMapping.candidate,
-      firstName: candidateProjectMapping.candidate.firstName || candidateProjectMapping.candidate.name?.split(' ')[0] || "",
-      lastName: candidateProjectMapping.candidate.lastName || candidateProjectMapping.candidate.name?.split(' ').slice(1).join(' ') || ""
+      firstName: (candidateProjectMapping.candidate as any).firstName || candidateProjectMapping.candidate.name?.split(' ')[0] || "",
+      lastName: (candidateProjectMapping.candidate as any).lastName || candidateProjectMapping.candidate.name?.split(' ').slice(1).join(' ') || ""
     } : undefined
   } : null;
 
   // Eligibility and Matchmaking data
-  const { data: eligibilityData } = useGetCandidateEligibilityQuery(
-    {
-      candidateId: candidateId!,
-      projectId: selectedProjectId,
-      roleId: selectedProject?.roleNeeded?.id || "",
-    },
-    { skip: !selectedProjectId || !selectedProject?.roleNeeded?.id }
-  );
+
 
   const { data: matchmakingData } = useGetMatchmakingProcessQuery(
     {
@@ -331,7 +311,6 @@ export default function CandidateDocumentVerificationPage() {
       return;
     }
 
-    setIsVerifyingAll(true);
     try {
       // Get all pending verifications
       const pendingVerifications = verifications.filter(
@@ -362,8 +341,6 @@ export default function CandidateDocumentVerificationPage() {
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to verify some documents");
-    } finally {
-      setIsVerifyingAll(false);
     }
   };
 
@@ -374,7 +351,6 @@ export default function CandidateDocumentVerificationPage() {
       return;
     }
 
-    setIsRejectingAll(true);
     try {
       // Get all pending verifications
       const pendingVerifications = verifications.filter(
@@ -405,8 +381,6 @@ export default function CandidateDocumentVerificationPage() {
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to reject some documents");
-    } finally {
-      setIsRejectingAll(false);
     }
   };
 
@@ -764,7 +738,7 @@ export default function CandidateDocumentVerificationPage() {
               </div>
               <div className="flex items-center gap-2">
                 {/* Bulk Actions moved here */}
-                {canVerifyDocuments && !summary.isDocumentationReviewed && (
+                {/* {canVerifyDocuments && !summary.isDocumentationReviewed && (
                   <div className="flex gap-2 mr-2">
                     {summary.totalSubmitted > 0 && summary.totalVerified < summary.totalSubmitted && (
                       <Button
@@ -790,7 +764,7 @@ export default function CandidateDocumentVerificationPage() {
                       </Button>
                     )}
                   </div>
-                )}
+                )} */}
                 <Badge className="bg-blue-100 text-blue-700 text-xs font-semibold">
                   {candidate.currentStatus?.statusName || "N/A"}
                 </Badge>
@@ -1025,7 +999,6 @@ export default function CandidateDocumentVerificationPage() {
             roleCatalogId={
               selectedProject?.roleNeeded?.roleCatalog?.id ||
               (selectedProject?.roleNeeded as any)?.roleCatalogId ||
-              projectResponse?.data?.rolesNeeded?.[0]?.roleCatalogId ||
               ""
             }
           />
@@ -1633,7 +1606,6 @@ export default function CandidateDocumentVerificationPage() {
           candidateId={candidateId!}
           projectId={selectedProjectId}
           roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
-          documents={verifiedDocuments}
           onViewDocument={handleOpenPDF}
           onMergeStart={() => setIsGeneratingPDF(true)}
           onMergeEnd={() => setIsGeneratingPDF(false)}

@@ -537,6 +537,73 @@ export class ScreeningsService {
       };
     });
 
+    // Determine `isInInterview` for candidate-projects by checking status history
+    const cpIds = itemsWithDocsStatus
+      .map((it) => it.candidateProjectMap?.id)
+      .filter(Boolean);
+
+    const interviewSubStatuses = [
+      'interview_assigned',
+      'interview_scheduled',
+      'interview_rescheduled',
+      'interview_completed',
+      'interview_passed',
+      'interview_failed',
+    ];
+
+    const interviewHistories = cpIds.length
+      ? await this.prisma.candidateProjectStatusHistory.findMany({
+          where: {
+            candidateProjectMapId: { in: cpIds },
+            subStatus: { name: { in: interviewSubStatuses } },
+          },
+          select: { candidateProjectMapId: true },
+        })
+      : [];
+
+    const inInterviewSet = new Set(interviewHistories.map((h) => h.candidateProjectMapId));
+
+    // Attach latest `sendToClient` (DocumentForwardHistory) per candidate-project-role and the `isInInterview` flag
+    const itemsWithSendToClient = await Promise.all(
+      itemsWithDocsStatus.map(async (it) => {
+        const cpm = it.candidateProjectMap;
+        if (!cpm) return { ...it, sendToClient: null, isInInterview: false };
+
+        const candidateId = cpm.candidate?.id;
+        const projectId = cpm.project?.id;
+        const roleCatalogId = cpm.roleNeeded?.roleCatalog?.id || null;
+
+        const latestForward = await this.prisma.documentForwardHistory.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleCatalogId: roleCatalogId || null,
+          },
+          orderBy: { sentAt: 'desc' },
+        });
+
+        return {
+          ...it,
+          sendToClient: latestForward ?? null,
+          isInInterview: Boolean(inInterviewSet.has(cpm.id)),
+        };
+      }),
+    );
+
+    return {
+      success: true,
+      data: {
+        items: itemsWithSendToClient,
+        pagination: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      message: 'Approved screenings retrieved successfully',
+    };
+
     return {
       success: true,
       data: {

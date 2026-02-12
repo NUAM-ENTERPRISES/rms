@@ -441,6 +441,16 @@ export interface ForwardingHistoryItem {
 }
 
 export interface ForwardingHistoryResponse {
+  project?: {
+    id: string;
+    title: string;
+    client?: {
+      id: string;
+      name: string;
+      email?: string;
+      phone?: string;
+    };
+  };
   items: Array<{
     id: string;
     recipientEmail: string;
@@ -450,9 +460,24 @@ export interface ForwardingHistoryResponse {
     sentAt?: string;
     error?: string | null;
     notes?: string;
+    isBulk?: boolean;
     sender: {
       name: string;
       email: string;
+    };
+    candidate?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      profileImage?: string;
+      countryCode?: string;
+      mobileNumber?: string;
+    };
+    roleCatalog?: {
+      id: string;
+      name: string;
+      label: string;
     };
   }>;
   meta: {
@@ -628,13 +653,21 @@ export const documentsApi = baseApi.injectEndpoints({
       { 
         success: boolean; 
         data: {
-          candidateProjects: any[];
+          items?: any[];
+          candidateProjects?: any[];
           pagination: {
             page: number;
             limit: number;
             total: number;
             totalPages: number;
-          }
+          };
+          counts?: {
+            pending?: number;
+            verified?: number;
+            rejected?: number;
+            verification_in_progress?: number;
+            verification_in_progress_document?: number;
+          };
         };
         message: string;
       },
@@ -831,8 +864,8 @@ export const documentsApi = baseApi.injectEndpoints({
     getForwardingHistory: builder.query<
       { success: boolean; data: ForwardingHistoryResponse },
       { 
-        candidateId: string; 
         projectId: string; 
+        candidateId?: string; 
         roleCatalogId?: string;
         page?: number;
         limit?: number;

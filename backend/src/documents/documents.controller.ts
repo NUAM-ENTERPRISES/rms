@@ -440,8 +440,34 @@ export class DocumentsController {
   @Get('forward-history')
   @Permissions('read:documents')
   @ApiOperation({
-    summary: 'Get document forward history',
-    description: 'Retrieve paginated history of email forwarding for a candidate/project.',
+    summary: 'Get document forward history (project-level)',
+    description: 'Retrieve paginated document forward history for a project (optional roleCatalogId) with search and pagination.',
+  })
+  async getProjectForwardHistory(
+    @Query('projectId') projectId: string,
+    @Query('roleCatalogId') roleCatalogId?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.documentsService.getProjectForwardHistory({
+      projectId,
+      roleCatalogId,
+      search,
+      page,
+      limit,
+    });
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Get('forward-history-details')
+  @Permissions('read:documents')
+  @ApiOperation({
+    summary: 'Get document forward history (details by candidate)',
+    description: 'Retrieve paginated history of email forwarding for a specific candidate + project + role combination.',
   })
   async getDocuemntForwardClientHistory(
     @Query('candidateId') candidateId: string,
