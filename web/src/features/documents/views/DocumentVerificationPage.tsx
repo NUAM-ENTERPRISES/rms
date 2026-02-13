@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { Suspense, lazy, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label as FormLabel } from "@/components/ui/label";
 import {
   Search,
-  CheckCircle,
   XCircle,
   AlertCircle,
   RefreshCw,
-  Users,
   User,
   Building2,
   FileText,
@@ -39,6 +37,13 @@ import {
   Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
+
+// lazy-load dashboard tiles for code-splitting
+const ScreeningApprovedTile = lazy(() => import('@/features/documents/components/ScreeningApprovedTile'));
+const PendingCandidatesTile = lazy(() => import('@/features/documents/components/PendingCandidatesTile'));
+const VerifiedDocumentsTile = lazy(() => import('@/features/documents/components/VerifiedDocumentsTile'));
+const RejectedDocumentsTile = lazy(() => import('@/features/documents/components/RejectedDocumentsTile'));
+
 import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
 import { useGetApprovedScreeningDocumentsQuery } from "@/features/screening-coordination";
 import { useCan } from "@/hooks/useCan";
@@ -244,6 +249,9 @@ export default function DocumentVerificationPage() {
           roleNeeded: it.roleNeeded || cpm.roleNeeded,
           // preserve interview state when present so UI can disable selection
           isInInterview: (cpm as any).isInInterview || it.isInInterview || false,
+          // surface API-provided statuses so UI can show subStatus/mainStatus
+          subStatus: (it as any).subStatus || (cpm as any).subStatus || null,
+          mainStatus: (it as any).mainStatus || (cpm as any).mainStatus || null,
         };
         map.set(id, existing);
         return;
@@ -265,6 +273,9 @@ export default function DocumentVerificationPage() {
         roleNeeded: it.roleNeeded || null,
         // ensure interview flag is preserved when backend provides it
         isInInterview: (it as any).isInInterview || false,
+        // surface API-provided statuses so UI can show subStatus/mainStatus
+        subStatus: (it as any).subStatus || null,
+        mainStatus: (it as any).mainStatus || null,
       };
 
       if (Array.isArray(it.documentVerifications) && it.documentVerifications.length > 0) {
@@ -401,137 +412,62 @@ export default function DocumentVerificationPage() {
         {/* Dashboard Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Screening Approved Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.05 }}
-          >
-            <Card
-              className={cn(
-                "border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-                statusFilter === "screening_approved" ? "ring-2 ring-purple-300" : ""
-              )}
-              onClick={() => {
-                setStatusFilter("screening_approved");
-                setCurrentPage(1);
-                setSelectedCandidateIds(new Set());
-                setSelectAll(false);
-              }}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">Screening Approved</p>
-                    <h3 className="text-3xl font-bold text-purple-600">
-                      {statusCounts.screening_approved}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-2">Ready for verification</p>
-                  </div>
-                  <div className="p-3 bg-purple-200/40 rounded-full">
-                    <CheckCircle className="h-6 w-6 text-purple-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}>
+            <Suspense fallback={<div className="h-28" />}> 
+              {/* lazy-loaded tile for code-splitting */}
+              <ScreeningApprovedTile
+                count={statusCounts.screening_approved}
+                active={statusFilter === "screening_approved"}
+                onClick={() => {
+                  setStatusFilter("screening_approved");
+                  setCurrentPage(1);
+                  setSelectedCandidateIds(new Set());
+                  setSelectAll(false);
+                }}
+              />
+            </Suspense>
           </motion.div>
 
           {/* Total Candidates Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Card
-              className={cn(
-                "border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-                statusFilter === "verification_in_progress_document" ? "ring-2 ring-blue-300" : ""
-              )}
-              onClick={() => {
-                setStatusFilter("verification_in_progress_document");
-                setCurrentPage(1);
-              }}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">Pending Candidates</p>
-                    <h3 className="text-3xl font-bold text-blue-600">
-                      {statusCounts.verification_in_progress_document}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-2">For verification</p>
-                  </div>
-                  <div className="p-3 bg-blue-200/40 rounded-full">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+            <Suspense fallback={<div className="h-28" />}>
+              <PendingCandidatesTile
+                count={statusCounts.verification_in_progress_document}
+                active={statusFilter === "verification_in_progress_document"}
+                onClick={() => {
+                  setStatusFilter("verification_in_progress_document");
+                  setCurrentPage(1);
+                }}
+              />
+            </Suspense>
           </motion.div>
 
           {/* Verified Documents Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card
-              className={cn(
-                "border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-                statusFilter === "documents_verified" ? "ring-2 ring-green-300" : ""
-              )}
-              onClick={() => {
-                setStatusFilter("documents_verified");
-                setCurrentPage(1);
-              }}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">Verified</p>
-                    <h3 className="text-3xl font-bold text-green-600">
-                      {statusCounts.documents_verified}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-2">Approved</p>
-                  </div>
-                  <div className="p-3 bg-green-200/40 rounded-full">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+            <Suspense fallback={<div className="h-28" />}>
+              <VerifiedDocumentsTile
+                count={statusCounts.documents_verified}
+                active={statusFilter === "documents_verified"}
+                onClick={() => {
+                  setStatusFilter("documents_verified");
+                  setCurrentPage(1);
+                }}
+              />
+            </Suspense>
           </motion.div>
 
           {/* Rejected Documents Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <Card
-              className={cn(
-                "border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-                statusFilter === "rejected_documents" ? "ring-2 ring-red-300" : ""
-              )}
-              onClick={() => {
-                setStatusFilter("rejected_documents");
-                setCurrentPage(1);
-              }}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">Rejected</p>
-                    <h3 className="text-3xl font-bold text-red-600">
-                      {statusCounts.rejected_documents}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-2">Not approved</p>
-                  </div>
-                  <div className="p-3 bg-red-200/40 rounded-full">
-                    <XCircle className="h-6 w-6 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+            <Suspense fallback={<div className="h-28" />}>
+              <RejectedDocumentsTile
+                count={statusCounts.rejected_documents}
+                active={statusFilter === "rejected_documents"}
+                onClick={() => {
+                  setStatusFilter("rejected_documents");
+                  setCurrentPage(1);
+                }}
+              />
+            </Suspense>
           </motion.div>
         </div>
 
@@ -828,6 +764,15 @@ export default function DocumentVerificationPage() {
                   const pendingCount = docs.filter((d: any) => d.status === "pending" || d.status === "verification_in_progress").length;
                   const rejectedCount = docs.filter((d: any) => d.status === "rejected").length;
 
+                  const subStatusLabel = candidateProject.subStatus?.label || candidateProject.subStatus?.name || null;
+
+                  const renderSubStatus = () =>
+                    subStatusLabel ? (
+                      <div className="mt-2">
+                        <Badge className="text-[10px] px-2 py-0.5">{subStatusLabel}</Badge>
+                      </div>
+                    ) : null;
+
                   if (statusFilter === "documents_verified") {
                     const lastVerified = docs
                       .filter((d: any) => d.status === "verified")
@@ -842,6 +787,7 @@ export default function DocumentVerificationPage() {
                         {lastVerified ? (
                           <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
                         ) : null}
+                        {renderSubStatus()}
                       </div>
                     );
                   }
@@ -851,6 +797,7 @@ export default function DocumentVerificationPage() {
                       <div className="text-sm text-gray-700">
                         <div className="font-medium">Pending: {pendingCount}</div>
                         <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
+                        {renderSubStatus()}
                       </div>
                     );
                   }
@@ -868,6 +815,7 @@ export default function DocumentVerificationPage() {
                         {lastRejected?.reason ? (
                           <div className="text-xs text-gray-500 truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
                         ) : null}
+                        {renderSubStatus()}
                       </div>
                     );
                   }
@@ -878,16 +826,25 @@ export default function DocumentVerificationPage() {
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
                           {candidateProject.screeningDecision || "Approved"}
                         </Badge>
+
                         {candidateProject.screeningConductedAt && (
                           <p className="text-[10px] text-gray-500 mt-1">
                             {new Date(candidateProject.screeningConductedAt).toLocaleDateString()}
                           </p>
                         )}
+
+                        {/* Show candidate sub-status when available (e.g. documents_verified) */}
+                        {renderSubStatus()}
                       </div>
                     );
                   }
 
-                  return <div className="text-sm text-gray-700">{status}</div>;
+                  return (
+                    <div className="text-sm text-gray-700">
+                      <div className="font-medium">{status}</div>
+                      {renderSubStatus()}
+                    </div>
+                  );
                 })()}
               </TableCell>
 

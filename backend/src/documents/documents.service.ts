@@ -1411,8 +1411,8 @@ export class DocumentsService {
             },
           },
           recruiter: { select: { id: true, name: true, email: true } },
-          mainStatus: true,
-          subStatus: true,
+          mainStatus: { select: { label: true } },
+          subStatus: { select: { label: true } },
           screenings: {
             select: {
               id: true,
@@ -2394,6 +2394,8 @@ export class DocumentsService {
             },
           },
           recruiter: { select: { id: true, name: true } },
+          mainStatus: { select: { label: true } },
+          subStatus: { select: { label: true } },
           roleNeeded: {
             select: {
               id: true,
@@ -2471,6 +2473,8 @@ export class DocumentsService {
         project: cp.project,
         roleNeeded: cp.roleNeeded,
         recruiter: cp.recruiter,
+        mainStatus: cp.mainStatus,
+        subStatus: cp.subStatus,
         documentVerifications: cp.documentVerifications,
         screening: latestScreening,
         progress: {
