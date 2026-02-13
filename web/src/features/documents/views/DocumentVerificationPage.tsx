@@ -163,11 +163,11 @@ export default function DocumentVerificationPage() {
       projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
       roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
       search: searchTerm || undefined,
-      page: currentPage,
-      limit: 10,
+      // fetch full page when viewing the screening_approved tab, otherwise fetch a small page to obtain counts only
+      page: statusFilter === "screening_approved" ? currentPage : 1,
+      limit: statusFilter === "screening_approved" ? 10 : 1,
       recruiterId: isStrictRecruiter ? user?.id : undefined,
-    },
-    { skip: statusFilter !== "screening_approved" }
+    }
   );
 
   // Normalize data for table rendering
