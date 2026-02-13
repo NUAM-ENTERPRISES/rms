@@ -1684,6 +1684,9 @@ export class DocumentsService {
             },
           },
         },
+        // include current main/sub status (label + name)
+        mainStatus: { select: { name: true, label: true } },
+        subStatus: { select: { name: true, label: true } },
         projectStatusHistory: {
           select: {
             mainStatus: { select: { name: true } },

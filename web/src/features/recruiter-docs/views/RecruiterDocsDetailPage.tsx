@@ -553,6 +553,27 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </Badge>
                 )}
               </>
+            ) : candidateProject?.subStatus?.name === "screening_assigned" ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button 
+                        variant="default"
+                        className="bg-slate-400 hover:bg-slate-400 text-white cursor-not-allowed opacity-60"
+                        disabled={true}
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        Send for Verification
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="start" className="max-w-xs bg-red-50 border border-red-200 text-red-700 transform -translate-x-6">
+                    <p className="font-semibold text-sm">Screening in Progress</p>
+                    <p className="text-xs mt-1">This candidate has been assigned for screening. You can send for document verification once the screening process is complete.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
               <Button 
                 variant="default"
