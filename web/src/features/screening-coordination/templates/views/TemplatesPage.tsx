@@ -73,7 +73,14 @@ export default function TemplatesPage() {
     limit: 100,
   });
 
-  const templates = templatesData?.data || [];
+  const templates = useMemo(() => {
+    const data: any = templatesData?.data;
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.items)) return data.items;
+    return [];
+  }, [templatesData]);
+
   const roles = roleCatalogData?.data?.roles || [];
 
   // Filter templates by search

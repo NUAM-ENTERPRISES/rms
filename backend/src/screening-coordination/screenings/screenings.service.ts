@@ -831,6 +831,7 @@ export class ScreeningsService {
    * Find screening details by candidate, project, and role catalog
    */
   async findByDetails(candidateId: string, projectId: string, roleCatalogId: string) {
+    // 1) Try exact-match search first (candidate + project + requested roleCatalogId)
     const screening = await this.prisma.screening.findFirst({
       where: {
         candidateProjectMap: {
@@ -845,13 +846,42 @@ export class ScreeningsService {
       select: { id: true },
     });
 
-    if (!screening) {
-      throw new NotFoundException(
-        `No screening found for candidate ${candidateId}, project ${projectId}, and role ${roleCatalogId}`,
+    if (screening) return this.findOne(screening.id);
+
+    // 2) Fallback: if the candidate is nominated for a different role on this project,
+    //    try the nomination's roleCatalogId (handles mismatched/incorrect roleCatalogId requests).
+    const candidateProject = await this.prisma.candidateProjects.findFirst({
+      where: { candidateId, projectId },
+      include: { roleNeeded: { select: { roleCatalogId: true } } },
+    });
+
+    const nominatedRoleCatalogId = candidateProject?.roleNeeded?.roleCatalogId ?? null;
+
+    if (nominatedRoleCatalogId && nominatedRoleCatalogId !== roleCatalogId) {
+      this.logger.warn(
+        `findByDetails: requested roleCatalogId=${roleCatalogId} does not match nominated roleCatalogId=${nominatedRoleCatalogId} — trying nominated role.`,
       );
+
+      const fallback = await this.prisma.screening.findFirst({
+        where: {
+          candidateProjectMap: {
+            candidateId,
+            projectId,
+            roleNeeded: { roleCatalogId: nominatedRoleCatalogId },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+
+      if (fallback) return this.findOne(fallback.id);
     }
 
-    return this.findOne(screening.id);
+    // 3) Nothing found — keep original behaviour (404) but include hint in the message.
+    throw new NotFoundException(
+      `No screening found for candidate ${candidateId}, project ${projectId}, and role ${roleCatalogId}.` +
+        (nominatedRoleCatalogId ? ` Candidate is nominated for roleCatalogId=${nominatedRoleCatalogId}.` : ''),
+    );
   }
 
   /**

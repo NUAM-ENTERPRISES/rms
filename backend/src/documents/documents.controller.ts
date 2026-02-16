@@ -344,17 +344,24 @@ export class DocumentsController {
     required: false,
     description: 'Optional Role Catalog ID to filter documents by role',
   })
+  @ApiQuery({
+    name: 'candidateProjectMapId',
+    required: false,
+    description: 'Optional Candidate Project Map ID',
+  })
   @ApiResponse({ status: 200, description: 'Merged PDF file' })
   async mergeVerifiedDocuments(
     @Query('candidateId') candidateId: string,
     @Query('projectId') projectId: string,
     @Query('roleCatalogId') roleCatalogId: string,
+    @Query('candidateProjectMapId') candidateProjectMapId: string,
     @Res({ passthrough: true }) res: Response,
   ) {
     const buffer = await this.documentsService.mergeVerifiedDocuments(
       candidateId,
       projectId,
       roleCatalogId,
+      candidateProjectMapId,
     );
 
     // 1. Upload the merged PDF to storage

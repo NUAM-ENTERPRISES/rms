@@ -1958,7 +1958,6 @@ export class DocumentsService {
 
     return {
       candidateProject,
-      roleNeeded,
       verifications,
       pagination: {
         page,
@@ -3305,13 +3304,15 @@ export class DocumentsService {
     candidateId: string,
     projectId: string,
     roleCatalogId?: string,
+    candidateProjectMapId?: string,
   ): Promise<Buffer> {
     // 1. Find the candidate project mapping first to ensure it's valid
     const cpMap = await this.prisma.candidateProjects.findFirst({
       where: {
+        id: candidateProjectMapId,
         candidateId,
         projectId,
-        roleNeeded: roleCatalogId ? { roleCatalogId } : undefined,
+        roleNeeded: (roleCatalogId && !candidateProjectMapId) ? { roleCatalogId } : undefined,
       },
     });
 
@@ -3449,12 +3450,52 @@ export class DocumentsService {
     projectId?: string;
     roleCatalogId?: string;
   }) {
+    const { candidateId, projectId, roleCatalogId } = filters;
+
+    // Build where clause
+    const where: any = {};
+    if (candidateId) where.candidateId = candidateId;
+    if (projectId) where.projectId = projectId;
+
+    if (roleCatalogId) {
+      // If roleSpecific is requested, try to find exact match first
+      const exactMatch = await this.prisma.mergedDocument.findFirst({
+        where: {
+          ...where,
+          roleCatalogId,
+        },
+        include: {
+          candidate: { select: { firstName: true, lastName: true } },
+          project: { select: { title: true } },
+          roleCatalog: { select: { name: true, label: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (exactMatch) return exactMatch;
+
+      // If not found, look for a generic one (roleCatalogId is null)
+      const genericMatch = await this.prisma.mergedDocument.findFirst({
+        where: {
+          ...where,
+          roleCatalogId: null,
+        },
+        include: {
+          candidate: { select: { firstName: true, lastName: true } },
+          project: { select: { title: true } },
+          roleCatalog: { select: { name: true, label: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (genericMatch) return genericMatch;
+
+      // If still not found, just return the latest merged document for this candidate/project
+      // regardless of the roleCatalogId
+    }
+
     return this.prisma.mergedDocument.findFirst({
-      where: {
-        ...(filters.candidateId && { candidateId: filters.candidateId }),
-        ...(filters.projectId && { projectId: filters.projectId }),
-        ...(filters.roleCatalogId && { roleCatalogId: filters.roleCatalogId }),
-      },
+      where,
       include: {
         candidate: {
           select: {

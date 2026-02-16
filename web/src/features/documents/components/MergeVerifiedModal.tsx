@@ -49,16 +49,35 @@ export function MergeVerifiedModal({
   );
 
   // Extract verified documents
-  const verifiedDocuments = useMemo(() => {
-    if (!verificationsResponse?.data?.verifications) return [];
-    return verificationsResponse.data.verifications
+  const { verifiedDocuments, activeRoleCatalogId, candidateProjectMapId } = useMemo(() => {
+    if (!verificationsResponse?.data) {
+      return { verifiedDocuments: [], activeRoleCatalogId: roleCatalogId, candidateProjectMapId: undefined };
+    }
+
+    const docs = verificationsResponse.data.verifications
       .filter(v => v.status === 'verified')
       .map(v => v.document);
-  }, [verificationsResponse]);
+
+    // Get the roleCatalogId from the first verification if available, 
+    // fall back to the one from the candidateProject, then the prop
+    const roleId = verificationsResponse.data.verifications?.[0]?.roleCatalogId || 
+                   verificationsResponse.data.roleNeeded?.roleCatalogId || 
+                   roleCatalogId;
+
+    return { 
+      verifiedDocuments: docs, 
+      activeRoleCatalogId: roleId,
+      candidateProjectMapId: verificationsResponse.data.candidateProject?.id
+    };
+  }, [verificationsResponse, roleCatalogId]);
 
   // Check for existing merged document using Redux
   const { data: mergedDocResponse, isLoading: isCheckingMerged, refetch: refetchMerged } = useGetMergedDocumentQuery(
-    { candidateId, projectId, roleCatalogId },
+    { 
+      candidateId, 
+      projectId, 
+      roleCatalogId: activeRoleCatalogId 
+    },
     { skip: !isOpen || !candidateId || !projectId }
   );
 
@@ -120,9 +139,17 @@ export function MergeVerifiedModal({
         candidateId,
         projectId,
       });
-      if (roleCatalogId) {
-        params.append("roleCatalogId", roleCatalogId);
+      
+      if (activeRoleCatalogId) {
+        params.append("roleCatalogId", activeRoleCatalogId);
       }
+      
+      if (candidateProjectMapId) {
+        params.append("candidateProjectMapId", candidateProjectMapId);
+      }
+
+      // Explicitly request only verified documents
+      params.append("status", "verified");
 
       const url = `${baseUrl}/documents/merge-verified?${params.toString()}`;
       
