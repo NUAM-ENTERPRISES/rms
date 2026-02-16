@@ -12,7 +12,9 @@ import {
   CheckCircle,
   AlertCircle,
   Upload,
+  GraduationCap,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { CandidateDetailTooltip } from "./CandidateDetailTooltip";
 import { memo } from "react";
@@ -176,6 +178,8 @@ interface CandidateCardProps {
   candidate: CandidateRecord;
   projectId?: string;
   isRecruiter?: boolean;
+  /** Current search term from the parent board — used to highlight / filter qualifications shown */
+  searchTerm?: string;
   onView?: (candidateId: string) => void;
   onAction?: (candidateId: string, action: string) => void;
   actions?: Array<{
@@ -230,6 +234,11 @@ interface CandidateCardProps {
       reasons: string[];
     }>;
   };
+  /**
+   * When true, show contact buttons (WhatsApp + Call) on the left side of the
+   * action row. Parent (Project page) enables this for Eligible / All columns.
+   */
+  showContactButtons?: boolean;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -254,6 +263,8 @@ const CandidateCard = memo(function CandidateCard({
   showSkipDocumentVerification = false,
   skipDocumentVerificationMessage,
   eligibilityData: propEligibilityData,
+  showContactButtons = false,
+  searchTerm = "",
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -535,6 +546,51 @@ const CandidateCard = memo(function CandidateCard({
     resolveNumericScore(matchScore) ??
     resolveNumericScore(candidate.matchScore) ??
     primaryRoleMatch.score;
+
+  // Show only the qualifications that match the current search term (if any).
+  // This keeps the card UI unchanged when there's no search, and highlights
+  // matching qualifications when the user searches for a qualification.
+  const _searchTerm = (/* optional prop forwarded from parent */ (undefined as unknown) as string) || "";
+  // Note: the parent component (`ProjectCandidatesBoard`) forwards `searchTerm`.
+  // We try to use that if available via props; TypeScript typing for the
+  // component will include `searchTerm?: string` below.
+  // (We will override `_searchTerm` with the actual prop below when added.)
+
+  // Build a normalized list of qualifications from both possible shapes
+  const allQualifications: Array<{ name?: string; shortName?: string; field?: string; university?: string }> = [];
+  (candidate.candidateQualifications || []).forEach((q: any) => {
+    allQualifications.push({ name: q.name, shortName: q.shortName, field: q.field, university: q.university });
+  });
+  (candidate.qualifications || []).forEach((q: any) => {
+    // `qualifications` can either include direct name/field or a nested `qualification` object
+    const nested = q.qualification || {};
+    allQualifications.push({ name: q.name || nested.name, shortName: nested.shortName, field: q.field || nested.field, university: q.university });
+  });
+
+  // NOTE: `searchTerm` prop is injected into the component signature below.
+  // Compute matching qualifications only when a non-empty search term exists.
+  const term = (searchTerm || _searchTerm || "").toLowerCase().trim();
+  // Deduplicate qualification pills by the display label (shortName/name/field/university).
+  // Keep the first occurrence of a label so cards do not show the same pill multiple times.
+  const matchingQualifications = (() => {
+    if (!term) return [] as typeof allQualifications;
+
+    const seen = new Set<string>();
+    const res: Array<typeof allQualifications[0]> = [];
+
+    for (const q of allQualifications) {
+      const label = (q.shortName || q.name || q.field || q.university || "").toString().trim();
+      if (!label) continue;
+      const labelLower = label.toLowerCase();
+      // only include qualifications that match the search term
+      if (!labelLower.includes(term)) continue;
+      if (seen.has(labelLower)) continue;
+      seen.add(labelLower);
+      res.push(q);
+    }
+
+    return res;
+  })();
 
   // DEBUG: In tests, help verify whether interview button is expected to render
   
@@ -879,68 +935,123 @@ const CandidateCard = memo(function CandidateCard({
           )}
         </div>
 
-        {showAssignButton && onAssignToProject && (
-          <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className={cn(isNotEligible && "cursor-not-allowed")}>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    disabled={isNotEligible}
-                    className="h-7 text-[11px] bg-green-600 hover:bg-green-700 px-2.5"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onAssignToProject(candidateId);
-                    }}
-                  >
-                    <UserPlus className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-                    Assign to Project
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {isNotEligible && (
-                <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
-                  <p>Not Eligible for Project</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
+        {/* Show matching qualifications when user is searching for a qualification */}
+        {Array.isArray(matchingQualifications) && matchingQualifications.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px]">
+            {matchingQualifications.map((mq, idx) => (
+              <span key={idx} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+                <GraduationCap className="h-3 w-3 text-slate-400" aria-hidden />
+                <span className="truncate max-w-[160px]">{mq.shortName || mq.name || mq.field || mq.university}</span>
+              </span>
+            ))}
           </div>
         )}
 
-        {isRecruiter && showVerifyButton &&
-          onVerify && isSendedForVerification === false && projectStatus !== "Verification In Progress" && (
-            <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-              <Button
-                variant="default"
-                size="sm"
-                className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onVerify(candidateId);
-                }}
-              >
-                <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-                Send for Verification
-              </Button>
-            </div>
-          )
-        }
+        {/* Unified footer: left = contact buttons, right = action buttons (assign / verify / interview) */}
+        {(showContactButtons || (showAssignButton && onAssignToProject) || (isRecruiter && showVerifyButton && onVerify) || (showInterviewButton && onSendForInterview)) && (
+          <div className="flex items-center justify-between border-t border-slate-100 pt-2">
+            <div className="flex items-center gap-2">
+              {showContactButtons && (
+                <>
+                  {/* WhatsApp button — opens wa.me if number present; stopPropagation so card click doesn't fire */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid="candidate-whatsapp-btn"
+                    className="h-7 w-9 p-0 bg-green-100 text-green-900 hover:bg-green-200 focus:ring-2 focus:ring-green-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;
+                      if (num) {
+                        // normalize number by removing spaces
+                        const normalized = String(num).replace(/\s+/g, "").replace(/[()+-]/g, "");
+                        window.open(`https://wa.me/${normalized}`, "_blank");
+                      }
+                    }}
+                  >
+                    <span className="sr-only">WhatsApp</span>
+                    <FaWhatsapp className="h-4 w-4 text-green-900" aria-hidden="true" />
+                  </Button>
 
-        {showInterviewButton && onSendForInterview && (
-          <div className="flex items-center justify-end border-t border-slate-100 pt-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="ml-2 h-7 text-[11px] bg-purple-600 hover:bg-purple-700 px-2.5"
-              onClick={(event) => {
-                event.stopPropagation();
-                onSendForInterview(candidateId);
-              }}
-            >
-              <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-              Send for Interview
-            </Button>
+                  {/* Call button — uses tel: link */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid="candidate-call-btn"
+                    className="h-7 w-9 p-0 border border-slate-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;
+                      if (num) {
+                        const normalized = String(num).replace(/\s+/g, "").replace(/[()+-]/g, "");
+                        window.location.href = `tel:${normalized}`;
+                      }
+                    }}
+                  >
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {showAssignButton && onAssignToProject && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn(isNotEligible && "cursor-not-allowed")}>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        disabled={isNotEligible}
+                        className="h-7 text-[11px] bg-green-600 hover:bg-green-700 px-2.5"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onAssignToProject(candidateId);
+                        }}
+                      >
+                        <UserPlus className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+                        Assign to Project
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {isNotEligible && (
+                    <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
+                      <p>Not Eligible for Project</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              )}
+
+              {isRecruiter && showVerifyButton && onVerify && isSendedForVerification === false && projectStatus !== "Verification In Progress" && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onVerify(candidateId);
+                  }}
+                >
+                  <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+                  Send for Verification
+                </Button>
+              )}
+
+              {showInterviewButton && onSendForInterview && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="ml-2 h-7 text-[11px] bg-purple-600 hover:bg-purple-700 px-2.5"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSendForInterview(candidateId);
+                  }}
+                >
+                  <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
+                  Send for Interview
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

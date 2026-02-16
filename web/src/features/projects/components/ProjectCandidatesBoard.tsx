@@ -99,6 +99,7 @@ const sanitizeCandidate = (
 const matchesSearchTerm = (candidate: CandidateRecord, term: string) => {
   if (!term) return true;
   const lowerTerm = term.toLowerCase();
+
   const name = `${candidate.firstName || ""} ${
     candidate.lastName || ""
   }`.toLowerCase();
@@ -108,10 +109,34 @@ const matchesSearchTerm = (candidate: CandidateRecord, term: string) => {
     candidate.contact?.toLowerCase() ||
     "";
 
+  // Check qualifications (both `qualifications` and `candidateQualifications` shapes)
+  const quals = (candidate.qualifications || candidate.candidateQualifications || []) as any[];
+  const qualificationMatch = Array.isArray(quals) && quals.some((q) => {
+    const names = [
+      (q.name as string) || "",
+      (q.qualification && (q.qualification.name as string)) || "",
+      (q.qualification && (q.qualification.shortName as string)) || "",
+      (q.field as string) || "",
+      (q.university as string) || "",
+    ]
+      .filter(Boolean)
+      .map((s) => String(s).toLowerCase());
+    return names.some((s) => s.includes(lowerTerm));
+  });
+
+  // Check skills
+  const skillsMatch = Array.isArray(candidate.skills) && candidate.skills.some((s) => (s || "").toLowerCase().includes(lowerTerm));
+
+  // Check role matches (designation)
+  const roleMatchesMatch = Array.isArray(candidate.roleMatches) && candidate.roleMatches.some((rm) => (rm.designation || "").toLowerCase().includes(lowerTerm));
+
   return (
     name.includes(lowerTerm) ||
     email.includes(lowerTerm) ||
-    phone.includes(lowerTerm)
+    phone.includes(lowerTerm) ||
+    qualificationMatch ||
+    skillsMatch ||
+    roleMatchesMatch
   );
 };
 
@@ -500,6 +525,7 @@ const ProjectCandidatesBoard = ({
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={isRecruiter}
+              searchTerm={searchTerm}
               onView={() => onViewCandidate(candidateId)}
               onAction={(id, action) => {
                 if (action === "assign") {
@@ -635,6 +661,7 @@ const ProjectCandidatesBoard = ({
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={isRecruiter}
+              searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
               onAction={(id, action) => {
                 if (action === "assign") {
@@ -663,6 +690,7 @@ const ProjectCandidatesBoard = ({
               isAlreadyInProject={assignmentInfo.isAssigned}
               showDocumentStatus={false}
               eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
+              showContactButtons={true}
             />
           );
         })}
@@ -770,6 +798,7 @@ const ProjectCandidatesBoard = ({
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={isRecruiter}
+              searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
               onAction={(id, action) => {
                 if (action === "assign") {
@@ -796,6 +825,7 @@ const ProjectCandidatesBoard = ({
               isAlreadyInProject={assignmentInfo.isAssigned}
               showDocumentStatus={false}
               eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
+              showContactButtons={true}
             />
           );
         })}

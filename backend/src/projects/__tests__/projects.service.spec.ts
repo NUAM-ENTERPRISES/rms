@@ -106,6 +106,8 @@ describe('ProjectsService', () => {
           maxExperience: 10,
           skills: '["Nursing", "Patient Care"]',
           roleCatalogId: 'role123',
+          genderRequirement: 'all',
+          ageRequirement: '',
         },
       ],
     };
@@ -250,6 +252,60 @@ describe('ProjectsService', () => {
               { description: { contains: 'test', mode: 'insensitive' } },
             ],
           },
+        }),
+      );
+    });
+  });
+
+  describe('getEligibleCandidates & getNominatedCandidates - qualification search', () => {
+    it('getEligibleCandidates should return candidate when search matches qualification shortName/name/field/university', async () => {
+      const project = {
+        id: 'proj-1',
+        rolesNeeded: [
+          { id: 'r1', designation: 'Any', roleCatalogId: 'role-1', minExperience: null, maxExperience: null, genderRequirement: 'all', educationRequirementsList: [] },
+        ],
+      } as any;
+
+      const candidate = {
+        id: 'c1',
+        firstName: 'Alice',
+        lastName: 'Qualified',
+        totalExperience: 3,
+        qualifications: [
+          { id: 'cq1', qualification: { id: 'qual-bsc', name: 'Bachelor of Science', shortName: 'BSc', field: 'Computer Science' }, university: 'XYZ University' },
+        ],
+      } as any;
+
+      prismaService.project.findUnique.mockResolvedValue(project);
+      // ensure candidate.findMany is available on the test prisma mock
+      prismaService.candidate.findMany = jest.fn().mockResolvedValue([candidate]);
+
+      const res = await service.getEligibleCandidates('proj-1', 'user1', ['Manager'], { search: 'bsc', page: 1, limit: 10 });
+
+      expect(res.candidates.length).toBeGreaterThanOrEqual(1);
+      expect(res.candidates[0].firstName).toEqual('Alice');
+    });
+
+    it('getNominatedCandidates should include qualification filtering in the prisma where clause when search is provided', async () => {
+      const project = { id: 'proj-1', rolesNeeded: [] } as any;
+      prismaService.project.findUnique.mockResolvedValue(project);
+
+      // Ensure count/findMany are stubbed so function proceeds
+      prismaService.candidateProjects.count = jest.fn().mockResolvedValue(0);
+      prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([]);
+
+      await service.getNominatedCandidates('proj-1', 'user1', ['Manager'], { search: 'bsc', page: 1, limit: 10 });
+
+      // Verify the prisma call included candidate qualifications in the WHERE candidate OR list
+      expect(prismaService.candidateProjects.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            candidate: expect.objectContaining({
+              OR: expect.arrayContaining([
+                expect.objectContaining({ qualifications: expect.any(Object) }),
+              ]),
+            }),
+          }),
         }),
       );
     });

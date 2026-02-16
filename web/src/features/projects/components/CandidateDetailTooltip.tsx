@@ -70,6 +70,61 @@ const calculateExperience = (workExp?: Array<any>) => {
   return null;
 };
 
+// Returns total full years of experience (number) when possible
+const calculateExperienceYears = (workExp?: Array<any>) => {
+  if (!workExp || workExp.length === 0) return null;
+  try {
+    let totalMonths = 0;
+    workExp.forEach(exp => {
+      const start = new Date(exp.startDate);
+      const end = exp.endDate ? new Date(exp.endDate) : new Date();
+      const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+      totalMonths += Math.max(0, months);
+    });
+    return Math.floor(totalMonths / 12);
+  } catch {
+    return null;
+  }
+};
+
+// Format a work experience period as `YYYY - YYYY` or `YYYY - Present` (safe for tests)
+const formatWorkPeriod = (startDate?: string, endDate?: string) => {
+  try {
+    const s = startDate ? new Date(startDate) : null;
+    const e = endDate ? new Date(endDate) : null;
+    const sYear = s ? s.getFullYear() : "";
+    const eLabel = e ? String(e.getFullYear()) : "Present";
+    return sYear ? `${sYear} - ${eLabel}` : eLabel;
+  } catch {
+    return "";
+  }
+};
+
+// Derive a human-readable qualification label from multiple possible shapes
+const getQualificationLabel = (candidate: CandidateRecord) => {
+  if (candidate.highestEducation) return candidate.highestEducation;
+  const quals = (candidate.candidateQualifications || candidate.qualifications || []) as any[];
+  if (!Array.isArray(quals) || quals.length === 0) return null;
+  const q = quals[0];
+  const nested = q.qualification || {};
+  const label = q.shortName || q.name || nested.shortName || nested.name || q.field || q.university;
+  return label ? String(label) : null;
+};
+
+// Try to extract department info from known candidate shapes (matchScore / roleMatches)
+const getDepartmentFromCandidate = (candidate: CandidateRecord) => {
+  if (candidate.matchScore && typeof candidate.matchScore === "object") {
+    // some responses include roleDepartmentLabel / roleDepartmentName in matchScore
+    // @ts-ignore - matchScore has flexible shape
+    return (candidate.matchScore as any).roleDepartmentLabel || (candidate.matchScore as any).roleDepartmentName || undefined;
+  }
+  // fallback: some roleMatches may include department (rare)
+  if (candidate.roleMatches && Array.isArray(candidate.roleMatches) && (candidate as any).roleMatches[0]?.department) {
+    return (candidate as any).roleMatches[0].department;
+  }
+  return undefined;
+};
+
 export function CandidateDetailTooltip({ candidate, children }: CandidateDetailTooltipProps) {
   const fullName = `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim();
   const contactValue =
@@ -79,6 +134,14 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
   const age = formatAge(candidate.dateOfBirth);
   const workExpDuration = calculateExperience(candidate.workExperiences) || 
     (candidate.totalExperience ? `${candidate.totalExperience} years` : null);
+
+  // New fields requested: qualification label, numeric years and department
+  const qualificationLabel = getQualificationLabel(candidate);
+  const department = getDepartmentFromCandidate(candidate);
+  const experienceYearsNumeric =
+    typeof candidate.totalExperience === "number"
+      ? candidate.totalExperience
+      : calculateExperienceYears(candidate.workExperiences);
 
   return (
     <Tooltip>
@@ -140,7 +203,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           )}
 
           {/* Personal Details */}
-          {(age || candidate.gender) && (
+          {(age || candidate.gender || department) && (
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -161,6 +224,27 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                     </span>
                   </div>
                 )}
+
+                {department && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Department:</span>
+                    <span className="text-slate-700 font-medium">{department}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Qualification */}
+          {qualificationLabel && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+                <GraduationCap className="h-3 w-3" />
+                Qualification
+              </h4>
+              <div className="text-[11px] flex items-center gap-2">
+                <span className="text-slate-500">Qualification:</span>
+                <span className="text-slate-700 font-medium">{qualificationLabel}</span>
               </div>
             </div>
           )}
@@ -172,10 +256,36 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 <Briefcase className="h-3 w-3" />
                 Experience
               </h4>
+
               <div className="text-[11px] flex items-center gap-2">
                 <span className="text-slate-500">Total Experience:</span>
                 <span className="text-slate-700 font-medium">{workExpDuration}</span>
               </div>
+
+              {experienceYearsNumeric !== null && (
+                <div className="text-[11px] flex items-center gap-2">
+                  <span className="text-slate-500">Years:</span>
+                  <span className="text-slate-700 font-medium">{experienceYearsNumeric} {Number(experienceYearsNumeric) === 1 ? 'year' : 'years'}</span>
+                </div>
+              )}
+
+              {/* Work history details (show up to 3 recent entries) */}
+              {Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0 && (
+                <div className="pt-2 space-y-2">
+                  <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work history</h5>
+                  <div className="space-y-2 text-[11px]">
+                    {candidate.workExperiences.slice(0, 3).map((we, idx) => (
+                      <div key={idx} className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{we.jobTitle || we.job_title || "-"}</div>
+                          <div className="text-[11px] text-slate-500 truncate">{we.companyName || we.company_name || "Unknown"}{we.location ? ` • ${we.location}` : ""}</div>
+                        </div>
+                        <div className="text-[11px] text-slate-500 whitespace-nowrap">{formatWorkPeriod(we.startDate || we.start_date, we.endDate || we.end_date)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

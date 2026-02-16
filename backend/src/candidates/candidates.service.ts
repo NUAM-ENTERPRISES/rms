@@ -393,12 +393,27 @@ export class CandidatesService {
     // Build where clause
     const where: any = {};
 
-    if (search) {
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+      const s = search.trim();
+      // Search across primary candidate fields and related qualifications
       where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { mobileNumber: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: s, mode: 'insensitive' } },
+        { lastName: { contains: s, mode: 'insensitive' } },
+        { mobileNumber: { contains: s, mode: 'insensitive' } },
+        { email: { contains: s, mode: 'insensitive' } },
+        // Match candidate qualifications (qualification name / shortName / field / university)
+        {
+          qualifications: {
+            some: {
+              OR: [
+                { qualification: { name: { contains: s, mode: 'insensitive' } } },
+                { qualification: { shortName: { contains: s, mode: 'insensitive' } } },
+                { qualification: { field: { contains: s, mode: 'insensitive' } } },
+                { university: { contains: s, mode: 'insensitive' } },
+              ],
+            },
+          },
+        },
       ];
     }
 
