@@ -53,7 +53,6 @@ import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
 import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
-import { BulkSendForInterviewModal } from "../components/BulkSendForInterviewModal";
 import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryModal";
 
 export default function DocumentVerificationPage() {
@@ -85,7 +84,6 @@ export default function DocumentVerificationPage() {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [bulkSendModalOpen, setBulkSendModalOpen] = useState(false);
-  const [bulkInterviewModalOpen, setBulkInterviewModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyModalData, setHistoryModalData] = useState<any>(null);
 
@@ -558,22 +556,13 @@ export default function DocumentVerificationPage() {
       <div className="flex items-center gap-3">
         {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
         {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && selectedCandidatesForModal.length > 0 && (
-          <>
-            <Button
-              onClick={() => setBulkInterviewModalOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              size="sm"
-            >
-              Bulk Send for Interview ({selectedCandidatesForModal.length})
-            </Button>
-            <Button
-              onClick={handleBulkSendToClient}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              size="sm"
-            >
-              Bulk Send to Client ({selectedCandidatesForModal.length})
-            </Button>
-          </>
+          <Button
+            onClick={handleBulkSendToClient}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            size="sm"
+          >
+            Bulk Send to Client ({selectedCandidatesForModal.length})
+          </Button>
         )}
       </div>
     </div>
@@ -1086,23 +1075,6 @@ export default function DocumentVerificationPage() {
         isOpen={bulkSendModalOpen}
         onClose={() => {
           setBulkSendModalOpen(false);
-          setSelectedCandidateIds(new Set());
-          setSelectAll(false);
-        }}
-        candidates={selectedCandidatesForModal}
-        onSuccess={() => {
-          // Reset selection after successful send
-          setSelectedCandidateIds(new Set());
-          setSelectAll(false);
-          refetch();
-        }}
-      />
-
-      {/* Bulk Send for Interview Modal */}
-      <BulkSendForInterviewModal
-        isOpen={bulkInterviewModalOpen}
-        onClose={() => {
-          setBulkInterviewModalOpen(false);
           setSelectedCandidateIds(new Set());
           setSelectAll(false);
         }}
