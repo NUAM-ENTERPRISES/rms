@@ -459,6 +459,16 @@ const CandidateCard = memo(function CandidateCard({
       ""
   );
 
+  // Also compute explicit candidate.currentStatus (separate from projectStatus)
+  const candidateStatusRaw: string =
+    typeof candidate.currentStatus === "string"
+      ? candidate.currentStatus
+      : candidate.currentStatus?.statusName || candidate.currentStatus?.name || "";
+  const normalize = (s: string | undefined) =>
+    (s || "").toString().toLowerCase().replace(/[\s_]+/g, "");
+  const showCandidateStatusBadge = !!candidateStatusRaw && !!projectStatus && normalize(candidateStatusRaw) !== normalize(projectStatus);
+  const candidateStatusConfig = candidateStatusRaw ? getStatusConfig(candidateStatusRaw) : null;
+
   // Get initials for avatar
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.charAt(0) || ""}${
@@ -709,6 +719,18 @@ const CandidateCard = memo(function CandidateCard({
           >
             {statusConfig.label}
           </Badge>
+
+          {/* Candidate's global/current status (shown only when different from project status) */}
+          {showCandidateStatusBadge && candidateStatusConfig && (
+            <Badge
+              variant="outline"
+              className={`${candidateStatusConfig.color} border text-[10px] px-2 py-0.5 rounded-full`}
+              title={`Candidate status: ${candidateStatusConfig.label}`}
+            >
+              {candidateStatusConfig.label}
+            </Badge>
+          )}
+
           {showMatchScore && displayMatchScore !== undefined && (
             <Tooltip>
               <TooltipTrigger asChild>

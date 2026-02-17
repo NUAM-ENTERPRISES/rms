@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useGetCandidateByIdQuery } from "@/features/candidates";
 import type { CandidateRecord } from "./CandidateCard";
 
 interface CandidateDetailTooltipProps {
@@ -158,6 +159,16 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
       ? candidate.totalExperience
       : calculateExperienceYears(candidate.workExperiences);
 
+  // If workExperiences are missing companyName (or missing entirely in the list view)
+  // fetch full candidate details (cached) and use that as fallback only when needed.
+  const candidateId = (candidate.candidateId || candidate.id) as string | undefined;
+  const needFetchWorkExp = !!candidateId && (
+    !Array.isArray(candidate.workExperiences) ||
+    candidate.workExperiences.length === 0 ||
+    candidate.workExperiences.some((we: any) => !(we.companyName || we.company_name || we.company))
+  );
+  const { data: fullCandidate } = useGetCandidateByIdQuery(candidateId ?? "", { skip: !needFetchWorkExp });
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -294,11 +305,43 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                       const end = we.endDate || we.end_date;
                       const period = formatWorkPeriod(start, end);
                       const duration = formatDuration(start, end);
+
+                      // Robust display fallbacks for heterogeneous API shapes:
+                      // - prefer explicit jobTitle/companyName
+                      // - then try nested roleCatalog.label / roleCatalog.shortName
+                      // - then fall back to candidate.matchScore.roleName or nominatedRole
+                      const roleCatalogFromExp = we.roleCatalog || we.role_catalog;
+                      const roleCatalogIdFromExp = we.roleCatalogId || we.role_catalog_id || we.roleCatalog?.id || we.role_catalog?.id;
+
+                      // try to resolve a role label from the experience, or from the candidate's matchScore
+                      let roleLabel: string | undefined = undefined;
+                      if (roleCatalogFromExp?.label) roleLabel = roleCatalogFromExp.label;
+                      else if (roleCatalogFromExp?.shortName) roleLabel = roleCatalogFromExp.shortName;
+                      else if (roleCatalogIdFromExp && (candidate as any).matchScore && typeof (candidate as any).matchScore === 'object' && (candidate as any).matchScore.roleCatalog && (candidate as any).matchScore.roleCatalog.id === roleCatalogIdFromExp) {
+                        roleLabel = (candidate as any).matchScore.roleCatalog.label || (candidate as any).matchScore.roleName;
+                      }
+
+                      const jobTitle = we.jobTitle || we.job_title || roleLabel || (candidate as any).matchScore?.roleName || candidate.nominatedRole?.designation || "-";
+                      // Prefer companyName from the experience entry; if missing, try the fully fetched candidate's matching workExperience (by id/role+dates), then fallbacks
+                      const fullMatch = fullCandidate?.workExperiences?.find((fwe: any) => fwe.id === we.id || ((fwe.roleCatalogId || fwe.role_catalog_id) && (fwe.roleCatalogId || fwe.role_catalog_id) === (we.roleCatalogId || we.role_catalog_id) && fwe.startDate === start && fwe.endDate === end));
+                      const company =
+                        we.companyName ||
+                        we.company_name ||
+                        we.company ||
+                        we.employer ||
+                        fullMatch?.companyName ||
+                        fullMatch?.company_name ||
+                        candidate.currentEmployer ||
+                        "Unknown";
+
+                      // show roleCatalog shortName as compact secondary if available
+                      const roleShort = roleCatalogFromExp?.shortName || (candidate as any).matchScore?.roleCatalog?.shortName || undefined;
+
                       return (
                         <div key={idx} className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate text-black">{we.jobTitle || we.job_title || "-"}</div>
-                            <div className="text-[11px] text-black truncate">{we.companyName || we.company_name || "Unknown"}{we.location ? ` • ${we.location}` : ""}</div>
+                            <div className="text-sm font-medium truncate text-black">{jobTitle}</div>
+                            <div className="text-[11px] text-black truncate">{company}{we.location ? ` • ${we.location}` : ""}{roleShort ? ` • ${roleShort}` : ""}</div>
                           </div>
                           <div className="text-[11px] text-black whitespace-nowrap">
                             {period}{duration ? ` • ${duration}` : ""}

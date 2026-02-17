@@ -45,7 +45,10 @@ import {
   AlertCircle,
   Users,
 } from "lucide-react";
-import { ImageViewer } from "@/components/molecules";
+import { FaWhatsapp } from "react-icons/fa";
+import { ImageViewer, DatePicker } from "@/components/molecules";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { parseISO, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
@@ -100,6 +103,10 @@ export default function CandidatesPage() {
     search: "",
     status: "all",
     experience: "all",
+    // date range filter (date added)
+    dateRange: "all" as string,
+    dateFrom: undefined as Date | undefined,
+    dateTo: undefined as Date | undefined,
     page: 1,
     limit: 20,
   });
@@ -241,6 +248,21 @@ export default function CandidatesPage() {
         });
       }
 
+      // Date range filter (filter by candidate.createdAt / date added)
+      if (filters.dateFrom || filters.dateTo) {
+        const from = filters.dateFrom ? startOfDay(filters.dateFrom) : null;
+        const to = filters.dateTo ? endOfDay(filters.dateTo) : null;
+        filtered = filtered.filter((candidate) => {
+          const dStr = candidate.createdAt || candidate.updatedAt;
+          if (!dStr) return false;
+          const d = parseISO(dStr);
+          if (from && to) return d >= from && d <= to;
+          if (from) return d >= from;
+          if (to) return d <= to;
+          return true;
+        });
+      }
+
       // Note: availability filter removed as it's not in the API interface
       // if (filters.availability !== "all") {
       //   filtered = filtered.filter(
@@ -270,6 +292,15 @@ export default function CandidatesPage() {
       year: "numeric",
     });
   };
+
+  // Helper to create sanitized digits-only phone string for tel/WhatsApp links
+  const formatPhoneForLink = (c: any) => {
+    const raw = String(c?.countryCode ?? "") + String(c?.mobileNumber ?? c?.mobile ?? c?.contact ?? "");
+    const digits = raw.replace(/\D/g, "");
+    return digits || null;
+  };
+
+
 
   // Get status badge variant and icon
   const getStatusInfo = (status: string) => {
@@ -1184,16 +1215,124 @@ export default function CandidatesPage() {
                     </p>
                   </div>
 
-                  {/* Optional: Add a little sparkle */}
-                  <div className="hidden sm:block">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-indigo-400 to-pink-400 opacity-20 blur-xl"></div>
+                  {/* Right-side filters: Date presets + From / To pickers (date added) */}
+                  <div className="ml-auto hidden md:flex items-center gap-3">
+                    {/* Date presets (All dates / Today / This week / etc.) */}
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-slate-500">Date Filteration</div>
+                      <div className="w-40">
+                        <Select
+                          value={filters.dateRange}
+                          onValueChange={(value) => {
+                            const today = new Date();
+                            let from: Date | undefined = undefined;
+                            let to: Date | undefined = undefined;
+                            switch (value) {
+                              case "today":
+                                from = startOfDay(today); to = endOfDay(today);
+                                break;
+                              case "yesterday": {
+                                const y = subDays(today, 1);
+                                from = startOfDay(y); to = endOfDay(y);
+                                break;
+                              }
+                              case "thisWeek":
+                                from = startOfWeek(today); to = endOfWeek(today);
+                                break;
+                              case "lastWeek": {
+                                const lw = subDays(today, 7);
+                                from = startOfWeek(lw); to = endOfWeek(lw);
+                                break;
+                              }
+                              case "thisMonth":
+                                from = startOfMonth(today); to = endOfMonth(today);
+                                break;
+                              case "custom":
+                                from = filters.dateFrom as Date | undefined;
+                                to = filters.dateTo as Date | undefined;
+                                break;
+                              case "all":
+                              default:
+                                from = undefined; to = undefined; break;
+                            }
+
+                            setFilters((prev) => ({ ...prev, dateRange: value, dateFrom: from, dateTo: to, page: 1 }));
+                          }}
+                        >
+                          <SelectTrigger className="h-9 w-40 rounded-xl border-0 bg-gray-50/50">
+                            <SelectValue placeholder="All" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="yesterday">Yesterday</SelectItem>
+                            <SelectItem value="thisWeek">This week</SelectItem>
+                            <SelectItem value="lastWeek">Last week</SelectItem>
+                            <SelectItem value="thisMonth">This month</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-slate-500">From</div>
+                      <div className="w-40">
+                        <DatePicker
+                          value={filters.dateFrom as Date | undefined}
+                          onChange={(d) =>
+                            setFilters((prev) => {
+                              const newRange = d || prev.dateTo ? "custom" : "all";
+                              return { ...prev, dateFrom: d, dateRange: newRange, page: 1 };
+                            })
+                          }
+                          compact
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-slate-500">To</div>
+                      <div className="w-40">
+                        <DatePicker
+                          value={filters.dateTo as Date | undefined}
+                          onChange={(d) =>
+                            setFilters((prev) => {
+                              const newRange = prev.dateFrom || d ? "custom" : "all";
+                              return { ...prev, dateTo: d, dateRange: newRange, page: 1 };
+                            })
+                          }
+                          compact
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          dateFrom: undefined,
+                          dateTo: undefined,
+                          dateRange: "all",
+                          page: 1,
+                        }))
+                      }
+                      className="text-slate-500"
+                    >
+                      Clear
+                    </Button>
+
+                    <div className="hidden lg:block">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-indigo-400 to-pink-400 opacity-20 blur-xl"></div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Table */}
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky">
                   <TableRow className="bg-gray-50/50 border-b border-gray-200">
                     <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
                       Candidate
@@ -1207,6 +1346,9 @@ export default function CandidatesPage() {
                     </TableHead>
                     <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
                       Last Updated
+                    </TableHead>
+                    <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+                      Contact
                     </TableHead>
                     <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
                       Actions
@@ -1337,6 +1479,45 @@ export default function CandidatesPage() {
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Calendar className="h-4 w-4 text-gray-400" />
                               {formatDate(candidate.updatedAt)}
+                            </div>
+                          </TableCell>
+
+                          {/* Contact */}
+                          <TableCell className="px-6 py-5 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {(() => {
+                                const phoneDigits = formatPhoneForLink(candidate);
+                                return (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      className="h-14 w-14 p-0 text-green-600"
+                                      onClick={() =>
+                                        phoneDigits &&
+                                        window.open(`https://wa.me/${phoneDigits}`, "_blank")
+                                      }
+                                      disabled={!phoneDigits}
+                                      title={`WhatsApp ${candidate.firstName || ""}`}
+                                      aria-label={`WhatsApp ${candidate.firstName || ""}`}
+                                    >
+                                      <FaWhatsapp className="h-14 w-14" />
+                                    </Button>
+
+                                    <Button
+                                      variant="ghost"
+                                      className="h-14 w-14 p-0 text-blue-600"
+                                      onClick={() =>
+                                        phoneDigits && (window.location.href = `tel:${phoneDigits}`)
+                                      }
+                                      disabled={!phoneDigits}
+                                      title={`Call ${candidate.firstName || ""}`}
+                                      aria-label={`Call ${candidate.firstName || ""}`}
+                                    >
+                                      <Phone className="h-14 w-14" />
+                                    </Button>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </TableCell>
 
