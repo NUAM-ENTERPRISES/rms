@@ -97,6 +97,9 @@ const MyInterviewsListPage = lazy(
 const AssignedInterviewsListPage = lazy(
   () => import("@/features/interviews/views/AssignedInterviewsListPage")
 );
+const ShortlistingListPage = lazy(
+  () => import("@/features/interviews/views/ShortlistingListPage")
+);
 const UpcomingInterviewsListPage = lazy(
   () => import("@/features/interviews/views/UpcomingInterviewsListPage")
 );
@@ -635,6 +638,19 @@ function App() {
                         <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <AssignedInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/interviews/shortlisting"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:interviews"]}>
+                          <AppLayout>
+                            <ShortlistingListPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

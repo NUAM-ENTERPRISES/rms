@@ -34,6 +34,9 @@ export async function seedCandidateProjectWorkflow() {
     { name: "documents_verified", label: "Verified Documents", order: 4, main: "documents" },
     { name: "documents_re_submission_requested", label: "Document Re-Submission Requested", order: 5, main: "documents" },
     { name: "rejected_documents", label: "Rejected Documents", order: 6, main: "documents" },
+    { name: "submitted_to_client", label: "Submitted to Client", order: 7, main: "documents" },
+    { name: "shortlisted", label: "Shortlisted", order: 8, main: "documents" },
+    { name: "not_shortlisted", label: "Not Shortlisted", order: 9, main: "documents" },
 
     // INTERVIEW
     {name: "interview_assigned", label: "Interview Assigned", order: 1, main: "interview" },
@@ -48,6 +51,8 @@ export async function seedCandidateProjectWorkflow() {
     { name: "screening_completed", label: "Screening Completed", order: 9, main: "interview" },
     { name: "screening_passed", label: "Screening Passed", order: 10, main: "interview" },
     { name: "screening_failed", label: "Screening Failed", order: 11, main: "interview" },
+
+
     // TRAINING (interview categories)
     { name: "training_assigned", label: "Training Assigned", order: 12, main: "interview" },
     { name: "training_in_progress", label: "Training In Progress", order: 13, main: "interview" },

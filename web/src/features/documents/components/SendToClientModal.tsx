@@ -25,7 +25,8 @@ import {
   Search,
   MessageSquare,
   Clock,
-  History
+  History,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -33,8 +34,10 @@ import {
   useForwardToClientMutation, 
   useGetLatestForwardingQuery 
 } from "../api";
+import { PDFViewer } from "@/components/molecules";
 import { formatDistanceToNow, format } from "date-fns";
 import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
+import { MergeVerifiedModal } from "./MergeVerifiedModal";
 
 interface SendToClientModalProps {
   isOpen: boolean;
@@ -63,13 +66,27 @@ export function SendToClientModal({
   const [notes, setNotes] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
+  // PDF viewer state
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string>("");
+  const [pdfViewerName, setPdfViewerName] = useState<string>("");
+
+  // Merge modal state
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+
   const [forwardToClient, { isLoading: isForwarding }] = useForwardToClientMutation();
 
   // Check for existing merged document
-  const { data: mergedDocResponse, isLoading: isCheckingMerged } = useGetMergedDocumentQuery(
-    { candidateId, projectId, roleCatalogId },
-    { skip: !isOpen || !candidateId || !projectId }
+  const { data: mergedDocResponse, isLoading: isCheckingMerged, refetch: refetchMerged } = useGetMergedDocumentQuery(
+    { candidateId, projectId, roleCatalogId: roleCatalogId || undefined },
+    { skip: !isOpen || !candidateId || !projectId, refetchOnMountOrArgChange: true }
   );
+
+  useEffect(() => {
+    if (isOpen) {
+      refetchMerged();
+    }
+  }, [isOpen, refetchMerged, roleCatalogId]);
 
   const mergedDoc = mergedDocResponse?.data;
 
@@ -350,7 +367,7 @@ export function SendToClientModal({
             </div>
 
             {/* Merged Document (if exists) */}
-            {mergedDoc && (
+            {mergedDoc ? (
               <div className={`p-4 rounded-xl flex items-center justify-between group transition-colors border ${
                 hasIndividualSelected 
                   ? "bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed" 
@@ -377,15 +394,68 @@ export function SendToClientModal({
                     <p className={`text-xs mt-0.5 ${hasIndividualSelected ? "text-slate-400" : "text-emerald-700"}`}>
                       {mergedDoc.fileName ? abbreviateFileName(mergedDoc.fileName) : "merged_documents.pdf"} 
                       <span className="mx-2">•</span>
-                      {mergedDoc.updatedAt ? `Generated ${formatDistanceToNow(new Date(mergedDoc.updatedAt))} ago` : 'Ready to send'}
+                      {mergedDoc.updatedAt ? `Generated ${safeFormatDistanceToNow(mergedDoc.updatedAt)}` : 'Ready to send'}
                     </p>
+                    <p className="text-[11px] text-slate-500 mt-1">Already generated — you can re-generate to include any recent updates.</p>
                   </div>
                 </div>
-                {!hasIndividualSelected && (
-                  <div className="bg-emerald-100 px-2 py-1 rounded text-[10px] font-bold text-emerald-700 uppercase">Recommended</div>
-                )}
+
+                {/* View merged PDF + Re-generate */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="View merged PDF"
+                    aria-label="View merged PDF"
+                    onClick={() => {
+                      const url = mergedDoc.fileUrl || "";
+                      const cacheBuster = mergedDoc.updatedAt ? (url.includes('?') ? '&' : '?') + `t=${new Date(mergedDoc.updatedAt).getTime()}` : "";
+                      setPdfViewerUrl(url + cacheBuster);
+                      setPdfViewerName(mergedDoc.fileName || `Merged - ${candidateName}`);
+                      setPdfViewerOpen(true);
+                    }}
+                    className="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsMergeModalOpen(true)}
+                    className="h-8 px-3 text-xs"
+                  >
+                    Re-generate
+                  </Button>
+
+                  {!hasIndividualSelected && (
+                    <div className="bg-emerald-100 px-2 py-1 rounded text-[10px] font-bold text-emerald-700 uppercase">Recommended</div>
+                  )}
+                </div>
               </div>
-            )}
+            ) : (
+              <div className={`p-4 rounded-xl flex items-center justify-between border bg-slate-50`}> 
+                <div>
+                  <Label className="font-bold flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Unified PDF (All Documents Merged)
+                  </Label>
+                  <p className="text-xs text-slate-500 mt-1">No unified PDF yet — please generate to attach a single merged file for the client.</p>
+                </div>
+                <div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsMergeModalOpen(true)}
+                    className="h-8 px-3 text-xs"
+                    disabled={!roleCatalogId}
+                    title={roleCatalogId ? "Generate unified PDF" : "Select role to enable generation"}
+                  >
+                    Generate
+                  </Button>
+                </div>
+              </div>
+            )},
 
             {/* Individual Documents */}
             <div className={`bg-white rounded-xl border border-slate-200 overflow-hidden ${hasMergedSelected ? "opacity-60" : ""}`}>
@@ -434,6 +504,20 @@ export function SendToClientModal({
                         {doc.docType.replace(/_/g, ' ')}
                       </p>
                     </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="View document"
+                        aria-label={`View ${doc.fileName}`}
+                        onClick={() => {
+                          setPdfViewerUrl(doc.fileUrl || "");
+                          setPdfViewerName(doc.fileName || doc.docType);
+                          setPdfViewerOpen(true);
+                        }}
+                        className="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     {selectedDocs.includes(doc.id) && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                   </div>
                 ))}
@@ -464,6 +548,33 @@ export function SendToClientModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <PDFViewer
+        fileUrl={pdfViewerUrl}
+        fileName={pdfViewerName}
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+        showDownload={true}
+        showZoomControls={true}
+        showRotationControls={true}
+        showFullscreenToggle={true}
+      />
+
+      <MergeVerifiedModal
+        isOpen={isMergeModalOpen}
+        onOpenChange={setIsMergeModalOpen}
+        candidateId={candidateId}
+        projectId={projectId}
+        roleCatalogId={roleCatalogId || ""}
+        onViewDocument={(url: string, name: string) => {
+          setPdfViewerUrl(url);
+          setPdfViewerName(name);
+          setPdfViewerOpen(true);
+        }}
+        onMergeEnd={() => {
+          refetchMerged?.();
+        }}
+      />
 
       <ClientForwardHistoryModal
         isOpen={isHistoryOpen}

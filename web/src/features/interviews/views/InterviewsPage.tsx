@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle2, Clock, TrendingUp, ClipboardCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, TrendingUp, ClipboardCheck, Mail } from "lucide-react";
 import { Calendar, RefreshCw } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { useGetInterviewsQuery, useGetAssignedInterviewsQuery, useGetUpcomingInterviewsQuery, useGetInterviewsDashboardQuery } from "../api";
+import { useGetInterviewsQuery, useGetUpcomingInterviewsQuery, useGetInterviewsDashboardQuery } from "../api";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
 import EditInterviewDialog from "../components/EditInterviewDialog";
 
@@ -35,7 +35,6 @@ export default function InterviewsPage() {
     page: 1,
     limit: 50,
   });
-  const { data: assignedData, refetch: refetchAssigned } = useGetAssignedInterviewsQuery({ page: 1, limit: 5 });
   // Ensure upcoming hook is called unconditionally (avoid hooks ordering changes)
   const { data: upcomingData, refetch: refetchUpcoming } = useGetUpcomingInterviewsQuery({ page: 1, limit: 5 });
 
@@ -78,7 +77,6 @@ export default function InterviewsPage() {
             <Button size="sm" onClick={() => {
                 try {
                   refetch?.();
-                  refetchAssigned?.();
                   refetchUpcoming?.();
                   refetchDashboard?.();
                 } catch (e) {
@@ -99,7 +97,12 @@ export default function InterviewsPage() {
 
   const upcomingInterviews = upcomingData?.data?.interviews ?? [];
 
-  const assignedInterviews = assignedData?.data?.items ?? [];
+  const shortlistingPreview = [
+    { id: "s1", candidateName: "Aisha Khan", role: "Software Engineer II", project: "Alpha", sentAt: new Date().toISOString() },
+    { id: "s2", candidateName: "Rahul Verma", role: "Frontend Developer", project: "Beta", sentAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+    { id: "s3", candidateName: "Maria Gomez", role: "QA Analyst", project: "Gamma", sentAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
+  ];
+  const shortlistingCount = shortlistingPreview.length;
 
   // Build stats using server-provided dashboard data when available, otherwise fall back to local calculations
   const scheduledThisWeek = dashboardData?.data?.thisWeek?.count ?? interviews.filter((iv) => {
@@ -161,7 +164,6 @@ export default function InterviewsPage() {
       onClick={() => {
         try {
           refetch?.();
-          refetchAssigned?.();
           refetchUpcoming?.();
           refetchDashboard?.();
         } catch (e) {}
@@ -263,20 +265,20 @@ export default function InterviewsPage() {
 
   <CardContent className="p-8 space-y-10">
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Assigned Interviews – Indigo Theme */}
+      {/* Short Listing Pending Candidates */}
       <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden">
-        <CardHeader className="pb-5 bg-gradient-to-r from-indigo-50/80 to-transparent">
+        <CardHeader className="pb-5 bg-gradient-to-r from-amber-50/80 to-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-gradient-to-br from-indigo-100 to-indigo-50 rounded-2xl shadow-md border border-indigo-200/60">
-                <Clock className="h-7 w-7 text-indigo-600" />
+              <div className="p-3.5 bg-gradient-to-br from-amber-100 to-amber-50 rounded-2xl shadow-md border border-amber-200/60">
+                <Mail className="h-7 w-7 text-amber-600" />
               </div>
               <div>
                 <CardTitle className="text-xl font-bold text-slate-900">
-                  Assigned Interviews
+                  Short Listing Pending Candidates
                 </CardTitle>
                 <CardDescription className="text-sm mt-1.5 text-slate-600">
-                  {assignedInterviews.length} interview{assignedInterviews.length !== 1 ? "s" : ""} ready for scheduling
+                  {shortlistingCount} candidate{shortlistingCount !== 1 ? "s" : ""} sent to client for review
                 </CardDescription>
               </div>
             </div>
@@ -284,14 +286,14 @@ export default function InterviewsPage() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (assignedInterviews[0]?.id) {
-                  navigate("/interviews/assigned", { state: { selectedId: assignedInterviews[0]?.id } });
+                if (shortlistingPreview[0]?.id) {
+                  navigate("/interviews/shortlisting", { state: { selectedId: shortlistingPreview[0]?.id } });
                 } else {
-                  navigate("/interviews/assigned");
+                  navigate("/interviews/shortlisting");
                 }
               }}
-              disabled={assignedInterviews.length === 0}
-              className="group text-sm font-medium text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+              disabled={shortlistingCount === 0}
+              className="group text-sm font-medium text-amber-600 hover:bg-amber-50 hover:text-amber-700"
             >
               View All
               <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
@@ -300,77 +302,55 @@ export default function InterviewsPage() {
         </CardHeader>
 
         <CardContent className="pt-4">
-          {assignedInterviews.length === 0 ? (
+          {shortlistingCount === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <Calendar className="h-14 w-14 mx-auto mb-5 opacity-40" />
-              <p className="font-semibold text-lg">No assigned interviews</p>
-              <p className="text-sm mt-2">New assignments will appear here automatically</p>
+              <p className="font-semibold text-lg">No shortlisting items</p>
+              <p className="text-sm mt-2">Candidates sent to clients will appear here</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {assignedInterviews.map((interview) => {
-                const candidate = interview.candidate;
-                const role = interview.roleNeeded;
-                return (
-                  <div
-                    key={interview.id}
-                    onClick={() => navigate(`/interviews/assigned`, { state: { selectedId: interview.id } })}
-                    className="group relative p-5 rounded-2xl border border-slate-200/80 hover:border-indigo-300 hover:bg-indigo-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between pr-28">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-semibold text-slate-900 truncate">
-                          {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
-                        </p>
-                        <p className="text-sm text-slate-600 truncate mt-1">
-                          {role?.designation || "Unknown Role"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
-                      <Calendar className="h-4.5 w-4.5" />
-                      <span className="font-medium">
-                        {interview.scheduledTime 
-                          ? new Date(interview.scheduledTime).toLocaleString() 
-                          : "Not scheduled"}
-                      </span>
-                      {interview.expired && (
-                        <Badge className="ml-auto text-xs bg-rose-100 text-rose-700 border-rose-200 font-medium">
-                          Expired
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Floating Stack */}
-                    <div className="absolute right-5 top-5 bottom-5 flex flex-col justify-between items-end">
-                      <Badge className="text-xs font-semibold bg-indigo-100 text-indigo-700 border-indigo-200 px-4 py-1.5 shadow-sm">
-                        {(interview as any).subStatus?.label || (interview as any).subStatus?.name || 'Assigned'}
-                      </Badge>
-
-                      <Button
-                        size="sm"
-                        className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl text-sm px-5 py-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const candidateName = interview.candidate
-                            ? `${interview.candidate.firstName} ${interview.candidate.lastName}`
-                            : "Unknown Candidate";
-                          const projectName = interview.project?.title || "Unknown Project";
-                          setScheduleDialogInitial({
-                            candidateProjectMapId: interview.id,
-                            candidateName,
-                            projectName,
-                          });
-                          setScheduleDialogOpen(true);
-                        }}
-                      >
-                        Schedule
-                      </Button>
+              {shortlistingPreview.slice(0, 3).map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => navigate(`/interviews/shortlisting`, { state: { selectedId: c.id } })}
+                  className="group relative p-5 rounded-2xl border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between pr-28">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-lg font-semibold text-slate-900 truncate">
+                        {c.candidateName}
+                      </p>
+                      <p className="text-sm text-slate-600 truncate mt-1">
+                        {c.role}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
+                    <Calendar className="h-4.5 w-4.5" />
+                    <span className="font-medium">
+                      {new Date(c.sentAt).toLocaleString()}
+                    </span>
+                    <Badge className="ml-auto text-xs bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
+                      Verified & Sent
+                    </Badge>
+                  </div>
+
+                  <div className="absolute right-5 top-5 bottom-5 flex flex-col justify-between items-end">
+                    <Button
+                      size="sm"
+                      className="mt-4 bg-amber-600 hover:bg-amber-700 text-white shadow-lg hover:shadow-xl text-sm px-5 py-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Shortlist action is handled on the full 'View All' page for now
+                      }}
+                    >
+                      Shortlist
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

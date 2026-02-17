@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -78,8 +78,14 @@ export function MergeVerifiedModal({
       projectId, 
       roleCatalogId: activeRoleCatalogId 
     },
-    { skip: !isOpen || !candidateId || !projectId }
+    { skip: !isOpen || !candidateId || !projectId, refetchOnMountOrArgChange: true }
   );
+
+  useEffect(() => {
+    if (isOpen) {
+      refetchMerged();
+    }
+  }, [isOpen, refetchMerged, activeRoleCatalogId]);
 
   const existingMergedDoc = mergedDocResponse?.data;
 
@@ -87,8 +93,11 @@ export function MergeVerifiedModal({
   const handleDownloadExisting = () => {
     if (!existingMergedDoc?.fileUrl) return;
     
+    const url = existingMergedDoc.fileUrl;
+    const cacheBuster = existingMergedDoc.updatedAt ? (url.includes('?') ? '&' : '?') + `t=${new Date(existingMergedDoc.updatedAt).getTime()}` : "";
+    
     const link = document.createElement('a');
-    link.href = existingMergedDoc.fileUrl;
+    link.href = url + cacheBuster;
     link.setAttribute('download', existingMergedDoc.fileName || 'Merged_Documents.pdf');
     link.target = '_blank';
     document.body.appendChild(link);

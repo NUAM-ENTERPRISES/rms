@@ -39,7 +39,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { BulkViewDocumentsModal } from "./BulkViewDocumentsModal";
 import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
 import { useBulkForwardToClientMutation } from "../api";
@@ -89,8 +88,6 @@ export function BulkSendToClientModal({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 16; // 4 rows × 4 columns
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mergeModalOpen, setMergeModalOpen] = useState(false);
-  const [selectedCandidateForMerge, setSelectedCandidateForMerge] = useState<any>(null);
   const [viewDocumentsModalOpen, setViewDocumentsModalOpen] = useState(false);
   const [selectedCandidateForViewDocs, setSelectedCandidateForViewDocs] = useState<any>(null);
   const [isFetchingMergedDocs, setIsFetchingMergedDocs] = useState(false);
@@ -237,6 +234,7 @@ export function BulkSendToClientModal({
 
         return {
           candidateId: candidate.candidate.id,
+          projectId: candidate.project.id,
           roleCatalogId: candidate.roleNeeded?.roleCatalog?.id || "",
           sendType,
           documentIds: sendType === "individual" ? selectedDocs : undefined,
@@ -519,27 +517,6 @@ export function BulkSendToClientModal({
                         )}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        {/* Generate Unified PDF Button */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              type="button"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-100 shadow-sm"
-                              onClick={() => {
-                                setSelectedCandidateForMerge(candidate);
-                                setMergeModalOpen(true);
-                              }}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-gray-900 text-white">
-                            Generate Unified PDF - Combines all candidate documents into a single PDF file
-                          </TooltipContent>
-                        </Tooltip>
-
                         {/* Documents Attachments Button */}
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -721,20 +698,6 @@ export function BulkSendToClientModal({
         </div>
       </DialogContent>
     </Dialog>
-
-    {/* Merge Verified Modal */}
-    {selectedCandidateForMerge && (
-      <MergeVerifiedModal
-        isOpen={mergeModalOpen}
-        onOpenChange={setMergeModalOpen}
-        candidateId={selectedCandidateForMerge.candidate.id}
-        projectId={selectedCandidateForMerge.project.id}
-        roleCatalogId={selectedCandidateForMerge.roleNeeded?.roleCatalog?.id || ""}
-        onViewDocument={(url) => {
-          window.open(url, '_blank');
-        }}
-      />
-    )}
 
     {/* View Documents Modal */}
     {selectedCandidateForViewDocs && (

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules";
 import { useGetCandidateProjectVerificationsQuery, useGetMergedDocumentQuery } from "../api";
+import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { formatDistanceToNow } from "date-fns";
 
 interface BulkViewDocumentsModalProps {
@@ -63,6 +64,7 @@ export function BulkViewDocumentsModal({
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string>("");
   const [selectedPdfName, setSelectedPdfName] = useState<string>("");
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const docsPerPage = 5;
 
@@ -74,10 +76,16 @@ export function BulkViewDocumentsModal({
     );
 
   // Call merged document API
-  const { data: mergedDocResponse, isLoading: isCheckingMerged } = useGetMergedDocumentQuery(
+  const { data: mergedDocResponse, isLoading: isCheckingMerged, refetch: refetchMerged } = useGetMergedDocumentQuery(
     { candidateId, projectId, roleCatalogId },
-    { skip: !isOpen || !candidateId || !projectId }
+    { skip: !isOpen || !candidateId || !projectId, refetchOnMountOrArgChange: true }
   );
+
+  useEffect(() => {
+    if (isOpen) {
+      refetchMerged();
+    }
+  }, [isOpen, refetchMerged, roleCatalogId]);
 
   // Handle different response structures
   let verifiedDocuments: any[] = [];
@@ -292,14 +300,12 @@ export function BulkViewDocumentsModal({
                 </div>
 
                 {/* Merged Document (if exists) */}
-                {mergedDoc && (
-                  <div
-                    className={`p-4 rounded-xl flex items-center justify-between group transition-colors border ${
-                      hasIndividualSelected
-                        ? "bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed"
-                        : "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200"
-                    }`}
-                  >
+                {mergedDoc ? (
+                  <div className={`p-4 rounded-xl flex items-center justify-between group transition-colors border ${
+                    hasIndividualSelected
+                      ? "bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed"
+                      : "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200"
+                  }`}>
                     <div className="flex items-center gap-3">
                       <Checkbox
                         id="merged-doc"
@@ -320,60 +326,68 @@ export function BulkViewDocumentsModal({
                           <FileText className="h-4 w-4" />
                           Unified PDF (All Documents Merged)
                         </Label>
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            hasIndividualSelected
-                              ? "text-slate-400"
-                              : "text-emerald-700"
-                          }`}
-                        >
-                          {mergedDoc.fileName
-                            ? abbreviateFileName(mergedDoc.fileName)
-                            : "merged_documents.pdf"}
+                        <p className={`text-xs mt-0.5 ${hasIndividualSelected ? "text-slate-400" : "text-emerald-700"}`}>
+                          {mergedDoc.fileName ? abbreviateFileName(mergedDoc.fileName) : "merged_documents.pdf"}
                           <span className="mx-2">•</span>
-                          {mergedDoc.updatedAt
-                            ? `Generated ${formatDistanceToNow(new Date(mergedDoc.updatedAt))} ago`
-                            : "Ready"}
+                          {mergedDoc.updatedAt ? `Generated ${formatDistanceToNow(new Date(mergedDoc.updatedAt))} ago` : 'Ready'}
                         </p>
+                        <p className="text-[11px] text-slate-500 mt-1">Already generated — you can re-generate to include any recent updates.</p>
                       </div>
                     </div>
-                    
+
+                    {/* View merged PDF + Re-generate */}
                     <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => {
+                          const url = mergedDoc.fileUrl;
+                          const cacheBuster = mergedDoc.updatedAt ? (url.includes('?') ? '&' : '?') + `t=${new Date(mergedDoc.updatedAt).getTime()}` : "";
+                          setSelectedPdfUrl(url + cacheBuster);
+                          setSelectedPdfName(mergedDoc.fileName || "merged.pdf");
+                          setPdfViewerOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsMergeModalOpen(true)}
+                        className="h-8 px-3 text-xs"
+                      >
+                        Re-generate
+                      </Button>
+
                       {!hasIndividualSelected && (
-                        <div className="bg-emerald-100 px-2 py-1 rounded text-[10px] font-bold text-emerald-700 uppercase">
-                          Recommended
-                        </div>
+                        <div className="bg-emerald-100 px-2 py-1 rounded text-[10px] font-bold text-emerald-700 uppercase">Recommended</div>
                       )}
-                      
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          onClick={() => {
-                            setSelectedPdfUrl(mergedDoc.fileUrl);
-                            setSelectedPdfName(mergedDoc.fileName || "merged.pdf");
-                            setPdfViewerOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          onClick={() =>
-                            handleDownloadDocument(
-                              mergedDoc.fileUrl,
-                              mergedDoc.fileName || "merged.pdf"
-                            )
-                          }
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`p-4 rounded-xl flex items-center justify-between border bg-slate-50`}> 
+                    <div>
+                      <Label className="font-bold flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Unified PDF (All Documents Merged)
+                      </Label>
+                      <p className="text-xs text-slate-500 mt-1">No unified PDF yet — please generate to attach a single merged file for the client.</p>
+                    </div>
+                    <div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsMergeModalOpen(true)}
+                        className="h-8 px-3 text-xs"
+                        disabled={!roleCatalogId}
+                        title={roleCatalogId ? "Generate unified PDF" : "Select role to enable generation"}
+                      >
+                        Generate
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -564,6 +578,23 @@ export function BulkViewDocumentsModal({
         showZoomControls={true}
         showRotationControls={true}
         showFullscreenToggle={true}
+      />
+
+      <MergeVerifiedModal
+        isOpen={isMergeModalOpen}
+        onOpenChange={setIsMergeModalOpen}
+        candidateId={candidateId}
+        projectId={projectId}
+        roleCatalogId={roleCatalogId || ""}
+        onViewDocument={(url: string, name: string) => {
+          const cacheBuster = url.includes('?') ? '&' : '?';
+          setSelectedPdfUrl(url + cacheBuster + `t=${Date.now()}`);
+          setSelectedPdfName(name);
+          setPdfViewerOpen(true);
+        }}
+        onMergeEnd={() => {
+          refetchMerged?.();
+        }}
       />
     </>
   );

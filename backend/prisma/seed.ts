@@ -77,6 +77,7 @@ const roles = [
       'read:candidates',
       'write:candidates',
       'nominate:candidates',
+      'shortlist:candidates',
       'read:teams',
       'read:interviews',
       'schedule:interviews',
@@ -107,6 +108,7 @@ const roles = [
       // Candidate decision permissions relevant to document flow
       'approve:candidates',
       'reject:candidates',
+      'shortlist:candidates',
     ],
   },
   {
@@ -119,6 +121,7 @@ const roles = [
       'request:resubmission',
       'approve:candidates',
       'reject:candidates',
+      'shortlist:candidates',
       'read:candidates',
       'write:candidates',
       'read:projects',
@@ -175,6 +178,25 @@ const roles = [
     ],
   },
   {
+    name: 'Screening Trainer',
+    description: 'Screening Trainer - Manages screenings and training',
+    permissions: [
+      'read:screenings',
+      'write:screenings',
+      'manage:screenings',
+      'conduct:screenings',
+      'read:interview_templates',
+      'write:interview_templates',
+      'manage:interview_templates',
+      'read:training',
+      'write:training',
+      'manage:training',
+      'assign:training',
+      'read:candidates',
+      'read:projects',
+    ],
+  },
+  {
     name: 'System Admin',
     description:
       'System Administrator - Full system access and user management',
@@ -217,6 +239,7 @@ const allPermissions = [
   'nominate:candidates',
   'approve:candidates',
   'reject:candidates',
+  'shortlist:candidates',
   'transfer:candidates',
   'transfer_back:candidates',
 
@@ -1246,6 +1269,14 @@ async function main() {
       countryCode: '+91',
       phone: '9876543223',
       role: 'Interview Coordinator',
+    },
+    {
+      email: 'trainer@affiniks.com',
+      name: 'Tom Trainer',
+      password: 'trainer123',
+      countryCode: '+91',
+      phone: '9876543224',
+      role: 'Screening Trainer',
     },
     {
       email: 'sysadmin@affiniks.com',

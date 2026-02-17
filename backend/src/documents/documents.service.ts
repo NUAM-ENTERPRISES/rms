@@ -2273,71 +2273,6 @@ export class DocumentsService {
           ? ['rejected']
           : ['verified', 'rejected'];
 
-    // completed nomination sub-statuses (include everything verified and beyond for 'verified' status)
-    const verifiedStatuses = [
-      'documents_verified',
-      'interview_assigned',
-      'interview_scheduled',
-      'interview_rescheduled',
-      'interview_completed',
-      'interview_passed',
-      'interview_failed',
-      'screening_assigned',
-      'screening_scheduled',
-      'screening_completed',
-      'screening_passed',
-      'screening_failed',
-      'training_assigned',
-      'training_in_progress',
-      'training_completed',
-      'ready_for_reassessment',
-      'interview_selected',
-      'transfered_to_processing',
-      'processing_in_progress',
-      'processing_completed',
-      'processing_failed',
-      'ready_for_final',
-      'hired',
-      'rejected_interview',
-      'rejected_selection',
-      'withdrawn',
-      'on_hold',
-    ];
-
-    const completedStatuses =
-      status === 'verified'
-        ? verifiedStatuses
-        : status === 'rejected'
-          ? ['rejected_documents']
-          : [...verifiedStatuses, 'rejected_documents'];
-
-    // Base where clause applied to counts and list
-    const baseWhere: any = {
-      status: { in: statuses },
-      isDeleted: false,
-    };
-
-    // Build candidateProjectMap 'is' object once so we don't overwrite other keys
-    const candidateProjectMapIs: any = {
-      subStatus: { name: { in: completedStatuses } },
-    };
-
-    if (recruiterId) candidateProjectMapIs.recruiterId = recruiterId;
-    if (projectId) candidateProjectMapIs.projectId = projectId;
-    if (roleCatalogId) candidateProjectMapIs.roleNeeded = { roleCatalogId };
-
-    baseWhere.candidateProjectMap = { is: candidateProjectMapIs };
-
-    // Search across candidate name, project title and document file name
-    if (search) {
-      baseWhere.OR = [
-        { candidateProjectMap: { is: { candidate: { firstName: { contains: search, mode: 'insensitive' } } } } },
-        { candidateProjectMap: { is: { candidate: { lastName: { contains: search, mode: 'insensitive' } } } } },
-        { candidateProjectMap: { is: { project: { title: { contains: search, mode: 'insensitive' } } } } },
-        { document: { fileName: { contains: search, mode: 'insensitive' } } },
-      ];
-    }
-
     const countBase: any = {};
     if (recruiterId) countBase.recruiterId = recruiterId;
     if (projectId) countBase.projectId = projectId;
@@ -2350,20 +2285,13 @@ export class DocumentsService {
     }
 
     // Build candidateProjects where (one item per nomination)
+    // We filter by candidates who have AT LEAST ONE verification matching requested statuses
+    // This allows showing history even if candidate moved to other stages (e.g. submitted_to_client)
     const cpWhere: any = {
-      subStatus: { name: { in: completedStatuses } },
+      ...countBase,
       // ensure there exists at least one verification matching requested statuses
       documentVerifications: { some: { status: { in: statuses }, isDeleted: false } },
     };
-
-    if (recruiterId) cpWhere.recruiterId = recruiterId;
-    if (projectId) cpWhere.projectId = projectId;
-    if (roleCatalogId) cpWhere.roleNeeded = { roleCatalogId };
-
-    // Filter by screening (only show candidates with screening data)
-    if (screening === 'true' || screening === true) {
-      cpWhere.screenings = { some: { decision: 'approved' } };
-    }
 
     // Search across candidate name, project title and document file name
     if (search) {
@@ -2450,13 +2378,13 @@ export class DocumentsService {
       this.prisma.candidateProjects.count({
         where: {
           ...countBase,
-          subStatus: { name: { in: verifiedStatuses } },
+          documentVerifications: { some: { status: 'verified', isDeleted: false } },
         },
       }),
       this.prisma.candidateProjects.count({
         where: {
           ...countBase,
-          subStatus: { name: 'rejected_documents' },
+          documentVerifications: { some: { status: 'rejected', isDeleted: false } },
         },
       }),
     ] as any);
@@ -2925,17 +2853,7 @@ export class DocumentsService {
 
     const verifiedWhereBase: any = {
       recruiterId,
-      OR: [
-        { subStatus: { name: 'documents_verified' } },
-        {
-          mainStatus: { name: { in: ['interview', 'processing', 'final'] } },
-          projectStatusHistory: {
-            some: {
-              subStatus: { name: 'documents_verified' },
-            },
-          },
-        },
-      ],
+      documentVerifications: { some: { status: 'verified', isDeleted: false } },
       project: {
         documentRequirements: {
           some: { isDeleted: false } as any,
@@ -2945,7 +2863,7 @@ export class DocumentsService {
 
     const rejectedWhereBase: any = {
       recruiterId,
-      subStatus: { name: 'rejected_documents' },
+      documentVerifications: { some: { status: 'rejected', isDeleted: false } },
       project: {
         documentRequirements: {
           some: { isDeleted: false } as any,
@@ -3006,11 +2924,14 @@ export class DocumentsService {
     } else if (status === 'InScreening') {
       activeWhere = { ...inScreeningWhereBase };
     } else {
-      // Default to verified or both if needed, but user asked for verified/rejected
+      // Default to verified or both if needed
       activeWhere = {
         recruiterId,
-        subStatus: {
-          name: { in: ['documents_verified', 'rejected_documents'] },
+        documentVerifications: {
+          some: {
+            status: { in: ['verified', 'rejected'] },
+            isDeleted: false,
+          },
         },
       };
     }
@@ -3564,7 +3485,7 @@ export class DocumentsService {
       try {
         const result = await this.processForwarding({
           candidateId: selection.candidateId,
-          projectId,
+          projectId: selection.projectId || projectId,
           recipientEmail,
           sendType: selection.sendType,
           documentIds: selection.documentIds,
@@ -3632,10 +3553,31 @@ export class DocumentsService {
 
     if (sendType === SendType.MERGED) {
       // 2. Locate latest merged PDF
-      const mergedDoc = await this.prisma.mergedDocument.findFirst({
-        where: { candidateId, projectId, roleCatalogId: roleCatalogId || null },
-        orderBy: { updatedAt: 'desc' },
-      });
+      // Try exact role match first, fallback to generic (null role), then latest overall
+      let mergedDoc: any = null;
+      const effectiveRoleCatalogId = roleCatalogId && roleCatalogId !== "" ? roleCatalogId : null;
+
+      if (effectiveRoleCatalogId) {
+        mergedDoc = await this.prisma.mergedDocument.findFirst({
+          where: { candidateId, projectId, roleCatalogId: effectiveRoleCatalogId },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
+
+      if (!mergedDoc) {
+        mergedDoc = await this.prisma.mergedDocument.findFirst({
+          where: { candidateId, projectId, roleCatalogId: null },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
+
+      // Final fallback: any merged document for this candidate and project
+      if (!mergedDoc) {
+        mergedDoc = await this.prisma.mergedDocument.findFirst({
+          where: { candidateId, projectId },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
 
       if (!mergedDoc) {
         throw new BadRequestException(`No merged document found for candidate ${candidateId}. Please generate it first.`);
@@ -3702,10 +3644,72 @@ export class DocumentsService {
       removeOnComplete: true,
     });
 
+    // 6. Update CandidateProject status -> submitted_to_client + create history (best-effort)
+    try {
+      // Find candidateProjectMap (prefer role-specific mapping when roleCatalogId provided)
+      let candidateProjectMap: any = null;
+
+      if (roleCatalogId) {
+        const roleNeeded = await this.prisma.roleNeeded.findFirst({ where: { projectId, roleCatalogId } });
+        if (roleNeeded) {
+          candidateProjectMap = await this.prisma.candidateProjects.findUnique({
+            where: {
+              candidateId_projectId_roleNeededId: {
+                candidateId,
+                projectId,
+                roleNeededId: roleNeeded.id,
+              },
+            },
+          });
+        }
+      }
+
+      if (!candidateProjectMap) {
+        candidateProjectMap = await this.prisma.candidateProjects.findFirst({
+          where: { candidateId, projectId },
+        });
+      }
+
+      if (candidateProjectMap) {
+        const mainStatus = await this.prisma.candidateProjectMainStatus.findFirst({ where: { name: 'documents' } });
+        const subStatus = await this.prisma.candidateProjectSubStatus.findFirst({ where: { name: 'submitted_to_client' } });
+
+        if (mainStatus && subStatus) {
+          await this.prisma.candidateProjects.update({
+            where: { id: candidateProjectMap.id },
+            data: {
+              mainStatusId: mainStatus.id,
+              subStatusId: subStatus.id,
+              updatedAt: new Date(),
+            },
+          });
+
+          const user = await this.prisma.user.findUnique({ where: { id: senderId }, select: { name: true } });
+
+          await this.prisma.candidateProjectStatusHistory.create({
+            data: {
+              candidateProjectMapId: candidateProjectMap.id,
+              changedById: senderId,
+              changedByName: user?.name || null,
+              mainStatusId: mainStatus.id,
+              subStatusId: subStatus.id,
+              mainStatusSnapshot: mainStatus.label,
+              subStatusSnapshot: subStatus.label,
+              reason: 'Documents submitted to client',
+              notes: `Forwarded to ${recipientEmail}${notes ? ` — ${notes}` : ''}`,
+            },
+          });
+        }
+      }
+    } catch (e) {
+      // best-effort: do not fail the forwarding if status update/history creation fails
+      this.logger.warn(`Failed to update candidate project status after forwarding: ${e?.message || e}`);
+    }
+
     return {
       success: true,
       message: `Documents successfully queued for delivery to ${recipientEmail}`,
-      historyId: history.id
+      historyId: history.id,
     };
   }
 

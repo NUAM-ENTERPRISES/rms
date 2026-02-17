@@ -80,3 +80,85 @@ describe('DocumentsService - verifyOfferLetter', () => {
     expect(result.message).toMatch(/HRD will only start/i);
   });
 });
+
+// New tests for forwarding -> submitted_to_client status update
+describe('DocumentsService - forwardToClient / bulkForwardToClient', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+
+    // mock queue so processForwarding doesn't throw
+    (service as any).documentForwardQueue = { add: jest.fn().mockResolvedValue(undefined) };
+  });
+
+  it('forwardToClient updates candidate-project to submitted_to_client and creates history', async () => {
+    const dto: any = {
+      candidateId: 'cand-1',
+      projectId: 'proj-1',
+      recipientEmail: 'client@example.com',
+      sendType: 'merged',
+    };
+
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({ id: 'cand-1' });
+    jest.spyOn(prisma.mergedDocument, 'findFirst' as any).mockResolvedValue({ id: 'md-1', fileUrl: 's3://x.pdf' });
+    jest.spyOn(prisma.documentForwardHistory, 'create' as any).mockResolvedValue({ id: 'hist-1' });
+
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({ id: 'cpm-1', recruiterId: 'rec-1' });
+    jest.spyOn(prisma.candidateProjectMainStatus, 'findFirst' as any).mockResolvedValue({ id: 'main-docs', label: 'Documents' });
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findFirst' as any).mockResolvedValue({ id: 'sub-submitted', label: 'Submitted to Client' });
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Sender One' });
+
+    const updateSpy = jest.spyOn(prisma.candidateProjects, 'update' as any).mockResolvedValue({ id: 'cpm-1', recruiterId: 'rec-1' });
+    const historySpy = jest.spyOn(prisma.candidateProjectStatusHistory, 'create' as any).mockResolvedValue({ id: 'hist-pp-1' });
+
+    const res = await service.forwardToClient(dto, 'user-1');
+
+    expect(updateSpy).toHaveBeenCalledWith({ where: { id: 'cpm-1' }, data: expect.objectContaining({ mainStatusId: 'main-docs', subStatusId: 'sub-submitted' }) });
+    expect(historySpy).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ candidateProjectMapId: 'cpm-1', mainStatusId: 'main-docs', subStatusId: 'sub-submitted' }) }));
+    expect(res).toEqual(expect.objectContaining({ success: true, historyId: 'hist-1' }));
+  });
+
+  it('bulkForwardToClient updates multiple candidate-projects when present', async () => {
+    const dto: any = {
+      recipientEmail: 'client@example.com',
+      projectId: 'proj-1',
+      notes: 'Bulk send',
+      selections: [
+        { candidateId: 'cand-1', sendType: 'merged' },
+        { candidateId: 'cand-2', sendType: 'merged' },
+      ],
+    };
+
+    jest.spyOn(prisma.project, 'findUnique' as any).mockResolvedValue({ id: 'proj-1' });
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({});
+    jest.spyOn(prisma.mergedDocument, 'findFirst' as any).mockResolvedValue({ id: 'md-1', fileUrl: 's3://x.pdf' });
+    jest.spyOn(prisma.documentForwardHistory, 'create' as any).mockResolvedValue({ id: 'hist-1' });
+
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({ id: 'cpm-1', recruiterId: 'rec-1' });
+    jest.spyOn(prisma.candidateProjectMainStatus, 'findFirst' as any).mockResolvedValue({ id: 'main-docs', label: 'Documents' });
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findFirst' as any).mockResolvedValue({ id: 'sub-submitted', label: 'Submitted to Client' });
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Sender One' });
+
+    const updateSpy = jest.spyOn(prisma.candidateProjects, 'update' as any).mockResolvedValue({ id: 'cpm-1', recruiterId: 'rec-1' });
+    const historySpy = jest.spyOn(prisma.candidateProjectStatusHistory, 'create' as any).mockResolvedValue({ id: 'hist-pp-1' });
+
+    const res = await service.bulkForwardToClient(dto, 'user-1');
+
+    expect(updateSpy).toHaveBeenCalled();
+    expect(historySpy).toHaveBeenCalled();
+    expect(res).toEqual(expect.objectContaining({ success: true }));
+  });
+});

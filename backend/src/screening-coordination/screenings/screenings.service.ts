@@ -320,7 +320,6 @@ export class ScreeningsService {
                   workExperiences: {
                     select: { id: true, companyName: true, jobTitle: true, startDate: true, endDate: true, isCurrent: true, description: true, location: true, skills: true },
                   },
-                  documents: { where: { isDeleted: false } },
                 },
               },
               project: {
@@ -335,7 +334,6 @@ export class ScreeningsService {
                   client: { select: { id: true, name: true, email: true, phone: true } },
                   country: { select: { code: true, name: true } },
                   creator: { select: { id: true, name: true } },
-                  documentRequirements: true,
                 },
               },
               roleNeeded: { select: { id: true, designation: true, roleCatalogId: true, roleCatalog: { select: { id: true, name: true, label: true, shortName: true } } } },
@@ -349,11 +347,6 @@ export class ScreeningsService {
               },
               mainStatus: true,
               subStatus: true,
-              documentVerifications: {
-                include: {
-                  document: true,
-                },
-              },
             },
           },
           checklistItems: {
@@ -716,7 +709,6 @@ export class ScreeningsService {
                       skills: true,
                     },
                   },
-                  documents: { where: { isDeleted: false } },
                 },
               },
               project: {
@@ -731,18 +723,12 @@ export class ScreeningsService {
                   client: { select: { id: true, name: true, email: true, phone: true } },
                   country: { select: { code: true, name: true } },
                   creator: { select: { id: true, name: true } },
-                  documentRequirements: true,
                 },
               },
               roleNeeded: { select: { id: true, designation: true, roleCatalogId: true, roleCatalog: { select: { id: true, name: true, label: true, shortName: true } } } },
               // Ensure callers get the current main/sub status on the candidate-project map
               mainStatus: true,
               subStatus: true,
-              documentVerifications: {
-                include: {
-                  document: true,
-                },
-              },
             },
           },
         template: {
@@ -754,11 +740,6 @@ export class ScreeningsService {
         },
         checklistItems: {
           orderBy: { category: 'asc' },
-        },
-        trainingAssignments: {
-          include: {
-            trainingSessions: true,
-          },
         },
       },
     });
@@ -819,11 +800,11 @@ export class ScreeningsService {
       coordinator,
       isDocumentVerificationRequired: augmented?.isDocumentVerificationRequired ?? true,
       isDocumentVerified: augmented?.isDocumentVerified ?? false,
-      candidateProjectMap: {
+      candidateProjectMap: interview.candidateProjectMap ? {
         ...interview.candidateProjectMap,
         candidate: candidateWithContact,
         roleCatalog,
-      },
+      } : null,
     };
   }
 
@@ -1133,7 +1114,13 @@ export class ScreeningsService {
       const cpm = finalResult.candidateProjectMap;
       
       // Only auto-send if there are no existing document verifications for this candidate/project nomination
-      const hasExistingDocs = (cpm as any)?.documentVerifications?.length > 0;
+      // Check directly in DB since finalResult has stripped documentVerifications
+      const hasExistingDocs = cpm ? await this.prisma.candidateProjectDocumentVerification.count({
+        where: {
+          candidateProjectMapId: cpm.id,
+          isDeleted: false,
+        }
+      }) > 0 : false;
       
       if (!hasExistingDocs && cpm && userId) {
         try {

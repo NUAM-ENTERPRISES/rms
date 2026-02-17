@@ -19,6 +19,11 @@ export class ForwardSelectionDto {
   @IsNotEmpty()
   sendType: SendType;
 
+  @ApiProperty({ example: 'proj_123', required: false })
+  @IsString()
+  @IsOptional()
+  projectId?: string;
+
   @ApiProperty({ required: false, type: [String], example: ['doc_1', 'doc_2'] })
   @IsArray()
   @IsOptional()

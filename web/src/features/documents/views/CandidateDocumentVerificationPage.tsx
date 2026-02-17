@@ -1225,15 +1225,7 @@ export default function CandidateDocumentVerificationPage() {
 
   {summary.allDocumentsVerified && canVerifyDocuments && (
     <div className="flex gap-3">
-      <Button
-        size="sm"
-        className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[260px] flex items-center justify-center gap-3"
-        onClick={() => setIsMergeModalOpen(true)}
-        disabled={isGeneratingPDF || verifiedCount === 0}
-      >
-        {isGeneratingPDF ? <RefreshCw className="h-6 w-6 animate-spin" /> : <FileText className="h-6 w-6" />}
-        <span>Generate Unified PDF</span>
-      </Button>
+      {/* "Generate Unified PDF" button moved into SendToClient modal */}
 
       {summary.isDocumentationReviewed && (summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified") && (
         <Button
