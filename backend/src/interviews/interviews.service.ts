@@ -11,10 +11,16 @@ import { QueryInterviewsDto } from './dto/query-interviews.dto';
 import { QueryUpcomingInterviewsDto } from './dto/query-upcoming-interviews.dto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { CandidateProjectsService } from '../candidate-projects/candidate-projects.service';
+import { OutboxService } from '../notifications/outbox.service';
 
 @Injectable()
 export class InterviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly candidateProjectsService: CandidateProjectsService,
+    private readonly outboxService: OutboxService,
+  ) {}
 
   async create(createInterviewDto: CreateInterviewDto, scheduledBy: string) {
     // If bulk IDs are provided in a single DTO, we route to createBulk
@@ -204,6 +210,8 @@ export class InterviewsService {
   }
 
   async findAll(query: QueryInterviewsDto) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
     const {
       search,
       type,
@@ -213,8 +221,6 @@ export class InterviewsService {
       roleNeededId,
       roleCatalogId,
       candidateId,
-      page = 1,
-      limit = 10,
     } = query;
 
     const where: any = {};
@@ -323,6 +329,11 @@ export class InterviewsService {
                 select: {
                   id: true,
                   title: true,
+                  client: {
+                    select: {
+                      name: true
+                    }
+                  }
                 },
               },
               roleNeeded: {
@@ -337,6 +348,11 @@ export class InterviewsService {
             select: {
               id: true,
               title: true,
+              client: {
+                select: {
+                  name: true
+                }
+              }
             },
           },
         },
@@ -368,7 +384,9 @@ export class InterviewsService {
    * Supports pagination and optional filters.
    */
   async getAssignedCandidateProjects(query: any) {
-    const { page = 1, limit = 10, projectId, roleCatalogId, candidateId, recruiterId, search, subStatus, includeScheduled } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const { projectId, roleCatalogId, candidateId, recruiterId, search, subStatus, includeScheduled } = query;
 
     const where: any = {};
 
@@ -440,11 +458,349 @@ export class InterviewsService {
   }
 
   /**
+   * Return candidate-project assignments that are in 'submitted_to_client' subStatus,
+   * meaning they are pending a shortlist decision from the client.
+   * Supports pagination, search, project, and role filters.
+   */
+  async getShortlistPending(query: any) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const { projectId, roleCatalogId, search } = query;
+
+    const where: any = {
+      subStatus: { is: { name: 'submitted_to_client' } }
+    };
+
+    if (projectId) where.projectId = projectId;
+
+    if (roleCatalogId) {
+      where.roleNeeded = { roleCatalogId };
+    }
+
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+      const s = search.trim();
+      where.OR = [
+        { candidate: { firstName: { contains: s, mode: 'insensitive' } } },
+        { candidate: { lastName: { contains: s, mode: 'insensitive' } } },
+        { candidate: { email: { contains: s, mode: 'insensitive' } } },
+        { project: { title: { contains: s, mode: 'insensitive' } } },
+      ];
+    }
+
+    const total = await this.prisma.candidateProjects.count({ where });
+
+    const items = await this.prisma.candidateProjects.findMany({
+      where,
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobileNumber: true,
+            profileImage: true,
+            qualifications: {
+              select: {
+                id: true,
+                university: true,
+                graduationYear: true,
+                gpa: true,
+                isCompleted: true,
+                qualification: {
+                  select: { id: true, name: true, shortName: true, level: true }
+                }
+              }
+            },
+            workExperiences: {
+              select: {
+                id: true,
+                companyName: true,
+                jobTitle: true,
+                startDate: true,
+                endDate: true,
+                isCurrent: true,
+                description: true
+              },
+              orderBy: { startDate: 'desc' }
+            }
+          }
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            client: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              }
+            },
+            countryCode: true,
+            requiredScreening: true,
+            resumeEditable: true,
+            createdBy: true,
+          }
+        },
+        roleNeeded: {
+          select: {
+            id: true,
+            designation: true,
+            minExperience: true,
+            maxExperience: true,
+            priority: true,
+            employmentType: true,
+            backgroundCheckRequired: true,
+            drugScreeningRequired: true,
+            additionalRequirements: true,
+            requiredCertifications: true,
+            salaryRange: true,
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                shortName: true
+              }
+            }
+          },
+        },
+        // include latest screening entries (ordered newest first) so front-end can show pass/fail details
+        screenings: {
+          select: {
+            id: true,
+            status: true,
+            decision: true,
+            overallRating: true,
+            scheduledTime: true,
+            conductedAt: true,
+            remarks: true,
+            strengths: true,
+            areasOfImprovement: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        recruiter: { select: { id: true, name: true, email: true } },
+        mainStatus: true,
+        subStatus: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    // Attach latest document forward (who sent to client) for each item
+    const itemsWithLatestForward = await Promise.all(
+      items.map(async (it: any) => {
+        const candidateId = it.candidate?.id;
+        const projectId = it.project?.id;
+        const roleCatalogId = it.roleNeeded?.roleCatalog?.id || null;
+
+        const latestForward = await this.prisma.documentForwardHistory.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleCatalogId: roleCatalogId || null,
+          },
+          orderBy: { sentAt: 'desc' },
+          include: { sender: { select: { id: true, name: true, email: true } } },
+        });
+
+        const latestScreening = Array.isArray(it.screenings) && it.screenings.length > 0 ? it.screenings[0] : null;
+        const { screenings, ...rest } = it as any;
+
+        return {
+          ...rest,
+          latestForward: latestForward
+            ? { id: latestForward.id, sentAt: latestForward.sentAt, sender: latestForward.sender }
+            : null,
+          screening: latestScreening || null,
+        };
+      }),
+    );
+
+    return {
+      items: itemsWithLatestForward,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Update client decision for a single candidate-project assignment.
+   * Creates both CandidateProjectStatusHistory and InterviewStatusHistory records in a single transaction.
+   */
+  async updateClientDecision(
+    candidateProjectMapId: string,
+    decision: 'shortlisted' | 'not_shortlisted',
+    notes: string | undefined,
+    changedById: string,
+  ) {
+    const changer = changedById
+      ? await this.prisma.user.findUnique({
+          where: { id: changedById },
+          select: { name: true },
+        })
+      : null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. Get current candidate project assignment
+      const cp = await tx.candidateProjects.findUnique({
+        where: { id: candidateProjectMapId },
+        include: {
+          mainStatus: true,
+          subStatus: true,
+        },
+      });
+
+      if (!cp) throw new NotFoundException('Candidate assignment not found');
+
+      // 2. Get target sub-status
+      const targetSub = await tx.candidateProjectSubStatus.findUnique({
+        where: { name: decision },
+        include: { stage: true },
+      });
+
+      if (!targetSub) throw new NotFoundException(`Sub-status ${decision} not found`);
+
+      // 3. (Optional but consistent) Resolve active recruiter
+      const activeRecruiterAssignment = await tx.candidateRecruiterAssignment.findFirst({
+        where: {
+          candidateId: cp.candidateId,
+          isActive: true,
+        },
+        select: {
+          recruiterId: true,
+        },
+      });
+      const activeRecruiterId = activeRecruiterAssignment?.recruiterId || cp.recruiterId;
+
+      // 4. Update candidate project status
+      const updated = await tx.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          subStatusId: targetSub.id,
+          mainStatusId: targetSub.stageId,
+          recruiterId: activeRecruiterId,
+        },
+        include: {
+          candidate: true,
+          project: true,
+          roleNeeded: true,
+          recruiter: true,
+          mainStatus: true,
+          subStatus: true,
+        },
+      });
+
+      // 5. Create CandidateProjectStatusHistory (requested by user)
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId,
+          changedById,
+          changedByName: changer?.name || null,
+          mainStatusId: targetSub.stageId,
+          subStatusId: targetSub.id,
+          mainStatusSnapshot: targetSub.stage?.label || null,
+          subStatusSnapshot: targetSub.label,
+          reason: notes || null,
+          notes: notes || null,
+        },
+      });
+
+      // 6. Create InterviewStatusHistory
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'client',
+          interviewId: null,
+          candidateProjectMapId: candidateProjectMapId,
+          previousStatus: cp.subStatus?.name || null,
+          status: decision,
+          statusSnapshot: decision === 'shortlisted' ? 'Shortlisted' : 'Not Shortlisted',
+          statusAt: new Date(),
+          changedById: changedById ?? null,
+          changedByName: changer?.name ?? null,
+          reason: notes ?? null,
+        },
+      });
+
+      return updated;
+    });
+
+    // --- notify recruiter if present ---
+    const recruiterId = result?.recruiter?.id;
+    if (recruiterId) {
+      const candidateName = result.candidate ? `${result.candidate.firstName} ${result.candidate.lastName}` : 'Candidate';
+      const projectTitle = result.project?.title || 'project';
+      const title = `Client decision: ${decision === 'shortlisted' ? 'Shortlisted' : 'Not Shortlisted'}`;
+      const message = decision === 'shortlisted'
+        ? `Client shortlisted ${candidateName} for ${projectTitle}`
+        : `Client did not shortlist ${candidateName} for ${projectTitle}`;
+
+      const link = `/shortlisting/${result.id}`;
+
+      // best-effort publish (async) — don't block return on failure
+      try {
+        await this.outboxService.publishRecruiterNotification(recruiterId, message, title, link, {
+          candidateProjectMapId: result.id,
+          candidateId: result.candidate?.id,
+          projectId: result.project?.id,
+          decision,
+        });
+      } catch (e) {
+        // use audit log for visibility if notification fails
+        await this.prisma.auditLog.create({
+          data: {
+            userId: changedById || 'system',
+            actionType: 'notification_failure',
+            entityType: 'candidate_project',
+            entityId: candidateProjectMapId,
+            changes: { error: (e as any).message || String(e) },
+          },
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Bulk update client decisions. Returns per-item result with success/failure.
+   */
+  async updateBulkClientDecision(
+    updates: Array<{ id: string; decision: 'shortlisted' | 'not_shortlisted'; notes?: string }>,
+    changedById: string,
+  ) {
+    if (!Array.isArray(updates) || updates.length === 0) return [];
+
+    const results = await Promise.all(
+      updates.map(async (u) => {
+        try {
+          const updated = await this.updateClientDecision(u.id, u.decision, u.notes, changedById);
+          return { id: u.id, success: true, data: updated };
+        } catch (err: any) {
+          return { id: u.id, success: false, error: err?.message || 'Failed to update' };
+        }
+      }),
+    );
+
+    return results;
+  }
+
+  /**
    * Return interviews tied to candidate-project maps whose subStatus is 'interview_scheduled'.
    * Supports pagination, search, roleNeeded filter, date range and other optional filters.
    */
   async getUpcomingInterviews(query: QueryUpcomingInterviewsDto) {
-    const { page = 1, limit = 10, projectId, candidateId, recruiterId, search, roleNeeded, roleCatalogId, startDate, endDate } = query as any;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const { projectId, candidateId, recruiterId, search, roleNeeded, roleCatalogId, startDate, endDate } = query as any;
 
     const where: any = {};
 
@@ -501,14 +857,34 @@ export class InterviewsService {
         candidateProjectMap: {
           include: {
             candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
-            project: { select: { id: true, title: true } },
+            project: {
+              select: {
+                id: true,
+                title: true,
+                client: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            },
             roleNeeded: { include: { roleCatalog: { select: { id: true, name: true, label: true, shortName: true, isActive: true } } } },
             recruiter: { select: { id: true, name: true, email: true } },
             mainStatus: true,
             subStatus: true,
           },
         },
-        project: { select: { id: true, title: true } },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            client: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
       },
       orderBy: { scheduledTime: 'asc' },
       skip: (page - 1) * limit,
@@ -760,6 +1136,11 @@ export class InterviewsService {
               select: {
                 id: true,
                 title: true,
+                client: {
+                  select: {
+                    name: true
+                  }
+                }
               },
             },
           },
@@ -768,6 +1149,11 @@ export class InterviewsService {
           select: {
             id: true,
             title: true,
+            client: {
+              select: {
+                name: true
+              }
+            }
           },
         },
       },

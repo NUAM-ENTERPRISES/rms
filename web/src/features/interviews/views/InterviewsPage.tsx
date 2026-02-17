@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle2, Clock, TrendingUp, ClipboardCheck, Mail } from "lucide-react";
+import { ArrowRight, CheckCircle2, TrendingUp, ClipboardCheck, Mail } from "lucide-react";
 import { Calendar, RefreshCw } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { useGetInterviewsQuery, useGetUpcomingInterviewsQuery, useGetInterviewsDashboardQuery } from "../api";
+import { ImageViewer } from "@/components/molecules/ImageViewer";
+import { useGetInterviewsQuery, useGetUpcomingInterviewsQuery, useGetInterviewsDashboardQuery, useGetShortlistPendingQuery, useUpdateClientDecisionMutation } from "../api";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
 import EditInterviewDialog from "../components/EditInterviewDialog";
+import { ClientDecisionModal } from "../components/ClientDecisionModal";
+import { toast } from "sonner";
 
 // STATUS_KEYS not used in dashboard layout (kept for compatibility if table-based view is readded)
 
@@ -18,7 +21,7 @@ export default function InterviewsPage() {
   const navigate = useNavigate();
   // Search and filter UI removed for dashboard; retain state if table is reintroduced later
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [scheduleDialogInitial, setScheduleDialogInitial] = useState<{
+  const [scheduleDialogInitial] = useState<{
     candidateProjectMapId?: string;
     candidateName?: string;
     projectName?: string;
@@ -44,6 +47,30 @@ export default function InterviewsPage() {
   const totalInterviews = interviewsData?.data?.pagination?.total ?? 0;
 
   const { data: dashboardData, refetch: refetchDashboard } = useGetInterviewsDashboardQuery();
+
+  const { data: shortlistData, refetch: refetchShortlist } = useGetShortlistPendingQuery({ page: 1, limit: 5 });
+
+  // Dashboard: client-decision modal for shortlist preview
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+  const [selectedShortlisting, setSelectedShortlisting] = useState<any | null>(null);
+  const [updateClientDecision, { isLoading: isUpdatingDecision }] = useUpdateClientDecisionMutation();
+
+  async function handleClientDecision(decision: "shortlisted" | "not_shortlisted" | null, reason: string) {
+    if (!selectedShortlisting || !decision) return;
+
+    try {
+      const res = await updateClientDecision({ id: selectedShortlisting.id, data: { decision, notes: reason } }).unwrap();
+
+      if (res.success) {
+        toast.success(decision === 'shortlisted' ? 'Candidate shortlisted successfully' : 'Candidate marked as not shortlisted');
+        setDecisionModalOpen(false);
+        setSelectedShortlisting(null);
+        refetchShortlist?.();
+      }
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to update candidate status');
+    }
+  }
 
   // legacy: status breakdown removed; dashboard uses card-based stats
 
@@ -97,12 +124,8 @@ export default function InterviewsPage() {
 
   const upcomingInterviews = upcomingData?.data?.interviews ?? [];
 
-  const shortlistingPreview = [
-    { id: "s1", candidateName: "Aisha Khan", role: "Software Engineer II", project: "Alpha", sentAt: new Date().toISOString() },
-    { id: "s2", candidateName: "Rahul Verma", role: "Frontend Developer", project: "Beta", sentAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-    { id: "s3", candidateName: "Maria Gomez", role: "QA Analyst", project: "Gamma", sentAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
-  ];
-  const shortlistingCount = shortlistingPreview.length;
+  const shortlistingPreview = shortlistData?.data?.items ?? [];
+  const shortlistingCount = shortlistData?.data?.pagination?.total ?? 0;
 
   // Build stats using server-provided dashboard data when available, otherwise fall back to local calculations
   const scheduledThisWeek = dashboardData?.data?.thisWeek?.count ?? interviews.filter((iv) => {
@@ -317,36 +340,53 @@ export default function InterviewsPage() {
                   className="group relative p-5 rounded-2xl border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
                 >
                   <div className="flex items-start justify-between pr-28">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-lg font-semibold text-slate-900 truncate">
-                        {c.candidateName}
-                      </p>
-                      <p className="text-sm text-slate-600 truncate mt-1">
-                        {c.role}
-                      </p>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <ImageViewer
+                        src={c.candidate?.profileImage}
+                        title={c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
+                        className="h-12 w-12 shrink-0 shadow-sm"
+                        enableHoverPreview={false}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-lg font-semibold text-slate-900 truncate">
+                          {c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
+                        </p>
+                        <p className="text-sm text-slate-600 truncate mt-1">
+                          {c.roleNeeded?.designation || "Unknown Role"}
+                          {c.candidate?.qualifications?.[0]?.qualification?.shortName || c.candidate?.qualifications?.[0]?.qualification?.name ? (
+                            <span className="text-xs text-muted-foreground ml-2">• {c.candidate.qualifications[0].qualification.shortName || c.candidate.qualifications[0].qualification.name}</span>
+                          ) : null}
+                          <span className="text-slate-500 ml-2">• {c.project?.title || "No Project"}</span>
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
                     <Calendar className="h-4.5 w-4.5" />
                     <span className="font-medium">
-                      {new Date(c.sentAt).toLocaleString()}
+                      {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "Just now"}
                     </span>
+                    {c.latestForward?.sender?.name && (
+                      <span className="text-xs text-muted-foreground ml-2">• forwarded by {c.latestForward.sender.name}</span>
+                    )}
                     <Badge className="ml-auto text-xs bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
-                      Verified & Sent
+                      {c.subStatus?.label || "Sent to Client"}
                     </Badge>
                   </div>
 
-                  <div className="absolute right-5 top-5 bottom-5 flex flex-col justify-between items-end">
+                  <div className="absolute right-4 top-4">
                     <Button
                       size="sm"
-                      className="mt-4 bg-amber-600 hover:bg-amber-700 text-white shadow-lg hover:shadow-xl text-sm px-5 py-2"
+                      className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Shortlist action is handled on the full 'View All' page for now
+                        setSelectedShortlisting(c);
+                        setDecisionModalOpen(true);
                       }}
+                      aria-label={`Update client decision for ${c.candidate?.firstName ?? 'candidate'}`}
                     >
-                      Shortlist
+                      Update
                     </Button>
                   </div>
                 </div>
@@ -404,6 +444,7 @@ export default function InterviewsPage() {
               {upcomingInterviews.map((interview) => {
                 const candidate = interview.candidate || interview.candidateProjectMap?.candidate;
                 const role = interview.roleNeeded || interview.candidateProjectMap?.roleNeeded;
+                const project = interview.project || interview.candidateProjectMap?.project;
                 return (
                   <div
                     key={interview.id}
@@ -411,13 +452,21 @@ export default function InterviewsPage() {
                     className="group p-5 rounded-2xl border border-slate-200/80 hover:border-teal-300 hover:bg-teal-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-semibold text-slate-900 truncate">
-                          {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
-                        </p>
-                        <p className="text-sm text-slate-600 truncate mt-1">
-                          {role?.designation || "Unknown Role"}
-                        </p>
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <ImageViewer
+                          src={candidate?.profileImage}
+                          title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
+                          className="h-12 w-12 shrink-0 shadow-sm"
+                          enableHoverPreview={false}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-lg font-semibold text-slate-900 truncate">
+                            {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
+                          </p>
+                          <p className="text-sm text-slate-600 truncate mt-1">
+                            {role?.designation || "Unknown Role"} • <span className="text-slate-500">{project?.title || "No Project"}</span>
+                          </p>
+                        </div>
                       </div>
                       <Badge className="ml-6 text-xs font-semibold bg-teal-100 text-teal-700 border-teal-200 px-4 py-1.5 shadow-sm">
                         {interview.candidateProjectMap?.subStatus?.label || interview.candidateProjectMap?.subStatus?.name || 'Scheduled'}
@@ -455,6 +504,17 @@ export default function InterviewsPage() {
     )}
   </CardContent>
 </Card>
+
+      <ClientDecisionModal
+        open={decisionModalOpen}
+        onOpenChange={(open) => {
+          setDecisionModalOpen(open);
+          if (!open) setSelectedShortlisting(null);
+        }}
+        candidateName={selectedShortlisting?.candidate ? `${selectedShortlisting.candidate.firstName} ${selectedShortlisting.candidate.lastName}` : 'Unknown Candidate'}
+        onSubmit={handleClientDecision}
+        isSubmitting={isUpdatingDecision}
+      />
 
         <ScheduleInterviewDialog
           open={scheduleDialogOpen}

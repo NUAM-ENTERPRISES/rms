@@ -20,6 +20,25 @@ export interface Interview {
     firstName: string;
     lastName: string;
     email?: string;
+    profileImage?: string;
+    mobileNumber?: string;
+    qualifications?: Array<{
+      id: string;
+      university?: string | null;
+      graduationYear?: number | null;
+      gpa?: number | null;
+      isCompleted?: boolean;
+      qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null;
+    }>;
+    workExperiences?: Array<{
+      id: string;
+      companyName?: string;
+      jobTitle?: string;
+      startDate?: string | null;
+      endDate?: string | null;
+      isCurrent?: boolean;
+      description?: string | null;
+    }>;
   };
   roleNeeded?: { id?: string; designation?: string };
 
@@ -31,18 +50,43 @@ export interface Interview {
       firstName: string;
       lastName: string;
       email?: string;
+      profileImage?: string;
+      mobileNumber?: string;
+      qualifications?: Array<{
+        id: string;
+        university?: string | null;
+        graduationYear?: number | null;
+        gpa?: number | null;
+        isCompleted?: boolean;
+        qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null;
+      }>;
+      workExperiences?: Array<{
+        id: string;
+        companyName?: string;
+        jobTitle?: string;
+        startDate?: string | null;
+        endDate?: string | null;
+        isCurrent?: boolean;
+        description?: string | null;
+      }>;
     };
     project: {
       id: string;
       title: string;
+      client?: { id?: string; name?: string; email?: string; phone?: string } | null;
+      countryCode?: string | null;
+      requiredScreening?: boolean | null;
+      resumeEditable?: boolean | null;
+      createdBy?: string | null;
     };
-    roleNeeded?: { id?: string; designation?: string };
+    roleNeeded?: { id?: string; designation?: string; minExperience?: number | null; maxExperience?: number | null; employmentType?: string | null; backgroundCheckRequired?: boolean | null; additionalRequirements?: string | null; salaryRange?: any | null; roleCatalog?: { id?: string; name?: string; label?: string; shortName?: string } | null };
     recruiter?: { id?: string; name?: string; email?: string };
     mainStatus?: { id?: string; name?: string; label?: string } | null;
     subStatus?: { id?: string; name?: string; label?: string } | null;
     assignedAt?: string;
     createdAt?: string;
     updatedAt?: string;
+    latestForward?: { id?: string; sentAt?: string; sender?: { id?: string; name?: string; email?: string } } | null;
   };
   project?: {
     id: string;
@@ -107,9 +151,19 @@ export interface QueryAssignedInterviewsRequest {
   search?: string;
 }
 
+export interface QueryShortlistPendingRequest {
+  page?: number;
+  limit?: number;
+  projectId?: string;
+  roleCatalogId?: string;
+  search?: string;
+}
+
+
+
 export interface AssignedInterviewItem {
   id: string;
-  candidate?: { id: string; firstName?: string; lastName?: string; email?: string };
+  candidate?: { id: string; firstName?: string; lastName?: string; email?: string; profileImage?: string; mobileNumber?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
   project?: { id: string; title?: string };
   roleNeeded?: { id?: string; designation?: string };
   recruiter?: { id?: string; name?: string; email?: string };
@@ -121,7 +175,7 @@ export interface AssignedInterviewItem {
   // Optionally include the expanded candidateProjectMap for consistency with Interview
   candidateProjectMap?: {
     id: string;
-    candidate: { id: string; firstName?: string; lastName?: string; email?: string };
+    candidate: { id: string; firstName?: string; lastName?: string; email?: string; profileImage?: string; mobileNumber?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
     project: { id: string; title?: string };
     roleNeeded?: { id?: string; designation?: string };
     recruiter?: { id?: string; name?: string; email?: string };
@@ -226,6 +280,67 @@ export const interviewsApi = baseApi.injectEndpoints({
       providesTags: ["Interview"],
     }),
 
+    getShortlistPending: builder.query<
+      { success: boolean; data: { items: any[]; pagination: any }; message?: string },
+      QueryShortlistPendingRequest
+    >({
+      query: (params) => ({
+        url: "/interviews/shortlist-pending",
+        params,
+      }),
+      providesTags: ["Interview"],
+    }),
+
+    /**
+     * Update candidate project status
+     * PATCH /candidate-projects/:id/status
+     */
+    updateCandidateProjectStatus: builder.mutation<
+      { success: boolean; data: any; message?: string },
+      { id: string; data: { mainStatusName?: string; subStatusName?: string; reason?: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/candidate-projects/${id}/status`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["Interview"],
+    }),
+
+    /**
+     * Single client decision
+     * PATCH /interviews/client-decision/:id
+     */
+    updateClientDecision: builder.mutation<
+      { success: boolean; data: any; message?: string },
+      { id: string; data: { decision: 'shortlisted' | 'not_shortlisted'; notes?: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/interviews/client-decision/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: ["Interview"],
+    }),
+
+    /**
+     * Bulk client decision
+     * PATCH /interviews/client-decision
+     */
+    updateBulkClientDecision: builder.mutation<
+      { success: boolean; data: Array<any>; message?: string },
+      { updates: { id: string; decision: 'shortlisted' | 'not_shortlisted'; notes?: string }[] }
+    >({
+      query: (body) => ({
+        url: `/interviews/client-decision`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ["Interview"],
+    }),
+
+   
+
     /**
      * Update interview status (separate endpoint)
      * PATCH /interviews/:id/status
@@ -295,5 +410,9 @@ export const {
   useUpdateInterviewStatusMutation,
   useGetAssignedInterviewsQuery,
   useGetUpcomingInterviewsQuery,
+  useGetShortlistPendingQuery,
+  useUpdateCandidateProjectStatusMutation,
+  useUpdateClientDecisionMutation,
+  useUpdateBulkClientDecisionMutation,
   useGetInterviewsDashboardQuery,
 } = interviewsApi;

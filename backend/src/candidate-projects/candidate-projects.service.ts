@@ -937,7 +937,7 @@ export class CandidateProjectsService {
     updateStatusDto: UpdateProjectStatusDto,
     userId: string,
   ) {
-    const { mainStatusId, subStatusId, reason, notes } = updateStatusDto;
+    const { mainStatusId, subStatusId, subStatusName, reason, notes } = updateStatusDto;
 
     // -------------------------------------
     // FIND candidate project
@@ -955,15 +955,23 @@ export class CandidateProjectsService {
     // -------------------------------------
     // GET sub-status (required)
     // -------------------------------------
-    const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
-      where: { id: subStatusId },
-      include: {
-        stage: true, // includes main status reference
-      },
-    });
+    let subStatus;
+    if (subStatusId) {
+      subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
+        where: { id: subStatusId },
+        include: { stage: true },
+      });
+    } else if (subStatusName) {
+      subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
+        where: { name: subStatusName },
+        include: { stage: true },
+      });
+    }
 
     if (!subStatus) {
-      throw new NotFoundException(`Sub-status ${subStatusId} not found`);
+      throw new NotFoundException(
+        `Sub-status ${subStatusId || subStatusName} not found`,
+      );
     }
 
     // -------------------------------------

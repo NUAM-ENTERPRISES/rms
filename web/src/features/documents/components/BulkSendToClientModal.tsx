@@ -29,7 +29,6 @@ import {
   X,
   Send,
   FileText,
-  Download,
   AlertCircle,
   RefreshCw,
   CheckCircle2,

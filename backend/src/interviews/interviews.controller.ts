@@ -453,7 +453,75 @@ export class InterviewsController {
       message: "Upcoming interviews retrieved successfully",
     };
   }
+  @Get('shortlist-pending')
+  @Permissions('read:interviews')
+  @ApiOperation({
+    summary: 'Get candidates pending shortlist decision (submitted_to_client)',
+    description: 'Retrieve candidate-project nominations that are in submitted_to_client status, awaiting a decision from the client. Supports pagination, search, and filtering by project or role.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'projectId', required: false, type: String })
+  @ApiQuery({ name: 'roleCatalogId', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending shortlist candidates retrieved successfully',
+  })
+  async getShortlistPending(@Query() query: any): Promise<any> {
+    const result = await this.interviewsService.getShortlistPending(query);
+    return {
+      success: true,
+      data: result,
+      message: 'Pending shortlist candidates retrieved successfully',
+    };
+  }
 
+  /* -------------------------------------------------------------------------- */
+  /* Client decision endpoints (single + bulk)                                    */
+  /* -------------------------------------------------------------------------- */
+
+  @Patch('client-decision/:id')
+  @Permissions('manage:candidates', 'write:interviews')
+  @ApiOperation({
+    summary: 'Update client decision for a single candidate-project',
+    description: 'Set client decision (shortlisted / not_shortlisted) for a single candidate-project map. This will update the candidate-project subStatus and create a status history record.',
+  })
+  @ApiParam({ name: 'id', description: 'CandidateProjectMap ID' })
+  @ApiBody({ type: require('./dto/update-client-decision.dto').UpdateClientDecisionDto })
+  @ApiResponse({ status: 200, description: 'Decision applied successfully' })
+  async updateClientDecision(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req,
+  ): Promise<any> {
+    const updated = await this.interviewsService.updateClientDecision(id, body.decision, body.notes, req.user.sub);
+    return {
+      success: true,
+      data: updated,
+      message: 'Client decision saved',
+    };
+  }
+
+  @Patch('client-decision')
+  @Permissions('manage:candidates', 'write:interviews')
+  @ApiOperation({
+    summary: 'Bulk update client decisions',
+    description: 'Apply client decisions for multiple candidate-project assignments at once (accepts array of { id, decision, notes }).',
+  })
+  @ApiBody({ type: require('./dto/bulk-update-client-decision.dto').BulkUpdateClientDecisionDto })
+  @ApiResponse({ status: 200, description: 'Bulk decisions processed' })
+  async bulkUpdateClientDecision(
+    @Body() body: any,
+    @Request() req,
+  ): Promise<any> {
+    const results = await this.interviewsService.updateBulkClientDecision(body.updates || [], req.user.sub);
+    return {
+      success: true,
+      data: results,
+      message: 'Bulk client decisions processed',
+    };
+  }
   @Get('dashboard')
   @Permissions('read:interviews')
   @ApiOperation({ summary: 'Get interview dashboard metrics (counts only)', description: "Return counts for this week's scheduled interviews and this month's completed interviews and pass rate." })

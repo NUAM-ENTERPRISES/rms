@@ -3,12 +3,20 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateProjectStatusDto {
   @ApiProperty({
-    description: 'Sub-status ID (required)',
+    description: 'Sub-status ID (optional if subStatusName provided)',
     example: 'clx123abc456substatus'
   })
   @IsString()
-  @IsNotEmpty()
-  subStatusId: string;
+  @IsOptional()
+  subStatusId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Sub-status name (alternative to subStatusId)',
+    example: 'shortlisted'
+  })
+  @IsString()
+  @IsOptional()
+  subStatusName?: string;
 
   @ApiPropertyOptional({
     description: 'Main status ID (optional, system auto-detects from sub-status if not provided)',
