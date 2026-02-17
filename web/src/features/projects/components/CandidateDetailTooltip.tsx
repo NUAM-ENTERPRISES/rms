@@ -289,7 +289,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 <div className="pt-2 space-y-2">
                   <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work Experience</h5>
                   <div className="space-y-2 text-[11px]">
-                    {candidate.workExperiences.slice(0, 3).map((we, idx) => {
+                    {candidate.workExperiences.slice(0, 3).map((we: any, idx: number) => {
                       const start = we.startDate || we.start_date;
                       const end = we.endDate || we.end_date;
                       const period = formatWorkPeriod(start, end);
