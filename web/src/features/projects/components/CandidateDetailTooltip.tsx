@@ -1,17 +1,13 @@
 import {
   Mail,
   Phone,
-  DollarSign,
-  Building,
   Briefcase,
   GraduationCap,
   Calendar,
-  MapPin,
   Info,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import type { CandidateRecord } from "./CandidateCard";
 
 interface CandidateDetailTooltipProps {
@@ -97,6 +93,25 @@ const formatWorkPeriod = (startDate?: string, endDate?: string) => {
     return sYear ? `${sYear} - ${eLabel}` : eLabel;
   } catch {
     return "";
+  }
+};
+
+// Human-readable duration between two dates (used per-work-entry)
+const formatDuration = (startDate?: string, endDate?: string) => {
+  if (!startDate) return null;
+  try {
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date();
+    let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    months = Math.max(0, months);
+    const years = Math.floor(months / 12);
+    const remMonths = months % 12;
+    if (years > 0 && remMonths > 0) return `${years}y ${remMonths}m`;
+    if (years > 0) return `${years} ${years === 1 ? 'year' : 'years'}`;
+    if (remMonths > 0) return `${remMonths} months`;
+    return `0 months`;
+  } catch {
+    return null;
   }
 };
 
@@ -269,20 +284,28 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 </div>
               )}
 
-              {/* Work history details (show up to 3 recent entries) */}
+              {/* Work history details (show up to 3 recent entries) with per-entry duration */}
               {Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0 && (
                 <div className="pt-2 space-y-2">
-                  <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work history</h5>
+                  <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work Experience</h5>
                   <div className="space-y-2 text-[11px]">
-                    {candidate.workExperiences.slice(0, 3).map((we, idx) => (
-                      <div key={idx} className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{we.jobTitle || we.job_title || "-"}</div>
-                          <div className="text-[11px] text-slate-500 truncate">{we.companyName || we.company_name || "Unknown"}{we.location ? ` • ${we.location}` : ""}</div>
+                    {candidate.workExperiences.slice(0, 3).map((we, idx) => {
+                      const start = we.startDate || we.start_date;
+                      const end = we.endDate || we.end_date;
+                      const period = formatWorkPeriod(start, end);
+                      const duration = formatDuration(start, end);
+                      return (
+                        <div key={idx} className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate text-black">{we.jobTitle || we.job_title || "-"}</div>
+                            <div className="text-[11px] text-black truncate">{we.companyName || we.company_name || "Unknown"}{we.location ? ` • ${we.location}` : ""}</div>
+                          </div>
+                          <div className="text-[11px] text-black whitespace-nowrap">
+                            {period}{duration ? ` • ${duration}` : ""}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-500 whitespace-nowrap">{formatWorkPeriod(we.startDate || we.start_date, we.endDate || we.end_date)}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
