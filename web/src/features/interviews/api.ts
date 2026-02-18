@@ -291,6 +291,28 @@ export const interviewsApi = baseApi.injectEndpoints({
       providesTags: ["Interview"],
     }),
 
+    getShortlisted: builder.query<
+      { success: boolean; data: { items: any[]; pagination: any }; message?: string },
+      QueryShortlistPendingRequest
+    >({
+      query: (params) => ({
+        url: "/interviews/shortlisted",
+        params,
+      }),
+      providesTags: ["Interview"],
+    }),
+
+    getNotShortlisted: builder.query<
+      { success: boolean; data: { items: any[]; pagination: any }; message?: string },
+      QueryShortlistPendingRequest
+    >({
+      query: (params) => ({
+        url: "/interviews/not-shortlisted",
+        params,
+      }),
+      providesTags: ["Interview"],
+    }),
+
     /**
      * Update candidate project status
      * PATCH /candidate-projects/:id/status
@@ -411,6 +433,8 @@ export const {
   useGetAssignedInterviewsQuery,
   useGetUpcomingInterviewsQuery,
   useGetShortlistPendingQuery,
+  useGetShortlistedQuery,
+  useGetNotShortlistedQuery,
   useUpdateCandidateProjectStatusMutation,
   useUpdateClientDecisionMutation,
   useUpdateBulkClientDecisionMutation,

@@ -270,7 +270,7 @@ export function BulkClientDecisionModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 border-t pt-4">
+        <DialogFooter className="gap-4 border-t pt-4">
           <Button
             variant="outline"
             onClick={() => handleClose(false)}

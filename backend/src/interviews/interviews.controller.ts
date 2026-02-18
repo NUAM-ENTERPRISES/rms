@@ -10,6 +10,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -85,9 +86,19 @@ export class InterviewsController {
     // Support bulk create (array of DTOs)
     if (Array.isArray(createInterviewDto)) {
       const results = await this.interviewsService.createBulk(createInterviewDto, req.user.id);
+      
+      // Check if any failed
+      const failed = results.filter(r => !r.success);
+      if (failed.length > 0) {
+        throw new BadRequestException({
+          message: `${failed.length} interview(s) failed to schedule.`,
+          details: results
+        });
+      }
+
       return {
         success: true,
-        data: results,
+        data: results.map(r => r.data),
         message: 'Interview(s) scheduled successfully',
       };
     }
@@ -474,6 +485,172 @@ export class InterviewsController {
       success: true,
       data: result,
       message: 'Pending shortlist candidates retrieved successfully',
+    };
+  }
+
+  @Get('shortlisted')
+  @Permissions('read:interviews')
+  @ApiOperation({
+    summary: "Get shortlisted candidates (subStatus = 'shortlisted')",
+    description: "Retrieve candidate-project assignments where the client has shortlisted the candidate. Supports pagination, search, project and roleCatalog filters.",
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'projectId', required: false, type: String })
+  @ApiQuery({ name: 'roleCatalogId', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Shortlisted candidates retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  candidateId: { type: 'string' },
+                  projectId: { type: 'string' },
+                  roleNeededId: { type: 'string' },
+                  notes: { type: 'string' },
+                  assignedAt: { type: 'string', format: 'date-time' },
+                  candidate: { type: 'object' },
+                  project: { type: 'object' },
+                  roleNeeded: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      designation: { type: 'string' },
+                      roleCatalog: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          label: { type: 'string' },
+                          shortName: { type: 'string' },
+                          isActive: { type: 'boolean' },
+                        },
+                      },
+                    },
+                  },
+                  recruiter: { type: 'object' },
+                  mainStatus: { type: 'object' },
+                  subStatus: { type: 'object' },
+                  latestForward: { type: 'object' },
+                  screenings: { type: 'array', items: { type: 'object' } },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' },
+              },
+            },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  async getShortlisted(@Query() query: any): Promise<any> {
+    const result = await this.interviewsService.getShortlisted(query);
+    return {
+      success: true,
+      data: result,
+      message: 'Shortlisted candidates retrieved successfully',
+    };
+  }
+
+  @Get('not-shortlisted')
+  @Permissions('read:interviews')
+  @ApiOperation({
+    summary: "Get not-shortlisted candidates (subStatus = 'not_shortlisted')",
+    description: "Retrieve candidate-project assignments that were marked not shortlisted by the client. Supports pagination, search, project and roleCatalog filters.",
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'projectId', required: false, type: String })
+  @ApiQuery({ name: 'roleCatalogId', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Not-shortlisted candidates retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  candidateId: { type: 'string' },
+                  projectId: { type: 'string' },
+                  roleNeededId: { type: 'string' },
+                  notes: { type: 'string' },
+                  assignedAt: { type: 'string', format: 'date-time' },
+                  candidate: { type: 'object' },
+                  project: { type: 'object' },
+                  roleNeeded: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      designation: { type: 'string' },
+                      roleCatalog: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          label: { type: 'string' },
+                          shortName: { type: 'string' },
+                          isActive: { type: 'boolean' },
+                        },
+                      },
+                    },
+                  },
+                  recruiter: { type: 'object' },
+                  mainStatus: { type: 'object' },
+                  subStatus: { type: 'object' },
+                  latestForward: { type: 'object' },
+                  screenings: { type: 'array', items: { type: 'object' } },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' },
+              },
+            },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  async getNotShortlisted(@Query() query: any): Promise<any> {
+    const result = await this.interviewsService.getNotShortlisted(query);
+    return {
+      success: true,
+      data: result,
+      message: 'Not-shortlisted candidates retrieved successfully',
     };
   }
 

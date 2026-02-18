@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,17 @@ export function DatePicker({
     }
     return "09:00";
   });
+
+  // Sync internal state with external value changes
+  useEffect(() => {
+    if (value && !isNaN(value.getTime())) {
+      setSelectedDate(value);
+      setTimeValue(format(value, "HH:mm"));
+    } else {
+      setSelectedDate(undefined);
+      setTimeValue("09:00");
+    }
+  }, [value]);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);

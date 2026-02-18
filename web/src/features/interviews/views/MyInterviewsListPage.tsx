@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 import { 
   ClipboardCheck, 
   Loader2, 
@@ -22,7 +22,11 @@ import {
   Edit3,
   CheckCircle2,
   CheckSquare,
-  Users
+  Users,
+  Phone,
+  Mail,
+  MapPin,
+  Building2
 } from "lucide-react";
 import { useGetInterviewsQuery, useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation, useGetInterviewHistoryQuery } from "../api";
 import { useGetProjectsQuery } from "@/services/projectsApi";
@@ -32,6 +36,7 @@ import { cn } from "@/lib/utils";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import EditInterviewDialog from "../components/EditInterviewDialog";
+import { ImageViewer } from "@/components/molecules";
 import { toast } from "sonner";
 
 const getOutcomeBadgeClass = (outcome?: string) => {
@@ -160,27 +165,11 @@ export default function MyInterviewsListPage() {
 
   const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(selected?.id ?? "", { skip: !selected?.id });
 
-  const handleReviewSubmit = async (payload: { interviewStatus: "passed" | "failed" | "completed"; subStatus?: string; reason?: string }) => {
-    if (selectedBulkIds.length > 0) {
-      try {
-        const updates = selectedBulkIds.map(id => ({
-          id,
-          ...payload
-        }));
-        await updateBulkInterviewStatus({ updates }).unwrap();
-        toast.success(`${selectedBulkIds.length} Interviews reviewed successfully`);
-        setSelectedBulkIds([]);
-      } catch (err: any) {
-        toast.error(err?.data?.message || "Failed to update status");
-      }
-      return;
-    }
-
-    if (!selected) return toast.error("No interview selected");
-
+  const handleReviewSubmit = async (updates: { id: string; interviewStatus: "passed" | "failed" | "completed"; subStatus?: string; reason?: string }[]) => {
     try {
-      await updateInterviewStatus({ id: selected.id, data: payload }).unwrap();
-      toast.success(`Interview marked as ${payload.interviewStatus}`);
+      await updateBulkInterviewStatus({ updates }).unwrap();
+      toast.success(`${updates.length} Interview(s) reviewed successfully`);
+      setSelectedBulkIds([]);
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to update status");
     }
@@ -416,13 +405,13 @@ export default function MyInterviewsListPage() {
                         )}
                       >
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 shrink-0">
-                            <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
-                              {candidate
-                                ? `${candidate.firstName?.[0] || ""}${candidate.lastName?.[0] || ""}`.toUpperCase()
-                                : "??"}
-                            </AvatarFallback>
-                          </Avatar>
+                          <ImageViewer
+                            src={candidate?.profileImage || null}
+                            title={candidate ? `${candidate.firstName} ${candidate.lastName}` : 'Unknown'}
+                            className="h-10 w-10 shrink-0"
+                            enableHoverPreview={false}
+                            ariaLabel={candidate ? `View profile image for ${candidate.firstName} ${candidate.lastName}` : 'View profile image'}
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm truncate">
                               {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
@@ -497,13 +486,12 @@ export default function MyInterviewsListPage() {
                   <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50/70 to-purple-50/70 dark:from-indigo-900/20 dark:to-purple-900/20">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-4 mb-5">
-                        <Avatar className="h-12 w-12">
-                          <AvatarFallback className="text-base font-bold bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                            {selected.candidateProjectMap?.candidate
-                              ? `${selected.candidateProjectMap.candidate.firstName?.[0] || ""}${selected.candidateProjectMap.candidate.lastName?.[0] || ""}`.toUpperCase()
-                              : "??"}
-                          </AvatarFallback>
-                        </Avatar>
+                        <ImageViewer
+                          src={selected.candidateProjectMap?.candidate?.profileImage || null}
+                          title={selected.candidateProjectMap?.candidate ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}` : 'Candidate'}
+                          className="h-12 w-12 border-2 border-white dark:border-indigo-800 shadow-sm"
+                          ariaLabel={selected.candidateProjectMap?.candidate ? `View full image for ${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}` : 'View full image'}
+                        />
                         <div>
                           <h3 className="font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-2 text-base">
                             <User className="h-5 w-5" />
@@ -514,11 +502,26 @@ export default function MyInterviewsListPage() {
                               ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}`
                               : "Unknown"}
                           </p>
-                          {selected.candidateProjectMap?.candidate?.email && (
-                            <p className="text-sm text-muted-foreground mt-2 break-all">
-                              {selected.candidateProjectMap.candidate.email}
-                            </p>
-                          )}
+                          <div className="flex flex-col gap-1.5 mt-3">
+                            {selected.candidateProjectMap?.candidate?.email && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Mail className="h-3.5 w-3.5" />
+                                <span className="truncate">{selected.candidateProjectMap.candidate.email}</span>
+                              </div>
+                            )}
+                            {selected.candidateProjectMap?.candidate?.mobileNumber && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Phone className="h-3.5 w-3.5" />
+                                <span>{selected.candidateProjectMap.candidate.mobileNumber}</span>
+                              </div>
+                            )}
+                            {selected.candidateProjectMap?.candidate?.totalExperience !== undefined && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Briefcase className="h-3.5 w-3.5" />
+                                <span>{selected.candidateProjectMap.candidate.totalExperience} years experience</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -530,15 +533,55 @@ export default function MyInterviewsListPage() {
                         <Briefcase className="h-5 w-5" />
                         Project & Role
                       </h3>
-                      <div className="space-y-3 text-sm">
-                        <div>
+                      <div className="space-y-4">
+                        <div className="space-y-1">
                           <p className="text-muted-foreground text-sm">Project</p>
-                          <p className="font-medium text-base">{selected.candidateProjectMap?.project?.title || "Unknown"}</p>
+                          <p className="font-medium text-base flex items-center gap-2">
+                            {selected.candidateProjectMap?.project?.title || "Unknown"}
+                            {selected.candidateProjectMap?.project?.countryCode && (
+                              <Badge variant="outline" className="text-[10px] h-4 px-1 px-1.5 uppercase border-purple-200 bg-purple-100/50">
+                                <MapPin className="h-2.5 w-2.5 mr-1" />
+                                {selected.candidateProjectMap.project.countryCode}
+                              </Badge>
+                            )}
+                          </p>
                         </div>
-                        <div>
+                        
+                        <div className="space-y-1">
                           <p className="text-muted-foreground text-sm">Role</p>
-                          <p className="font-medium text-base">{selected.candidateProjectMap?.roleNeeded?.designation || "Unknown"}</p>
+                          <p className="font-medium text-base">
+                            {selected.candidateProjectMap?.roleNeeded?.designation || "Unknown"}
+                          </p>
+                          {selected.candidateProjectMap?.roleNeeded?.roleCatalog && (
+                            <p className="text-xs text-purple-600/80 dark:text-purple-400/80 font-medium">
+                              {selected.candidateProjectMap.roleNeeded.roleCatalog.label || selected.candidateProjectMap.roleNeeded.roleCatalog.name}
+                            </p>
+                          )}
                         </div>
+
+                        {selected.candidateProjectMap?.project?.client && (
+                          <div className="pt-3 border-t border-purple-200/50 dark:border-purple-800/50 space-y-2">
+                            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                              <Building2 className="h-3 w-3" />
+                              Client Details
+                            </p>
+                            <div className="space-y-1.5 text-sm">
+                              <p className="font-medium">{selected.candidateProjectMap.project.client.name}</p>
+                              {selected.candidateProjectMap.project.client.email && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Mail className="h-3 w-3" />
+                                  <span>{selected.candidateProjectMap.project.client.email}</span>
+                                </div>
+                              )}
+                              {selected.candidateProjectMap.project.client.phone && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{selected.candidateProjectMap.project.client.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -607,7 +650,7 @@ export default function MyInterviewsListPage() {
       <ReviewInterviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
-        interview={selectedBulkIds.length > 0 ? { isBulk: true, count: selectedBulkIds.length } : selected}
+        interview={selectedBulkIds.length > 0 ? filteredList.filter(it => selectedBulkIds.includes(it.id)) : selected}
         onSubmit={handleReviewSubmit}
       />
 

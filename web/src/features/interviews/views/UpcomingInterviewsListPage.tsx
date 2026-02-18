@@ -40,7 +40,8 @@ import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetInterviewHistoryQuery } from "../api";
 import EditInterviewDialog from "../components/EditInterviewDialog";
 import { toast } from "sonner";
-import { useUpdateInterviewStatusMutation } from "../api";
+import { ImageViewer } from "@/components/molecules/ImageViewer";
+import { useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation } from "../api";
 import { cn } from "@/lib/utils";
 
 const getModeInfo = (mode?: string) => {
@@ -123,22 +124,17 @@ export default function UpcomingInterviewsListPage() {
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [updateInterviewStatus] = useUpdateInterviewStatusMutation();
+  const [updateBulkInterviewStatus] = useUpdateBulkInterviewStatusMutation();
 
   const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(
     selected?.id ?? "",
     { skip: !selected?.id }
   );
 
-  const handleReviewSubmit = async (payload: {
-    interviewStatus: "passed" | "failed" | "completed";
-    subStatus?: string;
-    reason?: string;
-  }) => {
-    if (!selected) return toast.error("No interview selected");
-
+  const handleReviewSubmit = async (updates: { id: string; interviewStatus: "passed" | "failed" | "completed"; subStatus?: string; reason?: string }[]) => {
     try {
-      await updateInterviewStatus({ id: selected.id, data: payload }).unwrap();
-      toast.success(`Interview marked as ${payload.interviewStatus}`);
+      await updateBulkInterviewStatus({ updates }).unwrap();
+      toast.success(`${updates.length} Interview(s) reviewed successfully`);
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to update status");
     }
@@ -246,6 +242,21 @@ export default function UpcomingInterviewsListPage() {
               >
                 <X className="h-4 w-4 mr-2" />
                 Clear
+              </Button>
+            )}
+
+            {displayed.length > 0 && (
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 ml-auto"
+                onClick={() => {
+                  setSelectedId(null);
+                  setIsReviewOpen(true);
+                }}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Review All ({displayed.length})
               </Button>
             )}
           </div>
@@ -374,13 +385,12 @@ export default function UpcomingInterviewsListPage() {
                   <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50/70 to-purple-50/70 dark:from-indigo-900/20 dark:to-purple-900/20">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-3 mb-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                            {selected.candidateProjectMap?.candidate
-                              ? `${selected.candidateProjectMap.candidate.firstName[0]}${selected.candidateProjectMap.candidate.lastName[0]}`.toUpperCase()
-                              : "??"}
-                          </AvatarFallback>
-                        </Avatar>
+                        <ImageViewer
+                          src={selected.candidateProjectMap?.candidate?.profileImage}
+                          alt={selected.candidateProjectMap?.candidate ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}` : "Unknown"}
+                          fallback={`${selected.candidateProjectMap?.candidate?.firstName?.[0] || ""}${selected.candidateProjectMap?.candidate?.lastName?.[0] || ""}`}
+                          size="lg"
+                        />
                         <div>
                           <h3 className="font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-2 text-sm">
                             <User className="h-4 w-4" />
@@ -406,14 +416,28 @@ export default function UpcomingInterviewsListPage() {
                       <div className="space-y-2 text-sm">
                         <div>
                           <p className="text-muted-foreground text-xs">Project</p>
-                          <p className="font-medium">{selected.candidateProjectMap?.project?.title || "Unknown"}</p>
+                          <p className="font-medium truncate">{selected.candidateProjectMap?.project?.title || "Unknown"}</p>
+                          {selected.candidateProjectMap?.project?.client && (
+                            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium truncate">
+                              {selected.candidateProjectMap.project.client.name}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <p className="text-muted-foreground text-xs">Role</p>
-                          <p className="font-medium">
+                          <p className="font-medium truncate">
                             {(selected as any).candidateProjectMap?.roleNeeded?.designation || "Unknown"}
                           </p>
                         </div>
+                        {selected.candidateProjectMap?.candidate?.mobileNumber && (
+                          <div className="col-span-2">
+                             <p className="text-muted-foreground text-xs">Contact</p>
+                             <p className="font-medium text-sm flex items-center gap-1">
+                               <Phone className="h-3 w-3" />
+                               {selected.candidateProjectMap.candidate.mobileNumber}
+                             </p>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -481,7 +505,7 @@ export default function UpcomingInterviewsListPage() {
       <ReviewInterviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
-        interview={selected}
+        interview={selected || (displayed.length > 0 ? displayed : null)}
         onSubmit={handleReviewSubmit}
       />
 
