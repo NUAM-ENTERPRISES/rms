@@ -26,7 +26,8 @@ import {
   Phone,
   Mail,
   MapPin,
-  Building2
+  Building2,
+  MessageCircle,
 } from "lucide-react";
 import { useGetInterviewsQuery, useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation, useGetInterviewHistoryQuery } from "../api";
 import { useGetProjectsQuery } from "@/services/projectsApi";
@@ -510,9 +511,21 @@ export default function MyInterviewsListPage() {
                               </div>
                             )}
                             {selected.candidateProjectMap?.candidate?.mobileNumber && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Phone className="h-3.5 w-3.5" />
-                                <span>{selected.candidateProjectMap.candidate.mobileNumber}</span>
+                              <div className="flex items-center justify-between group/wa">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Phone className="h-3.5 w-3.5" />
+                                  <span>{selected.candidateProjectMap.candidate.mobileNumber}</span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    const phone = selected.candidateProjectMap.candidate.mobileNumber.replace(/\D/g, '');
+                                    window.open(`https://wa.me/${phone}`, '_blank');
+                                  }}
+                                  className="opacity-0 group-hover/wa:opacity-100 transition-opacity p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded text-green-600"
+                                  title="Chat on WhatsApp"
+                                >
+                                  <MessageCircle className="h-3.5 w-3.5" />
+                                </button>
                               </div>
                             )}
                             {selected.candidateProjectMap?.candidate?.totalExperience !== undefined && (
@@ -617,9 +630,28 @@ export default function MyInterviewsListPage() {
                     {selected.meetingLink && (
                       <div className="pt-5 border-t">
                         <p className="text-muted-foreground mb-1">Meeting Link</p>
-                        <a href={selected.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-600 hover:underline break-all">
-                          {selected.meetingLink}
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a href={selected.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-600 hover:underline break-all flex-1">
+                            {selected.meetingLink}
+                          </a>
+                          {selected.candidateProjectMap?.candidate?.mobileNumber && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                              title="Send to WhatsApp"
+                              onClick={() => {
+                                const phone = selected.candidateProjectMap.candidate.mobileNumber.replace(/\D/g, '');
+                                const candidateName = selected.candidateProjectMap.candidate.firstName;
+                                const message = `Hi ${candidateName}, here is the meeting link for your interview: ${selected.meetingLink}`;
+                                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                              }}
+                            >
+                              <MessageCircle className="h-4 w-4 mr-1.5" />
+                              <span className="text-[10px] font-bold uppercase tracking-wider">Send Link</span>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )}
 

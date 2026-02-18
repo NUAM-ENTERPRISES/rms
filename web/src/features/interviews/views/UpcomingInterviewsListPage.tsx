@@ -17,6 +17,7 @@ import {
   Phone,
   Video,
   MapPin,
+  MessageCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -430,12 +431,24 @@ export default function UpcomingInterviewsListPage() {
                           </p>
                         </div>
                         {selected.candidateProjectMap?.candidate?.mobileNumber && (
-                          <div className="col-span-2">
-                             <p className="text-muted-foreground text-xs">Contact</p>
-                             <p className="font-medium text-sm flex items-center gap-1">
-                               <Phone className="h-3 w-3" />
-                               {selected.candidateProjectMap.candidate.mobileNumber}
-                             </p>
+                          <div className="col-span-2 flex items-center justify-between group/wa">
+                             <div>
+                               <p className="text-muted-foreground text-xs">Contact</p>
+                               <p className="font-medium text-sm flex items-center gap-1">
+                                 <Phone className="h-3 w-3" />
+                                 {selected.candidateProjectMap.candidate.mobileNumber}
+                               </p>
+                             </div>
+                             <button
+                               onClick={() => {
+                                 const phone = selected.candidateProjectMap.candidate.mobileNumber.replace(/\D/g, '');
+                                 window.open(`https://wa.me/${phone}`, '_blank');
+                               }}
+                               className="p-1.5 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-full text-green-600 transition-colors"
+                               title="Chat on WhatsApp"
+                             >
+                               <MessageCircle className="h-4 w-4" />
+                             </button>
                           </div>
                         )}
                       </div>
@@ -483,6 +496,43 @@ export default function UpcomingInterviewsListPage() {
                     <CardContent className="p-5">
                       <h3 className="font-semibold text-amber-700 dark:text-amber-400 text-sm mb-2">Notes</h3>
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selected.notes}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {selected.meetingLink && (
+                  <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 border-l-4 border-l-green-500">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-green-700 dark:text-green-400 text-sm mb-1 flex items-center gap-1.5">
+                            Meeting Link
+                          </h3>
+                          <a 
+                            href={selected.meetingLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 underline break-all block"
+                          >
+                            {selected.meetingLink}
+                          </a>
+                        </div>
+                        {selected.candidateProjectMap?.candidate?.mobileNumber && (
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white shadow-sm flex-shrink-0"
+                            onClick={() => {
+                              const phone = selected.candidateProjectMap.candidate.mobileNumber.replace(/\D/g, '');
+                              const candidateName = selected.candidateProjectMap.candidate.firstName;
+                              const message = `Hi ${candidateName}, here is the meeting link for your interview: ${selected.meetingLink}`;
+                              window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Send to Candidate
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 )}
