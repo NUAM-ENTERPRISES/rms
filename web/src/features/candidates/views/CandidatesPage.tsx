@@ -117,6 +117,8 @@ export default function CandidatesPage() {
       page: filters.page,
       limit: filters.limit,
       status: filters.status !== "all" ? filters.status : undefined,
+      dateFrom: filters.dateFrom ? filters.dateFrom.toISOString() : undefined,
+      dateTo: filters.dateTo ? filters.dateTo.toISOString() : undefined,
     },
     { skip: isRecruiter && !isManager } // Skip this query if user is recruiter without manager role
   );
@@ -135,6 +137,8 @@ export default function CandidatesPage() {
       limit: filters.limit,
       search: filters.search || undefined,
       status: filters.status !== "all" ? filters.status : undefined,
+      dateFrom: filters.dateFrom ? filters.dateFrom.toISOString() : undefined,
+      dateTo: filters.dateTo ? filters.dateTo.toISOString() : undefined,
     },
     { skip: !isRecruiter || isManager } // Skip this query if user is not recruiter or is manager
   );
@@ -248,20 +252,8 @@ export default function CandidatesPage() {
         });
       }
 
-      // Date range filter (filter by candidate.createdAt / date added)
-      if (filters.dateFrom || filters.dateTo) {
-        const from = filters.dateFrom ? startOfDay(filters.dateFrom) : null;
-        const to = filters.dateTo ? endOfDay(filters.dateTo) : null;
-        filtered = filtered.filter((candidate) => {
-          const dStr = candidate.createdAt || candidate.updatedAt;
-          if (!dStr) return false;
-          const d = parseISO(dStr);
-          if (from && to) return d >= from && d <= to;
-          if (from) return d >= from;
-          if (to) return d <= to;
-          return true;
-        });
-      }
+      // Date filtering is now performed server-side (dateFrom / dateTo sent to API).
+      // Removed client-side date filtering to avoid double work and improve performance.
 
       // Note: availability filter removed as it's not in the API interface
       // if (filters.availability !== "all") {

@@ -423,6 +423,8 @@ export interface GetCandidatesParams {
   search?: string;
   roleCatalogId?: string;
   teamId?: string;
+  dateFrom?: string; // ISO date string (filters createdAt/updatedAt >= dateFrom)
+  dateTo?: string;   // ISO date string (filters createdAt/updatedAt <= dateTo)
 }
 
 export interface GetRecruiterMyCandidatesParams {
@@ -431,6 +433,8 @@ export interface GetRecruiterMyCandidatesParams {
   status?: string;
   search?: string;
   roleCatalogId?: string;
+  dateFrom?: string; // ISO date string (filters createdAt/updatedAt >= dateFrom)
+  dateTo?: string;   // ISO date string (filters createdAt/updatedAt <= dateTo)
 }
 
 export interface RecruiterMyCandidatesResponse {
@@ -620,6 +624,8 @@ export const candidatesApi = baseApi.injectEndpoints({
         if (params.search) queryParams.append("search", params.search);
         if (params.roleCatalogId) queryParams.append("roleCatalogId", params.roleCatalogId);
         if (params.teamId) queryParams.append("teamId", params.teamId);
+        if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
+        if (params.dateTo) queryParams.append("dateTo", params.dateTo);
 
         const queryString = queryParams.toString();
         return queryString ? `/candidates?${queryString}` : "/candidates";
@@ -959,6 +965,8 @@ export const candidatesApi = baseApi.injectEndpoints({
         if (params?.search) queryParams.append("search", params.search);
         if (params?.roleCatalogId)
           queryParams.append("roleCatalogId", params.roleCatalogId);
+        if (params?.dateFrom) queryParams.append("dateFrom", params.dateFrom);
+        if (params?.dateTo) queryParams.append("dateTo", params.dateTo);
 
         const queryString = queryParams.toString();
         return queryString
