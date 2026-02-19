@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,8 @@ export default function MultiStepCreateProjectPage() {
     watch,
     setValue,
     trigger,
+    setError,
+    clearErrors,
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectFormSchema),
     defaultValues: defaultProjectValues,
@@ -86,9 +88,73 @@ export default function MultiStepCreateProjectPage() {
 
   // Navigation functions
   const goToNextStep = async () => {
+    // Local pre-validation for Requirement Criteria (step 1): ensure Qty is present and > 0
+    if (currentStep === 1) {
+      const roles = watch("rolesNeeded") || [];
+      let hasQtyError = false;
+      roles.forEach((r: any, idx: number) => {
+        clearErrors([`rolesNeeded.${idx}.quantity`]);
+        if (r.quantity == null || r.quantity <= 0) {
+          setError(`rolesNeeded.${idx}.quantity`, { type: "manual", message: "Quantity is required — enter number of positions" });
+          hasQtyError = true;
+        }
+      });
+      if (hasQtyError) {
+        // show the same friendly message used in the UI so users see consistent feedback
+        toast.error("Quantity is required — enter number of positions");
+        return; // block navigation and avoid showing Zod's generic message
+      }
+    }
+
     // Validate current step before proceeding
     const stepFields = getStepFields(currentStep);
     const isStepValid = await trigger(stepFields);
+
+    // Additional local validation for Candidate Criteria (step 2)
+    if (currentStep === 2) {
+      const roles = watch("rolesNeeded") || [];
+      const invalidRoleIndexes: number[] = [];
+
+      roles.forEach((r: any, idx: number) => {
+        // clear any previous manual errors for these specific candidate fields
+        clearErrors([
+          `rolesNeeded.${idx}.minExperience`,
+          `rolesNeeded.${idx}.maxExperience`,
+          `rolesNeeded.${idx}.ageRequirement`,
+          `rolesNeeded.${idx}.educationRequirementsList`,
+        ]);
+
+        let roleHasError = false;
+
+        if (r.minExperience == null) {
+          setError(`rolesNeeded.${idx}.minExperience`, { type: "manual", message: "Minimum experience is required" });
+          roleHasError = true;
+        }
+        if (r.maxExperience == null) {
+          setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Maximum experience is required" });
+          roleHasError = true;
+        }
+        if (r.minExperience != null && r.maxExperience != null && r.minExperience > r.maxExperience) {
+          setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Minimum experience must be less than or equal to maximum experience" });
+          roleHasError = true;
+        }
+        if (!r.ageRequirement || !/^\s*\d+\s*to\s*\d+\s*$/.test(r.ageRequirement)) {
+          setError(`rolesNeeded.${idx}.ageRequirement`, { type: "manual", message: "Age is required in format '18 to 25'" });
+          roleHasError = true;
+        }
+        if (!r.educationRequirementsList || r.educationRequirementsList.length === 0) {
+          setError(`rolesNeeded.${idx}.educationRequirementsList`, { type: "manual", message: "Select at least one education requirement" });
+          roleHasError = true;
+        }
+
+        if (roleHasError) invalidRoleIndexes.push(idx);
+      });
+
+      if (invalidRoleIndexes.length) {
+        toast.error("Please fix required candidate fields (experience, age, education) for the highlighted roles");
+        return; // block navigation
+      }
+    }
 
     if (isStepValid) {
       if (currentStep < STEPS.length - 1) {
@@ -98,9 +164,29 @@ export default function MultiStepCreateProjectPage() {
       // Log errors for debugging
       console.log("Validation errors:", errors);
       
-      // Get first error message to show
-      const firstError = Object.values(errors).find(err => err);
-      const errorMessage = firstError?.message || "Please fix the errors before proceeding";
+      let errorMessage = "Please fix the errors before proceeding";
+      
+      // Better error message extraction for complex schemas
+      if (errors.rolesNeeded) {
+        if ((errors.rolesNeeded as any).root) {
+          errorMessage = (errors.rolesNeeded as any).root.message;
+        } else if (Array.isArray(errors.rolesNeeded)) {
+          // Find first entry that has errors
+          const firstRoleErrorEntry = errors.rolesNeeded.find(e => e);
+          if (firstRoleErrorEntry) {
+            // Find first field error in that role
+            const firstFieldError = Object.values(firstRoleErrorEntry).find(err => (err as any)?.message);
+            if (firstFieldError) {
+              errorMessage = `Role Error: ${(firstFieldError as any).message}`;
+            }
+          }
+        }
+      } else {
+        const firstError = Object.values(errors).find(err => (err as any)?.message);
+        if (firstError) {
+          errorMessage = (firstError as any).message;
+        }
+      }
       
       toast.error(errorMessage);
     }

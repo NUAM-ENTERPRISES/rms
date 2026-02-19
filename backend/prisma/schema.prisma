@@ -969,6 +969,7 @@ model RoleCatalog {
   roleDepartment   RoleDepartment @relation(fields: [roleDepartmentId], references: [id], onDelete: Cascade)
   name             String         @unique
   label            String
+  type             String         @default("other")
   shortName        String?
   description      String?
   isActive         Boolean        @default(true)

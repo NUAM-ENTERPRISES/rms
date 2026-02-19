@@ -36,7 +36,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
     formData.clientId || "",
     { skip: !formData.clientId }
   );
-  const { data: systemConfig } = useGetSystemConfigQuery();
+  const { data: systemConfig } = useGetSystemConfigQuery("religions,states");
   const { data: qualificationsData } = useGetQualificationsQuery();
   const { getCountryName } = useCountryValidation();
 

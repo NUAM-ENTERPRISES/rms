@@ -43,7 +43,7 @@ export default function DocumentRequirementsSection({
   const [showAddNew, setShowAddNew] = useState(false);
 
   // Get system configuration for document types
-  const { data: systemConfig } = useGetSystemConfigQuery();
+  const { data: systemConfig } = useGetSystemConfigQuery("documentTypes");
   const documentTypes = systemConfig?.data?.constants?.documentTypes || {};
 
   const documentRequirements = watch("documentRequirements") || [];

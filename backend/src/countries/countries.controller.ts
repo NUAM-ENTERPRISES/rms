@@ -106,9 +106,9 @@ export class CountriesController {
   @Get('active')
   @Public()
   @ApiOperation({
-    summary: 'Get all active countries',
+    summary: 'Get active countries with pagination and search',
     description:
-      'Retrieve all active countries without pagination (for dropdowns)',
+      'Retrieve active countries with optional filtering by search term and region',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -118,17 +118,28 @@ export class CountriesController {
       properties: {
         success: { type: 'boolean', example: true },
         data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              code: { type: 'string', example: 'US' },
-              name: { type: 'string', example: 'United States' },
-              region: { type: 'string', example: 'North America' },
-              callingCode: { type: 'string', example: '+1' },
-              currency: { type: 'string', example: 'USD' },
-              timezone: { type: 'string', example: 'America/New_York' },
-              isActive: { type: 'boolean', example: true },
+          type: 'object',
+          properties: {
+            countries: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string', example: 'US' },
+                  name: { type: 'string', example: 'United States' },
+                  region: { type: 'string', example: 'North America' },
+                  isActive: { type: 'boolean', example: true },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number', example: 1 },
+                limit: { type: 'number', example: 50 },
+                total: { type: 'number', example: 195 },
+                totalPages: { type: 'number', example: 4 },
+              },
             },
           },
         },
@@ -139,12 +150,12 @@ export class CountriesController {
       },
     },
   })
-  async getActiveCountries(): Promise<{
+  async getActiveCountries(@Query() query: QueryCountriesDto): Promise<{
     success: boolean;
-    data: Country[];
+    data: PaginatedCountries;
     message: string;
   }> {
-    const data = await this.countriesService.getActiveCountries();
+    const data = await this.countriesService.getActiveCountries(query);
     return {
       success: true,
       data,

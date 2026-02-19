@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -29,6 +29,7 @@ import {
 export interface EducationRequirement {
   qualificationId: string;
   mandatory: boolean;
+  qualificationLabel?: string;
 }
 
 export interface ProjectQualificationSelectProps {
@@ -47,16 +48,17 @@ export default function ProjectQualificationSelect({
   className,
 }: ProjectQualificationSelectProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Fetch recommended qualifications for the role
   const { recommendations, isLoading: isLoadingRecommendations } =
     useRoleRecommendations(roleId || "", countryCode);
 
-  // Fetch all qualifications for browsing
+  // Fetch all qualifications for browsing (use debounced search to avoid rapid API calls)
   const { qualifications, isLoading: isLoadingQualifications } =
     useQualificationsLookup({
-      q: searchQuery,
+      q: debouncedSearch,
       isActive: true,
       limit: 10,
     });
@@ -119,11 +121,15 @@ export default function ProjectQualificationSelect({
   // Add a qualification to the selection
   const addQualification = (
     qualificationId: string,
-    mandatory: boolean = true
+    mandatory: boolean = true,
+    qualificationLabel?: string
   ) => {
     if (selectedIds.has(qualificationId)) return;
 
-    const newRequirements = [...value, { qualificationId, mandatory }];
+    const newRequirements = [
+      ...value,
+      { qualificationId, mandatory, qualificationLabel },
+    ];
     onChange(newRequirements);
   };
 
@@ -153,10 +159,13 @@ export default function ProjectQualificationSelect({
           <div className="space-y-2">
             <div className="flex flex-wrap gap-1">
               {value.map((requirement) => {
-                const qualName = getQualificationName(
-                  requirement.qualificationId,
-                  qualifications
-                );
+                // Use stored label first, then try to look up in current results
+                const qualName =
+                  requirement.qualificationLabel ||
+                  getQualificationName(
+                    requirement.qualificationId,
+                    qualifications
+                  );
                 return (
                   <Badge
                     key={requirement.qualificationId}
@@ -257,7 +266,8 @@ export default function ProjectQualificationSelect({
                               onClick={() => {
                                 addQualification(
                                   option.id,
-                                  option.isPreferred || true
+                                  option.isPreferred || true,
+                                  option.shortName || option.name
                                 );
                                 setIsDropdownOpen(false);
                               }}
@@ -302,7 +312,11 @@ export default function ProjectQualificationSelect({
                             <DropdownMenuItem
                               key={option.id}
                               onClick={() => {
-                                addQualification(option.id, true);
+                                addQualification(
+                                  option.id, 
+                                  true, 
+                                  option.shortName || option.name
+                                );
                                 setIsDropdownOpen(false);
                               }}
                               className="flex items-center justify-between p-2 cursor-pointer"

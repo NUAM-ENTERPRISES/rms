@@ -20,8 +20,15 @@ export class QueryRolesDto {
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional({
-    description: 'Filter by clinical roles only',
+  @ApiPropertyOptional({    description: 'Filter by role type',
+    example: 'nurse',
+    enum: ['nurse', 'doctor', 'other'],
+  })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiPropertyOptional({    description: 'Filter by clinical roles only',
     example: true,
   })
   @IsOptional()

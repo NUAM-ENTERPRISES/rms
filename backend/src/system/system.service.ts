@@ -7,52 +7,80 @@ import { DOCUMENT_TYPE_META } from '../common/constants/document-types';
 export class SystemService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getSystemConfig(): Promise<SystemConfigResponse> {
-    // Get all roles with their configurations
-    const roles = await this.prisma.role.findMany({
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        rolePermissions: {
-          select: {
-            permission: {
+  async getSystemConfig(parts: string[] = []): Promise<SystemConfigResponse> {
+    const includeAll = parts.length === 0;
+    const includeRoles = includeAll || parts.includes('roles');
+    const includeFullPermissions = includeAll || parts.includes('permissions');
+    
+    // Granular flags for performance optimization
+    const includeReligions = includeAll || parts.includes('religions');
+    const includeStates = includeAll || parts.includes('states');
+    const includeDocTypes = includeAll || parts.includes('documentTypes');
+    const includeStatuses = includeAll || parts.includes('statuses');
+    
+    // Backward compatibility for 'constants' part
+    const includeConstants = parts.includes('constants');
+    const finalIncludeReligions = includeReligions || includeConstants;
+    const finalIncludeStates = includeStates || includeConstants;
+    const finalIncludeDocTypes = includeDocTypes || includeConstants;
+    const finalIncludeStatuses = includeStatuses || includeConstants;
+
+    // Get all roles with their configurations - Only if requested
+    let roles: any[] = [];
+    if (includeRoles) {
+      roles = await this.prisma.role.findMany({
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          ...(includeFullPermissions ? {
+            rolePermissions: {
               select: {
-                key: true,
-                description: true,
+                permission: {
+                  select: {
+                    key: true,
+                    description: true,
+                  },
+                },
               },
             },
-          },
+          } : {}),
         },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+        orderBy: {
+          name: 'asc',
+        },
+      });
+    }
 
-    // Get religions
-    const religions = await this.prisma.religion.findMany({
-      where: { isActive: true },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-      },
-    });
+    // Get religions only if requested
+    let religions: any[] = [];
+    if (finalIncludeReligions) {
+      religions = await this.prisma.religion.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+    }
 
-    // Get Indian states
-    const indianStates = await this.prisma.state.findMany({
-      where: {
-        countryCode: 'IN',
-        isActive: true,
-      },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-      },
-    });
+    // Get Indian states only if requested
+    let indianStates: any[] = [];
+    if (finalIncludeStates) {
+      indianStates = await this.prisma.state.findMany({
+        where: {
+          countryCode: 'IN',
+          isActive: true,
+        },
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      });
+    }
 
     // Get role badge configurations
     const roleBadgeConfig = {
@@ -67,10 +95,15 @@ export class SystemService {
       'Processing Executive': { variant: 'outline', priority: 9 },
     };
 
-    // Get system constants
-    const constants = {
-      documentTypes: DOCUMENT_TYPE_META,
-      candidateStatuses: {
+    // Build constants object dynamically based on requested parts
+    const constants: any = {};
+    
+    if (finalIncludeDocTypes) {
+      constants.documentTypes = DOCUMENT_TYPE_META;
+    }
+    
+    if (finalIncludeStatuses) {
+      constants.candidateStatuses = {
         APPLIED: { displayName: 'Applied', color: 'blue' },
         SHORTLISTED: { displayName: 'Shortlisted', color: 'green' },
         REJECTED: { displayName: 'Rejected', color: 'red' },
@@ -85,25 +118,35 @@ export class SystemService {
         },
         REJECTED_DOCUMENTS: { displayName: 'Documents Rejected', color: 'red' },
         PENDING_DOCUMENTS: { displayName: 'Pending Documents', color: 'gray' },
-      },
-      religions: religions,
-      indianStates: indianStates,
-    };
+      };
+    }
+    
+    if (finalIncludeReligions) {
+      constants.religions = religions;
+    }
+    
+    if (finalIncludeStates) {
+      constants.indianStates = indianStates;
+    }
 
     return {
       success: true,
       data: {
-        roles: roles.map((role) => ({
-          id: role.id,
-          name: role.name,
-          description: role.description,
-          permissions: role.rolePermissions.map((rp) => rp.permission.key),
-          badgeConfig: roleBadgeConfig[role.name] || {
-            variant: 'outline',
-            priority: 999,
-          },
-        })),
-        roleBadgeConfig,
+        roles: includeRoles
+          ? roles.map((role) => ({
+              id: role.id,
+              name: role.name,
+              description: role.description,
+              permissions: includeFullPermissions 
+                ? role.rolePermissions.map((rp) => rp.permission.key)
+                : [],
+              badgeConfig: roleBadgeConfig[role.name] || {
+                variant: 'outline',
+                priority: 999,
+              },
+            }))
+          : [],
+        roleBadgeConfig: includeRoles ? roleBadgeConfig : {},
         constants,
         version: '1.0.0',
         lastUpdated: new Date().toISOString(),

@@ -33,8 +33,11 @@ export interface SystemConfigResponse {
 // Inject the system config endpoint
 export const systemConfigApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getSystemConfig: builder.query<SystemConfigResponse, void>({
-      query: () => "/system/config",
+    getSystemConfig: builder.query<SystemConfigResponse, string | void>({
+      query: (parts) => ({
+        url: "/system/config",
+        params: parts ? { parts } : undefined,
+      }),
       providesTags: ["SystemConfig"],
     }),
   }),

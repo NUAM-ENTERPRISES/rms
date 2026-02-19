@@ -33,8 +33,11 @@ export interface SystemConfigResponse {
 // System Config API
 export const systemConfigApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getSystemConfig: builder.query<SystemConfigResponse, void>({
-      query: () => "/system/config",
+    getSystemConfig: builder.query<SystemConfigResponse, string | void>({
+      query: (parts) => ({
+        url: "/system/config",
+        params: parts ? { parts } : undefined,
+      }),
       providesTags: ["SystemConfig"],
       keepUnusedDataFor: 3600, // 1 hour
     }),
@@ -46,10 +49,10 @@ export const { useGetSystemConfigQuery } = systemConfigApi;
 
 /**
  * Hook to get system configuration
- * This should be called once at app startup and cached
+ * Optimized to only fetch core parts (roles and statuses) by default
  */
-export function useSystemConfig() {
-  return useGetSystemConfigQuery();
+export function useSystemConfig(parts: string = "roles,permissions,statuses") {
+  return useGetSystemConfigQuery(parts);
 }
 
 /**

@@ -71,9 +71,28 @@ export const countriesApi = baseApi.injectEndpoints({
       keepUnusedDataFor: 3600, // Cache for 1 hour
     }),
 
-    getActiveCountries: builder.query<Country[], void>({
-      query: () => "countries/active",
-      transformResponse: (response: { data: Country[] }) => response.data,
+    getActiveCountries: builder.query<
+      PaginatedCountries,
+      CountriesQueryParams | void
+    >({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params && params.search)
+          searchParams.append("search", params.search);
+        if (params && params.region)
+          searchParams.append("region", params.region);
+        if (params && params.page)
+          searchParams.append("page", String(params.page));
+        if (params && params.limit)
+          searchParams.append("limit", String(params.limit));
+
+        return {
+          url: "countries/active",
+          params: Object.fromEntries(searchParams),
+        };
+      },
+      transformResponse: (response: { data: PaginatedCountries }) =>
+        response.data,
       providesTags: ["Country"],
       keepUnusedDataFor: 3600, // Cache for 1 hour
     }),
@@ -108,16 +127,14 @@ export const {
 /**
  * Hook for country dropdown data with error handling
  */
-export function useCountriesLookup() {
-  const {
-    data: countries = [],
-    isLoading,
-    error,
-    refetch,
-  } = useGetActiveCountriesQuery();
+export function useCountriesLookup(params?: CountriesQueryParams) {
+  const { data, isLoading, error, refetch } = useGetActiveCountriesQuery(params);
+
+  const countries = data?.countries || [];
 
   return {
     countries,
+    pagination: data?.pagination,
     isLoading,
     error,
     refetch,

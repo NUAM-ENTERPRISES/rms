@@ -19,6 +19,7 @@ export interface DepartmentSelectProps {
   className?: string;
   allowEmpty?: boolean;
   pageSize?: number;
+  includeRoles?: boolean;
 }
 
 export function DepartmentSelect({
@@ -32,6 +33,7 @@ export function DepartmentSelect({
   className,
   allowEmpty = true,
   pageSize = 20,
+  includeRoles = false,
 }: DepartmentSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -39,10 +41,10 @@ export function DepartmentSelect({
   const debouncedSearch = useDebounce(search, 300);
 
   const queryParams = useMemo(() => {
-    const params: any = { page, limit: pageSize, includeRoles: false };
+    const params: any = { page, limit: pageSize, includeRoles };
     if (debouncedSearch) params.search = debouncedSearch;
     return params;
-  }, [page, pageSize, debouncedSearch]);
+  }, [page, pageSize, debouncedSearch, includeRoles]);
 
   const { data, isLoading, isFetching } = useGetRoleDepartmentsQuery(queryParams);
   const departments = data?.data?.departments || [];

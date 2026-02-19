@@ -72,17 +72,19 @@ export function JobTitleSelect({
 
   // Note: we intentionally use the `role-departments` endpoint for both global and
   // department-scoped role fetching. Query params are assembled where the hook is called.
-  // Use the role-departments endpoint exclusively. If departmentId is provided we request that
-  // department with includeRoles=true to get its roles; otherwise request departments with
-  // includeRoles=true and flatten roles from the returned departments for global searching.
-  // If disabled and no department is selected, avoid calling the API (prevent unnecessary network calls)
-  const departmentsQueryParams = disabled && !departmentId
+  // When departmentId is provided, the first department contains the roles; otherwise flatten
+  // roles across departments returned on the current page.
+  // Optimization: Only fetch when the popover is open or if value is missing to avoid redundant background calls for every role card.
+  // We use !!value here because selectedRole is not yet defined.
+  const departmentsQueryParams = (!open && !!value) || (disabled && !departmentId)
     ? undefined
     : departmentId
     ? { id: departmentId, includeRoles: true, page: 1, limit: 1 }
     : { includeRoles: true, search: debouncedSearch, page, limit: pageSize };
 
-  const { data: deptData, isLoading, isFetching } = useGetRoleDepartmentsQuery(departmentsQueryParams);
+  const { data: deptData, isLoading, isFetching } = useGetRoleDepartmentsQuery(departmentsQueryParams, {
+    skip: departmentsQueryParams === undefined
+  });
 
   // When departmentId is provided, the first department contains the roles; otherwise flatten
   // roles across departments returned on the current page.

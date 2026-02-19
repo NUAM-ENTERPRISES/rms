@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { SystemService } from './system.service';
 import { SystemConfigResponse } from './dto/system-config.dto';
 
@@ -12,14 +12,22 @@ export class SystemController {
   @ApiOperation({
     summary: 'Get system configuration',
     description:
-      'Retrieve all system-wide configuration including roles, constants, and UI configurations.',
+      'Retrieve all system-wide configuration including roles, constants, and UI configurations. Supports partial loading via parts query.',
+  })
+  @ApiQuery({
+    name: 'parts',
+    required: false,
+    description: 'Comma-separated parts to include (e.g. roles,constants)',
   })
   @ApiResponse({
     status: 200,
     description: 'System configuration retrieved successfully',
     type: SystemConfigResponse,
   })
-  async getSystemConfig(): Promise<SystemConfigResponse> {
-    return this.systemService.getSystemConfig();
+  async getSystemConfig(
+    @Query('parts') parts?: string,
+  ): Promise<SystemConfigResponse> {
+    const requestedParts = parts ? parts.split(',') : [];
+    return this.systemService.getSystemConfig(requestedParts);
   }
 }

@@ -122,31 +122,54 @@ export class CountriesService {
   }
 
   /**
-   * Get all active countries for dropdowns (no pagination)
+   * Get filtered active countries with pagination (for dropdowns)
    */
-  async getActiveCountries(): Promise<Country[]> {
-    return this.prisma.country.findMany({
-      where: { isActive: true },
+  async getActiveCountries(query: QueryCountriesDto): Promise<PaginatedCountries> {
+    const { search, region, page = 1, limit = 250 } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = { isActive: true };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (region) {
+      where.region = { contains: region, mode: 'insensitive' };
+    }
+
+    const total = await this.prisma.country.count({ where });
+    const countries = await this.prisma.country.findMany({
+      where,
       orderBy: { name: 'asc' },
-      select: {
-        code: true,
-        name: true,
-        region: true,
-        callingCode: true,
-        currency: true,
-        timezone: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      skip,
+      take: limit,
     });
+
+    return {
+      countries: countries as any,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   /**
    * Get countries grouped by region
    */
   async getCountriesByRegion(): Promise<Record<string, Country[]>> {
-    const countries = await this.getActiveCountries();
+    // For grouping, we need all active countries, so we pass a high limit or a separate query
+    // To avoid breaking this, we fetch all active without pagination here
+    const countries = await this.prisma.country.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+    });
 
     return countries.reduce(
       (acc, country) => {

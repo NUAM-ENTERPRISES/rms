@@ -11,7 +11,8 @@ interface SystemConfigProviderProps {
  * This ensures system config is available throughout the app
  */
 export function SystemConfigProvider({ children }: SystemConfigProviderProps) {
-  const { data: systemConfig, isLoading, error } = useSystemConfig();
+  // Core config needed app-wide: Roles (for badges/UI), Permissions (for AuthZ), and Statuses (for badges)
+  const { data: systemConfig, isLoading, error } = useSystemConfig("roles,permissions,statuses");
 
   if (isLoading) {
     return (

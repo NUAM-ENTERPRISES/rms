@@ -10,6 +10,7 @@ export class RoleCatalogService {
     const {
       q,
       category,
+      type,
       isClinical,
       roleDepartmentId,
       isActive,
@@ -32,6 +33,10 @@ export class RoleCatalogService {
     if (category) {
       // legacy filter - kept for backwards compatibility
       where.category = category;
+    }
+
+    if (type) {
+      where.type = type;
     }
 
     if (isClinical !== undefined) {
@@ -66,6 +71,7 @@ export class RoleCatalogService {
           name: true,
           label: true,
           shortName: true,
+          type: true,
           description: true,
           roleDepartmentId: true,
           isActive: true,
@@ -95,6 +101,7 @@ export class RoleCatalogService {
         name: true,
         label: true,
         shortName: true,
+        type: true,
         description: true,
         roleDepartmentId: true,
         isActive: true,
