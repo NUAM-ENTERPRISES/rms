@@ -1,6 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
+
+vi.mock("react-router-dom", async () => ({ useNavigate: () => vi.fn() }));
+
 import CandidateCard from "../components/CandidateCard";
 
 describe("CandidateCard - interview button", () => {
@@ -70,5 +73,33 @@ describe("CandidateCard - interview button", () => {
     expect((await screen.findAllByText(/Emergency Staff Nurse/i)).length).toBeGreaterThan(0);
     // Ensure department is visible
     expect((await screen.findAllByText(/Emergency Department/i)).length).toBeGreaterThan(0);
+  });
+
+  it("renders WhatsApp and Call buttons when showContactButtons is true and does not trigger card onView", async () => {
+    const onView = vi.fn();
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    render(
+      <CandidateCard
+        candidate={{ id: "c4", firstName: "Contact", lastName: "Tester", countryCode: "+91", mobileNumber: "9876543210" }}
+        showContactButtons
+        onView={onView}
+      />
+    );
+
+    const waBtn = screen.getByTestId("candidate-whatsapp-btn");
+    const callBtn = screen.getByTestId("candidate-call-btn");
+
+    expect(waBtn).toBeInTheDocument();
+    expect(callBtn).toBeInTheDocument();
+
+    await userEvent.click(waBtn);
+    expect(openSpy).toHaveBeenCalled();
+
+    await userEvent.click(callBtn);
+    // clicking contact buttons should not call the card onView handler
+    expect(onView).not.toHaveBeenCalled();
+
+    openSpy.mockRestore();
   });
 });

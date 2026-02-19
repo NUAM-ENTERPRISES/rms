@@ -1329,6 +1329,19 @@ export class ProjectsService {
           { lastName: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
           { mobileNumber: { contains: search } },
+          // Match candidate qualifications (qualification name / shortName / field / university)
+          {
+            qualifications: {
+              some: {
+                OR: [
+                  { qualification: { name: { contains: search, mode: 'insensitive' } } },
+                  { qualification: { shortName: { contains: search, mode: 'insensitive' } } },
+                  { qualification: { field: { contains: search, mode: 'insensitive' } } },
+                  { university: { contains: search, mode: 'insensitive' } },
+                ],
+              },
+            },
+          },
         ],
       };
     }
@@ -2321,7 +2334,17 @@ export class ProjectsService {
     if (search) {
       items = items.filter((it) => {
         const skillsText = Array.isArray(it.skills) ? it.skills.join(' ') : String(it.skills || '');
-        const hay = `${it.firstName || ''} ${it.lastName || ''} ${it.email || ''} ${it.mobileNumber || ''} ${skillsText} ${it.university || ''}`.toLowerCase();
+        const qualsText = Array.isArray(it.qualifications)
+          ? it.qualifications
+              .map((q: any) => {
+                const nested = q.qualification || {};
+                return [q.name, nested.name, nested.shortName, q.field, q.university]
+                  .filter(Boolean)
+                  .join(' ');
+              })
+              .join(' ')
+          : '';
+        const hay = `${it.firstName || ''} ${it.lastName || ''} ${it.email || ''} ${it.mobileNumber || ''} ${skillsText} ${it.university || ''} ${qualsText}`.toLowerCase();
         return hay.includes(search);
       });
     }

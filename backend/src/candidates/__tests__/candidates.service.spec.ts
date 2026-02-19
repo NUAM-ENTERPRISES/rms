@@ -182,7 +182,7 @@ describe('CandidatesService', () => {
       });
     });
 
-    it('should apply search filter', async () => {
+    it('should apply search filter (includes qualifications)', async () => {
       prismaService.candidate.count.mockResolvedValue(1);
       prismaService.candidate.findMany.mockResolvedValue(mockCandidates as any);
 
@@ -190,13 +190,26 @@ describe('CandidatesService', () => {
 
       expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            OR: [
-              { name: { contains: 'john', mode: 'insensitive' } },
-              { contact: { contains: 'john', mode: 'insensitive' } },
-              { email: { contains: 'john', mode: 'insensitive' } },
-            ],
-          },
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              expect.objectContaining({ firstName: { contains: 'john', mode: 'insensitive' } }),
+              expect.objectContaining({ lastName: { contains: 'john', mode: 'insensitive' } }),
+              expect.objectContaining({ mobileNumber: { contains: 'john', mode: 'insensitive' } }),
+              expect.objectContaining({ email: { contains: 'john', mode: 'insensitive' } }),
+              // qualifications.some -> qualification.name/field and candidateQualification.university should be included
+              expect.objectContaining({
+                qualifications: expect.objectContaining({
+                  some: expect.objectContaining({
+                    OR: expect.arrayContaining([
+                      expect.objectContaining({ qualification: expect.objectContaining({ name: { contains: 'john', mode: 'insensitive' } }) }),
+                      expect.objectContaining({ qualification: expect.objectContaining({ field: { contains: 'john', mode: 'insensitive' } }) }),
+                      expect.objectContaining({ university: { contains: 'john', mode: 'insensitive' } }),
+                    ]),
+                  }),
+                }),
+              }),
+            ]),
+          }),
         }),
       );
     });
