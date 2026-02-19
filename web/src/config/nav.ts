@@ -116,6 +116,7 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "Processing Executive",
       "System Admin",
+      // "Screening Trainer",
     ],
     // Hidden from CRE - they only manage candidates
   },
@@ -134,6 +135,7 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "System Admin",
       "CRE",
+      // "Screening Trainer",
     ],
   },
   {
@@ -165,6 +167,7 @@ export const navigationConfig: NavItem[] = [
     path: "/basic-training",
     icon: BookOpen,
     permissions: ["read:training"],
+    hiddenForRoles: ["Screening Trainer"],
   },
   {
     id: "interviews",
@@ -194,6 +197,7 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
+    hiddenForRoles: ["Interview Coordinator"],
     children: [
       {
         id: "screenings-dashboard",
