@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface RequirementCriteriaStepProps {
@@ -74,6 +75,26 @@ export const RequirementCriteriaStep: React.FC<
   const debouncedSearch = useDebounce(searchInput, 400);
   const [deptPage, setDeptPage] = React.useState(1);
   const DEPT_LIMIT = 20;
+
+  // Confirm dialog state for clearing all role cards
+  const [showClearConfirm, setShowClearConfirm] = React.useState(false);
+
+  const handleClearAllConfirm = () => {
+    // reset to single empty role (keeps same shape used elsewhere)
+    setValue("rolesNeeded", [
+      {
+        departmentId: undefined,
+        roleCatalogId: "",
+        designation: "",
+        quantity: 1,
+        visaType: "contract",
+        genderRequirement: "all",
+      } as any,
+    ]);
+
+    toast.success("All role cards cleared");
+    setShowClearConfirm(false);
+  };
 
   // Reset page when search changes
   React.useEffect(() => {
@@ -133,14 +154,33 @@ export const RequirementCriteriaStep: React.FC<
       return;
     }
 
+    // Normalize current roles so we can detect duplicates by departmentId+roleCatalogId
+    const currentRoles = watchedRoles.length === 1 && !watchedRoles[0].roleCatalogId
+      ? []
+      : watchedRoles;
+
+    const existingKeys = new Set(
+      currentRoles
+        .filter((r: any) => r.roleCatalogId)
+        .map((r: any) => `${r.departmentId || ""}::${r.roleCatalogId}`)
+    );
+
     const newRoles: any[] = [];
-    
+    let duplicatesSkipped = 0;
+
     quickBuild.departmentIds.forEach(deptId => {
       const dept = deptLookup[deptId] || allDepartments.find(d => d.id === deptId);
       if (dept && dept.roles) {
         const matchingRole = dept.roles.find((r: any) => r.type === quickBuild.roleType);
-        
+
         if (matchingRole) {
+          const key = `${deptId || ""}::${matchingRole.id}`;
+          if (existingKeys.has(key)) {
+            duplicatesSkipped += 1;
+            return; // skip duplicate
+          }
+
+          existingKeys.add(key);
           newRoles.push({
             departmentId: deptId,
             roleCatalogId: matchingRole.id,
@@ -164,21 +204,35 @@ export const RequirementCriteriaStep: React.FC<
     });
 
     if (newRoles.length > 0) {
-      const currentRoles = watchedRoles.length === 1 && !watchedRoles[0].roleCatalogId 
-        ? [] 
-        : watchedRoles;
-
       setValue("rolesNeeded", [...currentRoles, ...newRoles]);
-      toast.success(`${newRoles.length} roles added successfully!`);
+
+      const addedMsg = `${newRoles.length} role${newRoles.length > 1 ? "s" : ""} added successfully!`;
+      if (duplicatesSkipped > 0) {
+        toast.success(`${addedMsg} ${duplicatesSkipped} duplicate${duplicatesSkipped > 1 ? "s" : ""} skipped.`);
+      } else {
+        toast.success(addedMsg);
+      }
+
       setQuickBuild(prev => ({ ...prev, departmentIds: [] }));
+    } else if (duplicatesSkipped > 0) {
+      // All selected items were duplicates
+      toast.error(`All selected departments already have this role — ${duplicatesSkipped} duplicate${duplicatesSkipped > 1 ? "s" : ""} skipped.`);
     } else {
       toast.error(`No ${ROLE_TYPE_CONFIG[quickBuild.roleType]?.label || quickBuild.roleType} found in selected departments`);
     }
   };
 
-  // Add new role manually
+  // Add new role manually — prevent duplicate empty placeholder
   const addRole = () => {
-    const currentRoles = watch("rolesNeeded");
+    const currentRoles = watch("rolesNeeded") || [];
+
+    // If there's already an empty placeholder (no department & no role selected), don't add another
+    const hasEmptyPlaceholder = currentRoles.some((r: any) => !r.roleCatalogId && !r.designation && !r.departmentId);
+    if (hasEmptyPlaceholder) {
+      toast.info("Please fill the existing empty role card before adding a new one");
+      return;
+    }
+
     setValue("rolesNeeded", [
       ...currentRoles,
       {
@@ -544,16 +598,38 @@ export const RequirementCriteriaStep: React.FC<
               </div>
             )}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addRole}
-            className="rounded-lg border-slate-200 bg-white shadow-sm gap-1.5 h-8 text-xs"
-          >
-            <Plus className="h-3.5 w-3.5 text-indigo-600" />
-            Add Role
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowClearConfirm(true)}
+              className="rounded-lg border-red-200 bg-white text-red-600 shadow-sm gap-1.5 h-8 text-xs"
+            >
+              Clear all
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addRole}
+              className="rounded-lg border-slate-200 bg-white shadow-sm gap-1.5 h-8 text-xs"
+            >
+              <Plus className="h-3.5 w-3.5 text-indigo-600" />
+              Add Role
+            </Button>
+          </div>
+
+          <ConfirmDialog
+            open={showClearConfirm}
+            onOpenChange={setShowClearConfirm}
+            onConfirm={handleClearAllConfirm}
+            title="Clear all roles?"
+            description="This will remove all roles you've added and reset to a single empty role. This action cannot be undone in this form."
+            confirmText="Clear All"
+            variant="destructive"
+          />
         </div>
 
         {/* The Role Cards Grid */}
@@ -638,13 +714,36 @@ export const RequirementCriteriaStep: React.FC<
                         <JobTitleSelect
                           value={role.designation}
                           onRoleChange={(r) => {
-                            if (r) {
-                              updateRole(index, "roleCatalogId", r.id);
-                              updateRole(index, "designation", r.label);
-                            } else {
+                            // Clear selection
+                            if (!r) {
                               updateRole(index, "roleCatalogId", "");
                               updateRole(index, "designation", "");
+                              return;
                             }
+
+                            const deptId = role.departmentId;
+
+                            // If same department + roleCatalog already exists elsewhere, merge quantities instead of creating duplicate
+                            if (deptId) {
+                              const duplicateIndex = watchedRoles.findIndex((rr: any, i: number) => i !== index && rr.roleCatalogId === r.id && rr.departmentId === deptId);
+                              if (duplicateIndex !== -1) {
+                                const qtyToAdd = (role.quantity && Number(role.quantity)) ? Number(role.quantity) : 1;
+                                const existingQty = (watchedRoles[duplicateIndex].quantity && Number(watchedRoles[duplicateIndex].quantity)) ? Number(watchedRoles[duplicateIndex].quantity) : 0;
+
+                                // increment existing role's quantity
+                                updateRole(duplicateIndex, "quantity", existingQty + qtyToAdd);
+
+                                // remove the now-duplicate card
+                                removeRole(index);
+
+                                toast.success("Duplicate role merged — quantity updated");
+                                return;
+                              }
+                            }
+
+                            // No duplicate — apply selection to this card
+                            updateRole(index, "roleCatalogId", r.id);
+                            updateRole(index, "designation", r.label);
                           }}
                           placeholder="Job Title"
                           departmentId={role.departmentId}
