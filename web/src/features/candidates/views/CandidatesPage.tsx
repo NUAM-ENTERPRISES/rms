@@ -1491,7 +1491,7 @@ export default function CandidatesPage() {
                                   <>
                                     <Button
                                       variant="ghost"
-                                      className="h-14 w-14 p-0 text-green-600"
+                                      className="h-8 w-8 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 hover:text-green-700 shadow-sm hover:shadow-md border border-green-100/50 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-200"
                                       onClick={() =>
                                         phoneDigits &&
                                         window.open(`https://wa.me/${phoneDigits}`, "_blank")
@@ -1500,12 +1500,12 @@ export default function CandidatesPage() {
                                       title={`WhatsApp ${candidate.firstName || ""}`}
                                       aria-label={`WhatsApp ${candidate.firstName || ""}`}
                                     >
-                                      <FaWhatsapp className="h-14 w-14" />
+                                      <FaWhatsapp className="h-5 w-5" />
                                     </Button>
 
                                     <Button
                                       variant="ghost"
-                                      className="h-14 w-14 p-0 text-blue-600"
+                                      className="h-8 w-8 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 shadow-sm hover:shadow-md border border-blue-100/50 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-200"
                                       onClick={() =>
                                         phoneDigits && (window.location.href = `tel:${phoneDigits}`)
                                       }
@@ -1513,7 +1513,7 @@ export default function CandidatesPage() {
                                       title={`Call ${candidate.firstName || ""}`}
                                       aria-label={`Call ${candidate.firstName || ""}`}
                                     >
-                                      <Phone className="h-14 w-14" />
+                                      <Phone className="h-5 w-5" />
                                     </Button>
                                   </>
                                 );
