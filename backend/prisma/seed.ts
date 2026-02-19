@@ -1279,6 +1279,22 @@ async function main() {
       role: 'Screening Trainer',
     },
     {
+      email: 'trainer2@affiniks.com',
+      name: 'Priya Trainer',
+      password: 'trainer123',
+      countryCode: '+91',
+      phone: '9876543240',
+      role: 'Screening Trainer',
+    },
+    {
+      email: 'trainer3@affiniks.com',
+      name: 'Arun Trainer',
+      password: 'trainer123',
+      countryCode: '+91',
+      phone: '9876543241',
+      role: 'Screening Trainer',
+    },
+    {
       email: 'sysadmin@affiniks.com',
       name: 'Alex System Admin',
       password: 'sysadmin123',
