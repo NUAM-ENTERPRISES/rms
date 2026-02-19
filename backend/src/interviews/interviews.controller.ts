@@ -783,9 +783,10 @@ export class InterviewsController {
   }> {
     const interview = await this.interviewsService.findOne(id);
     if (includeHistory && includeHistory !== 'false') {
-      const history = await this.interviewsService.getInterviewHistory(id);
+      const historyResult = await this.interviewsService.getInterviewHistory(id);
       // attach history to the returned interview object under `history`
-      (interview as any).history = history;
+      // service returns array when no pagination requested, or { items, pagination } when paginated
+      (interview as any).history = Array.isArray(historyResult) ? historyResult : historyResult.items;
     }
     return {
       success: true,
@@ -797,18 +798,67 @@ export class InterviewsController {
   @Get(':id/history')
   @Permissions('read:interviews')
   @ApiOperation({
-    summary: 'Get interview history',
-    description: 'Retrieve history events for a specific client interview (status changes, reasons, actor, timestamps).',
+    summary: 'Get interview history (paginated)',
+    description: 'Retrieve history events for a specific client interview (status changes, reasons, actor, timestamps). Supports pagination (default limit = 10).',
   })
   @ApiParam({ name: 'id', description: 'Interview ID' })
-  @ApiResponse({ status: 200, description: 'Interview history retrieved successfully' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
+  @ApiResponse({
+    status: 200,
+    description: 'Interview history retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  interviewId: { type: 'string' },
+                  status: { type: 'string' },
+                  reason: { type: 'string' },
+                  statusAt: { type: 'string', format: 'date-time' },
+                  changedBy: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      email: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' },
+              },
+            },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'Interview not found' })
-  async getHistory(@Param('id') id: string): Promise<{
+  async getHistory(@Param('id') id: string, @Query('page') page?: number, @Query('limit') limit?: number): Promise<{
     success: boolean;
     data: any;
     message: string;
   }> {
-    const history = await this.interviewsService.getInterviewHistory(id);
+    const p = Number(page) || 1;
+    const l = Number(limit) || 10;
+    const history = await this.interviewsService.getInterviewHistory(id, { page: p, limit: l });
 
     return {
       success: true,

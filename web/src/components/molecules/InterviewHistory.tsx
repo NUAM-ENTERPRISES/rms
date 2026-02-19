@@ -113,8 +113,22 @@ type ServerHistoryItem = {
   createdAt?: string;
 };
 
-export default function InterviewHistory({ items, isLoading }: { items?: (InterviewHistoryItem | ServerHistoryItem)[]; isLoading?: boolean }) {
-  const list = items && items.length ? items : screeningHistory;
+export default function InterviewHistory({
+  items,
+  isLoading,
+  pagination,
+  onPageChange,
+  onLimitChange,
+}: {
+  items?: (InterviewHistoryItem | ServerHistoryItem)[];
+  isLoading?: boolean;
+  pagination?: { page: number; limit: number; total: number; totalPages: number } | null;
+  onPageChange?: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
+}) {
+  // `items` comes from server (array) or mock local data — fall back to mock only when `items` is undefined
+  const list = items !== undefined && items !== null ? (Array.isArray(items) ? items : []) : screeningHistory;
+  const totalCount = pagination?.total ?? list.length;
 
   return (
     <Card>
@@ -125,7 +139,7 @@ export default function InterviewHistory({ items, isLoading }: { items?: (Interv
             Interview History
           </h3>
           <Badge variant="outline" className="text-xs">
-            {list.length} {list.length === 1 ? "event" : "events"}
+            {totalCount} {totalCount === 1 ? "event" : "events"}
           </Badge>
         </div>
 
@@ -190,9 +204,6 @@ export default function InterviewHistory({ items, isLoading }: { items?: (Interv
                       <TableCell>
                         <div className="space-y-1">
                           <p className="text-sm font-medium">{it.action}</p>
-                          {/* {it.note && (
-                            <p className="text-xs text-muted-foreground">{it.note}</p>
-                          )} */}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -215,6 +226,49 @@ export default function InterviewHistory({ items, isLoading }: { items?: (Interv
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination controls (shown when server provides pagination) */}
+          {pagination ? (
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/5">
+              <div className="text-xs text-muted-foreground">
+                Showing <span className="font-medium">{list.length}</span> of <span className="font-medium">{pagination.total}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <label className="text-muted-foreground">Per page</label>
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) => onLimitChange && onLimitChange(Number(e.target.value))}
+                    className="text-xs bg-transparent border rounded px-2 py-1"
+                    disabled={isLoading}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onPageChange && onPageChange(Math.max(1, (pagination.page || 1) - 1))}
+                    className="px-2 py-1 rounded border text-xs"
+                    disabled={isLoading || (pagination.page || 1) <= 1}
+                  >
+                    Prev
+                  </button>
+                  <div className="text-xs text-muted-foreground">Page <span className="font-medium">{pagination.page}</span> of <span className="font-medium">{pagination.totalPages}</span></div>
+                  <button
+                    onClick={() => onPageChange && onPageChange(Math.min(pagination.totalPages, (pagination.page || 1) + 1))}
+                    className="px-2 py-1 rounded border text-xs"
+                    disabled={isLoading || (pagination.page || 1) >= pagination.totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>

@@ -397,13 +397,15 @@ export const interviewsApi = baseApi.injectEndpoints({
 
     /**
      * Get interview history: GET /interviews/:id/history
+     * - accepts { id, page?, limit? }
+     * - server returns { items, pagination } for paginated responses
      */
     getInterviewHistory: builder.query<
-      { success: boolean; data: any[]; message?: string },
-      string
+      { success: boolean; data: any; message?: string },
+      { id: string; page?: number; limit?: number }
     >({
-      query: (id) => ({ url: `/interviews/${id}/history` }),
-      providesTags: (_result, _error, id) => [{ type: "Interview", id }],
+      query: ({ id, page, limit }) => ({ url: `/interviews/${id}/history`, params: { page, limit } }),
+      providesTags: (_result, _error, arg) => [{ type: "Interview", id: arg.id }],
     }),
 
     /**

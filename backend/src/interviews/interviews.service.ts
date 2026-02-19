@@ -1360,25 +1360,57 @@ export class InterviewsService {
 
   /**
    * Get history entries for a given interview (client interviews)
+   * - Supports optional pagination: pass { page, limit } to return paginated result
+   * - Backwards-compatible: when `query` is omitted the full array is returned
    */
-  async getInterviewHistory(interviewId: string) {
+  async getInterviewHistory(interviewId: string, query?: { page?: number; limit?: number }) {
     // Ensure interview exists
     const interview = await this.prisma.interview.findUnique({ where: { id: interviewId } });
     if (!interview) {
       throw new NotFoundException('Interview not found');
     }
 
-    const histories = await this.prisma.interviewStatusHistory.findMany({
-      where: { interviewId, interviewType: 'client' },
-      orderBy: { statusAt: 'desc' },
-      include: {
-        changedBy: {
-          select: { id: true, name: true, email: true },
+    // If caller did not request pagination, return full history array (preserve existing behavior)
+    const wantsPagination = !!(query && (query.page !== undefined || query.limit !== undefined));
+    if (!wantsPagination) {
+      const histories = await this.prisma.interviewStatusHistory.findMany({
+        where: { interviewId, interviewType: 'client' },
+        orderBy: { statusAt: 'desc' },
+        include: {
+          changedBy: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-    });
+      });
+      return histories;
+    }
 
-    return histories;
+    const page = Math.max(1, Number(query?.page) || 1);
+    const limit = Math.max(1, Number(query?.limit) || 10);
+    const skip = (page - 1) * limit;
+
+    const [total, items] = await Promise.all([
+      this.prisma.interviewStatusHistory.count({ where: { interviewId, interviewType: 'client' } }),
+      this.prisma.interviewStatusHistory.findMany({
+        where: { interviewId, interviewType: 'client' },
+        orderBy: { statusAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          changedBy: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ]);
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
   }
 
   /**

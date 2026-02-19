@@ -164,7 +164,18 @@ export default function MyInterviewsListPage() {
     return filteredList[0] || null;
   }, [filteredList, selectedId]);
 
-  const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(selected?.id ?? "", { skip: !selected?.id });
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(10);
+
+  // reset history pagination when a different interview is selected
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [selected?.id]);
+
+  const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(
+    { id: selected?.id ?? "", page: historyPage, limit: historyLimit },
+    { skip: !selected?.id }
+  );
 
   const handleReviewSubmit = async (updates: { id: string; interviewStatus: "passed" | "failed" | "completed"; subStatus?: string; reason?: string }[]) => {
     try {
@@ -664,7 +675,14 @@ export default function MyInterviewsListPage() {
                   </CardContent>
                 </Card>
 
-                <InterviewHistory items={historyResp?.data ?? []} isLoading={isHistoryLoading} />
+                {/* Normalize server response: backend returns { items, pagination } for paginated history */}
+                <InterviewHistory
+                  items={Array.isArray(historyResp?.data) ? historyResp?.data : historyResp?.data?.items ?? []}
+                  isLoading={isHistoryLoading}
+                  pagination={historyResp?.data?.pagination ?? null}
+                  onPageChange={(p) => setHistoryPage(p)}
+                  onLimitChange={(l) => { setHistoryLimit(l); setHistoryPage(1); }}
+                />
               </div>
             </ScrollArea>
           ) : (

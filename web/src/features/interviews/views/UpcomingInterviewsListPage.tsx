@@ -127,8 +127,15 @@ export default function UpcomingInterviewsListPage() {
   const [updateInterviewStatus] = useUpdateInterviewStatusMutation();
   const [updateBulkInterviewStatus] = useUpdateBulkInterviewStatusMutation();
 
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(10);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [selected?.id]);
+
   const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(
-    selected?.id ?? "",
+    { id: selected?.id ?? "", page: historyPage, limit: historyLimit },
     { skip: !selected?.id }
   );
 
@@ -537,7 +544,13 @@ export default function UpcomingInterviewsListPage() {
                   </Card>
                 )}
 
-                <InterviewHistory items={historyResp?.data ?? []} isLoading={isHistoryLoading} />
+                <InterviewHistory
+                  items={Array.isArray(historyResp?.data) ? historyResp?.data : historyResp?.data?.items ?? []}
+                  isLoading={isHistoryLoading}
+                  pagination={historyResp?.data?.pagination ?? null}
+                  onPageChange={(p) => setHistoryPage(p)}
+                  onLimitChange={(l) => { setHistoryLimit(l); setHistoryPage(1); }}
+                />
               </div>
             </ScrollArea>
           ) : (
