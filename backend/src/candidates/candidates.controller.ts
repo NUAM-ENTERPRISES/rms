@@ -10,6 +10,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -46,6 +47,8 @@ import { CANDIDATE_STATUS } from '../common/constants/statuses';
 @ApiBearerAuth()
 @Controller('candidates')
 export class CandidatesController {
+  private readonly logger = new Logger(CandidatesController.name);
+
   constructor(
     private readonly candidatesService: CandidatesService,
     private readonly rnrCreAssignmentService: RnrCreAssignmentService,
@@ -131,6 +134,18 @@ export class CandidatesController {
 
   @Get('recruiter/my-candidates')
   @Permissions('read:candidates')
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    description: 'Filter by createdAt (start of range) - ISO datetime',
+    example: '2026-02-19T00:00:00.000Z',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    description: 'Filter by createdAt (end of range) - ISO datetime',
+    example: '2026-02-19T23:59:59.000Z',
+  })
   @ApiOperation({
     summary: 'Get all candidates assigned to the logged-in recruiter',
     description:
@@ -283,6 +298,18 @@ export class CandidatesController {
     description: 'Filter by assigned recruiter ID',
   })
   @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    description: 'Filter by createdAt (start of range) - ISO datetime',
+    example: '2026-02-19T00:00:00.000Z',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    description: 'Filter by createdAt (end of range) - ISO datetime',
+    example: '2026-02-19T23:59:59.000Z',
+  })
+  @ApiQuery({
     name: 'page',
     required: false,
     description: 'Page number (1-based)',
@@ -364,6 +391,9 @@ export class CandidatesController {
     data: PaginatedCandidates;
     message: string;
   }> {
+    // log incoming query for troubleshooting date filtering
+    this.logger.log(`GET /candidates query => ${JSON.stringify(query)}`);
+
     const result = await this.candidatesService.findAll(query);
     return {
       success: true,

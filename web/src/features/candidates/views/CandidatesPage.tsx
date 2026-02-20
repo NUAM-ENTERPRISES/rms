@@ -117,6 +117,9 @@ export default function CandidatesPage() {
       page: filters.page,
       limit: filters.limit,
       status: filters.status !== "all" ? filters.status : undefined,
+      // send server-side date filters when set (normalize to full-day in local timezone)
+      dateFrom: filters.dateFrom ? startOfDay(filters.dateFrom).toISOString() : undefined,
+      dateTo: filters.dateTo ? endOfDay(filters.dateTo).toISOString() : undefined,
     },
     { skip: isRecruiter && !isManager } // Skip this query if user is recruiter without manager role
   );
@@ -135,6 +138,9 @@ export default function CandidatesPage() {
       limit: filters.limit,
       search: filters.search || undefined,
       status: filters.status !== "all" ? filters.status : undefined,
+      // server-side date filtering (normalize To as end-of-day)
+      dateFrom: filters.dateFrom ? startOfDay(filters.dateFrom).toISOString() : undefined,
+      dateTo: filters.dateTo ? endOfDay(filters.dateTo).toISOString() : undefined,
     },
     { skip: !isRecruiter || isManager } // Skip this query if user is not recruiter or is manager
   );
@@ -248,7 +254,7 @@ export default function CandidatesPage() {
         });
       }
 
-      // Date range filter (filter by candidate.createdAt / date added)
+      // Date range filter (client-side fallback)
       if (filters.dateFrom || filters.dateTo) {
         const from = filters.dateFrom ? startOfDay(filters.dateFrom) : null;
         const to = filters.dateTo ? endOfDay(filters.dateTo) : null;

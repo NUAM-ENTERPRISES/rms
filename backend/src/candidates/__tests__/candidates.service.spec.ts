@@ -213,6 +213,34 @@ describe('CandidatesService', () => {
         }),
       );
     });
+
+    it('should apply createdAt date range filter and expand same-day ranges', async () => {
+      prismaService.candidate.count.mockResolvedValue(1);
+      prismaService.candidate.findMany.mockResolvedValue(mockCandidates as any);
+
+      const dateFrom = '2026-02-17T00:00:00.000Z';
+      const dateToSame = '2026-02-17T00:00:00.000Z'; // same timestamp -> should be expanded
+
+      await service.findAll({ page: 1, limit: 10, dateFrom, dateTo: dateToSame } as any);
+
+      expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            createdAt: expect.objectContaining({
+              gte: expect.any(Date),
+              lte: expect.any(Date),
+            }),
+          }),
+        }),
+      );
+
+      const callArg = prismaService.candidate.findMany.mock.calls[0][0];
+      expect(callArg.where.createdAt.gte.toISOString()).toBe(new Date(dateFrom).toISOString());
+
+      // expanded lte should be dateFrom + 24h - 1ms
+      const expectedLte = new Date(new Date(dateFrom).getTime() + 24 * 60 * 60 * 1000 - 1);
+      expect(callArg.where.createdAt.lte.toISOString()).toBe(expectedLte.toISOString());
+    });
   });
 
   describe('findOne', () => {
