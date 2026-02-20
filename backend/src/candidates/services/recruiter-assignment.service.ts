@@ -439,26 +439,38 @@ export class RecruiterAssignmentService {
     }
 
     // CreatedAt / Date range filtering (server-side)
+    // Normalize incoming dateFrom/dateTo to full UTC calendar days so clients can pass
+    // either date-only or datetime strings and still get "whole-day" semantics.
     if ((dto as any).dateFrom || (dto as any).dateTo) {
-      let fromDt: Date | undefined = (dto as any).dateFrom ? new Date((dto as any).dateFrom) : undefined;
-      let toDt: Date | undefined = (dto as any).dateTo ? new Date((dto as any).dateTo) : undefined;
+      const rawFrom = (dto as any).dateFrom;
+      const rawTo = (dto as any).dateTo;
 
-      if (fromDt && toDt) {
-        if (fromDt.getTime() > toDt.getTime()) {
-          const tmp = fromDt;
-          fromDt = toDt;
-          toDt = tmp;
-        }
-        if (fromDt.getTime() === toDt.getTime()) {
-          toDt = new Date(toDt.getTime() + 24 * 60 * 60 * 1000 - 1);
-        }
+      let fromDt: Date | undefined;
+      let toDt: Date | undefined;
+
+      if (rawFrom) {
+        const parsed = new Date(rawFrom);
+        // use UTC components of the parsed value and normalize to start of that day (00:00:00.000 UTC)
+        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
+      }
+
+      if (rawTo) {
+        const parsed = new Date(rawTo);
+        // normalize to end of that day (23:59:59.999 UTC)
+        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
+      }
+
+      if (fromDt && toDt && fromDt.getTime() > toDt.getTime()) {
+        const tmp = fromDt;
+        fromDt = toDt;
+        toDt = tmp;
       }
 
       whereClause.createdAt = {} as any;
       if (fromDt) whereClause.createdAt.gte = fromDt;
       if (toDt) whereClause.createdAt.lte = toDt;
 
-      this.logger.log(`Applying createdAt filter for recruiter ${recruiterId}: from=${fromDt?.toISOString() || 'n/a'} to=${toDt?.toISOString() || 'n/a'}`);
+      this.logger.log(`Applying createdAt filter for recruiter ${recruiterId}: rawFrom=${rawFrom || 'n/a'} rawTo=${rawTo || 'n/a'} normalizedFrom=${fromDt?.toISOString() || 'n/a'} normalizedTo=${toDt?.toISOString() || 'n/a'}`);
     }
 
     // Get total count (for the listing - respects search/status/search filters)

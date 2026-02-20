@@ -481,23 +481,28 @@ export class CandidatesService {
     }
 
     // createdAt range filter (date added) - server-side
+    // Treat incoming dateFrom/dateTo as calendar dates — normalize to UTC day boundaries
     if (dateFrom || dateTo) {
-      // normalize: if both dates provided and equal, treat as full-day range
-      let fromDt: Date | undefined = dateFrom ? new Date(dateFrom) : undefined;
-      let toDt: Date | undefined = dateTo ? new Date(dateTo) : undefined;
+      const rawFrom = dateFrom;
+      const rawTo = dateTo;
 
-      if (fromDt && toDt) {
-        // swap if inverted
-        if (fromDt.getTime() > toDt.getTime()) {
-          const tmp = fromDt;
-          fromDt = toDt;
-          toDt = tmp;
-        }
-        // if equal timestamps (common when user selects same calendar day), expand to full 24h range
-        if (fromDt.getTime() === toDt.getTime()) {
-          // expand to end of that day (24h - 1ms from provided instant)
-          toDt = new Date(toDt.getTime() + 24 * 60 * 60 * 1000 - 1);
-        }
+      let fromDt: Date | undefined;
+      let toDt: Date | undefined;
+
+      if (rawFrom) {
+        const parsed = new Date(rawFrom);
+        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
+      }
+
+      if (rawTo) {
+        const parsed = new Date(rawTo);
+        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
+      }
+
+      if (fromDt && toDt && fromDt.getTime() > toDt.getTime()) {
+        const tmp = fromDt;
+        fromDt = toDt;
+        toDt = tmp;
       }
 
       where.createdAt = {} as any;
@@ -508,7 +513,7 @@ export class CandidatesService {
         where.createdAt.lte = toDt;
       }
 
-      this.logger.log(`Applying createdAt filter in findAll(): from=${fromDt?.toISOString() || 'n/a'} to=${toDt?.toISOString() || 'n/a'}`);
+      this.logger.log(`Applying createdAt filter in findAll(): rawFrom=${rawFrom || 'n/a'} rawTo=${rawTo || 'n/a'} normalizedFrom=${fromDt?.toISOString() || 'n/a'} normalizedTo=${toDt?.toISOString() || 'n/a'}`);
     }
 
     if (roleCatalogId && roleCatalogId !== 'all') {
@@ -543,11 +548,25 @@ export class CandidatesService {
       };
     }
 
-    // apply createdAt filter to dashboard counts when provided
+    // apply createdAt filter to dashboard counts when provided (use same normalization)
     if (dateFrom || dateTo) {
+      const rawFrom = dateFrom;
+      const rawTo = dateTo;
+      let fromDt: Date | undefined;
+      let toDt: Date | undefined;
+
+      if (rawFrom) {
+        const parsed = new Date(rawFrom);
+        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
+      }
+      if (rawTo) {
+        const parsed = new Date(rawTo);
+        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
+      }
+
       baseWhere.createdAt = {} as any;
-      if (dateFrom) baseWhere.createdAt.gte = new Date(dateFrom);
-      if (dateTo) baseWhere.createdAt.lte = new Date(dateTo);
+      if (fromDt) baseWhere.createdAt.gte = fromDt;
+      if (toDt) baseWhere.createdAt.lte = toDt;
     }
 
     // Get all status IDs
