@@ -23,6 +23,7 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import {
@@ -689,6 +690,169 @@ export class CandidatesService {
         totalPages: Math.ceil(total / limit),
       },
       counts,
+    };
+  }
+
+  /**
+   * Get consolidated candidates for project detail view
+   * Admin/Manager sees all, Recruiter sees their assigned only
+   * Includes nomination status for a specific project
+   */
+  async getConsolidatedCandidates(
+    queryDto: ConsolidatedCandidateQueryDto,
+    userId: string,
+    roles: string[],
+  ) {
+    const { projectId, search, roleCatalogId, page = 1, limit = 10 } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const isRecruiter = roles.includes('Recruiter');
+    const isAdminOrManager = roles.some((role) =>
+      [
+        'CEO',
+        'Director',
+        'Manager',
+        'Team Head',
+        'Team Lead',
+        'Admin',
+        'SuperAdmin',
+      ].includes(role),
+    );
+
+    // Build where clause
+    const where: any = {};
+
+    // 1. Role-based filtering
+    if (isRecruiter && !isAdminOrManager) {
+      where.recruiterAssignments = {
+        some: {
+          recruiterId: userId,
+          isActive: true,
+        },
+      };
+    }
+
+    // 2. Search
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+      const s = search.trim();
+      where.OR = [
+        { firstName: { contains: s, mode: 'insensitive' } },
+        { lastName: { contains: s, mode: 'insensitive' } },
+        { email: { contains: s, mode: 'insensitive' } },
+        { mobileNumber: { contains: s, mode: 'insensitive' } },
+      ];
+    }
+
+    // 3. Role Catalog Filter
+    if (roleCatalogId && roleCatalogId !== 'all') {
+      where.workExperiences = {
+        some: {
+          roleCatalogId: roleCatalogId,
+        },
+      };
+    }
+
+    const [candidates, total] = await Promise.all([
+      this.prisma.candidate.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          currentStatus: {
+            select: {
+              id: true,
+              statusName: true,
+            },
+          },
+          qualifications: {
+            include: {
+              qualification: true,
+            },
+          },
+          workExperiences: {
+            include: {
+              roleCatalog: true,
+            },
+          },
+          projects: {
+            where: {
+              projectId: projectId,
+            },
+            include: {
+              mainStatus: true,
+              subStatus: true,
+              project: {
+                select: {
+                  title: true,
+                },
+              },
+              roleNeeded: {
+                include: {
+                  roleCatalog: true,
+                },
+              },
+            },
+          },
+          recruiterAssignments: {
+            where: { isActive: true },
+            include: {
+              recruiter: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prisma.candidate.count({ where }),
+    ]);
+
+    const formattedCandidates = candidates.map((candidate) => {
+      const assignment = candidate.projects[0];
+      const isNominated = !!assignment;
+
+      // Extract the fields we want to keep and exclude the projects array as requested by the user
+      // No need for projects array in individual candidates since we have projectDetails for the specific project
+      const { projects, ...candidateData } = candidate;
+
+      return {
+        ...candidateData,
+        isNominated,
+        projectSubStatus: assignment?.subStatus,
+        projectMainStatus: assignment?.mainStatus,
+        projectDetails: isNominated
+          ? {
+              projectId: assignment.projectId,
+              projectTitle: assignment.project?.title,
+              mainStatus:
+                assignment.mainStatus?.label || assignment.mainStatus?.name,
+              subStatus: assignment.subStatus?.label || assignment.subStatus?.name,
+              nominatedRole:
+                assignment.roleNeeded?.roleCatalog?.name || 'N/A',
+              roleNeeded: assignment.roleNeeded
+                ? {
+                    id: assignment.roleNeeded.id,
+                    projectId: assignment.roleNeeded.projectId,
+                    roleCatalogId: assignment.roleNeeded.roleCatalogId,
+                    designation: assignment.roleNeeded.designation,
+                    roleCatalog: assignment.roleNeeded.roleCatalog,
+                  }
+                : null,
+            }
+          : null,
+      };
+    });
+
+    return {
+      candidates: formattedCandidates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 

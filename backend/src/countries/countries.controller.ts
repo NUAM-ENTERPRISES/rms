@@ -136,7 +136,7 @@ export class CountriesController {
               type: 'object',
               properties: {
                 page: { type: 'number', example: 1 },
-                limit: { type: 'number', example: 50 },
+                limit: { type: 'number', example: 10 },
                 total: { type: 'number', example: 195 },
                 totalPages: { type: 'number', example: 4 },
               },
@@ -150,12 +150,22 @@ export class CountriesController {
       },
     },
   })
-  async getActiveCountries(@Query() query: QueryCountriesDto): Promise<{
+  async getActiveCountries(
+    @Query() query: QueryCountriesDto,
+    @Query('limit') limitParam?: string,
+  ): Promise<{
     success: boolean;
     data: PaginatedCountries;
     message: string;
   }> {
-    const data = await this.countriesService.getActiveCountries(query);
+    // If the client provided an explicit `limit` query param use it (after parsing).
+    // If `limit` is omitted by the client, default to 10 for the active-countries endpoint.
+    const parsedLimit = limitParam !== undefined ? Number(limitParam) : NaN; // keep as number (NaN when missing)
+    const effectiveLimit = Number.isFinite(parsedLimit) ? Math.max(1, Math.floor(parsedLimit)) : 10;
+
+    const effectiveQuery = { ...query, limit: effectiveLimit } as QueryCountriesDto;
+
+    const data = await this.countriesService.getActiveCountries(effectiveQuery);
     return {
       success: true,
       data,

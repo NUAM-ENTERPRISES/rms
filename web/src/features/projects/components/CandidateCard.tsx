@@ -101,6 +101,14 @@ export interface CandidateRecord {
   roleMatches?: Array<{ roleId?: string; designation?: string; score?: number }>;
   nominatedRole?: { id?: string; designation?: string; score?: number };
   projects?: CandidateProjectLink[];
+  projectDetails?: {
+    projectId: string;
+    projectTitle: string;
+    mainStatus: string;
+    subStatus: string;
+    nominatedRole: string;
+    roleNeeded?: any;
+  } | null;
   project?: {
     id?: string;
     title?: string;
@@ -284,6 +292,11 @@ const CandidateCard = memo(function CandidateCard({
   const projectLink = propProjectId 
     ? candidate.projects?.find(p => p.projectId === propProjectId)
     : undefined;
+
+  // If projects array is missing (consolidated API), use flattened project properties
+  const isNominatedForThisProject = propProjectId === candidate.projectDetails?.projectId || !!projectLink;
+  const currentSubStatus = projectLink?.subStatus || (propProjectId === candidate.projectDetails?.projectId ? candidate.projectSubStatus : undefined);
+  const currentMainStatus = projectLink?.mainStatus || (propProjectId === candidate.projectDetails?.projectId ? candidate.projectMainStatus : undefined);
 
   const isSendedForVerification = projectLink?.isSendedForDocumentVerification ?? candidate.isSendedForDocumentVerification;
     
@@ -528,6 +541,15 @@ const CandidateCard = memo(function CandidateCard({
         designation: candidate.nominatedRole.designation,
         score: candidate.nominatedRole.score,
         department: undefined,
+      };
+    }
+
+    // Fallback to projectDetails (from consolidated API)
+    if (candidate.projectDetails?.roleNeeded) {
+      return {
+        designation: candidate.projectDetails.roleNeeded.designation,
+        department: candidate.projectDetails.roleNeeded.roleCatalog?.label || candidate.projectDetails.roleNeeded.roleCatalog?.name,
+        score: undefined,
       };
     }
 

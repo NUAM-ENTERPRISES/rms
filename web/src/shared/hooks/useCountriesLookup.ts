@@ -127,8 +127,14 @@ export const {
 /**
  * Hook for country dropdown data with error handling
  */
-export function useCountriesLookup(params?: CountriesQueryParams) {
-  const { data, isLoading, error, refetch } = useGetActiveCountriesQuery(params);
+export function useCountriesLookup(
+  params?: CountriesQueryParams,
+  options?: { skip?: boolean }
+) {
+  const { data, isLoading, error, refetch } = useGetActiveCountriesQuery(
+    params,
+    { skip: options?.skip }
+  );
 
   const countries = data?.countries || [];
 

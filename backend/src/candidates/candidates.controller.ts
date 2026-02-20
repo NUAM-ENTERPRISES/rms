@@ -32,6 +32,7 @@ import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
+import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -129,6 +130,31 @@ export class CandidatesController {
       success: true,
       data: candidate,
       message: 'Candidate created successfully',
+    };
+  }
+
+  @Get('project/consolidated')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get consolidated candidates for project detail view',
+    description:
+      'Returns all candidates for Admin/Manager and assigned candidates for Recruiters, with nomination info for the specified project.',
+  })
+  async getConsolidatedCandidates(
+    @Query() query: ConsolidatedCandidateQueryDto,
+    @Request() req,
+  ) {
+    const roles = req.user.roles || [];
+    const userId = req.user.id;
+    const result = await this.candidatesService.getConsolidatedCandidates(
+      query,
+      userId,
+      roles,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Consolidated candidates retrieved successfully',
     };
   }
 

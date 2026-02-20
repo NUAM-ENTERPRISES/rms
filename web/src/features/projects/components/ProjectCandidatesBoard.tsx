@@ -19,12 +19,10 @@ import {
 } from "lucide-react";
 import {
   useGetEligibleCandidatesQuery,
-  useGetProjectCandidatesByRoleQuery,
   useCheckBulkCandidateEligibilityQuery,
 } from "@/features/projects";
 import {
-  useGetCandidatesQuery,
-  useGetRecruiterMyCandidatesQuery,
+  useGetConsolidatedCandidatesQuery,
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -56,10 +54,6 @@ type ProjectAssignment = {
   };
 };
 
-const hasAssignmentData = (
-  value: unknown
-): value is { data?: ProjectAssignment[] } =>
-  typeof value === "object" && value !== null && "data" in value;
 
 interface ProjectCandidatesBoardProps {
   projectId: string;
@@ -147,9 +141,13 @@ const buildAssignmentInfo = (
   assignedIds: Set<string>
 ) => {
   const candidateId = candidate.candidateId || candidate.id || "";
-  const assignmentFromCandidate = candidate.projects?.find(
-    (project) => project.projectId === projectId
-  );
+  
+  // Use projectDetails from consolidated API or find in projects array if available
+  const isConsolidatedMatch = candidate.projectDetails?.projectId === projectId;
+  const assignmentFromCandidate = isConsolidatedMatch 
+    ? candidate.projectDetails 
+    : candidate.projects?.find((project) => project.projectId === projectId);
+    
   const assignmentFromManager = managerAssignments.find(
     (assignment) => assignment.candidateId === candidateId
   );
@@ -163,21 +161,28 @@ const buildAssignmentInfo = (
     ) || assignedIds.has(candidateId);
 
   const subStatusLabel =
-    assignmentFromCandidate?.subStatus?.label ||
+    (assignmentFromCandidate as any)?.subStatus?.label ||
+    (assignmentFromCandidate as any)?.subStatus || // consolidated string
     assignmentFromManager?.subStatus?.label ||
     candidate.projectSubStatus?.label;
+    
   const subStatusName =
-    assignmentFromCandidate?.subStatus?.name ||
+    (assignmentFromCandidate as any)?.subStatus?.name ||
+    (assignmentFromCandidate as any)?.subStatus || // consolidated string
     assignmentFromManager?.subStatus?.name ||
     candidate.projectSubStatus?.name ||
     candidate.projectSubStatus?.statusName;
+    
   const currentProjectStatus =
-    assignmentFromCandidate?.currentProjectStatus?.statusName ||
+    (assignmentFromCandidate as any)?.currentProjectStatus?.statusName ||
+    (assignmentFromCandidate as any)?.mainStatus || // consolidated string
     assignmentFromManager?.currentProjectStatus?.statusName ||
     candidate.currentProjectStatus?.statusName ||
     candidate.projectStatus?.statusName;
+    
   const mainStatus =
-    assignmentFromCandidate?.mainStatus?.name ||
+    (assignmentFromCandidate as any)?.mainStatus?.name ||
+    (assignmentFromCandidate as any)?.mainStatus || // consolidated string
     assignmentFromManager?.mainStatus?.name ||
     candidate.projectMainStatus?.name;
 
@@ -192,38 +197,31 @@ const buildAssignmentInfo = (
   const isNominated =
     isAssigned &&
     Boolean(
-      subStatusName?.toLowerCase().startsWith("nominated") ||
-        mainStatus?.toLowerCase() === "nominated" ||
-        currentProjectStatus?.toLowerCase() === "nominated"
+      String(subStatusName || "").toLowerCase().startsWith("nominated") ||
+        String(mainStatus || "").toLowerCase() === "nominated" ||
+        String(currentProjectStatus || "").toLowerCase() === "nominated"
     );
 
   const isVerificationInProgress =
     isAssigned &&
     Boolean(
-      subStatusName?.toLowerCase().includes("verification") ||
-        subStatusLabel?.toLowerCase().includes("verification") ||
-        currentProjectStatus?.toLowerCase().includes("verification")
+      String(subStatusName || "").toLowerCase().includes("verification") ||
+        String(subStatusLabel || "").toLowerCase().includes("verification") ||
+        String(currentProjectStatus || "").toLowerCase().includes("verification")
     );
 
   // New flag: some projects may skip document verification (direct screening).
-  // When a candidate is linked to this project and the backend marks
-  // `isSendedForDocumentVerification: false`, we should hide the
-  // "Send for Verification" button and show an informational icon.
-  // Skip document verification only when the project indicates direct
-  // screening (sub-status or main-status contains 'screening') AND
-  // the backend flag `isSendedForDocumentVerification` is explicitly false.
-  // We also check if the flag is missing but the status clearly indicates screening.
   const shouldSkipDocumentVerification = Boolean(
-    (assignmentFromCandidate?.isSendedForDocumentVerification === false ||
+    ((assignmentFromCandidate as any)?.isSendedForDocumentVerification === false ||
       candidate.isSendedForDocumentVerification === false ||
-      ((assignmentFromCandidate?.isSendedForDocumentVerification === undefined &&
+      (((assignmentFromCandidate as any)?.isSendedForDocumentVerification === undefined &&
         candidate.isSendedForDocumentVerification === undefined) &&
-        (subStatusName?.toLowerCase().includes("screening") ||
-          mainStatus?.toLowerCase().includes("screening") ||
-          currentProjectStatus?.toLowerCase().includes("screening")))) &&
-      (subStatusName?.toLowerCase().includes("screening") ||
-        currentProjectStatus?.toLowerCase().includes("screening") ||
-        mainStatus?.toLowerCase().includes("screening"))
+        (String(subStatusName || "").toLowerCase().includes("screening") ||
+          String(mainStatus || "").toLowerCase().includes("screening") ||
+          String(currentProjectStatus || "").toLowerCase().includes("screening")))) &&
+      (String(subStatusName || "").toLowerCase().includes("screening") ||
+        String(currentProjectStatus || "").toLowerCase().includes("screening") ||
+        String(mainStatus || "").toLowerCase().includes("screening"))
   );
 
   return {
@@ -269,31 +267,15 @@ const ProjectCandidatesBoard = ({
       limit: 10,
     });
 
-  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
-    {
-      search: searchTerm || undefined,
-      roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
-      limit: 10,
-    },
-    {
-      skip: !isRecruiter || isManager,
-    }
-  );
-  const allCandidatesQuery = useGetCandidatesQuery(
-    {
-      search: searchTerm || undefined,
-      roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
-      limit: 10,
-    },
-    {
-      skip: isRecruiter && !isManager,
-    }
-  );
-
-  const { data: managerAssignmentsData } = useGetProjectCandidatesByRoleQuery({
+  const consolidatedCandidatesQuery = useGetConsolidatedCandidatesQuery({
     projectId,
-    role: "Manager",
+    search: searchTerm || undefined,
+    roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
+    limit: 10,
   });
+
+  // Manager assignments query removed for this component (avoid calling `/candidates/role/Manager` from ProjectDetailPage)
+  const managerAssignmentsData = undefined;
 
   const eligibleCandidates: CandidateRecord[] = Array.isArray(
     eligibleResponse?.data
@@ -305,36 +287,8 @@ const ProjectCandidatesBoard = ({
       []
     : [];
 
-  // Extract candidates data - matching original RecruiterCandidatesTab pattern
-  const recruiterCandidatesData =
-    isRecruiter && !isManager ? recruiterCandidatesQuery.data : undefined;
-
-  const allCandidatesData =
-    !isRecruiter || isManager ? allCandidatesQuery.data : undefined;
-
-  // Determine which data to use (matching original pattern)
-  const candidatesData =
-    isRecruiter && !isManager
-      ? (recruiterCandidatesData as { data?: CandidateRecord[] } | undefined)
-          ?.data
-      : allCandidatesData;
-
-  // Extract candidates array - handle both direct array and nested structure
-  const allCandidates: CandidateRecord[] = Array.isArray(candidatesData)
-    ? candidatesData
-    : candidatesData &&
-      typeof candidatesData === "object" &&
-      "candidates" in candidatesData &&
-      Array.isArray(
-        (candidatesData as { candidates?: CandidateRecord[] }).candidates
-      )
-    ? (candidatesData as { candidates: CandidateRecord[] }).candidates
-    : candidatesData &&
-      typeof candidatesData === "object" &&
-      "data" in candidatesData &&
-      Array.isArray((candidatesData as { data?: CandidateRecord[] }).data)
-    ? (candidatesData as { data: CandidateRecord[] }).data
-    : [];
+  const allCandidates: CandidateRecord[] =
+    consolidatedCandidatesQuery.data?.data?.candidates || [];
 
   // Trigger bulk eligibility check when candidates are loaded
   const allCandidateIds = useMemo(() => {
@@ -381,27 +335,9 @@ const ProjectCandidatesBoard = ({
     return map;
   }, [bulkEligibilityResponse]);
 
-  const managerAssignmentsSource = managerAssignmentsData as unknown;
-  const managerAssignmentsPayload = hasAssignmentData(managerAssignmentsSource)
-    ? (Reflect.get(managerAssignmentsSource, "data") as
-        | ProjectAssignment[]
-        | undefined)
-    : (managerAssignmentsSource as ProjectAssignment[] | undefined);
-
-  const managerAssignments: ProjectAssignment[] = Array.isArray(
-    managerAssignmentsPayload
-  )
-    ? (managerAssignmentsPayload as ProjectAssignment[])
-    : [];
-  const assignedToProjectIds = useMemo(
-    () =>
-      new Set(
-        managerAssignments
-          .map((assignment) => assignment.candidateId)
-          .filter((id): id is string => Boolean(id))
-      ),
-    [managerAssignments]
-  );
+  // Manager assignments removed — rely on candidate.project and other status fields instead
+  const managerAssignments: ProjectAssignment[] = [];
+  const assignedToProjectIds = useMemo(() => new Set<string>(), []);
 
   const PAGE_SIZE = 10;
 
@@ -716,8 +652,7 @@ const ProjectCandidatesBoard = ({
   };
 
   const renderAllCandidatesColumn = () => {
-    const isLoadingAll =
-      recruiterCandidatesQuery.isLoading || allCandidatesQuery.isLoading;
+    const isLoadingAll = consolidatedCandidatesQuery.isLoading;
 
     if (isLoadingAll) {
       return (

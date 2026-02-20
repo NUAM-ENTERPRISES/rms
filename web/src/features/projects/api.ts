@@ -211,6 +211,7 @@ export interface QueryProjectsRequest {
   status?: "active" | "completed" | "cancelled";
   clientId?: string;
   teamId?: string;
+  countryCode?: string;
   page?: number;
   limit?: number;
   sortBy?: string;

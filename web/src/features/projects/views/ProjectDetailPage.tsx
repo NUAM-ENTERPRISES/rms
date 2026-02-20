@@ -53,7 +53,7 @@ import {
   useAssignToProjectMutation,
   useGetEligibleCandidatesQuery,
 } from "@/features/projects";
-import { useGetCandidatesQuery, useGetRecruiterMyCandidatesQuery } from "@/features/candidates";
+import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
 import { useCan } from "@/hooks/useCan";
@@ -159,6 +159,7 @@ export default function ProjectDetailPage() {
     search: searchTerm || undefined,
     roleCatalogId:
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
+    limit: 10,
   });
   const eligibleCandidates: any[] = Array.isArray(eligibleResponse?.data)
     ? eligibleResponse.data
@@ -168,55 +169,18 @@ export default function ProjectDetailPage() {
       []
     : [];
 
-  // Get all candidates based on user role
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
-  const isManager =
-    user?.roles?.some((role) =>
-      ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
-    ) ?? false;
+  const consolidatedCandidatesQuery = useGetConsolidatedCandidatesQuery({
+    projectId: projectId!,
+    search: searchTerm || undefined,
+    roleCatalogId:
+      selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
+    limit: 10,
+  });
 
-  const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
-    {
-      search: searchTerm || undefined,
-      roleCatalogId:
-        selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
-    },
-    {
-      skip: !isRecruiter || isManager,
-    }
-  );
-  const allCandidatesQuery = useGetCandidatesQuery(
-    {
-      search: searchTerm || undefined,
-      roleCatalogId:
-        selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
-    },
-    {
-      skip: isRecruiter && !isManager,
-    }
-  );
-
-  const recruiterCandidatesData =
-    isRecruiter && !isManager ? recruiterCandidatesQuery.data : undefined;
-  const allCandidatesData =
-    !isRecruiter || isManager ? allCandidatesQuery.data : undefined;
-  const candidatesData =
-    isRecruiter && !isManager
-      ? recruiterCandidatesData?.data
-      : allCandidatesData;
+  const candidatesData = consolidatedCandidatesQuery.data?.data?.candidates;
 
   const allCandidates = Array.isArray(candidatesData)
     ? candidatesData
-    : candidatesData &&
-      typeof candidatesData === "object" &&
-      "candidates" in candidatesData &&
-      Array.isArray(candidatesData.candidates)
-    ? candidatesData.candidates
-    : candidatesData &&
-      typeof candidatesData === "object" &&
-      "data" in candidatesData &&
-      Array.isArray(candidatesData.data)
-    ? candidatesData.data
     : [];
 
   // Get nominated candidates with proper status filtering

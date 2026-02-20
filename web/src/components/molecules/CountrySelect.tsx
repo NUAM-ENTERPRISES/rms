@@ -28,6 +28,7 @@ export interface CountrySelectProps {
   /** @deprecated handled by pagination now */
   groupByRegion?: boolean;
   name?: string;
+  skip?: boolean;
 }
 
 export function CountrySelect({
@@ -41,6 +42,7 @@ export function CountrySelect({
   className,
   allowEmpty = true,
   pageSize = 20,
+  skip = false,
 }: CountrySelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -48,11 +50,14 @@ export function CountrySelect({
   const debouncedSearch = useDebounce(search, 300);
 
   // Use the updated hook with pagination params
-  const { countries, pagination, isLoading } = useCountriesLookup({
-    search: debouncedSearch,
-    page,
-    limit: pageSize,
-  });
+  const { countries, pagination, isLoading } = useCountriesLookup(
+    {
+      search: debouncedSearch,
+      page,
+      limit: pageSize,
+    },
+    { skip }
+  );
 
   const handleSelect = (countryCode: string) => {
     onValueChange?.(countryCode === value ? "" : countryCode);

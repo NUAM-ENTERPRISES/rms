@@ -30,6 +30,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { CountrySelect } from "@/components/molecules";
 import { QueryProjectsRequest } from "@/features/projects";
 
 interface ProjectFiltersProps {
@@ -75,6 +76,7 @@ export default function ProjectFilters({
     filters.status ||
     filters.clientId ||
     filters.teamId ||
+    filters.countryCode ||
     filters.sortBy;
 
   const activeFilterCount = [
@@ -82,6 +84,7 @@ export default function ProjectFilters({
     filters.status,
     filters.clientId,
     filters.teamId,
+    filters.countryCode,
     filters.sortBy,
   ].filter(Boolean).length;
 
@@ -381,6 +384,24 @@ export default function ProjectFilters({
                   </Select>
                 </div>
 
+                {/* Country Filter - Only shown if enabled */}
+                {showCountryFilter && (
+                  <div className="space-y-4">
+                    <label className="text-sm font-bold text-gray-900 flex items-center gap-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="tracking-wide">Country</span>
+                    </label>
+                    <CountrySelect
+                      value={filters.countryCode}
+                      onValueChange={(value) =>
+                        handleFilterChange("countryCode", value || undefined)
+                      }
+                      pageSize={10}
+                      skip={!showCountryFilter}
+                    />
+                  </div>
+                )}
+
                 {/* Sort Order */}
                 <div className="space-y-4">
                   <label className="text-sm font-bold text-gray-900 flex items-center gap-3">
@@ -547,6 +568,22 @@ export default function ProjectFilters({
                 <button
                   onClick={() => handleFilterChange("teamId", undefined)}
                   className="ml-1 hover:bg-indigo-100 rounded-full p-0.5 transition-colors"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            )}
+
+            {filters.countryCode && (
+              <Badge
+                variant="secondary"
+                className="gap-1 px-2 py-1 bg-white/80 text-blue-800 border-blue-200 hover:bg-white transition-all duration-200 rounded-lg text-xs"
+              >
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                Country: {filters.countryCode}
+                <button
+                  onClick={() => handleFilterChange("countryCode", undefined)}
+                  className="ml-1 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>

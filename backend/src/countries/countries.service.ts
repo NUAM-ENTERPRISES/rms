@@ -125,7 +125,7 @@ export class CountriesService {
    * Get filtered active countries with pagination (for dropdowns)
    */
   async getActiveCountries(query: QueryCountriesDto): Promise<PaginatedCountries> {
-    const { search, region, page = 1, limit = 250 } = query;
+    const { search, region, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     const where: any = { isActive: true };

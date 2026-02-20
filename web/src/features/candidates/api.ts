@@ -82,6 +82,31 @@ export interface Candidate {
     name: string;
     email: string;
   };
+  isNominated?: boolean;
+  projectSubStatus?: any;
+  projectMainStatus?: any;
+  projectDetails?: {
+    projectId: string;
+    projectTitle: string;
+    mainStatus: string;
+    subStatus: string;
+    nominatedRole: string;
+    roleNeeded?: {
+      id: string;
+      projectId: string;
+      roleCatalogId: string;
+      designation: string;
+      roleCatalog: {
+        id: string;
+        name: string;
+        label: string;
+        type: string;
+        shortName?: string;
+        description?: string;
+        isActive: boolean;
+      };
+    } | null;
+  } | null;
   projects?: CandidateProjectMap[];
   workExperiences?: WorkExperience[];
   qualifications?: (CandidateQualification & {
@@ -496,6 +521,20 @@ export interface AllCandidatesResponse {
     otherEnquiry?: number;
   };
   message?: string;
+}
+
+export interface ConsolidatedCandidatesResponse {
+  success: boolean;
+  data: {
+    candidates: Candidate[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+  message: string;
 }
 
 export interface GetCandidateProjectPipelineResponse {
@@ -982,6 +1021,31 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: ["Candidate"],
     }),
 
+    // Get consolidated candidates for project detail view
+    getConsolidatedCandidates: builder.query<
+      ConsolidatedCandidatesResponse,
+      {
+        projectId: string;
+        search?: string;
+        roleCatalogId?: string;
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        queryParams.append("projectId", params.projectId);
+        if (params.search) queryParams.append("search", params.search);
+        if (params.roleCatalogId)
+          queryParams.append("roleCatalogId", params.roleCatalogId);
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+
+        return `/candidates/project/consolidated?${queryParams.toString()}`;
+      },
+      providesTags: ["Candidate"],
+    }),
+
     // Status configuration
     getStatusConfig: builder.query<
       { success: boolean; data: Record<string, any>; message: string },
@@ -1062,6 +1126,7 @@ export const {
   useGetCurrentRecruiterAssignmentQuery,
   useGetRecruiterAssignmentHistoryQuery,
   useGetRecruiterMyCandidatesQuery,
+  useGetConsolidatedCandidatesQuery,
   useGetStatusConfigQuery,
   useGetCandidateProjectPipelineQuery,
   useTransferCandidateMutation,

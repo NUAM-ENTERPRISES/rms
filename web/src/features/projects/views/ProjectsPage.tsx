@@ -42,6 +42,7 @@ export default function ProjectsPage() {
     status: undefined,
     clientId: undefined,
     teamId: undefined,
+    countryCode: undefined,
   });
 
   // RTK Query hooks
