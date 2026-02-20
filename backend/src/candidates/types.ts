@@ -58,6 +58,7 @@ export interface CandidateWithRelations extends Candidate {
   qualifications: (CandidateQualification & {
     qualification: Qualification;
   })[];
+  documents?: any[];
 }
 
 export interface PaginatedCandidates {

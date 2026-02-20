@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import {
   Card,
   CardContent,
@@ -17,12 +18,16 @@ import {
   Trash2,
   AlertTriangle,
   Target,
+  Briefcase,
+  FileText,
+  TrendingUp,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { getAge } from "@/utils";
 import { formatDate } from "@/lib/utils";
 import {
-  useGetCandidateByIdQuery
+  useGetCandidateByIdQuery,
+  useGetCandidateProjectsQuery,
+  useGetDocumentsQuery,
 } from "@/features/candidates";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
@@ -30,7 +35,6 @@ import { ImageViewer } from "@/components/molecules";
 import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { StatusBadge } from "../components/StatusBadge";
-import { useStatusConfig } from "../hooks/useStatusConfig";
 import { useAppSelector } from "@/app/hooks";
 import type {
   CandidateQualification,
@@ -52,8 +56,7 @@ export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
-  const { user } = useAppSelector((state) => state.auth);
-  const isCRE = user?.roles?.includes("CRE");
+  const {} = useAppSelector((state) => state.auth);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,14 +73,12 @@ export default function CandidateDetailPage() {
 
   // Status update modal state
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const { statusConfig } = useStatusConfig();
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
   const canManageCandidates = useCan("write:candidates");
-  const canTransferBack = useCan("transfer_back:candidates");
 
   // Fetch candidate data from API
   const {
@@ -93,6 +94,17 @@ export default function CandidateDetailPage() {
     useGetCandidateStatusPipelineQuery(id!, {
       skip: !id,
     });
+
+  // Fetch counts for stat cards
+  const { data: projectsData } = useGetCandidateProjectsQuery(
+    { candidateId: id!, page: 1, limit: 1 },
+    { skip: !id }
+  );
+
+  const { data: documentsData } = useGetDocumentsQuery(
+    { candidateId: id!, page: 1, limit: 1 },
+    { skip: !id }
+  );
 
   const handleEdit = () => {
     navigate(`/candidates/${id}/edit`);
@@ -190,7 +202,53 @@ export default function CandidateDetailPage() {
     );
   }
 
-  const age = getAge(candidate.dateOfBirth);
+  const stats = [
+    {
+      label: "Projects Assigned",
+      value: projectsData?.meta?.total ?? 0,
+      subtitle: "Assigned tasks",
+      icon: Briefcase,
+      color: "from-blue-500 to-cyan-500",
+      tab: "projects",
+    },
+    {
+      label: "Total Documents",
+      value: documentsData?.data?.pagination?.total ?? 0,
+      subtitle: "Verified files",
+      icon: FileText,
+      color: "from-purple-500 to-pink-500",
+      tab: "documents",
+    },
+    {
+      label: "Status History",
+      value: pipelineData?.data?.pipeline?.length ?? 0,
+      subtitle: "Status changes",
+      icon: TrendingUp,
+      color: "from-orange-500 to-red-500",
+      tab: "history",
+    },
+  ];
+
+  const gradientMap: Record<
+    string,
+    { bg: string; iconBg: string; text: string }
+  > = {
+    "from-blue-500 to-cyan-500": {
+      bg: "from-blue-50 to-blue-100/50",
+      iconBg: "bg-blue-200/40",
+      text: "text-blue-600",
+    },
+    "from-purple-500 to-pink-500": {
+      bg: "from-purple-50 to-purple-100/50",
+      iconBg: "bg-purple-200/40",
+      text: "text-purple-600",
+    },
+    "from-orange-500 to-red-500": {
+      bg: "from-orange-50 to-orange-100/50",
+      iconBg: "bg-orange-200/40",
+      text: "text-orange-600",
+    },
+  };
 
   return (
     <div>
@@ -210,24 +268,6 @@ export default function CandidateDetailPage() {
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
                 {candidate.firstName} {candidate.lastName}
               </h1>
-
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-slate-500">Status:</span>
-                <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-                <span className="text-sm text-slate-600">
-                  {statusConfig[candidate.currentStatus?.statusName ?? ""]?.description}
-                </span>
-                {canWriteCandidates && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsStatusModalOpen(true)}
-                    className="h-6 w-6 p-0 hover:bg-slate-100"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -239,6 +279,26 @@ export default function CandidateDetailPage() {
             </span>
           </div>
         </div>
+          <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Candidate Status</span>
+              <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+            </div>
+            
+            <div className="h-4 w-[1px] bg-slate-200 mx-1" />
+
+            {canWriteCandidates && (
+            <button
+  onClick={() => setIsStatusModalOpen(true)}
+  className="group relative flex items-center gap-2.5 px-3 py-1.5 bg-white/50 backdrop-blur-sm border border-slate-200/60 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300"
+>
+  <Edit className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-500 transition-transform group-hover:rotate-12" />
+  <span className="text-[10px] font-black text-slate-500 group-hover:text-blue-700 uppercase tracking-widest">
+    Update Status
+  </span>
+</button>
+            )}
+          </div>
         <div className="flex items-center gap-2">
           {canWriteCandidates && (
             <Button variant="outline" size="sm" onClick={handleEdit}>
@@ -255,8 +315,96 @@ export default function CandidateDetailPage() {
         </div>
       </div>
 
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {stats.map((stat, i) => {
+          const Icon = stat.icon;
+          const colors = gradientMap[stat.color];
+          return (
+            <motion.div
+              key={i}
+              onClick={() => stat.tab && setActiveTab(stat.tab)}
+              className="cursor-pointer"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: i * 0.1 }}
+            >
+              <Card
+                className={`border-0 shadow-md bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
+              >
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className={`p-3 rounded-xl ${colors.iconBg}`}>
+                    <Icon className={`h-6 w-6 ${colors.text}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      {stat.label}
+                    </p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-bold text-slate-900">
+                        {stat.value}
+                      </h3>
+                      <span className="text-xs text-slate-400 font-normal">
+                        {stat.subtitle}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-2">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          {/* <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger> */}
+          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <CandidateOverview
+            candidate={candidate}
+            canWriteCandidates={canWriteCandidates}
+            openAddModal={openAddModal}
+            openEditModal={openEditModal}
+          />
+        </TabsContent>
+
+        {/* Projects Tab - Optimized with independent API call */}
+        <TabsContent value="projects" className="space-y-6">
+          <CandidateProjects
+            candidateId={id!}
+          />
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
+          <CandidateDocuments candidateId={id!} />
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="space-y-6">
+          <CandidateHistory candidateId={id!} />
+        </TabsContent>
+
+        {/* Metrics Tab */}
+        <TabsContent value="metrics" className="space-y-6">
+          <CandidateMetrics candidate={candidate} />
+        </TabsContent>
+      </Tabs>
+
       {/* Pipeline */}
-      <Card className="mb-6 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="mt-6 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
         <CardHeader className="border-b border-slate-200">
           <CardTitle className="flex items-center gap-2 text-slate-900">
             <Target className="h-5 w-5 text-blue-600" />
@@ -283,54 +431,6 @@ export default function CandidateDetailPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-6"
-      >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="metrics">Metrics</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <CandidateOverview
-            candidate={candidate}
-            canWriteCandidates={canWriteCandidates}
-            openAddModal={openAddModal}
-            openEditModal={openEditModal}
-          />
-        </TabsContent>
-
-        {/* Projects Tab - Optimized with independent API call */}
-        <TabsContent value="projects" className="space-y-6">
-          <CandidateProjects
-            candidateId={id!}
-            StatusBadge={StatusBadge}
-          />
-        </TabsContent>
-
-        {/* Documents Tab */}
-        <TabsContent value="documents" className="space-y-6">
-          <CandidateDocuments candidateId={id!} />
-        </TabsContent>
-
-        {/* History Tab */}
-        <TabsContent value="history" className="space-y-6">
-          <CandidateHistory candidateId={id!} />
-        </TabsContent>
-
-        {/* Metrics Tab */}
-        <TabsContent value="metrics" className="space-y-6">
-          <CandidateMetrics candidate={candidate} />
-        </TabsContent>
-      </Tabs>
 
       {/* Modal for adding/editing qualifications and work experience */}
       <QualificationWorkExperienceModal

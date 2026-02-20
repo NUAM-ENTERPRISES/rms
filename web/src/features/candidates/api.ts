@@ -148,6 +148,8 @@ export interface Candidate {
   // Additional properties used in UI
   candidateQualifications?: any[];
   candidateExperience?: number;
+  documents?: any[];
+  projects?: any[];
   roleMatches?: Array<{
     roleId?: string;
     designation?: string;
