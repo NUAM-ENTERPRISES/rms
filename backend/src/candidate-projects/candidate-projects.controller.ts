@@ -417,6 +417,7 @@ export class CandidateProjectsController {
     };
   }
 
+/*
   @Post(':id/send-to-screening')
   @Permissions('manage:candidates', 'schedule:screenings')
   @ApiOperation({
@@ -452,6 +453,7 @@ export class CandidateProjectsController {
       message: 'Candidate sent to screening successfully',
     };
   }
+*/
 
   @Post(':id/approve-for-client-interview')
   @Permissions('approve:candidates')

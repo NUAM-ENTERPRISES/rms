@@ -501,23 +501,31 @@ const ProjectCandidatesBoard = ({
             candidate.projectSubStatus?.statusName ||
             "";
 
+          const isAlreadyInScreening = [
+            "screening_assigned",
+            "screening_scheduled",
+            "screening_in_progress",
+            "screening_completed",
+            "screening_passed",
+            "screening_failed",
+          ].includes(subStatusName);
+
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
           const showVerifyButton = subStatusName === "nominated_initial";
           const showInterviewButton = subStatusName === "documents_verified";
           const hasProject = Boolean(candidate.project);
 
-          const actions: {
-            label: string;
-            action: string;
-            variant?:
-              | "default"
-              | "outline"
-              | "secondary"
-              | "ghost"
-              | "destructive";
-            icon?: ComponentType<{ className?: string }>;
-          }[] = [];
+          const actions = (requiredScreening && !isAlreadyInScreening)
+            ? [
+                {
+                  label: "Send for Direct Screening",
+                  action: "send_for_screening",
+                  variant: "default" as const,
+                  icon: Send,
+                },
+              ]
+            : [];
 
           return (
             <CandidateCard
@@ -530,6 +538,9 @@ const ProjectCandidatesBoard = ({
               onAction={(id, action) => {
                 if (action === "assign") {
                   onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`);
+                }
+                if (action === "send_for_screening") {
+                  onSendForScreening?.(id, `${candidate.firstName} ${candidate.lastName}`);
                 }
               }}
               actions={actions}
@@ -631,23 +642,9 @@ const ProjectCandidatesBoard = ({
             project: sanitized.project || project,
           };
 
-          const actions = !assignmentInfo.isAssigned
-            ? [
-                ...(requiredScreening
-                  ? [
-                      {
-                        label: "Send for Direct Screening",
-                        action: "send_for_screening",
-                        variant: "default" as const,
-                        icon: Send,
-                      },
-                    ]
-                  : []),
-              ]
-            : [];
+          const actions: any[] = [];
 
-          const showVerifyButton =
-            assignmentInfo.isAssigned && assignmentInfo.isNominated;
+          const showVerifyButton = false; // assignmentInfo.isAssigned && assignmentInfo.isNominated;
 
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
@@ -765,25 +762,14 @@ const ProjectCandidatesBoard = ({
             ...sanitized,
             project: sanitized.project || project,
           };
-          const actions = !assignmentInfo.isAssigned
-            ? [
-                ...(requiredScreening
-                  ? [
-                      {
-                        label: "Send for Direct Screening",
-                        action: "send_for_screening",
-                        variant: "default" as const,
-                        icon: Send,
-                      },
-                    ]
-                  : []),
-              ]
-            : [];
+          const actions: any[] = [];
 
-          const showVerifyButton =
+          const showVerifyButton = false;
+          /*
             assignmentInfo.isAssigned &&
             assignmentInfo.isNominated &&
             !assignmentInfo.isVerificationInProgress;
+          */
 
           const shouldSkipDocVerification = Boolean(
             assignmentInfo.shouldSkipDocumentVerification === true

@@ -428,6 +428,11 @@ export class CandidateProjectsService {
    * Creates or updates candidate-project assignment and sets status to interview / screening_assigned
    * Adds candidate project status history and interview status history entries
    */
+  /**
+   * Send candidate for screening
+   * Creates or updates candidate-project assignment and sets status to interview / screening_assigned
+   * Adds candidate project status history and interview status history entries
+   */
   async sendForScreening(createDto: CreateCandidateProjectDto, userId: string) {
     let { candidateId, projectId, roleNeededId, recruiterId } = createDto;
 
@@ -497,7 +502,26 @@ export class CandidateProjectsService {
     // -------------------------------
     // CHECK EXISTING ASSIGNMENT
     // -------------------------------
-    const existingAssignment = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId, roleNeededId: roleNeededId || null } });
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({
+      where: { candidateId, projectId, roleNeededId: roleNeededId || null },
+      include: { subStatus: true },
+    });
+
+    if (existingAssignment?.subStatus) {
+      const screeningStatuses = [
+        'screening_assigned',
+        'screening_scheduled',
+        'screening_in_progress',
+        'screening_completed',
+        'screening_passed',
+        'screening_failed',
+      ];
+      if (screeningStatuses.includes(existingAssignment.subStatus.name)) {
+        throw new BadRequestException(
+          `Candidate is already in screening process (Current status: ${existingAssignment.subStatus.label || existingAssignment.subStatus.name})`,
+        );
+      }
+    }
 
     // -------------------------------
     // CREATE OR UPDATE ASSIGNMENT
