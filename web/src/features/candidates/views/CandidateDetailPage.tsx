@@ -35,7 +35,6 @@ import { ImageViewer } from "@/components/molecules";
 import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { StatusBadge } from "../components/StatusBadge";
-import { useStatusConfig } from "../hooks/useStatusConfig";
 import { useAppSelector } from "@/app/hooks";
 import type {
   CandidateQualification,
@@ -74,7 +73,6 @@ export default function CandidateDetailPage() {
 
   // Status update modal state
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const { statusConfig } = useStatusConfig();
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
@@ -270,24 +268,6 @@ export default function CandidateDetailPage() {
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
                 {candidate.firstName} {candidate.lastName}
               </h1>
-
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-slate-500">Status:</span>
-                <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-                <span className="text-sm text-slate-600">
-                  {statusConfig[candidate.currentStatus?.statusName ?? ""]?.description}
-                </span>
-                {canWriteCandidates && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsStatusModalOpen(true)}
-                    className="h-6 w-6 p-0 hover:bg-slate-100"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -299,6 +279,26 @@ export default function CandidateDetailPage() {
             </span>
           </div>
         </div>
+          <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Candidate Status</span>
+              <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+            </div>
+            
+            <div className="h-4 w-[1px] bg-slate-200 mx-1" />
+
+            {canWriteCandidates && (
+            <button
+  onClick={() => setIsStatusModalOpen(true)}
+  className="group relative flex items-center gap-2.5 px-3 py-1.5 bg-white/50 backdrop-blur-sm border border-slate-200/60 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300"
+>
+  <Edit className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-500 transition-transform group-hover:rotate-12" />
+  <span className="text-[10px] font-black text-slate-500 group-hover:text-blue-700 uppercase tracking-widest">
+    Update Status
+  </span>
+</button>
+            )}
+          </div>
         <div className="flex items-center gap-2">
           {canWriteCandidates && (
             <Button variant="outline" size="sm" onClick={handleEdit}>
