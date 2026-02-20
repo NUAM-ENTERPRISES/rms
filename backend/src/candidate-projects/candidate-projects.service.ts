@@ -14,6 +14,7 @@ import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
 import { BulkSendForInterviewDto } from './dto/bulk-send-for-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
+import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-query.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
   TRAINING_TYPE,
@@ -664,6 +665,226 @@ export class CandidateProjectsService {
   // NOTE: Notifications for coordinators and documentation executives are handled via Outbox events
   // to keep this service focused on business logic and avoid duplication. Helper notification methods
   // removed in favor of outbox publishes.
+
+  /**
+   * Get an overview of candidates for a project with counts and filtered data
+   */
+  async getProjectOverview(
+    projectId: string,
+    queryDto: ProjectOverviewQueryDto,
+    userId: string,
+    userRoles: string[] = [],
+  ) {
+    const { 
+      page = 1, 
+      limit = 10, 
+      roleCatalogId, 
+      search, 
+      startDate, 
+      endDate, 
+      period 
+    } = queryDto;
+    
+    const skip = (page - 1) * limit;
+
+    // -------------------------------
+    // 1. Build Base Where Clause
+    // -------------------------------
+    const where: any = { projectId };
+
+    if (roleCatalogId) {
+      where.roleNeeded = { roleCatalogId };
+    }
+
+    // Capture base context (except mainStatus) for counts
+    const baseWhereForCounts = { ...where };
+
+    if (queryDto.mainStatus && queryDto.mainStatus !== 'all') {
+      where.mainStatus = { name: queryDto.mainStatus };
+    }
+
+    // Role-based filtering: recruiter only sees their assigned candidates
+    const isRecruiter = userRoles.includes('Recruiter');
+    const isSpecialistOrManagement = userRoles.some(r =>
+      [
+        'CEO',
+        'Director',
+        'Manager',
+        'Team Head',
+        'Team Lead',
+        'System Admin',
+        'Documentation Executive',
+        'Processing Executive',
+        'Interview Coordinator',
+        'Screening Trainer',
+      ].includes(r),
+    );
+
+    if (isRecruiter && !isSpecialistOrManagement) {
+      where.recruiterId = userId;
+      baseWhereForCounts.recruiterId = userId;
+    }
+
+    // Date Filtering Logic
+    if (period || (startDate && endDate)) {
+      const dateRange: { gte?: Date; lte?: Date } = {};
+      
+      if (period) {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        switch (period) {
+          case DatePeriod.TODAY:
+            dateRange.gte = startOfDay;
+            break;
+          case DatePeriod.YESTERDAY:
+            const yesterday = new Date(startOfDay);
+            yesterday.setDate(yesterday.getDate() - 1);
+            dateRange.gte = yesterday;
+            dateRange.lte = new Date(startOfDay.getTime() - 1);
+            break;
+          case DatePeriod.THIS_WEEK:
+            const firstDayOfWeek = new Date(startOfDay);
+            const dayNum = firstDayOfWeek.getDay(); // 0 is Sunday
+            firstDayOfWeek.setDate(firstDayOfWeek.getDate() - (dayNum === 0 ? 6 : dayNum - 1)); // Set to Monday
+            dateRange.gte = firstDayOfWeek;
+            break;
+          case DatePeriod.LAST_WEEK:
+            const lastWeekStart = new Date(startOfDay);
+            const todayDayNum = lastWeekStart.getDay();
+            lastWeekStart.setDate(lastWeekStart.getDate() - (todayDayNum === 0 ? 6 : todayDayNum - 1) - 7);
+            const lastWeekEnd = new Date(lastWeekStart);
+            lastWeekEnd.setDate(lastWeekEnd.getDate() + 6);
+            lastWeekEnd.setHours(23, 59, 59, 999);
+            dateRange.gte = lastWeekStart;
+            dateRange.lte = lastWeekEnd;
+            break;
+          case DatePeriod.THIS_MONTH:
+            dateRange.gte = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case DatePeriod.LAST_MONTH:
+            dateRange.gte = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            dateRange.lte = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+            break;
+          case DatePeriod.THIS_YEAR:
+            dateRange.gte = new Date(now.getFullYear(), 0, 1);
+            break;
+        }
+      } else if (startDate && endDate) {
+        dateRange.gte = new Date(startDate);
+        dateRange.lte = new Date(endDate);
+      }
+
+      if (dateRange.gte || dateRange.lte) {
+        where.createdAt = dateRange;
+        baseWhereForCounts.createdAt = dateRange;
+      }
+    }
+
+    // Search Logic
+    if (search) {
+      const searchFilter = {
+        candidate: {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { mobileNumber: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      };
+      Object.assign(where, searchFilter);
+      Object.assign(baseWhereForCounts, searchFilter);
+    }
+
+    // -------------------------------
+    // 2. Query Counts and Paginated Data
+    // -------------------------------
+    const [
+      totalCandidates,
+      nominatedCount,
+      documentsCount,
+      interviewCount,
+      processingCount,
+      finalCount,
+      data,
+      project,
+      filteredCount,
+    ] = await Promise.all([
+      // Total count should use baseWhereForCounts to ignore current status filter
+      this.prisma.candidateProjects.count({ where: baseWhereForCounts }),
+
+      // Individual counts by main status should also use baseWhereForCounts
+      this.prisma.candidateProjects.count({
+        where: { ...baseWhereForCounts, mainStatus: { name: 'nominated' } },
+      }),
+      this.prisma.candidateProjects.count({
+        where: { ...baseWhereForCounts, mainStatus: { name: 'documents' } },
+      }),
+      this.prisma.candidateProjects.count({
+        where: { ...baseWhereForCounts, mainStatus: { name: 'interview' } },
+      }),
+      this.prisma.candidateProjects.count({
+        where: { ...baseWhereForCounts, mainStatus: { name: 'processing' } },
+      }),
+      this.prisma.candidateProjects.count({
+        where: { ...baseWhereForCounts, mainStatus: { name: 'final' } },
+      }),
+
+      // Paginated candidate list uses 'where' (which includes mainStatus)
+      this.prisma.candidateProjects.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          candidate: true,
+          project: {
+            select: { title: true },
+          },
+          roleNeeded: {
+            select: {
+              id: true,
+              projectId: true,
+              roleCatalogId: true,
+              designation: true,
+              roleCatalog: true,
+            },
+          },
+          mainStatus: true,
+          subStatus: true,
+          recruiter: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { title: true },
+      }),
+      // Total filtered count for pagination
+      this.prisma.candidateProjects.count({ where }),
+    ]);
+
+    return {
+      projectTitle: project?.title || 'Unknown Project',
+      summary: {
+        totalCandidates,
+        nominatedCount,
+        documentsCount,
+        interviewCount,
+        processingCount,
+        finalCount, // aka Deployed counts as per user request
+      },
+      data,
+      meta: {
+        total: filteredCount,
+        page,
+        limit,
+        totalPages: Math.ceil(filteredCount / limit),
+      },
+    };
+  }
 
   async findAll(queryDto: QueryCandidateProjectsDto) {
     const {

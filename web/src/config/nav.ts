@@ -137,6 +137,18 @@ export const navigationConfig: NavItem[] = [
       "CRE",
       // "Screening Trainer",
     ],
+    children: [
+       {
+        id: "candidates-overview",
+        label: "Overview",
+        path: "/candidates/overview",
+      },
+      {
+        id: "candidates-list",
+        label: "Follow Up",
+        path: "/candidates",
+      },
+    ],
   },
   {
     id: "recruiter-docs",

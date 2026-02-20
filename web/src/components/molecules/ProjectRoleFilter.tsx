@@ -30,6 +30,7 @@ export interface ProjectRoleFilterProps {
   showRoleFilter?: boolean;
   projectLabel?: string;
   roleLabel?: string;
+  defaultProject?: boolean;
 }
 
 export function ProjectRoleFilter({
@@ -39,6 +40,7 @@ export function ProjectRoleFilter({
   showRoleFilter = true,
   projectLabel = "Project Filter",
   roleLabel = "Role Filter",
+  defaultProject = false,
 }: ProjectRoleFilterProps) {
   const [projectSearch, setProjectSearch] = useState("");
   const [projectPage, setProjectPage] = useState(1);
@@ -50,7 +52,7 @@ export function ProjectRoleFilter({
   const { data: projectsData, isLoading: projectsLoading } = useGetProjectsQuery({
     limit: 10,
     page: projectPage,
-    search: debouncedProjectSearch || undefined,
+    ...(debouncedProjectSearch ? { search: debouncedProjectSearch } : {}),
   });
 
   const projects = projectsData?.data?.projects || [];
@@ -58,7 +60,7 @@ export function ProjectRoleFilter({
 
   // Get the selected project details (for displaying the name and getting roles)
   const { data: selectedProjectData } = useGetProjectsQuery(
-    { limit: 10, search: undefined },
+    { limit: 10, page: 1 }, // Align with Query 1 to share cache
     { skip: value.projectId === "all" }
   );
 
@@ -110,6 +112,18 @@ export function ProjectRoleFilter({
     },
     [onChange, value]
   );
+
+  // Auto-select first project if defaultProject is true and nothing is selected
+  useEffect(() => {
+    if (
+      defaultProject &&
+      value.projectId === "all" &&
+      projects.length > 0 &&
+      !projectsLoading
+    ) {
+      handleProjectChange(projects[0].id);
+    }
+  }, [defaultProject, value.projectId, projects, projectsLoading, handleProjectChange]);
 
   // Reset page when search changes
   useEffect(() => {

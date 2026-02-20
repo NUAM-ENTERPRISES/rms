@@ -29,6 +29,7 @@ import { BulkSendForInterviewDto } from './dto/bulk-send-for-interview.dto';
 import { SendToScreeningDto } from './dto/send-to-screening.dto';
 import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
+import { ProjectOverviewQueryDto } from './dto/project-overview-query.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Candidate Projects')
@@ -149,6 +150,36 @@ export class CandidateProjectsController {
     return {
       success: true,
       ...result,
+    };
+  }
+
+  @Get('project/:projectId/overview')
+  @Permissions('read:projects', 'read:candidates')
+  @ApiOperation({
+    summary: 'Get candidates overview for a project',
+    description: 
+      'Retrieve a summary of candidate counts by main status and a paginated list of candidates for a project. Supports filtering by role, date period, and search.',
+  })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Project overview retrieved successfully',
+  })
+  async getProjectOverview(
+    @Param('projectId') projectId: string,
+    @Query() queryDto: ProjectOverviewQueryDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.getProjectOverview(
+      projectId,
+      queryDto,
+      req.user.sub,
+      req.user.roles ?? [],
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Project overview retrieved successfully',
     };
   }
 
