@@ -1137,7 +1137,7 @@ export default function CandidatesPage() {
                         }
                         className="p-0.5 rounded-full hover:bg-blue-100 transition-colors"
                       >
-                        <X className="h-3 w-3" />
+                          <X className="h-3 w-3" />
                       </button>
                     </div>
                   )}

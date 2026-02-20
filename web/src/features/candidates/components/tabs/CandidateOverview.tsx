@@ -247,6 +247,197 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Educational Qualifications & Work Experience - Integrated Side by Side */}
+              <div className="mt-8 pt-6 border-t border-slate-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Educational Qualifications Column */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                        <GraduationCap className="h-5 w-5 text-blue-600" />
+                        Educational Qualifications
+                      </h3>
+                      {canWriteCandidates && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAddModal("qualification")}
+                          className="h-8 flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add
+                        </Button>
+                      )}
+                    </div>
+
+                    {candidate.qualifications &&
+                    candidate.qualifications.length > 0 ? (
+                      <div className="space-y-4">
+                        {candidate.qualifications.map((qual) => (
+                          <div
+                            key={qual.id}
+                            className="group relative bg-slate-50/50 border border-slate-200 rounded-lg p-4 transition-all hover:border-blue-300 hover:bg-blue-50/30"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-bold text-slate-900 line-clamp-1">
+                                  {qual.qualification.name}
+                                </h4>
+                                <p className="text-xs text-slate-600 font-medium line-clamp-1">
+                                  {qual.university ||
+                                    "University not specified"}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {canWriteCandidates && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      openEditModal("qualification", qual)
+                                    }
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-3">
+                              <div className="flex gap-3 text-[10px] text-slate-500 font-medium">
+                                {qual.graduationYear && (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />{" "}
+                                    {qual.graduationYear}
+                                  </span>
+                                )}
+                                {qual.gpa && (
+                                  <span className="flex items-center gap-1">
+                                    <Trophy className="h-3 w-3" /> GPA:{" "}
+                                    {qual.gpa}
+                                  </span>
+                                )}
+                              </div>
+                              {qual.isCompleted ? (
+                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] h-4 px-1.5 shadow-none">
+                                  Completed
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] h-4 px-1.5 shadow-none">
+                                  Ongoing
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                        <p className="text-sm text-slate-500 italic">
+                          No educational qualifications added.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Work Experience Column */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                        <Briefcase className="h-5 w-5 text-emerald-600" />
+                        Work Experience
+                      </h3>
+                      {canWriteCandidates && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAddModal("workExperience")}
+                          className="h-8 flex items-center gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add
+                        </Button>
+                      )}
+                    </div>
+
+                    {candidate.workExperiences &&
+                    candidate.workExperiences.length > 0 ? (
+                      <div className="space-y-4">
+                        {candidate.workExperiences.map((exp) => (
+                          <div
+                            key={exp.id}
+                            className="group relative bg-slate-50/50 border border-slate-200 rounded-lg p-4 transition-all hover:border-emerald-300 hover:bg-emerald-50/30"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-bold text-slate-900">
+                                    {exp.jobTitle}
+                                  </h4>
+                                  {exp.isCurrent && (
+                                    <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] h-4 px-1.5 shadow-none">
+                                      Current
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-emerald-700 font-semibold">
+                                  {exp.companyName}
+                                </p>
+                              </div>
+                              {canWriteCandidates && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    openEditModal("workExperience", exp)
+                                  }
+                                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="flex gap-4 mt-2 text-[11px] text-slate-500 font-medium">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(exp.startDate)} –{" "}
+                                {exp.isCurrent
+                                  ? "Present"
+                                  : exp.endDate
+                                  ? formatDate(exp.endDate)
+                                  : "Ongoing"}
+                              </span>
+                              {exp.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" /> {exp.location}
+                                </span>
+                              )}
+                              {exp.salary && (
+                                <span className="flex items-center gap-1 text-emerald-600">
+                                  <DollarSign className="h-3 w-3" />
+                                  {formatCurrency(exp.salary)}
+                                </span>
+                              )}
+                            </div>
+                            {exp.description && (
+                              <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
+                                {exp.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                        <p className="text-sm text-slate-500 italic">
+                          No work experience added.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -354,324 +545,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
       </div>
 
       {/* Resume List */}
-      <div className="mb-8">
+      <div className="mb-0">
         <CandidateResumeList candidateId={candidate.id} />
-      </div>
-
-      {/* Educational Qualifications and Work Experience - Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Educational Qualifications */}
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-2xl">
-          <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 pb-5">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
-                <div className="p-2 bg-blue-100 rounded-xl">
-                  <GraduationCap className="h-6 w-6 text-blue-600" />
-                </div>
-                Educational Qualifications
-              </CardTitle>
-              {canWriteCandidates && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => openAddModal("qualification")}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Qualification
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-7 pb-2">
-            {candidate.qualifications &&
-            candidate.qualifications.length > 0 ? (
-              <div className="space-y-6">
-                {candidate.qualifications.map((qual) => (
-                  <div
-                    key={qual.id}
-                    className="group relative bg-gradient-to-r from-slate-50 to-blue-50/30 border border-slate-200/80 rounded-xl p-5 hover:border-blue-300 hover:from-blue-50/70 hover:to-indigo-50/50 transition-all duration-300 hover:shadow-md"
-                  >
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 pr-4">
-                        <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                          {qual.qualification.name}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-1 text-sm">
-                          {qual.qualification.shortName && (
-                            <span className="font-semibold text-blue-700">
-                              {qual.qualification.shortName}
-                            </span>
-                          )}
-                          {qual.university && (
-                            <>
-                              {qual.qualification.shortName && (
-                                <span className="text-slate-400">•</span>
-                              )}
-                              <span className="text-slate-600 font-medium">
-                                {qual.university}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant="outline"
-                          className={`font-medium text-xs px-3 py-1.5 rounded-full border-2 transition-all ${
-                            qual.isCompleted
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm"
-                              : "bg-amber-50 text-amber-700 border-amber-300 shadow-sm"
-                          }`}
-                        >
-                          {qual.isCompleted ? (
-                            <>
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                              Completed
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="h-3.5 w-3.5 mr-1" />
-                              In Progress
-                            </>
-                          )}
-                        </Badge>
-
-                        {canWriteCandidates && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              openEditModal("qualification", qual)
-                            }
-                            className="h-9 w-9 rounded-lg hover:bg-blue-100 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-all duration-300"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {(qual.graduationYear || qual.gpa) && (
-                      <div className="flex flex-wrap items-center gap-5 mt-4 text-sm text-slate-600">
-                        {qual.graduationYear && (
-                          <div className="flex items-center gap-2 font-medium">
-                            <Calendar className="h-4 w-4 text-blue-500" />
-                            <span>Graduated {qual.graduationYear}</span>
-                          </div>
-                        )}
-                        {qual.gpa && (
-                          <div className="flex items-center gap-2 font-medium">
-                            <Trophy className="h-4 w-4 text-amber-500" />
-                            <span className="text-slate-800 font-semibold">
-                              GPA: {qual.gpa}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {qual.notes && (
-                      <div className="mt-4 p-4 bg-white/70 backdrop-blur-sm border border-slate-200 rounded-lg">
-                        <p className="text-sm text-slate-700 italic leading-relaxed">
-                          “{qual.notes}”
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-16 text-center">
-                <div className="max-w-sm mx-auto space-y-6">
-                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-                    <GraduationCap className="h-12 w-12 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-800">
-                      No Educational Qualifications Yet
-                    </h3>
-                  </div>
-                  {canWriteCandidates && (
-                    <Button
-                      onClick={() => openAddModal("qualification")}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-lg"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Add First Qualification
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Work Experience */}
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-2xl">
-          <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 pb-5">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
-                <div className="p-2 bg-emerald-100 rounded-xl">
-                  <Briefcase className="h-6 w-6 text-emerald-600" />
-                </div>
-                Work Experience
-              </CardTitle>
-              {canWriteCandidates && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => openAddModal("workExperience")}
-                  className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Experience
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-7 pb-2">
-            {candidate.workExperiences &&
-            candidate.workExperiences.length > 0 ? (
-              <div className="space-y-6">
-                {candidate.workExperiences.map((exp) => (
-                  <div
-                    key={exp.id}
-                    className="group relative bg-gradient-to-r from-slate-50 to-emerald-50/30 border border-slate-200/80 rounded-xl p-6 hover:border-emerald-300 hover:from-emerald-50/70 hover:to-teal-50/50 transition-all duration-300 hover:shadow-lg"
-                  >
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                    <div className="flex items-start justify-between gap-6">
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                              {exp.jobTitle}
-                            </h3>
-                            <p className="text-base font-semibold text-emerald-700 mt-1">
-                              {exp.companyName}
-                            </p>
-                          </div>
-                          {exp.isCurrent && (
-                            <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 font-medium px-3 py-1.5 rounded-full shadow-sm">
-                              Current Role
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-5 text-sm text-slate-600 font-medium mb-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-emerald-600" />
-                            <span>
-                              {formatDate(exp.startDate)} –{" "}
-                              {exp.isCurrent
-                                ? "Present"
-                                : exp.endDate
-                                ? formatDate(exp.endDate)
-                                : "Ongoing"}
-                            </span>
-                          </div>
-                          {exp.location && (
-                            <>
-                              <span className="text-slate-400">•</span>
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-emerald-600" />
-                                <span>{exp.location}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        {exp.description && (
-                          <p className="text-sm text-slate-700 leading-relaxed mb-5 bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-slate-200">
-                            {exp.description}
-                          </p>
-                        )}
-                        
-                        {exp.salary && (
-                           <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 mb-4">
-                                <DollarSign className="h-5 w-5 text-emerald-600" />
-                                <span>{formatCurrency(exp.salary)}</span>
-                              </div>
-                        )}
-
-                        {exp.achievements && (
-                          <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Trophy className="h-5 w-5 text-amber-600" />
-                              <span className="font-bold text-amber-800 uppercase tracking-wider text-xs">
-                                Key Achievements
-                              </span>
-                            </div>
-                            <p className="text-sm text-amber-900 leading-relaxed">
-                              {exp.achievements}
-                            </p>
-                          </div>
-                        )}
-
-                        {exp.skills && Array.isArray(exp.skills) && exp.skills.length > 0 && (
-                          <div className="flex wrap gap-2">
-                            {exp.skills.map((skill, i) => (
-                              <Badge
-                                key={i}
-                                variant="outline"
-                                className="bg-gradient-to-r from-purple-50 to-pink-50 text-purple-800 border-purple-300 font-medium px-3 py-1 rounded-full"
-                              >
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-shrink-0">
-                        {canWriteCandidates && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              openEditModal("workExperience", exp)
-                            }
-                            className="h-10 w-10 rounded-xl hover:bg-emerald-100 hover:text-emerald-700 opacity-0 group-hover:opacity-100 transition-all duration-300"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-16 text-center">
-                <div className="max-w-sm mx-auto space-y-6">
-                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full flex items-center justify-center">
-                    <Briefcase className="h-12 w-12 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-800">
-                      No Work Experience Added
-                    </h3>
-                  </div>
-                  {canWriteCandidates && (
-                    <Button
-                      onClick={() => openAddModal("workExperience")}
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium shadow-lg"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Add First Experience
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
