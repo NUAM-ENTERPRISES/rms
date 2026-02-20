@@ -39,6 +39,8 @@ interface ProjectFiltersProps {
   onCreateProject?: () => void;
   canCreateProject?: boolean;
   className?: string;
+  /** When false, country-related UI and lookups are skipped */
+  showCountryFilter?: boolean;
 }
 
 export default function ProjectFilters({
@@ -48,6 +50,7 @@ export default function ProjectFilters({
   onCreateProject,
   canCreateProject,
   className,
+  showCountryFilter = true,
 }: ProjectFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/hooks/useCan";
-import { FlagIcon, useCountryValidation } from "@/shared";
+import { FlagIcon } from "@/shared";
 
 interface ProjectCardProps {
   project: Project;
@@ -27,7 +27,8 @@ export default function ProjectCard({
   className,
 }: ProjectCardProps) {
   const canReadProjects = useCan("read:projects");
-  const { getCountryName } = useCountryValidation();
+  // Avoid global countries lookup on listing page — show code as fallback
+  const getCountryNameFallback = (code?: string) => code ? code.toUpperCase() : null;
 
   // Calculate deadline status
   const deadline = new Date(project.deadline);
@@ -143,8 +144,7 @@ export default function ProjectCard({
                   aria-label={`Flag of ${project.countryCode}`}
                 />
                 <span className="text-xs text-gray-600 mt-1 text-center">
-                  {getCountryName(project.countryCode) ||
-                    project.countryCode.toUpperCase()}
+                  {getCountryNameFallback(project.countryCode) || project.countryCode.toUpperCase()}
                 </span>
               </div>
             )}

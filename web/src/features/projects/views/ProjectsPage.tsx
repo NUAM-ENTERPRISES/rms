@@ -145,6 +145,7 @@ export default function ProjectsPage() {
                 onExport={handleExportProjects}
                 onCreateProject={handleCreateProject}
                 canCreateProject={canManageProjects}
+                showCountryFilter={false}
               />
             </div>
           </div>
