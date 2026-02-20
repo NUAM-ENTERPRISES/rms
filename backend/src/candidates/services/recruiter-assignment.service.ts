@@ -438,6 +438,29 @@ export class RecruiterAssignmentService {
       };
     }
 
+    // CreatedAt / Date range filtering (server-side)
+    if ((dto as any).dateFrom || (dto as any).dateTo) {
+      let fromDt: Date | undefined = (dto as any).dateFrom ? new Date((dto as any).dateFrom) : undefined;
+      let toDt: Date | undefined = (dto as any).dateTo ? new Date((dto as any).dateTo) : undefined;
+
+      if (fromDt && toDt) {
+        if (fromDt.getTime() > toDt.getTime()) {
+          const tmp = fromDt;
+          fromDt = toDt;
+          toDt = tmp;
+        }
+        if (fromDt.getTime() === toDt.getTime()) {
+          toDt = new Date(toDt.getTime() + 24 * 60 * 60 * 1000 - 1);
+        }
+      }
+
+      whereClause.createdAt = {} as any;
+      if (fromDt) whereClause.createdAt.gte = fromDt;
+      if (toDt) whereClause.createdAt.lte = toDt;
+
+      this.logger.log(`Applying createdAt filter for recruiter ${recruiterId}: from=${fromDt?.toISOString() || 'n/a'} to=${toDt?.toISOString() || 'n/a'}`);
+    }
+
     // Get total count (for the listing - respects search/status/search filters)
     const totalCount = await this.prisma.candidate.count({
       where: whereClause,

@@ -136,6 +136,10 @@ GET /api/v1/candidates/recruiter/my-candidates?search=John
 ### 5. **Combined Filters**
 ```bash
 GET /api/v1/candidates/recruiter/my-candidates?page=1&limit=10&status=qualified&search=engineer
+
+Example: filter by created date (today)
+
+GET /api/v1/candidates/recruiter/my-candidates?dateFrom=2026-02-19T00:00:00.000Z&dateTo=2026-02-19T23:59:59.000Z
 ```
 
 ---

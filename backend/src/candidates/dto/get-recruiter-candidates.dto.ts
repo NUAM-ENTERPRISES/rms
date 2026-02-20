@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsInt, Min, IsString, IsEnum, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CANDIDATE_STATUS, CandidateStatus } from '../../common/constants/statuses';
@@ -50,4 +50,20 @@ export class GetRecruiterCandidatesDto {
   @IsOptional()
   @IsString()
   roleCatalogId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by candidate createdAt (from) - ISO datetime',
+    example: '2026-02-19T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by candidate createdAt (to) - ISO datetime',
+    example: '2026-02-19T23:59:59.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
 }

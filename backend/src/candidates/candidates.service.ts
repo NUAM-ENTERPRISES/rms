@@ -380,6 +380,9 @@ export class CandidatesService {
       maxSalary,
       dateOfBirthFrom,
       dateOfBirthTo,
+      // server-side createdAt range filter (ISO strings)
+      dateFrom,
+      dateTo,
       roleCatalogId,
       page = 1,
       limit = 10,
@@ -477,6 +480,37 @@ export class CandidatesService {
       }
     }
 
+    // createdAt range filter (date added) - server-side
+    if (dateFrom || dateTo) {
+      // normalize: if both dates provided and equal, treat as full-day range
+      let fromDt: Date | undefined = dateFrom ? new Date(dateFrom) : undefined;
+      let toDt: Date | undefined = dateTo ? new Date(dateTo) : undefined;
+
+      if (fromDt && toDt) {
+        // swap if inverted
+        if (fromDt.getTime() > toDt.getTime()) {
+          const tmp = fromDt;
+          fromDt = toDt;
+          toDt = tmp;
+        }
+        // if equal timestamps (common when user selects same calendar day), expand to full 24h range
+        if (fromDt.getTime() === toDt.getTime()) {
+          // expand to end of that day (24h - 1ms from provided instant)
+          toDt = new Date(toDt.getTime() + 24 * 60 * 60 * 1000 - 1);
+        }
+      }
+
+      where.createdAt = {} as any;
+      if (fromDt) {
+        where.createdAt.gte = fromDt;
+      }
+      if (toDt) {
+        where.createdAt.lte = toDt;
+      }
+
+      this.logger.log(`Applying createdAt filter in findAll(): from=${fromDt?.toISOString() || 'n/a'} to=${toDt?.toISOString() || 'n/a'}`);
+    }
+
     if (roleCatalogId && roleCatalogId !== 'all') {
       where.workExperiences = {
         some: {
@@ -507,6 +541,13 @@ export class CandidatesService {
           recruiterId: assignedTo,
         },
       };
+    }
+
+    // apply createdAt filter to dashboard counts when provided
+    if (dateFrom || dateTo) {
+      baseWhere.createdAt = {} as any;
+      if (dateFrom) baseWhere.createdAt.gte = new Date(dateFrom);
+      if (dateTo) baseWhere.createdAt.lte = new Date(dateTo);
     }
 
     // Get all status IDs

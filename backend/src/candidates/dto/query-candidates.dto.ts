@@ -139,6 +139,22 @@ export class QueryCandidatesDto {
   dateOfBirthTo?: string;
 
   @ApiPropertyOptional({
+    description: 'Filter by candidate createdAt (from) - ISO datetime',
+    example: '2026-02-19T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by candidate createdAt (to) - ISO datetime',
+    example: '2026-02-19T23:59:59.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
+
+  @ApiPropertyOptional({
     description: 'Page number (1-based)',
     example: 1,
     minimum: 1,
