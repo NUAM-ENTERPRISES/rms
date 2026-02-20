@@ -180,7 +180,7 @@ export default function QualificationWorkExperienceModal({
         setSkills(expSkills);
         workExperienceForm.reset({
           companyName: exp.companyName,
-          departmentId: (exp as any).departmentId || undefined,
+          departmentId: exp.roleCatalog?.roleDepartmentId || undefined,
           roleCatalogId: exp.roleCatalogId || "",
           jobTitle: exp.jobTitle,
           startDate: exp.startDate.split("T")[0], // Convert to YYYY-MM-DD format

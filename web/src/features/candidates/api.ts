@@ -174,7 +174,6 @@ export interface Candidate {
   candidateQualifications?: any[];
   candidateExperience?: number;
   documents?: any[];
-  projects?: any[];
   roleMatches?: Array<{
     roleId?: string;
     designation?: string;
@@ -209,6 +208,12 @@ export interface WorkExperience {
   achievements?: string;
   createdAt: string;
   updatedAt: string;
+  roleCatalog?: {
+    id: string;
+    name: string;
+    label: string;
+    roleDepartmentId: string;
+  };
 }
 
 export interface CreateWorkExperienceRequest {
