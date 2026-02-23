@@ -157,7 +157,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       return (
                         candidate.totalExperience ||
                         candidate.experience ||
-                        0
+                        "N/A"
                       );
                     })()}
                   </p>
@@ -301,7 +301,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     >
                       {candidate.sectorType
                         ? candidate.sectorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-                        : "Not specified"}
+                        : "N/A"}
                     </Badge>
                   </div>
                   <div>
@@ -314,7 +314,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     >
                       {candidate.visaType
                         ? candidate.visaType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-                        : "Not specified"}
+                        : "N/A"}
                     </Badge>
                   </div>
                   <div className="lg:col-span-1">
@@ -334,7 +334,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ))
                       ) : (
                         <span className="text-sm text-slate-400 italic">
-                          None specified
+                          N/A
                         </span>
                       )}
                     </div>
@@ -356,7 +356,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ))
                       ) : (
                         <span className="text-sm text-slate-400 italic">
-                          None specified
+                          N/A
                         </span>
                       )}
                     </div>
@@ -498,7 +498,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   )}
                                 </div>
                                 <p className="text-sm text-emerald-700 font-semibold">
-                                  {exp.companyName}
+                                  {exp.companyName || "N/A"}
                                 </p>
                               </div>
                               {canWriteCandidates && (

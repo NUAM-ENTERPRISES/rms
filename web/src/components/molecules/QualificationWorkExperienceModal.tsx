@@ -57,7 +57,7 @@ const qualificationSchema = z.object({
 });
 
 const workExperienceSchema = z.object({
-  companyName: z.string().min(2, "Company name is required"),
+  companyName: z.string().optional(),
   departmentId: z.string().optional(),
   roleCatalogId: z.string().min(1, "Role catalog ID is required"),
   jobTitle: z.string().min(2, "Job title is required"),
@@ -65,7 +65,14 @@ const workExperienceSchema = z.object({
   endDate: z.string().optional(),
   isCurrent: z.boolean(),
   description: z.string().optional(),
-  salary: z.number().min(0).optional(),
+  salary: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0).optional().nullable()
+  ),
   location: z.string().optional(),
   skills: z.array(z.string()),
   achievements: z.string().optional(),
@@ -607,7 +614,7 @@ export default function QualificationWorkExperienceModal({
 
               {/* Company Name */}
               <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name *</Label>
+                <Label htmlFor="companyName">Hospital Name</Label>
                 <Input
                   {...workExperienceForm.register("companyName")}
                   placeholder="ABC Hospital"
