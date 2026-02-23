@@ -63,10 +63,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               </CardTitle>
               {canWriteCandidates && onEditPersonalInfo && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={onEditPersonalInfo}
-                  className="text-blue-600 border-blue-200 hover:border-blue-300 hover:bg-blue-50 gap-1.5 h-8 shadow-sm"
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1.5 h-8"
                 >
                   <Edit className="h-4 w-4" />
                   <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
@@ -230,9 +230,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       </label>
                       <p className="text-sm flex items-center gap-2 mt-1">
                         <Phone className="h-3 w-3 text-slate-400" />
-                        {candidate.referralPhone
-                          ? `${candidate.referralCountryCode || ""} ${candidate.referralPhone}`
-                          : "N/A"}
+                        {candidate.referralCountryCode}
+                        {candidate.referralPhone || "N/A"}
                       </p>
                     </div>
                   </>
@@ -281,10 +280,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </h3>
                   {canWriteCandidates && (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={onEditJobPreferences}
-                      className="text-indigo-600 border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50 gap-1.5 h-8 shadow-sm"
+                      className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5 h-8"
                     >
                       <Edit className="h-4 w-4" />
                       <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
@@ -300,11 +299,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       variant="outline"
                       className="text-slate-700 border-slate-300"
                     >
-                      {candidate.sectorType && candidate.sectorType !== "no_preference"
-                        ? candidate.sectorType
-                            .replace(/_/g, " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase())
-                        : "N/A"}
+                      {candidate.sectorType
+                        ? candidate.sectorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                        : "Not specified"}
                     </Badge>
                   </div>
                   <div>
@@ -315,11 +312,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       variant="outline"
                       className="text-slate-700 border-slate-300"
                     >
-                      {candidate.visaType && candidate.visaType !== "not_applicable"
-                        ? candidate.visaType
-                            .replace(/_/g, " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase())
-                        : "N/A"}
+                      {candidate.visaType
+                        ? candidate.visaType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                        : "Not specified"}
                     </Badge>
                   </div>
                   <div className="lg:col-span-1">
@@ -339,7 +334,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ))
                       ) : (
                         <span className="text-sm text-slate-400 italic">
-                          N/A
+                          None specified
                         </span>
                       )}
                     </div>
@@ -361,7 +356,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ))
                       ) : (
                         <span className="text-sm text-slate-400 italic">
-                          N/A
+                          None specified
                         </span>
                       )}
                     </div>
