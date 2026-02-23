@@ -545,7 +545,8 @@ export class AuthController {
     const common = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
+      sameSite: 'none' as const,
+      // sameSite: 'lax' as const,
       path: '/api/v1/auth',
     };
     res.cookie('rfi', t.id, { ...common, maxAge: t.maxAgeMs });
