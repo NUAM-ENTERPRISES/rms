@@ -12,6 +12,8 @@ import { OutboxProcessor } from '../jobs/outbox.processor';
 import { DocumentForwardProcessor } from '../jobs/document-forward.processor';
 import { PrismaModule } from '../database/prisma.module';
 import { UploadModule } from '../upload/upload.module';
+import { WhatsAppService } from './whatsapp.service';
+import { WhatsAppNotificationService } from './whatsapp-notification.service';
 
 @Module({
   imports: [
@@ -56,7 +58,17 @@ import { UploadModule } from '../upload/upload.module';
     NotificationsProcessor,
     OutboxProcessor,
     DocumentForwardProcessor,
+    WhatsAppService,
+    WhatsAppNotificationService,
   ],
-  exports: [NotificationsService, NotificationsGateway, OutboxService, EmailService, BullModule],
+  exports: [
+    NotificationsService,
+    NotificationsGateway,
+    OutboxService,
+    EmailService,
+    WhatsAppService,
+    WhatsAppNotificationService,
+    BullModule,
+  ],
 })
 export class NotificationsModule {}

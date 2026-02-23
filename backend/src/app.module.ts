@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import whatsappConfig from './config/whatsapp.config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -47,6 +48,7 @@ import { ProcessingModule } from './processing/processing.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [whatsappConfig],
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
