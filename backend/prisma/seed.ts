@@ -1086,7 +1086,7 @@ async function main() {
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@affiniks.com' },
+    where: { email: 'admin@nuam.com' },
     update: {
       name: 'System Administrator',
       password: hashedPassword,
@@ -1094,7 +1094,7 @@ async function main() {
       mobileNumber: '9876543210',
     },
     create: {
-      email: 'admin@affiniks.com',
+      email: 'admin@nuam.com',
       name: 'System Administrator',
       password: hashedPassword,
       countryCode: '+91',
@@ -1143,7 +1143,7 @@ async function main() {
 
   const testUsers = [
     {
-      email: 'director@affiniks.com',
+      email: 'director@nuam.com',
       name: 'Sarah Director',
       password: 'director123',
       countryCode: '+91',
@@ -1151,7 +1151,7 @@ async function main() {
       role: 'Director',
     },
     {
-      email: 'manager@affiniks.com',
+      email: 'manager@nuam.com',
       name: 'Mike Manager',
       password: 'manager123',
       countryCode: '+91',
@@ -1159,7 +1159,7 @@ async function main() {
       role: 'Manager',
     },
     {
-      email: 'teamhead@affiniks.com',
+      email: 'teamhead@nuam.com',
       name: 'Lisa Team Head',
       password: 'teamhead123',
       countryCode: '+91',
@@ -1167,7 +1167,7 @@ async function main() {
       role: 'Team Head',
     },
     {
-      email: 'teamlead@affiniks.com',
+      email: 'teamlead@nuam.com',
       name: 'David Team Lead',
       password: 'teamlead123',
       countryCode: '+91',
@@ -1175,7 +1175,7 @@ async function main() {
       role: 'Team Lead',
     },
     {
-      email: 'recruiter1@affiniks.com',
+      email: 'recruiter1@nuam.com',
       name: 'Emma Recruiter',
       password: 'recruiter123',
       countryCode: '+91',
@@ -1183,7 +1183,7 @@ async function main() {
       role: 'Recruiter',
     },
     {
-      email: 'recruiter2@affiniks.com',
+      email: 'recruiter2@nuam.com',
       name: 'John Recruiter',
       password: 'recruiter123',
       countryCode: '+91',
@@ -1191,7 +1191,7 @@ async function main() {
       role: 'Recruiter',
     },
     {
-      email: 'recruiter3@affiniks.com',
+      email: 'recruiter3@nuam.com',
       name: 'Sarah Recruiter',
       password: 'recruiter123',
       countryCode: '+91',
@@ -1199,7 +1199,7 @@ async function main() {
       role: 'Recruiter',
     },
     {
-      email: 'recruiter4@affiniks.com',
+      email: 'recruiter4@nuam.com',
       name: 'Mike Recruiter',
       password: 'recruiter123',
       countryCode: '+91',
@@ -1207,7 +1207,7 @@ async function main() {
       role: 'Recruiter',
     },
     {
-      email: 'recruiter5@affiniks.com',
+      email: 'recruiter5@nuam.com',
       name: 'Lisa Recruiter',
       password: 'recruiter123',
       countryCode: '+91',
@@ -1215,7 +1215,7 @@ async function main() {
       role: 'Recruiter',
     },
     {
-      email: 'docs@affiniks.com',
+      email: 'docs@nuam.com',
       name: 'Alex Documentation',
       password: 'docs123',
       countryCode: '+91',
@@ -1223,7 +1223,7 @@ async function main() {
       role: 'Documentation Executive',
     },
     {
-      email: 'processing@affiniks.com',
+      email: 'processing@nuam.com',
       name: 'Jordan Processing',
       password: 'processing123',
       countryCode: '+91',
@@ -1231,7 +1231,7 @@ async function main() {
       role: 'Processing Executive',
     },
     {
-      email: 'processing1@affiniks.com',
+      email: 'processing1@nuam.com',
       name: 'Michael Processing',
       password: 'processing123',
       countryCode: '+91',
@@ -1239,7 +1239,7 @@ async function main() {
       role: 'Processing Executive',
     },
     {
-      email: 'processing2@affiniks.com',
+      email: 'processing2@nuam.com',
       name: 'Sarah Processing',
       password: 'processing123',
       countryCode: '+91',
@@ -1247,7 +1247,7 @@ async function main() {
       role: 'Processing Executive',
     },
     {
-      email: 'processing3@affiniks.com',
+      email: 'processing3@nuam.com',
       name: 'Robert Processing',
       password: 'processing123',
       countryCode: '+91',
@@ -1255,7 +1255,7 @@ async function main() {
       role: 'Processing Executive',
     },
     {
-      email: 'processing4@affiniks.com',
+      email: 'processing4@nuam.com',
       name: 'Emily Processing',
       password: 'processing123',
       countryCode: '+91',
@@ -1263,7 +1263,7 @@ async function main() {
       role: 'Processing Executive',
     },
     {
-      email: 'coordinator@affiniks.com',
+      email: 'coordinator@nuam.com',
       name: 'Rachel Interview Coordinator',
       password: 'coordinator123',
       countryCode: '+91',
@@ -1271,7 +1271,7 @@ async function main() {
       role: 'Interview Coordinator',
     },
     {
-      email: 'trainer@affiniks.com',
+      email: 'trainer@nuam.com',
       name: 'Tom Trainer',
       password: 'trainer123',
       countryCode: '+91',
@@ -1279,7 +1279,7 @@ async function main() {
       role: 'Screening Trainer',
     },
     {
-      email: 'trainer2@affiniks.com',
+      email: 'trainer2@nuam.com',
       name: 'Priya Trainer',
       password: 'trainer123',
       countryCode: '+91',
@@ -1287,7 +1287,7 @@ async function main() {
       role: 'Screening Trainer',
     },
     {
-      email: 'trainer3@affiniks.com',
+      email: 'trainer3@nuam.com',
       name: 'Arun Trainer',
       password: 'trainer123',
       countryCode: '+91',
@@ -1295,7 +1295,7 @@ async function main() {
       role: 'Screening Trainer',
     },
     {
-      email: 'sysadmin@affiniks.com',
+      email: 'sysadmin@nuam.com',
       name: 'Alex System Admin',
       password: 'sysadmin123',
       countryCode: '+91',
@@ -1501,41 +1501,41 @@ async function main() {
 
   console.log('✅ Database seeding completed successfully!');
   console.log('\n🔑 Test Users Created (Login with Phone + Password):');
-  console.log(`👑 CEO: +919876543210 / ${adminPassword} (admin@affiniks.com)`);
+  console.log(`👑 CEO: +919876543210 / ${adminPassword} (admin@nuam.com)`);
   console.log(
-    `👔 Director: +919876543211 / director123 (director@affiniks.com)`,
+    `👔 Director: +919876543211 / director123 (director@nuam.com)`,
   );
-  console.log(`📊 Manager: +919876543212 / manager123 (manager@affiniks.com)`);
+  console.log(`📊 Manager: +919876543212 / manager123 (manager@nuam.com)`);
   console.log(
-    `👥 Team Head: +919876543213 / teamhead123 (teamhead@affiniks.com)`,
-  );
-  console.log(
-    `🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)`,
+    `👥 Team Head: +919876543213 / teamhead123 (teamhead@nuam.com)`,
   );
   console.log(
-    `🔍 Recruiter 1: +919876543215 / recruiter123 (recruiter1@affiniks.com)`,
+    `🎯 Team Lead: +919876543214 / teamlead123 (teamlead@nuam.com)`,
   );
   console.log(
-    `🔍 Recruiter 2: +919876543216 / recruiter123 (recruiter2@affiniks.com)`,
+    `🔍 Recruiter 1: +919876543215 / recruiter123 (recruiter1@nuam.com)`,
   );
   console.log(
-    `🔍 Recruiter 3: +919876543217 / recruiter123 (recruiter3@affiniks.com)`,
+    `🔍 Recruiter 2: +919876543216 / recruiter123 (recruiter2@nuam.com)`,
   );
   console.log(
-    `🔍 Recruiter 4: +919876543218 / recruiter123 (recruiter4@affiniks.com)`,
+    `🔍 Recruiter 3: +919876543217 / recruiter123 (recruiter3@nuam.com)`,
   );
   console.log(
-    `🔍 Recruiter 5: +919876543219 / recruiter123 (recruiter5@affiniks.com)`,
-  );
-  console.log(`📄 Documentation: +919876543220 / docs123 (docs@affiniks.com)`);
-  console.log(
-    `⚙️ Processing: +919876543221 / processing123 (processing@affiniks.com)`,
+    `🔍 Recruiter 4: +919876543218 / recruiter123 (recruiter4@nuam.com)`,
   );
   console.log(
-    `🎤 Interview Coordinator: +919876543223 / coordinator123 (coordinator@affiniks.com)`,
+    `🔍 Recruiter 5: +919876543219 / recruiter123 (recruiter5@nuam.com)`,
+  );
+  console.log(`📄 Documentation: +919876543220 / docs123 (docs@nuam.com)`);
+  console.log(
+    `⚙️ Processing: +919876543221 / processing123 (processing@nuam.com)`,
   );
   console.log(
-    `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@affiniks.com)`,
+    `🎤 Interview Coordinator: +919876543223 / coordinator123 (coordinator@nuam.com)`,
+  );
+  console.log(
+    `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@nuam.com)`,
   );
   console.log('\n🎯 Each user has their respective role permissions!');
   console.log(
