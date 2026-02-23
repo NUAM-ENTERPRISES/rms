@@ -453,10 +453,11 @@ async function seedQualificationAliases() {
           createdCount++;
         } catch (error) {
           // Skip if alias already exists (unique constraint)
-          if (!error.message.includes('Unique constraint')) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (!errorMessage.includes('Unique constraint')) {
             console.warn(
               `Warning: Could not create alias "${aliasData.alias}":`,
-              error.message,
+              errorMessage,
             );
           }
         }
@@ -1085,22 +1086,38 @@ async function main() {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@nuam.com' },
-    update: {
-      name: 'System Administrator',
-      password: hashedPassword,
-      countryCode: '+91',
-      mobileNumber: '9876543210',
-    },
-    create: {
-      email: 'admin@nuam.com',
-      name: 'System Administrator',
-      password: hashedPassword,
-      countryCode: '+91',
-      mobileNumber: '9876543210',
+  // Find user by email or phone to avoid unique constraint issues (common in CI/CD environments)
+  let adminUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: 'admin@nuam.com' },
+        { countryCode: '+91', mobileNumber: '9876543210' },
+      ],
     },
   });
+
+  if (adminUser) {
+    adminUser = await prisma.user.update({
+      where: { id: adminUser.id },
+      data: {
+        email: 'admin@nuam.com',
+        name: 'System Administrator',
+        password: hashedPassword,
+        countryCode: '+91',
+        mobileNumber: '9876543210',
+      },
+    });
+  } else {
+    adminUser = await prisma.user.create({
+      data: {
+        email: 'admin@nuam.com',
+        name: 'System Administrator',
+        password: hashedPassword,
+        countryCode: '+91',
+        mobileNumber: '9876543210',
+      },
+    });
+  }
 
   // Assign CEO role to admin user
   const ceoRole = await prisma.role.findUnique({
@@ -1307,22 +1324,38 @@ async function main() {
   for (const userData of testUsers) {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    const user = await prisma.user.upsert({
-      where: { email: userData.email },
-      update: {
-        name: userData.name,
-        password: hashedPassword,
-        countryCode: userData.countryCode,
-        mobileNumber: userData.phone,
-      },
-      create: {
-        email: userData.email,
-        name: userData.name,
-        password: hashedPassword,
-        countryCode: userData.countryCode,
-        mobileNumber: userData.phone,
+    // Find user by email or phone to avoid unique constraint issues
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: userData.email },
+          { countryCode: userData.countryCode, mobileNumber: userData.phone },
+        ],
       },
     });
+
+    if (user) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: userData.email,
+          name: userData.name,
+          password: hashedPassword,
+          countryCode: userData.countryCode,
+          mobileNumber: userData.phone,
+        },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email: userData.email,
+          name: userData.name,
+          password: hashedPassword,
+          countryCode: userData.countryCode,
+          mobileNumber: userData.phone,
+        },
+      });
+    }
 
     // Get the role
     const role = await prisma.role.findUnique({

@@ -70,20 +70,37 @@ export async function seedCRERole() {
 
   console.log(`✅ Assigned ${crePermissions.length} permissions to CRE role`);
 
-  // 5. Create a sample CRE user (optional - you can skip this if you want to manually create users)
-  const creUser = await prisma.user.upsert({
-    where: { email: 'cre@affiniks.com' },
-    update: {
-      name: 'CRE User',
-    },
-    create: {
-      email: 'cre@affiniks.com',
-      password: '$2b$10$2zD38atLNjqCY.dDy1V0GOTtY9YTnFk2RreS5Fa8qJdujLTUZRqOW', // Password: cre123
-      name: 'CRE User',
-      countryCode: '+91',
-      mobileNumber: '9988776655',
+  // 5. Create a sample CRE user (optional - check both email and phone for CI/CD robustness)
+  let creUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: 'cre@affiniks.com' },
+        { countryCode: '+91', mobileNumber: '9988776655' },
+      ],
     },
   });
+
+  if (creUser) {
+    creUser = await prisma.user.update({
+      where: { id: creUser.id },
+      data: {
+        email: 'cre@affiniks.com',
+        name: 'CRE User',
+        countryCode: '+91',
+        mobileNumber: '9988776655',
+      },
+    });
+  } else {
+    creUser = await prisma.user.create({
+      data: {
+        email: 'cre@affiniks.com',
+        password: '$2b$10$2zD38atLNjqCY.dDy1V0GOTtY9YTnFk2RreS5Fa8qJdujLTUZRqOW', // Password: cre123
+        name: 'CRE User',
+        countryCode: '+91',
+        mobileNumber: '9988776655',
+      },
+    });
+  }
 
   console.log(`✅ CRE User created/updated: ${creUser.id} (${creUser.email})`);
 
