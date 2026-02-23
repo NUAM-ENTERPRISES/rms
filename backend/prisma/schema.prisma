@@ -381,7 +381,7 @@ model WorkExperience {
   id            String       @id @default(cuid())
   candidateId   String
   roleCatalogId String?
-  companyName   String
+  companyName   String?
   jobTitle      String
   startDate     DateTime
   endDate       DateTime?

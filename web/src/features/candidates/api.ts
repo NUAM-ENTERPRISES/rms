@@ -210,7 +210,7 @@ export interface CandidateQualification {
 export interface WorkExperience {
   id: string;
   candidateId: string;
-  companyName: string;
+  companyName?: string;
   roleCatalogId: string;
   jobTitle: string;
   startDate: string;
@@ -233,7 +233,7 @@ export interface WorkExperience {
 
 export interface CreateWorkExperienceRequest {
   candidateId: string;
-  companyName: string;
+  companyName?: string;
   roleCatalogId: string;
   jobTitle: string;
   startDate: string;

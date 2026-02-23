@@ -26,13 +26,14 @@ export class CreateWorkExperienceDto {
   @IsString()
   roleCatalogId?: string;
 
-  @ApiProperty({
-    description: 'Company name',
+  @ApiPropertyOptional({
+    description: 'Company/Hospital name',
     example: 'City General Hospital',
     minLength: 2,
   })
+  @IsOptional()
   @IsString()
-  companyName: string;
+  companyName?: string;
 
   @ApiProperty({
     description: 'Job title/position',

@@ -287,8 +287,9 @@ const ProjectCandidatesBoard = ({
       []
     : [];
 
-  const allCandidates: CandidateRecord[] =
-    consolidatedCandidatesQuery.data?.data?.candidates || [];
+  const allCandidates: CandidateRecord[] = (
+    consolidatedCandidatesQuery.data?.data?.candidates || []
+  ) as CandidateRecord[];
 
   // Trigger bulk eligibility check when candidates are loaded
   const allCandidateIds = useMemo(() => {
