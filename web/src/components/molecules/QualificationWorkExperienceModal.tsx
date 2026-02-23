@@ -65,7 +65,14 @@ const workExperienceSchema = z.object({
   endDate: z.string().optional(),
   isCurrent: z.boolean(),
   description: z.string().optional(),
-  salary: z.number().min(0).optional(),
+  salary: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0).optional().nullable()
+  ),
   location: z.string().optional(),
   skills: z.array(z.string()),
   achievements: z.string().optional(),
@@ -248,9 +255,8 @@ export default function QualificationWorkExperienceModal({
     }
   };
 
-  const handleWorkExperienceSubmit = async (formData: any) => {
+  const handleWorkExperienceSubmit = async (data: WorkExperienceFormData) => {
     try {
-      const data = formData as WorkExperienceFormData;
       const { departmentId, ...dataWithoutDepartmentId } = data;
       const payload = {
         ...dataWithoutDepartmentId,
@@ -543,7 +549,7 @@ export default function QualificationWorkExperienceModal({
         ) : (
           <form
             onSubmit={workExperienceForm.handleSubmit(
-              handleWorkExperienceSubmit
+              handleWorkExperienceSubmit as any
             )}
             className="space-y-4"
           >
