@@ -194,6 +194,7 @@ model Country {
   roleRecommendedQualifications RoleRecommendedQualification[]
   countryDocumentRequirements   CountryDocumentRequirement[]
   processingCountrySteps        ProcessingCountryStep[]
+  candidatePreferences          CandidatePreferredCountry[]
 
   @@map("countries")
 }
@@ -299,7 +300,10 @@ model Candidate {
   experience           Int?
   skills               Json                           @default("[]")
   currentEmployer      String?
-  expectedSalary       Int?
+  expectedMinSalary    Int?
+  expectedMaxSalary    Int?
+  sectorType           String?
+  visaType             String?
   createdAt            DateTime                       @default(now())
   updatedAt            DateTime                       @updatedAt
   teamId               String?
@@ -311,6 +315,8 @@ model Candidate {
   graduationYear       Int?
   highestEducation     String?
   lastName             String
+  /// “total experience” entered by the recruiter/candidate.  use this value
+  /// when it is set – it lets us account for career breaks, gaps, etc.
   totalExperience      Int?
   university           String?
   countryCode          String
@@ -323,6 +329,8 @@ model Candidate {
   referralDescription  String?
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
+  preferredCountries   CandidatePreferredCountry[]
+  facilityPreferences  CandidateFacilityPreference[]
   team                 Team?                          @relation(fields: [teamId], references: [id])
   certifications       Certification[]
   documents            Document[]
@@ -343,6 +351,30 @@ model Candidate {
   @@index([currentStatusId])
   @@index([countryCode, mobileNumber])
   @@map("candidates")
+}
+
+model CandidatePreferredCountry {
+  id            String   @id @default(cuid())
+  candidateId   String
+  countryCode   String
+
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  country       Country   @relation(fields: [countryCode], references: [code])
+
+  @@unique([candidateId, countryCode])
+  @@index([candidateId])
+  @@map("candidate_preferred_countries")
+}
+
+model CandidateFacilityPreference {
+  id            String   @id @default(cuid())
+  candidateId   String
+  facilityType  String
+
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@map("candidate_facility_preferences")
 }
 
 model WorkExperience {

@@ -34,6 +34,8 @@ import QualificationWorkExperienceModal from "@/components/molecules/Qualificati
 import { ImageViewer } from "@/components/molecules";
 import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
+import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
+import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { useAppSelector } from "@/app/hooks";
 import type {
@@ -73,6 +75,12 @@ export default function CandidateDetailPage() {
 
   // Status update modal state
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+
+  // Job preference update modal state
+  const [isJobPreferenceModalOpen, setIsJobPreferenceModalOpen] = useState(false);
+
+  // Personal info update modal state
+  const [isPersonalInfoModalOpen, setIsPersonalInfoModalOpen] = useState(false);
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
@@ -300,12 +308,6 @@ export default function CandidateDetailPage() {
             )}
           </div>
         <div className="flex items-center gap-2">
-          {canWriteCandidates && (
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          )}
           {canManageCandidates && (
             <Button variant="outline" size="sm" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-2" />
@@ -377,6 +379,8 @@ export default function CandidateDetailPage() {
             canWriteCandidates={canWriteCandidates}
             openAddModal={openAddModal}
             openEditModal={openEditModal}
+            onEditJobPreferences={() => setIsJobPreferenceModalOpen(true)}
+            onEditPersonalInfo={() => setIsPersonalInfoModalOpen(true)}
           />
         </TabsContent>
 
@@ -449,6 +453,44 @@ export default function CandidateDetailPage() {
         candidateId={id!}
         currentStatus={candidate.currentStatus?.statusName ?? ""}
         candidateName={`${candidate.firstName} ${candidate.lastName}`}
+      />
+
+      {/* Job preference update modal */}
+      <UpdateJobPreferenceModal
+        isOpen={isJobPreferenceModalOpen}
+        onClose={() => setIsJobPreferenceModalOpen(false)}
+        candidateId={id!}
+        initialData={{
+          expectedMinSalary: candidate.expectedMinSalary,
+          expectedMaxSalary: candidate.expectedMaxSalary,
+          sectorType: candidate.sectorType,
+          visaType: candidate.visaType,
+          preferredCountries: candidate.preferredCountries?.map(pc => pc.country.code),
+          facilityPreferences: candidate.facilityPreferences?.map(fp => fp.facilityType),
+        }}
+      />
+
+      {/* Personal info update modal */}
+      <UpdatePersonalInfoModal
+        isOpen={isPersonalInfoModalOpen}
+        onClose={() => setIsPersonalInfoModalOpen(false)}
+        candidateId={id!}
+        initialData={{
+          firstName: candidate.firstName,
+          lastName: candidate.lastName,
+          profileImage: candidate.profileImage,
+          countryCode: candidate.countryCode,
+          mobileNumber: candidate.mobileNumber,
+          email: candidate.email,
+          source: candidate.source,
+          gender: candidate.gender,
+          dateOfBirth: candidate.dateOfBirth,
+          referralCompanyName: candidate.referralCompanyName,
+          referralEmail: candidate.referralEmail,
+          referralCountryCode: candidate.referralCountryCode,
+          referralPhone: candidate.referralPhone,
+          referralDescription: candidate.referralDescription,
+        }}
       />
 
     </div>

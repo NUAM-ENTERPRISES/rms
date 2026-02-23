@@ -22,8 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Save, ArrowLeft } from "lucide-react";
-import { CountryCodeSelect } from "@/components/molecules";
+import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase } from "lucide-react";
+import { CountryCodeSelect, MultiCountrySelect, MultiSelect } from "@/components/molecules";
 import {
   useGetCandidateByIdQuery,
   useUpdateCandidateMutation,
@@ -31,6 +31,7 @@ import {
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
 import { useCan } from "@/hooks/useCan";
+import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 
 // ==================== VALIDATION SCHEMA ====================
 
@@ -45,6 +46,26 @@ const updateCandidateSchema = z.object({
   source: z.enum(["manual", "meta", "referral"]),
   gender: z.any(),
   dateOfBirth: z.string().optional(),
+  expectedMinSalary: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0).optional().nullable()
+  ),
+  expectedMaxSalary: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0).optional().nullable()
+  ),
+  preferredCountries: z.array(z.string()).optional(),
+  facilityPreferences: z.array(z.string()).optional(),
+  sectorType: z.string().optional(),
+  visaType: z.string().optional(),
 
   referralCompanyName: z.string().optional(),
   referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -101,6 +122,12 @@ export default function EditCandidatePage() {
       source: "manual",
       gender: "" as any,
       dateOfBirth: "",
+      expectedMinSalary: undefined,
+      expectedMaxSalary: undefined,
+      preferredCountries: [],
+      facilityPreferences: [],
+      sectorType: SECTOR_TYPES.NO_PREFERENCE,
+      visaType: VISA_TYPES.NOT_APPLICABLE,
       teamId: "none",
       referralCompanyName: "",
       referralEmail: "",
@@ -154,6 +181,12 @@ export default function EditCandidatePage() {
         dateOfBirth: candidate.dateOfBirth
           ? new Date(candidate.dateOfBirth).toISOString().split("T")[0]
           : "",
+        expectedMinSalary: candidate.expectedMinSalary ?? undefined,
+        expectedMaxSalary: candidate.expectedMaxSalary ?? undefined,
+        preferredCountries: candidate.preferredCountries?.map((pc) => pc.country.code) || [],
+        facilityPreferences: candidate.facilityPreferences?.map((fp) => fp.facilityType) || [],
+        sectorType: candidate.sectorType || SECTOR_TYPES.NO_PREFERENCE,
+        visaType: candidate.visaType || VISA_TYPES.NOT_APPLICABLE,
         teamId: candidate.assignedTo || "none",
         referralCompanyName: candidate.referralCompanyName || "",
         referralEmail: candidate.referralEmail || "",
@@ -256,6 +289,24 @@ export default function EditCandidatePage() {
       }
       if (data.dateOfBirth && data.dateOfBirth.trim()) {
         payload.dateOfBirth = data.dateOfBirth;
+      }
+      if (data.expectedMinSalary !== undefined) {
+        payload.expectedMinSalary = data.expectedMinSalary;
+      }
+      if (data.expectedMaxSalary !== undefined) {
+        payload.expectedMaxSalary = data.expectedMaxSalary;
+      }
+      if (data.preferredCountries && data.preferredCountries.length > 0) {
+        payload.preferredCountries = data.preferredCountries;
+      }
+      if (data.facilityPreferences && data.facilityPreferences.length > 0) {
+        payload.facilityPreferences = data.facilityPreferences;
+      }
+      if (data.sectorType) {
+        payload.sectorType = data.sectorType;
+      }
+      if (data.visaType) {
+        payload.visaType = data.visaType;
       }
       if (data.teamId && data.teamId !== "none" && data.teamId.trim()) {
         payload.assignedTo = data.teamId;
@@ -446,6 +497,117 @@ export default function EditCandidatePage() {
                         className="h-11 pl-10 bg-white border-slate-200"
                       />
                     </div>
+                  </div>
+                  {/* Salary Range */}
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="expectedMinSalary" className="text-slate-700 font-medium">
+                      Expected Min Salary
+                    </FormLabel>
+                    <Input
+                      id="expectedMinSalary"
+                      type="number"
+                      {...form.register("expectedMinSalary", { valueAsNumber: true })}
+                      placeholder="40000"
+                      className="h-11 bg-white border-slate-200"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="expectedMaxSalary" className="text-slate-700 font-medium">
+                      Expected Max Salary
+                    </FormLabel>
+                    <Input
+                      id="expectedMaxSalary"
+                      type="number"
+                      {...form.register("expectedMaxSalary", { valueAsNumber: true })}
+                      placeholder="60000"
+                      className="h-11 bg-white border-slate-200"
+                    />
+                  </div>
+                  {/* Preferences fields */}
+                  <div className="space-y-2">
+                    <FormLabel className="text-slate-700 font-medium">
+                      Preferred Countries
+                    </FormLabel>
+                    <Controller
+                      name="preferredCountries"
+                      control={form.control}
+                      render={({ field }) => (
+                        <MultiCountrySelect
+                          placeholder="Select countries..."
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          pageSize={20}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <FormLabel className="text-slate-700 font-medium">
+                      Facility Preferences
+                    </FormLabel>
+                    <Controller
+                      name="facilityPreferences"
+                      control={form.control}
+                      render={({ field }) => (
+                        <MultiSelect
+                          placeholder="Select facility types..."
+                          options={FACILITY_TYPES.map(type => ({
+                            value: type,
+                            label: type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())
+                          }))}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  {/* Sector Type */}
+                  <div className="space-y-2">
+                    <FormLabel className="text-slate-700 font-medium">
+                      Sector Type
+                    </FormLabel>
+                    <Select
+                      value={form.watch("sectorType") || SECTOR_TYPES.PRIVATE}
+                      onValueChange={(value) =>
+                        form.setValue("sectorType", value)
+                      }
+                    >
+                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                        <SelectValue placeholder="Select sector" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(SECTOR_TYPES).map(([key, value]) => (
+                          <SelectItem key={value} value={value}>
+                            {key.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Visa Type */}
+                  <div className="space-y-2">
+                    <FormLabel className="text-slate-700 font-medium">
+                      Visa Type
+                    </FormLabel>
+                    <Select
+                      value={form.watch("visaType") || VISA_TYPES.EMPLOYMENT}
+                      onValueChange={(value) =>
+                        form.setValue("visaType", value)
+                      }
+                    >
+                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                        <SelectValue placeholder="Select visa type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(VISA_TYPES).map(([key, value]) => (
+                          <SelectItem key={value} value={value}>
+                            {key.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Gender */}

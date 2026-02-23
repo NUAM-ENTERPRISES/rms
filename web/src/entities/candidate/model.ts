@@ -15,7 +15,10 @@ export interface Candidate {
   experience?: number;
   skills: string[];
   currentEmployer?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
@@ -72,7 +75,10 @@ export interface CreateCandidateRequest {
   experience?: number;
   skills?: string[];
   currentEmployer?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
   assignedTo?: string;
 
   // Optional referral data
@@ -92,7 +98,10 @@ export interface UpdateCandidateRequest {
   experience?: number;
   skills?: string[];
   currentEmployer?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
   assignedTo?: string;
 
   // Optional referral updates

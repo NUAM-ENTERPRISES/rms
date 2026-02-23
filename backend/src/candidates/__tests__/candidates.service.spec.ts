@@ -67,7 +67,10 @@ describe('CandidatesService', () => {
       experience: 5,
       skills: '["Nursing", "Patient Care"]',
       currentEmployer: 'City Hospital',
-      expectedSalary: 50000,
+      expectedMinSalary: 40000,
+      expectedMaxSalary: 60000,
+      preferredCountries: ['AE', 'KW'],
+      facilityPreferences: ['clinic', 'home_care'],
       teamId: 'team123',
     };
 
@@ -102,7 +105,8 @@ describe('CandidatesService', () => {
           experience: 5,
           skills: ['Nursing', 'Patient Care'],
           currentEmployer: 'City Hospital',
-          expectedSalary: 50000,
+          expectedMinSalary: 40000,
+          expectedMaxSalary: 60000,
           assignedTo: 'user123',
           teamId: 'team123',
         },

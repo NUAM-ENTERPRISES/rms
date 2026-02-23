@@ -36,6 +36,8 @@ interface CandidateOverviewProps {
     type: "qualification" | "workExperience",
     data: CandidateQualification | WorkExperience
   ) => void;
+  onEditJobPreferences?: () => void;
+  onEditPersonalInfo?: () => void;
 }
 
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
@@ -43,6 +45,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   canWriteCandidates,
   openAddModal,
   openEditModal,
+  onEditJobPreferences,
+  onEditPersonalInfo,
 }) => {
   const age = getAge(candidate.dateOfBirth);
 
@@ -52,10 +56,23 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
         {/* Candidate Information */}
         <Card className="xl:col-span-2 border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
           <CardHeader className="border-b border-gray-300 px-6 py-4">
-            <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 select-none">
-              <User className="h-6 w-6 text-blue-600" />
-              Candidate Information
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 select-none">
+                <User className="h-6 w-6 text-blue-600" />
+                Candidate Information
+              </CardTitle>
+              {canWriteCandidates && onEditPersonalInfo && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onEditPersonalInfo}
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1.5 h-8"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="max-w-4xl mx-auto">
@@ -149,12 +166,18 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Expected Salary
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <DollarSign className="h-3 w-3 text-slate-400" />
-                    {candidate.expectedSalary
+                  <div className="text-sm flex items-center gap-2 mt-1 font-medium text-blue-700">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    {candidate.expectedMinSalary !== undefined
+                      ? `${formatCurrency(candidate.expectedMinSalary)}${
+                          candidate.expectedMaxSalary
+                            ? ` - ${formatCurrency(candidate.expectedMaxSalary)}`
+                            : ""
+                        }`
+                      : candidate.expectedSalary
                       ? formatCurrency(candidate.expectedSalary)
                       : "N/A"}
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
@@ -247,6 +270,99 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Job Preferences Section */}
+              <div className="mt-8 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                    <Briefcase className="h-5 w-5 text-indigo-600" />
+                    Job Preferences
+                  </h3>
+                  {canWriteCandidates && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onEditJobPreferences}
+                      className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5 h-8"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Sector Type
+                    </label>
+                    <Badge
+                      variant="outline"
+                      className="text-slate-700 border-slate-300"
+                    >
+                      {candidate.sectorType
+                        ? candidate.sectorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                        : "Not specified"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Visa Type
+                    </label>
+                    <Badge
+                      variant="outline"
+                      className="text-slate-700 border-slate-300"
+                    >
+                      {candidate.visaType
+                        ? candidate.visaType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                        : "Not specified"}
+                    </Badge>
+                  </div>
+                  <div className="lg:col-span-1">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Preferred Countries
+                    </label>
+                    <div className="flex flex-wrap gap-1">
+                      {candidate.preferredCountries &&
+                      candidate.preferredCountries.length > 0 ? (
+                        candidate.preferredCountries.map((pc, idx) => (
+                          <Badge
+                            key={idx}
+                            className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"
+                          >
+                            {pc.country.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-sm text-slate-400 italic">
+                          None specified
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="lg:col-span-1">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Facility Preferences
+                    </label>
+                    <div className="flex flex-wrap gap-1">
+                      {candidate.facilityPreferences &&
+                      candidate.facilityPreferences.length > 0 ? (
+                        candidate.facilityPreferences.map((fp, idx) => (
+                          <Badge
+                            key={idx}
+                            className="bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100"
+                          >
+                            {fp.facilityType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-sm text-slate-400 italic">
+                          None specified
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Educational Qualifications & Work Experience - Integrated Side by Side */}
               <div className="mt-8 pt-6 border-t border-slate-200">

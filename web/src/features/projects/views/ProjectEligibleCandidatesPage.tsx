@@ -59,7 +59,8 @@ const mockEligibleCandidates = [
     experience: 5,
     skills: ["Nursing", "ICU", "Emergency Care", "Patient Care"],
     currentEmployer: "City Hospital",
-    expectedSalary: 75000,
+    expectedMinSalary: 70000,
+    expectedMaxSalary: 80000,
     location: "New York, NY",
     availability: "immediate",
     matchScore: 95,
@@ -74,7 +75,8 @@ const mockEligibleCandidates = [
     experience: 8,
     skills: ["Nursing", "Surgery", "Anesthesia", "Critical Care"],
     currentEmployer: "Regional Medical Center",
-    expectedSalary: 85000,
+    expectedMinSalary: 80000,
+    expectedMaxSalary: 90000,
     location: "Los Angeles, CA",
     availability: "2_weeks",
     matchScore: 88,
@@ -89,7 +91,8 @@ const mockEligibleCandidates = [
     experience: 3,
     skills: ["Nursing", "Pediatrics", "Family Care"],
     currentEmployer: "Children's Hospital",
-    expectedSalary: 65000,
+    expectedMinSalary: 60000,
+    expectedMaxSalary: 70000,
     location: "Chicago, IL",
     availability: "1_month",
     matchScore: 82,
@@ -104,7 +107,8 @@ const mockEligibleCandidates = [
     experience: 12,
     skills: ["Nursing", "ICU", "Emergency Care", "Leadership", "Training"],
     currentEmployer: "University Hospital",
-    expectedSalary: 95000,
+    expectedMinSalary: 90000,
+    expectedMaxSalary: 100000,
     location: "Boston, MA",
     availability: "immediate",
     matchScore: 92,
@@ -195,7 +199,7 @@ export default function ProjectEligibleCandidatesPage() {
         case "name":
           return a.name.localeCompare(b.name);
         case "salary":
-          return (b.expectedSalary || 0) - (a.expectedSalary || 0);
+          return (b.expectedMinSalary || 0) - (a.expectedMinSalary || 0);
         default:
           return 0;
       }
@@ -519,11 +523,11 @@ export default function ProjectEligibleCandidatesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {candidate.expectedSalary ? (
+                        {candidate.expectedMinSalary ? (
                           <div className="flex items-center space-x-1">
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">
-                              ${candidate.expectedSalary.toLocaleString()}
+                              ${candidate.expectedMinSalary?.toLocaleString()} - ${candidate.expectedMaxSalary?.toLocaleString()}
                             </span>
                           </div>
                         ) : (

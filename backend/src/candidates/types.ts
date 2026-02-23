@@ -58,6 +58,8 @@ export interface CandidateWithRelations extends Candidate {
   qualifications: (CandidateQualification & {
     qualification: Qualification;
   })[];
+  preferredCountries?: { countryCode: string }[];
+  facilityPreferences?: { facilityType: string }[];
   documents?: any[];
 }
 

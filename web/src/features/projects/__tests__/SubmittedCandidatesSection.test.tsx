@@ -23,7 +23,10 @@ vi.mock("../api", () => {
             mobileNumber: "7865565445",
             experience: 4,
             skills: [],
-            expectedSalary: null,
+            expectedMinSalary: null,
+            expectedMaxSalary: null,
+            preferredCountries: [],
+            facilityPreferences: [],
             team: null,
             currentStatus: {
               id: 1,

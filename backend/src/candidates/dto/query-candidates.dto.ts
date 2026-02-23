@@ -186,7 +186,7 @@ export class QueryCandidatesDto {
       'name',
       'currentStatus',
       'experience',
-      'expectedSalary',
+      'expectedMinSalary',
     ],
     example: 'createdAt',
   })
@@ -197,7 +197,7 @@ export class QueryCandidatesDto {
     'name',
     'currentStatus',
     'experience',
-    'expectedSalary',
+    'expectedMinSalary',
   ])
   sortBy?: string = 'createdAt';
 

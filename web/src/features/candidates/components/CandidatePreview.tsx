@@ -19,6 +19,7 @@ import {
   MapPin,
   CheckCircle,
   X,
+  Edit2,
 } from "lucide-react";
 
 interface CandidatePreviewProps {
@@ -41,9 +42,16 @@ interface CandidatePreviewProps {
     gpa?: number;
     qualifications?: any[];
     workExperiences?: any[];
+    expectedMinSalary?: number;
+    expectedMaxSalary?: number;
+    preferredCountries?: string[];
+    facilityPreferences?: string[];
+    sectorType?: string;
+    visaType?: string;
   };
   onConfirm: () => void;
   onCancel: () => void;
+  onEditStep?: (step: number) => void;
   isLoading?: boolean;
 }
 
@@ -51,6 +59,7 @@ export default function CandidatePreview({
   candidateData,
   onConfirm,
   onCancel,
+  onEditStep,
   isLoading = false,
 }: CandidatePreviewProps) {
   const formatDate = (dateString: string) => {
@@ -78,12 +87,25 @@ export default function CandidatePreview({
 
       <div className="space-y-8 overflow-y-auto max-h-[calc(95vh-130px)] px-6 pb-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
         {/* Personal Information */}
-        <Card className="border border-slate-300 rounded-md shadow-sm bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 px-4 py-3 border-b border-slate-200">
-              <User className="h-5 w-5 text-blue-600" />
-              Personal Information
-            </CardTitle>
+        <Card className="border border-slate-300 rounded-md shadow-sm bg-white overflow-hidden">
+          <CardHeader className="p-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 border-0 p-0">
+                <User className="h-5 w-5 text-blue-600" />
+                Personal Information
+              </CardTitle>
+              {onEditStep && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => onEditStep(1)}
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Edit</span>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -187,6 +209,109 @@ export default function CandidatePreview({
           </CardContent>
         </Card>
 
+        {/* Job Preferences */}
+        <Card className="border border-slate-300 rounded-md shadow-sm bg-white overflow-hidden">
+          <CardHeader className="p-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 border-0 p-0">
+                <Briefcase className="h-5 w-5 text-blue-600" />
+                Job Preferences
+              </CardTitle>
+              {onEditStep && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => onEditStep(2)}
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Edit</span>
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Expected Salary Range
+                </label>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {candidateData.expectedMinSalary !== undefined ? `$${candidateData.expectedMinSalary.toLocaleString()}` : "N/A"}
+                  {candidateData.expectedMaxSalary
+                    ? ` - $${candidateData.expectedMaxSalary.toLocaleString()}`
+                    : ""}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Sector Type
+                </label>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {candidateData.sectorType
+                    ? candidateData.sectorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                    : "Not specified"}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Visa Type
+                </label>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {candidateData.visaType
+                    ? candidateData.visaType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                    : "Not specified"}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 pt-4 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
+                  Preferred Countries
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {candidateData.preferredCountries &&
+                  candidateData.preferredCountries.length > 0 ? (
+                    candidateData.preferredCountries.map((country, idx) => (
+                      <Badge
+                        key={idx}
+                        variant="secondary"
+                        className="bg-blue-50 text-blue-700 border-blue-100"
+                      >
+                        {country}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-400">None selected</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
+                  Facility Preferences
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {candidateData.facilityPreferences &&
+                  candidateData.facilityPreferences.length > 0 ? (
+                    candidateData.facilityPreferences.map((facility, idx) => (
+                      <Badge
+                        key={idx}
+                        variant="secondary"
+                        className="bg-indigo-50 text-indigo-700 border-indigo-100"
+                      >
+                        {facility.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-400">None selected</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Educational Qualifications */}
         {((candidateData.qualifications &&
           candidateData.qualifications.length > 0) ||
@@ -194,12 +319,25 @@ export default function CandidatePreview({
           candidateData.university ||
           candidateData.graduationYear ||
           candidateData.gpa) && (
-          <Card className="border border-slate-300 rounded-md shadow-sm bg-white">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 px-4 py-3 border-b border-slate-200">
-                <GraduationCap className="h-5 w-5 text-blue-600" />
-                Educational Qualifications
-              </CardTitle>
+          <Card className="border border-slate-300 rounded-md shadow-sm bg-white overflow-hidden">
+            <CardHeader className="p-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 border-0 p-0">
+                  <GraduationCap className="h-5 w-5 text-blue-600" />
+                  Educational Qualifications
+                </CardTitle>
+                {onEditStep && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => onEditStep(3)}
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Edit</span>
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
               {candidateData.qualifications &&
@@ -322,12 +460,25 @@ export default function CandidatePreview({
         {/* Work Experience */}
         {candidateData.workExperiences &&
           candidateData.workExperiences.length > 0 && (
-            <Card className="border border-slate-300 rounded-md shadow-sm bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 px-4 py-3 border-b border-slate-200">
-                  <Briefcase className="h-5 w-5 text-blue-600" />
-                  Work Experience ({candidateData.workExperiences.length} entries)
-                </CardTitle>
+            <Card className="border border-slate-300 rounded-md shadow-sm bg-white overflow-hidden">
+              <CardHeader className="p-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 border-0 p-0">
+                    <Briefcase className="h-5 w-5 text-blue-600" />
+                    Work Experience ({candidateData.workExperiences.length} entries)
+                  </CardTitle>
+                  {onEditStep && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => onEditStep(4)}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      <span className="text-xs font-bold uppercase tracking-wider">Edit</span>
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4">
                 {candidateData.workExperiences.map((experience, index) => (

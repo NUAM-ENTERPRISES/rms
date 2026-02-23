@@ -9,3 +9,4 @@
 export * from './statuses';
 export * from './document-types';
 export * from './permissions';
+export * from './candidate-constants';

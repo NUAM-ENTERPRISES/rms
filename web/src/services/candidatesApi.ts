@@ -11,7 +11,10 @@ interface Candidate {
   experience?: number;
   skills: string[];
   currentEmployer?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
@@ -67,7 +70,10 @@ interface CreateCandidateRequest {
   experience?: number;
   skills?: string[];
   currentEmployer?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string;
@@ -86,7 +92,10 @@ interface UpdateCandidateRequest {
   experience?: number;
   skills?: string[];
   currentEmployer?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string | null;

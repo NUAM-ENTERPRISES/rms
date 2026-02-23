@@ -217,7 +217,10 @@ export class CandidatesService {
         currentSalary: createCandidateDto.currentSalary,
         currentEmployer: createCandidateDto.currentEmployer,
         currentRole: createCandidateDto.currentRole,
-        expectedSalary: createCandidateDto.expectedSalary,
+        expectedMinSalary: createCandidateDto.expectedMinSalary,
+        expectedMaxSalary: createCandidateDto.expectedMaxSalary,
+        sectorType: createCandidateDto.sectorType,
+        visaType: createCandidateDto.visaType,
         highestEducation: createCandidateDto.highestEducation,
         university: createCandidateDto.university,
         graduationYear: createCandidateDto.graduationYear,
@@ -229,6 +232,22 @@ export class CandidatesService {
           : [],
         // Note: assignedTo field has been removed - all assignments tracked via CandidateProjects
         teamId: createCandidateDto.teamId,
+        // Handle multiple preferred countries
+        preferredCountries: createCandidateDto.preferredCountries
+          ? {
+            create: createCandidateDto.preferredCountries.map((code) => ({
+              country: { connect: { code } },
+            })),
+          }
+          : undefined,
+        // Handle multiple facility preferences
+        facilityPreferences: createCandidateDto.facilityPreferences
+          ? {
+            create: createCandidateDto.facilityPreferences.map((facilityType) => ({
+              facilityType,
+            })),
+          }
+          : undefined,
         // Handle multiple qualifications
         qualifications: createCandidateDto.qualifications
           ? {
@@ -462,12 +481,12 @@ export class CandidatesService {
     }
 
     if (minSalary !== undefined || maxSalary !== undefined) {
-      where.expectedSalary = {};
+      where.expectedMinSalary = {};
       if (minSalary !== undefined) {
-        where.expectedSalary.gte = minSalary;
+        where.expectedMinSalary.gte = minSalary;
       }
       if (maxSalary !== undefined) {
-        where.expectedSalary.lte = maxSalary;
+        where.expectedMinSalary.lte = maxSalary;
       }
     }
 
@@ -1006,6 +1025,12 @@ export class CandidatesService {
             qualification: true,
           },
         },
+        preferredCountries: {
+          include: {
+            country: true,
+          },
+        },
+        facilityPreferences: true,
       },
     });
 
@@ -1129,8 +1154,14 @@ export class CandidatesService {
       updateData.currentEmployer = updateCandidateDto.currentEmployer;
     if (updateCandidateDto.currentRole)
       updateData.currentRole = updateCandidateDto.currentRole;
-    if (updateCandidateDto.expectedSalary !== undefined)
-      updateData.expectedSalary = updateCandidateDto.expectedSalary;
+    if (updateCandidateDto.expectedMinSalary !== undefined)
+      updateData.expectedMinSalary = updateCandidateDto.expectedMinSalary;
+    if (updateCandidateDto.expectedMaxSalary !== undefined)
+      updateData.expectedMaxSalary = updateCandidateDto.expectedMaxSalary;
+    if (updateCandidateDto.sectorType !== undefined)
+      updateData.sectorType = updateCandidateDto.sectorType;
+    if (updateCandidateDto.visaType !== undefined)
+      updateData.visaType = updateCandidateDto.visaType;
     if (updateCandidateDto.highestEducation)
       updateData.highestEducation = updateCandidateDto.highestEducation;
     if (updateCandidateDto.university)
@@ -1143,6 +1174,23 @@ export class CandidatesService {
       updateData.skills = JSON.parse(updateCandidateDto.skills);
     if (updateCandidateDto.teamId !== undefined)
       updateData.teamId = updateCandidateDto.teamId;
+
+    if (updateCandidateDto.preferredCountries) {
+      updateData.preferredCountries = {
+        deleteMany: {},
+        create: updateCandidateDto.preferredCountries.map((code) => ({
+          country: { connect: { code } },
+        })),
+      };
+    }
+    if (updateCandidateDto.facilityPreferences) {
+      updateData.facilityPreferences = {
+        deleteMany: {},
+        create: updateCandidateDto.facilityPreferences.map((facilityType) => ({
+          facilityType,
+        })),
+      };
+    }
 
     // Update candidate
     const candidate = await this.prisma.candidate.update({
@@ -1738,11 +1786,11 @@ export class CandidatesService {
     const experienceStats = await this.prisma.candidate.aggregate({
       _avg: {
         experience: true,
-        expectedSalary: true,
+        expectedMinSalary: true,
       },
       where: {
         experience: { not: null },
-        expectedSalary: { not: null },
+        expectedMinSalary: { not: null },
       },
     });
 
@@ -1757,7 +1805,7 @@ export class CandidatesService {
       candidatesBySource,
       candidatesByTeam,
       averageExperience: experienceStats._avg.experience || 0,
-      averageExpectedSalary: experienceStats._avg.expectedSalary || 0,
+      averageExpectedSalary: experienceStats._avg.expectedMinSalary || 0,
     };
   }
 

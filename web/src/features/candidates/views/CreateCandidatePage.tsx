@@ -26,9 +26,11 @@ import type { CandidateQualification } from "@/components/molecules/CandidateQua
 import CandidateCreationStepper from "../components/CandidateCreationStepper";
 import {
   PersonalInformationStep,
+  JobPreferenceStep,
   EducationalQualificationStep,
   WorkExperienceStep,
 } from "../components/steps";
+import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 
 // ==================== VALIDATION SCHEMA ====================
 
@@ -50,6 +52,26 @@ const createCandidateSchema = z.object({
   source: z.enum(["manual", "meta", "referral"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
+  expectedMinSalary: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0).optional().nullable()
+  ),
+  expectedMaxSalary: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().min(0).optional().nullable()
+  ),
+  preferredCountries: z.array(z.string()).optional(),
+  facilityPreferences: z.array(z.string()).optional(),
+  sectorType: z.string().optional(),
+  visaType: z.string().optional(),
 
   // Referral Fields
   referralCompanyName: z.string().optional(),
@@ -116,17 +138,22 @@ const STEPS = [
   {
     id: 1,
     title: "Personal Info",
-    description: "Basic candidate information",
+    description: "Basic information",
   },
   {
     id: 2,
-    title: "Education",
-    description: "Educational qualifications",
+    title: "Job Preference",
+    description: "Salary & work preferences",
   },
   {
     id: 3,
+    title: "Education",
+    description: "Qualifications",
+  },
+  {
+    id: 4,
     title: "Experience",
-    description: "Work experience (optional)",
+    description: "Work history (optional)",
   },
 ];
 
@@ -188,6 +215,10 @@ export default function CreateCandidatePage() {
       graduationYear: undefined,
       gpa: undefined,
       qualifications: [],
+      sectorType: SECTOR_TYPES.NO_PREFERENCE,
+      visaType: VISA_TYPES.NOT_APPLICABLE,
+      preferredCountries: [],
+      facilityPreferences: [],
     },
   });
 
@@ -240,16 +271,38 @@ export default function CreateCandidatePage() {
     return false;
   };
 
+  const validateStep2 = async () => {
+    const step2Fields = [
+      "expectedMinSalary",
+      "expectedMaxSalary",
+      "preferredCountries",
+      "facilityPreferences",
+      "sectorType",
+      "visaType"
+    ];
+    const isValid = await form.trigger(step2Fields as any);
+    
+    if (isValid) {
+      if (!completedSteps.includes(2)) {
+        setCompletedSteps([...completedSteps, 2]);
+      }
+      return true;
+    }
+    return false;
+  };
+
   const handleNextStep = async () => {
     let canProceed = false;
 
     if (currentStep === 1) {
       canProceed = await validateStep1();
     } else if (currentStep === 2) {
+      canProceed = await validateStep2();
+    } else if (currentStep === 3) {
       // Educational qualifications are optional, so we can always proceed
       canProceed = true;
-      if (!completedSteps.includes(2)) {
-        setCompletedSteps([...completedSteps, 2]);
+      if (!completedSteps.includes(3)) {
+        setCompletedSteps([...completedSteps, 3]);
       }
     }
 
@@ -295,6 +348,18 @@ export default function CreateCandidatePage() {
         if (data.referralDescription) payload.referralDescription = data.referralDescription;
       }
 
+      // Preference fields
+      if (data.expectedMinSalary !== undefined) payload.expectedMinSalary = data.expectedMinSalary;
+      if (data.expectedMaxSalary !== undefined) payload.expectedMaxSalary = data.expectedMaxSalary;
+      if (data.sectorType) payload.sectorType = data.sectorType;
+      if (data.visaType) payload.visaType = data.visaType;
+      if (data.preferredCountries && data.preferredCountries.length > 0) {
+        payload.preferredCountries = data.preferredCountries;
+      }
+      if (data.facilityPreferences && data.facilityPreferences.length > 0) {
+        payload.facilityPreferences = data.facilityPreferences;
+      }
+
       // Educational qualifications (legacy fields)
       if (data.highestEducation && data.highestEducation.trim()) {
         payload.highestEducation = data.highestEducation;
@@ -307,6 +372,19 @@ export default function CreateCandidatePage() {
       }
       if (data.gpa && data.gpa > 0) {
         payload.gpa = data.gpa;
+      }
+      // salary range & preferences
+      if (data.expectedMinSalary !== undefined) {
+        payload.expectedMinSalary = data.expectedMinSalary;
+      }
+      if (data.expectedMaxSalary !== undefined) {
+        payload.expectedMaxSalary = data.expectedMaxSalary;
+      }
+      if (data.preferredCountries && data.preferredCountries.length > 0) {
+        payload.preferredCountries = data.preferredCountries;
+      }
+      if (data.facilityPreferences && data.facilityPreferences.length > 0) {
+        payload.facilityPreferences = data.facilityPreferences;
       }
 
       // Multiple qualifications
@@ -406,12 +484,20 @@ export default function CreateCandidatePage() {
         );
       case 2:
         return (
+          <JobPreferenceStep
+            control={form.control}
+            errors={form.formState.errors}
+            isLoading={isLoading}
+          />
+        );
+      case 3:
+        return (
           <EducationalQualificationStep
             qualifications={qualifications}
             setQualifications={setQualifications}
           />
         );
-      case 3:
+      case 4:
         return (
           <WorkExperienceStep
             workExperiences={workExperiences}
@@ -540,9 +626,19 @@ export default function CreateCandidatePage() {
         gpa: form.getValues("gpa"),
         qualifications,
         workExperiences,
+        expectedMinSalary: form.getValues("expectedMinSalary"),
+        expectedMaxSalary: form.getValues("expectedMaxSalary"),
+        preferredCountries: form.getValues("preferredCountries"),
+        facilityPreferences: form.getValues("facilityPreferences"),
+        sectorType: form.getValues("sectorType"),
+        visaType: form.getValues("visaType"),
       }}
       onConfirm={handlePreviewConfirm}
       onCancel={handlePreviewCancel}
+      onEditStep={(step) => {
+        setCurrentStep(step);
+        setShowPreview(false);
+      }}
       isLoading={isLoading || uploadingImage}
     />
   )}

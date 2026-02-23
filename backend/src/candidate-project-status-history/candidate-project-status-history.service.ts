@@ -37,7 +37,10 @@ export class CandidateProjectStatusHistoryService {
               }
             },
             experience: true,
-            expectedSalary: true,
+            expectedMinSalary: true,
+            expectedMaxSalary: true,
+            sectorType: true,
+            visaType: true,
             currentEmployer: true,
             currentRole: true,
             graduationYear: true,

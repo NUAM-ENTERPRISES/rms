@@ -203,14 +203,58 @@ export class CreateCandidateDto {
   currentRole?: string;
 
   @ApiPropertyOptional({
-    description: 'Expected salary in currency units',
+    description: 'Expected minimum salary in currency units',
     example: 50000,
     minimum: 0,
   })
   @IsOptional()
   @IsInt()
   @Min(0)
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+
+  @ApiPropertyOptional({
+    description: 'Expected maximum salary in currency units',
+    example: 80000,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  expectedMaxSalary?: number;
+
+  @ApiPropertyOptional({
+    description: 'Sector type (private/government)',
+    example: 'private',
+  })
+  @IsOptional()
+  @IsString()
+  sectorType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Type of visa currently held or required',
+    example: 'employment',
+  })
+  @IsOptional()
+  @IsString()
+  visaType?: string;
+
+  @ApiPropertyOptional({
+    description: 'List of preferred countries (country codes)',
+    example: ['SA', 'AE', 'QA'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredCountries?: string[];
+
+  @ApiPropertyOptional({
+    description: 'List of preferred facility types',
+    example: ['general_hospital', 'clinic'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  facilityPreferences?: string[];
 
   // Educational Qualifications
   @ApiPropertyOptional({

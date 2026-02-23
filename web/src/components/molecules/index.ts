@@ -3,6 +3,8 @@ export * from "./domain";
 
 // Shared molecules
 export { default as CountrySelect } from "./CountrySelect";
+export { default as MultiCountrySelect } from "./MultiCountrySelect";
+export { default as MultiSelect } from "./MultiSelect";
 export { CountryCodeSelect } from "./CountryCodeSelect";
 export { DatePicker } from "./DatePicker";
 export { RoleSelect } from "./RoleSelect";

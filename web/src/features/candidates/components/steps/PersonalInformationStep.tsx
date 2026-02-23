@@ -55,6 +55,7 @@ interface PersonalInformationStepProps {
 export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = ({
   control,
   errors,
+  selectedImage,
   setSelectedImage,
   uploadingImage,
   isLoading,

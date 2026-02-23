@@ -50,7 +50,22 @@ export interface Candidate {
   currentSalary?: number;
   currentEmployer?: string;
   currentRole?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  expectedSalary?: number; // Legacy field
+  preferredCountries?: Array<{
+    country: {
+      id: string;
+      name: string;
+      code: string;
+    };
+  }>;
+  facilityPreferences?: Array<{
+    id: string;
+    facilityType: string;
+  }>;
+  sectorType?: string;
+  visaType?: string;
 
   // New fields for better contact management
   countryCode?: string;
@@ -367,7 +382,13 @@ export interface CreateCandidateRequest {
   currentSalary?: number;
   currentEmployer?: string;
   currentRole?: string;
-  expectedSalary?: number;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  expectedSalary?: number; // Legacy
+  sectorType?: string;
+  visaType?: string;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
   highestEducation?: string;
   university?: string;
   graduationYear?: number;
@@ -399,15 +420,31 @@ export interface CreateCandidateRequest {
 
 export interface UpdateCandidateRequest {
   id: string;
-  name?: string;
-  contact?: string;
+  firstName?: string;
+  lastName?: string;
+  countryCode?: string;
+  mobileNumber?: string;
   email?: string;
-  currentStatus?: string;
-  experience?: number;
-  skills?: string[];
+  source?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  currentStatusId?: number;
+  totalExperience?: number;
+  currentSalary?: number;
   currentEmployer?: string;
-  expectedSalary?: number;
-  assignedTo?: string;
+  currentRole?: string;
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  sectorType?: string;
+  visaType?: string;
+  preferredCountries?: string[];
+  facilityPreferences?: string[];
+  highestEducation?: string;
+  university?: string;
+  graduationYear?: number;
+  gpa?: number;
+  skills?: string;
+  teamId?: string;
 }
 
 export interface UpdateCandidateStatusRequest {
