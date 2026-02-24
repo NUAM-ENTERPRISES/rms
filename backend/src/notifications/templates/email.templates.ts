@@ -121,7 +121,9 @@ export class EmailTemplates {
     <div class="outer-wrapper">
         <div class="container">
             <div class="header">
+                <!-- logo temporarily hidden
                 <img src="cid:logo" alt="RMS" class="logo-img">
+                -->
                 <h1 class="main-title">Candidate profile for your review</h1>
             </div>
             
@@ -158,7 +160,7 @@ export class EmailTemplates {
                 
                 <p style="margin-top: 32px;">
                     Cheers,<br>
-                    <strong>Global Recruitment Team</strong>
+                    <strong>Global Nuam Team</strong>
                 </p>
             </div>
             
