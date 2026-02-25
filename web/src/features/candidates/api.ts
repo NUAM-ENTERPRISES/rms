@@ -67,6 +67,16 @@ export interface Candidate {
   sectorType?: string;
   visaType?: string;
 
+  // Physical / personal attributes
+  height?: number;
+  weight?: number;
+  skinTone?: string;
+  languageProficiency?: string;
+  smartness?: string;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
+
   // New fields for better contact management
   countryCode?: string;
   mobileNumber?: string;

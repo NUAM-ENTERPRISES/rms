@@ -15,10 +15,12 @@ export const formatDate = (dateString?: string) => {
   });
 };
 
-export const formatCurrency = (amount?: number) => {
-  if (!amount) return "N/A";
-  return new Intl.NumberFormat("en-US", {
+export const formatCurrency = (amount?: number, currency: string = "INR") => {
+  if (amount == null) return "N/A";
+  // Use locale appropriate for rupee when currency is INR
+  const locale = currency === "INR" ? "en-IN" : "en-US";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency,
   }).format(amount);
 };
