@@ -3267,18 +3267,30 @@ export class DocumentsService {
     }
 
     // 3. Filter to keep only the latest document per docType (to avoid duplicates if any)
-    const latestDocsMap = new Map<string, any>();
-    for (const v of verifications) {
-      const type = v.document.docType;
-      if (
-        !latestDocsMap.has(type) ||
-        new Date(v.document.createdAt) > new Date(latestDocsMap.get(type).document.createdAt)
-      ) {
         latestDocsMap.set(type, v);
-      }
-    }
+    let docsToMerge: any[];
 
-    const docsToMerge = Array.from(latestDocsMap.values());
+    // 3. Reorder documents if documentIds are provided, otherwise use latest per type
+    if (orderedDocumentIds && orderedDocumentIds.length > 0) {
+      // Create a map for quick lookup
+      const vMap = new Map(verifications.map(v => [v.documentId, v]));
+      
+      // Order them based on the provided list
+        .map(id => vMap.get(id))
+        .filter(v => !!v);
+    } else {
+      // Filter to keep only the latest document per docType (to avoid duplicates if any)
+      const latestDocsMap = new Map<string, any>();
+      for (const v of verifications) {
+        const type = v.document.docType;
+          !latestDocsMap.has(type) ||
+          new Date(v.document.createdAt) > new Date(latestDocsMap.get(type).document.createdAt)
+        ) {
+          latestDocsMap.set(type, v);
+        }
+      }
+      docsToMerge = Array.from(latestDocsMap.values());
+    }
 
     const mergedPdf = await PDFDocument.create();
 
