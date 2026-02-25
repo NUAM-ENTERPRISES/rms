@@ -381,7 +381,7 @@ model CandidatePreferredCountry {
 
 model CandidateFacilityPreference {
   id            String   @id @default(cuid())
-_  candidateId   String
+ candidateId   String
   facilityType  String
 
   candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
