@@ -3226,6 +3226,7 @@ export class DocumentsService {
     projectId: string,
     roleCatalogId?: string,
     candidateProjectMapId?: string,
+    orderedDocumentIds?: string[],
   ): Promise<Buffer> {
     // 1. Find the candidate project mapping first to ensure it's valid
     const cpMap = await this.prisma.candidateProjects.findFirst({
@@ -3266,8 +3267,6 @@ export class DocumentsService {
       throw new NotFoundException('No verified documents found for this candidate nomination.');
     }
 
-    // 3. Filter to keep only the latest document per docType (to avoid duplicates if any)
-        latestDocsMap.set(type, v);
     let docsToMerge: any[];
 
     // 3. Reorder documents if documentIds are provided, otherwise use latest per type
@@ -3276,6 +3275,7 @@ export class DocumentsService {
       const vMap = new Map(verifications.map(v => [v.documentId, v]));
       
       // Order them based on the provided list
+      docsToMerge = orderedDocumentIds
         .map(id => vMap.get(id))
         .filter(v => !!v);
     } else {
@@ -3283,6 +3283,7 @@ export class DocumentsService {
       const latestDocsMap = new Map<string, any>();
       for (const v of verifications) {
         const type = v.document.docType;
+        if (
           !latestDocsMap.has(type) ||
           new Date(v.document.createdAt) > new Date(latestDocsMap.get(type).document.createdAt)
         ) {
