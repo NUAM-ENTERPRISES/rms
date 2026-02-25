@@ -68,6 +68,7 @@ import {
   useVerifyDocumentMutation,
   useCreateDocumentMutation,
   useRequestResubmissionMutation,
+  useReuploadDocumentMutation,
 } from "@/features/documents";
 import { useGetProjectQuery } from "@/features/projects";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
@@ -119,6 +120,8 @@ export default function CandidateDocumentVerificationPage() {
   const [isResubmitDialogOpen, setIsResubmitDialogOpen] = useState(false);
   const [resubmitReason, setResubmitReason] = useState("");
   const [selectedResubmitVerification, setSelectedResubmitVerification] = useState<any>(null);
+  const [isReuploadMode, setIsReuploadMode] = useState(false);
+  const [reuploadDocId, setReuploadDocId] = useState<string | null>(null);
 
   // PDF Viewer state
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
@@ -204,6 +207,8 @@ export default function CandidateDocumentVerificationPage() {
     useCreateDocumentMutation();
   const [requestResubmission, { isLoading: isRequestingResubmission }] =
     useRequestResubmissionMutation();
+  const [reuploadDocument, { isLoading: isReuploading }] =
+    useReuploadDocumentMutation();
 
     // Project-related refetch helpers so we can trigger live updates elsewhere
     const { refetch: refetchProject } = useGetProjectQuery(selectedProject?.project?.id || "", {
@@ -241,6 +246,7 @@ export default function CandidateDocumentVerificationPage() {
 
   // Source of truth for candidate-project mapping ID
   const candidateProjectMapId = 
+    requirementsData?.data?.candidateProject?.id ||
     summary.candidateProjectMapId || 
     selectedProject?.id || 
     candidateProjectMapping?.id ||
@@ -465,27 +471,44 @@ export default function CandidateDocumentVerificationPage() {
         return;
       }
 
-      const documentData = await createDocument({
-        candidateId: candidateId!,
-        docType: uploadDocType,
-        fileName,
-        fileUrl,
-        fileSize,
-        mimeType,
-        roleCatalogId: uploadDocType.toLowerCase() === "resume" ? (selectedProject?.roleNeeded?.roleCatalog?.id || "") : undefined,
-      }).unwrap();
+      if (isReuploadMode && reuploadDocId) {
+        // Handle Reupload versioning logic
+        await reuploadDocument({
+          documentId: reuploadDocId,
+          candidateProjectMapId: candidateProjectMapId || "",
+          fileName,
+          fileUrl,
+          fileSize,
+          mimeType,
+        }).unwrap();
+        toast.success("Document re-uploaded successfully!");
+      } else {
+        // Step 2: Create Document record in database
+        const documentData = await createDocument({
+          candidateId: candidateId!,
+          docType: uploadDocType,
+          fileName,
+          fileUrl,
+          fileSize,
+          mimeType,
+          roleCatalogId: uploadDocType.toLowerCase() === "resume" ? (selectedProject?.roleNeeded?.roleCatalog?.id || "") : undefined,
+        }).unwrap();
 
-      // Step 3: Link the document to the current project
-      await reuseDocument({
-        documentId: documentData.data.id,
-        projectId: selectedProjectId,
-        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
-      }).unwrap();
+        // Step 3: Link the document to the current project
+        await reuseDocument({
+          documentId: documentData.data.id,
+          projectId: selectedProjectId,
+          roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
+        }).unwrap();
 
-      toast.success("Document uploaded and linked successfully!");
+        toast.success("Document uploaded and linked successfully!");
+      }
+
       setShowUploadDialog(false);
       setUploadFile(null);
       setUploadDocType("");
+      setIsReuploadMode(false);
+      setReuploadDocId(null);
       // keep existing verification status intact when replacing the file
       // Ensure UI updates immediately
       refetchRequirements();
@@ -1107,8 +1130,19 @@ export default function CandidateDocumentVerificationPage() {
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setUploadDocType(verification.document.docType); setShowUploadDialog(true); setUploadFile(null); }}>
-                                <Upload className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
+                                onClick={() => { 
+                                  setUploadDocType(verification.document.docType); 
+                                  setIsReuploadMode(true);
+                                  setReuploadDocId(verification.document.id);
+                                  setShowUploadDialog(true); 
+                                  setUploadFile(null); 
+                                }}
+                              >
+                                <RefreshCw className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -1203,12 +1237,34 @@ export default function CandidateDocumentVerificationPage() {
                               )}
                             </>
                           ) : (
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" className="h-8 px-3" onClick={() => { setUploadDocType(requirement.docType); setShowReuseDialog(true); }}>Link</Button>
-                              <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3" onClick={() => { setUploadDocType(requirement.docType); setUploadFile(null); setShowUploadDialog(true); }}>
-                                <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
-                              </Button>
-                            </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3"
+                              onClick={() => {
+                                setUploadDocType(requirement.docType);
+                                setIsReuploadMode(false);
+                                setReuploadDocId(null);
+                                setShowReuseDialog(true);
+                              }}
+                            >
+                              Link
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
+                              onClick={() => {
+                                setUploadDocType(requirement.docType);
+                                setIsReuploadMode(false);
+                                setReuploadDocId(null);
+                                setUploadFile(null);
+                                setShowUploadDialog(true);
+                              }}
+                            >
+                              <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
+                            </Button>
+                          </div>
                           )}
                         </div>
                       </TableCell> 

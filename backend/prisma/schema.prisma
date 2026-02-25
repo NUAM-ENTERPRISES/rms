@@ -946,6 +946,7 @@ model CandidateProjectDocumentVerification {
   notes                 String?
   rejectionReason       String?
   resubmissionRequested Boolean @default(false)
+  isReuploaded          Boolean @default(false)
 
   isUploadedByProcessingTeam Boolean @default(false)
   isProcessingReplaced       Boolean @default(false)

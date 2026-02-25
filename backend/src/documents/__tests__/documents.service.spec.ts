@@ -81,6 +81,104 @@ describe('DocumentsService - verifyOfferLetter', () => {
   });
 });
 
+
+// additional tests for reupload behaviour
+
+describe('DocumentsService - reupload behaviour', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('flags verified verification and creates new document/verification when reuploading', async () => {
+    const documentId = 'doc-old';
+    const cpmId = 'cpm-1';
+    const userId = 'u1';
+    const existingVer = { id: 'ver-old', status: 'verified' };
+
+    // stub lookups
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({ id: documentId, candidateId: 'cand-1', docType: 'resume', roleCatalogId: 'role-1' });
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({ id: cpmId });
+
+    const txMock: any = {
+      candidateProjectDocumentVerification: {
+        findUnique: jest.fn().mockResolvedValue(existingVer),
+        update: jest.fn().mockResolvedValue({ ...existingVer, isReuploaded: true }),
+        create: jest.fn().mockResolvedValue({ id: 'ver-new' }),
+      },
+      documentVerificationHistory: { create: jest.fn().mockResolvedValue(undefined) },
+      document: {
+        create: jest.fn().mockResolvedValue({ id: 'doc-new' }),
+        update: jest.fn(),
+      },
+    };
+
+    jest.spyOn(prisma, '$transaction' as any).mockImplementation(async (cb: any) => cb(txMock));
+
+    const result = await service.reupload(documentId, {
+      candidateProjectMapId: cpmId,
+      fileName: 'new.pdf',
+      fileUrl: 'http://x',
+    } as any, userId);
+
+    // old verification was flagged
+    expect(txMock.candidateProjectDocumentVerification.update).toHaveBeenCalledWith({
+      where: { id: existingVer.id },
+      data: { isReuploaded: true },
+    });
+
+    // a new document + verification should be created
+    expect(txMock.document.create).toHaveBeenCalled();
+    expect(txMock.candidateProjectDocumentVerification.create).toHaveBeenCalled();
+    expect(result.verification).toBeDefined();
+  });
+
+  it('overwrites document if previous status was not verified', async () => {
+    const documentId = 'doc-old';
+    const cpmId = 'cpm-1';
+    const userId = 'u1';
+    const existingVer = { id: 'ver-old', status: 'pending' };
+
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({ id: documentId });
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({ id: cpmId });
+
+    const txMock: any = {
+      candidateProjectDocumentVerification: {
+        findUnique: jest.fn().mockResolvedValue(existingVer),
+        update: jest.fn().mockResolvedValue(existingVer),
+      },
+      document: {
+        update: jest.fn().mockResolvedValue({ id: documentId, status: 'resubmitted' }),
+      },
+      documentVerificationHistory: { create: jest.fn().mockResolvedValue(undefined) },
+    };
+    jest.spyOn(prisma, '$transaction' as any).mockImplementation(async (cb: any) => cb(txMock));
+
+    const result = await service.reupload(documentId, {
+      candidateProjectMapId: cpmId,
+      fileName: 'new.pdf',
+      fileUrl: 'http://x',
+    } as any, userId);
+
+    expect(txMock.document.update).toHaveBeenCalled();
+    expect(txMock.candidateProjectDocumentVerification.update).toHaveBeenCalled();
+    expect(result.verification).toBeDefined();
+  });
+});
+
 // New tests for forwarding -> submitted_to_client status update
 describe('DocumentsService - forwardToClient / bulkForwardToClient', () => {
   let service: DocumentsService;

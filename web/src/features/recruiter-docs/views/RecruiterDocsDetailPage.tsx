@@ -721,13 +721,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                     onClick={() => {
                                       setSelectedRequirement(requirement);
                                       setUploadDocType(requirement.docType);
-                                      if (verification.status === "resubmission_required") {
-                                        setIsReuploadMode(true);
-                                        setReuploadDocId(verification.document.id);
-                                      } else {
-                                        setIsReuploadMode(false);
-                                        setReuploadDocId(null);
-                                      }
+                                      // Always set reupload mode when clicking the re-upload button
+                                      setIsReuploadMode(true);
+                                      setReuploadDocId(verification.document.id);
                                       setShowUploadDialog(true);
                                     }}
                                   >
@@ -744,6 +740,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                   onClick={() => {
                                     setSelectedRequirement(requirement);
                                     setUploadDocType(requirement.docType);
+                                    setIsReuploadMode(false);
+                                    setReuploadDocId(null);
                                     setShowReuseDialog(true);
                                   }}
                                 >
@@ -757,6 +755,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                   onClick={() => {
                                     setSelectedRequirement(requirement);
                                     setUploadDocType(requirement.docType);
+                                    setIsReuploadMode(false);
+                                    setReuploadDocId(null);
                                     setShowUploadDialog(true);
                                   }}
                                 >

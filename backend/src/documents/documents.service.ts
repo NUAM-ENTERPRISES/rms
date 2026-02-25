@@ -666,12 +666,24 @@ export class DocumentsService {
       select: { name: true },
     });
 
+    // Find the existing verification to get its metadata
+    const oldVerification = await this.prisma.candidateProjectDocumentVerification.findUnique({
+      where: {
+        candidateProjectMapId_documentId: {
+          candidateProjectMapId: reuploadDto.candidateProjectMapId,
+          documentId: documentId,
+        },
+      },
+    });
+
     // Update document and verification in a transaction
+    // Instead of updating the shared document, we create a new one to preserve history
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Update the main document record
-      const updatedDocument = await tx.document.update({
-        where: { id: documentId },
+      // 1. Create a NEW document record
+      const newDocument = await tx.document.create({
         data: {
+          candidateId: document.candidateId,
+          docType: document.docType,
           fileName: reuploadDto.fileName,
           fileUrl: reuploadDto.fileUrl,
           fileSize: reuploadDto.fileSize,
@@ -682,37 +694,48 @@ export class DocumentsService {
           documentNumber: reuploadDto.documentNumber,
           notes: reuploadDto.notes,
           status: DOCUMENT_STATUS.RESUBMITTED,
-          updatedAt: new Date(),
+          roleCatalogId: document.roleCatalogId || oldVerification?.roleCatalogId || null,
+          uploadedBy: userId,
         },
       });
 
-      // 2. Update the verification record
-      const verification = await tx.candidateProjectDocumentVerification.update({
-        where: {
-          candidateProjectMapId_documentId: {
-            candidateProjectMapId: reuploadDto.candidateProjectMapId,
-            documentId: documentId,
+      // 2. Mark the old verification as reuploaded/deleted and create a new one
+      if (oldVerification) {
+        await tx.candidateProjectDocumentVerification.update({
+          where: { id: oldVerification.id },
+          data: {
+            isDeleted: true,
+            isReuploaded: true,
+            status: "superseded", // or keep original status
+            updatedAt: new Date(),
           },
-        },
+        });
+      }
+
+      // Create the new verification record
+      const verification = await tx.candidateProjectDocumentVerification.create({
         data: {
+          candidateProjectMapId: reuploadDto.candidateProjectMapId,
+          documentId: newDocument.id,
+          roleCatalogId: oldVerification?.roleCatalogId || document.roleCatalogId || null,
           status: DOCUMENT_STATUS.RESUBMITTED,
-          resubmissionRequested: false, // Reset flag as it's now resubmitted
-          updatedAt: new Date(),
+          resubmissionRequested: false,
+          notes: reuploadDto.notes,
         },
       });
 
-      // 3. Create history entry
+      // 3. Create history entry for the new verification house
       await tx.documentVerificationHistory.create({
         data: {
           verificationId: verification.id,
           action: DOCUMENT_STATUS.RESUBMITTED,
           performedBy: userId,
           performedByName: user?.name || null,
-          notes: reuploadDto.notes,
+          notes: `Document re-uploaded (replaced document ID ${documentId})`,
         },
       });
 
-      return { updatedDocument, verification };
+      return { updatedDocument: newDocument, verification };
     });
 
     // Update CandidateProjectMap status
@@ -720,7 +743,7 @@ export class DocumentsService {
 
     // Publish event for notification
     await this.outboxService.publishDocumentResubmitted(
-      documentId,
+      result.updatedDocument.id,
       userId,
       reuploadDto.candidateProjectMapId,
     );
@@ -1844,6 +1867,7 @@ export class DocumentsService {
       documentationStatus,
       documentationStatusCode,
       summary: {
+        candidateProjectMapId: candidateProject.id,
         totalRequired,
         totalSubmitted,
         totalVerified,

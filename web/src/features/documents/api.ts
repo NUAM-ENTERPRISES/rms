@@ -52,6 +52,7 @@ export interface DocumentVerification {
   resubmissionRequested: boolean;
   resubmissionRequestedAt?: string;
   resubmissionRequestedBy?: string;
+  isReuploaded?: boolean;
   candidateProjectMap: {
     id: string;
     status: string;
