@@ -327,6 +327,19 @@ model Candidate {
   referralEmail        String?
   referralPhone        String?
   referralDescription  String?
+
+  // Physical and Personal attributes
+  height               Float?
+  weight               Float?
+  skinTone             String?
+  languageProficiency  String?
+  smartness            String?
+
+  // Licensing and Verification
+  licensingExam        String?
+  dataFlow             Boolean?   @default(false)
+  eligibility          Boolean?   @default(false)
+
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
   preferredCountries   CandidatePreferredCountry[]
@@ -368,7 +381,7 @@ model CandidatePreferredCountry {
 
 model CandidateFacilityPreference {
   id            String   @id @default(cuid())
-  candidateId   String
+_  candidateId   String
   facilityType  String
 
   candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)

@@ -23,8 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CountryCodeSelect } from "@/components/molecules";
+import { SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
 import { ProfileImageUpload } from "@/components/molecules/ProfileImageUpload";
-import { User, Phone, Mail, Calendar } from "lucide-react";
+import { User, Phone, Mail, Calendar, Ruler, Weight, Sparkles, Languages, Brain } from "lucide-react";
 
 type CreateCandidateFormData = {
   firstName: string;
@@ -34,7 +35,7 @@ type CreateCandidateFormData = {
   email?: string;
   source: "manual" | "meta" | "referral";
   gender: "MALE" | "FEMALE" | "OTHER";
-  dateOfBirth: string;
+  dateOfBirth?: string;
   referralCompanyName?: string;
   referralEmail?: string;
   referralCountryCode?: string;
@@ -225,7 +226,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 htmlFor="dateOfBirth"
                 className="text-slate-700 font-medium"
               >
-                Date of Birth *
+                Date of Birth (optional)
               </Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -309,6 +310,137 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                   {errors.source.message as string}
                 </p>
               )}
+            </div>
+
+            {/* Physical Information subsection */}
+            <div className="col-span-full">
+              <h3 className="text-lg font-semibold text-slate-800 mt-6">
+                Physical Information
+              </h3>
+            </div>
+
+            {/* Height */}
+            <div className="space-y-2">
+              <Label htmlFor="height" className="text-slate-700 font-medium flex items-center gap-2">
+                <Ruler className="h-4 w-4 text-slate-500" />
+                Height (cm)
+              </Label>
+              <Controller
+                name="height"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="height"
+                    type="number"
+                    step="0.1"
+                    placeholder="175"
+                    className="h-11 bg-white border-slate-200"
+                  />
+                )}
+              />
+            </div>
+
+            {/* Weight */}
+            <div className="space-y-2">
+              <Label htmlFor="weight" className="text-slate-700 font-medium flex items-center gap-2">
+                <Weight className="h-4 w-4 text-slate-500" />
+                Weight (kg)
+              </Label>
+              <Controller
+                name="weight"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="weight"
+                    type="number"
+                    step="0.1"
+                    placeholder="70"
+                    className="h-11 bg-white border-slate-200"
+                  />
+                )}
+              />
+            </div>
+
+            {/* Skin Tone */}
+            <div className="space-y-2">
+              <Label htmlFor="skinTone" className="text-slate-700 font-medium flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-slate-500" />
+                Skin Tone
+              </Label>
+              <Controller
+                name="skinTone"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select skin tone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SKIN_TONES.map((tone) => (
+                        <SelectItem key={tone} value={tone}>
+                          {tone}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {/* Language Proficiency */}
+            <div className="space-y-2">
+              <Label htmlFor="languageProficiency" className="text-slate-700 font-medium flex items-center gap-2">
+                <Languages className="h-4 w-4 text-slate-500" />
+                Language Proficiency
+              </Label>
+              <Controller
+                name="languageProficiency"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="languageProficiency"
+                    placeholder="English (Fluent), Arabic (Basic)"
+                    className="h-11 bg-white border-slate-200"
+                  />
+                )}
+              />
+            </div>
+
+            {/* Smartness */}
+            <div className="space-y-2">
+              <Label htmlFor="smartness" className="text-slate-700 font-medium flex items-center gap-2">
+                <Brain className="h-4 w-4 text-slate-500" />
+                Smartness
+              </Label>
+              <Controller
+                name="smartness"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select rating" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SMARTNESS_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
             {/* Referral Information */}

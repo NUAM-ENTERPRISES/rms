@@ -139,7 +139,7 @@ export class CandidatesService {
       }
     }
 
-    // Validate date of birth is in the past if provided
+    // Validate date of birth is in the past if provided (still optional)
     if (createCandidateDto.dateOfBirth) {
       const dateOfBirth = new Date(createCandidateDto.dateOfBirth);
       if (dateOfBirth >= new Date()) {
@@ -214,7 +214,8 @@ export class CandidatesService {
         referralEmail: createCandidateDto.referralEmail,
         referralPhone: createCandidateDto.referralPhone,
         referralDescription: createCandidateDto.referralDescription,
-        dateOfBirth: new Date(createCandidateDto.dateOfBirth), // Now mandatory
+        // set dateOfBirth only if provided (optional field)
+        ...(createCandidateDto.dateOfBirth && { dateOfBirth: new Date(createCandidateDto.dateOfBirth) }),
         gender: createCandidateDto.gender,
         currentStatusId: defaultStatusId,
         totalExperience: totalExperience,
@@ -225,6 +226,14 @@ export class CandidatesService {
         expectedMaxSalary: createCandidateDto.expectedMaxSalary,
         sectorType: createCandidateDto.sectorType,
         visaType: createCandidateDto.visaType,
+        height: createCandidateDto.height,
+        weight: createCandidateDto.weight,
+        skinTone: createCandidateDto.skinTone,
+        languageProficiency: createCandidateDto.languageProficiency,
+        smartness: createCandidateDto.smartness,
+        licensingExam: createCandidateDto.licensingExam,
+        dataFlow: createCandidateDto.dataFlow ?? null,
+        eligibility: createCandidateDto.eligibility ?? null,
         highestEducation: createCandidateDto.highestEducation,
         university: createCandidateDto.university,
         graduationYear: createCandidateDto.graduationYear,
@@ -1166,6 +1175,22 @@ export class CandidatesService {
       updateData.sectorType = updateCandidateDto.sectorType;
     if (updateCandidateDto.visaType !== undefined)
       updateData.visaType = updateCandidateDto.visaType;
+    if (updateCandidateDto.height !== undefined)
+      updateData.height = updateCandidateDto.height;
+    if (updateCandidateDto.weight !== undefined)
+      updateData.weight = updateCandidateDto.weight;
+    if (updateCandidateDto.skinTone !== undefined)
+      updateData.skinTone = updateCandidateDto.skinTone;
+    if (updateCandidateDto.languageProficiency !== undefined)
+      updateData.languageProficiency = updateCandidateDto.languageProficiency;
+    if (updateCandidateDto.smartness !== undefined)
+      updateData.smartness = updateCandidateDto.smartness;
+    if (updateCandidateDto.licensingExam !== undefined)
+      updateData.licensingExam = updateCandidateDto.licensingExam;
+    if (updateCandidateDto.dataFlow !== undefined)
+      updateData.dataFlow = updateCandidateDto.dataFlow;
+    if (updateCandidateDto.eligibility !== undefined)
+      updateData.eligibility = updateCandidateDto.eligibility;
     if (updateCandidateDto.highestEducation)
       updateData.highestEducation = updateCandidateDto.highestEducation;
     if (updateCandidateDto.university)

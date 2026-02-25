@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
 import { toast } from "sonner";
 import { useState } from "react";
 import {
@@ -29,6 +30,7 @@ import {
   JobPreferenceStep,
   EducationalQualificationStep,
   WorkExperienceStep,
+  ChecklistStep,
 } from "../components/steps";
 import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 
@@ -51,7 +53,7 @@ const createCandidateSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "referral"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  dateOfBirth: z.string().optional(),
   expectedMinSalary: z.preprocess(
     (val) => {
       if (val === "" || val === null || val === undefined) return undefined;
@@ -72,6 +74,14 @@ const createCandidateSchema = z.object({
   facilityPreferences: z.array(z.string()).optional(),
   sectorType: z.string().optional(),
   visaType: z.string().optional(),
+  height: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
+  weight: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
+  skinTone: z.enum([...SKIN_TONES] as [string, ...string[]]).optional(),
+  languageProficiency: z.string().optional(),
+  smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional(),
+  licensingExam: z.string().optional(),
+  dataFlow: z.boolean().optional().default(false),
+  eligibility: z.boolean().optional().default(false),
 
   // Referral Fields
   referralCompanyName: z.string().optional(),
@@ -154,6 +164,11 @@ const STEPS = [
     id: 4,
     title: "Experience",
     description: "Work history (optional)",
+  },
+  {
+    id: 5,
+    title: "Checklist",
+    description: "Licensing & Verification",
   },
 ];
 
@@ -304,6 +319,18 @@ export default function CreateCandidatePage() {
       if (!completedSteps.includes(3)) {
         setCompletedSteps([...completedSteps, 3]);
       }
+    } else if (currentStep === 4) {
+      // Work experiences are optional, so we can always proceed
+      canProceed = true;
+      if (!completedSteps.includes(4)) {
+        setCompletedSteps([...completedSteps, 4]);
+      }
+    } else if (currentStep === 5) {
+      // Checklist is optional, so we can always proceed
+      canProceed = true;
+      if (!completedSteps.includes(5)) {
+        setCompletedSteps([...completedSteps, 5]);
+      }
     }
 
     if (canProceed) {
@@ -404,8 +431,8 @@ export default function CreateCandidatePage() {
         payload.workExperiences = workExperiences.map((exp) => {
           const { departmentId, id, ...expData } = exp;
           return {
-            companyName: expData.companyName,
-            roleCatalogId: expData.roleCatalogId,
+            companyName: expData.companyName || undefined,
+            roleCatalogId: expData.roleCatalogId || undefined,
             jobTitle: expData.jobTitle,
             startDate: expData.startDate,
             endDate: expData.endDate || undefined,
@@ -508,6 +535,14 @@ export default function CreateCandidatePage() {
             setNewSkill={setNewSkill}
           />
         );
+      case 5:
+        return (
+          <ChecklistStep
+            control={form.control}
+            errors={form.formState.errors}
+            isLoading={isLoading}
+          />
+        );
       default:
         return null;
     }
@@ -575,6 +610,19 @@ export default function CreateCandidatePage() {
 
         {/* Right Buttons */}
         <div className="flex gap-3">
+          {/* Allow finishing early if personal info (step 1) is valid */}
+          {completedSteps.includes(1) && currentStep < STEPS.length && (
+            <Button
+              type="button"
+              onClick={handleFinish}
+              disabled={isLoading || uploadingImage}
+              className="min-w-[160px] bg-slate-800 hover:bg-slate-900 text-white shadow-sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Preview & Create
+            </Button>
+          )}
+
           {currentStep < STEPS.length && (
             <Button
               type="button"
@@ -632,6 +680,11 @@ export default function CreateCandidatePage() {
         facilityPreferences: form.getValues("facilityPreferences"),
         sectorType: form.getValues("sectorType"),
         visaType: form.getValues("visaType"),
+        skinTone: form.getValues("skinTone"),
+        smartness: form.getValues("smartness"),
+        licensingExam: form.getValues("licensingExam"),
+        dataFlow: form.getValues("dataFlow"),
+        eligibility: form.getValues("eligibility"),
       }}
       onConfirm={handlePreviewConfirm}
       onCancel={handlePreviewCancel}

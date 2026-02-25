@@ -48,6 +48,11 @@ interface CandidatePreviewProps {
     facilityPreferences?: string[];
     sectorType?: string;
     visaType?: string;
+    skinTone?: string;
+    smartness?: string;
+    licensingExam?: string;
+    dataFlow?: boolean;
+    eligibility?: boolean;
   };
   onConfirm: () => void;
   onCancel: () => void;
@@ -160,6 +165,26 @@ export default function CandidatePreview({
                   {candidateData.gender}
                 </Badge>
               </div>
+              {candidateData.skinTone && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Skin Tone
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.skinTone}
+                  </p>
+                </div>
+              )}
+              {candidateData.smartness && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Smartness
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.smartness}
+                  </p>
+                </div>
+              )}
 
               {/* Integrated Referral Fields */}
               {candidateData.source === "referral" && (
@@ -529,6 +554,67 @@ export default function CandidatePreview({
               </CardContent>
             </Card>
           )}
+
+        {/* Checklist */}
+        <Card className="border border-slate-300 rounded-md shadow-sm bg-white overflow-hidden">
+          <CardHeader className="p-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 border-0 p-0">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
+                Final Checklist
+              </CardTitle>
+              {onEditStep && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => onEditStep(5)}
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Edit</span>
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Licensing Exam
+                </label>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {candidateData.licensingExam && candidateData.licensingExam !== "none"
+                    ? candidateData.licensingExam.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                    : "None"}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Data Flow
+                </label>
+                <div className="mt-1">
+                  {candidateData.dataFlow ? (
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">Completed</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-slate-500 border-slate-200">Not Completed</Badge>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Eligibility
+                </label>
+                <div className="mt-1">
+                  {candidateData.eligibility ? (
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">Verified</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-slate-500 border-slate-200">Not Verified</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <DialogFooter className="flex items-center justify-center gap-4 px-6 py-4 border-t border-slate-200 bg-slate-50">

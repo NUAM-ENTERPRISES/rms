@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase } from "lucide-react";
+import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck } from "lucide-react";
 import { CountryCodeSelect, MultiCountrySelect, MultiSelect } from "@/components/molecules";
 import {
   useGetCandidateByIdQuery,
@@ -30,8 +30,9 @@ import {
 } from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCan } from "@/hooks/useCan";
-import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
+import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES, LICENSING_EXAMS, SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
 
 // ==================== VALIDATION SCHEMA ====================
 
@@ -66,6 +67,14 @@ const updateCandidateSchema = z.object({
   facilityPreferences: z.array(z.string()).optional(),
   sectorType: z.string().optional(),
   visaType: z.string().optional(),
+  height: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
+  weight: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
+  skinTone: z.enum([...SKIN_TONES] as [string, ...string[]]).optional(),
+  languageProficiency: z.string().optional(),
+  smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional(),
+  licensingExam: z.string().optional(),
+  dataFlow: z.boolean().optional(),
+  eligibility: z.boolean().optional(),
 
   referralCompanyName: z.string().optional(),
   referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -187,6 +196,14 @@ export default function EditCandidatePage() {
         facilityPreferences: candidate.facilityPreferences?.map((fp) => fp.facilityType) || [],
         sectorType: candidate.sectorType || SECTOR_TYPES.NO_PREFERENCE,
         visaType: candidate.visaType || VISA_TYPES.NOT_APPLICABLE,
+        height: candidate.height ?? undefined,
+        weight: candidate.weight ?? undefined,
+        skinTone: candidate.skinTone || "",
+        languageProficiency: candidate.languageProficiency || "",
+        smartness: candidate.smartness || "",
+        licensingExam: candidate.licensingExam || "",
+        dataFlow: candidate.dataFlow ?? false,
+        eligibility: candidate.eligibility ?? false,
         teamId: candidate.assignedTo || "none",
         referralCompanyName: candidate.referralCompanyName || "",
         referralEmail: candidate.referralEmail || "",
@@ -311,6 +328,16 @@ export default function EditCandidatePage() {
       if (data.teamId && data.teamId !== "none" && data.teamId.trim()) {
         payload.assignedTo = data.teamId;
       }
+
+      // Physical / Personal / Checklist fields
+      payload.height = data.height;
+      payload.weight = data.weight;
+      payload.skinTone = data.skinTone;
+      payload.languageProficiency = data.languageProficiency;
+      payload.smartness = data.smartness;
+      payload.licensingExam = data.licensingExam;
+      payload.dataFlow = data.dataFlow;
+      payload.eligibility = data.eligibility;
 
       // Referral fields
       if (data.source === "referral") {
@@ -664,6 +691,90 @@ export default function EditCandidatePage() {
                     </Select>
                   </div>
 
+                  {/* Height */}
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="height" className="text-slate-700 font-medium">
+                      Height (cm)
+                    </FormLabel>
+                    <Input
+                      id="height"
+                      type="number"
+                      step="0.1"
+                      {...form.register("height")}
+                      className="h-11 bg-white border-slate-200"
+                    />
+                  </div>
+
+                  {/* Weight */}
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="weight" className="text-slate-700 font-medium">
+                      Weight (kg)
+                    </FormLabel>
+                    <Input
+                      id="weight"
+                      type="number"
+                      step="0.1"
+                      {...form.register("weight")}
+                      className="h-11 bg-white border-slate-200"
+                    />
+                  </div>
+
+                  {/* Skin Tone */}
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="skinTone" className="text-slate-700 font-medium">
+                      Skin Tone
+                    </FormLabel>
+                    <Select
+                      value={form.watch("skinTone") || ""}
+                      onValueChange={(val) => form.setValue("skinTone", val)}
+                    >
+                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                        <SelectValue placeholder="Select skin tone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SKIN_TONES.map((tone) => (
+                          <SelectItem key={tone} value={tone}>
+                            {tone}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Language Proficiency */}
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="languageProficiency" className="text-slate-700 font-medium">
+                      Language Proficiency
+                    </FormLabel>
+                    <Input
+                      id="languageProficiency"
+                      {...form.register("languageProficiency")}
+                      className="h-11 bg-white border-slate-200"
+                    />
+                  </div>
+
+                  {/* Smartness */}
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="smartness" className="text-slate-700 font-medium">
+                      Smartness
+                    </FormLabel>
+                    <Select
+                      value={form.watch("smartness") || ""}
+                      onValueChange={(val) => form.setValue("smartness", val)}
+                    >
+                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                        <SelectValue placeholder="Select rating" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SMARTNESS_LEVELS.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Referral Information */}
                   {form.watch("source") === "referral" && (
                     <>
@@ -748,6 +859,108 @@ export default function EditCandidatePage() {
                       </div>
                     </>
                   )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Checklist Section */}
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                <CheckSquare className="h-5 w-5 text-green-600" />
+                Final Checklist
+              </CardTitle>
+              <CardDescription>
+                Update candidate's licensing and verification status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Licensing Exam */}
+                <div className="space-y-2">
+                  <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
+                    <FileCheck className="h-4 w-4 text-slate-500" />
+                    Licensing Exam
+                  </FormLabel>
+                  <Controller
+                    name="licensingExam"
+                    control={form.control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value || "none"}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="h-11 bg-white border-slate-200 focus:ring-blue-500/20">
+                          <SelectValue placeholder="Select licensing exam" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {Object.entries(LICENSING_EXAMS).map(([key, value]) => (
+                            <SelectItem key={value} value={value}>
+                              {key.replace("_", " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-6 flex flex-col justify-center">
+                  {/* Data Flow */}
+                  <div className="flex items-center space-x-3 p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                    <Controller
+                      name="dataFlow"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="dataFlow"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="h-5 w-5"
+                        />
+                      )}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <FormLabel
+                        htmlFor="dataFlow"
+                        className="text-sm font-medium leading-none cursor-pointer text-slate-700"
+                      >
+                        Data Flow Completed
+                      </FormLabel>
+                      <p className="text-xs text-slate-500">
+                        Candidate has completed data flow verification.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Eligibility */}
+                  <div className="flex items-center space-x-3 p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                    <Controller
+                      name="eligibility"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="eligibility"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="h-5 w-5"
+                        />
+                      )}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <FormLabel
+                        htmlFor="eligibility"
+                        className="text-sm font-medium leading-none cursor-pointer text-slate-700"
+                      >
+                        Eligible
+                      </FormLabel>
+                      <p className="text-xs text-slate-500">
+                        Candidate meets the eligibility criteria.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>

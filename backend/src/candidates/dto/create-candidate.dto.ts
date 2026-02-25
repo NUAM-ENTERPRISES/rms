@@ -132,12 +132,13 @@ export class CreateCandidateDto {
   @IsString()
   referralDescription?: string;
 
-  @ApiProperty({
-    description: 'Date of birth (mandatory)',
+  @ApiPropertyOptional({
+    description: 'Date of birth',
     example: '1990-01-01T00:00:00.000Z',
   })
+  @IsOptional()
   @IsDateString()
-  dateOfBirth: string;
+  dateOfBirth?: string;
 
   @ApiPropertyOptional({
     description: 'Gender of the candidate',
@@ -237,6 +238,70 @@ export class CreateCandidateDto {
   @IsOptional()
   @IsString()
   visaType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Candidate height in cm',
+    example: 175.5,
+  })
+  @IsOptional()
+  @IsNumber()
+  height?: number;
+
+  @ApiPropertyOptional({
+    description: 'Candidate weight in kg',
+    example: 70.2,
+  })
+  @IsOptional()
+  @IsNumber()
+  weight?: number;
+
+  @ApiPropertyOptional({
+    description: 'Candidate skin tone',
+    example: 'Fair',
+  })
+  @IsOptional()
+  @IsString()
+  skinTone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Candidate language proficiency',
+    example: 'English - Fluent, Arabic - Basic',
+  })
+  @IsOptional()
+  @IsString()
+  languageProficiency?: string;
+
+  @ApiPropertyOptional({
+    description: 'Candidate smartness/personality rating',
+    example: 'Excellent',
+  })
+  @IsOptional()
+  @IsString()
+  smartness?: string;
+
+  @ApiPropertyOptional({
+    description: 'Licensing exam taken',
+    example: 'prometric',
+  })
+  @IsOptional()
+  @IsString()
+  licensingExam?: string;
+
+  @ApiPropertyOptional({
+    description: 'Data flow verification status',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  dataFlow?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Eligibility status',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  eligibility?: boolean;
 
   @ApiPropertyOptional({
     description: 'List of preferred countries (country codes)',

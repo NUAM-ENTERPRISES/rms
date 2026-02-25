@@ -50,7 +50,6 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     if (
       newWorkExperience.companyName &&
       newWorkExperience.jobTitle &&
-      newWorkExperience.roleCatalogId &&
       newWorkExperience.startDate
     ) {
       const newId = `work-exp-${Date.now()}-${Math.random()
@@ -77,7 +76,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       setNewSkill("");
     } else {
       toast.error(
-        "Please fill in required fields (Company, Department, Job Title, Start Date)"
+        "Please fill in the required fields (Company, Job Title, and Start Date) to add this work experience entry."
       );
     }
   };
@@ -191,9 +190,14 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
         {/* Add New Work Experience Form */}
         <div className="border border-slate-200 rounded-lg p-6 bg-slate-50">
-          <h4 className="text-lg font-semibold text-slate-800 mb-4">
-            Add New Work Experience
-          </h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-semibold text-slate-800">
+              Add New Work Experience (Optional)
+            </h4>
+            <p className="text-sm text-slate-500 italic">
+              You can skip this step and add experience later
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Department */}
@@ -233,15 +237,10 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   }
                 }}
                 label="Job Title"
-                placeholder={
-                  newWorkExperience.departmentId
-                    ? "e.g., Registered Nurse"
-                    : "Select a department first"
-                }
+                placeholder="e.g., Registered Nurse"
                 required
                 allowEmpty={false}
                 departmentId={newWorkExperience.departmentId}
-                disabled={!newWorkExperience.departmentId}
               />
             </div>
 
