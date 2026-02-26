@@ -36,6 +36,7 @@ import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
+import { UpdatePhysicalInfoModal } from "../components/UpdatePhysicalInfoModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { useAppSelector } from "@/app/hooks";
 import type {
@@ -81,6 +82,9 @@ export default function CandidateDetailPage() {
 
   // Personal info update modal state
   const [isPersonalInfoModalOpen, setIsPersonalInfoModalOpen] = useState(false);
+
+  // Physical info update modal state
+  const [isPhysicalModalOpen, setIsPhysicalModalOpen] = useState(false);
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
@@ -381,6 +385,7 @@ export default function CandidateDetailPage() {
             openEditModal={openEditModal}
             onEditJobPreferences={() => setIsJobPreferenceModalOpen(true)}
             onEditPersonalInfo={() => setIsPersonalInfoModalOpen(true)}
+            onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
           />
         </TabsContent>
 
@@ -490,6 +495,20 @@ export default function CandidateDetailPage() {
           referralCountryCode: candidate.referralCountryCode,
           referralPhone: candidate.referralPhone,
           referralDescription: candidate.referralDescription,
+        }}
+      />
+
+      {/* Physical info update modal */}
+      <UpdatePhysicalInfoModal
+        isOpen={isPhysicalModalOpen}
+        onClose={() => setIsPhysicalModalOpen(false)}
+        candidateId={id!}
+        initialData={{
+          height: candidate.height,
+          weight: candidate.weight,
+          skinTone: candidate.skinTone,
+          languageProficiency: candidate.languageProficiency,
+          smartness: candidate.smartness,
         }}
       />
 

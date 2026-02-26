@@ -13,7 +13,7 @@ import {
   Phone,
   Calendar,
   Clock,
-  DollarSign,
+  IndianRupee,
   GraduationCap,
   Plus,
   Briefcase,
@@ -38,6 +38,7 @@ interface CandidateOverviewProps {
   ) => void;
   onEditJobPreferences?: () => void;
   onEditPersonalInfo?: () => void;
+  onEditPhysicalInfo?: () => void;
 }
 
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
@@ -47,6 +48,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   openEditModal,
   onEditJobPreferences,
   onEditPersonalInfo,
+  onEditPhysicalInfo,
 }) => {
   const age = getAge(candidate.dateOfBirth);
 
@@ -164,23 +166,6 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Expected Salary
-                  </label>
-                  <div className="text-sm flex items-center gap-2 mt-1 font-medium text-blue-700">
-                    <DollarSign className="h-3.5 w-3.5" />
-                    {candidate.expectedMinSalary !== undefined
-                      ? `${formatCurrency(candidate.expectedMinSalary)}${
-                          candidate.expectedMaxSalary
-                            ? ` - ${formatCurrency(candidate.expectedMaxSalary)}`
-                            : ""
-                        }`
-                      : candidate.expectedSalary
-                      ? formatCurrency(candidate.expectedSalary)
-                      : "N/A"}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Source
                   </label>
                   <p className="text-sm mt-1 capitalize">
@@ -271,6 +256,73 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
               )}
 
+              {/* Physical Information Section */}
+              <div className="mt-8 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                    <Sparkles className="h-5 w-5 text-teal-600" />
+                    Physical Information
+                  </h3>
+                  {canWriteCandidates && onEditPhysicalInfo && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onEditPhysicalInfo}
+                      className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 gap-1.5 h-8"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Height
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.height != null
+                        ? `${candidate.height} cm`
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Weight
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.weight != null
+                        ? `${candidate.weight} kg`
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Skin Tone
+                    </label>
+                    <p className="text-sm mt-1 capitalize">
+                      {candidate.skinTone || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Language Proficiency
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.languageProficiency || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Smartness
+                    </label>
+                    <p className="text-sm mt-1 capitalize">
+                      {candidate.smartness || "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Job Preferences Section */}
               <div className="mt-8 pt-6 border-t border-slate-200">
                 <div className="flex items-center justify-between mb-4">
@@ -290,7 +342,24 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Expected Salary
+                    </label>
+                    <div className="text-sm flex items-center gap-2 mt-1 font-medium text-blue-700">
+                      <IndianRupee className="h-3.5 w-3.5" />
+                      {candidate.expectedMinSalary !== undefined
+                        ? `${formatCurrency(candidate.expectedMinSalary)}${
+                            candidate.expectedMaxSalary
+                              ? ` - ${formatCurrency(candidate.expectedMaxSalary)}`
+                              : ""
+                          }`
+                        : candidate.expectedSalary
+                        ? formatCurrency(candidate.expectedSalary)
+                        : "N/A"}
+                    </div>
+                  </div>
                   <div>
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
                       Sector Type
@@ -531,7 +600,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               )}
                               {exp.salary && (
                                 <span className="flex items-center gap-1 text-emerald-600">
-                                  <DollarSign className="h-3 w-3" />
+                                  <IndianRupee className="h-3 w-3" />
                                   {formatCurrency(exp.salary)}
                                 </span>
                               )}
@@ -637,7 +706,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       <Calendar className="h-5 w-5 text-white" />
                     )}
                     {label === "Offers" && (
-                       <DollarSign className="h-5 w-5 text-white" />
+                       <IndianRupee className="h-5 w-5 text-white" />
                     )}
                     {label === "Placements" && (
                       <Trophy className="h-5 w-5 text-white" />

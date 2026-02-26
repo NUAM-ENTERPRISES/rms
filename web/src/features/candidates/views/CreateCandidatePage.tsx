@@ -220,6 +220,15 @@ export default function CreateCandidatePage() {
       source: "manual" as const,
       gender: "" as any,
       dateOfBirth: "",
+      // physical information defaults
+      height: undefined,
+      weight: undefined,
+      skinTone: "",
+      languageProficiency: "",
+      smartness: "",
+      licensingExam: "",
+      dataFlow: false,
+      eligibility: false,
       referralCompanyName: "",
       referralEmail: "",
       referralCountryCode: "+91",
@@ -425,6 +434,29 @@ export default function CreateCandidatePage() {
           notes: qual.notes,
         }));
       }
+
+      // Physical information
+      if (data.height !== undefined && data.height !== null) {
+        payload.height = data.height;
+      }
+      if (data.weight !== undefined && data.weight !== null) {
+        payload.weight = data.weight;
+      }
+      if (data.skinTone) {
+        payload.skinTone = data.skinTone;
+      }
+      if (data.languageProficiency) {
+        payload.languageProficiency = data.languageProficiency;
+      }
+      if (data.smartness) {
+        payload.smartness = data.smartness;
+      }
+      if (data.licensingExam) {
+        payload.licensingExam = data.licensingExam;
+      }
+      // dataFlow and eligibility default false but send anyway
+      payload.dataFlow = data.dataFlow;
+      payload.eligibility = data.eligibility;
 
       // Work experiences
       if (workExperiences && workExperiences.length > 0) {
@@ -681,6 +713,9 @@ export default function CreateCandidatePage() {
         sectorType: form.getValues("sectorType"),
         visaType: form.getValues("visaType"),
         skinTone: form.getValues("skinTone"),
+        height: form.getValues("height"),
+        weight: form.getValues("weight"),
+        languageProficiency: form.getValues("languageProficiency"),
         smartness: form.getValues("smartness"),
         licensingExam: form.getValues("licensingExam"),
         dataFlow: form.getValues("dataFlow"),

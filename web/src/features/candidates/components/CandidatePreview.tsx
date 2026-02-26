@@ -51,6 +51,9 @@ interface CandidatePreviewProps {
     skinTone?: string;
     smartness?: string;
     licensingExam?: string;
+    height?: number;
+    weight?: number;
+    languageProficiency?: string;
     dataFlow?: boolean;
     eligibility?: boolean;
   };
@@ -165,6 +168,26 @@ export default function CandidatePreview({
                   {candidateData.gender}
                 </Badge>
               </div>
+              {candidateData.height != null && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Height
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.height} cm
+                  </p>
+                </div>
+              )}
+              {candidateData.weight != null && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Weight
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.weight} kg
+                  </p>
+                </div>
+              )}
               {candidateData.skinTone && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase">
@@ -172,6 +195,16 @@ export default function CandidatePreview({
                   </label>
                   <p className="mt-1 text-sm font-medium text-slate-900">
                     {candidateData.skinTone}
+                  </p>
+                </div>
+              )}
+              {candidateData.languageProficiency && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Language Proficiency
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.languageProficiency}
                   </p>
                 </div>
               )}
