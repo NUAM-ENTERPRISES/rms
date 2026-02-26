@@ -42,6 +42,18 @@ export class BulkForwardToClientDto {
   @IsNotEmpty()
   recipientEmail: string;
 
+  @ApiProperty({ required: false, type: [String], example: ['cc1@example.com', 'cc2@example.com'] })
+  @IsArray()
+  @IsEmail({}, { each: true })
+  @IsOptional()
+  cc?: string[];
+
+  @ApiProperty({ required: false, type: [String], example: ['bcc1@example.com', 'bcc2@example.com'] })
+  @IsArray()
+  @IsEmail({}, { each: true })
+  @IsOptional()
+  bcc?: string[];
+
   @ApiProperty({ example: 'proj_456' })
   @IsString()
   @IsNotEmpty()

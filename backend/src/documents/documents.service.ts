@@ -3491,6 +3491,8 @@ export class DocumentsService {
       candidateId, 
       projectId, 
       recipientEmail, 
+      cc,
+      bcc,
       sendType, 
       documentIds, 
       notes, 
@@ -3503,9 +3505,11 @@ export class DocumentsService {
       candidateId,
       projectId,
       recipientEmail,
-      sendType,
-      documentIds,
-      notes,
+      cc,
+      bcc,
+      sendType, 
+      documentIds, 
+      notes, 
       roleCatalogId,
       senderId,
       csvUrl,
@@ -3519,6 +3523,8 @@ export class DocumentsService {
   async bulkForwardToClient(bulkForwardDto: BulkForwardToClientDto, senderId: string) {
     const { 
       recipientEmail, 
+      cc,
+      bcc,
       projectId, 
       notes, 
       selections, 
@@ -3542,6 +3548,8 @@ export class DocumentsService {
             candidateId: selection.candidateId,
             projectId: selection.projectId || projectId,
             recipientEmail,
+            cc,
+            bcc,
             sendType: selection.sendType,
             documentIds: selection.documentIds,
             notes,
@@ -3599,6 +3607,8 @@ export class DocumentsService {
     candidateId: string;
     projectId: string;
     recipientEmail: string;
+    cc?: string[];
+    bcc?: string[];
     sendType: SendType;
     documentIds?: string[];
     notes?: string;
@@ -3612,6 +3622,8 @@ export class DocumentsService {
       candidateId, 
       projectId, 
       recipientEmail, 
+      cc = [],
+      bcc = [],
       sendType, 
       documentIds, 
       notes, 
@@ -3714,6 +3726,8 @@ export class DocumentsService {
       data: ({
         senderId,
         recipientEmail,
+        ccEmails: cc,
+        bccEmails: bcc,
         candidateId,
         projectId,
         roleCatalogId: roleCatalogId || null,

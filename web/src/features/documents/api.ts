@@ -395,6 +395,8 @@ export interface GetCandidateProjectVerificationsParams {
 
 export interface ForwardToClientRequest {
   recipientEmail: string;
+  cc?: string[];
+  bcc?: string[];
   candidateId: string;
   projectId: string;
   roleCatalogId?: string;
@@ -407,6 +409,8 @@ export interface ForwardToClientRequest {
 
 export interface BulkForwardToClientRequest {
   recipientEmail: string;
+  cc?: string[];
+  bcc?: string[];
   projectId: string;
   notes?: string;
   deliveryMethod?: "email_individual" | "email_combined" | "google_drive";

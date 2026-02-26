@@ -1774,6 +1774,8 @@ model DocumentForwardHistory {
   id              String   @id @default(cuid())
   senderId        String
   recipientEmail  String
+  ccEmails        String[] @default([])
+  bccEmails       String[] @default([])
   candidateId     String
   projectId       String
   roleCatalogId   String?

@@ -30,7 +30,9 @@ import {
   Paperclip,
   Trash2,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Users,
+  ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -45,6 +47,7 @@ import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
 import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { SelectedDoc } from "./BulkViewDocumentsModal";
 import { Badge } from "@/components/ui";
+import { MultiEmailInput } from "./MultiEmailInput";
 
 interface SendToClientModalProps {
   isOpen: boolean;
@@ -68,6 +71,9 @@ export function SendToClientModal({
   candidateName,
 }: SendToClientModalProps) {
   const [email, setEmail] = useState("");
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
+  const [showCCBCC, setShowCCBCC] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState<SelectedDoc[]>([]);
   const [notes, setNotes] = useState("");
@@ -148,6 +154,9 @@ export function SendToClientModal({
     } else {
       // Reset state when modal closes
       setEmail("");
+      setCc([]);
+      setBcc([]);
+      setShowCCBCC(false);
       setIsEditingEmail(false);
       setSelectedDocs([]);
       setNotes("");
@@ -251,6 +260,8 @@ export function SendToClientModal({
 
       const payload = {
         recipientEmail: email,
+        cc,
+        bcc,
         candidateId,
         projectId,
         roleCatalogId,
@@ -388,10 +399,21 @@ export function SendToClientModal({
                       <p className="text-slate-900 font-semibold truncate">{clientData.phone || "N/A"}</p>
                     </div>
                   </div>
-                  <div className="space-y-2 mt-auto">
-                    <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Recipient Email</p>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
+                  <div className="space-y-4 flex-1">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Recipient Email</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEditingEmail(!isEditingEmail)}
+                          className="h-6 px-1.5 text-slate-500 hover:text-emerald-600"
+                        >
+                          {isEditingEmail ? "Save" : <Edit2 className="h-3 w-3" />}
+                        </Button>
+                      </div>
+                      <div className="relative">
                         <Input
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
@@ -401,16 +423,41 @@ export function SendToClientModal({
                         />
                         <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsEditingEmail(!isEditingEmail)}
-                        className="h-9 px-2 border-slate-200 text-slate-600"
-                      >
-                        {isEditingEmail ? "Save" : <Edit2 className="h-3.5 w-3.5" />}
-                      </Button>
                     </div>
+
+                    {!showCCBCC ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCCBCC(true)}
+                        className="text-[10px] text-emerald-600 font-bold hover:underline py-1 w-fit"
+                      >
+                        + Add CC/BCC
+                      </button>
+                    ) : (
+                      <div className="space-y-3 pt-1 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <MultiEmailInput
+                          emails={cc}
+                          onChange={setCc}
+                          label="CC Emails"
+                          placeholder="Add CC email..."
+                          icon={<Users className="h-3 w-3" />}
+                        />
+                        <MultiEmailInput
+                          emails={bcc}
+                          onChange={setBcc}
+                          label="BCC Emails"
+                          placeholder="Add BCC email..."
+                          icon={<ShieldAlert className="h-3 w-3" />}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCCBCC(false)}
+                          className="text-[10px] text-slate-400 font-medium hover:text-red-500 hover:underline transition-colors"
+                        >
+                          Hide CC/BCC
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -428,6 +475,38 @@ export function SendToClientModal({
                       />
                       <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
                     </div>
+                    
+                    {!showCCBCC ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCCBCC(true)}
+                        className="text-[10px] text-emerald-600 font-bold hover:underline py-2 w-fit"
+                      >
+                        + Add CC/BCC
+                      </button>
+                    ) : (
+                      <div className="space-y-3 pt-2 animate-in fade-in duration-300">
+                        <MultiEmailInput
+                          emails={cc}
+                          onChange={setCc}
+                          placeholder="CC email"
+                          icon={<Users className="h-3 w-3" />}
+                        />
+                        <MultiEmailInput
+                          emails={bcc}
+                          onChange={setBcc}
+                          placeholder="BCC email"
+                          icon={<ShieldAlert className="h-3 w-3" />}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCCBCC(false)}
+                          className="text-[10px] text-slate-400 font-medium hover:text-red-500"
+                        >
+                          Hide CC/BCC
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

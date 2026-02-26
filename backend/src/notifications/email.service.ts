@@ -31,7 +31,9 @@ export class EmailService {
   }
 
   async sendEmail(options: {
-    to: string;
+    to: string | string[];
+    cc?: string | string[];
+    bcc?: string | string[];
     subject: string;
     html: string;
     attachments?: any[];
@@ -40,6 +42,8 @@ export class EmailService {
       const info = await this.transporter.sendMail({
         from: this.configService.get<string>('SMTP_FROM', '"RMS Support" <noreply@example.com>'),
         to: options.to,
+        cc: options.cc,
+        bcc: options.bcc,
         subject: options.subject,
         html: options.html,
         attachments: options.attachments,

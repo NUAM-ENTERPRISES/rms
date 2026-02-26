@@ -38,6 +38,8 @@ import {
   FileSpreadsheet,
   Paperclip,
   Trash2,
+  Users,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -45,6 +47,7 @@ import { BulkViewDocumentsModal, SelectedDoc } from "./BulkViewDocumentsModal";
 import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
 import { useBulkForwardToClientMutation, BulkForwardToClientRequest } from "../api";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
+import { MultiEmailInput } from "./MultiEmailInput";
 
 interface BulkSendToClientModalProps {
   isOpen: boolean;
@@ -96,6 +99,9 @@ export function BulkSendToClientModal({
   const [isFetchingMergedDocs, setIsFetchingMergedDocs] = useState(false);
   const [selectedDocsByCandidate, setSelectedDocsByCandidate] = useState<Record<string, SelectedDoc[]>>({});
   const [recipientEmail, setRecipientEmail] = useState("");
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
+  const [showCCBCC, setShowCCBCC] = useState(false);
   const [notes, setNotes] = useState("");
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
@@ -161,6 +167,9 @@ export function BulkSendToClientModal({
       // Reset state when modal closes
       setShowValidationErrors(false);
       setRecipientEmail("");
+      setCc([]);
+      setBcc([]);
+      setShowCCBCC(false);
       setNotes("");
       setIsEditingEmail(false);
       setSelectedDocsByCandidate({});
@@ -296,6 +305,8 @@ export function BulkSendToClientModal({
 
       const payload: BulkForwardToClientRequest = {
         recipientEmail,
+        cc,
+        bcc,
         projectId: visibleCandidates[0]?.project.id,
         notes: notes || `Attached are the verified documents for ${visibleCandidates.length} candidates.`,
         deliveryMethod,
@@ -417,57 +428,74 @@ export function BulkSendToClientModal({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {/* Client Information Section */}
-              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-2 mb-1.5">
+              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-2">
+                <div className="flex items-center gap-2 mb-0.5">
                   <User className="h-3 w-3 text-blue-600" />
-                  <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">Recipient</h3>
+                  <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">Recipient & CC/BCC</h3>
                 </div>
                 
-                {commonClient ? (
-                  <div className="space-y-1.5">
-                    <p className="text-slate-900 dark:text-white text-[11px] font-semibold truncate">{commonClient.name || "N/A"}</p>
-                    <div className="flex gap-1 items-center">
-                      <div className="relative flex-1">
-                        <Input
-                          value={recipientEmail}
-                          onChange={(e) => setRecipientEmail(e.target.value)}
-                          disabled={!isEditingEmail}
-                          className={cn(
-                            "pl-6 h-7 text-[11px] border-slate-200 focus:ring-blue-500/20",
-                            !isEditingEmail ? "bg-slate-50 dark:bg-slate-800/50 text-slate-600" : "bg-white dark:bg-gray-900"
-                          )}
-                          placeholder="client@email.com"
-                        />
-                        <Mail className="absolute left-2 top-1.5 h-3 w-3 text-slate-400" />
-                      </div>
+                <div className="space-y-2">
+                  <div className="flex gap-1 items-center">
+                    <div className="relative flex-1">
+                      <Input
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        disabled={!isEditingEmail && !!commonClient}
+                        className={cn(
+                          "pl-6 h-7 text-[10px] border-slate-200 focus:ring-blue-500/20",
+                          !isEditingEmail && !!commonClient ? "bg-slate-50 dark:bg-slate-800/50 text-slate-600" : "bg-white dark:bg-gray-900"
+                        )}
+                        placeholder="Recipient Email"
+                      />
+                      <Mail className="absolute left-2 top-2 h-2.5 w-2.5 text-slate-400" />
+                    </div>
+                    {commonClient && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => setIsEditingEmail(!isEditingEmail)}
-                        className="h-7 px-2 border-slate-200 text-slate-600 dark:text-slate-400 text-xs flex-shrink-0"
+                        className="h-7 w-7 p-0 text-slate-400 hover:text-blue-600"
                       >
-                        {isEditingEmail ? "Save" : <Edit2 className="h-3 w-3" />}
+                        <Edit2 className="h-3 w-3" />
                       </Button>
-                    </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="bg-amber-50 border border-amber-100 p-1.5 rounded flex items-start gap-2">
-                    <AlertCircle className="h-3 w-3 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-amber-800 font-semibold">Enter email</p>
-                      <div className="relative mt-1">
-                        <Input
-                          value={recipientEmail}
-                          onChange={(e) => setRecipientEmail(e.target.value)}
-                          className="pl-6 h-7 text-[11px] border-slate-200 dark:border-slate-800"
-                          placeholder="client@email.com"
-                        />
-                        <Mail className="absolute left-2 top-1.5 h-3 w-3 text-slate-400" />
-                      </div>
+
+                  {!showCCBCC ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowCCBCC(true)}
+                      className="text-[9px] text-blue-600 font-bold hover:underline py-0.5 w-fit"
+                    >
+                      + Add CC/BCC
+                    </button>
+                  ) : (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <MultiEmailInput
+                        emails={cc}
+                        onChange={setCc}
+                        placeholder="Add CC email..."
+                        icon={<Users className="h-2.5 w-2.5" />}
+                        className="space-y-1"
+                      />
+                      <MultiEmailInput
+                        emails={bcc}
+                        onChange={setBcc}
+                        placeholder="Add BCC email..."
+                        icon={<ShieldAlert className="h-2.5 w-2.5" />}
+                        className="space-y-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCCBCC(false)}
+                        className="text-[9px] text-slate-400 font-medium hover:text-red-500 hover:underline"
+                      >
+                        Hide
+                      </button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Message Section */}

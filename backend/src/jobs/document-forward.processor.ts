@@ -89,6 +89,8 @@ export class DocumentForwardProcessor extends WorkerHost {
 
       await this.emailService.sendEmail({
         to: history.recipientEmail,
+        cc: history.ccEmails,
+        bcc: history.bccEmails,
         subject: `Documents for ${history.candidate.firstName} ${history.candidate.lastName} - ${history.project.title}`,
         html,
         attachments,
@@ -123,6 +125,8 @@ export class DocumentForwardProcessor extends WorkerHost {
     const { bulkForwardDto, senderId } = job.data;
     const { 
       recipientEmail, 
+      cc,
+      bcc,
       projectId, 
       notes, 
       selections, 
@@ -255,7 +259,7 @@ export class DocumentForwardProcessor extends WorkerHost {
         gdriveLink = await this.googleDriveService.shareFolder(batchFolderId, recipientEmail);
       }
 
-      // 6. Send the combined email
+      // 6. Send the combined email̦
       const html = EmailTemplates.bulkForwardDocuments({
         projectTitle: project.title,
         candidates: emailCandidates,
@@ -265,6 +269,8 @@ export class DocumentForwardProcessor extends WorkerHost {
 
       await this.emailService.sendEmail({
         to: recipientEmail,
+        cc: cc || [],
+        bcc: bcc || [],
         subject: `Batch Candidate Submission (${emailCandidates.length}) - ${project.title}`,
         html,
         attachments,
