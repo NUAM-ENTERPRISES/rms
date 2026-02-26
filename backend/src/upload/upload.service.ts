@@ -357,9 +357,12 @@ export class UploadService {
       'image/jpg',
       'image/png',
       'image/webp',
+      'text/csv',
+      'application/vnd.ms-excel',
+      'text/plain',
     ];
     const folder = `candidates/documents/${candidateId}/${docType}`;
-    return this.uploadFile(file, folder, allowedMimeTypes, 10);
+    return this.uploadFile(file, folder, allowedMimeTypes, 20);
   }
 
   /**

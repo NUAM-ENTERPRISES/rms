@@ -6,6 +6,7 @@ import { PrismaModule } from '../database/prisma.module';
 import { ProcessingModule } from '../processing/processing.module';
 import { UploadModule } from '../upload/upload.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { GoogleDriveModule } from '../google-drive/google-drive.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ProcessingModule,
     forwardRef(() => UploadModule),
     forwardRef(() => NotificationsModule),
+    GoogleDriveModule,
     BullModule.registerQueue({
       name: 'document-forward',
     }),

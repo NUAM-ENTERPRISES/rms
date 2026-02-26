@@ -3,6 +3,12 @@ import { IsEmail, IsNotEmpty, IsString, IsArray, IsOptional, IsEnum, ValidateNes
 import { Type } from 'class-transformer';
 import { SendType } from './forward-to-client.dto';
 
+export enum DeliveryMethod {
+  EMAIL_INDIVIDUAL = 'email_individual',
+  EMAIL_COMBINED = 'email_combined',
+  GOOGLE_DRIVE = 'google_drive',
+}
+
 export class ForwardSelectionDto {
   @ApiProperty({ example: 'cand_123' })
   @IsString()
@@ -46,9 +52,24 @@ export class BulkForwardToClientDto {
   @IsOptional()
   notes?: string;
 
+  @ApiProperty({ enum: DeliveryMethod, example: 'email_combined', default: DeliveryMethod.EMAIL_INDIVIDUAL })
+  @IsEnum(DeliveryMethod)
+  @IsOptional()
+  deliveryMethod?: DeliveryMethod;
+
   @ApiProperty({ type: [ForwardSelectionDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ForwardSelectionDto)
   selections: ForwardSelectionDto[];
+
+  @ApiProperty({ required: false, example: 'https://cdn.example.com/attachments/summary.csv' })
+  @IsString()
+  @IsOptional()
+  csvUrl?: string;
+
+  @ApiProperty({ required: false, example: 'batch-summary.csv' })
+  @IsString()
+  @IsOptional()
+  csvName?: string;
 }

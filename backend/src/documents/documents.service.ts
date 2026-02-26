@@ -20,7 +20,7 @@ import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
-import { BulkForwardToClientDto } from './dto/bulk-forward-to-client.dto';
+import { BulkForwardToClientDto, DeliveryMethod } from './dto/bulk-forward-to-client.dto';
 import {
   DocumentWithRelations,
   PaginatedDocuments,
@@ -36,6 +36,8 @@ import {
 } from '../common/constants';
 import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingService } from '../processing/processing.service';
+import { UploadService } from '../upload/upload.service';
+import { GoogleDriveService } from '../google-drive/google-drive.service';
 
 @Injectable()
 export class DocumentsService {
@@ -45,6 +47,8 @@ export class DocumentsService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly processingService: ProcessingService,
+    private readonly uploadService: UploadService,
+    private readonly googleDriveService: GoogleDriveService,
     @InjectQueue('document-forward') private readonly documentForwardQueue: Queue,
   ) { }
 
@@ -3490,7 +3494,9 @@ export class DocumentsService {
       sendType, 
       documentIds, 
       notes, 
-      roleCatalogId 
+      roleCatalogId,
+      csvUrl,
+      csvName,
     } = forwardDto;
 
     return this.processForwarding({
@@ -3501,7 +3507,9 @@ export class DocumentsService {
       documentIds,
       notes,
       roleCatalogId,
-      senderId
+      senderId,
+      csvUrl,
+      csvName,
     });
   }
 
@@ -3509,46 +3517,78 @@ export class DocumentsService {
    * Bulk forward documents for multiple candidates to client
    */
   async bulkForwardToClient(bulkForwardDto: BulkForwardToClientDto, senderId: string) {
-    const { recipientEmail, projectId, notes, selections } = bulkForwardDto;
+    const { 
+      recipientEmail, 
+      projectId, 
+      notes, 
+      selections, 
+      deliveryMethod = DeliveryMethod.EMAIL_INDIVIDUAL,
+      csvUrl,
+      csvName,
+    } = bulkForwardDto;
 
     // Validate project once
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw new NotFoundException('Project not found');
 
-    const results: Array<{ candidateId: string; success: boolean }> = [];
-    const errors: Array<{ candidateId: string; error: string }> = [];
+    // If using individual emails, keep existing behavior
+    if (!deliveryMethod || deliveryMethod === DeliveryMethod.EMAIL_INDIVIDUAL) {
+      const results: Array<{ candidateId: string; success: boolean }> = [];
+      const errors: Array<{ candidateId: string; error: string }> = [];
 
-    for (const selection of selections) {
-      try {
-        const result = await this.processForwarding({
-          candidateId: selection.candidateId,
-          projectId: selection.projectId || projectId,
-          recipientEmail,
-          sendType: selection.sendType,
-          documentIds: selection.documentIds,
-          notes,
-          roleCatalogId: selection.roleCatalogId,
-          senderId,
-          isBulk: true,
-        });
-        results.push({ candidateId: selection.candidateId, success: true });
-      } catch (error) {
-        this.logger.error(`Failed to forward documents for candidate ${selection.candidateId}: ${error.message}`);
-        errors.push({ candidateId: selection.candidateId, error: error.message });
+      for (const selection of selections) {
+        try {
+          await this.processForwarding({
+            candidateId: selection.candidateId,
+            projectId: selection.projectId || projectId,
+            recipientEmail,
+            sendType: selection.sendType,
+            documentIds: selection.documentIds,
+            notes,
+            roleCatalogId: selection.roleCatalogId,
+            senderId,
+            isBulk: true,
+            csvUrl,
+            csvName,
+          });
+          results.push({ candidateId: selection.candidateId, success: true });
+        } catch (error) {
+          this.logger.error(`Failed to forward documents for candidate ${selection.candidateId}: ${error.message}`);
+          errors.push({ candidateId: selection.candidateId, error: error.message });
+        }
       }
+
+      if (results.length === 0 && errors.length > 0) {
+        throw new BadRequestException(`Bulk forwarding failed: ${errors[0].error}`);
+      }
+
+      return {
+        success: true,
+        message: `Successfully queued documents for ${results.length} candidates. ${errors.length > 0 ? `${errors.length} failed.` : ''}`,
+        details: {
+          processed: results,
+          failed: errors
+        }
+      };
     }
 
-    if (results.length === 0 && errors.length > 0) {
-      throw new BadRequestException(`Bulk forwarding failed: ${errors[0].error}`);
-    }
+    // New delivery methods: EMAIL_COMBINED or GOOGLE_DRIVE
+    // For these, we queue a single bulk job instead of multiple individual ones
+    await this.documentForwardQueue.add('bulk-send-documents', {
+      bulkForwardDto,
+      senderId,
+    }, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+      removeOnComplete: true,
+    });
 
     return {
       success: true,
-      message: `Successfully queued documents for ${results.length} candidates. ${errors.length > 0 ? `${errors.length} failed.` : ''}`,
-      details: {
-        processed: results,
-        failed: errors
-      }
+      message: `Bulk document delivery (${deliveryMethod}) queued for ${selections.length} candidates. This may take a few minutes.`,
     };
   }
 
@@ -3565,6 +3605,8 @@ export class DocumentsService {
     roleCatalogId?: string;
     senderId: string;
     isBulk?: boolean;
+    csvUrl?: string;
+    csvName?: string;
   }) {
     const { 
       candidateId, 
@@ -3576,6 +3618,8 @@ export class DocumentsService {
       roleCatalogId,
       senderId,
       isBulk = false,
+      csvUrl,
+      csvName,
     } = params;
 
     // 1. Validate candidate
@@ -3587,6 +3631,16 @@ export class DocumentsService {
     // The existing forwardToClient validated it.
 
     let attachments: any[] = [];
+
+    // Add optional CSV attachment if provided
+    if (csvUrl) {
+      attachments.push({
+        id: `csv-${Date.now()}`,
+        fileName: csvName || 'summary.csv',
+        fileUrl: csvUrl,
+        mimeType: 'text/csv',
+      });
+    }
 
     if (sendType === SendType.MERGED) {
       // 2. Locate latest merged PDF
@@ -3644,12 +3698,14 @@ export class DocumentsService {
         throw new BadRequestException(`No valid verified documents found for candidate ${candidateId}.`);
       }
 
-      attachments = docs.map(d => ({
+      const individualDocs = docs.map(d => ({
         id: d.id,
         fileName: d.fileName,
         fileUrl: d.fileUrl,
         mimeType: d.mimeType,
       }));
+
+      attachments.push(...individualDocs);
     }
 
     // 4. Create Audit Trail Entry (History)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,11 @@ import {
   MessageSquare,
   Clock,
   History,
-  Eye
+  Eye,
+  Paperclip,
+  Trash2,
+  X,
+  FileSpreadsheet
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -34,10 +38,13 @@ import {
   useForwardToClientMutation, 
   useGetLatestForwardingQuery 
 } from "../api";
+import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { PDFViewer } from "@/components/molecules";
 import { formatDistanceToNow, format } from "date-fns";
 import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
 import { MergeVerifiedModal } from "./MergeVerifiedModal";
+import { SelectedDoc } from "./BulkViewDocumentsModal";
+import { Badge } from "@/components/ui";
 
 interface SendToClientModalProps {
   isOpen: boolean;
@@ -62,9 +69,10 @@ export function SendToClientModal({
 }: SendToClientModalProps) {
   const [email, setEmail] = useState("");
   const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+  const [selectedDocs, setSelectedDocs] = useState<SelectedDoc[]>([]);
   const [notes, setNotes] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
   // PDF viewer state
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
@@ -75,6 +83,7 @@ export function SendToClientModal({
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
 
   const [forwardToClient, { isLoading: isForwarding }] = useForwardToClientMutation();
+  const [uploadDocument, { isLoading: isUploadingCsv }] = useUploadDocumentMutation();
 
   // Check for existing merged document
   const { data: mergedDocResponse, isLoading: isCheckingMerged, refetch: refetchMerged } = useGetMergedDocumentQuery(
@@ -89,6 +98,20 @@ export function SendToClientModal({
   }, [isOpen, refetchMerged, roleCatalogId]);
 
   const mergedDoc = mergedDocResponse?.data;
+
+  // Total size of selected documents in MB
+  const totalSelectedSizeInfo = useMemo(() => {
+    let totalBytes = 0;
+    selectedDocs.forEach(doc => {
+      totalBytes += (doc.size || 0);
+    });
+    // Add CSV size if present
+    if (csvFile) {
+      totalBytes += csvFile.size;
+    }
+    const mb = totalBytes / (1024 * 1024);
+    return { bytes: totalBytes, mb };
+  }, [selectedDocs, csvFile]);
 
   // New: Check for latest forwarding record
   const { data: latestForwardingResponse } = useGetLatestForwardingQuery(
@@ -128,6 +151,7 @@ export function SendToClientModal({
       setIsEditingEmail(false);
       setSelectedDocs([]);
       setNotes("");
+      setCsvFile(null);
     }
   }, [isOpen, clientData]);
 
@@ -136,23 +160,44 @@ export function SendToClientModal({
     setSelectedDocs((prev) => {
       // If selecting merged, clear individual docs
       if (docId === "merged") {
-        return prev.includes("merged") ? [] : ["merged"];
+        const isCurrentlySelected = prev.some(d => d.id === "merged");
+        if (isCurrentlySelected) {
+          return [];
+        } else if (mergedDoc) {
+          return [
+            {
+              id: "merged",
+              name: mergedDoc.fileName || "merged_documents.pdf",
+              size: mergedDoc.fileSize || 0,
+            },
+          ];
+        }
+        return prev;
       }
       
       // If selecting individual doc, ensure merged is NOT selected
-      const isCurrentlySelected = prev.includes(docId);
-      const withoutMerged = prev.filter(id => id !== "merged");
+      const isCurrentlySelected = prev.some(d => d.id === docId);
+      const withoutMerged = prev.filter(d => d.id !== "merged");
       
       if (isCurrentlySelected) {
-        return withoutMerged.filter(id => id !== docId);
+        return withoutMerged.filter(d => d.id !== docId);
       } else {
-        return [...withoutMerged, docId];
+        const doc = documents.find(d => d.id === docId);
+        if (!doc) return withoutMerged;
+        return [
+          ...withoutMerged,
+          {
+            id: doc.id,
+            name: doc.fileName,
+            size: doc.fileSize || 0,
+          },
+        ];
       }
     });
   };
 
-  const hasIndividualSelected = selectedDocs.some(id => id !== "merged");
-  const hasMergedSelected = selectedDocs.includes("merged");
+  const hasIndividualSelected = selectedDocs.some(d => d.id !== "merged");
+  const hasMergedSelected = selectedDocs.some(d => d.id === "merged");
 
   const handleSend = async () => {
     if (!email) {
@@ -172,11 +217,39 @@ export function SendToClientModal({
       return;
     }
 
-    try {
-      const sendType = selectedDocs.includes("merged") ? "merged" : "individual";
-      const documentIds = sendType === "individual" ? selectedDocs : undefined;
+    // Gmail/Outlook limit check
+    if (totalSelectedSizeInfo.mb > 20) {
+      toast.error(`Total document size (${totalSelectedSizeInfo.mb.toFixed(2)}MB) exceeds the 20MB limit. Please remove some documents.`);
+      return;
+    }
 
-      await forwardToClient({
+    try {
+      let csvUrl = undefined;
+      let csvName = undefined;
+
+      // Handle CSV upload if present
+      if (csvFile) {
+        toast.info(`Uploading ${csvFile.name}...`);
+        const formData = new FormData();
+        formData.append("file", csvFile);
+        formData.append("docType", "csv_attachment");
+        
+        const uploadResult = await uploadDocument({ 
+          candidateId, 
+          formData 
+        }).unwrap();
+
+        if (uploadResult.success) {
+          csvUrl = uploadResult.data.fileUrl;
+          csvName = csvFile.name;
+          console.log("Single CSV Upload Success:", { csvUrl, csvName });
+        }
+      }
+
+      const sendType: "merged" | "individual" = selectedDocs.some(d => d.id === "merged") ? "merged" : "individual";
+      const documentIds = sendType === "individual" ? selectedDocs.map(d => d.id) : undefined;
+
+      const payload = {
         recipientEmail: email,
         candidateId,
         projectId,
@@ -184,7 +257,13 @@ export function SendToClientModal({
         sendType,
         documentIds,
         notes: notes || `Attached are the verified documents for ${candidateName}`,
-      }).unwrap();
+        csvUrl,
+        csvName
+      };
+
+      console.log("Forward to Client Payload:", payload);
+
+      await forwardToClient(payload).unwrap();
 
       toast.success("Mail sent successfully and queued. Please wait for 3 minutes.");
       onOpenChange(false);
@@ -212,7 +291,7 @@ export function SendToClientModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-slate-50">
+      <DialogContent className="!max-w-6xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-slate-50">
         {/* Header */}
         <DialogHeader className="p-6 bg-gradient-to-r from-emerald-600 to-teal-700 text-white relative">
           <div className="absolute right-12 top-6">
@@ -230,14 +309,29 @@ export function SendToClientModal({
             <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
               <Send className="h-5 w-5 text-white" />
             </div>
-            Send Documents to Client
+            <div className="flex flex-col">
+              <span>Send Documents to Client</span>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-xs text-emerald-100/80 font-normal">Candidate: {candidateName}</p>
+                {totalSelectedSizeInfo.bytes > 0 && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[10px] h-4.5 px-1.5 border-white/20 text-white font-bold ${
+                      totalSelectedSizeInfo.mb > 20 ? "bg-red-500/20 text-red-100 border-red-400/30 animate-pulse" : "bg-white/10"
+                    }`}
+                  >
+                    {totalSelectedSizeInfo.mb.toFixed(2)} MB
+                  </Badge>
+                )}
+              </div>
+            </div>
           </DialogTitle>
           <p className="text-emerald-100 text-sm mt-1">
             Send {candidateName}'s verified documentation to the client for review.
           </p>
         </DialogHeader>
 
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
           {/* Previous Forwarding History (if any) */}
           {latestForwarding && (
             <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
@@ -274,86 +368,151 @@ export function SendToClientModal({
             </div>
           )}
 
-          {/* Client Information Section */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="h-4 w-4 text-emerald-600" />
-              <h3 className="font-semibold text-slate-800">Client Details</h3>
-            </div>
-            
-            {clientData ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-1">
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Client Name</p>
-                  <p className="text-slate-900 font-semibold">{clientData.name || "N/A"}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Client Information Section */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="h-4 w-4 text-emerald-600" />
+                <h3 className="font-semibold text-slate-800">Client Details</h3>
+              </div>
+              
+              {clientData ? (
+                <div className="flex flex-col gap-4 text-sm flex-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Client Name</p>
+                      <p className="text-slate-900 font-semibold truncate">{clientData.name || "N/A"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Contact</p>
+                      <p className="text-slate-900 font-semibold truncate">{clientData.phone || "N/A"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mt-auto">
+                    <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Recipient Email</p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={!isEditingEmail}
+                          className={`pl-8 h-9 text-xs border-slate-200 focus:ring-emerald-500/20 ${!isEditingEmail ? 'bg-slate-50 text-slate-600' : 'bg-white'}`}
+                          placeholder="client@email.com"
+                        />
+                        <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingEmail(!isEditingEmail)}
+                        className="h-9 px-2 border-slate-200 text-slate-600"
+                      >
+                        {isEditingEmail ? "Save" : <Edit2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Contact Number</p>
-                  <p className="text-slate-900 font-semibold">{clientData.phone || "N/A"}</p>
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Recipient Email</p>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-start gap-3 flex-1">
+                  <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-amber-800 font-medium">No client linked</p>
+                    <p className="text-xs text-amber-700">Enter email below</p>
+                    <div className="mt-3 relative">
                       <Input
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        disabled={!isEditingEmail}
-                        className={`pl-9 h-10 border-slate-200 focus:ring-emerald-500/20 ${!isEditingEmail ? 'bg-slate-50 text-slate-600' : 'bg-white'}`}
+                        className="pl-8 h-9 text-xs border-slate-200 focus:ring-emerald-500/20"
                         placeholder="client@email.com"
                       />
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingEmail(!isEditingEmail)}
-                      className="h-10 border-slate-200 text-slate-600"
-                    >
-                      {isEditingEmail ? "Save" : <><Edit2 className="h-4 w-4 mr-1.5" /> Edit</>}
-                    </Button>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-amber-800 font-medium">No client linked to this project</p>
-                  <p className="text-xs text-amber-700">Please enter the recipient email manually below.</p>
-                </div>
-              </div>
-            )}
-            
-            {!clientData && (
-              <div className="mt-4 space-y-2">
-                <Label className="text-slate-600 text-sm">Recipient Email</Label>
-                <div className="relative">
-                  <Input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9 h-11 border-slate-200 focus:ring-emerald-500/20"
-                    placeholder="client@email.com"
-                  />
-                  <Mail className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Optional Message Section */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-emerald-600" />
-              <h3 className="font-semibold text-slate-800">Custom Message (Optional)</h3>
+              )}
             </div>
-            <Textarea 
-              placeholder={`Add a message for the client (e.g. "Please find the attached documents for ${candidateName}")`}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[100px] border-slate-200 focus:ring-emerald-500/20 resize-none ring-offset-transparent"
-            />
+
+            {/* Optional Message Section */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 flex flex-col h-full">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-emerald-600" />
+                <h3 className="font-semibold text-slate-800">Message (Optional)</h3>
+              </div>
+              <Textarea 
+                placeholder={`Add a message for the client...`}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="flex-1 min-h-[100px] border-slate-200 focus:ring-emerald-500/20 resize-none ring-offset-transparent text-sm"
+              />
+            </div>
+
+            {/* New CSV Upload Section */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 flex flex-col h-full">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                  <h3 className="font-semibold text-slate-800">CSV Attachment</h3>
+                </div>
+                {csvFile && (
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold text-[10px]">
+                    {csvFile.size < 1024 * 1024 
+                      ? `${(csvFile.size / 1024).toFixed(0)} KB` 
+                      : `${(csvFile.size / (1024 * 1024)).toFixed(2)} MB`}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex-1 flex flex-col justify-center">
+                {csvFile ? (
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 group">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
+                        <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{csvFile.name}</p>
+                        <p className="text-[10px] text-slate-500">Ready to attach</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCsvFile(null)}
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="relative h-full">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
+                            toast.error("Please upload only CSV files");
+                            return;
+                          }
+                          setCsvFile(file);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                      id="csv-upload"
+                    />
+                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 h-full flex flex-col items-center justify-center text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all">
+                      <div className="inline-flex p-2 bg-slate-100 rounded-full mb-2">
+                        <Paperclip className="h-4 w-4 text-slate-500" />
+                      </div>
+                      <p className="text-xs font-medium text-slate-700">Attach CSV</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Summary data</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Document Selection Section */}
@@ -373,10 +532,10 @@ export function SendToClientModal({
                   ? "bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed" 
                   : "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200"
               }`}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 text-left">
                   <Checkbox 
                     id="merged-doc" 
-                    checked={selectedDocs.includes("merged")}
+                    checked={selectedDocs.some(d => d.id === "merged")}
                     onCheckedChange={() => toggleDoc("merged")}
                     disabled={hasIndividualSelected}
                     className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
@@ -394,6 +553,12 @@ export function SendToClientModal({
                     <p className={`text-xs mt-0.5 ${hasIndividualSelected ? "text-slate-400" : "text-emerald-700"}`}>
                       {mergedDoc.fileName ? abbreviateFileName(mergedDoc.fileName) : "merged_documents.pdf"} 
                       <span className="mx-2">•</span>
+                      {mergedDoc.fileSize > 0 && (
+                        <>
+                          {(mergedDoc.fileSize / (1024 * 1024)).toFixed(2)} MB
+                          <span className="mx-2">•</span>
+                        </>
+                      )}
                       {mergedDoc.updatedAt ? `Generated ${safeFormatDistanceToNow(mergedDoc.updatedAt)}` : 'Ready to send'}
                     </p>
                     <p className="text-[11px] text-slate-500 mt-1">Already generated — you can re-generate to include any recent updates.</p>
@@ -470,15 +635,21 @@ export function SendToClientModal({
                   className="h-6 text-[10px] uppercase font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 disabled:text-slate-400"
                   onClick={() => {
                     if (hasMergedSelected) return;
-                    const allIds = documents.map(d => d.id);
-                    if (selectedDocs.filter(id => id !== "merged").length === documents.length) {
+                    
+                    const individualSelectedCount = selectedDocs.filter(d => d.id !== "merged").length;
+                    
+                    if (individualSelectedCount === documents.length) {
                       setSelectedDocs([]);
                     } else {
-                      setSelectedDocs(allIds);
+                      setSelectedDocs(documents.map(doc => ({
+                        id: doc.id,
+                        name: doc.fileName,
+                        size: doc.fileSize || 0
+                      })));
                     }
                   }}
                 >
-                  {selectedDocs.filter(id => id !== "merged").length === documents.length ? "Deselect All" : "Select All"}
+                  {selectedDocs.filter(d => d.id !== "merged").length === documents.length ? "Deselect All" : "Select All"}
                 </Button>
               </div>
               <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
@@ -486,7 +657,7 @@ export function SendToClientModal({
                   <div key={doc.id} className={`p-3 flex items-center gap-3 transition-colors ${hasMergedSelected ? "cursor-not-allowed" : "hover:bg-slate-50"}`}>
                     <Checkbox 
                       id={`doc-${doc.id}`} 
-                      checked={selectedDocs.includes(doc.id)}
+                      checked={selectedDocs.some(d => d.id === doc.id)}
                       onCheckedChange={() => toggleDoc(doc.id)}
                       disabled={hasMergedSelected}
                       className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
@@ -500,9 +671,15 @@ export function SendToClientModal({
                       >
                         {abbreviateFileName(doc.fileName)}
                       </Label>
-                      <p className={`text-[10px] capitalize ${hasMergedSelected ? "text-slate-300" : "text-slate-500"}`}>
-                        {doc.docType.replace(/_/g, ' ')}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-[10px] capitalize ${hasMergedSelected ? "text-slate-300" : "text-slate-500"}`}>
+                          {doc.docType.replace(/_/g, ' ')}
+                        </p>
+                        <span className={`text-[10px] ${hasMergedSelected ? "text-slate-300" : "text-slate-400"}`}>•</span>
+                        <p className={`text-[10px] ${hasMergedSelected ? "text-slate-300" : "text-emerald-600 font-medium"}`}>
+                          {((doc.fileSize || 0) / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
                     </div>
                       <Button
                         variant="ghost"
@@ -518,7 +695,7 @@ export function SendToClientModal({
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                    {selectedDocs.includes(doc.id) && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                    {selectedDocs.some(d => d.id === doc.id) && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                   </div>
                 ))}
               </div>

@@ -41,4 +41,14 @@ export class ForwardToClientDto {
   @IsString()
   @IsOptional()
   roleCatalogId?: string;
+
+  @ApiProperty({ required: false, example: 'https://cdn.example.com/attachments/summary.csv' })
+  @IsString()
+  @IsOptional()
+  csvUrl?: string;
+
+  @ApiProperty({ required: false, example: 'candidate-summary.csv' })
+  @IsString()
+  @IsOptional()
+  csvName?: string;
 }

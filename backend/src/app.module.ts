@@ -43,6 +43,7 @@ import { CandidateProjectStatusModule } from './candidate-project-status/candida
 import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
 import { ScreeningCoordinationModule } from './screening-coordination/screening-coordination.module';
 import { ProcessingModule } from './processing/processing.module';
+import { GoogleDriveModule } from './google-drive/google-drive.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { ProcessingModule } from './processing/processing.module';
     CandidateProjectStatusHistoryModule,
     ScreeningCoordinationModule,
     ProcessingModule,
+    GoogleDriveModule,
   ],
   controllers: [AppController],
   providers: [
