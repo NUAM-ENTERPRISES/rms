@@ -322,107 +322,80 @@ export function BulkSendToClientModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6 py-4 bg-slate-50/50 dark:bg-gray-950/50">
-          <div className="max-w-5xl mx-auto space-y-4 mb-6">
-            {/* Delivery Method Selection */}
-            <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+        <ScrollArea className="flex-1 px-6 py-3 bg-slate-50/50 dark:bg-gray-950/50">
+          <div className="max-w-5xl mx-auto space-y-2 mb-3">
+            {/* Delivery Method Selection - Compact */}
+            <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Send className="h-3 w-3 text-blue-600" />
-                  <h3 className="font-bold text-xs text-slate-800 dark:text-slate-200">Delivery Method</h3>
+                  <h3 className="font-bold text-xs text-slate-800 dark:text-slate-200">Send</h3>
                 </div>
-                {visibleCandidates.length >= 10 && deliveryMethod === 'email_individual' && (
-                  <Badge variant="outline" className="text-[9px] bg-amber-50 text-amber-700 border-amber-200 animate-pulse">
-                    <AlertCircle className="h-2.5 w-2.5 mr-1" />
-                    Combined email or GDrive recommended for {visibleCandidates.length} candidates
-                  </Badge>
-                )}
+                <Tabs value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)} className="flex-1">
+                  <TabsList className="grid grid-cols-3 w-full h-7 bg-slate-100 dark:bg-slate-800 p-0.5">
+                    <TabsTrigger value="email_individual" className="text-[8px] h-6 px-1">Separate</TabsTrigger>
+                    <TabsTrigger value="email_combined" className="text-[8px] h-6 px-1">Combined</TabsTrigger>
+                    <TabsTrigger value="google_drive" className="text-[8px] h-6 px-1">GDrive</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
-              <Tabs value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)} className="w-full">
-                <TabsList className="grid grid-cols-3 w-full h-8 bg-slate-100 dark:bg-slate-800 p-0.5">
-                  <TabsTrigger value="email_individual" className="text-[10px] h-7">Separate Emails</TabsTrigger>
-                  <TabsTrigger value="email_combined" className="text-[10px] h-7">Combined Email</TabsTrigger>
-                  <TabsTrigger value="google_drive" className="text-[10px] h-7">Google Drive Link</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              
-              <p className="text-[10px] text-slate-500 mt-2 italic px-1">
-                {deliveryMethod === 'email_individual' && "Recipient will receive a separate email for EACH candidate."}
-                {deliveryMethod === 'email_combined' && "Recipient will receive ONE email with documents for ALL candidates as attachments."}
-                {deliveryMethod === 'google_drive' && "Recipient will receive ONE email with a secure Google Drive folder link containing all profiles."}
-              </p>
+              {visibleCandidates.length >= 10 && deliveryMethod === 'email_individual' && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 p-1.5 rounded">
+                  <AlertCircle className="h-3 w-3 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-[9px] text-amber-700 font-semibold">Combined or GDrive recommended</p>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {/* Client Information Section */}
-              <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
                   <User className="h-3 w-3 text-blue-600" />
-                  <h3 className="font-bold text-xs text-slate-800 dark:text-slate-200">Recipient Details</h3>
+                  <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">Recipient</h3>
                 </div>
                 
                 {commonClient ? (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="space-y-0.5">
-                        <p className="text-slate-500 text-[8px] font-bold uppercase tracking-wider">Client Name</p>
-                        <p className="text-slate-900 dark:text-white text-xs font-semibold">{commonClient.name || "N/A"}</p>
-                      </div>
-                      {'phone' in commonClient && commonClient.phone && (
-                        <div className="space-y-0.5">
-                          <p className="text-slate-500 text-[8px] font-bold uppercase tracking-wider">Contact</p>
-                          <p className="text-slate-900 dark:text-white text-xs font-semibold truncate">{commonClient.phone}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[8px] font-bold uppercase">Email</Label>
-                      <div className="flex gap-1">
-                        <div className="relative flex-1">
-                          <Input
-                            value={recipientEmail}
-                            onChange={(e) => setRecipientEmail(e.target.value)}
-                            disabled={!isEditingEmail}
-                            className={cn(
-                              "pl-7 h-8 text-xs border-slate-200 focus:ring-blue-500/20",
-                              !isEditingEmail ? "bg-slate-50 dark:bg-slate-800/50 text-slate-600" : "bg-white dark:bg-gray-900"
-                            )}
-                            placeholder="client@email.com"
-                          />
-                          <Mail className="absolute left-2 top-2 h-3 w-3 text-slate-400" />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsEditingEmail(!isEditingEmail)}
-                          className="h-8 px-2 border-slate-200 text-slate-600 dark:text-slate-400 text-xs"
-                        >
-                          {isEditingEmail ? "Save" : <Edit2 className="h-3 w-3" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="bg-amber-50 border border-amber-100 p-2 rounded flex items-start gap-2">
-                      <AlertCircle className="h-3 w-3 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-[10px]">
-                        <p className="text-amber-800 font-semibold">No client details</p>
-                        <p className="text-amber-700">Enter email manually</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-slate-600 dark:text-slate-400 text-[8px] font-bold">Email</Label>
-                      <div className="relative">
+                  <div className="space-y-1.5">
+                    <p className="text-slate-900 dark:text-white text-[11px] font-semibold truncate">{commonClient.name || "N/A"}</p>
+                    <div className="flex gap-1 items-center">
+                      <div className="relative flex-1">
                         <Input
                           value={recipientEmail}
                           onChange={(e) => setRecipientEmail(e.target.value)}
-                          className="pl-7 h-8 text-xs border-slate-200 dark:border-slate-800"
+                          disabled={!isEditingEmail}
+                          className={cn(
+                            "pl-6 h-7 text-[11px] border-slate-200 focus:ring-blue-500/20",
+                            !isEditingEmail ? "bg-slate-50 dark:bg-slate-800/50 text-slate-600" : "bg-white dark:bg-gray-900"
+                          )}
                           placeholder="client@email.com"
                         />
-                        <Mail className="absolute left-2 top-2 h-3 w-3 text-slate-400" />
+                        <Mail className="absolute left-2 top-1.5 h-3 w-3 text-slate-400" />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingEmail(!isEditingEmail)}
+                        className="h-7 px-2 border-slate-200 text-slate-600 dark:text-slate-400 text-xs flex-shrink-0"
+                      >
+                        {isEditingEmail ? "Save" : <Edit2 className="h-3 w-3" />}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-100 p-1.5 rounded flex items-start gap-2">
+                    <AlertCircle className="h-3 w-3 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-amber-800 font-semibold">Enter email</p>
+                      <div className="relative mt-1">
+                        <Input
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                          className="pl-6 h-7 text-[11px] border-slate-200 dark:border-slate-800"
+                          placeholder="client@email.com"
+                        />
+                        <Mail className="absolute left-2 top-1.5 h-3 w-3 text-slate-400" />
                       </div>
                     </div>
                   </div>
@@ -430,29 +403,23 @@ export function BulkSendToClientModal({
               </div>
 
               {/* Message Section */}
-              <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
                   <MessageSquare className="h-3 w-3 text-blue-600" />
-                  <h3 className="font-bold text-xs text-slate-800 dark:text-slate-200">Message (Optional)</h3>
+                  <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">Message (Optional)</h3>
                 </div>
                 <Textarea 
                   placeholder={`Message about these ${candidates.length} candidates...`}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[60px] text-xs border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 resize-none p-2"
+                  className="min-h-[48px] text-xs border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 resize-none p-2"
                 />
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 px-2">
-              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-              <span className="text-[8px] font-bold uppercase text-slate-400 tracking-wider">Candidates</span>
-              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
             </div>
           </div>
 
           <TooltipProvider delayDuration={200}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-4 px-6">
             {currentCandidates.map((candidate) => {
               const roleLabel =
                 candidate.roleNeeded?.roleCatalog?.label || "Role Not Specified";
@@ -654,7 +621,7 @@ export function BulkSendToClientModal({
 
         <div className="px-6 py-4 border-t bg-white dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <div className="flex flex-col">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   Reviewing {visibleCandidates.length} candidates
@@ -665,6 +632,16 @@ export function BulkSendToClientModal({
                     {visibleCandidates.length - Object.keys(selectedDocsByCandidate).length} pending document selection
                   </p>
                 )}
+              </div>
+
+              {/* Delivery Method Description */}
+              <div className="flex flex-col text-xs text-slate-600 dark:text-slate-400 border-l pl-6">
+                <span className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Delivery Method:</span>
+                <p className="italic">
+                  {deliveryMethod === 'email_individual' && "Recipient will get a separate email for EACH candidate."}
+                  {deliveryMethod === 'email_combined' && "Recipient will get ONE email with all documents as attachments."}
+                  {deliveryMethod === 'google_drive' && "Recipient will get ONE email with a Google Drive folder link."}
+                </p>
               </div>
 
               {/* Pagination Controls */}
