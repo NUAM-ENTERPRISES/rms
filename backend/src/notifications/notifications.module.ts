@@ -12,6 +12,7 @@ import { OutboxProcessor } from '../jobs/outbox.processor';
 import { DocumentForwardProcessor } from '../jobs/document-forward.processor';
 import { PrismaModule } from '../database/prisma.module';
 import { UploadModule } from '../upload/upload.module';
+import { GoogleDriveModule } from '../google-drive/google-drive.module';
 import { WhatsAppService } from './whatsapp.service';
 import { WhatsAppNotificationService } from './whatsapp-notification.service';
 
@@ -20,6 +21,7 @@ import { WhatsAppNotificationService } from './whatsapp-notification.service';
     PrismaModule,
     ConfigModule,
     forwardRef(() => UploadModule),
+    GoogleDriveModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

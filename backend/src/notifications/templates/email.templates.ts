@@ -176,5 +176,85 @@ export class EmailTemplates {
     `;
   }
 
+  /**
+   * Template for bulk forwarding multiple candidate documents
+   */
+  static bulkForwardDocuments(data: {
+    projectTitle: string;
+    candidates: Array<{ name: string; role: string }>;
+    gdriveLink?: string;
+    notes?: string | null;
+  }) {
+    const { projectTitle, candidates, gdriveLink, notes } = data;
+
+    const candidateRows = candidates.map(c => `
+      <div style="padding: 10px; border-bottom: 1px solid #f0f0f0;">
+        <div style="font-weight: 500; color: #202124;">${c.name}</div>
+        <div style="font-size: 12px; color: #70757a;">${c.role}</div>
+      </div>
+    `).join('');
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; padding: 0; background-color: #f1f3f4; font-family: 'Google Sans', Roboto, sans-serif; }
+        .outer-wrapper { padding: 40px 20px; }
+        .container { max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #dadce0; overflow: hidden; }
+        .header { padding: 32px 40px; background: #f8f9fa; border-bottom: 1px solid #e8eaed; }
+        .main-title { font-size: 20px; font-weight: 500; color: #3c4043; margin: 0; }
+        .content { padding: 32px 40px; color: #5f6368; font-size: 14px; line-height: 1.6; }
+        .candidate-list { margin: 24px 0; border: 1px solid #e8eaed; border-radius: 4px; }
+        .gdrive-banner { background-color: #e8f0fe; border: 1px solid #d2e3fc; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center; }
+        .button { background-color: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500; display: inline-block; margin-top: 10px; }
+        .footer { padding: 0 40px 32px; color: #70757a; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="outer-wrapper">
+        <div class="container">
+            <div class="header">
+                <h1 class="main-title">Batch Candidate Submission: ${projectTitle}</h1>
+            </div>
+            
+            <div class="content">
+                <p>Hello,</p>
+                <p>We have processed and verified the documentation for <strong>${candidates.length} candidates</strong> for the <strong>${projectTitle}</strong> project.</p>
+                
+                <div class="candidate-list">
+                    <div style="background: #f8f9fa; padding: 10px; font-weight: bold; border-bottom: 1px solid #e8eaed; font-size: 12px; text-transform: uppercase;">Candidates Included (${candidates.length})</div>
+                    ${candidateRows}
+                </div>
+
+                ${gdriveLink ? `
+                <div class="gdrive-banner">
+                    <div style="font-weight: 500; color: #1967d2; font-size: 16px; margin-bottom: 8px;">Documents Shared via Google Drive</div>
+                    <p style="margin-bottom: 16px;">Due to the size and number of documents, we have compiled them into a secure folder for your review.</p>
+                    <a href="${gdriveLink}" class="button" target="_blank">Access Shared Folder</a>
+                </div>` : '<p>All candidate documents are attached to this email for your reference.</p>'}
+
+                ${notes ? `
+                <div style="background-color: #f8f9fa; border-left: 4px solid #1a73e8; padding: 16px; margin: 24px 0; font-style: italic;">
+                    "${notes}"
+                </div>` : ''}
+
+                <p>Kindly review the profiles and let us know your feedback on the next steps.</p>
+                
+                <p style="margin-top: 32px;">Cheers,<br><strong>Global Nuam Team</strong></p>
+            </div>
+            
+            <div class="footer">
+                <p>Resource Management System &copy; 2026</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+  }
+
   // You can add more templates here later (e.g., Welcome, Reset Password, etc.)
 }

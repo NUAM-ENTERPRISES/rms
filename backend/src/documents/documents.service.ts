@@ -20,7 +20,7 @@ import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
-import { BulkForwardToClientDto } from './dto/bulk-forward-to-client.dto';
+import { BulkForwardToClientDto, DeliveryMethod } from './dto/bulk-forward-to-client.dto';
 import {
   DocumentWithRelations,
   PaginatedDocuments,
@@ -36,6 +36,8 @@ import {
 } from '../common/constants';
 import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingService } from '../processing/processing.service';
+import { UploadService } from '../upload/upload.service';
+import { GoogleDriveService } from '../google-drive/google-drive.service';
 
 @Injectable()
 export class DocumentsService {
@@ -45,6 +47,8 @@ export class DocumentsService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly processingService: ProcessingService,
+    private readonly uploadService: UploadService,
+    private readonly googleDriveService: GoogleDriveService,
     @InjectQueue('document-forward') private readonly documentForwardQueue: Queue,
   ) { }
 
@@ -3472,46 +3476,74 @@ export class DocumentsService {
    * Bulk forward documents for multiple candidates to client
    */
   async bulkForwardToClient(bulkForwardDto: BulkForwardToClientDto, senderId: string) {
-    const { recipientEmail, projectId, notes, selections } = bulkForwardDto;
+    const { 
+      recipientEmail, 
+      projectId, 
+      notes, 
+      selections, 
+      deliveryMethod = DeliveryMethod.EMAIL_INDIVIDUAL 
+    } = bulkForwardDto;
 
     // Validate project once
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw new NotFoundException('Project not found');
 
-    const results: Array<{ candidateId: string; success: boolean }> = [];
-    const errors: Array<{ candidateId: string; error: string }> = [];
+    // If using individual emails, keep existing behavior
+    if (!deliveryMethod || deliveryMethod === DeliveryMethod.EMAIL_INDIVIDUAL) {
+      const results: Array<{ candidateId: string; success: boolean }> = [];
+      const errors: Array<{ candidateId: string; error: string }> = [];
 
-    for (const selection of selections) {
-      try {
-        const result = await this.processForwarding({
-          candidateId: selection.candidateId,
-          projectId: selection.projectId || projectId,
-          recipientEmail,
-          sendType: selection.sendType,
-          documentIds: selection.documentIds,
-          notes,
-          roleCatalogId: selection.roleCatalogId,
-          senderId,
-          isBulk: true,
-        });
-        results.push({ candidateId: selection.candidateId, success: true });
-      } catch (error) {
-        this.logger.error(`Failed to forward documents for candidate ${selection.candidateId}: ${error.message}`);
-        errors.push({ candidateId: selection.candidateId, error: error.message });
+      for (const selection of selections) {
+        try {
+          await this.processForwarding({
+            candidateId: selection.candidateId,
+            projectId: selection.projectId || projectId,
+            recipientEmail,
+            sendType: selection.sendType,
+            documentIds: selection.documentIds,
+            notes,
+            roleCatalogId: selection.roleCatalogId,
+            senderId,
+            isBulk: true,
+          });
+          results.push({ candidateId: selection.candidateId, success: true });
+        } catch (error) {
+          this.logger.error(`Failed to forward documents for candidate ${selection.candidateId}: ${error.message}`);
+          errors.push({ candidateId: selection.candidateId, error: error.message });
+        }
       }
+
+      if (results.length === 0 && errors.length > 0) {
+        throw new BadRequestException(`Bulk forwarding failed: ${errors[0].error}`);
+      }
+
+      return {
+        success: true,
+        message: `Successfully queued documents for ${results.length} candidates. ${errors.length > 0 ? `${errors.length} failed.` : ''}`,
+        details: {
+          processed: results,
+          failed: errors
+        }
+      };
     }
 
-    if (results.length === 0 && errors.length > 0) {
-      throw new BadRequestException(`Bulk forwarding failed: ${errors[0].error}`);
-    }
+    // New delivery methods: EMAIL_COMBINED or GOOGLE_DRIVE
+    // For these, we queue a single bulk job instead of multiple individual ones
+    await this.documentForwardQueue.add('bulk-send-documents', {
+      bulkForwardDto,
+      senderId,
+    }, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+      removeOnComplete: true,
+    });
 
     return {
       success: true,
-      message: `Successfully queued documents for ${results.length} candidates. ${errors.length > 0 ? `${errors.length} failed.` : ''}`,
-      details: {
-        processed: results,
-        failed: errors
-      }
+      message: `Bulk document delivery (${deliveryMethod}) queued for ${selections.length} candidates. This may take a few minutes.`,
     };
   }
 

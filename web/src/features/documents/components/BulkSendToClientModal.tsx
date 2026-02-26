@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -95,6 +96,7 @@ export function BulkSendToClientModal({
   const [notes, setNotes] = useState("");
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<"email_individual" | "email_combined" | "google_drive">("email_individual");
 
   // History modal state (opens forwarding history for a single candidate)
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -244,6 +246,7 @@ export function BulkSendToClientModal({
         recipientEmail,
         projectId: visibleCandidates[0]?.project.id,
         notes: notes || `Attached are the verified documents for ${visibleCandidates.length} candidates.`,
+        deliveryMethod,
         selections
       }; 
 
@@ -320,7 +323,36 @@ export function BulkSendToClientModal({
         </DialogHeader>
 
         <ScrollArea className="flex-1 px-6 py-4 bg-slate-50/50 dark:bg-gray-950/50">
-          <div className="max-w-5xl mx-auto space-y-2 mb-6">
+          <div className="max-w-5xl mx-auto space-y-4 mb-6">
+            {/* Delivery Method Selection */}
+            <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Send className="h-3 w-3 text-blue-600" />
+                  <h3 className="font-bold text-xs text-slate-800 dark:text-slate-200">Delivery Method</h3>
+                </div>
+                {visibleCandidates.length >= 10 && deliveryMethod === 'email_individual' && (
+                  <Badge variant="outline" className="text-[9px] bg-amber-50 text-amber-700 border-amber-200 animate-pulse">
+                    <AlertCircle className="h-2.5 w-2.5 mr-1" />
+                    Combined email or GDrive recommended for {visibleCandidates.length} candidates
+                  </Badge>
+                )}
+              </div>
+              <Tabs value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)} className="w-full">
+                <TabsList className="grid grid-cols-3 w-full h-8 bg-slate-100 dark:bg-slate-800 p-0.5">
+                  <TabsTrigger value="email_individual" className="text-[10px] h-7">Separate Emails</TabsTrigger>
+                  <TabsTrigger value="email_combined" className="text-[10px] h-7">Combined Email</TabsTrigger>
+                  <TabsTrigger value="google_drive" className="text-[10px] h-7">Google Drive Link</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              
+              <p className="text-[10px] text-slate-500 mt-2 italic px-1">
+                {deliveryMethod === 'email_individual' && "Recipient will receive a separate email for EACH candidate."}
+                {deliveryMethod === 'email_combined' && "Recipient will receive ONE email with documents for ALL candidates as attachments."}
+                {deliveryMethod === 'google_drive' && "Recipient will receive ONE email with a secure Google Drive folder link containing all profiles."}
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Client Information Section */}
               <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
