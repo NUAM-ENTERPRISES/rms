@@ -331,7 +331,7 @@ export function SendToClientModal({
           </p>
         </DialogHeader>
 
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
           {/* Previous Forwarding History (if any) */}
           {latestForwarding && (
             <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
