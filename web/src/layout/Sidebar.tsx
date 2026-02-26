@@ -300,7 +300,7 @@ export default function Sidebar({
       className={cn(
         "relative flex flex-col transition-all duration-500 ease-out overflow-hidden",
         "my-4 mx-2",
-        "h-[calc(100vh-2rem)]",
+        "h-[calc(100%-2rem)]",
         "backdrop-blur-xl",
         "border-r border-white/30 dark:border-white/15",
         "rounded-r-3xl",
