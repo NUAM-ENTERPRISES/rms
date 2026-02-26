@@ -1780,7 +1780,10 @@ model DocumentForwardHistory {
   projectId       String
   roleCatalogId   String?
   sendType        String   // "merged" or "individual"
+  deliveryMethod  String?  // "email_individual", "email_combined", "google_drive"
   documentDetails Json     // Array of object with {id, fileName, fileUrl}
+  csvUrl          String?
+  gdriveLink      String?
   isBulk          Boolean  @default(false)
   status          String   @default("pending") // "pending", "sent", "failed"
   error           String?

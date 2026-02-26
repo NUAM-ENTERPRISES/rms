@@ -3512,6 +3512,7 @@ export class DocumentsService {
       notes, 
       roleCatalogId,
       senderId,
+      deliveryMethod: DeliveryMethod.EMAIL_INDIVIDUAL,
       csvUrl,
       csvName,
     });
@@ -3556,6 +3557,7 @@ export class DocumentsService {
             roleCatalogId: selection.roleCatalogId,
             senderId,
             isBulk: true,
+            deliveryMethod: deliveryMethod || DeliveryMethod.EMAIL_INDIVIDUAL,
             csvUrl,
             csvName,
           });
@@ -3615,8 +3617,10 @@ export class DocumentsService {
     roleCatalogId?: string;
     senderId: string;
     isBulk?: boolean;
+    deliveryMethod?: string;
     csvUrl?: string;
     csvName?: string;
+    gdriveLink?: string;
   }) {
     const { 
       candidateId, 
@@ -3630,8 +3634,10 @@ export class DocumentsService {
       roleCatalogId,
       senderId,
       isBulk = false,
+      deliveryMethod,
       csvUrl,
       csvName,
+      gdriveLink,
     } = params;
 
     // 1. Validate candidate
@@ -3732,7 +3738,10 @@ export class DocumentsService {
         projectId,
         roleCatalogId: roleCatalogId || null,
         sendType: sendType,
+        deliveryMethod: deliveryMethod || null,
         documentDetails: attachments as any,
+        csvUrl: csvUrl || null,
+        gdriveLink: gdriveLink || null,
         isBulk: Boolean(isBulk),
         notes,
         status: 'pending',
@@ -3803,7 +3812,7 @@ export class DocumentsService {
               mainStatusSnapshot: mainStatus.label,
               subStatusSnapshot: subStatus.label,
               reason: 'Documents submitted to client',
-              notes: `Forwarded to ${recipientEmail}${notes ? ` — ${notes}` : ''}`,
+              notes: `Forwarded via ${deliveryMethod || 'email'} to ${recipientEmail}${notes ? ` — ${notes}` : ''}`,
             },
           });
         }

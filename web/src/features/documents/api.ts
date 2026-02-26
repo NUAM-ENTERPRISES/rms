@@ -432,6 +432,10 @@ export interface ForwardingHistoryItem {
   projectId: string;
   roleCatalogId?: string;
   sendType: "merged" | "individual";
+  deliveryMethod?: string;
+  csvUrl?: string;
+  gdriveLink?: string;
+  isBulk?: boolean;
   documentDetails: Array<{
     id: string;
     fileName: string;
@@ -448,6 +452,20 @@ export interface ForwardingHistoryItem {
     name: string;
     email: string;
   };
+  candidate?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    profileImage?: string;
+    countryCode?: string;
+    mobileNumber?: string;
+  };
+  roleCatalog?: {
+    id: string;
+    name?: string;
+    label: string;
+  };
 }
 
 export interface ForwardingHistoryResponse {
@@ -461,35 +479,7 @@ export interface ForwardingHistoryResponse {
       phone?: string;
     };
   };
-  items: Array<{
-    id: string;
-    recipientEmail: string;
-    status: string;
-    sendType: "merged" | "individual";
-    createdAt: string;
-    sentAt?: string;
-    error?: string | null;
-    notes?: string;
-    isBulk?: boolean;
-    sender: {
-      name: string;
-      email: string;
-    };
-    candidate?: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      email: string;
-      profileImage?: string;
-      countryCode?: string;
-      mobileNumber?: string;
-    };
-    roleCatalog?: {
-      id: string;
-      name: string;
-      label: string;
-    };
-  }>;
+  items: ForwardingHistoryItem[];
   meta: {
     total: number;
     page: number;

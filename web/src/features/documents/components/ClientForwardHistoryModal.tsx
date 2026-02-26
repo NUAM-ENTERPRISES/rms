@@ -18,7 +18,10 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  ExternalLink,
+  Link as LinkIcon,
+  Database
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -73,6 +76,19 @@ export function ClientForwardHistoryModal({
         return <Badge className="bg-red-500 hover:bg-red-600 text-white gap-1"><XCircle className="h-3 w-3" /> Failed</Badge>;
       default:
         return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" /> {status}</Badge>;
+    }
+  };
+
+  const getDeliveryBadge = (method?: string) => {
+    switch (method?.toLowerCase()) {
+      case "email_individual":
+        return <Badge variant="outline" className="text-[9px] bg-sky-50 text-sky-700 border-sky-100 px-1.5 font-bold uppercase tracking-tight">Separate</Badge>;
+      case "email_combined":
+        return <Badge variant="outline" className="text-[9px] bg-indigo-50 text-indigo-700 border-indigo-100 px-1.5 font-bold uppercase tracking-tight">Combined</Badge>;
+      case "google_drive":
+        return <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-100 px-1.5 font-bold uppercase tracking-tight">G-Drive</Badge>;
+      default:
+        return null;
     }
   };
 
@@ -163,8 +179,9 @@ export function ClientForwardHistoryModal({
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <FileText className="h-3.5 w-3.5" />
-                      <div className="flex items-center gap-1.5">
-                        <span>Type: <Badge variant="secondary" className="text-[10px] capitalize px-1 py-0">{item.sendType}</Badge></span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>Format: <Badge variant="secondary" className="text-[10px] capitalize px-1 py-0">{item.sendType}</Badge></span>
+                        {item.deliveryMethod && getDeliveryBadge(item.deliveryMethod)}
                         {item.isBulk && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] px-1 py-0 border-blue-200">Bulk</Badge>}
                       </div>
                     </div>
@@ -184,6 +201,35 @@ export function ClientForwardHistoryModal({
                   {item.notes && (
                     <div className="bg-slate-50 p-3 rounded-lg text-xs text-slate-600 border border-slate-100 italic">
                       "{item.notes}"
+                    </div>
+                  )}
+
+                  {(item.csvUrl || item.gdriveLink) && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {item.csvUrl && (
+                        <a 
+                          href={item.csvUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-md text-[10px] font-bold hover:bg-amber-100 transition-colors"
+                        >
+                          <Database className="h-3 w-3" />
+                          View CSV Summary
+                          <ExternalLink className="h-2.5 w-2.5 ml-0.5" />
+                        </a>
+                      )}
+                      {item.gdriveLink && (
+                        <a 
+                          href={item.gdriveLink} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-md text-[10px] font-bold hover:bg-emerald-100 transition-colors"
+                        >
+                          <LinkIcon className="h-3 w-3" />
+                          Google Drive Folder
+                          <ExternalLink className="h-2.5 w-2.5 ml-0.5" />
+                        </a>
+                      )}
                     </div>
                   )}
 

@@ -227,10 +227,18 @@ export class DocumentForwardProcessor extends WorkerHost {
           );
         }
 
+        const candidateAttachments: any[] = [];
         for (const doc of candidateDocsToForward) {
           try {
             const buffer = await this.uploadService.getFile(doc.fileUrl);
             
+            candidateAttachments.push({
+              id: doc.id,
+              fileName: doc.fileName,
+              fileUrl: doc.fileUrl,
+              mimeType: doc.mimeType || 'application/pdf',
+            });
+
             if (candidateFolderId) {
               await this.googleDriveService.uploadFile(
                 candidateFolderId, 
@@ -250,8 +258,11 @@ export class DocumentForwardProcessor extends WorkerHost {
           }
         }
 
+        // Store candidate specific data for history creation after email is sent
+        (selection as any).candidateAttachments = candidateAttachments;
+
         // 4. Update individual CandidateProject status
-        await this.updateCandidateStatus(selection.candidateId, projectId, senderId);
+        await this.updateCandidateStatus(selection.candidateId, projectId, senderId, deliveryMethod, notes);
       }
 
       // 5. Finalize GDrive sharing
@@ -276,6 +287,34 @@ export class DocumentForwardProcessor extends WorkerHost {
         attachments,
       });
 
+      // 7. Create history records for each candidate
+      for (const selection of selections) {
+        try {
+          await this.prisma.documentForwardHistory.create({
+            data: {
+              senderId,
+              recipientEmail,
+              ccEmails: cc || [],
+              bccEmails: bcc || [],
+              candidateId: selection.candidateId,
+              projectId,
+              roleCatalogId: selection.roleCatalogId || null,
+              sendType: selection.sendType,
+              deliveryMethod,
+              documentDetails: (selection as any).candidateAttachments || [],
+              csvUrl: csvUrl || null,
+              gdriveLink: gdriveLink || null,
+              isBulk: true,
+              status: 'sent',
+              sentAt: new Date(),
+              notes,
+            } as any
+          });
+        } catch (historyError) {
+          this.logger.error(`Failed to create history for candidate ${selection.candidateId}: ${historyError.message}`);
+        }
+      }
+
       return { success: true, method: deliveryMethod, count: emailCandidates.length };
 
     } catch (error) {
@@ -284,7 +323,7 @@ export class DocumentForwardProcessor extends WorkerHost {
     }
   }
 
-  private async updateCandidateStatus(candidateId: string, projectId: string, senderId: string) {
+  private async updateCandidateStatus(candidateId: string, projectId: string, senderId: string, deliveryMethod?: string, notes?: string) {
     try {
       const cpm = await this.prisma.candidateProjects.findFirst({
         where: { candidateId, projectId }
@@ -301,6 +340,22 @@ export class DocumentForwardProcessor extends WorkerHost {
               mainStatusId: mainStatus.id,
               subStatusId: subStatus.id,
               updatedAt: new Date(),
+            },
+          });
+
+          const user = await this.prisma.user.findUnique({ where: { id: senderId }, select: { name: true } });
+
+          await this.prisma.candidateProjectStatusHistory.create({
+            data: {
+              candidateProjectMapId: cpm.id,
+              changedById: senderId,
+              changedByName: user?.name || null,
+              mainStatusId: mainStatus.id,
+              subStatusId: subStatus.id,
+              mainStatusSnapshot: mainStatus.label,
+              subStatusSnapshot: subStatus.label,
+              reason: 'Documents submitted to client',
+              notes: `Forwarded via ${deliveryMethod || 'email'}${notes ? ` — ${notes}` : ''}`,
             },
           });
         }
