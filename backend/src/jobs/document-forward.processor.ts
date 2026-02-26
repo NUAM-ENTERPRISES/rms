@@ -63,19 +63,10 @@ export class DocumentForwardProcessor extends WorkerHost {
       const attachments: any[] = [];
       const documentDetails = history.documentDetails as any[];
 
-      // Add Logo as CID attachment if it exists
-      const logoPath = path.join(process.cwd(), 'src/assets/logo/logo.png');
-      if (fs.existsSync(logoPath)) {
-        attachments.push({
-          filename: 'logo.png',
-          content: fs.readFileSync(logoPath),
-          cid: 'logo' // This matches <img src="cid:logo"> in the template
-        });
-      }
-
       // Download all documents as buffers
       for (const doc of documentDetails) {
         try {
+          this.logger.log(`Downloading document for single forward: ${doc.fileName} (${doc.id})`);
           const buffer = await this.uploadService.getFile(doc.fileUrl);
           attachments.push({
             filename: doc.fileName,
@@ -130,7 +121,15 @@ export class DocumentForwardProcessor extends WorkerHost {
 
   async handleBulkForward(job: Job<any>): Promise<any> {
     const { bulkForwardDto, senderId } = job.data;
-    const { recipientEmail, projectId, notes, selections, deliveryMethod } = bulkForwardDto;
+    const { 
+      recipientEmail, 
+      projectId, 
+      notes, 
+      selections, 
+      deliveryMethod,
+      csvUrl,
+      csvName 
+    } = bulkForwardDto;
 
     this.logger.log(`Processing bulk forward (${deliveryMethod}) for ${selections.length} candidates to ${recipientEmail}`);
 
@@ -139,9 +138,26 @@ export class DocumentForwardProcessor extends WorkerHost {
 
     const emailCandidates: Array<{ name: string; role: string }> = [];
     const attachments: any[] = [];
+
     let gdriveLink: string | undefined;
 
     try {
+      // 0.1 Handle CSV attachment if provided
+      if (csvUrl) {
+        try {
+          this.logger.log(`Downloading CSV attachment for bulk forward: ${csvName || 'batch-summary.csv'} from ${csvUrl}`);
+          const buffer = await this.uploadService.getFile(csvUrl);
+          attachments.push({
+            filename: csvName || 'batch-summary.csv',
+            content: buffer,
+            contentType: 'text/csv',
+          });
+          this.logger.log(`Successfully attached CSV to bulk email`);
+        } catch (error) {
+          this.logger.error(`Failed to download CSV attachment from ${csvUrl}: ${error.message}`);
+        }
+      }
+
       // 1. Handle Google Drive setup if requested
       let batchFolderId: string | undefined;
       if (deliveryMethod === DeliveryMethod.GOOGLE_DRIVE) {
@@ -151,6 +167,22 @@ export class DocumentForwardProcessor extends WorkerHost {
         batchFolderId = await this.googleDriveService.createFolder(
           `Batch Submission - ${project.title} - ${new Date().toLocaleDateString()}`
         );
+        
+        // Also upload CSV to GDrive root folder if it exists
+        if (csvUrl) {
+          try {
+            const buffer = await this.uploadService.getFile(csvUrl);
+            await this.googleDriveService.uploadFile(
+              batchFolderId,
+              csvName || 'batch-summary.csv',
+              'text/csv',
+              buffer
+            );
+            this.logger.log(`Successfully uploaded CSV to Google Drive batch folder`);
+          } catch (err) {
+            this.logger.error(`Failed to upload CSV to Google Drive: ${err.message}`);
+          }
+        }
       }
 
       // 2. Process each selection

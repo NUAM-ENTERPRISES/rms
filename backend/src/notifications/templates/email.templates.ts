@@ -39,11 +39,6 @@ export class EmailTemplates {
             padding: 32px 40px 16px 40px;
             text-align: left;
         }
-        .logo-img {
-            height: 32px;
-            width: auto;
-            margin-bottom: 24px;
-        }
         .main-title {
             font-size: 22px;
             font-weight: 500;
@@ -121,9 +116,6 @@ export class EmailTemplates {
     <div class="outer-wrapper">
         <div class="container">
             <div class="header">
-                <!-- logo temporarily hidden
-                <img src="cid:logo" alt="RMS" class="logo-img">
-                -->
                 <h1 class="main-title">Candidate profile for your review</h1>
             </div>
             
@@ -148,15 +140,15 @@ export class EmailTemplates {
                     </div>
                 </div>
 
+                <div class="divider"></div>
+                
+                <p>Kindly review the attachments and update us on the next steps for evaluation.</p>
+                
                 ${notes ? `
                 <div class="remark-box">
                     <span class="remark-label">Recruiter's comment</span>
                     <div class="remark-text">"${notes}"</div>
                 </div>` : ''}
-
-                <div class="divider"></div>
-                
-                <p>Kindly review the attachments and update us on the next steps for evaluation.</p>
                 
                 <p style="margin-top: 32px;">
                     Cheers,<br>

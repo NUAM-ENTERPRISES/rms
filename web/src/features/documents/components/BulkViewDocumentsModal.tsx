@@ -28,6 +28,12 @@ import { useGetCandidateProjectVerificationsQuery, useGetMergedDocumentQuery } f
 import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { formatDistanceToNow } from "date-fns";
 
+export interface SelectedDoc {
+  id: string;
+  name: string;
+  size: number;
+}
+
 interface BulkViewDocumentsModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,8 +50,8 @@ interface BulkViewDocumentsModalProps {
   };
   projectTitle: string;
   roleLabel: string;
-  selectedDocs?: string[];
-  onSelectedDocsChange?: (docs: string[]) => void;
+  selectedDocs?: SelectedDoc[];
+  onSelectedDocsChange?: (docs: SelectedDoc[]) => void;
 }
 
 export function BulkViewDocumentsModal({
@@ -97,6 +103,7 @@ export function BulkViewDocumentsModal({
       verifiedDocuments = verificationsResponse.data.verifications.map((verification: any) => ({
         id: verification.documentId || verification.id,
         fileName: verification.document?.fileName || "",
+        fileSize: verification.document?.fileSize || 0,
         fileUrl: verification.document?.fileUrl || "",
         docType: verification.document?.docType || "document",
         status: verification.status,
@@ -135,26 +142,47 @@ export function BulkViewDocumentsModal({
   const toggleDoc = (docId: string) => {
     if (!onSelectedDocsChange) return;
 
-    let newSelected: string[] = [];
+    let newSelected: SelectedDoc[] = [];
     // If selecting merged, clear individual docs
     if (docId === "merged") {
-      newSelected = selectedDocs.includes("merged") ? [] : ["merged"];
+      const isCurrentlySelected = selectedDocs.some((d) => d.id === "merged");
+      if (isCurrentlySelected) {
+        newSelected = [];
+      } else if (mergedDoc) {
+        newSelected = [
+          {
+            id: "merged",
+            name: mergedDoc.fileName || "merged_documents.pdf",
+            size: mergedDoc.fileSize || 0,
+          },
+        ];
+      }
     } else {
       // If selecting individual doc, ensure merged is NOT selected
-      const isCurrentlySelected = selectedDocs.includes(docId);
-      const withoutMerged = selectedDocs.filter((id) => id !== "merged");
+      const doc = verifiedDocuments.find((d) => d.id === docId);
+      if (!doc) return;
+
+      const withoutMerged = selectedDocs.filter((d) => d.id !== "merged");
+      const isCurrentlySelected = withoutMerged.some((d) => d.id === docId);
 
       if (isCurrentlySelected) {
-        newSelected = withoutMerged.filter((id) => id !== docId);
+        newSelected = withoutMerged.filter((d) => d.id !== docId);
       } else {
-        newSelected = [...withoutMerged, docId];
+        newSelected = [
+          ...withoutMerged,
+          {
+            id: doc.id,
+            name: doc.fileName,
+            size: doc.fileSize,
+          },
+        ];
       }
     }
     onSelectedDocsChange(newSelected);
   };
 
-  const hasIndividualSelected = selectedDocs.some((id) => id !== "merged");
-  const hasMergedSelected = selectedDocs.includes("merged");
+  const hasIndividualSelected = selectedDocs.some((d) => d.id !== "merged");
+  const hasMergedSelected = selectedDocs.some((d) => d.id === "merged");
 
   const abbreviateFileName = (name?: string, segmentsToKeep = 3) => {
     if (!name) return "unnamed_file";
@@ -309,7 +337,7 @@ export function BulkViewDocumentsModal({
                     <div className="flex items-center gap-3">
                       <Checkbox
                         id="merged-doc"
-                        checked={selectedDocs.includes("merged")}
+                        checked={selectedDocs.some((d) => d.id === "merged")}
                         onCheckedChange={() => toggleDoc("merged")}
                         disabled={hasIndividualSelected}
                         className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
@@ -329,7 +357,8 @@ export function BulkViewDocumentsModal({
                         <p className={`text-xs mt-0.5 ${hasIndividualSelected ? "text-slate-400" : "text-emerald-700"}`}>
                           {mergedDoc.fileName ? abbreviateFileName(mergedDoc.fileName) : "merged_documents.pdf"}
                           <span className="mx-2">•</span>
-                          {mergedDoc.updatedAt ? `Generated ${formatDistanceToNow(new Date(mergedDoc.updatedAt))} ago` : 'Ready'}
+                          {mergedDoc.fileSize ? `${(mergedDoc.fileSize / (1024 * 1024)).toFixed(2)} MB` : ""}
+                          {mergedDoc.updatedAt ? ` • Generated ${formatDistanceToNow(new Date(mergedDoc.updatedAt))} ago` : ' • Ready'}
                         </p>
                         <p className="text-[11px] text-slate-500 mt-1">Already generated — you can re-generate to include any recent updates.</p>
                       </div>
@@ -413,18 +442,22 @@ export function BulkViewDocumentsModal({
                       className="h-6 text-[10px] uppercase font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:text-slate-400"
                       onClick={() => {
                         if (hasMergedSelected || !onSelectedDocsChange) return;
-                        const allIds = verifiedDocuments.map((d) => d.id);
-                        if (
-                          selectedDocs.filter((id) => id !== "merged")
-                            .length === verifiedDocuments.length
-                        ) {
+                        
+                        const individualDocs = selectedDocs.filter((d) => d.id !== "merged");
+                        
+                        if (individualDocs.length === verifiedDocuments.length) {
                           onSelectedDocsChange([]);
                         } else {
-                          onSelectedDocsChange(allIds);
+                          const allSelected = verifiedDocuments.map((doc) => ({
+                            id: doc.id,
+                            name: doc.fileName,
+                            size: doc.fileSize || 0,
+                          }));
+                          onSelectedDocsChange(allSelected);
                         }
                       }}
                     >
-                      {selectedDocs.filter((id) => id !== "merged").length ===
+                      {selectedDocs.filter((d) => d.id !== "merged").length ===
                       verifiedDocuments.length
                         ? "Deselect All"
                         : "Select All"}
@@ -449,7 +482,7 @@ export function BulkViewDocumentsModal({
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <Checkbox
                               id={`doc-${doc.id}`}
-                              checked={selectedDocs.includes(doc.id)}
+                              checked={selectedDocs.some((d) => d.id === doc.id)}
                               onCheckedChange={() => toggleDoc(doc.id)}
                               disabled={hasMergedSelected}
                               className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 flex-shrink-0"
@@ -465,15 +498,16 @@ export function BulkViewDocumentsModal({
                               >
                                 {abbreviateFileName(doc.fileName)}
                               </Label>
-                              <p
-                                className={`text-[10px] capitalize ${
-                                  hasMergedSelected
-                                    ? "text-slate-300"
-                                    : "text-slate-500"
-                                }`}
-                              >
-                                {doc.docType.replace(/_/g, " ")}
-                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">
+                                  {doc.docType.toUpperCase()}
+                                </span>
+                                {doc.fileSize > 0 && (
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    {(doc.fileSize / (1024 * 1024)).toFixed(2)} MB
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">

@@ -62,4 +62,14 @@ export class BulkForwardToClientDto {
   @ValidateNested({ each: true })
   @Type(() => ForwardSelectionDto)
   selections: ForwardSelectionDto[];
+
+  @ApiProperty({ required: false, example: 'https://cdn.example.com/attachments/summary.csv' })
+  @IsString()
+  @IsOptional()
+  csvUrl?: string;
+
+  @ApiProperty({ required: false, example: 'batch-summary.csv' })
+  @IsString()
+  @IsOptional()
+  csvName?: string;
 }

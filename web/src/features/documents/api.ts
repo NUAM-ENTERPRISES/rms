@@ -400,18 +400,23 @@ export interface ForwardToClientRequest {
   sendType: "merged" | "individual";
   documentIds?: string[];
   notes?: string;
+  csvUrl?: string;
+  csvName?: string;
 }
 
 export interface BulkForwardToClientRequest {
   recipientEmail: string;
   projectId: string;
   notes?: string;
+  deliveryMethod?: "email_individual" | "email_combined" | "google_drive";
   selections: {
     candidateId: string;
     roleCatalogId: string;
     sendType: "merged" | "individual";
     documentIds?: string[];
   }[];
+  csvUrl?: string;
+  csvName?: string;
 }
 
 export interface ForwardingHistoryItem {

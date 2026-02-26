@@ -3457,7 +3457,9 @@ export class DocumentsService {
       sendType, 
       documentIds, 
       notes, 
-      roleCatalogId 
+      roleCatalogId,
+      csvUrl,
+      csvName,
     } = forwardDto;
 
     return this.processForwarding({
@@ -3468,7 +3470,9 @@ export class DocumentsService {
       documentIds,
       notes,
       roleCatalogId,
-      senderId
+      senderId,
+      csvUrl,
+      csvName,
     });
   }
 
@@ -3481,7 +3485,9 @@ export class DocumentsService {
       projectId, 
       notes, 
       selections, 
-      deliveryMethod = DeliveryMethod.EMAIL_INDIVIDUAL 
+      deliveryMethod = DeliveryMethod.EMAIL_INDIVIDUAL,
+      csvUrl,
+      csvName,
     } = bulkForwardDto;
 
     // Validate project once
@@ -3505,6 +3511,8 @@ export class DocumentsService {
             roleCatalogId: selection.roleCatalogId,
             senderId,
             isBulk: true,
+            csvUrl,
+            csvName,
           });
           results.push({ candidateId: selection.candidateId, success: true });
         } catch (error) {
@@ -3560,6 +3568,8 @@ export class DocumentsService {
     roleCatalogId?: string;
     senderId: string;
     isBulk?: boolean;
+    csvUrl?: string;
+    csvName?: string;
   }) {
     const { 
       candidateId, 
@@ -3571,6 +3581,8 @@ export class DocumentsService {
       roleCatalogId,
       senderId,
       isBulk = false,
+      csvUrl,
+      csvName,
     } = params;
 
     // 1. Validate candidate
@@ -3582,6 +3594,16 @@ export class DocumentsService {
     // The existing forwardToClient validated it.
 
     let attachments: any[] = [];
+
+    // Add optional CSV attachment if provided
+    if (csvUrl) {
+      attachments.push({
+        id: `csv-${Date.now()}`,
+        fileName: csvName || 'summary.csv',
+        fileUrl: csvUrl,
+        mimeType: 'text/csv',
+      });
+    }
 
     if (sendType === SendType.MERGED) {
       // 2. Locate latest merged PDF
@@ -3639,12 +3661,14 @@ export class DocumentsService {
         throw new BadRequestException(`No valid verified documents found for candidate ${candidateId}.`);
       }
 
-      attachments = docs.map(d => ({
+      const individualDocs = docs.map(d => ({
         id: d.id,
         fileName: d.fileName,
         fileUrl: d.fileUrl,
         mimeType: d.mimeType,
       }));
+
+      attachments.push(...individualDocs);
     }
 
     // 4. Create Audit Trail Entry (History)
