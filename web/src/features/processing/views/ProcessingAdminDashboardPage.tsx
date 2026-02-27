@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/context/ThemeContext";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +34,6 @@ import {
     X,
     ChevronLeft,
     ChevronRight,
-    UserCheck,
     Mail,
     Phone
 } from "lucide-react";
@@ -41,13 +42,10 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useGetAllProcessingCandidatesAdminQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProjectsQuery } from "@/services/projectsApi";
 
-// This page is intentionally not wired to any API. It uses local dummy data
-// and is wrapped with <Can> so only admin/manager/system admin roles can view it.
-
 export default function ProcessingAdminDashboardPage() {
     const navigate = useNavigate();
+    const { theme } = useTheme();
 
-    // Local UI state (same as production page)
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
     const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed" | "cancelled" | "visa_stamped">("all");
@@ -56,11 +54,9 @@ export default function ProcessingAdminDashboardPage() {
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
 
-    // Fetch projects for filters
     const { data: projectsData } = useGetProjectsQuery({ limit: 50 });
     const projects = projectsData?.data?.projects || [];
 
-    // API call for admin processing candidates
     const adminQueryParams: any = {
         search: debouncedSearch || undefined,
         projectId: projectFilter === "all" ? undefined : projectFilter,
@@ -69,9 +65,6 @@ export default function ProcessingAdminDashboardPage() {
         limit: pageSize,
     };
 
-    // Send only one of `status` or `filterType` to match backend validation rules:
-    // - `filterType=total_processing` when viewing the full admin total
-    // - use `status` for specific status filters like `visa_stamped` to avoid duplicate params
     if (statusFilter === "all") {
         adminQueryParams.filterType = "total_processing";
     } else if (statusFilter === "visa_stamped") {
@@ -85,9 +78,6 @@ export default function ProcessingAdminDashboardPage() {
     const candidates = apiResponse?.data?.candidates || [];
     const pagination = apiResponse?.data?.pagination;
 
-
-
-    // Pagination (driven by API when available)
     const totalItems = pagination?.total ?? candidates.length;
     const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
     useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, projectFilter, roleFilter, pageSize]);
@@ -125,20 +115,9 @@ export default function ProcessingAdminDashboardPage() {
         return labels[status] || status;
     };
 
- 
-    const rowBgClass = (status: string) => {
-        switch (status) {
-            case "in_progress": return "bg-blue-50/40";
-            case "assigned": return "bg-indigo-50/40";
-            case "completed": return "bg-emerald-50/40";
-            case "cancelled": return "bg-rose-50/40";
-            default: return "";
-        }
-    };
-
     return (
         <Can roles={["CEO", "Director", "Manager", "System Admin"]} fallback={<div className="p-8 text-center text-slate-600">Not authorized</div>}>
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
+            <div className={cn("min-h-screen p-6", theme === "dark" ? "bg-black text-white" : "bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-black")}>
                 <div className="mx-auto max-w-7xl space-y-8">
                     <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
@@ -146,8 +125,8 @@ export default function ProcessingAdminDashboardPage() {
                                 <ClipboardList className="h-7 w-7 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black text-slate-900">Processing Overview — Admin</h1>
-                                <p className="text-slate-600 font-medium">Admin view: totals, trends and a quick look at processing status</p>
+                                <h1 className={cn("text-4xl font-black", theme === "dark" ? "text-white" : "text-slate-900")}>Processing Overview — Admin</h1>
+                                <p className={cn("font-medium", theme === "dark" ? "text-gray-300" : "text-slate-600")}>Admin view: totals, trends and a quick look at processing status</p>
                             </div>
                         </div>
 
@@ -161,44 +140,61 @@ export default function ProcessingAdminDashboardPage() {
 
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         {stats.map((stat) => (
-                            <Card key={stat.label} className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${statusFilter === stat.status ? 'border-violet-500 ring-2 ring-violet-500/20' : stat.borderColor}`} onClick={() => setStatusFilter(stat.status === 'all' ? 'all' : (statusFilter === stat.status ? 'all' : (stat.status as "all" | "visa_stamped" | "in_progress" | "completed" | "cancelled" | "assigned")))}>
-                                <div className={`absolute inset-0 ${stat.bgColor} opacity-40 transition-opacity group-hover:opacity-60`} />
+                            <Card
+                                key={stat.label}
+                                className={cn(
+                                    "group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer",
+                                    statusFilter === stat.status ? "border-violet-500 ring-2 ring-violet-500/20" : stat.borderColor,
+                                    theme === "dark" ? "bg-slate-800 text-white" : ""
+                                )}
+                                onClick={() => setStatusFilter(stat.status === 'all' ? 'all' : (statusFilter === stat.status ? 'all' : (stat.status as "all" | "visa_stamped" | "in_progress" | "completed" | "cancelled" | "assigned")))}
+                            >
+                                <div
+                                    className={cn(
+                                        "absolute inset-0 opacity-40 transition-opacity group-hover:opacity-60",
+                                        theme === "dark" ? "bg-slate-800" : stat.bgColor
+                                    )}
+                                />
                                 <CardHeader className="relative pb-3">
                                     <div className="flex items-center justify-between">
-                                        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-700">{stat.label}</CardTitle>
-                                        <div className={`rounded-xl ${stat.bgColor} p-2.5 shadow-md`}>
-                                            <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                                        <CardTitle className={cn("text-sm font-semibold uppercase tracking-wider", theme === "dark" ? "text-white" : "text-slate-700")}>
+                                            {stat.label}
+                                        </CardTitle>
+                                        <div className={cn("rounded-xl p-2.5 shadow-md", theme === "dark" ? "bg-slate-800" : stat.bgColor)}>
+                                            <stat.icon className={`h-5 w-5 ${theme === "dark" ? "text-white" : stat.color}`} />
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="relative space-y-2">
                                     <div className="flex items-baseline gap-2">
-                                        <span className={`text-4xl font-black ${stat.color}`}>{stat.value}</span>
+                                        <span className={cn("text-4xl font-black", theme === "dark" ? "text-white" : stat.color)}>
+                                            {stat.value}
+                                        </span>
                                     </div>
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
 
-                    <Card className="border-0 shadow-xl overflow-hidden bg-white">
-                        <CardHeader className="border-b border-slate-100 bg-white pb-6">
+                    <Card className={cn("border-0 shadow-xl overflow-hidden", theme === "dark" ? "bg-black" : "bg-white")}>
+                        <CardHeader className={cn("border-b pb-6", theme === "dark" ? "bg-black border-slate-700 text-white" : "bg-white border-slate-100")}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <div className="rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 p-2.5 shadow-lg">
                                         <Users className="h-5 w-5 text-white" />
                                     </div>
                                     <div>
-                                        <CardTitle className="text-xl font-bold text-slate-900">Active Candidates</CardTitle>
-                                        <p className="text-sm text-slate-500">Admin quick list</p>
+                                        <CardTitle className={cn("text-xl font-bold", theme === "dark" ? "text-white" : "text-slate-900")}>Active Candidates</CardTitle>
+                                        <p className={cn("text-sm", theme === "dark" ? "text-gray-300" : "text-slate-500")}>Admin quick list</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     {isFetching && <svg className="h-5 w-5 animate-spin text-violet-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>}
-                                    <Badge className="bg-violet-100 text-violet-700 border-0 px-4 py-2 text-sm font-bold self-start sm:self-center">{totalItems} Results</Badge>
+                                    <Badge className={cn("px-4 py-2 text-sm font-bold self-start sm:self-center", theme === "dark" ? "bg-violet-900 text-white" : "bg-violet-100 text-violet-700 border-0")}>{totalItems} Results</Badge>
                                 </div>
                             </div>
 
-                            <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-2xl border border-slate-100">
+                            <div className={cn("mt-6 p-4 rounded-2xl border", theme === "dark" ? "bg-black border-slate-700" : "bg-gradient-to-r from-slate-50 to-blue-50/50 border border-slate-100")}>
                                 <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                                     <div className="relative flex-1 max-w-md">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-violet-100 rounded-lg p-1.5"><Search className="h-4 w-4 text-violet-600" /></div>
@@ -253,35 +249,35 @@ export default function ProcessingAdminDashboardPage() {
                             </div>
                         </CardHeader>
 
-                        <CardContent className="p-0">
-                            <div className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
+                        <CardContent className={cn("p-0", theme === "dark" ? "bg-black text-white" : "bg-white text-black")}>
+                            <div className={cn("overflow-auto max-h-[80vh] scrollbar-thin", theme === "dark" ? "scrollbar-thumb-slate-600" : "scrollbar-thumb-slate-200")}>
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-slate-50/80 hover:bg-slate-50">
-                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Candidate</TableHead>
-                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Project & Role</TableHead>
-                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Recruiter</TableHead>
-                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Processing</TableHead>
-                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Status</TableHead>
-                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[120px]">Progress</TableHead>
-                                            <TableHead className="text-center font-bold text-slate-700 text-xs uppercase tracking-wider w-[80px]">Action</TableHead>
+                                        <TableRow className={cn(theme === "dark" ? "bg-black hover:bg-slate-800" : "bg-slate-50/80")}>
+                                            <TableHead className={cn("font-bold text-xs uppercase tracking-wider w-[220px]", theme === "dark" ? "text-white" : "text-slate-700")}>Candidate</TableHead>
+                                            <TableHead className={cn("font-bold text-xs uppercase tracking-wider", theme === "dark" ? "text-white" : "text-slate-700")}>Project & Role</TableHead>
+                                            <TableHead className={cn("font-bold text-xs uppercase tracking-wider", theme === "dark" ? "text-white" : "text-slate-700")}>Recruiter</TableHead>
+                                            <TableHead className={cn("font-bold text-xs uppercase tracking-wider", theme === "dark" ? "text-white" : "text-slate-700")}>Processing</TableHead>
+                                            <TableHead className={cn("font-bold text-xs uppercase tracking-wider", theme === "dark" ? "text-white" : "text-slate-700")}>Status</TableHead>
+                                            <TableHead className={cn("font-bold text-xs uppercase tracking-wider w-[120px]", theme === "dark" ? "text-white" : "text-slate-700")}>Progress</TableHead>
+                                            <TableHead className={cn("text-center font-bold text-xs uppercase tracking-wider w-[80px]", theme === "dark" ? "text-white" : "text-slate-700")}>Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
 
-                                    <TableBody>
+                                    <TableBody className={theme === "dark" ? "bg-black" : ""}>
                                         {isLoading ? (
-                                            <TableRow>
+                                            <TableRow className={theme === "dark" ? "bg-black" : ""}>
                                                 <TableCell colSpan={8} className="h-64 text-center">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <svg className="h-10 w-10 animate-spin text-violet-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-                                                        <p className="text-sm font-medium text-slate-500">Loading candidates...</p>
+                                                        <p className={cn("text-sm font-medium", theme === "dark" ? "text-gray-300" : "text-slate-500")}>Loading candidates...</p>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
                                         ) : candidates.length === 0 ? (
-                                            <TableRow>
+                                            <TableRow className={theme === "dark" ? "bg-black" : ""}>
                                                 <TableCell colSpan={8} className="h-64 text-center">
-                                                    <div className="flex flex-col items-center justify-center text-slate-500 space-y-2">
+                                                    <div className={cn("flex flex-col items-center justify-center space-y-2", theme === "dark" ? "text-gray-300" : "text-slate-500")}>
                                                         <Filter className="h-10 w-10 opacity-20" />
                                                         <p className="text-lg font-bold">No candidates found</p>
                                                         <p className="text-sm">Try adjusting your filters or search term</p>
@@ -291,13 +287,47 @@ export default function ProcessingAdminDashboardPage() {
                                             </TableRow>
                                         ) : (
                                             candidates.map((procCandidate) => (
-                                                <TableRow key={procCandidate.id} className={`group transition-colors border-b border-slate-100 hover:shadow-sm ${rowBgClass(procCandidate.processingStatus)}`}>
+                                                <TableRow
+                                                    key={procCandidate.id}
+                                                    className={cn(
+                                                        "group transition-all duration-200 hover:shadow-md",
+                                                        theme === "dark"
+                                                            ? "bg-black hover:bg-black border-b border-slate-800"
+                                                            : "bg-white hover:bg-white border-b border-slate-200"
+                                                    )}
+                                                >
                                                     <TableCell className="py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <ImageViewer title={`${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} src={procCandidate.candidate.profileImage || null} className="h-9 w-9 rounded-full" ariaLabel={`View full image for ${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} enableHoverPreview={true} />
+                                                            <ImageViewer 
+                                                                title={`${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} 
+                                                                src={procCandidate.candidate.profileImage || null} 
+                                                                className="h-9 w-9 rounded-full" 
+                                                                ariaLabel={`View full image for ${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} 
+                                                                enableHoverPreview={true} 
+                                                            />
                                                             <div className="min-w-0">
-                                                                <button className="font-bold text-sm text-slate-900 truncate text-left hover:text-violet-600 transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/processingCandidateDetails/${procCandidate.id}`); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/processingCandidateDetails/${procCandidate.id}`); } }}>{procCandidate.candidate.firstName} {procCandidate.candidate.lastName}</button>
-                                                                <div className="text-xs text-slate-500 truncate flex flex-col gap-0.5 mt-1">
+                                                                <button 
+                                                                    className={cn(
+                                                                        "font-bold text-sm truncate text-left hover:text-violet-600 transition-colors",
+                                                                        theme === "dark" ? "text-white" : "text-slate-900"
+                                                                    )} 
+                                                                    onClick={(e) => { 
+                                                                        e.stopPropagation(); 
+                                                                        navigate(`/processingCandidateDetails/${procCandidate.id}`); 
+                                                                    }} 
+                                                                    onKeyDown={(e) => { 
+                                                                        if (e.key === 'Enter' || e.key === ' ') { 
+                                                                            e.preventDefault(); 
+                                                                            navigate(`/processingCandidateDetails/${procCandidate.id}`); 
+                                                                        } 
+                                                                    }}
+                                                                >
+                                                                    {procCandidate.candidate.firstName} {procCandidate.candidate.lastName}
+                                                                </button>
+                                                                <div className={cn(
+                                                                    "text-xs truncate flex flex-col gap-0.5 mt-1",
+                                                                    theme === "dark" ? "text-gray-300" : "text-slate-500"
+                                                                )}>
                                                                     <div className="flex items-center gap-2"><Mail className="h-3 w-3" /> <span className="truncate">{procCandidate.candidate.email || "—"}</span></div>
                                                                     <div className="flex items-center gap-2"><Phone className="h-3 w-3" /> <span className="truncate">{procCandidate.candidate.mobileNumber || "—"}</span></div>
                                                                 </div>
@@ -307,17 +337,20 @@ export default function ProcessingAdminDashboardPage() {
 
                                                     <TableCell className="py-4">
                                                         <div className="space-y-1">
-                                                            <p className="text-sm text-slate-700 font-bold leading-tight">{procCandidate.project.title}</p>
+                                                            <p className={cn("text-sm font-bold leading-tight", theme === "dark" ? "text-white" : "text-slate-700")}>{procCandidate.project.title}</p>
                                                             <p className="text-xs text-violet-600 font-semibold uppercase tracking-wide">{procCandidate.role.designation}</p>
                                                             {procCandidate.project?.country?.flag && (
-                                                                <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5"><span title={procCandidate.project.country.flagName || procCandidate.project.country.name} aria-label={procCandidate.project.country.flagName || procCandidate.project.country.name} className="text-lg leading-none">{procCandidate.project.country.flag}</span><span className="font-medium">{procCandidate.project.country.name}</span></p>
+                                                                <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                                                                    <span title={procCandidate.project.country.flagName || procCandidate.project.country.name} aria-label={procCandidate.project.country.flagName || procCandidate.project.country.name} className="text-lg leading-none">{procCandidate.project.country.flag}</span>
+                                                                    <span className="font-medium">{procCandidate.project.country.name}</span>
+                                                                </p>
                                                             )}
                                                         </div>
                                                     </TableCell>
 
                                                     <TableCell className="py-4">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-medium text-slate-700">
+                                                            <span className={cn("text-sm font-medium", theme === "dark" ? "text-white" : "text-slate-700")}>
                                                                 {procCandidate.candidateProjectMap?.recruiter?.name || "N/A"}
                                                             </span>
                                                         </div>
@@ -332,14 +365,42 @@ export default function ProcessingAdminDashboardPage() {
                                                         </div>
                                                     </TableCell>
 
-    
-                                                    <TableCell className="py-4"><Badge className={`text-xs border-2 font-black whitespace-nowrap px-3 py-1 ${getStatusBadge(procCandidate.processingStatus)}`}>{displayStatus(procCandidate.processingStatus)}</Badge></TableCell>
-
                                                     <TableCell className="py-4">
-                                                        <div className="space-y-1.5">{(() => { const raw = (procCandidate as any).progressCount; const pct = typeof raw === 'number' ? Math.min(100, Math.max(0, raw)) : (procCandidate.processingStatus === 'completed' ? 100 : 0); return (<><span className="text-xs font-black text-slate-700">{pct}%</span><div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200"><div style={{ width: `${pct}%` }} className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} /></div></>); })()}</div>
+                                                        <Badge className={`text-xs border-2 font-black whitespace-nowrap px-3 py-1 ${getStatusBadge(procCandidate.processingStatus)}`}>
+                                                            {displayStatus(procCandidate.processingStatus)}
+                                                        </Badge>
                                                     </TableCell>
 
-                                                    <TableCell className="py-4 text-center"><Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-violet-100 hover:text-violet-700 rounded-full transition-all hover:scale-110 shadow-sm" onClick={() => navigate(`/processingCandidateDetails/${procCandidate.id}`)}><Eye className="h-5 w-5" /></Button></TableCell>
+                                                    <TableCell className="py-4">
+                                                        <div className="space-y-1.5">
+                                                            {(() => {
+                                                                const raw = (procCandidate as any).progressCount;
+                                                                const pct = typeof raw === 'number' ? Math.min(100, Math.max(0, raw)) : (procCandidate.processingStatus === 'completed' ? 100 : 0);
+                                                                return (
+                                                                    <>
+                                                                        <span className={cn("text-xs font-black", theme === "dark" ? "text-white" : "text-slate-700")}>{pct}%</span>
+                                                                        <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
+                                                                            <div 
+                                                                                style={{ width: `${pct}%` }} 
+                                                                                className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                                                                            />
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </TableCell>
+
+                                                    <TableCell className="py-4 text-center">
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="ghost" 
+                                                            className="h-9 w-9 p-0 hover:bg-violet-100 hover:text-violet-700 rounded-full transition-all hover:scale-110 shadow-sm" 
+                                                            onClick={() => navigate(`/processingCandidateDetails/${procCandidate.id}`)}
+                                                        >
+                                                            <Eye className="h-5 w-5" />
+                                                        </Button>
+                                                    </TableCell>
                                                 </TableRow>
                                             ))
                                         )}
@@ -347,8 +408,8 @@ export default function ProcessingAdminDashboardPage() {
                                 </Table>
                             </div>
 
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white">
-                                <div className="text-sm text-slate-600">Showing {startItem} - {endItem} of {totalItems}</div>
+                            <div className={cn("flex items-center justify-between px-4 py-3 border-t", theme === "dark" ? "border-slate-700 bg-black" : "border-slate-100 bg-white")}>
+                                <div className={cn("text-sm", theme === "dark" ? "text-gray-300" : "text-slate-600")}>Showing {startItem} - {endItem} of {totalItems}</div>
                                 <div className="flex items-center gap-2">
                                     <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
                                         <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
@@ -359,7 +420,7 @@ export default function ProcessingAdminDashboardPage() {
                                         </SelectContent>
                                     </Select>
                                     <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}><ChevronLeft /></Button>
-                                    <div className="px-2 text-sm text-slate-700">Page {page} / {totalPages}</div>
+                                    <div className={cn("px-2 text-sm", theme === "dark" ? "text-gray-300" : "text-slate-700")}>Page {page} / {totalPages}</div>
                                     <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}><ChevronRight /></Button>
                                 </div>
                             </div>

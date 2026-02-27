@@ -705,14 +705,16 @@ const ManagerDashboard: React.FC = () => {
 };
 
 // Main Dashboard Component
+
 export default function DashboardPage() {
+
   const isAdmin = useHasRole(["CEO", "Director"]);
 
   return (
-    <div className={`min-h-screen ${theme === "dark" ? "bg-[#181a20] text-[#f3f3f3]" : "bg-[#f7fafc] text-[#222]"}`}>
-      <div className="w-full mx-auto">
-        {isAdmin ? <AdminDashboard /> : <ManagerDashboard />}
-      </div>
-    </div>
+   <div className="min-h-screen bg-[#f7fafc] text-[#222]">
+  <div className="w-full mx-auto">
+    {isAdmin ? <AdminDashboard /> : <ManagerDashboard />}
+  </div>
+</div>
   );
 }
