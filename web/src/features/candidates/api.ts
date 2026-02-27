@@ -455,6 +455,14 @@ export interface UpdateCandidateRequest {
   gpa?: number;
   skills?: string;
   teamId?: string;
+  height?: number;
+  weight?: number;
+  skinTone?: string;
+  languageProficiency?: string;
+  smartness?: string;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
 }
 
 export interface UpdateCandidateStatusRequest {
@@ -792,6 +800,8 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: (_, __, { id }) => [
         { type: "Candidate", id },
         "Candidate",
+        "CandidateProject",
+        "ProjectCandidates",
       ],
     }),
     deleteCandidate: builder.mutation<void, string>({
@@ -820,6 +830,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         "Candidate",
         { type: "Project", id: projectId },
         "ProjectCandidates",
+        "CandidateProject",
       ],
     }),
 
@@ -832,7 +843,12 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: nominationData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: (_, __, { projectId }) => [
+        "Candidate",
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+        "CandidateProject",
+      ],
     }),
 
     approveOrRejectCandidate: builder.mutation<
@@ -849,7 +865,11 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: approvalData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: [
+        "Candidate",
+        "ProjectCandidates",
+        "CandidateProject",
+      ],
     }),
 
     getEligibleCandidates: builder.query<
@@ -1095,7 +1115,10 @@ export const candidatesApi = baseApi.injectEndpoints({
 
         return `/candidates/project/consolidated?${queryParams.toString()}`;
       },
-      providesTags: ["Candidate"],
+      providesTags: (_, __, { projectId }) => [
+        "Candidate",
+        { type: "Project", id: projectId },
+      ],
     }),
 
     // Status configuration

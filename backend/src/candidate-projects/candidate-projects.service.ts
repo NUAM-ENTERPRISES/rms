@@ -2270,6 +2270,7 @@ export class CandidateProjectsService {
       where: { id: projectId },
       include: {
         rolesNeeded: true,
+        country: true,
       },
     });
 
@@ -2285,6 +2286,11 @@ export class CandidateProjectsService {
       include: {
         // include work history so bulk eligibility mirrors single-candidate behavior
         workExperiences: true,
+        preferredCountries: {
+          include: {
+            country: true,
+          },
+        },
       },
     });
 
@@ -2349,6 +2355,83 @@ export class CandidateProjectsService {
           reasons.push(
             `Experience mismatch: Candidate has ${candidateExp} years, but role exceeds maximum ${role.maxExperience} years.`,
           );
+        }
+
+        // 1. Country Preference Check
+        const prefCountries = candidate.preferredCountries || [];
+        if (prefCountries.length > 0 && project.countryCode) {
+          const isCountryMatch = prefCountries.some(
+            (cp) => cp.countryCode === project.countryCode,
+          );
+          if (!isCountryMatch) {
+            const countryList = prefCountries
+              .map((cp) => cp.country?.name || cp.countryCode)
+              .join(', ');
+            reasons.push(
+              `Candidate preferred country is ${countryList}, not ${
+                project.country?.name || project.countryCode
+              }.`,
+            );
+          }
+        }
+
+        // 2. Sector Type Check
+        if (
+          candidate.sectorType &&
+          project.projectType &&
+          candidate.sectorType.toLowerCase() !== 'no_preference'
+        ) {
+          if (
+            candidate.sectorType.toLowerCase() !==
+            project.projectType.toLowerCase()
+          ) {
+            reasons.push(
+              `Sector mismatch: Candidate preferred ${candidate.sectorType}, but project is ${project.projectType}.`,
+            );
+          }
+        }
+
+        // 3. Salary Check
+        let roleSalaryRange = role.salaryRange;
+        if (roleSalaryRange && typeof roleSalaryRange === 'string') {
+          try {
+            roleSalaryRange = JSON.parse(roleSalaryRange);
+          } catch (e) {}
+        }
+        if (Array.isArray(roleSalaryRange) && roleSalaryRange.length >= 2) {
+          const maxSal = Number(roleSalaryRange[1]);
+          if (
+            candidate.expectedMinSalary &&
+            maxSal < candidate.expectedMinSalary
+          ) {
+            reasons.push(
+              `Salary mismatch: Candidate expects minimum ${candidate.expectedMinSalary}, but project maximum is ${maxSal}.`,
+            );
+          }
+        }
+
+        // 4. Licensing/Verification Check
+        if (project.licensingExam) {
+          if (!candidate.licensingExam) {
+            reasons.push(
+              `Licensing Exam mismatch: Project requires ${project.licensingExam}, but candidate has no licensing exam specified.`,
+            );
+          } else if (
+            project.licensingExam.toLowerCase() !==
+            candidate.licensingExam.toLowerCase()
+          ) {
+            reasons.push(
+              `Licensing Exam mismatch: Project requires ${project.licensingExam}, but candidate has ${candidate.licensingExam}.`,
+            );
+          }
+        }
+
+        if (project.dataFlow === true && candidate.dataFlow !== true) {
+          reasons.push(`DataFlow verification is required for this project.`);
+        }
+
+        if (project.eligibility === true && candidate.eligibility !== true) {
+          reasons.push(`Eligibility verification is required for this project.`);
         }
 
         return {

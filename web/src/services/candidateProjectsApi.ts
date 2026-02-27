@@ -45,7 +45,11 @@ export const candidateProjectsApi = baseApi.injectEndpoints({
         params,
       }),
       transformResponse: (response: ApiResponse<ProjectOverviewResponse>) => response.data,
-      providesTags: ["CandidateProject"],
+      providesTags: (result, error, { projectId }) => [
+        "CandidateProject",
+        "ProjectCandidates",
+        { type: "Project", id: projectId },
+      ],
     }),
   }),
 });

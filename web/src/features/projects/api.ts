@@ -384,7 +384,10 @@ export const projectsApi = baseApi.injectEndpoints({
           limit,
         },
       }),
-      providesTags: ["Candidate"],
+      providesTags: (_, __, { projectId }) => [
+        "Candidate",
+        { type: "Project", id: projectId },
+      ],
     }),
 
     // Create new project
@@ -451,6 +454,7 @@ export const projectsApi = baseApi.injectEndpoints({
       providesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
         "ProjectCandidates",
+        "Candidate",
       ],
     }),
 
@@ -463,6 +467,7 @@ export const projectsApi = baseApi.injectEndpoints({
       providesTags: (_, __, projectId) => [
         { type: "Project", id: projectId },
         "DocumentVerification",
+        "Candidate",
       ],
     }),
 
@@ -500,6 +505,7 @@ export const projectsApi = baseApi.injectEndpoints({
         "DocumentVerification",
         // Candidate queries should also refresh so lists that show candidate status update live
         "Candidate",
+        "CandidateProject",
       ],
     }),
 
@@ -525,6 +531,7 @@ export const projectsApi = baseApi.injectEndpoints({
         "ProjectCandidates",
         "Interview",
         "Candidate",
+        "CandidateProject",
       ],
     }),
 
@@ -549,6 +556,7 @@ export const projectsApi = baseApi.injectEndpoints({
         "ProjectCandidates",
         "Screening",
         "Candidate",
+        "CandidateProject",
       ],
     }),
 
@@ -609,6 +617,7 @@ export const projectsApi = baseApi.injectEndpoints({
       providesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
         "ProjectCandidates",
+        "Candidate",
       ],
     }),
 
@@ -678,6 +687,10 @@ export const projectsApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "Candidate",
+      ],
     }),
 
     // Get role departments (includes roles when includeRoles=true)

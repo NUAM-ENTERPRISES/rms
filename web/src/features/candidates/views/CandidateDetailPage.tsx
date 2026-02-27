@@ -37,6 +37,7 @@ import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
 import { UpdatePhysicalInfoModal } from "../components/UpdatePhysicalInfoModal";
+import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { useAppSelector } from "@/app/hooks";
 import type {
@@ -85,6 +86,9 @@ export default function CandidateDetailPage() {
 
   // Physical info update modal state
   const [isPhysicalModalOpen, setIsPhysicalModalOpen] = useState(false);
+
+  // Licensing update modal state
+  const [isLicensingModalOpen, setIsLicensingModalOpen] = useState(false);
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
@@ -386,6 +390,7 @@ export default function CandidateDetailPage() {
             onEditJobPreferences={() => setIsJobPreferenceModalOpen(true)}
             onEditPersonalInfo={() => setIsPersonalInfoModalOpen(true)}
             onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
+            onEditLicensing={() => setIsLicensingModalOpen(true)}
           />
         </TabsContent>
 
@@ -509,6 +514,18 @@ export default function CandidateDetailPage() {
           skinTone: candidate.skinTone,
           languageProficiency: candidate.languageProficiency,
           smartness: candidate.smartness,
+        }}
+      />
+
+      {/* Licensing update modal */}
+      <UpdateLicensingModal
+        isOpen={isLicensingModalOpen}
+        onClose={() => setIsLicensingModalOpen(false)}
+        candidateId={id!}
+        initialData={{
+          licensingExam: candidate.licensingExam,
+          dataFlow: candidate.dataFlow,
+          eligibility: candidate.eligibility,
         }}
       />
 

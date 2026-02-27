@@ -44,6 +44,7 @@ import {
   ShieldCheck,
   ClipboardCheck,
   Activity,
+  RefreshCcw,
 } from "lucide-react";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
@@ -147,7 +148,9 @@ export default function ProjectDetailPage() {
     isLoading,
     error,
     refetch: refetchProject,
-  } = useGetProjectQuery(projectId!);
+  } = useGetProjectQuery(projectId!, {
+    refetchOnFocus: true,
+  });
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
   // Board filters
@@ -157,12 +160,14 @@ export default function ProjectDetailPage() {
   const [showDetails, setShowDetails] = useState(false);
 
   // Get eligible candidates
-  const { data: eligibleResponse } = useGetEligibleCandidatesQuery({
+  const { data: eligibleResponse, refetch: refetchEligible } = useGetEligibleCandidatesQuery({
     projectId: projectId!,
     search: searchTerm || undefined,
     roleCatalogId:
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
+  }, {
+    refetchOnFocus: true,
   });
   const eligibleCandidates: any[] = Array.isArray(eligibleResponse?.data)
     ? eligibleResponse.data
@@ -178,6 +183,8 @@ export default function ProjectDetailPage() {
     roleCatalogId:
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
+  }, {
+    refetchOnFocus: true,
   });
 
   const candidatesData = consolidatedCandidatesQuery.data?.data?.candidates;
@@ -202,7 +209,10 @@ export default function ProjectDetailPage() {
         page: 1,
         limit: 10, // default to 10 for nominated candidates
       },
-      { skip: !shouldLoadNominated }
+      { 
+        skip: !shouldLoadNominated,
+        refetchOnFocus: true,
+      }
     );
 
   const [sendForVerification] = useSendForVerificationMutation();
@@ -212,6 +222,20 @@ export default function ProjectDetailPage() {
       useSendForScreeningMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
+
+  const handleRefreshAll = async () => {
+    try {
+      await Promise.all([
+        refetchProject?.(),
+        refetchNominated?.(),
+        refetchEligible?.(),
+        consolidatedCandidatesQuery?.refetch?.(),
+      ]);
+      toast.success("Project data refreshed");
+    } catch (e) {
+      toast.error("Failed to refresh data");
+    }
+  };
 
   // Get data (Moved above early returns to comply with Rules of Hooks)
   const projectCandidates = React.useMemo(() => {
@@ -701,6 +725,20 @@ export default function ProjectDetailPage() {
 
               {/* Right Side — Action Buttons */}
               <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshAll}
+                  disabled={isLoading || isLoadingCandidates}
+                  className="text-slate-500 hover:text-blue-600 font-medium h-10 px-4"
+                >
+                  <RefreshCcw
+                    className={`h-4 w-4 mr-2 ${
+                      isLoading || isLoadingCandidates ? "animate-spin" : ""
+                    }`}
+                  />
+                  Reload
+                </Button>
                 {canManageProjects && !isProcessingExecutive && (
                   <>
                     {/* Edit Button — Clean & Professional */}

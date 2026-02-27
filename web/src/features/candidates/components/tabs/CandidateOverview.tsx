@@ -19,9 +19,9 @@ import {
   Briefcase,
   Edit,
   MapPin,
-  CheckCircle2,
   Trophy,
   Sparkles,
+  ClipboardCheck,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { getAge } from "@/utils/getAge";
@@ -39,6 +39,7 @@ interface CandidateOverviewProps {
   onEditJobPreferences?: () => void;
   onEditPersonalInfo?: () => void;
   onEditPhysicalInfo?: () => void;
+  onEditLicensing?: () => void;
 }
 
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
@@ -49,6 +50,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   onEditJobPreferences,
   onEditPersonalInfo,
   onEditPhysicalInfo,
+  onEditLicensing,
 }) => {
   const age = getAge(candidate.dateOfBirth);
 
@@ -427,6 +429,74 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         <span className="text-sm text-slate-400 italic">
                           N/A
                         </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Licensing & Verification Section */}
+              <div className="mt-8 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                    <ClipboardCheck className="h-5 w-5 text-violet-600" />
+                    Licensing & Verification
+                  </h3>
+                  {canWriteCandidates && onEditLicensing && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onEditLicensing}
+                      className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 gap-1.5 h-8"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Licensing Exam
+                    </label>
+                    <Badge
+                      variant="outline"
+                      className="text-slate-700 border-slate-300 capitalize"
+                    >
+                      {candidate.licensingExam && candidate.licensingExam !== "none"
+                        ? candidate.licensingExam.replace(/_/g, " ")
+                        : "N/A"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Data Flow Completed
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {candidate.dataFlow ? (
+                        <Badge className="bg-blue-50 text-blue-700 border-blue-100">
+                          Completed
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-400 border-slate-200">
+                          Not Completed
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Eligibility
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {candidate.eligibility ? (
+                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">
+                          Eligible
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-400 border-slate-200">
+                          Not Verified
+                        </Badge>
                       )}
                     </div>
                   </div>

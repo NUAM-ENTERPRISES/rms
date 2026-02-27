@@ -260,14 +260,14 @@ const ProjectCandidatesBoard = ({
       search: searchTerm || undefined,
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
       limit: 10,
-    });
+    }, { refetchOnFocus: true });
 
   const consolidatedCandidatesQuery = useGetConsolidatedCandidatesQuery({
     projectId,
     search: searchTerm || undefined,
     roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
     limit: 10,
-  });
+  }, { refetchOnFocus: true });
 
   // Manager assignments query removed for this component (avoid calling `/candidates/role/Manager` from ProjectDetailPage)
   const managerAssignmentsData = undefined;
@@ -314,6 +314,7 @@ const ProjectCandidatesBoard = ({
     },
     {
       skip: !projectId || debouncedCandidateIds.length === 0,
+      refetchOnFocus: true,
     }
   );
 
