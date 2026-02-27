@@ -218,6 +218,12 @@ model Project {
   resumeEditable       Boolean               @default(true) // Whether resume can be edited according to requirements
   groomingRequired     String                @default("formal") // "formal", "casual", "not_specified"
   hideContactInfo      Boolean               @default(true) // Hide email and mobile in resume for private projects
+  
+  // Licensing and Verification
+  licensingExam        String?
+  dataFlow             Boolean?              @default(false)
+  eligibility          Boolean?              @default(false)
+  
   candidateProjects    CandidateProjects[]
   documentRequirements DocumentRequirement[]
   interviews           Interview[]
@@ -917,6 +923,7 @@ model DocumentRequirement {
   docType     String
   mandatory   Boolean   @default(true)
   description String?
+  isAutomatic Boolean   @default(false)
   isDeleted   Boolean   @default(false)
   deletedAt   DateTime?
   createdAt   DateTime  @default(now())

@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 export interface ProjectCountryCellProps {
   /** Country code (ISO-2) */
   countryCode?: string | null;
+  /** Country name to avoid lookup */
+  countryName?: string | null;
   /** Size variant */
   size?: "sm" | "md" | "lg" | "xl" | "2xl";
   /** Layout direction */
@@ -28,6 +30,7 @@ export interface ProjectCountryCellProps {
  */
 export function ProjectCountryCell({
   countryCode,
+  countryName: propCountryName,
   size = "sm",
   layout = "horizontal",
   showCode = false,
@@ -44,7 +47,7 @@ export function ProjectCountryCell({
     );
   }
 
-  const countryName = getCountryName(countryCode);
+  const countryName = propCountryName || getCountryName(countryCode);
 
   return (
     <div className={cn("flex items-center", className)}>

@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Calendar, Building2, Users, Briefcase, Settings } from "lucide-react";
+import { FileText, Calendar, Building2, Users, Briefcase, Settings, ShieldCheck, ClipboardCheck } from "lucide-react";
 
 type Project = any;
 
@@ -63,6 +63,7 @@ export default function ProjectDetailsModal({
                 {project.countryCode ? (
                   <ProjectCountryCell
                     countryCode={project.countryCode}
+                    countryName={project.country?.name}
                     size="md"
                     fallbackText="No country"
                     className="inline-flex items-center text-sm"
@@ -121,6 +122,21 @@ export default function ProjectDetailsModal({
                 <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
                   Type: {project.projectType || "Private"}
                 </div>
+                {project.licensingExam && (
+                  <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium border border-orange-200 text-orange-700">
+                    License: {project.licensingExam.toUpperCase()}
+                  </div>
+                )}
+                {project.dataFlow && (
+                  <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium border border-blue-200 text-blue-700">
+                    Data Flow Required
+                  </div>
+                )}
+                {project.eligibility && (
+                  <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium border border-emerald-200 text-emerald-700">
+                    Eligibility Required
+                  </div>
+                )}
               </div>
             </section>
 
@@ -134,9 +150,16 @@ export default function ProjectDetailsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {project.rolesNeeded.map((role: any) => (
                     <div key={role.id} className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex flex-col">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                        <h4 className="text-base font-semibold text-purple-700 truncate">{role.designation}</h4>
-                        <Badge variant="outline" className="text-xs px-3 py-0.5 w-fit">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                        <div className="flex flex-col min-w-0">
+                          <h4 className="text-base font-semibold text-purple-700 truncate">{role.designation}</h4>
+                          {role.roleCatalog?.roleDepartment && (
+                            <span className="text-[10px] text-slate-500 font-medium truncate">
+                              {role.roleCatalog.roleDepartment.label}
+                            </span>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-xs px-3 py-0.5 w-fit flex-shrink-0">
                           {role.quantity} pos
                         </Badge>
                       </div>
@@ -144,8 +167,52 @@ export default function ProjectDetailsModal({
                         <div><strong>Exp:</strong> {role.minExperience}–{role.maxExperience || "Any"}</div>
                         <div><strong>Age:</strong> {role.ageRequirement || "—"}</div>
                         <div><strong>Gender:</strong> {role.genderRequirement || "All"}</div>
+                        <div><strong>Employment:</strong> {role.employmentType || "Any"}</div>
                         <div><strong>Visa:</strong> {role.visaType || "Any"}</div>
+                        <div><strong>Salary:</strong> {role.salaryRange || "As per policy"}</div>
                       </div>
+
+                      {/* Education List */}
+                      {role.educationRequirementsList?.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {role.educationRequirementsList.map((edu: any, idx: number) => (
+                            <span key={idx} className="text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600">
+                              {edu.qualification?.shortName || edu.qualification?.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Benefits & Requirements */}
+                      <div className="mt-3 space-y-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {role.accommodation && (
+                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">Accommodation</Badge>
+                          )}
+                          {role.food && (
+                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">Food Provided</Badge>
+                          )}
+                          {role.transport && (
+                            <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">Transportation</Badge>
+                          )}
+                        </div>
+
+                        {(role.backgroundCheckRequired || role.drugScreeningRequired) && (
+                          <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-slate-500">
+                            {role.backgroundCheckRequired && (
+                              <span className="flex items-center gap-1">
+                                <ShieldCheck className="h-3 w-3" /> Background Check
+                              </span>
+                            )}
+                            {role.drugScreeningRequired && (
+                              <span className="flex items-center gap-1">
+                                <ClipboardCheck className="h-3 w-3" /> Drug Screening
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       {role.notes && (
                         <p className="mt-2 text-xs text-slate-600 italic">
                           Note: {role.notes}

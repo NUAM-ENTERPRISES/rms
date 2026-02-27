@@ -477,6 +477,32 @@ export class CreateProjectDto {
   hideContactInfo?: boolean = true;
 
   @ApiPropertyOptional({
+    description: 'Licensing exam requirements',
+    example: 'HAAD, DHA, MOH',
+  })
+  @IsOptional()
+  @IsString()
+  licensingExam?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether data flow verification is required',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  dataFlow?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Whether eligibility verification is required',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  eligibility?: boolean = false;
+
+  @ApiPropertyOptional({
     description: 'Roles needed for this project',
     type: [CreateRoleNeededDto],
   })

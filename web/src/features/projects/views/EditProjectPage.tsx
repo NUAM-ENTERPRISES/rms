@@ -93,7 +93,7 @@ export default function EditProjectPage() {
 
   // State for preview modal
   const [showPreview, setShowPreview] = useState(false);
-  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<ProjectFormData | null>(null);
 
   // Load project data into form when available
   useEffect(() => {
@@ -257,7 +257,7 @@ export default function EditProjectPage() {
   };
 
   // Handle form submission - show preview instead of direct submission
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: ProjectFormData) => {
     setPreviewData(data);
     setShowPreview(true);
   };

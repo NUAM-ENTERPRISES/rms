@@ -167,6 +167,11 @@ export default function DocumentRequirementsSection({
                       Required
                     </Badge>
                   )}
+                  {requirement.isAutomatic && (
+                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                      Auto-added
+                    </Badge>
+                  )}
                 </div>
                 <Input
                   placeholder="Description (optional)"
@@ -199,7 +204,9 @@ export default function DocumentRequirementsSection({
                     variant="ghost"
                     size="sm"
                     onClick={() => removeDocumentRequirement(index)}
+                    disabled={requirement.isAutomatic}
                     className="text-destructive hover:text-destructive"
+                    title={requirement.isAutomatic ? "This document is required by project settings (Licensing/Data Flow/Eligibility)" : "Remove document"}
                   >
                     <X className="h-4 w-4" />
                   </Button>

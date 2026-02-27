@@ -103,6 +103,24 @@ export class ProjectsController {
                   food: { type: 'string' },
                   transport: { type: 'string' },
                   target: { type: 'string' },
+                  roleCatalog: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      label: { type: 'string' },
+                      shortName: { type: 'string' },
+                      isActive: { type: 'boolean' },
+                      roleDepartment: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          shortName: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -409,6 +427,24 @@ export class ProjectsController {
                   food: { type: 'string' },
                   transport: { type: 'string' },
                   target: { type: 'string' },
+                  roleCatalog: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      label: { type: 'string' },
+                      shortName: { type: 'string' },
+                      isActive: { type: 'boolean' },
+                      roleDepartment: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          shortName: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -479,6 +515,24 @@ export class ProjectsController {
                   food: { type: 'string' },
                   transport: { type: 'string' },
                   target: { type: 'string' },
+                  roleCatalog: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      label: { type: 'string' },
+                      shortName: { type: 'string' },
+                      isActive: { type: 'boolean' },
+                      roleDepartment: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          shortName: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },

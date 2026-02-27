@@ -80,15 +80,10 @@ const sanitizeCandidate = (
   candidate: CandidateRecord,
   hideContactInfo?: boolean
 ): CandidateRecord =>
-  hideContactInfo
-    ? {
-        ...candidate,
-        email: undefined,
-        contact: undefined,
-        mobileNumber: undefined,
-        countryCode: undefined,
-      }
-    : candidate;
+  // we used to strip contact fields here when hideContactInfo was true,
+  // but the tooltip relies on them. instead we simply return the record and
+  // let the card component hide the pills conditionally.
+  candidate;
 
 const matchesSearchTerm = (candidate: CandidateRecord, term: string) => {
   if (!term) return true;
@@ -470,6 +465,7 @@ const ProjectCandidatesBoard = ({
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={isRecruiter}
+              hideContactInfo={hideContactInfo}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(candidateId)}
               onAction={(id, action) => {
@@ -595,6 +591,7 @@ const ProjectCandidatesBoard = ({
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={isRecruiter}
+              hideContactInfo={hideContactInfo}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
               onAction={(id, action) => {
@@ -720,6 +717,7 @@ const ProjectCandidatesBoard = ({
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={isRecruiter}
+              hideContactInfo={hideContactInfo}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
               onAction={(id, action) => {

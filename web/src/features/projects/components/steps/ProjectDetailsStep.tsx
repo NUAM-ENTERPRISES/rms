@@ -25,8 +25,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CountrySelect, DatePicker, ClientSelect } from "@/components/molecules";
-import { Building2, Target, CheckCircle, Shield } from "lucide-react";
+import { Building2, Target, CheckCircle, Shield, FileText, ClipboardCheck, Award } from "lucide-react";
 import { ProjectFormData } from "../../schemas/project-schemas";
+import { LICENSING_EXAMS } from "@/constants/candidate-constants";
 
 interface ProjectDetailsStepProps {
   control: Control<ProjectFormData>;
@@ -34,6 +35,7 @@ interface ProjectDetailsStepProps {
   setValue: UseFormSetValue<ProjectFormData>;
   errors: FieldErrors<ProjectFormData>;
   onCreateClientClick?: () => void;
+  initialCountryData?: { code: string; name: string };
 }
 
 export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
@@ -42,6 +44,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
   setValue,
   errors,
   onCreateClientClick,
+  initialCountryData,
 }) => {
   const projectType = watch("projectType");
 
@@ -238,6 +241,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                   allowEmpty={true}
                   groupByRegion={true}
                   error={errors.countryCode?.message}
+                  initialCountryData={initialCountryData}
                 />
               )}
             />
@@ -418,6 +422,95 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               {errors.requiredScreening && (
                 <span className="text-sm text-red-600 mt-1 block">{errors.requiredScreening.message}</span>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Licensing and Verification Requirements */}
+        <div className="pt-6 border-t border-slate-200">
+          <Label className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">
+            <Award className="h-4 w-4 text-violet-600" />
+            Licensing & Verification Requirements
+          </Label>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <Label htmlFor="licensingExam" className="text-sm font-medium text-slate-700">
+                Licensing Exam
+              </Label>
+              <Controller
+                name="licensingExam"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                    value={field.value || "none"}
+                  >
+                    <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500">
+                      <SelectValue placeholder="Select licensing exam" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None / Not Required</SelectItem>
+                      {Object.entries(LICENSING_EXAMS).map(([key, value]) => (
+                        <SelectItem key={value} value={value}>
+                          {key.replace("_", " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.licensingExam && (
+                <p className="text-sm text-red-600">{errors.licensingExam.message}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-4 justify-center">
+              <div className="flex items-center space-x-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+                <Controller
+                  name="dataFlow"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="dataFlow"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="dataFlow"
+                    className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-blue-600" />
+                    Data Flow Required
+                  </Label>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+                <Controller
+                  name="eligibility"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="eligibility"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="eligibility"
+                    className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+                  >
+                    <ClipboardCheck className="h-3.5 w-3.5 text-green-600" />
+                    Eligibility Required
+                  </Label>
+                </div>
+              </div>
             </div>
           </div>
         </div>

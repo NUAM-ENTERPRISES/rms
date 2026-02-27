@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks";
 import { FlagIcon } from "@/shared";
-import { useCountriesLookup } from "@/shared/hooks/useCountriesLookup";
+import { useCountriesLookup, useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
 
 export interface CountrySelectProps {
   value?: string;
@@ -29,6 +29,8 @@ export interface CountrySelectProps {
   groupByRegion?: boolean;
   name?: string;
   skip?: boolean;
+  /** Optional initial country data to avoid extra fetch */
+  initialCountryData?: { code: string; name: string };
 }
 
 export function CountrySelect({
@@ -43,6 +45,7 @@ export function CountrySelect({
   allowEmpty = true,
   pageSize = 20,
   skip = false,
+  initialCountryData,
 }: CountrySelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -65,6 +68,16 @@ export function CountrySelect({
   };
 
   const selectedCountry = countries.find((c) => c.code === value);
+
+  // if the current page of countries doesn't include the selected value,
+  // fetch it explicitly so the button can show its name.
+  // We SKIP this if initialCountryData is provided and matches.
+  const shouldSkipFetch = !value || !!selectedCountry || (initialCountryData?.code === value);
+  const { data: fetchedCountry } = useGetCountryByCodeQuery(value, {
+    skip: shouldSkipFetch,
+  });
+
+  const displayCountry = selectedCountry || (initialCountryData?.code === value ? initialCountryData : fetchedCountry);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -89,10 +102,10 @@ export function CountrySelect({
             disabled={disabled}
           >
             <div className="flex items-center gap-3 truncate">
-              {value && selectedCountry ? (
+              {value && displayCountry ? (
                 <>
                   <FlagIcon countryCode={value} size="sm" className="shrink-0" />
-                  <span className="truncate">{selectedCountry.name}</span>
+                  <span className="truncate">{displayCountry.name}</span>
                 </>
               ) : (
                 <span className="text-slate-400">{placeholder}</span>

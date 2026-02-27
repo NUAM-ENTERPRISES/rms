@@ -79,6 +79,102 @@ export default function MultiStepEditProjectPage() {
     mode: "onChange",
   });
 
+  // Automatically update document requirements based on project details
+  const watchedLicensingExam = watch("licensingExam");
+  const watchedDataFlow = watch("dataFlow");
+  const watchedEligibility = watch("eligibility");
+
+  useEffect(() => {
+    // Skip if still loading project data to avoid adding requirements to default values
+    if (isLoadingProject) return;
+
+    const currentRequirements = watch("documentRequirements") || [];
+    let updatedRequirements = [...currentRequirements];
+    let hasChanges = false;
+
+    // Helper to find the index of a docType
+    const findDocIndex = (docType: string) => 
+      updatedRequirements.findIndex(r => r.docType === docType);
+
+    // 1. Handle Licensing Exam
+    // Current licensing exam values (prometric, dha, etc.) are now valid docTypes
+    const neededExamDoc = watchedLicensingExam && watchedLicensingExam !== "none" 
+      ? watchedLicensingExam
+      : null;
+
+    // Remove old exam docs that are no longer needed
+    const allExamDocTypes = [
+      "saudi_prometric", "moh_prometric", "qchp_prometric", "prometric_result",
+      "prometric", "dha", "haad", "moh", "scfhs", "qchp", "omsb", "nhra", 
+      "nmc_uk", "cbt", "oet", "ielts", "usmle", "nclex_rn"
+    ];
+    updatedRequirements = updatedRequirements.filter(r => {
+      if (allExamDocTypes.includes(r.docType)) {
+        if (r.isAutomatic && r.docType !== neededExamDoc) {
+          hasChanges = true;
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // Add needed exam doc if missing
+    if (neededExamDoc && findDocIndex(neededExamDoc) === -1) {
+      updatedRequirements.push({
+        docType: neededExamDoc,
+        mandatory: true,
+        description: `Automatically added based on ${watchedLicensingExam} licensing exam requirement`,
+        isAutomatic: true,
+      });
+      hasChanges = true;
+    }
+
+    // 2. Handle Data Flow
+    const dataFlowIndex = findDocIndex("dataflow_report");
+    if (watchedDataFlow) {
+      if (dataFlowIndex === -1) {
+        updatedRequirements.push({
+          docType: "dataflow_report",
+          mandatory: true,
+          description: "Automatically added based on Data Flow requirement",
+          isAutomatic: true,
+        });
+        hasChanges = true;
+      }
+    } else {
+      if (dataFlowIndex !== -1 && updatedRequirements[dataFlowIndex].isAutomatic) {
+        updatedRequirements.splice(dataFlowIndex, 1);
+        hasChanges = true;
+      }
+    }
+
+    // 3. Handle Eligibility
+    const eligibilityIndex = findDocIndex("eligibility_letter");
+    if (watchedEligibility) {
+      if (eligibilityIndex === -1) {
+        updatedRequirements.push({
+          docType: "eligibility_letter",
+          mandatory: true,
+          description: "Automatically added based on Eligibility requirement",
+          isAutomatic: true,
+        });
+        hasChanges = true;
+      }
+    } else {
+      if (eligibilityIndex !== -1 && updatedRequirements[eligibilityIndex].isAutomatic) {
+        updatedRequirements.splice(eligibilityIndex, 1);
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      setValue("documentRequirements", updatedRequirements, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [watchedLicensingExam, watchedDataFlow, watchedEligibility, setValue, watch, isLoadingProject]);
+
   // Load project data into form when available
   useEffect(() => {
     if (projectData?.data) {
@@ -99,11 +195,13 @@ export default function MultiStepEditProjectPage() {
         resumeEditable: (project as any).resumeEditable ?? true,
         groomingRequired: (project as any).groomingRequired ?? "formal",
         hideContactInfo: (project as any).hideContactInfo ?? true,
-        requiredScreening: (project as any).requiredScreening ?? false,
-            rolesNeeded:
+        requiredScreening: (project as any).requiredScreening ?? false,        licensingExam: (project as any).licensingExam || "",
+        dataFlow: (project as any).dataFlow ?? false,
+        eligibility: (project as any).eligibility ?? false,
+        rolesNeeded:
           project.rolesNeeded?.map((role: any) => ({
             roleCatalogId: role.roleCatalogId || "",
-            departmentId: role.departmentId,
+            departmentId: role.departmentId || role.roleCatalog?.roleDepartment?.id,
             designation: role.designation,
             // Ensure quantity is a number (fallback to 1 if null/undefined)
             quantity: typeof role.quantity === "number" ? role.quantity : 1,
@@ -220,6 +318,7 @@ export default function MultiStepEditProjectPage() {
             docType: doc.docType,
             mandatory: doc.mandatory,
             description: doc.description,
+            isAutomatic: doc.isAutomatic,
           })) || [],
       };
 
@@ -500,11 +599,32 @@ export default function MultiStepEditProjectPage() {
 
   // Render current step
   const renderCurrentStep = () => {
+    // Extract department labels for RequirementCriteriaStep
+    const departmentLabels: Record<string, string> = {};
+    if (projectData?.data?.rolesNeeded) {
+      projectData.data.rolesNeeded.forEach((role: any) => {
+        const deptId = role.departmentId || role.roleCatalog?.roleDepartment?.id;
+        const deptLabel = role.roleCatalog?.roleDepartment?.label;
+        if (deptId && deptLabel) {
+          departmentLabels[deptId] = deptLabel;
+        }
+      });
+    }
+
     const stepProps = {
       control,
       watch,
       setValue,
       errors,
+      initialDepartmentLabels: departmentLabels,
+      initialCountryData: projectData?.data?.countryCode
+        ? {
+            code: projectData.data.countryCode,
+            name:
+              projectData.data.country?.name ||
+              projectData.data.countryCode,
+          }
+        : undefined,
     };
 
     switch (currentStep) {
@@ -517,7 +637,7 @@ export default function MultiStepEditProjectPage() {
       case 3:
         return <DocumentRequirementsStep {...stepProps} />;
       case 4:
-        return <PreviewStep watch={watch} />;
+        return <PreviewStep watch={watch} initialCountryData={stepProps.initialCountryData} />;
       default:
         return null;
     }

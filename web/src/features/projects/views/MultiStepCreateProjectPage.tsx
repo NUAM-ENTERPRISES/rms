@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -74,6 +74,99 @@ export default function MultiStepCreateProjectPage() {
     resolver: zodResolver(projectFormSchema),
     defaultValues: defaultProjectValues,
   });
+
+  // Automatically update document requirements based on project details
+  const watchedLicensingExam = watch("licensingExam");
+  const watchedDataFlow = watch("dataFlow");
+  const watchedEligibility = watch("eligibility");
+
+  useEffect(() => {
+    const currentRequirements = watch("documentRequirements") || [];
+    let updatedRequirements = [...currentRequirements];
+    let hasChanges = false;
+
+    // Helper to find the index of a docType
+    const findDocIndex = (docType: string) => 
+      updatedRequirements.findIndex(r => r.docType === docType);
+
+    // 1. Handle Licensing Exam
+    // Current licensing exam values (prometric, dha, etc.) are now valid docTypes
+    const neededExamDoc = watchedLicensingExam && watchedLicensingExam !== "none" 
+      ? watchedLicensingExam
+      : null;
+
+    // Remove old exam docs that are no longer needed
+    const allExamDocTypes = [
+      "saudi_prometric", "moh_prometric", "qchp_prometric", "prometric_result",
+      "prometric", "dha", "haad", "moh", "scfhs", "qchp", "omsb", "nhra", 
+      "nmc_uk", "cbt", "oet", "ielts", "usmle", "nclex_rn"
+    ];
+    updatedRequirements = updatedRequirements.filter(r => {
+      if (allExamDocTypes.includes(r.docType)) {
+        if (r.isAutomatic && r.docType !== neededExamDoc) {
+          hasChanges = true;
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // Add needed exam doc if missing
+    if (neededExamDoc && findDocIndex(neededExamDoc) === -1) {
+      updatedRequirements.push({
+        docType: neededExamDoc,
+        mandatory: true,
+        description: `Automatically added based on ${watchedLicensingExam} licensing exam requirement`,
+        isAutomatic: true,
+      });
+      hasChanges = true;
+    }
+
+    // 2. Handle Data Flow
+    const dataFlowIndex = findDocIndex("dataflow_report");
+    if (watchedDataFlow) {
+      if (dataFlowIndex === -1) {
+        updatedRequirements.push({
+          docType: "dataflow_report",
+          mandatory: true,
+          description: "Automatically added based on Data Flow requirement",
+          isAutomatic: true,
+        });
+        hasChanges = true;
+      }
+    } else {
+      if (dataFlowIndex !== -1 && updatedRequirements[dataFlowIndex].isAutomatic) {
+        updatedRequirements.splice(dataFlowIndex, 1);
+        hasChanges = true;
+      }
+    }
+
+    // 3. Handle Eligibility
+    const eligibilityIndex = findDocIndex("eligibility_letter");
+    if (watchedEligibility) {
+      if (eligibilityIndex === -1) {
+        updatedRequirements.push({
+          docType: "eligibility_letter",
+          mandatory: true,
+          description: "Automatically added based on Eligibility requirement",
+          isAutomatic: true,
+        });
+        hasChanges = true;
+      }
+    } else {
+      if (eligibilityIndex !== -1 && updatedRequirements[eligibilityIndex].isAutomatic) {
+        updatedRequirements.splice(eligibilityIndex, 1);
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      setValue("documentRequirements", updatedRequirements, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [watchedLicensingExam, watchedDataFlow, watchedEligibility, setValue, watch]);
 
   // Create progress steps with status
   const progressSteps: ProgressStep[] = STEPS.map((step, index) => ({

@@ -41,6 +41,9 @@ import {
   Home,
   Bus,
   GraduationCap,
+  ShieldCheck,
+  ClipboardCheck,
+  Activity,
 } from "lucide-react";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
@@ -621,22 +624,10 @@ export default function ProjectDetailPage() {
   // Get data
   const pagination = projectCandidatesData?.data?.pagination;
 
-  const projectResumeEditable =
-    "resumeEditable" in project
-      ? Boolean((project as { resumeEditable?: boolean }).resumeEditable)
-      : false;
-  const projectGroomingRequirement =
-    "groomingRequired" in project
-      ? (project as { groomingRequired?: string | null }).groomingRequired
-      : undefined;
-  const projectHideContactInfo =
-    "hideContactInfo" in project
-      ? Boolean((project as { hideContactInfo?: boolean }).hideContactInfo)
-      : false;
-  const projectRequiredScreening =
-    "requiredScreening" in project
-      ? Boolean((project as { requiredScreening?: boolean }).requiredScreening)
-      : false;
+  const projectResumeEditable = Boolean(project.resumeEditable);
+  const projectGroomingRequirement = project.groomingRequired;
+  const projectHideContactInfo = Boolean(project.hideContactInfo);
+  const projectRequiredScreening = Boolean(project.requiredScreening);
 
   // normalize document requirements to a safe array so we never read .length on undefined
   const documentRequirements = Array.isArray(project.documentRequirements)
@@ -700,6 +691,7 @@ export default function ProjectDetailPage() {
                   </Button>
                   <ProjectCountryCell
                     countryCode={project.countryCode}
+                    countryName={project.country?.name}
                     size="2xl"
                     fallbackText="Not specified"
                     className="shadow-lg ring-4 ring-white/90 rounded-full"
@@ -859,6 +851,7 @@ export default function ProjectDetailPage() {
                       value: (
                         <ProjectCountryCell
                           countryCode={project.countryCode}
+                          countryName={project.country?.name}
                           size="sm"
                           fallbackText="—"
                         />
@@ -905,6 +898,24 @@ export default function ProjectDetailPage() {
                       color: "text-red-600",
                       label: "Contact",
                       value: projectHideContactInfo ? "Hidden" : "Visible",
+                    },
+                    {
+                      icon: Activity,
+                      color: "text-orange-600",
+                      label: "License Exam",
+                      value: project.licensingExam?.toUpperCase() || "None",
+                    },
+                    {
+                      icon: ShieldCheck,
+                      color: "text-blue-600",
+                      label: "Data Flow",
+                      value: project.dataFlow ? "Required" : "Not Required",
+                    },
+                    {
+                      icon: ClipboardCheck,
+                      color: "text-emerald-600",
+                      label: "Eligibility",
+                      value: project.eligibility ? "Required" : "Not Required",
                     },
                   ].map((item, i) => (
                     <div
@@ -992,9 +1003,16 @@ export default function ProjectDetailPage() {
                     className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-slate-900 text-sm truncate">
-                        {role.designation}
-                      </span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-slate-900 text-sm truncate">
+                          {role.designation}
+                        </span>
+                        {role.roleCatalog?.roleDepartment && (
+                          <span className="text-[10px] text-slate-500 font-medium truncate">
+                            {role.roleCatalog.roleDepartment.label}
+                          </span>
+                        )}
+                      </div>
                       <Badge className="text-[10px] h-5 bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0">
                         {role.quantity} pos
                       </Badge>
@@ -1044,34 +1062,61 @@ export default function ProjectDetailPage() {
                       )}
 
                     {/* Benefits & Type */}
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                      <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/60">
+                      {(role.accommodation || role.food || role.transport) && (
+                        <div className="flex items-center gap-2 mr-auto">
                           {role.accommodation && (
-                            <Home
-                              className="h-3 w-3 text-emerald-600"
-                              aria-label="Accommodation provided"
-                              role="img"
-                            />
+                            <div className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] font-medium border border-emerald-100">
+                              <Home className="h-2.5 w-2.5" />
+                              <span>Housing</span>
+                            </div>
                           )}
                           {role.food && (
-                            <Utensils
-                              className="h-3 w-3 text-orange-600"
-                              aria-label="Food provided"
-                              role="img"
-                            />
+                            <div className="flex items-center gap-0.5 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] font-medium border border-blue-100">
+                              <Utensils className="h-2.5 w-2.5" />
+                              <span>Food</span>
+                            </div>
                           )}
                           {role.transport && (
-                            <Bus
-                              className="h-3 w-3 text-blue-600"
-                              aria-label="Transport provided"
-                              role="img"
-                            />
+                            <div className="flex items-center gap-0.5 text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded text-[10px] font-medium border border-purple-100">
+                              <Bus className="h-2.5 w-2.5" />
+                              <span>Travel</span>
+                            </div>
                           )}
                         </div>
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        {role.employmentType || "Permanent"}
-                      </span>
+                      )}
+
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        {role.employmentType && (
+                          <Badge variant="outline" className="text-[10px] h-4.5 font-medium border-slate-300 text-slate-600 px-1.5">
+                            {role.employmentType.toUpperCase()}
+                          </Badge>
+                        )}
+                        {role.visaType && (
+                          <Badge variant="outline" className="text-[10px] h-4.5 font-medium border-amber-300 text-amber-700 bg-amber-50 px-1.5">
+                            {role.visaType.replace(/_/g, ' ').toUpperCase()} VISA
+                          </Badge>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Screening Badges */}
+                    {(role.backgroundCheckRequired || role.drugScreeningRequired) && (
+                      <div className="flex items-center gap-2 pt-1">
+                        {role.backgroundCheckRequired && (
+                          <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                            <ShieldCheck className="h-2.5 w-2.5 text-slate-400" />
+                            Security Clearance
+                          </span>
+                        )}
+                        {role.drugScreeningRequired && (
+                          <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                            <ClipboardCheck className="h-2.5 w-2.5 text-slate-400" />
+                            Medical Screening
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>

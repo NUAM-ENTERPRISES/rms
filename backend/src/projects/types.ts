@@ -2,6 +2,7 @@ import {
   Project,
   RoleNeeded,
   CandidateProjects,
+  DocumentRequirement,
   Client,
   User,
   Team,
@@ -11,6 +12,16 @@ export interface ProjectWithRelations extends Project {
   client: Client | null;
   creator: User;
   team: Team | null;
+  country: {
+    code: string;
+    name: string;
+    region: string;
+    callingCode: string | null;
+    currency?: string;
+    timezone: string | null;
+    isActive: boolean;
+  } | null;
+  documentRequirements: DocumentRequirement[];
   rolesNeeded: (RoleNeeded & {
     roleCatalog?: {
       id: string;

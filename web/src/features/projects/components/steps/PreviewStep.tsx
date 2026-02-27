@@ -25,12 +25,14 @@ import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 import { useGetClientQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
+import { LICENSING_EXAMS } from "@/constants/candidate-constants";
 
 interface PreviewStepProps {
   watch: UseFormWatch<ProjectFormData>;
+  initialCountryData?: { code: string; name: string };
 }
 
-export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
+export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryData }) => {
   const formData = watch();
   const { data: selectedClientData } = useGetClientQuery(
     formData.clientId || "",
@@ -39,6 +41,15 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
   const { data: systemConfig } = useGetSystemConfigQuery("religions,states");
   const { data: qualificationsData } = useGetQualificationsQuery();
   const { getCountryName } = useCountryValidation();
+
+  // Helper function to get country name - prefer initialCountryData if it matches
+  const getDisplayCountryName = (code?: string) => {
+    if (!code) return null;
+    if (initialCountryData && initialCountryData.code === code) {
+      return initialCountryData.name;
+    }
+    return getCountryName(code);
+  };
 
   // Helper function to get qualification name by ID
   const getQualificationName = (qualificationId: string) => {
@@ -64,6 +75,12 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
       (r) => r.id === religionId
     );
     return religion?.name || religionId;
+  };
+
+  const getLicensingExamLabel = (value: string) => {
+    if (!value) return "";
+    const entry = Object.entries(LICENSING_EXAMS).find(([_, val]) => val === value);
+    return entry ? entry[0].replace("_", " ") : value.toUpperCase();
   };
 
   return (
@@ -110,7 +127,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
                 {formData.countryCode ? (
                   <FlagWithName
                     countryCode={formData.countryCode}
-                    countryName={getCountryName(formData.countryCode) || ""}
+                    countryName={getDisplayCountryName(formData.countryCode) || ""}
                     size="sm"
                   />
                 ) : (
@@ -173,6 +190,36 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch }) => {
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md text-sm font-medium">
                   <CheckCircle className="h-4 w-4" />
                   Required Screening Process Enabled
+                </div>
+              </div>
+            )}
+
+            {/* Licensing and Verification Summary */}
+            {(formData.licensingExam || formData.dataFlow || formData.eligibility) && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                  Licensing & Verification
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {formData.licensingExam && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="border-violet-200 text-violet-700 bg-violet-50">
+                        Exam: {getLicensingExamLabel(formData.licensingExam)}
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-3">
+                    {formData.dataFlow && (
+                      <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
+                        Data Flow Required
+                      </Badge>
+                    )}
+                    {formData.eligibility && (
+                      <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
+                        Eligibility Required
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

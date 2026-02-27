@@ -37,9 +37,20 @@ export interface Project {
   groomingRequired?: "formal" | "casual" | "not_specified";
   hideContactInfo?: boolean;
   requiredScreening?: boolean;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
   accommodation?: boolean;
   food?: boolean;
   transport?: boolean;
+  country?: {
+    code: string;
+    name: string;
+    region?: string;
+    callingCode?: string;
+    currency?: string;
+    timezone?: string;
+  };
 }
 
 export interface RoleNeeded {
@@ -79,6 +90,19 @@ export interface RoleNeeded {
   relocationAssistance: boolean;
   additionalRequirements?: string;
   notes?: string;
+  roleCatalog?: {
+    id: string;
+    name: string;
+    label: string;
+    shortName: string;
+    isActive: boolean;
+    roleDepartment: {
+      id: string;
+      name: string;
+      label: string;
+      shortName: string;
+    };
+  };
 }
 
 export interface EducationRequirement {
@@ -149,6 +173,9 @@ export interface CreateProjectRequest {
   teamId?: string;
   countryCode?: string;
   projectType: "private" | "ministry";
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
   rolesNeeded: CreateRoleNeededRequest[];
   documentRequirements: CreateDocumentRequirementRequest[];
 }

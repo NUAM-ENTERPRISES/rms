@@ -23,4 +23,12 @@ export class CreateDocumentRequirementDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether this was automatically added based on project settings',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isAutomatic?: boolean;
 }

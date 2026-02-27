@@ -36,6 +36,7 @@ interface RequirementCriteriaStepProps {
   watch: UseFormWatch<ProjectFormData>;
   setValue: UseFormSetValue<ProjectFormData>;
   errors: FieldErrors<ProjectFormData>;
+  initialDepartmentLabels?: Record<string, string>;
 }
 
 // Friendly type labels & icons
@@ -59,7 +60,7 @@ const CARD_BG_COLORS = [
 
 export const RequirementCriteriaStep: React.FC<
   RequirementCriteriaStepProps
-> = ({ control, watch, setValue, errors }) => {
+> = ({ control, watch, setValue, errors, initialDepartmentLabels }) => {
   const watchedRoles = watch("rolesNeeded");
 
   // State for bulk addition tool
@@ -130,7 +131,12 @@ export const RequirementCriteriaStep: React.FC<
   // Helper: find department label by id
   const getDeptLabel = (id?: string) => {
     if (!id) return "";
-    return deptLookup[id]?.label || allDepartments.find(d => d.id === id)?.label || "";
+    return (
+      deptLookup[id]?.label || 
+      allDepartments.find(d => d.id === id)?.label || 
+      initialDepartmentLabels?.[id] || 
+      ""
+    );
   };
 
   // Count of valid (filled) roles
@@ -419,7 +425,10 @@ export const RequirementCriteriaStep: React.FC<
                         </div>
                       ) : (
                         allDepartments.map((dept) => {
-                          const isSelected = quickBuild.departmentIds.includes(dept.id);
+                          const matchingRoleForType = dept.roles?.find((ro: any) => ro.type === quickBuild.roleType);
+                          const isAlreadyAdded = watchedRoles.some(r => r.departmentId === dept.id && r.roleCatalogId === matchingRoleForType?.id);
+                          const isSelected = quickBuild.departmentIds.includes(dept.id) || isAlreadyAdded;
+                          
                           return (
                             <div 
                               key={dept.id} 
@@ -432,18 +441,30 @@ export const RequirementCriteriaStep: React.FC<
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                toggleDepartment(dept.id);
+                                
+                                // If already added, don't allow toggling it into the bulk add list
+                                if (!isAlreadyAdded) {
+                                  toggleDepartment(dept.id);
+                                } else {
+                                  toast.info(`${getDeptLabel(dept.id)} already has this ${ROLE_TYPE_CONFIG[quickBuild.roleType]?.label || quickBuild.roleType} role`);
+                                }
                               }}
                             >
                               <Checkbox 
                                 checked={isSelected}
-                                className="border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 pointer-events-none h-3.5 w-3.5"
+                                className={cn(
+                                  "border-slate-300 h-3.5 w-3.5",
+                                  isAlreadyAdded 
+                                    ? "data-[state=checked]:bg-slate-400 data-[state=checked]:border-slate-400" 
+                                    : "data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                                )}
                               />
                               <span className={cn(
-                                "text-[11px] font-medium leading-none cursor-pointer truncate",
-                                isSelected ? "text-indigo-700" : "text-slate-600"
+                                "text-[11px] font-medium leading-none truncate",
+                                isSelected ? (isAlreadyAdded ? "text-slate-500 italic" : "text-indigo-700") : "text-slate-600"
                               )}>
                                 {dept.label}
+                                {isAlreadyAdded && " (Added)"}
                               </span>
                             </div>
                           );

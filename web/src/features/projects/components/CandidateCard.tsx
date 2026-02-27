@@ -83,6 +83,27 @@ export interface CandidateRecord {
   dateOfBirth?: string;
   gender?: string;
   source?: string;
+  
+  // Physical and Personal attributes
+  height?: number;
+  weight?: number;
+  skinTone?: string;
+  languageProficiency?: string;
+  smartness?: string;
+
+  // Licensing and Verification
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
+
+  // Preferences
+  expectedMinSalary?: number;
+  expectedMaxSalary?: number;
+  sectorType?: string;
+  visaType?: string;
+  preferredCountries?: Array<{ id: string; countryCode: string }>;
+  facilityPreferences?: Array<{ id: string; facilityType: string }>;
+
   /**
    * Flag set by the backend when the candidate has been linked to a project
    * but document verification was intentionally skipped (direct screening).
@@ -272,6 +293,8 @@ const CandidateCard = memo(function CandidateCard({
   skipDocumentVerificationMessage,
   eligibilityData: propEligibilityData,
   showContactButtons = false,
+  /** control hiding of email/phone pills */
+  hideContactInfo = false,
   searchTerm = "",
 }: CandidateCardProps) {
   const navigate = useNavigate();
@@ -946,13 +969,13 @@ const CandidateCard = memo(function CandidateCard({
 
         {/* Detail pills */}
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
-          {candidate.email && (
+          {!hideContactInfo && candidate.email && (
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
               <Mail className="h-3 w-3 text-slate-400" aria-hidden="true" />
               <span className="truncate max-w-[140px]">{candidate.email}</span>
             </span>
           )}
-          {contactValue && (
+          {!hideContactInfo && contactValue && (
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
               <Phone className="h-3 w-3 text-slate-400" aria-hidden="true" />
               <span className="truncate max-w-[120px]">{contactValue}</span>

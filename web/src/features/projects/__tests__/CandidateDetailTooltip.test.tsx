@@ -10,6 +10,9 @@ describe("CandidateDetailTooltip - additional fields", () => {
       id: "c1",
       firstName: "Q",
       lastName: "Tester",
+      email: "email@example.com",
+      countryCode: "+91",
+      mobileNumber: "9999999999",
       candidateQualifications: [
         { id: "cq1", name: "Bachelor of Science", level: "bachelor", field: "Nursing", university: "XYZ" },
       ],
@@ -39,6 +42,10 @@ describe("CandidateDetailTooltip - additional fields", () => {
     expect((await screen.findAllByText(/Personal/i)).length).toBeGreaterThan(0);
     expect((await screen.findAllByText(/Department:/i)).length).toBeGreaterThan(0);
     expect((await screen.findAllByText(/Emergency Department/i)).length).toBeGreaterThan(0);
+
+    // contact details should also render
+    expect((await screen.findAllByText(/email@example.com/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/\+91 9999999999/)).length).toBeGreaterThan(0);
   });
 
   it("shows detailed work experience entries when provided", async () => {

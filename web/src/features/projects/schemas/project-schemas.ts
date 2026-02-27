@@ -13,6 +13,9 @@ export const projectFormSchema = z.object({
   groomingRequired: z.enum(["formal", "casual", "not_specified"]),
   hideContactInfo: z.boolean(),
   requiredScreening: z.boolean(),
+  licensingExam: z.string().optional(),
+  dataFlow: z.boolean().optional(),
+  eligibility: z.boolean().optional(),
   rolesNeeded: z
     .array(
       z.object({
@@ -107,6 +110,7 @@ export const projectFormSchema = z.object({
         docType: z.string().min(1, "Document type is required"),
         mandatory: z.boolean(),
         description: z.string().optional(),
+        isAutomatic: z.boolean().optional(),
       })
     )
     .min(1, "At least one document requirement is mandatory"),
@@ -123,6 +127,9 @@ export const defaultProjectValues = {
   groomingRequired: "formal" as const,
   hideContactInfo: true, // Default to hide contact info for private projects
   requiredScreening: false,
+  licensingExam: "",
+  dataFlow: false,
+  eligibility: false,
   rolesNeeded: [
     {
       departmentId: undefined,

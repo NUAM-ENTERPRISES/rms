@@ -102,4 +102,16 @@ describe("CandidateCard - interview button", () => {
 
     openSpy.mockRestore();
   });
+
+  it("hides email/phone pills when hideContactInfo prop is true", () => {
+    render(
+      <CandidateCard
+        candidate={{ id: "c5", firstName: "Hide", lastName: "Tester", email: "foo@bar.com", countryCode: "+91", mobileNumber: "1234567890" }}
+        hideContactInfo
+      />
+    );
+
+    expect(screen.queryByText("foo@bar.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("+91 1234567890")).not.toBeInTheDocument();
+  });
 });

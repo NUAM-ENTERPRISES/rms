@@ -185,6 +185,8 @@ export class ProjectsService {
           groomingRequired: createProjectDto.groomingRequired || 'formal',
           hideContactInfo: createProjectDto.hideContactInfo ?? true,
           requiredScreening: createProjectDto.requiredScreening ?? false,
+          dataFlow: createProjectDto.dataFlow ?? false,
+          eligibility: createProjectDto.eligibility ?? false,
         },
       });
 
@@ -301,6 +303,7 @@ export class ProjectsService {
             docType: req.docType,
             mandatory: req.mandatory,
             description: req.description,
+            isAutomatic: req.isAutomatic ?? false,
           })),
         });
       }
@@ -315,6 +318,7 @@ export class ProjectsService {
         client: true,
         creator: true,
         team: true,
+        country: true,
         rolesNeeded: {
           include: {
             educationRequirementsList: {
@@ -336,7 +340,8 @@ export class ProjectsService {
                 name: true,
                 label: true,
                 shortName: true,
-                roleDepartment: { select: { id: true, name: true, shortName: true } },
+                isActive: true,
+                roleDepartment: { select: { id: true, name: true, label: true, shortName: true } },
               },
             },
           },
@@ -354,6 +359,7 @@ export class ProjectsService {
     // Normalize rolesNeeded to include ageRequirement string
     const normalized = {
       ...completeProject,
+      country: completeProject.country,
       rolesNeeded: completeProject.rolesNeeded.map((role) => ({
         ...role,
         requiredSkills: this.parseJsonField(role.requiredSkills as any),
@@ -439,6 +445,7 @@ export class ProjectsService {
         client: true,
         creator: true,
         team: true,
+        country: true,
         rolesNeeded: {
           include: {
             educationRequirementsList: {
@@ -461,10 +468,13 @@ export class ProjectsService {
                 label: true,
                 shortName: true,
                 isActive: true,
-                roleDepartment: { select: { id: true, name: true, shortName: true } },
+                roleDepartment: { select: { id: true, name: true, label: true, shortName: true } },
               },
             },
           },
+        },
+        documentRequirements: {
+          where: { isDeleted: false },
         },
       },
     });
@@ -472,6 +482,7 @@ export class ProjectsService {
     // Parse JSON fields in rolesNeeded for all projects
     const projectsWithParsedData = projects.map((project) => ({
       ...project,
+      country: project.country,
       rolesNeeded: project.rolesNeeded.map((role) => ({
         ...role,
         requiredSkills: this.parseJsonField(role.requiredSkills),
@@ -510,6 +521,7 @@ export class ProjectsService {
         client: true,
         creator: true,
         team: true,
+        country: true,
         rolesNeeded: {
           include: {
             educationRequirementsList: {
@@ -531,7 +543,8 @@ export class ProjectsService {
                 name: true,
                 label: true,
                 shortName: true,
-                roleDepartment: { select: { id: true, name: true, shortName: true } },
+                isActive: true,
+                roleDepartment: { select: { id: true, name: true, label: true, shortName: true } },
               },
             },
           },
@@ -674,6 +687,12 @@ export class ProjectsService {
       updateData.hideContactInfo = updateProjectDto.hideContactInfo;
     if (updateProjectDto.requiredScreening !== undefined)
       updateData.requiredScreening = updateProjectDto.requiredScreening;
+    if (updateProjectDto.licensingExam !== undefined)
+      updateData.licensingExam = updateProjectDto.licensingExam;
+    if (updateProjectDto.dataFlow !== undefined)
+      updateData.dataFlow = updateProjectDto.dataFlow;
+    if (updateProjectDto.eligibility !== undefined)
+      updateData.eligibility = updateProjectDto.eligibility;
 
     // Handle rolesNeeded updates if provided (SAFE: do not delete referenced roles)
     if (updateProjectDto.rolesNeeded !== undefined) {
@@ -877,7 +896,7 @@ export class ProjectsService {
                 label: true,
                 shortName: true,
                 isActive: true,
-                roleDepartment: { select: { id: true, name: true, shortName: true } },
+                roleDepartment: { select: { id: true, name: true, label: true, shortName: true } },
               },
             },
           },
@@ -953,6 +972,7 @@ export class ProjectsService {
               data: {
                 mandatory: dto.mandatory !== undefined ? dto.mandatory : existing.mandatory,
                 description: dto.description !== undefined ? dto.description : existing.description,
+                isAutomatic: dto.isAutomatic !== undefined ? dto.isAutomatic : existing.isAutomatic,
                 isDeleted: false,
                 deletedAt: null,
                 updatedAt: new Date(),
@@ -997,6 +1017,7 @@ export class ProjectsService {
                 docType: dto.docType,
                 mandatory: dto.mandatory,
                 description: dto.description,
+                isAutomatic: dto.isAutomatic ?? false,
                 isDeleted: false,
               },
             });
@@ -1011,6 +1032,7 @@ export class ProjectsService {
         client: true,
         creator: true,
         team: true,
+        country: true,
         rolesNeeded: {
           include: {
             educationRequirementsList: {
@@ -1051,6 +1073,7 @@ export class ProjectsService {
     // Normalize rolesNeeded to include ageRequirement string
     const normalizedProject = {
       ...refreshedProject,
+      country: refreshedProject.country,
       rolesNeeded: refreshedProject.rolesNeeded.map((role) => ({
         ...role,
         requiredSkills: this.parseJsonField(role.requiredSkills as any),
@@ -1399,6 +1422,8 @@ export class ProjectsService {
               take: 1,
               orderBy: { assignedAt: 'desc' },
             },
+            preferredCountries: true,
+            facilityPreferences: true,
           },
         },
 
@@ -1443,6 +1468,7 @@ export class ProjectsService {
                 docType: true,
                 mandatory: true,
                 description: true,
+                isAutomatic: true,
                 createdAt: true,
                 updatedAt: true,
               },
@@ -1604,6 +1630,24 @@ export class ProjectsService {
         gpa: c.gpa,
         highestEducation: c.highestEducation,
         profileImage: c.profileImage,
+
+        // Physical and Personal attributes
+        height: c.height,
+        weight: c.weight,
+        skinTone: c.skinTone,
+        languageProficiency: c.languageProficiency,
+        smartness: c.smartness,
+
+        // Licensing and Verification
+        licensingExam: c.licensingExam,
+        dataFlow: c.dataFlow,
+        eligibility: c.eligibility,
+
+        // Preferences
+        sectorType: c.sectorType,
+        visaType: c.visaType,
+        preferredCountries: c.preferredCountries,
+        facilityPreferences: c.facilityPreferences,
 
         // Team
         team: c.team ? { id: c.team.id, name: c.team.name } : null,
@@ -1851,7 +1895,11 @@ export class ProjectsService {
         client: true,
         creator: true,
         team: true,
+        country: true,
         rolesNeeded: true,
+        documentRequirements: {
+          where: { isDeleted: false },
+        },
         candidateProjects: {
           include: {
             candidate: {
@@ -2182,44 +2230,6 @@ export class ProjectsService {
           },
         },
 
-        // ----------------------------
-        // 🔥 NEW PROJECT-STATUS INCLUDE
-        // ----------------------------
-        projects: {
-          where: { projectId },
-          select: {
-            id: true,
-            assignedAt: true,
-
-            // MAIN STATUS (big stage)
-            mainStatus: {
-              select: {
-                id: true,
-                name: true,
-                label: true,
-                color: true,
-                icon: true,
-                order: true,
-              },
-            },
-
-            // SUB STATUS (progress inside stage)
-            subStatus: {
-              select: {
-                id: true,
-                name: true,
-                label: true,
-                color: true,
-                icon: true,
-                order: true,
-              },
-            },
-          },
-          // NO extra include inside projects
-          take: 1,
-          orderBy: { assignedAt: 'desc' },
-        },
-
         currentStatus: {
           select: {
             id: true,
@@ -2251,6 +2261,8 @@ export class ProjectsService {
             isCurrent: true,
           },
         },
+        preferredCountries: true,
+        facilityPreferences: true,
       },
     });
 

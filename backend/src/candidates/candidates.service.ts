@@ -833,6 +833,8 @@ export class CandidatesService {
               },
             },
           },
+          preferredCountries: true,
+          facilityPreferences: true,
         },
         orderBy: {
           createdAt: 'desc',

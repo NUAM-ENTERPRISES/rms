@@ -137,6 +137,21 @@ export interface Project {
   team?: Team;
   rolesNeeded: RoleNeeded[];
   candidateProjects: CandidateProject[];
+  country?: {
+    code: string;
+    name: string;
+    region: string;
+    callingCode: string;
+    currency: string;
+  };
+  documentRequirements?: any[];
+  resumeEditable?: boolean;
+  groomingRequired?: "formal" | "casual" | "not_specified";
+  hideContactInfo?: boolean;
+  requiredScreening?: boolean;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
 }
 
 export interface Pagination {
