@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Card,
   CardContent,
@@ -150,6 +152,7 @@ const STATUS_BADGE: Record<
 // -------------------------------------------------------------------
 export default function CandidatesOverviewPage() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   // Filter states
   const [activeFilter, setActiveFilter] = useState("all");
@@ -268,18 +271,23 @@ export default function CandidatesOverviewPage() {
         {/* ── Page Header ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Users className="h-6 w-6 text-blue-600" />
+            <h1 className={cn("text-2xl font-bold flex items-center gap-2", theme === "dark" ? "text-white" : "text-slate-900")}>
+              <Users className={cn("h-6 w-6", theme === "dark" ? "text-white" : "text-blue-600")} />
               <span>{projectTitle || "Candidate Overview"}</span>
             </h1>
-            <p className="text-slate-500 text-sm">
+            <p className={cn("text-sm", theme === "dark" ? "text-white" : "text-slate-500")}>
               Comprehensive dashboard for candidate tracking and status overview
             </p>
           </div>
         </div>
 
         {/* ── Search & Filter ── */}
-        <Card className="border-0 shadow-lg bg-white/90">
+        <Card
+          className={cn(
+            "border-0 shadow-lg",
+            theme === "dark" ? "bg-black text-white" : "bg-white/90"
+          )}
+        >
           <CardContent className="pt-4 pb-4">
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="relative group flex-1">
@@ -293,7 +301,12 @@ export default function CandidatesOverviewPage() {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+                  className={cn(
+                    "pl-14 h-14 text-base border-0 focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md",
+                    theme === "dark"
+                      ? "bg-white text-black"
+                      : "bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white"
+                  )}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -309,11 +322,11 @@ export default function CandidatesOverviewPage() {
             </div>
 
             {/* ── Date Filter Section ── */}
-            <div className="border-t border-gray-100 pt-3">
+            <div className={cn("border-t pt-3", theme === "dark" ? "border-slate-700" : "border-gray-100")}>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1.5 mr-1">
                   <CalendarDays className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-semibold text-gray-700">Date Added</span>
+                  <span className={cn("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-700")}>Date Added</span>
                 </div>
 
                 {[
@@ -337,11 +350,14 @@ export default function CandidatesOverviewPage() {
                         }
                         setPage(1);
                       }}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200",
                         isActive
                           ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : theme === "dark"
+                          ? "bg-black text-white border-slate-700 hover:bg-slate-800 hover:border-slate-600"
                           : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                      }`}
+                      )}
                     >
                       {preset.label}
                     </button>
@@ -417,17 +433,24 @@ export default function CandidatesOverviewPage() {
                       setPage(1);
                     }
                   }}
-                  className={`border-0 shadow-sm bg-gradient-to-br ${tile.bgGradient} backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5 ${
-                    isActive ? "ring-2 ring-blue-500/30 shadow-md" : ""
-                  }`}
+                  className={cn(
+                    "border-0 shadow-sm backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5",
+                    theme === "dark" ? "bg-slate-800 text-white" : `bg-gradient-to-br ${tile.bgGradient}`,
+                    isActive && "ring-2 ring-blue-500/30 shadow-md"
+                  )}
                 >
                   <CardContent className="pt-2 pb-2 px-3">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-medium text-slate-600 mb-0.5 truncate">
+                        <p className={cn("text-[10px] font-medium mb-0.5 truncate", theme === "dark" ? "text-white" : "text-slate-600")}>
                           {tile.label}
                         </p>
-                        <h3 className={`text-lg font-bold ${tile.textColor}`}>
+                        <h3 className={cn(
+                          "text-lg font-bold",
+                          theme === "dark"
+                            ? "text-white bg-slate-800 px-1 rounded"
+                            : tile.textColor
+                        )}>
                           {counts[tile.key] ?? 0}
                         </h3>
                       </div>
@@ -443,14 +466,14 @@ export default function CandidatesOverviewPage() {
         </div>
 
         {/* ── Candidates Table ── */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardHeader>
+        <Card className={cn("border-0 shadow-lg", theme === "dark" ? "bg-black text-white" : "bg-white/90")}>
+          <CardHeader className={cn(theme === "dark" ? "bg-black text-white" : "")}>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">
+                <CardTitle className={cn("text-lg font-semibold", theme === "dark" ? "text-white" : "text-slate-800")}>
                   {getActiveTileLabel()}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className={theme === "dark" ? "text-white" : ""}>
                   {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
                 </CardDescription>
               </div>
@@ -458,7 +481,7 @@ export default function CandidatesOverviewPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
+            <div className={cn("rounded-xl overflow-hidden min-h-[400px]", theme === "dark" ? "border-none bg-black" : "border border-gray-200 bg-white shadow-sm")}>
               {isError ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4">
                   <AlertTriangle className="h-12 w-12 text-red-500" />
@@ -474,16 +497,16 @@ export default function CandidatesOverviewPage() {
                 </div>
               ) : (
                 <>
-                  <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
+                  <div className={cn("border-b px-6 py-4", theme === "dark" ? "bg-black border-slate-700 text-white" : "border-gray-200 bg-gray-50/70")}>
                     <div className="flex items-center gap-4">
                       <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
                         <Users className="h-7 w-7 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-gray-900">
+                        <h4 className={cn("text-lg font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}>
                           {getActiveTileLabel()}
                         </h4>
-                        <p className="text-sm text-gray-600 mt-1 font-medium">
+                        <p className={cn("text-sm mt-1 font-medium", theme === "dark" ? "text-white" : "text-gray-600")}>
                           {counts[activeFilter] || candidates.length} candidate{counts[activeFilter] !== 1 ? "s" : ""} in total
                         </p>
                       </div>
@@ -492,26 +515,26 @@ export default function CandidatesOverviewPage() {
 
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                      <TableRow className={cn("border-b", theme === "dark" ? "bg-black border-slate-700" : "bg-gray-50/50 border-gray-200")}>
+                        <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
                           Candidate
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
                           Project & Role
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
                           Stage
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
                           Sub Status
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
                           Recruiter
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
                           Applied At
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className={cn("h-11 px-6 text-right text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
                           Actions
                         </TableHead>
                       </TableRow>
@@ -528,7 +551,12 @@ export default function CandidatesOverviewPage() {
                         return (
                           <TableRow
                             key={item.id}
-                            className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0"
+                            className={cn(
+                              "border-b transition-colors last:border-b-0",
+                              theme === "dark"
+                                ? "border-slate-700 hover:bg-slate-800"
+                                : "border-gray-100 hover:bg-gray-50/70"
+                            )}
                           >
                             <TableCell className="px-6 py-5">
                               <div className="flex items-center gap-4">
@@ -540,18 +568,45 @@ export default function CandidatesOverviewPage() {
                                 <div className="flex-1">
                                   <button
                                     onClick={() => navigate(`/candidates/${candidate.id}`)}
-                                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
+                                    className={cn(
+                                      "font-semibold hover:underline transition-all duration-200",
+                                      theme === "dark"
+                                        ? "text-white hover:text-blue-400"
+                                        : "text-gray-900 hover:text-blue-600"
+                                    )}
                                   >
                                     {candidate.firstName} {candidate.lastName}
                                   </button>
-                                  <div className="text-sm text-slate-500 mt-1.5 space-y-0.5">
+                                  <div className="text-sm mt-1.5 space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">{candidate.email}</span>
+                                      <Mail
+                                        className={cn(
+                                          "h-3.5 w-3.5",
+                                          theme === "dark" ? "text-gray-400" : "text-gray-400"
+                                        )}
+                                      />
+                                      <span
+                                        className={cn(
+                                          "",
+                                          theme === "dark" ? "text-white" : "text-gray-700"
+                                        )}
+                                      >
+                                        {candidate.email}
+                                      </span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">
+                                      <Phone
+                                        className={cn(
+                                          "h-3.5 w-3.5",
+                                          theme === "dark" ? "text-gray-400" : "text-gray-400"
+                                        )}
+                                      />
+                                      <span
+                                        className={cn(
+                                          "",
+                                          theme === "dark" ? "text-white" : "text-gray-700"
+                                        )}
+                                      >
                                         {candidate.countryCode} {candidate.mobileNumber}
                                       </span>
                                     </div>
@@ -562,10 +617,20 @@ export default function CandidatesOverviewPage() {
 
                             <TableCell className="px-6 py-5">
                               <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-slate-800 line-clamp-1">
+                                <span
+                                  className={cn(
+                                    "text-sm font-semibold line-clamp-1",
+                                    theme === "dark" ? "text-white" : "text-slate-800"
+                                  )}
+                                >
                                   {item.project?.title || "N/A"}
                                 </span>
-                                <span className="text-[11px] text-slate-500 mt-0.5 font-medium">
+                                <span
+                                  className={cn(
+                                    "text-[11px] mt-0.5 font-medium",
+                                    theme === "dark" ? "text-white" : "text-slate-500"
+                                  )}
+                                >
                                   {item.roleNeeded?.roleCatalog?.label || item.roleNeeded?.designation || "N/A"}
                                 </span>
                               </div>
@@ -581,21 +646,41 @@ export default function CandidatesOverviewPage() {
                             </TableCell>
 
                             <TableCell className="px-6 py-5">
-                              <span className="text-sm text-slate-600">
+                              <span
+                                className={cn(
+                                  "text-sm",
+                                  theme === "dark" ? "text-white" : "text-slate-600"
+                                )}
+                              >
                                 {item.subStatus?.label || "Initial"}
                               </span>
                             </TableCell>
 
                             <TableCell className="px-6 py-5">
                               <div className="flex items-center gap-2">
-                                <UserCheck className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm font-medium text-slate-800">
+                                <UserCheck
+                                  className={cn(
+                                    "h-4 w-4",
+                                    theme === "dark" ? "text-gray-400" : "text-gray-400"
+                                  )}
+                                />
+                                <span
+                                  className={cn(
+                                    "text-sm font-medium",
+                                    theme === "dark" ? "text-white" : "text-slate-800"
+                                  )}
+                                >
                                   {item.recruiter?.name || "System"}
                                 </span>
                               </div>
                             </TableCell>
 
-                            <TableCell className="px-6 py-5 text-sm text-gray-600">
+                            <TableCell
+                              className={cn(
+                                "px-6 py-5 text-sm",
+                                theme === "dark" ? "text-white" : "text-gray-600"
+                              )}
+                            >
                               {formatDate(item.createdAt)}
                             </TableCell>
 

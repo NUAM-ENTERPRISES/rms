@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/context/ThemeContext";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -842,13 +844,26 @@ export default function CandidatesPage() {
     }
   };
 
+  const { theme } = useTheme();
+
   return (
-    <div className="min-h-screen ">
+    <div className={cn(
+      "min-h-screen",
+      theme === "dark" ? "bg-black text-white" : "bg-white text-black"
+    )}>
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/90">
+        <Card
+          className={cn(
+            "border-0 shadow-lg",
+            theme === "dark" ? "bg-black text-white" : "bg-white/90 text-black"
+          )}
+        >
           <CardContent>
-            <div className="space-y-6">
+            <div className={cn(
+                theme === "dark" ? "text-white" : "text-black",
+                "space-y-6"
+              )}>
               {/* Premium Search Bar with Enhanced Styling */}
               <div className="relative group">
                 <div
@@ -864,7 +879,10 @@ export default function CandidatesPage() {
                   placeholder="Search candidates by name, skills, or email..."
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+                  className={cn(
+                    "pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md",
+                    theme === "dark" && "bg-black text-white"
+                  )}
                 />
                 <div
                   className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${filters.search ? "ring-2 ring-blue-500/20" : ""
@@ -1004,7 +1022,7 @@ export default function CandidatesPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1.5 mr-1">
                     <CalendarDays className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-semibold text-gray-700">Date Added</span>
+                    <span className={cn("text-sm font-semibold", theme === "dark" ? "text-white" : "text-gray-700")}>Date Added</span>
                   </div>
 
                   {/* Quick preset pills */}
@@ -1054,11 +1072,14 @@ export default function CandidatesPage() {
                           }
                           setFilters((prev) => ({ ...prev, dateRange: preset.key, dateFrom: from, dateTo: to, page: 1 }));
                         }}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200",
                           isActive
                             ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                        }`}
+                            : cn(
+                                theme === "dark" ? "bg-black text-white border-slate-700 hover:bg-slate-800 hover:border-slate-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                              )
+                        )}
                       >
                         {preset.label}
                       </button>
@@ -1069,10 +1090,14 @@ export default function CandidatesPage() {
                 {/* Row 2: Custom date pickers (shown when "custom" is selected) + Active range badge */}
                 <div className="flex flex-wrap items-center gap-3 mt-3">
                   {/* From / To date pickers — always visible but highlighted when custom */}
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200 ${
-                    filters.dateRange === "custom" ? "border-blue-300 bg-blue-50/50" : "border-gray-200 bg-gray-50/50"
-                  }`}>
-                    <span className="text-xs font-medium text-gray-500 min-w-[32px]">From</span>
+                  <div className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200",
+                    filters.dateRange === "custom"
+                      ? "border-blue-300 bg-blue-50/50"
+                      : "border-gray-200 bg-gray-50/50",
+                    theme === "dark" && "bg-black/80 border-slate-700"
+                  )}>
+                    <span className={cn("text-xs font-medium min-w-[32px]", theme === "dark" ? "text-white" : "text-gray-500")}>From</span>
                     <div className="w-36">
                       <DatePicker
                         value={filters.dateFrom}
@@ -1090,12 +1115,13 @@ export default function CandidatesPage() {
                         }
                         placeholder="Start date"
                         compact
+                        className={theme === "dark" ? "bg-black text-white" : ""}
                       />
                     </div>
 
                     <ArrowRight className="h-3.5 w-3.5 text-gray-400 mx-1" />
 
-                    <span className="text-xs font-medium text-gray-500 min-w-[20px]">To</span>
+                    <span className={cn("text-xs font-medium min-w-[20px]", theme === "dark" ? "text-white" : "text-gray-500")}>To</span>
                     <div className="w-36">
                       <DatePicker
                         value={filters.dateTo}
@@ -1114,6 +1140,7 @@ export default function CandidatesPage() {
                         placeholder="End date"
                         compact
                         disabled={!filters.dateFrom}
+                        className={theme === "dark" ? "bg-black text-white" : ""}
                       />
                     </div>
                   </div>
@@ -1247,18 +1274,26 @@ export default function CandidatesPage() {
                   }}
                   role={isInteractive ? "button" : undefined}
                   tabIndex={isInteractive ? 0 : undefined}
-                  className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 ${isInteractive ? "cursor-pointer hover:shadow-sm transform hover:-translate-y-0.5" : ""} ${isActive ? "ring-2 ring-blue-500/30" : ""}`}
+                  className={cn(
+                    "border-0 shadow-sm",
+                    theme === "dark"
+                      ? "bg-slate-800 text-white"
+                      : `bg-gradient-to-br ${colors.bg}`,
+                    "backdrop-blur-sm transition-all duration-200",
+                    isInteractive && "cursor-pointer hover:shadow-sm transform hover:-translate-y-0.5",
+                    isActive && "ring-2 ring-blue-500/30"
+                  )}
                 >
                   <CardContent className="pt-1 pb-1">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-medium text-slate-600 mb-0.5">
+                        <p className={cn("text-[10px] font-medium mb-0.5", theme === "dark" ? "text-white" : "text-slate-600")}>
                           {stat.label}
                         </p>
-                        <h3 className={`text-lg font-semibold ${colors.text}`}>
+                        <h3 className={cn("text-lg font-semibold", theme === "dark" ? "text-white" : colors.text)}>
                           {stat.value}
                         </h3>
-                        <p className="text-[9px] text-slate-500 mt-0.5">
+                        <p className={cn("text-[9px] mt-0.5", theme === "dark" ? "text-white" : "text-slate-500")}>
                           {stat.subtitle}
                         </p>
                       </div>
@@ -1275,14 +1310,26 @@ export default function CandidatesPage() {
         </div>
 
         {/* Candidates Table */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardHeader>
+        <Card
+          className={cn(
+            "border-0 shadow-lg",
+            theme === "dark" ? "bg-black text-white" : "bg-white/90"
+          )}
+        >
+          <CardHeader className={theme === "dark" ? "bg-black text-white" : ""}>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">
+                <CardTitle
+                  className={cn(
+                    "text-lg font-semibold",
+                    theme === "dark" ? "text-white" : "text-slate-800"
+                  )}
+                >
                   {getTableTitle()}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription
+                  className={theme === "dark" ? "text-white" : "text-slate-600"}
+                >
                   {getTableSubtitle()} • {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
                   candidates found
                 </CardDescription>
@@ -1292,9 +1339,23 @@ export default function CandidatesPage() {
 
           <CardContent>
             {/* Premium Table Container */}
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div
+              className={cn(
+                "rounded-xl border shadow-sm overflow-hidden",
+                theme === "dark"
+                  ? "bg-black text-white border-slate-700"
+                  : "border-gray-200 bg-white"
+              )}
+            >
               {/* Beautiful Header */}
-              <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
+              <div
+                className={cn(
+                  "border-b px-6 py-4",
+                  theme === "dark"
+                    ? "bg-black text-white border-slate-700"
+                    : "border-gray-200 bg-gray-50/70"
+                )}
+              >
                 <div className="flex items-center gap-4">
                   {/* Colorful Gradient Icon Background */}
                   <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
@@ -1302,10 +1363,10 @@ export default function CandidatesPage() {
                   </div>
 
                   <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900">
+                    <h4 className={cn("text-lg font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}>
                       {getTableTitle()}
                     </h4>
-                    <p className="text-sm text-gray-600 mt-1 font-medium">
+                    <p className={cn("text-sm mt-1 font-medium", theme === "dark" ? "text-white" : "text-gray-600")}>
                       {getTableSubtitle()} — {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
                       candidate{filteredCandidates?.length !== 1 ? "s" : ""} in
                       total
@@ -1325,26 +1386,63 @@ export default function CandidatesPage() {
               </div>
 
               {/* Table */}
-              <Table>
+              <Table className={theme === "dark" ? "text-white" : ""}>
                 <TableHeader className="sticky">
-                  <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                  <TableRow
+                    className={cn(
+                      "border-b",
+                      theme === "dark"
+                        ? "bg-black border-slate-700"
+                        : "bg-gray-50/50 border-gray-200"
+                    )}
+                  >
+                    <TableHead
+                      className={cn(
+                        "h-11 px-6 text-left text-xs font-medium uppercase tracking-wider",
+                        theme === "dark" ? "text-white" : "text-gray-600"
+                      )}
+                    >
                       Candidate
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead
+                      className={cn(
+                        "h-11 px-6 text-left text-xs font-medium uppercase tracking-wider",
+                        theme === "dark" ? "text-white" : "text-gray-600"
+                      )}
+                    >
                       Recruiter
                     </TableHead>
                     {/* Skills column removed */}
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead
+                      className={cn(
+                        "h-11 px-6 text-left text-xs font-medium uppercase tracking-wider",
+                        theme === "dark" ? "text-white" : "text-gray-600"
+                      )}
+                    >
                       Status
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead
+                      className={cn(
+                        "h-11 px-6 text-left text-xs font-medium uppercase tracking-wider",
+                        theme === "dark" ? "text-white" : "text-gray-600"
+                      )}
+                    >
                       Last Updated
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead
+                      className={cn(
+                        "h-11 px-6 text-center text-xs font-medium uppercase tracking-wider",
+                        theme === "dark" ? "text-white" : "text-gray-600"
+                      )}
+                    >
                       Contact
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead
+                      className={cn(
+                        "h-11 px-6 text-right text-xs font-medium uppercase tracking-wider",
+                        theme === "dark" ? "text-white" : "text-gray-600"
+                      )}
+                    >
                       Actions
                     </TableHead>
                   </TableRow>
@@ -1364,7 +1462,12 @@ export default function CandidatesPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0"
+                          className={cn(
+                            "border-b transition-colors last:border-b-0",
+                            theme === "dark"
+                              ? "border-slate-700 hover:bg-slate-800"
+                              : "border-gray-100 hover:bg-gray-50/70"
+                          )}
                         >
                           {/* Candidate */}
                           <TableCell className="px-6 py-5">
@@ -1387,25 +1490,36 @@ export default function CandidatesPage() {
                                     e.stopPropagation();
                                     navigate(`/candidates/${candidate.id}`);
                                   }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
+                                  className={cn(
+                                    "font-semibold hover:underline transition-all duration-200",
+                                    theme === "dark"
+                                      ? "text-white hover:text-blue-400"
+                                      : "text-gray-900 hover:text-blue-600"
+                                  )}
                                 >
                                   {candidate.firstName} {candidate.lastName}
                                 </button>
-                                <div className="text-sm text-slate-500 mt-1 font-medium">
+                                <div className={cn(
+                                  "text-sm mt-1 font-medium",
+                                  theme === "dark" ? "text-slate-300" : "text-slate-500"
+                                )}>
                                   {candidate.currentRole || ""}
                                 </div>
 
                                 {/* Contact moved below profile */}
-                                <div className="text-sm text-slate-500 mt-2 space-y-1">
+                                <div className={cn(
+                                  "text-sm mt-2 space-y-1",
+                                  theme === "dark" ? "text-slate-300" : "text-slate-500"
+                                )}>
                                   {candidate.email && (
                                     <div className="flex items-center gap-2">
                                       <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">{candidate.email}</span>
+                                      <span className={theme === "dark" ? "text-white" : "text-gray-700"}>{candidate.email}</span>
                                     </div>
                                   )}
                                   <div className="flex items-center gap-2">
                                     <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                    <span className="text-gray-700">{candidate.countryCode} {candidate.mobileNumber}</span>
+                                    <span className={theme === "dark" ? "text-white" : "text-gray-700"}>{candidate.countryCode} {candidate.mobileNumber}</span>
                                   </div>
                                 </div>
                               </div>
@@ -1417,16 +1531,16 @@ export default function CandidatesPage() {
                             <div className="text-sm">
                               {recruiter ? (
                                 <div className="space-y-1">
-                                  <div className="font-medium text-slate-900">{recruiter.name}</div>
+                                  <div className={cn("font-medium", theme === "dark" ? "text-white" : "text-slate-900")}>{recruiter.name}</div>
                                   {recruiter.email && (
-                                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                                    <div className={cn("flex items-center gap-2 text-sm", theme === "dark" ? "text-slate-300" : "text-slate-700") }>
                                       <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span>{recruiter.email}</span>
+                                      <span className={theme === "dark" ? "text-white" : ""}>{recruiter.email}</span>
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-500">Unassigned</span>
+                                <span className={theme === "dark" ? "text-slate-300" : "text-slate-500"}>Unassigned</span>
                               )}
                             </div>
                           </TableCell>
@@ -1470,7 +1584,7 @@ export default function CandidatesPage() {
 
                           {/* Last Updated */}
                           <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <div className={cn("flex items-center gap-2 text-sm", theme === "dark" ? "text-white" : "text-gray-600") }>
                               <Calendar className="h-4 w-4 text-gray-400" />
                               {formatDate(candidate.updatedAt)}
                             </div>
@@ -1485,7 +1599,11 @@ export default function CandidatesPage() {
                                   <>
                                     <Button
                                       variant="ghost"
-                                      className="h-8 w-8 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 hover:text-green-700 shadow-sm hover:shadow-md border border-green-100/50 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-200"
+                                      className={cn(
+                                        "h-8 w-8 p-0 rounded-full flex items-center justify-center shadow-sm hover:shadow-md disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-200",
+                                        "text-green-600 border border-green-100/50 hover:bg-green-100 hover:text-green-700",
+                                        theme === "dark" && "bg-white"
+                                      )}
                                       onClick={() =>
                                         phoneDigits &&
                                         window.open(`https://wa.me/${phoneDigits}`, "_blank")
@@ -1499,7 +1617,11 @@ export default function CandidatesPage() {
 
                                     <Button
                                       variant="ghost"
-                                      className="h-8 w-8 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 shadow-sm hover:shadow-md border border-blue-100/50 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-200"
+                                      className={cn(
+                                        "h-8 w-8 p-0 rounded-full flex items-center justify-center shadow-sm hover:shadow-md disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-200",
+                                        "text-blue-600 border border-blue-100/50 hover:bg-blue-100 hover:text-blue-700",
+                                        theme === "dark" && "bg-white"
+                                      )}
                                       onClick={() =>
                                         phoneDigits && (window.location.href = `tel:${phoneDigits}`)
                                       }
@@ -1612,10 +1734,15 @@ export default function CandidatesPage() {
             {/* Pagination - Your Original */}
             {Array.isArray(filteredCandidates) &&
               filteredCandidates.length > 0 && (
-                <Card className="mt-4 border-0 shadow-lg bg-white/90">
+                <Card
+              className={cn(
+                "mt-4 border-0 shadow-lg",
+                theme === "dark" ? "bg-black text-white" : "bg-white/90"
+              )}
+            >
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-slate-600">
+                      <div className={cn("text-sm", theme === "dark" ? "text-white" : "text-slate-600")}>
                         Showing {(filters.page - 1) * filters.limit + 1} to{" "}
                         {Math.min(filters.page * filters.limit, totalCount)} of{" "}
                         {totalCount} candidates
