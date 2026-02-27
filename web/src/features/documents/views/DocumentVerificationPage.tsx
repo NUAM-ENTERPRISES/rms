@@ -49,6 +49,7 @@ import { useGetApprovedScreeningDocumentsQuery } from "@/features/screening-coor
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
@@ -57,6 +58,7 @@ import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryMod
 
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const canReadDocuments = useCan("read:documents");
   const user = useAppSelector((s) => s.auth.user);
   // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
@@ -383,16 +385,16 @@ export default function DocumentVerificationPage() {
   }, [candidateProjects, selectedCandidateIds]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className={cn("min-h-screen p-4", theme === "dark" ? "bg-black" : "bg-gradient-to-br from-slate-50 to-slate-100")}>
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Compact Header */}
-        <div className="flex items-center justify-between bg-white rounded-xl shadow-lg border border-gray-200 px-6 py-4">
+        <div className={cn("flex items-center justify-between rounded-xl shadow-lg px-6 py-4", theme === "dark" ? "bg-black border-slate-800" : "bg-white border border-gray-200")}>
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">
+            <h1 className={cn("text-2xl font-extrabold", theme === "dark" ? "text-white" : "text-slate-900")}>
               Document Verification
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              <span className="font-semibold text-gray-900">{totalCandidates}</span> candidates &bull; Review and verify candidate documents
+            <p className={cn("mt-1 text-sm", theme === "dark" ? "text-gray-300" : "text-gray-500")}>
+              <span className={cn("font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}>{totalCandidates}</span> candidates &bull; Review and verify candidate documents
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -400,7 +402,9 @@ export default function DocumentVerificationPage() {
               variant="ghost"
               size="sm"
               onClick={() => refetch()}
-              className="text-slate-600 hover:text-slate-900"
+              className={cn(
+                theme === "dark" ? "text-white hover:text-gray-300" : "text-slate-600 hover:text-slate-900"
+              )}
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -473,7 +477,7 @@ export default function DocumentVerificationPage() {
         </div>
 
         {/* Compact Filters */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+        <div className={cn("backdrop-blur-sm rounded-lg p-4 shadow-sm", theme === "dark" ? "bg-black/80 border-slate-700" : "bg-white/80 border border-slate-200")}>
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="w-full md:w-1/3">
               <div className="relative">
@@ -499,8 +503,9 @@ export default function DocumentVerificationPage() {
               />
               
               <div className={cn(
-                "flex items-center space-x-2 px-3 py-2 bg-slate-50 rounded-md border border-slate-200 transition-opacity",
-                statusFilter === "screening_approved" ? "opacity-50 pointer-events-none" : "opacity-100"
+                "flex items-center space-x-2 px-3 py-2 rounded-md transition-opacity",
+                statusFilter === "screening_approved" ? "opacity-50 pointer-events-none" : "opacity-100",
+                theme === "dark" ? "bg-black border-slate-700 ring-1 ring-white/20" : "bg-slate-50 border border-slate-200"
               )}>
                 <Checkbox
                   id="screening-filter"
@@ -513,7 +518,7 @@ export default function DocumentVerificationPage() {
                 />
                 <label
                   htmlFor="screening-filter"
-                  className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap"
+                  className={cn("text-sm font-medium leading-none cursor-pointer whitespace-nowrap", theme === "dark" ? "text-white" : "")}
                 >
                   Screening Approved
                 </label>
@@ -523,16 +528,16 @@ export default function DocumentVerificationPage() {
         </div>
 
         {/* Compact Documents Table */}
-       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+       <div className={cn("rounded-xl overflow-hidden", theme === "dark" ? "border-none bg-black" : "border border-gray-200 bg-white shadow-sm")}>
   {/* Header */}
-  <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
+  <div className={cn("border-b px-6 py-4", theme === "dark" ? "bg-black border-slate-700 text-white" : "border-gray-200 bg-gray-50/70")}>
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
        <div className="rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-lg shadow-purple-500/20">
           <User className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className={cn("text-lg font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}>
             {(() => {
               switch (statusFilter) {
                 case "documents_verified":
@@ -548,8 +553,8 @@ export default function DocumentVerificationPage() {
               }
             })()}
           </h3>
-          <p className="text-sm text-gray-500">
-            <span className="font-semibold text-gray-900">{totalCandidates}</span>{' '}
+          <p className={cn("text-sm", theme === "dark" ? "text-gray-300" : "text-gray-500")}>
+            <span className={cn("font-semibold", theme === "dark" ? "text-white" : "text-gray-900")}>{totalCandidates}</span>{' '}
             {(() => {
               return totalCandidates === 1 ? 'candidate' : 'candidates';
             })()} {statusFilter === 'all' ? 'to review' : ''}
@@ -594,9 +599,9 @@ export default function DocumentVerificationPage() {
   {!isLoading && !error && candidateProjects.length > 0 && (
     <Table>
       <TableHeader>
-        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+        <TableRow className={cn("border-b", theme === "dark" ? "bg-black border-slate-700" : "bg-gray-50/50 border-gray-200")}>
           {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600 w-12">
+            <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider w-12", theme === "dark" ? "text-white" : "text-gray-600")}>
               <Checkbox
                 checked={selectAll}
                 onCheckedChange={handleSelectAll}
@@ -604,47 +609,47 @@ export default function DocumentVerificationPage() {
               />
             </TableHead>
           )}
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}> 
             Candidate
           </TableHead>
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}> 
             Project
           </TableHead>
           
           {statusFilter === "documents_verified" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
               Verified
             </TableHead>
           ) : statusFilter === "verification_in_progress_document" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
               Pending / Submitted
             </TableHead>
           ) : statusFilter === "rejected_documents" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
               Rejected
             </TableHead>
           ) : statusFilter === "screening_approved" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
               Screening Status
             </TableHead>
           ) : (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
               Status
             </TableHead>
           )}
 
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
             {statusFilter === "screening_approved" ? "Docs Status" : "Screening Details"}
           </TableHead>
           {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
               Sent to Client
             </TableHead>
           )}
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className={cn("h-11 px-6 text-left text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
             Recruiter
           </TableHead>
-          <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className={cn("h-11 px-6 text-right text-xs font-medium uppercase tracking-wider", theme === "dark" ? "text-white" : "text-gray-600")}>
             Actions
           </TableHead>
         </TableRow>
@@ -661,7 +666,8 @@ export default function DocumentVerificationPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: index * 0.03 }}
               className={cn(
-                "border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors",
+                "border-b border-gray-100 last:border-b-0 transition-colors",
+                theme === "dark" ? "hover:bg-slate-800" : "hover:bg-gray-50/70",
                 statusFilter === "verification_in_progress_document" ? "relative group" : ""
               )}
               data-tooltip={statusFilter === "verification_in_progress_document" ? "Please verify the documents" : undefined}
@@ -711,11 +717,16 @@ export default function DocumentVerificationPage() {
                           `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
                         )
                       }
-                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                      className={cn(
+                        "text-sm font-medium hover:underline",
+                        theme === "dark" ? "text-white hover:text-blue-400" : "text-gray-900 hover:text-blue-600"
+                      )}
                     >
                       {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
                     </button>
-                    <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
+                    <p className={cn("text-xs", theme === "dark" ? "text-gray-300" : "text-gray-500")}>
+                      {candidateProject.candidate.email}
+                    </p>
                   </div>
                 </div>
               </TableCell>
@@ -726,7 +737,7 @@ export default function DocumentVerificationPage() {
                     <Building2 className="h-4 w-4 text-gray-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className={cn("text-sm font-medium", theme === "dark" ? "text-white" : "text-gray-900")}>
                       {candidateProject.project.title}
                     </p>
                     {candidateProject.roleNeeded?.roleCatalog?.label ? (
@@ -734,12 +745,12 @@ export default function DocumentVerificationPage() {
                         {candidateProject.roleNeeded.roleCatalog.label}
                       </p>
                     ) : (
-                      <p className="text-xs text-gray-500">
+                      <p className={cn("text-xs", theme === "dark" ? "text-gray-300" : "text-gray-500")}>
                         {candidateProject.project.client?.name || candidateProject.project.clientName || "—"}
                       </p>
                     )}
                     {candidateProject.roleNeeded?.roleCatalog?.label && (
-                      <p className="text-[10px] text-gray-400">
+                      <p className={cn("text-[10px]", theme === "dark" ? "text-gray-400" : "text-gray-400")}>  
                         {candidateProject.project.client?.name || candidateProject.project.clientName || "—"}
                       </p>
                     )}
@@ -774,10 +785,10 @@ export default function DocumentVerificationPage() {
                       .reverse()[0];
 
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className={cn("text-sm", theme === "dark" ? "text-gray-300" : "text-gray-700")}>
                         <div className="font-medium">{verifiedCount} / {totalDocs} verified</div>
                         {lastVerified ? (
-                          <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
+                          <div className={cn("text-xs", theme === "dark" ? "text-gray-400" : "text-gray-500")}>Last: {new Date(lastVerified).toLocaleDateString()}</div>
                         ) : null}
                         {renderSubStatus()}
                       </div>
@@ -786,9 +797,9 @@ export default function DocumentVerificationPage() {
 
                   if (statusFilter === "verification_in_progress_document") {
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className={cn("text-sm", theme === "dark" ? "text-gray-300" : "text-gray-700")}>
                         <div className="font-medium">Pending: {pendingCount}</div>
-                        <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
+                        <div className={cn("text-xs", theme === "dark" ? "text-gray-400" : "text-gray-500")}>Submitted: {totalDocs}</div>
                         {renderSubStatus()}
                       </div>
                     );
@@ -802,10 +813,10 @@ export default function DocumentVerificationPage() {
                       .sort((a: any, b: any) => (a.at > b.at ? -1 : 1))[0];
 
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className={cn("text-sm", theme === "dark" ? "text-gray-300" : "text-gray-700")}>
                         <div className="font-medium">Rejected: {rejectedCount}</div>
                         {lastRejected?.reason ? (
-                          <div className="text-xs text-gray-500 truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
+                          <div className={cn("text-xs truncate max-w-[20rem]", theme === "dark" ? "text-gray-400" : "text-gray-500")}>Reason: {lastRejected.reason}</div>
                         ) : null}
                         {renderSubStatus()}
                       </div>
@@ -814,13 +825,13 @@ export default function DocumentVerificationPage() {
 
                   if (statusFilter === "screening_approved") {
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className={cn("text-sm", theme === "dark" ? "text-gray-300" : "text-gray-700")}>
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
                           {candidateProject.screeningDecision || "Approved"}
                         </Badge>
 
                         {candidateProject.screeningConductedAt && (
-                          <p className="text-[10px] text-gray-500 mt-1">
+                          <p className={cn("text-[10px] mt-1", theme === "dark" ? "text-gray-400" : "text-gray-500")}>
                             {new Date(candidateProject.screeningConductedAt).toLocaleDateString()}
                           </p>
                         )}
@@ -932,12 +943,12 @@ export default function DocumentVerificationPage() {
               )}
 
               {/* Recruiter */}
-              <TableCell className="px-6 py-5 text-sm text-gray-600">
+              <TableCell className={cn("px-6 py-5 text-sm", theme === "dark" ? "text-white" : "text-gray-600")}> 
                 {candidateProject.recruiter?.name || "Unassigned"}
               </TableCell>
 
               {/* Actions */}
-              <TableCell className="px-6 py-5 text-right">
+              <TableCell className={cn("px-6 py-5 text-right", theme === "dark" ? "text-white" : "") }>
                 <VerificationActionsMenu
                   candidateProject={candidateProject}
                   onReject={handleRejectCandidate}
