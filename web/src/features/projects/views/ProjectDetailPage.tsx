@@ -501,6 +501,20 @@ export default function ProjectDetailPage() {
     }
   };
 
+  // Eligibility query for the verify modal
+  const verifyCandidateIds = React.useMemo(
+    () => (verifyConfirm.candidateId ? [verifyConfirm.candidateId] : []),
+    [verifyConfirm.candidateId]
+  );
+  const { data: verifyEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId: projectId!, candidateIds: verifyCandidateIds },
+    { skip: !projectId || verifyCandidateIds.length === 0 }
+  );
+  const verifyEligibilityData = React.useMemo(() => {
+    if (!verifyEligibilityResponse?.data || !Array.isArray(verifyEligibilityResponse.data)) return null;
+    return verifyEligibilityResponse.data.find((d) => d.candidateId === verifyConfirm.candidateId) || null;
+  }, [verifyEligibilityResponse, verifyConfirm.candidateId]);
+
   // Eligibility query for the assign modal
   const assignCandidateIds = React.useMemo(
     () => (assignConfirm.candidateId ? [assignConfirm.candidateId] : []),
@@ -1546,11 +1560,24 @@ export default function ProjectDetailPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {project?.rolesNeeded?.filter((r: any) => r.id === verifyConfirm.roleNeededId).map((r: any) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            {r.designation}
-                          </SelectItem>
-                        ))}
+                        {project?.rolesNeeded?.filter((r: any) => r.id === verifyConfirm.roleNeededId).map((r: any) => {
+                          const roleElig = verifyEligibilityData?.roleEligibility?.find(
+                            (re: any) => re.designation === r.designation
+                          );
+                          return (
+                            <SelectItem key={r.id} value={r.id}>
+                              <span className="flex items-center gap-2">
+                                {r.designation}
+                                {roleElig && roleElig.reasons.length > 0 && (
+                                  <AlertCircle className="h-3 w-3 text-amber-500 inline" />
+                                )}
+                                {roleElig && roleElig.reasons.length === 0 && (
+                                  <CheckCircle2 className="h-3 w-3 text-green-500 inline" />
+                                )}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <Button size="sm" variant="ghost" onClick={() => setShowEditRoleConfirm(true)} className="h-8 w-8 p-0">
@@ -1564,19 +1591,68 @@ export default function ProjectDetailPage() {
                       setVerifyConfirm((prev) => ({ ...prev, roleNeededId: v }))
                     }
                   >
-                    <SelectTrigger className="w-56">
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {project?.rolesNeeded?.map((r: any) => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.designation}
-                        </SelectItem>
-                      ))}
+                      {project?.rolesNeeded?.map((r: any) => {
+                        const roleElig = verifyEligibilityData?.roleEligibility?.find(
+                          (re: any) => re.designation === r.designation
+                        );
+                        return (
+                          <SelectItem key={r.id} value={r.id}>
+                            <span className="flex items-center gap-2">
+                              {r.designation}
+                              {roleElig && roleElig.reasons.length > 0 && (
+                                <AlertCircle className="h-3 w-3 text-amber-500 inline" />
+                              )}
+                              {roleElig && roleElig.reasons.length === 0 && (
+                                <CheckCircle2 className="h-3 w-3 text-green-500 inline" />
+                              )}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 )}
               </div>
+
+              {/* Eligibility reasons for the selected role */}
+              {(() => {
+                const selectedRole = project?.rolesNeeded?.find((r: any) => r.id === verifyConfirm.roleNeededId);
+                const roleElig = verifyEligibilityData?.roleEligibility?.find(
+                  (re: any) => re.designation === selectedRole?.designation
+                );
+                if (!roleElig) return null;
+                return (
+                  <div className={`mt-2 p-3 rounded-lg border ${
+                    roleElig.reasons.length === 0
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    <div className={`flex items-center gap-2 text-xs font-semibold mb-1 ${
+                      roleElig.reasons.length === 0 ? 'text-green-700' : 'text-amber-700'
+                    }`}>
+                      {roleElig.reasons.length === 0 ? (
+                        <><CheckCircle2 className="h-3.5 w-3.5" /> Eligible for {roleElig.designation}</>
+                      ) : (
+                        <><AlertCircle className="h-3.5 w-3.5" /> {roleElig.designation} &mdash; Eligibility Issues</>
+                      )}
+                    </div>
+                    {roleElig.reasons.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1 mt-1">
+                        {roleElig.reasons.map((reason: string, idx: number) => (
+                          <li key={idx} className="text-[11px] text-slate-600 italic">{reason}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-green-600 italic">This candidate meets all requirements for this role.</p>
+                    )}
+                  </div>
+                );
+              })()}
+
               <label
                 htmlFor="verify-notes"
                 className="text-sm font-medium text-gray-700"
