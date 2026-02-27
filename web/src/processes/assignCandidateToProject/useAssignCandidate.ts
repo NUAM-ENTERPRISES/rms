@@ -5,9 +5,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { candidatesApi } from "@/features/candidates/api";
+import { candidatesApi, CandidateProjectMap } from "@/features/candidates/api";
 import { projectsApi } from "@/features/projects/api";
-import { documentsApi } from "@/features/documents/api";
 
 interface AssignCandidateParams {
   candidateId: string;
@@ -26,7 +25,7 @@ export function useAssignCandidate() {
 
   // RTK Query mutations
   const [nominateCandidate] = candidatesApi.useNominateCandidateMutation();
-  const [getProjectById] = projectsApi.useLazyGetProjectByIdQuery();
+  const [getProjectById] = projectsApi.useLazyGetProjectQuery();
   const [getCandidateById] = candidatesApi.useLazyGetCandidateByIdQuery();
 
   const assignCandidate = async (
@@ -41,12 +40,16 @@ export function useAssignCandidate() {
         throw new Error("Candidate not found");
       }
 
-      const candidate = candidateResult.data?.data;
+      const candidate = candidateResult.data;
       if (!candidate) {
         throw new Error("Candidate not found");
       }
 
-      if (candidate.currentStatus !== "active") {
+      const statusName = typeof candidate.currentStatus === 'string' 
+        ? candidate.currentStatus 
+        : candidate.currentStatus?.statusName;
+
+      if (statusName !== "active") {
         throw new Error("Candidate is not available for assignment");
       }
 
@@ -66,8 +69,8 @@ export function useAssignCandidate() {
       }
 
       // Step 3: Check if candidate is already assigned to this project
-      const existingAssignment = candidate.projects.find(
-        (p) => p.projectId === params.projectId
+      const existingAssignment = candidate.projects?.find(
+        (p: CandidateProjectMap) => p.projectId === params.projectId
       );
 
       if (existingAssignment) {
@@ -86,8 +89,9 @@ export function useAssignCandidate() {
       }
 
       // Step 5: Success feedback
+      const candidateName = candidate.name || `${candidate.firstName} ${candidate.lastName}`;
       toast.success(
-        `${candidate.name} has been successfully assigned to ${project.title}`
+        `${candidateName} has been successfully assigned to ${project.title}`
       );
 
       return {

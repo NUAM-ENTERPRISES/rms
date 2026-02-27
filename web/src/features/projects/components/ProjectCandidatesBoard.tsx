@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, ComponentType, useState, useEffect } from "react";
+import { ReactNode, useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,13 +31,6 @@ import CandidateCard, {
 } from "@/features/projects/components/CandidateCard";
 
 type CandidateColumnType = "nominated" | "eligible" | "all";
-
-type StatusOption = {
-  id: string | number;
-  label?: string;
-  name?: string;
-  statusName?: string;
-};
 
 type ProjectAssignment = {
   id?: string;
@@ -268,9 +261,6 @@ const ProjectCandidatesBoard = ({
     roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
     limit: 10,
   }, { refetchOnFocus: true });
-
-  // Manager assignments query removed for this component (avoid calling `/candidates/role/Manager` from ProjectDetailPage)
-  const managerAssignmentsData = undefined;
 
   const eligibleCandidates: CandidateRecord[] = Array.isArray(
     eligibleResponse?.data
