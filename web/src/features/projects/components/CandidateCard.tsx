@@ -309,10 +309,9 @@ const CandidateCard = memo(function CandidateCard({
     (action) => action.label.toLowerCase() !== "assign to project"
   );
 
-  // Eligibility check - strict: disable if any reasons exist (hard or soft)
-  const isNotEligible =
-    propEligibilityData?.isEligible === false ||
-    propEligibilityData?.roleEligibility?.some((r) => r.reasons && r.reasons.length > 0);
+  // Eligibility check: enable if ANY role is eligible (even with soft reasons)
+  const anyRoleEligible = propEligibilityData?.roleEligibility?.some((r) => r.isEligible);
+  const isNotEligible = propEligibilityData?.isEligible === false || !anyRoleEligible;
   const eligibilityData = propEligibilityData;
 
   // Document verification logic
@@ -814,11 +813,14 @@ const CandidateCard = memo(function CandidateCard({
                     displayMatchScore
                   )} border text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1`}
                 >
+                  {anyRoleEligible && (
+                    <Trophy className="h-3 w-3 text-amber-500 animate-pulse" />
+                  )}
                   <span className="text-[11px] font-semibold">{displayMatchScore}%</span>
                 </Badge>
               </TooltipTrigger>
 
-              <TooltipContent className="bg-white text-slate-700 border shadow-sm p-2 rounded-md max-w-xs">
+              <TooltipContent className="bg-white text-slate-700 border shadow-sm p-0 rounded-md max-w-xs">
                 {primaryRoleMatch.designation ? (
                   <>
                     {/* Include a concise, screen-reader-friendly sentence describing
@@ -826,7 +828,7 @@ const CandidateCard = memo(function CandidateCard({
                     <div className="sr-only">
                       This candidate is eligible for {primaryRoleMatch.designation} with score {displayMatchScore}%
                     </div>
-                    <div className="p-3 max-w-xs">
+                    <div className="p-4 max-w-xs">
                     <div className="flex items-center gap-3">
                       <div
                         className={`${getMatchScoreColor(
@@ -859,10 +861,44 @@ const CandidateCard = memo(function CandidateCard({
                           style={{ width: `${displayMatchScore}%` }}
                         />
                       </div>
+
+                      {/* Top matched role reasons (Only top matched role reason) */}
+                      {(() => {
+                        const topRole = eligibilityData?.roleEligibility?.find(
+                          (r) => r.designation === primaryRoleMatch.designation
+                        );
+                        if (topRole?.reasons && topRole.reasons.length > 0) {
+                          return (
+                            <div className="mt-4 p-2.5 rounded-lg border border-slate-100 bg-slate-50">
+                              <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <AlertCircle className="h-3 w-3 text-amber-500" />
+                                {topRole.designation} Match Details
+                              </div>
+                              <ul className="list-disc list-inside space-y-1.5">
+                                {topRole.reasons.map((reason, idx) => (
+                                  <li key={idx} className="text-[10px] text-slate-500 italic leading-relaxed pl-1">
+                                    {reason}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
-                    {eligibilityData?.roleEligibility && eligibilityData.roleEligibility.some(r => r.isEligible) && (
-                      <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                    {eligibilityData?.roleEligibility && anyRoleEligible && (
+                      <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                        <div className="text-[11px] font-bold text-green-600 flex items-center gap-2 mb-3 bg-green-50 p-2.5 rounded-lg border border-green-100 italic">
+                          <Trophy className="h-3.5 w-3.5 text-amber-500 animate-pulse shrink-0" />
+                          <span>
+                            Correct! {eligibilityData.roleEligibility.filter(r => r.isEligible).length > 1 
+                              ? `these roles are eligible. You can assign this candidate to any of these ${eligibilityData.roleEligibility.filter(r => r.isEligible).length} roles.` 
+                              : `this role is eligible. You can assign this candidate to only this role.`}
+                          </span>
+                        </div>
+
                         {eligibilityData.roleEligibility.filter(role => role.isEligible).map((role, rIdx) => (
                           <div key={rIdx} className="space-y-1">
                             <div className="flex items-center justify-between gap-4">
@@ -985,7 +1021,10 @@ const CandidateCard = memo(function CandidateCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-600 cursor-help animate-pulse"
+                  className={cn(
+                    "flex items-center justify-center w-6 h-6 rounded-full cursor-help animate-pulse",
+                    isNotEligible ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+                  )}
                   onClick={(event) => event.stopPropagation()}
                 >
                   <AlertCircle className="h-4 w-4" aria-hidden />
@@ -993,14 +1032,17 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipTrigger>
               <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs p-3 rounded-xl">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-red-600 font-bold text-xs">
+                  <div className={cn(
+                    "flex items-center gap-2 font-bold text-xs",
+                    isNotEligible ? "text-red-600" : "text-amber-600"
+                  )}>
                     <AlertCircle className="h-3.5 w-3.5" />
-                    <span>{eligibilityData.isEligible ? "Eligibility Mismatch" : "Not Eligible for Project"}</span>
+                    <span>{isNotEligible ? "Not Eligible for Project" : "Eligibility Mismatch"}</span>
                   </div>
                   <div className="text-[10px] text-slate-500 mb-2">
-                    {eligibilityData.isEligible 
-                      ? "This candidate is eligible but has some soft mismatches." 
-                      : "This candidate does not meet the minimum requirements for any role in this project."}
+                    {isNotEligible 
+                      ? "This candidate does not meet the minimum requirements for any role in this project."
+                      : "This candidate is eligible but has some soft mismatches or requires verification."}
                   </div>
                   
                   {eligibilityData?.roleEligibility && (

@@ -2250,6 +2250,7 @@ export class CandidateProjectsService {
           (we) => we.roleCatalogId === role.roleCatalogId,
         );
         if (!hasSpecificExperience) {
+          flags.experience = false;
           hardReasons.push(
             `Experience mismatch: Candidate has no recorded experience as ${
               role.roleCatalog?.label || role.designation
@@ -2303,7 +2304,7 @@ export class CandidateProjectsService {
       return {
         roleId: role.id,
         designation: role.designation,
-        isEligible: hardReasons.length === 0,
+        isEligible: hardReasons.length === 0 && softReasons.length === 0,
         flags,
         reasons: [...hardReasons, ...softReasons],
       };
@@ -2520,7 +2521,7 @@ export class CandidateProjectsService {
         return {
           roleId: role.id,
           designation: role.designation,
-          isEligible: hardReasons.length === 0,
+          isEligible: hardReasons.length === 0 && softReasons.length === 0,
           flags,
           reasons: [...hardReasons, ...softReasons],
         };
