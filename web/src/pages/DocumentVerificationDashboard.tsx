@@ -150,6 +150,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
+import { useTheme } from "@/context/ThemeContext";
 export default function DocumentVerificationDashboard() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -231,8 +232,9 @@ export default function DocumentVerificationDashboard() {
     );
   }
 
+  const { theme } = useTheme();
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className={`container mx-auto p-6 space-y-6 ${theme === "dark" ? "bg-[#181a20] text-[#f3f3f3]" : "bg-[#f7fafc] text-[#222]"}`}> 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTheme } from "@/context/ThemeContext";
 import { Link, useLocation } from "react-router-dom";
 import { ChevronLeft, Sparkles } from "lucide-react";
 import { useNav } from "@/hooks/useNav";
@@ -144,6 +145,7 @@ function NavItemComponent({
   isCollapsed: boolean;
   depth?: number;
 }) {
+  const { theme } = useTheme();
   const location = useLocation();
 
   const hasChildren = item.children && item.children.length > 0;
@@ -179,7 +181,10 @@ function NavItemComponent({
         isCollapsed ? "justify-center py-2" : "justify-between py-2 px-3",
         isCurrentlyActive
           ? "bg-gradient-to-r from-violet-500/20 via-purple-500/15 to-fuchsia-500/20 backdrop-blur-sm"
-          : "hover:bg-white/5 dark:hover:bg-white/5"
+          : cn(
+              theme === "dark" && "bg-black",
+              "hover:bg-white/5 dark:hover:bg-white/5"
+            )
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -261,6 +266,7 @@ export default function Sidebar({
   isCollapsed,
   onToggleCollapse,
 }: SidebarProps) {
+  const { theme } = useTheme();
   const navItems = useNav();
   const [isHoverOpen, setIsHoverOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -304,23 +310,26 @@ export default function Sidebar({
         "backdrop-blur-xl",
         "border-r border-white/30 dark:border-white/15",
         "rounded-r-3xl",
+        "bg-white/10 dark:bg-black",
         effectiveCollapsed ? "w-20" : "w-64"
       )}
       style={{
-        background: "rgba(255, 255, 255, 0.1)",
+        background: theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255, 255, 255, 0.1)",
         backdropFilter: "blur(24px) saturate(200%)",
         WebkitBackdropFilter: "blur(24px) saturate(200%)",
         boxShadow:
-          "0 20px 60px -12px rgba(0, 0, 0, 0.25), 0 8px 24px -6px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 -2px 8px 0 rgba(255, 255, 255, 0.2) inset",
+          theme === "dark"
+            ? "0 20px 60px -12px rgba(0, 0, 0, 0.5), 0 8px 24px -6px rgba(0, 0, 0, 0.3)"
+            : "0 20px 60px -12px rgba(0, 0, 0, 0.25), 0 8px 24px -6px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 -2px 8px 0 rgba(255, 255, 255, 0.2) inset",
       }}
     >
-      {/* Frosted glass overlay - minimal white, let background show through */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-white/10 to-white/15 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-50/10 via-transparent to-slate-50/10 pointer-events-none" />
+      {/* Frosted glass overlay - minimal white, let background show through; hide tints in dark mode */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-white/10 to-white/15 dark:bg-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-50/10 via-transparent to-slate-50/10 dark:bg-transparent pointer-events-none" />
 
       {/* Elevation glow effect behind sidebar */}
-      <div className="absolute -inset-2 bg-gradient-to-r from-white/20 via-white/10 to-white/20 rounded-r-3xl blur-2xl -z-10 pointer-events-none opacity-50" />
-      <div className="absolute -inset-1 bg-white/15 rounded-r-3xl blur-xl -z-10 pointer-events-none" />
+      <div className="absolute -inset-2 bg-gradient-to-r from-white/20 via-white/10 to-white/20 dark:bg-transparent rounded-r-3xl blur-2xl -z-10 pointer-events-none opacity-50" />
+      <div className="absolute -inset-1 bg-white/15 dark:bg-transparent rounded-r-3xl blur-xl -z-10 pointer-events-none" />
 
       {/* Top glass highlight line */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
@@ -331,6 +340,11 @@ export default function Sidebar({
           "relative flex items-center justify-between z-10 transition-all duration-500",
           isScrolled ? "h-14 px-3" : "h-16 px-4"
         )}
+        style={{
+          background: theme === "dark" ? "rgba(0,0,0,0.8)" : "rgba(255, 255, 255, 0.1)",
+          backdropFilter: "blur(24px) saturate(200%)",
+          WebkitBackdropFilter: "blur(24px) saturate(200%)",
+        }}
       >
         {/* Top accent line */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
@@ -396,7 +410,10 @@ export default function Sidebar({
       {/* Navigation */}
       <nav
         ref={scrollRef}
-        className="flex-1 px-2 py-3 space-y-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 relative z-0"
+        className={cn(
+          "flex-1 px-2 py-3 space-y-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 relative z-0",
+          theme === "dark" && "bg-black"
+        )}
       >
         {navItems.map((item) => (
           <NavItemComponent
@@ -412,7 +429,7 @@ export default function Sidebar({
         <div
           className="p-3 relative z-10"
           style={{
-            background: "rgba(255, 255, 255, 0.08)",
+            background: theme === "dark" ? "rgba(0,0,0,0.8)" : "rgba(255, 255, 255, 0.08)",
             backdropFilter: "blur(24px) saturate(200%)",
             WebkitBackdropFilter: "blur(24px) saturate(200%)",
           }}
@@ -420,7 +437,7 @@ export default function Sidebar({
           <div
             className="p-2.5 rounded-lg border border-white/40 dark:border-white/20 shadow-lg"
             style={{
-              background: "rgba(255, 255, 255, 0.12)",
+              background: theme === "dark" ? "rgba(0,0,0,0.85)" : "rgba(255, 255, 255, 0.12)",
               backdropFilter: "blur(20px) saturate(200%)",
               WebkitBackdropFilter: "blur(20px) saturate(200%)",
             }}

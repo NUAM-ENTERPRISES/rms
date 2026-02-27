@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTheme } from "@/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 
 export default function ProjectsPage() {
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
@@ -66,6 +68,24 @@ export default function ProjectsPage() {
   });
   const recruiterAnalytics = recruiterAnalyticsResponse?.data;
 
+  // Error handling
+  if (projectsError || statsError) {
+    return (
+      <div className={`min-h-screen ${theme === "dark" ? "bg-[#181a20] text-white" : "bg-[#f7fafc] text-black"} p-6`}>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-2">
+              Failed to load projects or stats.
+            </h2>
+            <p className="mb-4">
+              Please try again later or contact support.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Handle filter changes
   const handleFiltersChange = (newFilters: QueryProjectsRequest) => {
     setFilters(newFilters);
@@ -90,36 +110,10 @@ export default function ProjectsPage() {
     toast.info("Export functionality coming soon");
   };
 
-  // Error handling
-  if (projectsError || statsError) {
-    return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              {canReadProjects
-                ? "Error Loading Projects"
-                : "Project Access Limited"}
-            </h2>
-            <p className="text-gray-600">
-              {canReadProjects
-                ? "There was an error loading the projects. Please try again later."
-                : "You have limited access to project information. Contact your administrator for full access."}
-            </p>
-            {canReadProjects && (
-              <Button onClick={() => window.location.reload()} className="mt-4">
-                Retry
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto w-full space-y-6 py-2">
+    <div className={`min-h-screen ${theme === "dark" ? "bg-[#181a20] text-white" : "bg-[#f7fafc] text-black"}`}>
+      <div className={`mx-auto w-full space-y-6 py-2 ${theme === "dark" ? "bg-[#181a20] text-white" : "bg-[#f7fafc] text-black"}`}>
         {isRecruiter && canReadProjects && (
           <RecruiterPulse
             analytics={recruiterAnalytics}
@@ -138,7 +132,7 @@ export default function ProjectsPage() {
           )}
 
         {canReadProjects && (
-          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50 dark:bg-black dark:border-slate-800">
             <div className="p-5">
               <ProjectFilters
                 filters={filters}
@@ -153,13 +147,13 @@ export default function ProjectsPage() {
         )}
 
         {canReadProjects ? (
-          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/60">
-            <div className="flex flex-col gap-2 border-b border-slate-100/80 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/60 dark:bg-black dark:border-slate-800">
+            <div className="flex flex-col gap-2 border-b border-slate-100/80 p-6 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-black">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-300">
                   Project roster
                 </p>
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                   All active engagements
                 </h2>
               </div>

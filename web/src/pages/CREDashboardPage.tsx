@@ -17,8 +17,9 @@ import { toast } from "sonner";
 import { useState } from "react";
 
 import { useCan } from "@/hooks/useCan";
+import { useTheme } from "@/context/ThemeContext";
 
-export default function CREDashboardPage() {
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   const canTransferBack = useCan("transfer_back:candidates");
@@ -96,7 +97,7 @@ export default function CREDashboardPage() {
   }).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`min-h-screen ${theme === "dark" ? "bg-[#181a20] text-[#f3f3f3]" : "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-[#222]"}`}>
       <div className="space-y-6 p-6 max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="space-y-2">

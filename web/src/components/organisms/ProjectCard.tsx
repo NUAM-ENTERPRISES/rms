@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Calendar,
   Users,
@@ -26,6 +27,8 @@ export default function ProjectCard({
   onView,
   className,
 }: ProjectCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const canReadProjects = useCan("read:projects");
   // Avoid global countries lookup on listing page — show code as fallback
   const getCountryNameFallback = (code?: string) => code ? code.toUpperCase() : null;
@@ -102,6 +105,7 @@ export default function ProjectCard({
         isUrgent && "border-l-orange-500",
         isWarning && "border-l-yellow-500",
         !isOverdue && !isUrgent && !isWarning && "border-l-gray-300",
+        isDark ? "bg-slate-800 text-white" : "bg-white text-gray-900",
         className
       )}
     >
@@ -110,14 +114,14 @@ export default function ProjectCard({
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                <h3 className={`text-lg font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {project.title}
                 </h3>
               </div>
 
               <div className="flex items-center gap-2 mb-2">
-                <Building2 className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600 truncate">
+                <Building2 className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                <span className={`text-sm truncate ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                   {project?.client?.name || ""}
                 </span>
               </div>
@@ -126,7 +130,7 @@ export default function ProjectCard({
               <div className="flex items-center gap-2 mb-2">
                 <Badge
                   variant="outline"
-                  className={cn("text-xs font-medium", statusConfig.color)}
+                  className={cn("text-xs font-medium", statusConfig.color, isDark ? 'bg-slate-600 dark:bg-slate-700 ring-1 ring-white/20' : '')}
                 >
                   <StatusIcon className="w-3 h-3 mr-1" />
                   {project.status}
@@ -192,13 +196,13 @@ export default function ProjectCard({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">
+                  <Users className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                     Positions
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
+                  <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                     {filledPositions}/{totalPositions} filled
                   </span>
                 </div>
@@ -211,16 +215,16 @@ export default function ProjectCard({
                     key={role.id}
                     className="flex items-center justify-between text-xs"
                   >
-                    <span className="text-gray-600 truncate flex-1">
+                    <span className={`truncate flex-1 ${isDark ? 'text-white' : 'text-gray-600'}`}>
                       {role.designation}
                     </span>
-                    <span className="text-gray-800 font-medium">
+                    <span className={`${isDark ? 'text-white' : 'text-gray-800'} font-medium`}>
                       {role.quantity}
                     </span>
                   </div>
                 ))}
                 {(project.rolesNeeded?.length || 0) > 3 && (
-                  <div className="text-xs text-gray-500">
+                  <div className={`text-xs ${isDark ? 'text-white' : 'text-gray-500'}`}>
                     +{(project.rolesNeeded?.length || 0) - 3} more roles
                   </div>
                 )}
@@ -228,10 +232,10 @@ export default function ProjectCard({
             </div>
 
             {/* Created Info */}
-            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className={`flex items-center justify-between pt-2 border-t ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
               <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3 text-gray-400" />
-                <span className="text-xs text-gray-500">
+                <Clock className={`w-3 h-3 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
+                <span className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                   Created{" "}
                   {formatDistanceToNow(new Date(project.createdAt), {
                     addSuffix: true,

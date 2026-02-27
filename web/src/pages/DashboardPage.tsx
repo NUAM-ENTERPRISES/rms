@@ -1,5 +1,6 @@
 import React from "react";
 import { useHasRole } from "@/hooks/useCan";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Card,
   CardContent,
@@ -708,7 +709,7 @@ export default function DashboardPage() {
   const isAdmin = useHasRole(["CEO", "Director"]);
 
   return (
-    <div className="min-h-screen  ">
+    <div className={`min-h-screen ${theme === "dark" ? "bg-[#181a20] text-[#f3f3f3]" : "bg-[#f7fafc] text-[#222]"}`}>
       <div className="w-full mx-auto">
         {isAdmin ? <AdminDashboard /> : <ManagerDashboard />}
       </div>
