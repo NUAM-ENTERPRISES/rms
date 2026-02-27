@@ -242,9 +242,8 @@ export class ProjectsService {
               shiftType: role.shiftType,
               onCallRequired: role.onCallRequired ?? false,
               physicalDemands: role.physicalDemands,
-              salaryRange: role.salaryRange
-                ? JSON.parse(role.salaryRange)
-                : null,
+              minSalaryRange: role.minSalaryRange,
+              maxSalaryRange: role.maxSalaryRange,
               benefits: role.benefits,
               relocationAssistance: role.relocationAssistance ?? false,
               additionalRequirements: role.additionalRequirements,
@@ -370,7 +369,8 @@ export class ProjectsService {
         licenseRequirements: this.parseJsonField(role.licenseRequirements as any),
         requiredCertifications: this.parseJsonField(role.requiredCertifications as any),
         specificExperience: this.parseJsonField(role.specificExperience as any),
-        salaryRange: this.parseJsonField(role.salaryRange as any),
+        minSalaryRange: role.minSalaryRange,
+        maxSalaryRange: role.maxSalaryRange,
         educationRequirements: this.parseJsonField(role.educationRequirements as any),
         technicalSkills: this.parseJsonField(role.technicalSkills as any),
         ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
@@ -495,7 +495,8 @@ export class ProjectsService {
           role.requiredCertifications,
         ),
         specificExperience: this.parseJsonField(role.specificExperience),
-        salaryRange: this.parseJsonField(role.salaryRange),
+        minSalaryRange: role.minSalaryRange,
+        maxSalaryRange: role.maxSalaryRange,
         educationRequirements: this.parseJsonField(role.educationRequirements),
         technicalSkills: this.parseJsonField(role.technicalSkills),
         // Add computed age string for convenience (e.g., "18 to 25")
@@ -574,7 +575,8 @@ export class ProjectsService {
           role.requiredCertifications,
         ),
         specificExperience: this.parseJsonField(role.specificExperience),
-        salaryRange: this.parseJsonField(role.salaryRange),
+        minSalaryRange: role.minSalaryRange,
+        maxSalaryRange: role.maxSalaryRange,
         educationRequirements: this.parseJsonField(role.educationRequirements),
         technicalSkills: this.parseJsonField(role.technicalSkills),
         ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
@@ -808,7 +810,8 @@ export class ProjectsService {
           shiftType: role.shiftType,
           onCallRequired: role.onCallRequired ?? false,
           physicalDemands: role.physicalDemands,
-          salaryRange: role.salaryRange ? JSON.parse(role.salaryRange) : null,
+          minSalaryRange: role.minSalaryRange,
+          maxSalaryRange: role.maxSalaryRange,
           benefits: role.benefits,
           relocationAssistance: role.relocationAssistance ?? false,
           additionalRequirements: role.additionalRequirements,
@@ -1084,7 +1087,8 @@ export class ProjectsService {
         licenseRequirements: this.parseJsonField(role.licenseRequirements as any),
         requiredCertifications: this.parseJsonField(role.requiredCertifications as any),
         specificExperience: this.parseJsonField(role.specificExperience as any),
-        salaryRange: this.parseJsonField(role.salaryRange as any),
+        minSalaryRange: role.minSalaryRange,
+        maxSalaryRange: role.maxSalaryRange,
         educationRequirements: this.parseJsonField(role.educationRequirements as any),
         technicalSkills: this.parseJsonField(role.technicalSkills as any),
         ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
@@ -2267,128 +2271,16 @@ export class ProjectsService {
       },
     });
 
-    // --------------------------------
     // 4. FILTER MATCHING CANDIDATES
-    // --------------------------------
-    const effectiveRoles = query.roleCatalogId
+    // A candidate is eligible if they have a match score > 0 for at least one of the effective roles.
+    const effectiveRoles = query.roleCatalogId && query.roleCatalogId !== 'all'
       ? project.rolesNeeded.filter((r) => r.roleCatalogId === query.roleCatalogId)
       : project.rolesNeeded;
 
     const matchedCandidates = candidates.filter((candidate) => {
-      // Get Unified Eligibility Data
-      const age = candidate.dateOfBirth
-        ? this.calculateAge(new Date(candidate.dateOfBirth))
-        : null;
-      const candidateGender = candidate.gender?.toLowerCase();
-      let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
-      if (
-        (!candidateExp || candidateExp === 0) &&
-        Array.isArray(candidate.workExperiences) &&
-        candidate.workExperiences.length > 0
-      ) {
-        candidateExp = this.calculateExperienceFromWorkHistory(
-          candidate.workExperiences,
-        );
-      }
-
-      // Candidate matches if they are eligible for AT LEAST ONE of the effective roles
       return effectiveRoles.some((role) => {
-        // 1. Gender Check
-        let genderMatch = true;
-        if (
-          role.genderRequirement &&
-          role.genderRequirement.toLowerCase() !== 'all'
-        ) {
-          const requiredGender = role.genderRequirement.toLowerCase();
-          genderMatch = !!candidateGender && candidateGender === requiredGender;
-        }
-
-        // 2. Age Check
-        let ageMatch = true;
-        if (age === null) {
-          ageMatch = false;
-        } else if (age < role.minAge || age > role.maxAge) {
-          ageMatch = false;
-        }
-
-        // 3. Experience Check
-        let experienceMatch = true;
-        if (role.minExperience !== null && candidateExp < role.minExperience) {
-          experienceMatch = false;
-        }
-        if (role.maxExperience !== null && candidateExp > role.maxExperience) {
-          experienceMatch = false;
-        }
-
-        // 4. Country Preference Check
-        let countryMatch = true;
-        const prefCountries = (candidate as any).preferredCountries || [];
-        if (prefCountries.length > 0 && project.countryCode) {
-          countryMatch = prefCountries.some(
-            (cp: any) => cp.countryCode === project.countryCode,
-          );
-        }
-
-        // 5. Sector Type Check
-        let sectorMatch = true;
-        if (
-          candidate.sectorType &&
-          project.projectType &&
-          candidate.sectorType.toLowerCase() !== 'no_preference'
-        ) {
-          sectorMatch =
-            candidate.sectorType.toLowerCase() ===
-            project.projectType.toLowerCase();
-        }
-
-        // 6. Salary Check
-        let salaryMatch = true;
-        let roleSalaryRange = role.salaryRange;
-        if (roleSalaryRange && typeof roleSalaryRange === 'string') {
-          try {
-            roleSalaryRange = JSON.parse(roleSalaryRange);
-          } catch (e) {}
-        }
-        if (Array.isArray(roleSalaryRange) && roleSalaryRange.length >= 2) {
-          const maxSal = Number(roleSalaryRange[1]);
-          if (
-            candidate.expectedMinSalary &&
-            maxSal < candidate.expectedMinSalary
-          ) {
-            salaryMatch = false;
-          }
-        }
-
-        // 7. Licensing/Verification Check
-        let licensingMatch = true;
-        if (project.licensingExam) {
-          if (!candidate.licensingExam) {
-            licensingMatch = false;
-          } else if (
-            project.licensingExam.toLowerCase() !==
-            candidate.licensingExam.toLowerCase()
-          ) {
-            licensingMatch = false;
-          }
-        }
-
-        if (project.dataFlow === true && candidate.dataFlow !== true) {
-          licensingMatch = false;
-        }
-
-        if (project.eligibility === true && candidate.eligibility !== true) {
-          licensingMatch = false;
-        }
-
-        return (
-          genderMatch &&
-          ageMatch &&
-          experienceMatch &&
-          countryMatch &&
-          sectorMatch &&
-          salaryMatch &&
-          licensingMatch
-        );
+        const score = this.calculateRoleMatchScore(candidate, role, project);
+        return score > 0;
       });
     });
 
@@ -2646,62 +2538,12 @@ export class ProjectsService {
     if (role.maxExperience !== null && candidateExp > role.maxExperience)
       return 0;
 
-    // Project-level checks (Strict)
-    if (project) {
-      // Country Preference
-      const prefCountries = candidate.preferredCountries || [];
-      if (prefCountries.length > 0 && project.countryCode) {
-        const isCountryMatch = prefCountries.some(
-          (cp: any) => cp.countryCode === project.countryCode,
-        );
-        if (!isCountryMatch) return 0;
-      }
-
-      // Sector Match
-      if (
-        candidate.sectorType &&
-        project.projectType &&
-        candidate.sectorType.toLowerCase() !== 'no_preference'
-      ) {
-        if (
-          candidate.sectorType.toLowerCase() !==
-          project.projectType.toLowerCase()
-        ) {
-          return 0;
-        }
-      }
-
-      // Salary Match
-      let roleSalaryRange = role.salaryRange;
-      if (roleSalaryRange && typeof roleSalaryRange === 'string') {
-        try {
-          roleSalaryRange = JSON.parse(roleSalaryRange);
-        } catch (e) {}
-      }
-      if (Array.isArray(roleSalaryRange) && roleSalaryRange.length >= 2) {
-        const maxSal = Number(roleSalaryRange[1]);
-        if (
-          candidate.expectedMinSalary &&
-          maxSal < candidate.expectedMinSalary
-        ) {
-          return 0;
-        }
-      }
-
-      // Licensing/Verification
-      if (project.licensingExam) {
-        if (
-          !candidate.licensingExam ||
-          project.licensingExam.toLowerCase() !==
-            candidate.licensingExam.toLowerCase()
-        ) {
-          return 0;
-        }
-      }
-
-      if (project.dataFlow === true && candidate.dataFlow !== true) return 0;
-      if (project.eligibility === true && candidate.eligibility !== true)
-        return 0;
+    // Specific Role Catalog Match Check (Strict Eligibility)
+    if (role.roleCatalogId) {
+      const hasSpecificExperience = candidate.workExperiences?.some(
+        (we: any) => we.roleCatalogId === role.roleCatalogId,
+      );
+      if (!hasSpecificExperience) return 0;
     }
 
     // 2. SCORING (If eligible, calculate relative score)
@@ -2713,9 +2555,12 @@ export class ProjectsService {
 
     // Experience scoring (40 points)
     // First, prefer role-catalog specific work experience (if candidate has workExperiences matching role.roleCatalogId)
-    const hasRoleSpecificWorkExp = Array.isArray(candidate.workExperiences)
-      && role.roleCatalogId
-      && candidate.workExperiences.some((we: any) => we.roleCatalogId === role.roleCatalogId);
+    const hasRoleSpecificWorkExp =
+      Array.isArray(candidate.workExperiences) &&
+      role.roleCatalogId &&
+      candidate.workExperiences.some(
+        (we: any) => we.roleCatalogId === role.roleCatalogId,
+      );
 
     if (hasRoleSpecificWorkExp) {
       roleScore += 40;
@@ -2738,12 +2583,84 @@ export class ProjectsService {
       roleScore += 30;
     }
 
-    // Education scoring (30 points) - more accurate: full points for matching qualification id/level/field;
-    // partial points if candidate has qualifications but doesn't match exactly.
-    roleScore += this.calculateEducationScore(candidate.qualifications, role.educationRequirementsList);
+    // Education scoring (30 points)
+    roleScore += this.calculateEducationScore(
+      candidate.qualifications,
+      role.educationRequirementsList,
+    );
+
+    // 3. APPLY SOFT MISMATCH PENALTIES (Deductions but not disqualifications)
+    if (project) {
+      // --- NEW: Project-level verification checks moved to Soft Penalties ---
+      
+      // Licensing Exam Penalty (-10 points)
+      if (project.licensingExam) {
+        if (
+          !candidate.licensingExam ||
+          project.licensingExam.toLowerCase() !==
+            candidate.licensingExam.toLowerCase()
+        ) {
+          roleScore -= 10;
+        }
+      }
+
+      // DataFlow Penalty (-5 points)
+      if (project.dataFlow === true && candidate.dataFlow !== true) {
+        roleScore -= 5;
+      }
+
+      // Eligibility Status Penalty (-5 points)
+      if (project.eligibility === true && candidate.eligibility !== true) {
+        roleScore -= 5;
+      }
+
+      // Country Preference Penalty (-5 points)
+      const prefCountries = candidate.preferredCountries || [];
+      if (prefCountries.length > 0 && project.countryCode) {
+        const isCountryMatch = prefCountries.some(
+          (cp: any) => cp.countryCode === project.countryCode,
+        );
+        if (!isCountryMatch) {
+          roleScore -= 5;
+        }
+      }
+
+      // Sector Match Penalty (-5 points)
+      if (
+        candidate.sectorType &&
+        project.projectType &&
+        candidate.sectorType.toLowerCase() !== 'no_preference'
+      ) {
+        if (
+          candidate.sectorType.toLowerCase() !==
+          project.projectType.toLowerCase()
+        ) {
+          roleScore -= 5;
+        }
+      }
+
+      // Salary Match Penalty (-10 points)
+      const projMin = role.minSalaryRange;
+      const projMax = role.maxSalaryRange;
+      const candMin = candidate.expectedMinSalary;
+      const candMax = candidate.expectedMaxSalary;
+
+      let salaryMismatch = false;
+      if (projMax && candMin && candMin > projMax) {
+        salaryMismatch = true;
+      } else if (projMin && candMax && candMax < projMin) {
+        salaryMismatch = true;
+      }
+      
+      if (salaryMismatch) {
+        roleScore -= 10;
+      }
+    }
 
     // Ensure value is between 0 and 100
-    return Math.min(100, Math.max(0, Math.round(roleScore)));
+    // We use a small positive value (e.g. 1) even if score drops below 0 
+    // to ensure they stay in the "Eligible" list if they passed the strict checks.
+    return Math.min(100, Math.max(1, Math.round(roleScore)));
   }
 
   /**

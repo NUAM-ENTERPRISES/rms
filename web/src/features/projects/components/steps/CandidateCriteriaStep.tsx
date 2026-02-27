@@ -92,7 +92,8 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
     candidateStates: [] as string[],
     candidateReligions: [] as string[],
     educationRequirementsList: [] as EducationRequirement[],
-    salaryRange: { min: "", max: "", currency: "USD" },
+    minSalaryRange: undefined as number | undefined,
+    maxSalaryRange: undefined as number | undefined,
   });
 
   const [bulkSkillInput, setBulkSkillInput] = useState("");
@@ -122,7 +123,8 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
       candidateStates: [...bulkCriteria.candidateStates],
       candidateReligions: [...bulkCriteria.candidateReligions],
       educationRequirementsList: [...bulkCriteria.educationRequirementsList],
-      salaryRange: { ...bulkCriteria.salaryRange },
+      minSalaryRange: bulkCriteria.minSalaryRange,
+      maxSalaryRange: bulkCriteria.maxSalaryRange,
     }));
 
     setValue("rolesNeeded", updatedRoles);
@@ -214,35 +216,23 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             {/* Salary Range */}
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
-                <Award className="h-3 w-3" /> Salary Range
+                <Award className="h-3 w-3" /> Salary (Min-Max)
               </Label>
               <div className="flex gap-1.5">
                 <Input
+                  type="number"
                   placeholder="Min"
-                  value={bulkCriteria.salaryRange.min}
-                  onChange={(e) => setBulkCriteria(p => ({...p, salaryRange: {...p.salaryRange, min: e.target.value}}))}
+                  value={bulkCriteria.minSalaryRange || ""}
+                  onChange={(e) => setBulkCriteria(p => ({...p, minSalaryRange: parseInt(e.target.value) || undefined}))}
                   className="bg-white border-slate-200 h-8 rounded-lg text-xs"
                 />
                 <Input
+                  type="number"
                   placeholder="Max"
-                  value={bulkCriteria.salaryRange.max}
-                  onChange={(e) => setBulkCriteria(p => ({...p, salaryRange: {...p.salaryRange, max: e.target.value}}))}
+                  value={bulkCriteria.maxSalaryRange || ""}
+                  onChange={(e) => setBulkCriteria(p => ({...p, maxSalaryRange: parseInt(e.target.value) || undefined}))}
                   className="bg-white border-slate-200 h-8 rounded-lg text-xs"
                 />
-                <Select
-                  value={bulkCriteria.salaryRange.currency}
-                  onValueChange={(v) => setBulkCriteria(p => ({...p, salaryRange: {...p.salaryRange, currency: v}}))}
-                >
-                  <SelectTrigger className="bg-white border-slate-200 h-8 px-1.5 rounded-lg text-[10px] w-16">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="SAR">SAR</SelectItem>
-                    <SelectItem value="INR">INR</SelectItem>
-                    <SelectItem value="AED">AED</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 

@@ -142,6 +142,8 @@ export default function CreateProjectPage() {
           institutionRequirements: role.institutionRequirements
             ? role.institutionRequirements
             : undefined,
+          minSalaryRange: role.minSalaryRange,
+          maxSalaryRange: role.maxSalaryRange,
         })),
         documentRequirements: previewData.documentRequirements || [],
       };

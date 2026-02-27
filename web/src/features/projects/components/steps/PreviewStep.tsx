@@ -287,6 +287,16 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
                   </div>
                 )}
 
+                {/* Salary */}
+                {(role.minSalaryRange || role.maxSalaryRange) && (
+                  <div>
+                    <span className="text-slate-600">Salary: </span>
+                    <span className="font-medium">
+                      {role.minSalaryRange ? role.minSalaryRange.toLocaleString() : "N/A"} - {role.maxSalaryRange ? role.maxSalaryRange.toLocaleString() : "N/A"}
+                    </span>
+                  </div>
+                )}
+
                 {/* Gender & Age & Benefits */}
                 {role.genderRequirement && (
                   <div>

@@ -265,7 +265,8 @@ model RoleNeeded {
   physicalDemands           String?
   relocationAssistance      Boolean                          @default(false)
   requiredCertifications    Json?
-  salaryRange               Json?
+  minSalaryRange            Int?
+  maxSalaryRange            Int?
   shiftType                 String?
   specificExperience        Json?
   employmentType            String                           @default("permanent") // "contract" or "permanent"

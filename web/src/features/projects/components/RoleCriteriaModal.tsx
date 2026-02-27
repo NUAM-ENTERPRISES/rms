@@ -407,60 +407,36 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               <div className="space-y-1.5">
                 <Label className={cn(
                   "text-[11px] font-semibold flex items-center gap-1",
-                  roleErrors?.salaryRange ? "text-destructive" : "text-slate-600"
+                  (roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) ? "text-destructive" : "text-slate-600"
                 )}>
-                  <Award className="h-3 w-3 text-emerald-600" /> Salary Range
-                  {roleErrors?.salaryRange && <AlertCircle className="h-3 w-3" />}
+                  <Award className="h-3 w-3 text-emerald-600" /> Salary (Min-Max)
+                  {(roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) && <AlertCircle className="h-3 w-3" />}
                 </Label>
                 <div className="flex gap-2">
                   <Input
+                    type="number"
                     placeholder="Min"
-                    value={(role.salaryRange as any)?.min || ""}
-                    onChange={(e) => {
-                      const range = (role.salaryRange as any) || { min: "", max: "", currency: "USD" };
-                      updateRole("salaryRange", { ...range, min: e.target.value });
-                    }}
+                    value={role.minSalaryRange ?? ""}
+                    onChange={(e) => updateRole("minSalaryRange", e.target.value === "" ? undefined : parseInt(e.target.value))}
                     className={cn(
                       "h-9 flex-1 bg-white text-sm",
-                      roleErrors?.salaryRange ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
+                      roleErrors?.minSalaryRange ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
                     )}
                   />
                   <Input
+                    type="number"
                     placeholder="Max"
-                    value={(role.salaryRange as any)?.max || ""}
-                    onChange={(e) => {
-                      const range = (role.salaryRange as any) || { min: "", max: "", currency: "USD" };
-                      updateRole("salaryRange", { ...range, max: e.target.value });
-                    }}
+                    value={role.maxSalaryRange ?? ""}
+                    onChange={(e) => updateRole("maxSalaryRange", e.target.value === "" ? undefined : parseInt(e.target.value))}
                     className={cn(
                       "h-9 flex-1 bg-white text-sm",
-                      roleErrors?.salaryRange ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
+                      roleErrors?.maxSalaryRange ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
                     )}
                   />
-                  <Select
-                    value={(role.salaryRange as any)?.currency || "USD"}
-                    onValueChange={(v) => {
-                      const range = (role.salaryRange as any) || { min: "", max: "", currency: "USD" };
-                      updateRole("salaryRange", { ...range, currency: v });
-                    }}
-                  >
-                    <SelectTrigger className={cn(
-                      "h-9 w-24 bg-white text-sm",
-                      roleErrors?.salaryRange ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
-                    )}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="SAR">SAR</SelectItem>
-                      <SelectItem value="INR">INR</SelectItem>
-                      <SelectItem value="AED">AED</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
-                {roleErrors?.salaryRange && (
+                {(roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) && (
                   <p className="text-[10px] text-destructive font-medium">
-                    {roleErrors.salaryRange.message || (roleErrors.salaryRange as any).root?.message}
+                    {roleErrors?.minSalaryRange?.message || roleErrors?.maxSalaryRange?.message}
                   </p>
                 )}
               </div>

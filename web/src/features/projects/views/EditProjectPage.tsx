@@ -147,11 +147,8 @@ export default function EditProjectPage() {
           licenseRequirements: Array.isArray(role.licenseRequirements)
             ? role.licenseRequirements.join(", ")
             : role.licenseRequirements || undefined,
-          salaryRange: role.salaryRange 
-            ? (typeof role.salaryRange === 'string' 
-                ? JSON.parse(role.salaryRange) 
-                : role.salaryRange)
-            : undefined,
+          minSalaryRange: role.minSalaryRange ?? undefined,
+          maxSalaryRange: role.maxSalaryRange ?? undefined,
           benefits: role.benefits || undefined,
           backgroundCheckRequired: role.backgroundCheckRequired,
           drugScreeningRequired: role.drugScreeningRequired,
@@ -234,10 +231,8 @@ export default function EditProjectPage() {
           institutionRequirements: role.institutionRequirements
             ? role.institutionRequirements
             : undefined,
-          // salaryRange must be a JSON string as per backend requirement
-          salaryRange: role.salaryRange
-            ? JSON.stringify(role.salaryRange)
-            : undefined,
+          minSalaryRange: role.minSalaryRange,
+          maxSalaryRange: role.maxSalaryRange,
         })),
       };
 
@@ -809,84 +804,38 @@ export default function EditProjectPage() {
                       <Label className="text-sm font-medium text-slate-700">
                         Salary Range (Optional)
                       </Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-slate-500">Min Salary</Label>
                           <Input
-                            type="text"
-                            value={
-                              role.salaryRange && typeof role.salaryRange === 'object' && 'min' in role.salaryRange
-                                ? (role.salaryRange as any).min
-                                : ""
-                            }
+                            type="number"
+                            value={role.minSalaryRange ?? ""}
                             onChange={(e) => {
-                              const currentRange = (role.salaryRange && typeof role.salaryRange === 'object') 
-                                ? role.salaryRange as any 
-                                : { min: "", max: "", currency: "USD" };
-                              updateRole(index, "salaryRange", {
-                                ...currentRange,
-                                min: e.target.value,
-                              });
+                              const value = e.target.value === "" ? undefined : parseInt(e.target.value);
+                              updateRole(index, "minSalaryRange", value);
                             }}
                             placeholder="Min"
                             className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                           />
                         </div>
-                        <div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-slate-500">Max Salary</Label>
                           <Input
-                            type="text"
-                            value={
-                              role.salaryRange && typeof role.salaryRange === 'object' && 'max' in role.salaryRange
-                                ? (role.salaryRange as any).max
-                                : ""
-                            }
+                            type="number"
+                            value={role.maxSalaryRange ?? ""}
                             onChange={(e) => {
-                              const currentRange = (role.salaryRange && typeof role.salaryRange === 'object') 
-                                ? role.salaryRange as any 
-                                : { min: "", max: "", currency: "USD" };
-                              updateRole(index, "salaryRange", {
-                                ...currentRange,
-                                max: e.target.value,
-                              });
+                              const value = e.target.value === "" ? undefined : parseInt(e.target.value);
+                              updateRole(index, "maxSalaryRange", value);
                             }}
                             placeholder="Max"
                             className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                           />
                         </div>
-                        <div>
-                          <Select
-                            value={
-                              role.salaryRange && typeof role.salaryRange === 'object' && 'currency' in role.salaryRange
-                                ? (role.salaryRange as any).currency
-                                : "USD"
-                            }
-                            onValueChange={(value) => {
-                              const currentRange = (role.salaryRange && typeof role.salaryRange === 'object') 
-                                ? role.salaryRange as any 
-                                : { min: 0, max: 0, currency: "USD" };
-                              updateRole(index, "salaryRange", {
-                                ...currentRange,
-                                currency: value,
-                              });
-                            }}
-                          >
-                            <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="EUR">EUR</SelectItem>
-                              <SelectItem value="GBP">GBP</SelectItem>
-                              <SelectItem value="SAR">SAR</SelectItem>
-                              <SelectItem value="AED">AED</SelectItem>
-                              <SelectItem value="INR">INR</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
                       </div>
-                      <p className="text-xs text-slate-500">Enter minimum and maximum salary with currency</p>
-                      {errors.rolesNeeded?.[index]?.salaryRange && (
+                      <p className="text-xs text-slate-500">Enter minimum and maximum numeric salary</p>
+                      {(errors.rolesNeeded?.[index]?.minSalaryRange || errors.rolesNeeded?.[index]?.maxSalaryRange) && (
                         <span className="text-sm text-red-600">
-                          {errors.rolesNeeded[index].salaryRange?.message}
+                          {errors.rolesNeeded[index].minSalaryRange?.message || errors.rolesNeeded[index].maxSalaryRange?.message}
                         </span>
                       )}
                     </div>

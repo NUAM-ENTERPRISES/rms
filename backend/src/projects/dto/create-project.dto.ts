@@ -173,12 +173,20 @@ export class CreateRoleNeededDto {
   physicalDemands?: string;
 
   @ApiPropertyOptional({
-    description: 'Salary range as JSON object',
-    example: '{"min": 60000, "max": 80000, "currency": "USD"}',
+    description: 'Minimum salary',
+    example: 60000,
   })
   @IsOptional()
-  @IsJSON()
-  salaryRange?: string;
+  @IsInt()
+  minSalaryRange?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum salary',
+    example: 80000,
+  })
+  @IsOptional()
+  @IsInt()
+  maxSalaryRange?: number;
 
   @ApiPropertyOptional({
     description: 'Benefits package description',

@@ -581,7 +581,8 @@ export class InterviewsService {
             drugScreeningRequired: true,
             additionalRequirements: true,
             requiredCertifications: true,
-            salaryRange: true,
+            minSalaryRange: true,
+            maxSalaryRange: true,
             roleCatalog: {
               select: {
                 id: true,
@@ -755,7 +756,8 @@ export class InterviewsService {
             drugScreeningRequired: true,
             additionalRequirements: true,
             requiredCertifications: true,
-            salaryRange: true,
+            minSalaryRange: true,
+            maxSalaryRange: true,
             roleCatalog: {
               select: {
                 id: true,
@@ -924,7 +926,8 @@ export class InterviewsService {
             drugScreeningRequired: true,
             additionalRequirements: true,
             requiredCertifications: true,
-            salaryRange: true,
+            minSalaryRange: true,
+            maxSalaryRange: true,
             roleCatalog: {
               select: {
                 id: true,

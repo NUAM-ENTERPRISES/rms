@@ -2169,7 +2169,11 @@ export class CandidateProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
-        rolesNeeded: true,
+        rolesNeeded: {
+          include: {
+            roleCatalog: true,
+          },
+        },
       },
     });
 
@@ -2186,14 +2190,15 @@ export class CandidateProjectsService {
     }
 
     const roleEligibility = project.rolesNeeded.map((role) => {
-      const reasons: string[] = [];
+      const hardReasons: string[] = [];
+      const softReasons: string[] = [];
       const flags = {
         gender: true,
         age: true,
         experience: true,
       };
 
-      // Gender Check
+      // Gender Check (Hard)
       if (
         role.genderRequirement &&
         role.genderRequirement.toLowerCase() !== 'all'
@@ -2201,50 +2206,106 @@ export class CandidateProjectsService {
         const requiredGender = role.genderRequirement.toLowerCase();
         if (!candidateGender) {
           flags.gender = false;
-          reasons.push(
+          hardReasons.push(
             `Gender is required for this role (${role.genderRequirement}), but candidate gender is not specified.`,
           );
         } else if (candidateGender !== requiredGender) {
           flags.gender = false;
-          reasons.push(
+          hardReasons.push(
             `Gender mismatch: Role requires ${role.genderRequirement}, but candidate is ${candidate.gender}.`,
           );
         }
       }
 
-      // Age Check
+      // Age Check (Hard)
       if (age === null) {
         flags.age = false;
-        reasons.push(
+        hardReasons.push(
           `Age is required for this role (${role.minAge} to ${role.maxAge} years) but candidate date of birth is not provided.`,
         );
       } else if (age < role.minAge || age > role.maxAge) {
         flags.age = false;
-        reasons.push(
+        hardReasons.push(
           `Age mismatch: Candidate is ${age} years old, but role requires ${role.minAge} to ${role.maxAge} years.`,
         );
       }
 
-      // Experience Check
+      // Experience Check (Hard)
       if (role.minExperience !== null && candidateExp < role.minExperience) {
         flags.experience = false;
-        reasons.push(
+        hardReasons.push(
           `Experience mismatch: Candidate has ${candidateExp} years, but role requires minimum ${role.minExperience} years.`,
         );
       }
       if (role.maxExperience !== null && candidateExp > role.maxExperience) {
         flags.experience = false;
-        reasons.push(
+        hardReasons.push(
           `Experience mismatch: Candidate has ${candidateExp} years, but role exceeds maximum ${role.maxExperience} years.`,
         );
+      }
+
+      // Specific Role Match Check (Hard)
+      if (role.roleCatalogId) {
+        const hasSpecificExperience = candidate.workExperiences?.some(
+          (we) => we.roleCatalogId === role.roleCatalogId,
+        );
+        if (!hasSpecificExperience) {
+          hardReasons.push(
+            `Experience mismatch: Candidate has no recorded experience as ${
+              role.roleCatalog?.label || role.designation
+            }.`,
+          );
+        }
+      }
+
+      // Salary Check (Soft)
+      const projMin = role.minSalaryRange;
+      const projMax = role.maxSalaryRange;
+      const candMin = candidate.expectedMinSalary;
+      const candMax = candidate.expectedMaxSalary;
+      
+      if (projMax && candMin && candMin > projMax) {
+        const rangeStr = projMin ? `${projMin} - ${projMax}` : `up to ${projMax}`;
+        softReasons.push(
+          `Salary mismatch: Candidate expects minimum ${candMin}, but project budget is ${rangeStr}.`,
+        );
+      } else if (projMin && candMax && candMax < projMin) {
+        const rangeStr = projMax ? `${projMin} - ${projMax}` : `at least ${projMin}`;
+        softReasons.push(
+          `Salary mismatch: Candidate maximum expectation ${candMax} is below project minimum ${rangeStr}.`,
+        );
+      }
+
+      // 4. Licensing/Verification Check (Soft)
+      if (project.licensingExam) {
+        if (!candidate.licensingExam) {
+          softReasons.push(
+            `Licensing Exam mismatch: Project requires ${project.licensingExam}, but candidate has no licensing exam specified.`,
+          );
+        } else if (
+          project.licensingExam.toLowerCase() !==
+          candidate.licensingExam.toLowerCase()
+        ) {
+          softReasons.push(
+            `Licensing Exam mismatch: Project requires ${project.licensingExam}, but candidate has ${candidate.licensingExam}.`,
+          );
+        }
+      }
+
+      if (project.dataFlow === true && candidate.dataFlow !== true) {
+        softReasons.push(`DataFlow verification is required for this project.`);
+      }
+
+      if (project.eligibility === true && candidate.eligibility !== true) {
+        softReasons.push(`Eligibility verification is required for this project.`);
       }
 
       return {
         roleId: role.id,
         designation: role.designation,
-        isEligible: reasons.length === 0,
+        isEligible: hardReasons.length === 0,
         flags,
-        reasons,
+        reasons: [...hardReasons, ...softReasons],
       };
     });
 
@@ -2260,7 +2321,7 @@ export class CandidateProjectsService {
 
   /**
    * Bulk check candidate eligibility for a project
-   * Returns only candidates who are NOT eligible
+   * Returns eligibility status for all requested candidates
    */
   async checkBulkEligibility(dto: BulkCheckEligibilityDto) {
     const { projectId, candidateIds } = dto;
@@ -2269,7 +2330,11 @@ export class CandidateProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
-        rolesNeeded: true,
+        rolesNeeded: {
+          include: {
+            roleCatalog: true,
+          },
+        },
         country: true,
       },
     });
@@ -2303,14 +2368,15 @@ export class CandidateProjectsService {
       }
 
       const roleEligibility = project.rolesNeeded.map((role) => {
-        const reasons: string[] = [];
+        const hardReasons: string[] = [];
+        const softReasons: string[] = [];
         const flags = {
           gender: true,
           age: true,
           experience: true,
         };
 
-        // Gender Check
+        // Gender Check (Hard)
         if (
           role.genderRequirement &&
           role.genderRequirement.toLowerCase() !== 'all'
@@ -2318,46 +2384,64 @@ export class CandidateProjectsService {
           const requiredGender = role.genderRequirement.toLowerCase();
           if (!candidateGender) {
             flags.gender = false;
-            reasons.push(
+            hardReasons.push(
               `Gender is required for this role (${role.genderRequirement}), but candidate gender is not specified.`,
             );
           } else if (candidateGender !== requiredGender) {
             flags.gender = false;
-            reasons.push(
+            hardReasons.push(
               `Gender mismatch: Role requires ${role.genderRequirement}, but candidate is ${candidate.gender}.`,
             );
           }
         }
 
-        // Age Check
+        // Age Check (Hard)
         if (age === null) {
           flags.age = false;
-          reasons.push(
+          hardReasons.push(
             `Age is required for this role (${role.minAge} to ${role.maxAge} years) but candidate date of birth is not provided.`,
           );
         } else if (age < role.minAge || age > role.maxAge) {
           flags.age = false;
-          reasons.push(
+          hardReasons.push(
             `Age mismatch: Candidate is ${age} years old, but role requires ${role.minAge} to ${role.maxAge} years.`,
           );
         }
 
-        // Experience Check
+        // Experience Check (Hard)
         if (role.minExperience !== null && candidateExp < role.minExperience) {
           flags.experience = false;
-          reasons.push(
+          hardReasons.push(
             `Experience mismatch: Candidate has ${candidateExp} years, but role requires minimum ${role.minExperience} years.`,
           );
         }
 
-        if (role.maxExperience !== null && candidateExp > role.maxExperience) {
+        if (
+          role.maxExperience !== null &&
+          role.maxExperience !== undefined &&
+          candidateExp > role.maxExperience
+        ) {
           flags.experience = false;
-          reasons.push(
+          hardReasons.push(
             `Experience mismatch: Candidate has ${candidateExp} years, but role exceeds maximum ${role.maxExperience} years.`,
           );
         }
 
-        // 1. Country Preference Check
+        // --- NEW: Specific Role Match Check (Hard) ---
+        if (role.roleCatalogId) {
+          const hasSpecificExperience = candidate.workExperiences?.some(
+            (we) => we.roleCatalogId === role.roleCatalogId,
+          );
+          if (!hasSpecificExperience) {
+            hardReasons.push(
+              `Experience mismatch: Candidate has no recorded experience as ${
+                role.roleCatalog?.label || role.designation
+              }.`,
+            );
+          }
+        }
+
+        // 1. Country Preference Check (Soft)
         const prefCountries = candidate.preferredCountries || [];
         if (prefCountries.length > 0 && project.countryCode) {
           const isCountryMatch = prefCountries.some(
@@ -2365,9 +2449,9 @@ export class CandidateProjectsService {
           );
           if (!isCountryMatch) {
             const countryList = prefCountries
-              .map((cp) => cp.country?.name || cp.countryCode)
+              .map((cp) => (cp as any).country?.name || cp.countryCode)
               .join(', ');
-            reasons.push(
+            softReasons.push(
               `Candidate preferred country is ${countryList}, not ${
                 project.country?.name || project.countryCode
               }.`,
@@ -2375,7 +2459,7 @@ export class CandidateProjectsService {
           }
         }
 
-        // 2. Sector Type Check
+        // 2. Sector Type Check (Soft)
         if (
           candidate.sectorType &&
           project.projectType &&
@@ -2385,61 +2469,60 @@ export class CandidateProjectsService {
             candidate.sectorType.toLowerCase() !==
             project.projectType.toLowerCase()
           ) {
-            reasons.push(
+            softReasons.push(
               `Sector mismatch: Candidate preferred ${candidate.sectorType}, but project is ${project.projectType}.`,
             );
           }
         }
 
-        // 3. Salary Check
-        let roleSalaryRange = role.salaryRange;
-        if (roleSalaryRange && typeof roleSalaryRange === 'string') {
-          try {
-            roleSalaryRange = JSON.parse(roleSalaryRange);
-          } catch (e) {}
-        }
-        if (Array.isArray(roleSalaryRange) && roleSalaryRange.length >= 2) {
-          const maxSal = Number(roleSalaryRange[1]);
-          if (
-            candidate.expectedMinSalary &&
-            maxSal < candidate.expectedMinSalary
-          ) {
-            reasons.push(
-              `Salary mismatch: Candidate expects minimum ${candidate.expectedMinSalary}, but project maximum is ${maxSal}.`,
-            );
-          }
+        // 3. Salary Check (Soft)
+        const projMin = role.minSalaryRange;
+        const projMax = role.maxSalaryRange;
+        const candMin = candidate.expectedMinSalary;
+        const candMax = candidate.expectedMaxSalary;
+        
+        if (projMax && candMin && candMin > projMax) {
+          const rangeStr = projMin ? `${projMin} - ${projMax}` : `up to ${projMax}`;
+          softReasons.push(
+            `Salary mismatch: Candidate expects minimum ${candMin}, but project budget is ${rangeStr}.`,
+          );
+        } else if (projMin && candMax && candMax < projMin) {
+          const rangeStr = projMax ? `${projMin} - ${projMax}` : `at least ${projMin}`;
+          softReasons.push(
+            `Salary mismatch: Candidate maximum expectation ${candMax} is below project minimum ${rangeStr}.`,
+          );
         }
 
-        // 4. Licensing/Verification Check
+        // 4. Licensing/Verification Check (Soft)
         if (project.licensingExam) {
           if (!candidate.licensingExam) {
-            reasons.push(
+            softReasons.push(
               `Licensing Exam mismatch: Project requires ${project.licensingExam}, but candidate has no licensing exam specified.`,
             );
           } else if (
             project.licensingExam.toLowerCase() !==
             candidate.licensingExam.toLowerCase()
           ) {
-            reasons.push(
+            softReasons.push(
               `Licensing Exam mismatch: Project requires ${project.licensingExam}, but candidate has ${candidate.licensingExam}.`,
             );
           }
         }
 
         if (project.dataFlow === true && candidate.dataFlow !== true) {
-          reasons.push(`DataFlow verification is required for this project.`);
+          softReasons.push(`DataFlow verification is required for this project.`);
         }
 
         if (project.eligibility === true && candidate.eligibility !== true) {
-          reasons.push(`Eligibility verification is required for this project.`);
+          softReasons.push(`Eligibility verification is required for this project.`);
         }
 
         return {
           roleId: role.id,
           designation: role.designation,
-          isEligible: reasons.length === 0,
+          isEligible: hardReasons.length === 0,
           flags,
-          reasons,
+          reasons: [...hardReasons, ...softReasons],
         };
       });
 
@@ -2451,8 +2534,8 @@ export class CandidateProjectsService {
       };
     });
 
-    // Return only candidates who are NOT eligible
-    return results.filter((r) => !r.isEligible);
+    // Return the full results (even eligible ones) so the UI can show role-specific mismatch messages in tooltips
+    return results;
   }
 
   /**

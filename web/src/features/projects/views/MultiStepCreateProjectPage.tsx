@@ -359,6 +359,11 @@ export default function MultiStepCreateProjectPage() {
                 role.skills.split(",").map((s: string) => s.trim())
               )
             : undefined,
+          technicalSkills: role.technicalSkills
+            ? JSON.stringify(
+                role.technicalSkills.split(",").map((s: string) => s.trim())
+              )
+            : undefined,
           languageRequirements: role.languageRequirements
             ? JSON.stringify(
                 role.languageRequirements
@@ -374,10 +379,8 @@ export default function MultiStepCreateProjectPage() {
           institutionRequirements: role.institutionRequirements
             ? role.institutionRequirements
             : undefined,
-          // salaryRange must be a JSON string as per backend requirement
-          salaryRange: role.salaryRange
-            ? JSON.stringify(role.salaryRange)
-            : undefined,
+          minSalaryRange: role.minSalaryRange,
+          maxSalaryRange: role.maxSalaryRange,
           };
         }),
         documentRequirements: data.documentRequirements || [],

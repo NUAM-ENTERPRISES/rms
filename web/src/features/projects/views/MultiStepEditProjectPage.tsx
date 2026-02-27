@@ -200,6 +200,7 @@ export default function MultiStepEditProjectPage() {
         eligibility: (project as any).eligibility ?? false,
         rolesNeeded:
           project.rolesNeeded?.map((role: any) => ({
+            id: role.id,
             roleCatalogId: role.roleCatalogId || "",
             departmentId: role.departmentId || role.roleCatalog?.roleDepartment?.id,
             designation: role.designation,
@@ -217,7 +218,9 @@ export default function MultiStepEditProjectPage() {
             specificExperience: Array.isArray(role.specificExperience)
               ? role.specificExperience.join(", ")
               : role.specificExperience,
-            ageRequirement: (role as any).ageRequirement || undefined,
+            ageRequirement: role.ageRequirement 
+              ? role.ageRequirement.replace("-", " to ") 
+              : undefined,
             accommodation:
               (role as any).accommodation !== null &&
               (role as any).accommodation !== undefined
@@ -250,6 +253,11 @@ export default function MultiStepEditProjectPage() {
             licenseRequirements: Array.isArray(role.licenseRequirements)
               ? role.licenseRequirements.join(", ")
               : role.licenseRequirements,
+            technicalSkills: Array.isArray(role.technicalSkills)
+              ? role.technicalSkills.join(", ")
+              : role.technicalSkills || undefined,
+            minSalaryRange: role.minSalaryRange ?? undefined,
+            maxSalaryRange: role.maxSalaryRange ?? undefined,
             additionalRequirements: role.additionalRequirements,
             notes: role.notes,
             employmentType: role.employmentType,
@@ -404,25 +412,20 @@ export default function MultiStepEditProjectPage() {
         ]);
 
         let roleHasError = false;
-        if (r.minExperience == null) {
-          setError(`rolesNeeded.${idx}.minExperience`, { type: "manual", message: "Minimum experience is required" });
-          roleHasError = true;
-        }
-        if (r.maxExperience == null) {
-          setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Maximum experience is required" });
-          roleHasError = true;
-        }
+        // Don't block purely based on missing optional fields, only invalid formats
         if (r.minExperience != null && r.maxExperience != null && r.minExperience > r.maxExperience) {
           setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Minimum experience must be less than or equal to maximum experience" });
           roleHasError = true;
         }
-        if (!r.ageRequirement || !/^\s*\d+\s*to\s*\d+\s*$/.test(r.ageRequirement)) {
-          setError(`rolesNeeded.${idx}.ageRequirement`, { type: "manual", message: "Age is required in format '18 to 25'" });
+        if (r.ageRequirement && !/^\s*\d+\s*to\s*\d+\s*$/.test(r.ageRequirement)) {
+          setError(`rolesNeeded.${idx}.ageRequirement`, { type: "manual", message: "Age must be in format '18 to 25'" });
           roleHasError = true;
         }
-        if (!r.educationRequirementsList || r.educationRequirementsList.length === 0) {
-          setError(`rolesNeeded.${idx}.educationRequirementsList`, { type: "manual", message: "Select at least one education requirement" });
-          roleHasError = true;
+        // Basic requirement: at least one qualification if the array exists
+        if (r.educationRequirementsList && r.educationRequirementsList.length === 0) {
+          // You could choose to not block here if it's optional
+          // setError(`rolesNeeded.${idx}.educationRequirementsList`, { type: "manual", message: "Select at least one education requirement" });
+          // roleHasError = true;
         }
 
         if (roleHasError) invalidRoleIndexes.push(idx);
@@ -545,6 +548,11 @@ export default function MultiStepEditProjectPage() {
                 role.skills.split(",").map((s: string) => s.trim())
               )
             : undefined,
+          technicalSkills: role.technicalSkills
+            ? JSON.stringify(
+                role.technicalSkills.split(",").map((s: string) => s.trim())
+              )
+            : undefined,
           languageRequirements: role.languageRequirements
             ? JSON.stringify(
                 role.languageRequirements
@@ -560,6 +568,8 @@ export default function MultiStepEditProjectPage() {
           institutionRequirements: role.institutionRequirements
             ? role.institutionRequirements
             : undefined,
+          minSalaryRange: role.minSalaryRange,
+          maxSalaryRange: role.maxSalaryRange,
           };
         }),
       };

@@ -43,14 +43,8 @@ export const projectFormSchema = z.object({
         technicalSkills: z.string().nullable().optional(),
         languageRequirements: z.string().nullable().optional(),
         licenseRequirements: z.string().nullable().optional(),
-        salaryRange: z
-          .object({
-            min: z.string().optional(),
-            max: z.string().optional(),
-            currency: z.string().optional(),
-          })
-          .nullable()
-          .optional(),
+        minSalaryRange: z.number().nullable().optional(),
+        maxSalaryRange: z.number().nullable().optional(),
         benefits: z.string().nullable().optional(),
         // Commented out for now as per requirements
         // backgroundCheckRequired: z.boolean(),
@@ -138,6 +132,8 @@ export const defaultProjectValues = {
       quantity: 1,
       priority: "medium" as const,
       technicalSkills: undefined,
+      minSalaryRange: undefined,
+      maxSalaryRange: undefined,
       backgroundCheckRequired: true,
       drugScreeningRequired: true,
       onCallRequired: false,

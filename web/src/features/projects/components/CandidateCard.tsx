@@ -7,7 +7,12 @@ import {
   Send,
   CheckCircle2,
   AlertTriangle,
+  ExternalLink,
+  ShieldCheck,
+  ShieldAlert,
   UserPlus,
+  ArrowRight,
+  Trophy,
   FileText,
   CheckCircle,
   AlertCircle,
@@ -304,8 +309,10 @@ const CandidateCard = memo(function CandidateCard({
     (action) => action.label.toLowerCase() !== "assign to project"
   );
 
-  // Eligibility check
-  const isNotEligible = propEligibilityData?.isEligible === false;
+  // Eligibility check - strict: disable if any reasons exist (hard or soft)
+  const isNotEligible =
+    propEligibilityData?.isEligible === false ||
+    propEligibilityData?.roleEligibility?.some((r) => r.reasons && r.reasons.length > 0);
   const eligibilityData = propEligibilityData;
 
   // Document verification logic
@@ -724,8 +731,30 @@ const CandidateCard = memo(function CandidateCard({
                         </span>
                       </TooltipTrigger>
                       {isNotEligible && (
-                        <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
-                          <p>Not Eligible for Project</p>
+                        <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs shadow-xl">
+                          <div className="space-y-2">
+                            <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
+                              Eligibility Mismatch:
+                            </p>
+                            {eligibilityData?.roleEligibility?.map(
+                              (role, idx) => (
+                                <div key={idx} className="space-y-1">
+                                  <p className="text-slate-300 font-medium">
+                                    {role.designation}:
+                                  </p>
+                                  <ul className="list-disc pl-3 space-y-0.5">
+                                    {role.reasons.map((reason, ridx) => (
+                                      <li key={ridx}>{reason}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )
+                            )}
+                            {(!eligibilityData?.roleEligibility ||
+                              eligibilityData.roleEligibility.length === 0) && (
+                              <p>Not eligible for this project.</p>
+                            )}
+                          </div>
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -809,31 +838,52 @@ const CandidateCard = memo(function CandidateCard({
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="text-[11px] text-slate-500">Top match</div>
-                        <div className="text-sm font-semibold truncate">
+                        <div className="text-sm font-bold truncate">
                           {primaryRoleMatch.designation}
                         </div>
                         {primaryRoleMatch.department && (
-                          <div className="text-xs text-slate-400 mt-0.5 truncate">
+                          <div className="text-[10px] text-slate-400 mt-0.5 truncate uppercase tracking-wider font-medium">
                             {primaryRoleMatch.department}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="mt-3">
-                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div className="mt-4">
+                      <div className="text-xs font-semibold text-slate-500 mb-1.5">{displayMatchScore}% match</div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                         <div
                           className={`${getMatchScoreColor(
                             displayMatchScore ?? 0
-                          )} h-2 rounded-full`}
+                          )} h-full rounded-full`}
                           style={{ width: `${displayMatchScore}%` }}
                         />
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">{displayMatchScore}% match</div>
                     </div>
+
+                    {eligibilityData?.roleEligibility && eligibilityData.roleEligibility.some(r => r.isEligible) && (
+                      <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                        {eligibilityData.roleEligibility.filter(role => role.isEligible).map((role, rIdx) => (
+                          <div key={rIdx} className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="text-[11px] font-bold text-slate-700">{role.designation}</div>
+                              <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">Eligible</span>
+                            </div>
+                            {role.reasons && role.reasons.length > 0 && (
+                              <ul className="list-disc list-inside space-y-1 mt-1">
+                                {role.reasons.map((reason, idx) => (
+                                  <li key={idx} className="text-[10px] text-slate-500 italic leading-relaxed pl-1">
+                                    {reason}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                    </>
+                </>
                 ) : candidate.roleMatches && candidate.roleMatches.length > 0 ? (
                   <div className="text-xs font-medium">Top role: {candidate.roleMatches[0].designation} — {candidate.roleMatches[0].score ?? '-'}%</div>
                 ) : (
@@ -931,12 +981,12 @@ const CandidateCard = memo(function CandidateCard({
           )}
 
           {/* Eligibility Warning Icon */}
-          {eligibilityData && eligibilityData.isEligible === false && (
+          {eligibilityData && (eligibilityData.isEligible === false || eligibilityData.roleEligibility?.some(r => r.reasons && r.reasons.length > 0)) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
                   className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-600 cursor-help animate-pulse"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
                 >
                   <AlertCircle className="h-4 w-4" aria-hidden />
                 </div>
@@ -945,22 +995,40 @@ const CandidateCard = memo(function CandidateCard({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-red-600 font-bold text-xs">
                     <AlertCircle className="h-3.5 w-3.5" />
-                    <span>Not Eligible for Project</span>
+                    <span>{eligibilityData.isEligible ? "Eligibility Mismatch" : "Not Eligible for Project"}</span>
                   </div>
-                  <div className="space-y-1.5">
-                    {(eligibilityData?.roleEligibility || []).map((role, rIdx) => (
-                      <div key={rIdx} className="space-y-1">
-                        <div className="text-[11px] font-semibold text-slate-700">{role.designation}</div>
-                        <ul className="list-disc list-inside space-y-0.5">
-                          {role.reasons.map((reason, idx) => (
-                            <li key={idx} className="text-[10px] text-slate-600 leading-relaxed">
-                              {reason}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                  <div className="text-[10px] text-slate-500 mb-2">
+                    {eligibilityData.isEligible 
+                      ? "This candidate is eligible but has some soft mismatches." 
+                      : "This candidate does not meet the minimum requirements for any role in this project."}
                   </div>
+                  
+                  {eligibilityData?.roleEligibility && (
+                    <div className="space-y-2 border-t pt-2">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Role Breakdown</div>
+                      {eligibilityData.roleEligibility.map((role, rIdx) => (
+                        <div key={rIdx} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] font-semibold text-slate-700">{role.designation}</div>
+                            {role.isEligible ? (
+                              <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Eligible</span>
+                            ) : (
+                              <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">Not Eligible</span>
+                            )}
+                          </div>
+                          {role.reasons && role.reasons.length > 0 && (
+                            <ul className="list-disc list-inside space-y-0.5">
+                              {role.reasons.map((reason, idx) => (
+                                <li key={idx} className="text-[10px] text-slate-500 italic leading-relaxed">
+                                  {reason}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -1082,8 +1150,28 @@ const CandidateCard = memo(function CandidateCard({
                     </span>
                   </TooltipTrigger>
                   {isNotEligible && (
-                    <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2">
-                      <p>Not Eligible for Project</p>
+                    <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs shadow-xl">
+                      <div className="space-y-2">
+                        <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
+                          Eligibility Mismatch:
+                        </p>
+                        {eligibilityData?.roleEligibility?.map((role, idx) => (
+                          <div key={idx} className="space-y-1">
+                            <p className="text-slate-300 font-medium">
+                              {role.designation}:
+                            </p>
+                            <ul className="list-disc pl-3 space-y-0.5">
+                              {role.reasons.map((reason, ridx) => (
+                                <li key={ridx}>{reason}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                        {(!eligibilityData?.roleEligibility ||
+                          eligibilityData.roleEligibility.length === 0) && (
+                          <p>Not eligible for this project.</p>
+                        )}
+                      </div>
                     </TooltipContent>
                   )}
                 </Tooltip>

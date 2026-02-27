@@ -79,7 +79,7 @@ export interface Interview {
       resumeEditable?: boolean | null;
       createdBy?: string | null;
     };
-    roleNeeded?: { id?: string; designation?: string; minExperience?: number | null; maxExperience?: number | null; employmentType?: string | null; backgroundCheckRequired?: boolean | null; additionalRequirements?: string | null; salaryRange?: any | null; roleCatalog?: { id?: string; name?: string; label?: string; shortName?: string } | null };
+    roleNeeded?: { id?: string; designation?: string; minExperience?: number | null; maxExperience?: number | null; employmentType?: string | null; backgroundCheckRequired?: boolean | null; additionalRequirements?: string | null; minSalaryRange?: number | null; maxSalaryRange?: number | null; roleCatalog?: { id?: string; name?: string; label?: string; shortName?: string } | null };
     recruiter?: { id?: string; name?: string; email?: string };
     mainStatus?: { id?: string; name?: string; label?: string } | null;
     subStatus?: { id?: string; name?: string; label?: string } | null;

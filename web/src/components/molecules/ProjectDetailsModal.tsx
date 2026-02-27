@@ -169,7 +169,11 @@ export default function ProjectDetailsModal({
                         <div><strong>Gender:</strong> {role.genderRequirement || "All"}</div>
                         <div><strong>Employment:</strong> {role.employmentType || "Any"}</div>
                         <div><strong>Visa:</strong> {role.visaType || "Any"}</div>
-                        <div><strong>Salary:</strong> {role.salaryRange || "As per policy"}</div>
+                        <div>
+                          <strong>Salary:</strong> {(role.minSalaryRange || role.maxSalaryRange) 
+                            ? `${role.minSalaryRange || "N/A"}–${role.maxSalaryRange || "N/A"}`
+                            : "As per policy"}
+                        </div>
                       </div>
 
                       {/* Education List */}
