@@ -7,11 +7,7 @@ import {
   Send,
   CheckCircle2,
   AlertTriangle,
-  ExternalLink,
-  ShieldCheck,
-  ShieldAlert,
   UserPlus,
-  ArrowRight,
   Trophy,
   FileText,
   CheckCircle,
@@ -273,6 +269,8 @@ interface CandidateCardProps {
    * action row. Parent (Project page) enables this for Eligible / All columns.
    */
   showContactButtons?: boolean;
+  /** control hiding of email/phone pills */
+  hideContactInfo?: boolean;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -321,11 +319,6 @@ const CandidateCard = memo(function CandidateCard({
   const projectLink = propProjectId 
     ? candidate.projects?.find(p => p.projectId === propProjectId)
     : undefined;
-
-  // If projects array is missing (consolidated API), use flattened project properties
-  const isNominatedForThisProject = propProjectId === candidate.projectDetails?.projectId || !!projectLink;
-  const currentSubStatus = projectLink?.subStatus || (propProjectId === candidate.projectDetails?.projectId ? candidate.projectSubStatus : undefined);
-  const currentMainStatus = projectLink?.mainStatus || (propProjectId === candidate.projectDetails?.projectId ? candidate.projectMainStatus : undefined);
 
   const isSendedForVerification = projectLink?.isSendedForDocumentVerification ?? candidate.isSendedForDocumentVerification;
     
@@ -608,15 +601,6 @@ const CandidateCard = memo(function CandidateCard({
     resolveNumericScore(candidate.matchScore) ??
     primaryRoleMatch.score;
 
-  // Show only the qualifications that match the current search term (if any).
-  // This keeps the card UI unchanged when there's no search, and highlights
-  // matching qualifications when the user searches for a qualification.
-  const _searchTerm = (/* optional prop forwarded from parent */ (undefined as unknown) as string) || "";
-  // Note: the parent component (`ProjectCandidatesBoard`) forwards `searchTerm`.
-  // We try to use that if available via props; TypeScript typing for the
-  // component will include `searchTerm?: string` below.
-  // (We will override `_searchTerm` with the actual prop below when added.)
-
   // Build a normalized list of qualifications from both possible shapes
   const allQualifications: Array<{ name?: string; shortName?: string; field?: string; university?: string }> = [];
   (candidate.candidateQualifications || []).forEach((q: any) => {
@@ -630,7 +614,7 @@ const CandidateCard = memo(function CandidateCard({
 
   // NOTE: `searchTerm` prop is injected into the component signature below.
   // Compute matching qualifications only when a non-empty search term exists.
-  const term = (searchTerm || _searchTerm || "").toLowerCase().trim();
+  const term = (searchTerm || "").toLowerCase().trim();
   // Deduplicate qualification pills by the display label (shortName/name/field/university).
   // Keep the first occurrence of a label so cards do not show the same pill multiple times.
   const matchingQualifications = (() => {

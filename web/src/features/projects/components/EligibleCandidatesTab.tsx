@@ -19,6 +19,7 @@ import {
   Send,
   BarChart3,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui";
 import {
@@ -33,6 +34,7 @@ import {
   useGetProjectCandidatesByRoleQuery,
   useSendForVerificationMutation,
   useGetProjectQuery,
+  useCheckBulkCandidateEligibilityQuery,
 } from "@/features/projects";
 import { useAssignToProjectMutation } from "@/features/candidates";
 import CandidateCard from "./CandidateCard";
@@ -86,6 +88,17 @@ export default function EligibleCandidatesTab({
   // Get project details for comparison
   const { data: projectData } = useGetProjectQuery(projectId);
 
+  // Eligibility query for the assign modal
+  const assignCandidateIds = assignConfirm.candidateId ? [assignConfirm.candidateId] : [];
+  const { data: assignEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId, candidateIds: assignCandidateIds },
+    { skip: assignCandidateIds.length === 0 }
+  );
+  const assignEligibilityData = (() => {
+    if (!assignEligibilityResponse?.data || !Array.isArray(assignEligibilityResponse.data)) return null;
+    return assignEligibilityResponse.data.find((d) => d.candidateId === assignConfirm.candidateId) || null;
+  })();
+
   const [sendForVerification] = useSendForVerificationMutation();
   const [assignToProject, { isLoading: isAssigning }] = useAssignToProjectMutation();
 
@@ -132,7 +145,29 @@ export default function EligibleCandidatesTab({
   };
 
   const showAssignConfirmation = (candidateId: string, candidateName: string) => {
-    setAssignConfirm({ isOpen: true, candidateId, candidateName, roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id, notes: "" });
+    // Find candidate to determine top matched role
+    const candidate = getCandidateById(candidateId);
+    let bestRoleNeededId = projectData?.data?.rolesNeeded?.[0]?.id;
+    if (candidate?.roleMatches && candidate.roleMatches.length > 0) {
+      const sorted = [...candidate.roleMatches].sort((a: any, b: any) => (b.score ?? 0) - (a.score ?? 0));
+      const topRoleDesignation = sorted[0]?.designation;
+      if (topRoleDesignation) {
+        const matchedRole = projectData?.data?.rolesNeeded?.find(
+          (r: any) => r.designation === topRoleDesignation
+        );
+        if (matchedRole) bestRoleNeededId = matchedRole.id;
+      }
+    } else if (candidate?.matchScore && typeof candidate.matchScore === 'object') {
+      const ms = candidate.matchScore as any;
+      const roleName = ms.roleName || ms.roleDepartmentLabel;
+      if (roleName) {
+        const matchedRole = projectData?.data?.rolesNeeded?.find(
+          (r: any) => r.designation === roleName
+        );
+        if (matchedRole) bestRoleNeededId = matchedRole.id;
+      }
+    }
+    setAssignConfirm({ isOpen: true, candidateId, candidateName, roleNeededId: bestRoleNeededId, notes: "" });
   };
 
   const handleAssignSingleCandidate = async () => {
@@ -545,15 +580,65 @@ export default function EligibleCandidatesTab({
                 value={assignConfirm.roleNeededId}
                 onValueChange={(v) => setAssignConfirm(prev => ({ ...prev, roleNeededId: v }))}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {projectData?.data?.rolesNeeded?.map((r: any) => (
-                    <SelectItem key={r.id} value={r.id}>{r.designation}</SelectItem>
-                  ))}
+                  {projectData?.data?.rolesNeeded?.map((r: any) => {
+                    const roleElig = assignEligibilityData?.roleEligibility?.find(
+                      (re: any) => re.designation === r.designation
+                    );
+                    return (
+                      <SelectItem key={r.id} value={r.id}>
+                        <span className="flex items-center gap-2">
+                          {r.designation}
+                          {roleElig && roleElig.reasons.length > 0 && (
+                            <AlertCircle className="h-3 w-3 text-amber-500 inline" />
+                          )}
+                          {roleElig && roleElig.reasons.length === 0 && (
+                            <CheckCircle2 className="h-3 w-3 text-green-500 inline" />
+                          )}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+
+              {/* Eligibility reasons for the selected role */}
+              {(() => {
+                const selectedRole = projectData?.data?.rolesNeeded?.find((r: any) => r.id === assignConfirm.roleNeededId);
+                const roleElig = assignEligibilityData?.roleEligibility?.find(
+                  (re: any) => re.designation === selectedRole?.designation
+                );
+                if (!roleElig) return null;
+                return (
+                  <div className={`mt-2 p-3 rounded-lg border ${
+                    roleElig.reasons.length === 0
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    <div className={`flex items-center gap-2 text-xs font-semibold mb-1 ${
+                      roleElig.reasons.length === 0 ? 'text-green-700' : 'text-amber-700'
+                    }`}>
+                      {roleElig.reasons.length === 0 ? (
+                        <><CheckCircle2 className="h-3.5 w-3.5" /> Eligible for {roleElig.designation}</>
+                      ) : (
+                        <><AlertCircle className="h-3.5 w-3.5" /> {roleElig.designation} &mdash; Eligibility Issues</>
+                      )}
+                    </div>
+                    {roleElig.reasons.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1 mt-1">
+                        {roleElig.reasons.map((reason: string, idx: number) => (
+                          <li key={idx} className="text-[11px] text-slate-600 italic">{reason}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-green-600 italic">This candidate meets all requirements for this role.</p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             
             {/* Candidate-Project Comparison */}
