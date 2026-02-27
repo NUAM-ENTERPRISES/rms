@@ -4,9 +4,6 @@ import { toast } from "sonner";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -638,17 +635,74 @@ export default function ProjectDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-slate-200 rounded w-1/3"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-4">
-                <div className="h-64 bg-slate-200 rounded-lg"></div>
-                <div className="h-32 bg-slate-200 rounded-lg"></div>
+        <div className="w-full mx-auto space-y-6">
+          {/* Header skeleton */}
+          <div className="relative overflow-hidden bg-white/95 rounded-2xl p-6 lg:p-8 shadow-xl ring-1 ring-slate-200/50">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex-1 space-y-3">
+                <div className="h-8 w-72 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="h-4 w-40 bg-slate-50 rounded-md animate-pulse" />
               </div>
-              <div className="space-y-4">
-                <div className="h-32 bg-slate-200 rounded-lg"></div>
-                <div className="h-48 bg-slate-200 rounded-lg"></div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-28 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="h-10 w-10 bg-slate-100 rounded-full animate-pulse" />
+              </div>
+            </div>
+            <div className="mt-6 h-1 bg-slate-100 rounded-full" />
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+          </div>
+          {/* Content skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 space-y-5">
+              <div className="relative overflow-hidden bg-white/80 rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex gap-3 mb-4">
+                  <div className="h-10 flex-1 bg-slate-100 rounded-lg animate-pulse" />
+                  <div className="h-10 w-48 bg-slate-100 rounded-lg animate-pulse" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-3">
+                      <div className="h-4 w-24 bg-slate-100 rounded-md animate-pulse" />
+                      {[1, 2].map((j) => (
+                        <div key={j} className="bg-white rounded-lg p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-9 w-9 bg-slate-100 rounded-full animate-pulse" />
+                            <div className="flex-1 space-y-1.5">
+                              <div className="h-3 w-24 bg-slate-100 rounded-md animate-pulse" />
+                              <div className="h-2.5 w-16 bg-slate-50 rounded-md animate-pulse" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+              </div>
+            </div>
+            <div className="lg:col-span-4 space-y-5">
+              <div className="relative overflow-hidden bg-white/95 rounded-xl p-4 shadow-md">
+                <div className="grid grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-slate-50 rounded-lg p-3 space-y-2">
+                      <div className="h-5 w-5 bg-slate-100 rounded-md animate-pulse mx-auto" />
+                      <div className="h-6 w-10 bg-slate-100 rounded-md animate-pulse mx-auto" />
+                      <div className="h-3 w-14 bg-slate-50 rounded-md animate-pulse mx-auto" />
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+              </div>
+              <div className="relative overflow-hidden bg-white/95 rounded-xl p-4 shadow-md">
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5">
+                      <div className="h-3 w-20 bg-slate-100 rounded-md animate-pulse" />
+                      <div className="h-3 w-16 bg-slate-50 rounded-md animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
               </div>
             </div>
           </div>
@@ -660,25 +714,21 @@ export default function ProjectDetailPage() {
   // Error state
   if (error || !projectData?.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-        <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                Project Not Found
-              </CardTitle>
-              <CardDescription className="text-slate-600">
-                The project you're looking for doesn't exist or you don't have
-                access to it.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              <Button onClick={() => navigate("/projects")} className="mt-4">
-                Back to Projects
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
+          <CardContent className="flex flex-col items-center py-12 px-8">
+            <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-red-400" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Project Not Found</h2>
+            <p className="text-sm text-slate-500 text-center mb-6">
+              The project you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
+            </p>
+            <Button onClick={() => navigate("/projects")} className="font-semibold px-6">
+              Back to Projects
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -701,19 +751,21 @@ export default function ProjectDetailPage() {
   // Access control
   if (!canReadProjects) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-        <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                Access Denied
-              </CardTitle>
-              <CardDescription className="text-slate-600">
-                You don't have permission to view this project.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
+          <CardContent className="flex flex-col items-center py-12 px-8">
+            <div className="h-16 w-16 rounded-full bg-amber-50 flex items-center justify-center mb-4">
+              <ShieldCheck className="h-8 w-8 text-amber-400" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Access Denied</h2>
+            <p className="text-sm text-slate-500 text-center mb-6">
+              You don&apos;t have permission to view this project.
+            </p>
+            <Button variant="outline" onClick={() => navigate("/projects")} className="font-semibold px-6">
+              Back to Projects
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -723,92 +775,107 @@ export default function ProjectDetailPage() {
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
         <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
-          <CardContent className="p-6 lg:p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              {/* Left Side — Title (Black) + Country */}
-              <div className="flex items-center gap-5 flex-1 min-w-0">
-                <div className="flex-1">
-                  {/* Title — Strong Black Text */}
-                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
-                    {project.title}
-                  </h1>
-
-                  {/* Optional Subtitle (Client Name) */}
-                  {project.client && (
-                    <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-slate-500" />
-                      {project.client.name}
-                    </p>
-                  )}
-                </div>
-
-                {/* Country Flag & View Details — Clean & Elevated */}
-                <div className="flex-shrink-0 flex items-center gap-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowDetails(true)}
-                    className="font-semibold"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    View details
-                  </Button>
+          <CardContent className="p-5 lg:p-6">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+              {/* Left Side — Title + Status + Country */}
+              <div className="flex items-start gap-4 flex-1 min-w-0">
+                {/* Country flag */}
+                <div className="flex-shrink-0 mt-1">
                   <ProjectCountryCell
                     countryCode={project.countryCode}
                     countryName={project.country?.name}
                     size="2xl"
-                    fallbackText="Not specified"
-                    className="shadow-lg ring-4 ring-white/90 rounded-full"
+                    fallbackText="—"
+                    className="shadow-md ring-3 ring-white/90 rounded-full"
                   />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight tracking-tight truncate">
+                      {project.title}
+                    </h1>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
+                        project.status === 'active'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : project.status === 'completed'
+                          ? 'border-blue-200 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 bg-slate-50 text-slate-600'
+                      }`}
+                    >
+                      {project.status}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
+                    {project.client && (
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                        {project.client.name}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      Due {formatDate(project.deadline)}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                      {project.rolesNeeded.reduce((s: number, r: any) => s + r.quantity, 0)} positions
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Right Side — Action Buttons */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDetails(true)}
+                  className="text-slate-500 hover:text-blue-600 font-medium h-9 px-3 text-xs"
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1.5" />
+                  Details
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleRefreshAll}
                   disabled={isLoading || isLoadingCandidates}
-                  className="text-slate-500 hover:text-blue-600 font-medium h-10 px-4"
+                  className="text-slate-500 hover:text-blue-600 font-medium h-9 w-9 p-0"
+                  title="Refresh all data"
                 >
                   <RefreshCcw
-                    className={`h-4 w-4 mr-2 ${
+                    className={`h-3.5 w-3.5 ${
                       isLoading || isLoadingCandidates ? "animate-spin" : ""
                     }`}
                   />
-                  Reload
                 </Button>
                 {canManageProjects && !isProcessingExecutive && (
                   <>
-                    {/* Edit Button — Clean & Professional */}
+                    <div className="w-px h-6 bg-slate-200" />
                     <Button
                       variant="outline"
-                      size="lg"
+                      size="sm"
                       onClick={() => navigate(`/projects/${project.id}/edit`)}
-                      className="font-semibold border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-md transition-all duration-200"
+                      className="font-semibold h-9 text-xs border-slate-200 hover:border-blue-400 hover:text-blue-600 transition-colors"
                     >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Project
+                      <Edit className="h-3.5 w-3.5 mr-1.5" />
+                      Edit
                     </Button>
-
-                    {/* Delete Button — Strong but Clean */}
                     <Button
                       variant="destructive"
-                      size="lg"
+                      size="sm"
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                      className="font-semibold h-9 text-xs shadow-sm hover:shadow-md transition-all"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                       Delete
                     </Button>
                   </>
                 )}
               </div>
             </div>
-
-            {/* Clean Bottom Accent Line */}
-            <div className="mt-6 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-70"></div>
           </CardContent>
         </Card>
 
@@ -848,252 +915,199 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Right Column: Project Info + Supporting Cards */}
-          <div className="space-y-4 text-sm lg:space-y-5 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2 px-3 pb-6 lg:px-0">
-            {/* Project Overview Card */}
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-              <CardContent className="p-3 lg:p-4 space-y-4">
-                {/* 4 Stats — Fully Responsive & No Cutoff */}
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-                  {/* Positions */}
-                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-lg border border-blue-200/30">
-                    <Briefcase className="h-5 w-5 text-blue-600 mb-1" />
-                    <div className="text-xl lg:text-2xl font-bold text-blue-700">
-                      {project.rolesNeeded.reduce((s, r) => s + r.quantity, 0)}
-                    </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5">
-                      Positions
-                    </div>
-                  </div>
-
-                  {/* Nominated — NOW NEVER CUTS OFF */}
-                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-emerald-500/5 to-teal-600/10 rounded-lg border border-emerald-200/30">
-                    <UserCheck className="h-5 w-5 text-emerald-600 mb-1" />
-                    <div className="text-xl lg:text-2xl font-bold text-emerald-700">
-                      {pagination?.total || 0}
-                    </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
-                      <span className="hidden lg:inline">Nominated</span>
-                      <span className="lg:hidden">Noms</span>
-                    </div>
-                  </div>
-
-                  {/* Roles */}
-                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-purple-500/5 to-pink-600/10 rounded-lg border border-purple-200/30">
-                    <Layers className="h-5 w-5 text-purple-600 mb-1" />
-                    <div className="text-xl lg:text-2xl font-bold text-purple-700">
-                      {project.rolesNeeded.length}
-                    </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5">
-                      Roles
-                    </div>
-                  </div>
-
-                  {/* Days Left */}
-                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-orange-500/5 to-red-600/10 rounded-lg border border-orange-200/30">
-                    <Calendar className="h-5 w-5 text-orange-600 mb-1" />
-                    <div className="text-xl lg:text-2xl font-bold text-orange-700">
-                      {Math.max(
-                        0,
-                        Math.ceil(
-                          (new Date(project.deadline).getTime() - Date.now()) /
-                            86400000
-                        )
-                      )}
-                    </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
-                      <span className="hidden sm:inline">Days Left</span>
-                      <span className="sm:hidden">Days</span>
-                    </div>
-                  </div>
+          <div className="space-y-4 text-sm lg:space-y-4 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2 px-3 pb-6 lg:px-0 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+            {/* Quick Stats Strip */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                {
+                  icon: Briefcase,
+                  value: project.rolesNeeded.reduce((s: number, r: any) => s + r.quantity, 0),
+                  label: "Positions",
+                  color: "text-blue-600",
+                  bg: "bg-blue-50",
+                  ring: "ring-blue-100",
+                },
+                {
+                  icon: UserCheck,
+                  value: pagination?.total || 0,
+                  label: "Nominated",
+                  color: "text-emerald-600",
+                  bg: "bg-emerald-50",
+                  ring: "ring-emerald-100",
+                },
+                {
+                  icon: Layers,
+                  value: project.rolesNeeded.length,
+                  label: "Roles",
+                  color: "text-purple-600",
+                  bg: "bg-purple-50",
+                  ring: "ring-purple-100",
+                },
+                {
+                  icon: Clock,
+                  value: Math.max(0, Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000)),
+                  label: "Days Left",
+                  color: "text-orange-600",
+                  bg: "bg-orange-50",
+                  ring: "ring-orange-100",
+                },
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  className={`flex flex-col items-center p-2.5 ${stat.bg} rounded-xl ring-1 ${stat.ring} transition-shadow hover:shadow-sm`}
+                >
+                  <stat.icon className={`h-4 w-4 ${stat.color} mb-1`} />
+                  <span className={`text-lg font-extrabold ${stat.color} tabular-nums leading-none`}>
+                    {stat.value}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none truncate">
+                    {stat.label}
+                  </span>
                 </div>
+              ))}
+            </div>
 
-                {/* Compact Details List — No overflow */}
-                <div className="space-y-1.5 border-t border-slate-200 pt-3">
+            {/* Project Overview Card */}
+            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+              <CardContent className="p-0">
+
+                {/* Grouped Details Sections */}
+                {/* Schedule & Location */}
+                <div className="px-3.5 py-2.5 space-y-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Schedule & Location</p>
                   {[
-                    {
-                      icon: Calendar,
-                      color: "text-blue-600",
-                      label: "Deadline",
-                      value: formatDateTime(project.deadline),
-                    },
-                    {
-                      icon: Clock,
-                      color: "text-green-600",
-                      label: "Created",
-                      value: formatDate(project.createdAt),
-                    },
-                    {
-                      icon: MapPin,
-                      color: "text-purple-600",
-                      label: "Country",
-                      value: (
-                        <ProjectCountryCell
-                          countryCode={project.countryCode}
-                          countryName={project.country?.name}
-                          size="sm"
-                          fallbackText="—"
-                        />
-                      ),
-                    },
-                    {
-                      icon: UserCheck,
-                      color: "text-emerald-600",
-                      label: "Status",
-                      value: (
-                        <Badge variant="outline" className="text-xs h-5">
-                          {project.status}
-                        </Badge>
-                      ),
-                    },
-                    {
-                      icon: User,
-                      color: "text-indigo-600",
-                      label: "Creator",
-                      value: project.creator.name,
-                    },
-                    {
-                      icon: Building2,
-                      color: "text-orange-600",
-                      label: "Type",
-                      value:
-                        project.projectType === "ministry" ? "Gov" : "Private",
-                    },
-                    {
-                      icon: FileText,
-                      color: "text-cyan-600",
-                      label: "Resume",
-                      value: projectResumeEditable ? "Edit" : "Fixed",
-                    },
-                    {
-                      icon: User,
-                      color: "text-pink-600",
-                      label: "Grooming",
-                      value:
-                        projectGroomingRequirement?.[0]?.toUpperCase() || "—",
-                    },
-                    {
-                      icon: Target,
-                      color: "text-red-600",
-                      label: "Contact",
-                      value: projectHideContactInfo ? "Hidden" : "Visible",
-                    },
-                    {
-                      icon: Activity,
-                      color: "text-orange-600",
-                      label: "License Exam",
-                      value: project.licensingExam?.toUpperCase() || "None",
-                    },
-                    {
-                      icon: ShieldCheck,
-                      color: "text-blue-600",
-                      label: "Data Flow",
-                      value: project.dataFlow ? "Required" : "Not Required",
-                    },
-                    {
-                      icon: ClipboardCheck,
-                      color: "text-emerald-600",
-                      label: "Eligibility",
-                      value: project.eligibility ? "Required" : "Not Required",
-                    },
+                    { icon: Calendar, color: "text-blue-500", label: "Deadline", value: formatDateTime(project.deadline) },
+                    { icon: Clock, color: "text-slate-500", label: "Created", value: formatDate(project.createdAt) },
+                    { icon: MapPin, color: "text-purple-500", label: "Country", value: (<ProjectCountryCell countryCode={project.countryCode} countryName={project.country?.name} size="sm" fallbackText="—" />) },
                   ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between gap-2 py-1.5 hover:bg-slate-50 rounded px-1"
-                    >
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <item.icon
-                          className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`}
-                        />
-                        <span className="text-xs font-medium text-slate-600 truncate">
-                          {item.label}
-                        </span>
+                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
+                        <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
                       </div>
-                      <div className="text-xs font-semibold text-slate-900 text-right truncate max-w-[45%]">
-                        {item.value}
-                      </div>
+                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Description — Safe & Compact */}
+                <div className="mx-3.5 border-t border-slate-100" />
+
+                {/* Project Config */}
+                <div className="px-3.5 py-2.5 space-y-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Configuration</p>
+                  {[
+                    { icon: User, color: "text-indigo-500", label: "Creator", value: project.creator.name },
+                    { icon: Building2, color: "text-orange-500", label: "Type", value: project.projectType === "ministry" ? "Government" : "Private" },
+                    { icon: FileText, color: "text-cyan-500", label: "Resume", value: projectResumeEditable ? "Editable" : "Fixed" },
+                    { icon: User, color: "text-pink-500", label: "Grooming", value: projectGroomingRequirement?.[0]?.toUpperCase() || "—" },
+                    { icon: Target, color: "text-red-500", label: "Contact", value: projectHideContactInfo ? "Hidden" : "Visible" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
+                        <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mx-3.5 border-t border-slate-100" />
+
+                {/* Compliance */}
+                <div className="px-3.5 py-2.5 space-y-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Compliance</p>
+                  {[
+                    { icon: Activity, color: "text-orange-500", label: "License Exam", value: project.licensingExam?.toUpperCase() || "None" },
+                    { icon: ShieldCheck, color: "text-blue-500", label: "Data Flow", value: project.dataFlow ? "Required" : "Not Required" },
+                    { icon: ClipboardCheck, color: "text-emerald-500", label: "Eligibility", value: project.eligibility ? "Required" : "Not Required" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
+                        <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Description */}
                 {project.description && (
-                  <p className="text-xs text-slate-600 leading-snug bg-slate-50 p-2.5 rounded-lg border border-slate-200 italic mt-3 line-clamp-3">
-                    {project.description}
-                  </p>
+                  <div className="px-3.5 pb-3">
+                    <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 italic line-clamp-3">
+                      {project.description}
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Other Cards — Same Compact & Responsive Style */}
+            {/* Documents Card */}
             {documentRequirements.length > 0 && (
-              <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-                <CardHeader className="pb-2 px-3">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-orange-600" /> Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-3 pb-3 space-y-2">
+              <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
+                  <div className="h-6 w-6 rounded-md bg-orange-100 flex items-center justify-center">
+                    <FileText className="h-3.5 w-3.5 text-orange-600" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">Documents</span>
+                  <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md ml-auto">
+                    {documentRequirements.length}
+                  </span>
+                </div>
+                <div className="px-3 pb-3 space-y-1.5">
                   {documentRequirements.map((req: any, i: number) => (
                     <div
                       key={i}
-                      className="p-2.5 bg-orange-50/30 rounded-lg border border-orange-100/50 space-y-1.5"
+                      className="flex items-center gap-2 p-2 bg-slate-50/80 rounded-lg border border-slate-100/80 hover:bg-slate-50 transition-colors"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                          <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">
-                            {req.docType
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                          </span>
-                        </div>
-                        {req.mandatory && (
-                          <Badge className="h-4 text-[9px] bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100 px-1.5 font-bold">
-                            REQUIRED
-                          </Badge>
-                        )}
-                      </div>
-                      {req.description && (
-                        <div className="flex items-start gap-1.5 pl-3">
-                          <AlertCircle className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                          <p className="text-[11px] text-slate-600 leading-relaxed italic">
-                            {req.description}
-                          </p>
-                        </div>
+                      <div className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${req.mandatory ? 'bg-orange-400' : 'bg-slate-300'}`} />
+                      <span className="text-[11px] font-semibold text-slate-700 flex-1 truncate">
+                        {req.docType
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      </span>
+                      {req.mandatory && (
+                        <span className="text-[9px] font-bold text-orange-600 bg-orange-100/80 px-1.5 py-0.5 rounded flex-shrink-0">
+                          REQ
+                        </span>
                       )}
                     </div>
                   ))}
-                </CardContent>
+                </div>
               </Card>
             )}
 
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-              <CardHeader className="pb-2 px-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Target className="h-4 w-4 text-purple-600" /> Roles (
-                  {project.rolesNeeded.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 px-3 pb-3">
+            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
+                <div className="h-6 w-6 rounded-md bg-purple-100 flex items-center justify-center">
+                  <Target className="h-3.5 w-3.5 text-purple-600" />
+                </div>
+                <span className="text-xs font-bold text-slate-800">Roles</span>
+                <span className="text-[10px] font-semibold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-md ml-auto">
+                  {project.rolesNeeded.length}
+                </span>
+              </div>
+              <div className="space-y-2 px-3 pb-3">
                 {project.rolesNeeded.map((role) => (
                   <div
                     key={role.id}
-                    className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2"
+                    className="p-2.5 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-150 space-y-2 hover:shadow-sm transition-shadow"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-slate-900 text-sm truncate">
+                        <span className="font-bold text-slate-800 text-[13px] truncate leading-tight">
                           {role.designation}
                         </span>
                         {role.roleCatalog?.roleDepartment && (
-                          <span className="text-[10px] text-slate-500 font-medium truncate">
+                          <span className="text-[10px] text-slate-400 font-medium truncate">
                             {role.roleCatalog.roleDepartment.label}
                           </span>
                         )}
                       </div>
-                      <Badge className="text-[10px] h-5 bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0">
+                      <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md flex-shrink-0">
                         {role.quantity} pos
-                      </Badge>
+                      </span>
                     </div>
 
                     {/* Experience & Age & Gender */}
@@ -1197,27 +1211,34 @@ export default function ProjectDetailPage() {
                     )}
                   </div>
                 ))}
-              </CardContent>
+              </div>
             </Card>
 
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-              <CardHeader className="pb-2 px-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-teal-600" /> Client
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-3 pb-3">
-                <div className="p-2.5 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200">
-                  <div className="font-semibold text-slate-900 text-sm truncate">
-                    {project.client?.name || "Not assigned"}
-                  </div>
-                  {project.client && (
-                    <Badge className="text-xs mt-1 bg-teal-700 text-white">
-                      {project.client.type}
-                    </Badge>
-                  )}
+            {/* Client Card */}
+            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
+                <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
+                  <Building2 className="h-3.5 w-3.5 text-teal-600" />
                 </div>
-              </CardContent>
+                <span className="text-xs font-bold text-slate-800">Client</span>
+              </div>
+              <div className="px-3 pb-3">
+                <div className="flex items-center gap-3 p-2.5 bg-gradient-to-br from-teal-50/80 to-cyan-50/40 rounded-lg border border-teal-100">
+                  <div className="h-8 w-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-4 w-4 text-teal-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-800 text-xs truncate">
+                      {project.client?.name || "Not assigned"}
+                    </div>
+                    {project.client && (
+                      <span className="text-[10px] text-teal-600 font-medium">
+                        {project.client.type}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
         </div>

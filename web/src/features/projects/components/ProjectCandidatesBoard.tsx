@@ -11,11 +11,14 @@ import {
 } from "@/components/ui/select";
 import {
   Search,
-  Briefcase,
   Trophy,
   ShieldCheck,
   Users2,
   Send,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+  Filter,
 } from "lucide-react";
 import {
   useGetEligibleCandidatesQuery,
@@ -64,14 +67,83 @@ interface ProjectCandidatesBoardProps {
   onSendForInterview?: (candidateId: string, candidateName: string) => void;
   onSendForScreening?: (candidateId: string, candidateName: string) => void;
   requiredScreening?: boolean;
-  hideContactInfo?: boolean;
+  hideContactInfo?: boolean; // eslint-disable-line @typescript-eslint/no-unused-vars -- passed through to CandidateCard
 }
 
-const COLUMN_MAX_HEIGHT = "max-h-[calc(100vh-20rem)]";
+const COLUMN_MAX_HEIGHT = "max-h-[calc(100vh-18rem)]";
+
+// Skeleton card component for loading states
+const SkeletonCard = () => (
+  <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-white p-3 space-y-3">
+    <div className="flex items-center gap-3">
+      <div className="h-10 w-10 rounded-full bg-slate-100 animate-pulse" />
+      <div className="flex-1 space-y-2">
+        <div className="h-3.5 w-28 bg-slate-100 rounded-md animate-pulse" />
+        <div className="h-2.5 w-20 bg-slate-50 rounded-md animate-pulse" />
+      </div>
+      <div className="h-5 w-14 bg-slate-100 rounded-full animate-pulse" />
+    </div>
+    <div className="flex gap-2">
+      <div className="h-5 w-16 bg-slate-50 rounded-full animate-pulse" />
+      <div className="h-5 w-12 bg-slate-50 rounded-full animate-pulse" />
+    </div>
+    {/* shimmer overlay */}
+    <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+  </div>
+);
+
+// Empty state component
+const EmptyColumnState = ({ message, icon: Icon }: { message: string; icon: typeof Inbox }) => (
+  <div className="flex flex-col items-center justify-center py-12 px-4">
+    <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
+      <Icon className="h-6 w-6 text-slate-300" />
+    </div>
+    <p className="text-sm text-slate-400 font-medium text-center">{message}</p>
+    <p className="text-xs text-slate-300 mt-1">Try adjusting your filters</p>
+  </div>
+);
+
+// Pagination component
+const PaginationControls = ({ page, totalPages, total, pageSize, onPageChange }: {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) => (
+  <div className="flex items-center justify-between px-1 py-2 mt-1">
+    <span className="text-[11px] text-slate-400 tabular-nums">
+      {Math.min((page - 1) * pageSize + 1, total)}–{Math.min(page * pageSize, total)} of {total}
+    </span>
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onPageChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="h-7 w-7 p-0 rounded-lg hover:bg-slate-100 disabled:opacity-30"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+      </Button>
+      <span className="text-[11px] text-slate-500 font-medium tabular-nums min-w-[2rem] text-center">
+        {page}/{totalPages}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        disabled={page === totalPages}
+        className="h-7 w-7 p-0 rounded-lg hover:bg-slate-100 disabled:opacity-30"
+      >
+        <ChevronRight className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  </div>
+);
 
 const sanitizeCandidate = (
   candidate: CandidateRecord,
-  hideContactInfo?: boolean
+  _hideContactInfo?: boolean
 ): CandidateRecord =>
   // we used to strip contact fields here when hideContactInfo was true,
   // but the tooltip relies on them. instead we simply return the record and
@@ -371,23 +443,16 @@ const ProjectCandidatesBoard = ({
   const renderNominatedColumn = () => {
     if (isLoadingNominated) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3].map((index) => (
-            <div
-              key={`nominated-skeleton-${index}`}
-              className="h-16 bg-slate-200 rounded-xl animate-pulse"
-            />
+            <SkeletonCard key={`nominated-skeleton-${index}`} />
           ))}
         </div>
       );
     }
 
     if (sanitizedNominated.length === 0) {
-      return (
-        <div className="text-center py-8 text-slate-500 text-sm">
-          No nominated candidates
-        </div>
-      );
+      return <EmptyColumnState message="No nominated candidates" icon={Trophy} />;
     }
 
     const totalNominated = sanitizedNominated.length;
@@ -502,20 +567,13 @@ const ProjectCandidatesBoard = ({
         })}
 
         {nominatedTotalPages > 1 && (
-          <div className="flex items-center justify-between px-3 py-2">
-            <div className="text-xs text-slate-500">
-              Showing {Math.min((nominatedPage - 1) * PAGE_SIZE + 1, totalNominated)} - {Math.min(nominatedPage * PAGE_SIZE, totalNominated)} of {totalNominated}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setNominatedPage((p) => Math.max(1, p - 1))} disabled={nominatedPage === 1}>
-                Prev
-              </Button>
-              <div className="text-sm">{nominatedPage} / {nominatedTotalPages}</div>
-              <Button variant="outline" size="sm" onClick={() => setNominatedPage((p) => Math.min(nominatedTotalPages, p + 1))} disabled={nominatedPage === nominatedTotalPages}>
-                Next
-              </Button>
-            </div>
-          </div>
+          <PaginationControls
+            page={nominatedPage}
+            totalPages={nominatedTotalPages}
+            total={totalNominated}
+            pageSize={PAGE_SIZE}
+            onPageChange={setNominatedPage}
+          />
         )}
       </div>
     );
@@ -524,23 +582,16 @@ const ProjectCandidatesBoard = ({
   const renderEligibleColumn = () => {
     if (isLoadingEligible) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3].map((index) => (
-            <div
-              key={`eligible-skeleton-${index}`}
-              className="h-16 bg-slate-200 rounded-xl animate-pulse"
-            />
+            <SkeletonCard key={`eligible-skeleton-${index}`} />
           ))}
         </div>
       );
     }
 
     if (filteredEligible.length === 0) {
-      return (
-        <div className="text-center py-8 text-slate-500 text-sm">
-          No eligible candidates
-        </div>
-      );
+      return <EmptyColumnState message="No eligible candidates" icon={ShieldCheck} />;
     }
 
     const totalEligible = filteredEligible.length;
@@ -618,20 +669,13 @@ const ProjectCandidatesBoard = ({
         })}
 
         {eligibleTotalPages > 1 && (
-          <div className="flex items-center justify-between px-3 py-2">
-            <div className="text-xs text-slate-500">
-              Showing {Math.min((eligiblePage - 1) * PAGE_SIZE + 1, totalEligible)} - {Math.min(eligiblePage * PAGE_SIZE, totalEligible)} of {totalEligible}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setEligiblePage((p) => Math.max(1, p - 1))} disabled={eligiblePage === 1}>
-                Prev
-              </Button>
-              <div className="text-sm">{eligiblePage} / {eligibleTotalPages}</div>
-              <Button variant="outline" size="sm" onClick={() => setEligiblePage((p) => Math.min(eligibleTotalPages, p + 1))} disabled={eligiblePage === eligibleTotalPages}>
-                Next
-              </Button>
-            </div>
-          </div>
+          <PaginationControls
+            page={eligiblePage}
+            totalPages={eligibleTotalPages}
+            total={totalEligible}
+            pageSize={PAGE_SIZE}
+            onPageChange={setEligiblePage}
+          />
         )}
       </div>
     );
@@ -645,23 +689,16 @@ const ProjectCandidatesBoard = ({
 
     if (isLoadingAll) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3].map((index) => (
-            <div
-              key={`all-skeleton-${index}`}
-              className="h-16 bg-slate-200 rounded-xl animate-pulse"
-            />
+            <SkeletonCard key={`all-skeleton-${index}`} />
           ))}
         </div>
       );
     }
 
     if (filteredAllCandidates.length === 0) {
-      return (
-        <div className="text-center py-8 text-slate-500 text-sm">
-          No candidates available
-        </div>
-      );
+      return <EmptyColumnState message="No candidates available" icon={Users2} />;
     }
 
     const totalAll = filteredAllCandidates.length;
@@ -742,20 +779,13 @@ const ProjectCandidatesBoard = ({
         })}
 
         {allTotalPages > 1 && (
-          <div className="flex items-center justify-between px-3 py-2">
-            <div className="text-xs text-slate-500">
-              Showing {Math.min((allPage - 1) * PAGE_SIZE + 1, totalAll)} - {Math.min(allPage * PAGE_SIZE, totalAll)} of {totalAll}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setAllPage((p) => Math.max(1, p - 1))} disabled={allPage === 1}>
-                Prev
-              </Button>
-              <div className="text-sm">{allPage} / {allTotalPages}</div>
-              <Button variant="outline" size="sm" onClick={() => setAllPage((p) => Math.min(allTotalPages, p + 1))} disabled={allPage === allTotalPages}>
-                Next
-              </Button>
-            </div>
-          </div>
+          <PaginationControls
+            page={allPage}
+            totalPages={allTotalPages}
+            total={totalAll}
+            pageSize={PAGE_SIZE}
+            onPageChange={setAllPage}
+          />
         )}
       </div>
     );
@@ -811,23 +841,31 @@ const ProjectCandidatesBoard = ({
     },
   ];
 
+  // Column-specific gradient configs
+  const columnGradients: Record<CandidateColumnType, { bg: string; border: string; countBg: string; countText: string }> = {
+    nominated: { bg: "bg-gradient-to-br from-amber-50/80 to-orange-50/40", border: "border-amber-100/60", countBg: "bg-amber-100", countText: "text-amber-700" },
+    eligible: { bg: "bg-gradient-to-br from-emerald-50/80 to-green-50/40", border: "border-emerald-100/60", countBg: "bg-emerald-100", countText: "text-emerald-700" },
+    all: { bg: "bg-gradient-to-br from-sky-50/80 to-blue-50/40", border: "border-sky-100/60", countBg: "bg-sky-100", countText: "text-sky-700" },
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+    <div className="space-y-5">
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-center bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-slate-100 shadow-sm">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
           <Input
-            placeholder="Search candidates..."
+            placeholder="Search by name, email, phone, qualification..."
             value={searchTerm}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="pl-10"
+            className="pl-10 h-10 bg-white border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus-visible:ring-blue-500/20 focus-visible:border-blue-300 transition-colors"
             aria-label="Search all candidates"
           />
         </div>
         <div className="flex items-center gap-2">
-          <Briefcase className="h-4 w-4 text-slate-400" aria-hidden="true" />
+          <Filter className="h-4 w-4 text-slate-400" aria-hidden="true" />
           <Select value={selectedRole} onValueChange={onRoleChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px] h-10 bg-white border-slate-200 rounded-lg text-sm">
               <SelectValue placeholder="All Roles" />
             </SelectTrigger>
             <SelectContent>
@@ -842,52 +880,56 @@ const ProjectCandidatesBoard = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {columns.map((column) => (
-          <Card
-            key={column.id}
-            className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col"
-            aria-labelledby={`column-${column.id}-title`}
-          >
-            <CardHeader className="!px-3 !py-1.5 !pb-1.5 border-b border-slate-200">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div
-                    className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 ${column.iconClasses}`}
-                    aria-hidden="true"
-                  >
-                    <column.icon className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <CardTitle
-                      id={`column-${column.id}-title`}
-                      className="text-sm font-semibold text-slate-900 truncate leading-tight"
-                    >
-                      {column.title}
-                    </CardTitle>
-                    <p className="text-[10px] text-slate-500 truncate leading-tight mt-0.5">
-                      {column.subtitle}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className="text-xs font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full flex-shrink-0"
-                  aria-live="polite"
-                  aria-atomic="true"
-                >
-                  {column.count}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent
-              className={`flex-1 px-2 overflow-y-auto ${COLUMN_MAX_HEIGHT} space-y-3`}
-              role="list"
-              aria-label={column.ariaLabel}
+      {/* Board Columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {columns.map((column) => {
+          const gradient = columnGradients[column.id];
+          return (
+            <Card
+              key={column.id}
+              className={`border ${gradient.border} shadow-sm hover:shadow-md transition-shadow duration-300 ${gradient.bg} backdrop-blur-sm rounded-2xl flex flex-col overflow-hidden`}
+              aria-labelledby={`column-${column.id}-title`}
             >
-              {column.content}
-            </CardContent>
-          </Card>
-        ))}
+              <CardHeader className="!px-4 !py-3 !pb-2.5 border-b border-slate-100/80">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${column.iconClasses} shadow-sm`}
+                      aria-hidden="true"
+                    >
+                      <column.icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <CardTitle
+                        id={`column-${column.id}-title`}
+                        className="text-sm font-bold text-slate-800 truncate leading-tight"
+                      >
+                        {column.title}
+                      </CardTitle>
+                      <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">
+                        {column.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-xs font-bold ${gradient.countText} ${gradient.countBg} px-2.5 py-1 rounded-lg flex-shrink-0 tabular-nums shadow-sm`}
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
+                    {column.count}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent
+                className={`flex-1 px-3 py-2 overflow-y-auto ${COLUMN_MAX_HEIGHT} space-y-3 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent`}
+                role="list"
+                aria-label={column.ariaLabel}
+              >
+                {column.content}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

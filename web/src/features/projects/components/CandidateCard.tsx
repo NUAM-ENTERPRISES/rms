@@ -643,7 +643,9 @@ const CandidateCard = memo(function CandidateCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200 bg-white/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-within:border-blue-300 focus-within:shadow-md py-2",
+        "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-200/80 hover:shadow-lg hover:shadow-blue-100/30 focus-within:border-blue-300 focus-within:shadow-lg py-0",
+        isAlreadyInProject && "border-l-[3px] border-l-emerald-400",
+        isNotEligible && !isAlreadyInProject && "border-l-[3px] border-l-red-300 opacity-75",
         className
       )}
       onClick={() => onView?.(candidateId)}
@@ -657,20 +659,15 @@ const CandidateCard = memo(function CandidateCard({
       tabIndex={0}
       aria-label={`View candidate ${fullName}`}
     >
-      <div
-        className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500"
-        aria-hidden="true"
-      />
-      
       {/* Detailed Info Tooltip - Hover on entire card */}
       <CandidateDetailTooltip candidate={candidate} />
 
-      <CardContent className="pl-3 pr-3 py-0 space-y-2">
+      <CardContent className="px-3.5 py-3 space-y-2.5">
         {/* Header row */}
         <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 border border-white shadow-sm flex-shrink-0">
+          <Avatar className="h-10 w-10 border-2 border-white shadow-sm flex-shrink-0 ring-2 ring-slate-100">
             <AvatarImage src={candidate.profileImage} alt={fullName} />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-semibold">
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold">
               {getInitials(candidate.firstName, candidate.lastName)}
             </AvatarFallback>
           </Avatar>
@@ -678,18 +675,24 @@ const CandidateCard = memo(function CandidateCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
+                <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
                   {fullName || "Unnamed Candidate"}
                 </p>
+                {/* Show current role / employer as subtitle */}
+                {(candidate.currentRole || candidate.currentEmployer) && (
+                  <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">
+                    {candidate.currentRole}{candidate.currentRole && candidate.currentEmployer ? " at " : ""}{candidate.currentEmployer}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {isAlreadyInProject && (
                   <Badge
                     variant="outline"
-                    className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-2 py-0 h-5 rounded-full flex items-center gap-1"
+                    className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-2 py-0 h-5 rounded-md flex items-center gap-1 font-medium"
                   >
                     <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-                    In Project
+                    Assigned
                   </Badge>
                 )}
                 {filteredActions && filteredActions.length > 0 && (
@@ -768,11 +771,11 @@ const CandidateCard = memo(function CandidateCard({
           </div>
         </div>
 
-        {/* Status row */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Status & Match Score row */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <Badge
             variant="outline"
-            className={`${statusConfig.color} border text-[10px] px-2 py-0.5 rounded-full`}
+            className={`${statusConfig.color} border text-[10px] px-2 py-0.5 rounded-md font-medium`}
           >
             {statusConfig.label}
           </Badge>
@@ -781,7 +784,7 @@ const CandidateCard = memo(function CandidateCard({
           {showCandidateStatusBadge && candidateStatusConfig && (
             <Badge
               variant="outline"
-              className={`${candidateStatusConfig.color} border text-[10px] px-2 py-0.5 rounded-full`}
+              className={`${candidateStatusConfig.color} border text-[10px] px-2 py-0.5 rounded-md font-medium`}
               title={`Candidate status: ${candidateStatusConfig.label}`}
             >
               {candidateStatusConfig.label}
@@ -795,12 +798,12 @@ const CandidateCard = memo(function CandidateCard({
                   variant="outline"
                   className={`${getMatchScoreColor(
                     displayMatchScore
-                  )} border text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1`}
+                  )} border text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 font-medium`}
                 >
                   {anyRoleEligible && (
-                    <Trophy className="h-3 w-3 text-amber-500 animate-pulse" />
+                    <Trophy className="h-3 w-3 text-amber-500" />
                   )}
-                  <span className="text-[11px] font-semibold">{displayMatchScore}%</span>
+                  <span className="text-[11px] font-bold tabular-nums">{displayMatchScore}%</span>
                 </Badge>
               </TooltipTrigger>
 
@@ -1006,12 +1009,12 @@ const CandidateCard = memo(function CandidateCard({
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "flex items-center justify-center w-6 h-6 rounded-full cursor-help animate-pulse",
-                    isNotEligible ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+                    "flex items-center justify-center w-5 h-5 rounded-md cursor-help transition-colors",
+                    isNotEligible ? "bg-red-100 text-red-500" : "bg-amber-100 text-amber-500"
                   )}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <AlertCircle className="h-4 w-4" aria-hidden />
+                  <AlertCircle className="h-3.5 w-3.5" aria-hidden />
                 </div>
               </TooltipTrigger>
               <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs p-3 rounded-xl">
@@ -1062,34 +1065,34 @@ const CandidateCard = memo(function CandidateCard({
         </div>
 
         {/* Detail pills */}
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
           {!hideContactInfo && candidate.email && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
               <Mail className="h-3 w-3 text-slate-400" aria-hidden="true" />
-              <span className="truncate max-w-[140px]">{candidate.email}</span>
+              <span className="truncate max-w-[130px]">{candidate.email}</span>
             </span>
           )}
           {!hideContactInfo && contactValue && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
               <Phone className="h-3 w-3 text-slate-400" aria-hidden="true" />
-              <span className="truncate max-w-[120px]">{contactValue}</span>
+              <span className="truncate max-w-[110px]">{contactValue}</span>
             </span>
           )}
           {candidate.currentEmployer && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
               <Building className="h-3 w-3 text-slate-400" aria-hidden="true" />
-              <span className="truncate max-w-[140px]">
+              <span className="truncate max-w-[130px]">
                 {candidate.currentEmployer}
               </span>
             </span>
           )}
           {candidate.expectedSalary && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
               <DollarSign
                 className="h-3 w-3 text-slate-400"
                 aria-hidden="true"
               />
-              <span className="truncate max-w-[120px]">
+              <span className="truncate max-w-[110px]">
                 {formatSalary(candidate.expectedSalary)}
               </span>
             </span>
@@ -1098,11 +1101,11 @@ const CandidateCard = memo(function CandidateCard({
 
         {/* Show matching qualifications when user is searching for a qualification */}
         {Array.isArray(matchingQualifications) && matchingQualifications.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px]">
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
             {matchingQualifications.map((mq, idx) => (
-              <span key={idx} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
-                <GraduationCap className="h-3 w-3 text-slate-400" aria-hidden />
-                <span className="truncate max-w-[160px]">{mq.shortName || mq.name || mq.field || mq.university}</span>
+              <span key={idx} className="inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 border border-blue-100 font-medium">
+                <GraduationCap className="h-3 w-3 text-blue-400" aria-hidden />
+                <span className="truncate max-w-[150px]">{mq.shortName || mq.name || mq.field || mq.university}</span>
               </span>
             ))}
           </div>
@@ -1110,7 +1113,7 @@ const CandidateCard = memo(function CandidateCard({
 
         {/* Unified footer: left = contact buttons, right = action buttons (assign / verify / interview) */}
         {(showContactButtons || (showAssignButton && onAssignToProject) || (isRecruiter && showVerifyButton && onVerify) || (showInterviewButton && onSendForInterview)) && (
-          <div className="flex items-center justify-between border-t border-slate-100 pt-2">
+          <div className="flex items-center justify-between border-t border-slate-100/80 pt-2.5 mt-1">
             <div className="flex items-center gap-2">
               {showContactButtons && (
                 <>
@@ -1119,7 +1122,7 @@ const CandidateCard = memo(function CandidateCard({
                     variant="ghost"
                     size="sm"
                     data-testid="candidate-whatsapp-btn"
-                    className="h-7 w-9 p-0 bg-green-100 text-green-900 hover:bg-green-200 focus:ring-2 focus:ring-green-200"
+                    className="h-8 w-8 p-0 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-lg transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;
@@ -1131,7 +1134,7 @@ const CandidateCard = memo(function CandidateCard({
                     }}
                   >
                     <span className="sr-only">WhatsApp</span>
-                    <FaWhatsapp className="h-4 w-4 text-green-900" aria-hidden="true" />
+                    <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
                   </Button>
 
                   {/* Call button — uses tel: link */}
@@ -1139,7 +1142,7 @@ const CandidateCard = memo(function CandidateCard({
                     variant="ghost"
                     size="sm"
                     data-testid="candidate-call-btn"
-                    className="h-7 w-9 p-0 border border-slate-100"
+                    className="h-8 w-8 p-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-lg border border-slate-100 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;
@@ -1164,14 +1167,14 @@ const CandidateCard = memo(function CandidateCard({
                         variant="default"
                         size="sm"
                         disabled={isNotEligible}
-                        className="h-7 text-[11px] bg-green-600 hover:bg-green-700 px-2.5"
+                        className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-3 rounded-lg font-medium shadow-sm shadow-emerald-200 transition-all"
                         onClick={(event) => {
                           event.stopPropagation();
                           onAssignToProject(candidateId);
                         }}
                       >
-                        <UserPlus className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-                        Assign to Project
+                        <UserPlus className="h-3 w-3 mr-1.5" aria-hidden="true" />
+                        Assign
                       </Button>
                     </span>
                   </TooltipTrigger>
@@ -1207,14 +1210,14 @@ const CandidateCard = memo(function CandidateCard({
                 <Button
                   variant="default"
                   size="sm"
-                  className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-2.5"
+                  className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 px-3 rounded-lg font-medium shadow-sm shadow-blue-200 transition-all"
                   onClick={(event) => {
                     event.stopPropagation();
                     onVerify(candidateId);
                   }}
                 >
-                  <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-                  Send for Verification
+                  <Send className="h-3 w-3 mr-1.5" aria-hidden="true" />
+                  Verify
                 </Button>
               )}
 
@@ -1222,14 +1225,14 @@ const CandidateCard = memo(function CandidateCard({
                 <Button
                   variant="default"
                   size="sm"
-                  className="ml-2 h-7 text-[11px] bg-purple-600 hover:bg-purple-700 px-2.5"
+                  className="h-7 text-[11px] bg-purple-600 hover:bg-purple-700 px-3 rounded-lg font-medium shadow-sm shadow-purple-200 transition-all"
                   onClick={(event) => {
                     event.stopPropagation();
                     onSendForInterview(candidateId);
                   }}
                 >
-                  <Send className="h-2.5 w-2.5 mr-1" aria-hidden="true" />
-                  Send for Interview
+                  <Send className="h-3 w-3 mr-1.5" aria-hidden="true" />
+                  Interview
                 </Button>
               )}
             </div>
