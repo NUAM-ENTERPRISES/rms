@@ -313,6 +313,34 @@ const ProjectCandidatesBoard = ({
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
+
+  const handleDragStart = (e: React.DragEvent, candidateId: string) => {
+    e.dataTransfer.setData("candidateId", candidateId);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDrop = (e: React.DragEvent, columnId: CandidateColumnType) => {
+    e.preventDefault();
+    const candidateId = e.dataTransfer.getData("candidateId");
+    
+    // Only handle drop to "nominated" column
+    if (columnId === "nominated" && candidateId) {
+      // Find candidate in eligible or all candidates
+      const candidate = [...eligibleCandidates, ...allCandidates].find(
+        (c) => (c.candidateId || c.id) === candidateId
+      );
+      
+      if (candidate) {
+        onAssignCandidate(candidateId, `${candidate.firstName} ${candidate.lastName}`);
+      }
+    }
+  };
+
   const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
   const isManager =
     user?.roles?.some((role) =>
@@ -627,6 +655,10 @@ const ProjectCandidatesBoard = ({
             candidate.projectSubStatus?.name === "documents_verified" ||
             candidate.projectSubStatus?.statusName === "documents_verified";
 
+          const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
+          const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
+          const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+
           return (
             <CandidateCard
               key={`eligible-${assignmentInfo.candidateId}`}
@@ -654,6 +686,7 @@ const ProjectCandidatesBoard = ({
               }
               showAssignButton={!assignmentInfo.isAssigned}
               onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
+              onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
               showSkipDocumentVerification={shouldSkipDocVerification}
               skipDocumentVerificationMessage={
                 "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
@@ -662,7 +695,7 @@ const ProjectCandidatesBoard = ({
               onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
               isAlreadyInProject={assignmentInfo.isAssigned}
               showDocumentStatus={false}
-              eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
+              eligibilityData={eligibilityData}
               showContactButtons={true}
             />
           );
@@ -739,6 +772,10 @@ const ProjectCandidatesBoard = ({
             candidate.projectSubStatus?.name === "documents_verified" ||
             candidate.projectSubStatus?.statusName === "documents_verified";
 
+          const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
+          const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
+          const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+
           return (
             <CandidateCard
               key={`all-${assignmentInfo.candidateId}`}
@@ -764,6 +801,7 @@ const ProjectCandidatesBoard = ({
               }
               showAssignButton={!assignmentInfo.isAssigned}
               onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
+              onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
               showSkipDocumentVerification={shouldSkipDocVerification}
               skipDocumentVerificationMessage={
                 "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
@@ -772,7 +810,7 @@ const ProjectCandidatesBoard = ({
               onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
               isAlreadyInProject={assignmentInfo.isAssigned}
               showDocumentStatus={false}
-              eligibilityData={eligibilityMap.get(assignmentInfo.candidateId)}
+              eligibilityData={eligibilityData}
               showContactButtons={true}
             />
           );
@@ -889,6 +927,8 @@ const ProjectCandidatesBoard = ({
               key={column.id}
               className={`border ${gradient.border} shadow-sm hover:shadow-md transition-shadow duration-300 ${gradient.bg} backdrop-blur-sm rounded-2xl flex flex-col overflow-hidden`}
               aria-labelledby={`column-${column.id}-title`}
+              onDragOver={column.id === "nominated" ? handleDragOver : undefined}
+              onDrop={column.id === "nominated" ? (e) => handleDrop(e, column.id) : undefined}
             >
               <CardHeader className="!px-4 !py-3 !pb-2.5 border-b border-slate-100/80">
                 <div className="flex items-center justify-between gap-2">

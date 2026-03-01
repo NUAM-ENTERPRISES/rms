@@ -271,6 +271,8 @@ interface CandidateCardProps {
   showContactButtons?: boolean;
   /** control hiding of email/phone pills */
   hideContactInfo?: boolean;
+  /** Drag and Drop support */
+  onDragStart?: (e: React.DragEvent, candidateId: string) => void;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -299,6 +301,7 @@ const CandidateCard = memo(function CandidateCard({
   /** control hiding of email/phone pills */
   hideContactInfo = false,
   searchTerm = "",
+  onDragStart,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -642,6 +645,8 @@ const CandidateCard = memo(function CandidateCard({
 
   return (
     <Card
+      draggable={!!onDragStart}
+      onDragStart={(e) => onDragStart?.(e, candidateId)}
       className={cn(
         "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-200/80 hover:shadow-lg hover:shadow-blue-100/30 focus-within:border-blue-300 focus-within:shadow-lg py-0",
         isAlreadyInProject && "border-l-[3px] border-l-emerald-400",
