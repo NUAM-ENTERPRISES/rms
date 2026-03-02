@@ -92,11 +92,11 @@ function SettingCard({
   accent?: "blue" | "purple" | "green" | "orange" | "red";
 }) {
   const accentColors = {
-    blue: "bg-blue-50 border-blue-100 text-blue-700",
-    purple: "bg-purple-50 border-purple-100 text-purple-700",
-    green: "bg-green-50 border-green-100 text-green-700",
-    orange: "bg-orange-50 border-orange-100 text-orange-700",
-    red: "bg-red-50 border-red-100 text-red-700",
+    blue: "bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-950/20 dark:border-blue-900 dark:text-blue-400",
+    purple: "bg-purple-50 border-purple-100 text-purple-700 dark:bg-purple-950/20 dark:border-purple-900 dark:text-purple-400",
+    green: "bg-green-50 border-green-100 text-green-700 dark:bg-green-950/20 dark:border-green-900 dark:text-green-400",
+    orange: "bg-orange-50 border-orange-100 text-orange-700 dark:bg-orange-950/20 dark:border-orange-900 dark:text-orange-400",
+    red: "bg-red-50 border-red-100 text-red-700 dark:bg-red-950/20 dark:border-red-900 dark:text-red-400",
   };
 
   return (
@@ -125,9 +125,9 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-slate-100">
-          <Icon className="h-4 w-4 text-slate-600" />
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800">
+          <Icon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
         </div>
         {title}
       </h3>
@@ -219,11 +219,11 @@ export function HRDSettingsCard() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-xl bg-white overflow-hidden">
+      <Card className="border-0 shadow-xl bg-white dark:bg-slate-900 overflow-hidden">
         <CardContent className="flex items-center justify-center py-20">
           <div className="text-center space-y-4">
             <LoadingSpinner className="h-10 w-10 mx-auto" />
-            <p className="text-sm text-slate-500">Loading HRD settings...</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Loading HRD settings...</p>
           </div>
         </CardContent>
       </Card>
@@ -234,7 +234,7 @@ export function HRDSettingsCard() {
 
   return (
     <>
-      <Card className="border-0 shadow-xl bg-white overflow-hidden">
+      <Card className="border-0 shadow-xl bg-white dark:bg-slate-900 overflow-hidden">
         {/* Header */}
         <CardHeader className="border-b bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 text-white p-6">
           <div className="flex items-center justify-between">
@@ -283,20 +283,20 @@ export function HRDSettingsCard() {
                 {/* Reminder Configuration */}
                 <div className="space-y-4">
                   <SectionHeader icon={Timer} title="Reminder Configuration" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                     <FormField
                       control={form.control}
                       name="daysAfterSubmission"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Days After Submission</FormLabel>
+                          <FormLabel className="text-slate-700 dark:text-slate-300">Days After Submission</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Start reminders after</FormDescription>
@@ -309,14 +309,14 @@ export function HRDSettingsCard() {
                       name="totalDays"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Total Days</FormLabel>
+                          <FormLabel className="text-slate-700 dark:text-slate-300">Total Days</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Duration for reminders</FormDescription>
@@ -329,14 +329,14 @@ export function HRDSettingsCard() {
                       name="remindersPerDay"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Reminders Per Day</FormLabel>
+                          <FormLabel className="text-slate-700 dark:text-slate-300">Reminders Per Day</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Daily reminders count</FormDescription>
@@ -349,14 +349,14 @@ export function HRDSettingsCard() {
                       name="delayBetweenReminders"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Delay Between (mins)</FormLabel>
+                          <FormLabel className="text-slate-700 dark:text-slate-300">Delay Between (mins)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={0}
-                              className="bg-white border-slate-200"
+                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Minutes between reminders</FormDescription>
@@ -378,7 +378,7 @@ export function HRDSettingsCard() {
                       name="officeHours.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-slate-600 dark:text-slate-400 font-normal">
                             {field.value ? "Enabled" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -389,18 +389,18 @@ export function HRDSettingsCard() {
                     />
                   </div>
                   {form.watch("officeHours.enabled") && (
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-purple-50 rounded-xl border border-purple-100">
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/50">
                       <FormField
                         control={form.control}
                         name="officeHours.start"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-purple-700">Start Time</FormLabel>
+                            <FormLabel className="text-purple-700 dark:text-purple-400">Start Time</FormLabel>
                             <FormControl>
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white border-purple-200"
+                                className="bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-900/50 dark:text-slate-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -411,12 +411,12 @@ export function HRDSettingsCard() {
                         name="officeHours.end"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-purple-700">End Time</FormLabel>
+                            <FormLabel className="text-purple-700 dark:text-purple-400">End Time</FormLabel>
                             <FormControl>
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white border-purple-200"
+                                className="bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-900/50 dark:text-slate-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -437,7 +437,7 @@ export function HRDSettingsCard() {
                       name="escalate.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-slate-600 dark:text-slate-400 font-normal">
                             {field.value ? "Enabled" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -448,20 +448,20 @@ export function HRDSettingsCard() {
                     />
                   </div>
                   {form.watch("escalate.enabled") && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/50">
                       <FormField
                         control={form.control}
                         name="escalate.afterDays"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-orange-700">Escalate After Days</FormLabel>
+                            <FormLabel className="text-orange-700 dark:text-orange-400">Escalate After Days</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white border-orange-200"
+                                className="bg-white dark:bg-slate-900 border-orange-200 dark:border-orange-900/50"
                               />
                             </FormControl>
                             <FormDescription>Days before escalation</FormDescription>
@@ -473,10 +473,10 @@ export function HRDSettingsCard() {
                         name="escalate.assignmentStrategy"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-orange-700">Assignment Strategy</FormLabel>
+                            <FormLabel className="text-orange-700 dark:text-orange-400">Assignment Strategy</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-white border-orange-200">
+                                <SelectTrigger className="bg-white dark:bg-slate-900 border-orange-200 dark:border-orange-900/50 dark:text-slate-200">
                                   <SelectValue placeholder="Select strategy" />
                                 </SelectTrigger>
                               </FormControl>
@@ -504,7 +504,7 @@ export function HRDSettingsCard() {
                       name="testMode.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-slate-600 dark:text-slate-400 font-normal">
                             {field.value ? "Active" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -515,10 +515,10 @@ export function HRDSettingsCard() {
                     />
                   </div>
                   {form.watch("testMode.enabled") && (
-                    <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                    <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/50">
                       <div className="flex items-start gap-3 mb-4">
-                        <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-                        <p className="text-xs text-red-700">
+                        <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-red-700 dark:text-red-300">
                           Test mode is active. Reminders will be sent with reduced delays for testing purposes.
                         </p>
                       </div>
@@ -527,17 +527,17 @@ export function HRDSettingsCard() {
                         name="testMode.immediateDelayMinutes"
                         render={({ field }) => (
                           <FormItem className="max-w-xs">
-                            <FormLabel className="text-red-700">Immediate Delay (mins)</FormLabel>
+                            <FormLabel className="text-red-700 dark:text-red-400">Immediate Delay (mins)</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white border-red-200"
+                                className="bg-white dark:bg-slate-900 border-red-200 dark:border-red-900/50"
                               />
                             </FormControl>
-                            <FormDescription>Minutes delay in test mode</FormDescription>
+                            <FormDescription className="dark:text-red-300/70">Minutes delay in test mode</FormDescription>
                           </FormItem>
                         )}
                       />
@@ -551,7 +551,7 @@ export function HRDSettingsCard() {
                     type="button"
                     variant="outline"
                     onClick={handleCancel}
-                    className="px-6"
+                    className="px-6 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Cancel
@@ -599,9 +599,9 @@ export function HRDSettingsCard() {
                 </div>
                 {settings?.dailyTimes && settings.dailyTimes.length > 0 && (
                   <div className="flex items-center gap-2 mt-3">
-                    <span className="text-xs text-slate-500 font-medium">Daily Times:</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Daily Times:</span>
                     {settings.dailyTimes.map((time, i) => (
-                      <Badge key={i} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                      <Badge key={i} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
                         {time}
                       </Badge>
                     ))}
@@ -609,7 +609,7 @@ export function HRDSettingsCard() {
                 )}
               </div>
 
-              <Separator />
+              <Separator className="dark:bg-slate-800" />
 
               {/* Office Hours Display */}
               <div className="space-y-4">
@@ -637,7 +637,7 @@ export function HRDSettingsCard() {
                 )}
               </div>
 
-              <Separator />
+              <Separator className="dark:bg-slate-800" />
 
               {/* Escalation Display */}
               <div className="space-y-4">
@@ -665,7 +665,7 @@ export function HRDSettingsCard() {
                 )}
               </div>
 
-              <Separator />
+              <Separator className="dark:bg-slate-800" />
 
               {/* Test Mode Display */}
               <div className="space-y-4">
@@ -676,10 +676,10 @@ export function HRDSettingsCard() {
                   badgeVariant={settings?.testMode?.enabled ? "destructive" : "secondary"}
                 />
                 {settings?.testMode?.enabled && (
-                  <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+                  <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-900/50">
                     <div className="flex items-start gap-3 mb-3">
-                      <AlertTriangle className="h-5 w-5 text-red-600 shrink-0" />
-                      <p className="text-xs text-red-700 font-medium">
+                      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+                      <p className="text-xs text-red-700 dark:text-red-300 font-medium">
                         Test mode is currently active. Reminders are using reduced delays.
                       </p>
                     </div>

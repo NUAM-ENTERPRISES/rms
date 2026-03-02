@@ -307,11 +307,11 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-900">
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Header */}
-   <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
-  <CardHeader className="pb-3 border-b border-indigo-200/50">
+   <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 dark:from-indigo-950/90 dark:to-purple-950/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:ring-indigo-800/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50 dark:hover:ring-indigo-700/50">
+  <CardHeader className="pb-3 border-b border-indigo-200/50 dark:border-indigo-800/50">
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-4">
         <div className="relative group">
@@ -321,10 +321,10 @@ export default function TemplatesPage() {
           </div>
         </div>
         <div>
-          <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
+          <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent tracking-tight">
             Screening Templates
           </CardTitle>
-          <CardDescription className="text-sm text-slate-600 mt-1 font-medium">
+          <CardDescription className="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">
             {filteredTemplates.length} template{filteredTemplates.length !== 1 ? "s" : ""} found •{" "}
             {filteredTemplates.filter((t) => t.isActive).length} active
           </CardDescription>
@@ -352,7 +352,7 @@ export default function TemplatesPage() {
       <div className="relative group">
         <div
           className={`absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-all duration-300 ${
-            filters.search ? "text-indigo-600 scale-110" : "text-slate-400"
+            filters.search ? "text-indigo-600 dark:text-indigo-400 scale-110" : "text-slate-400 dark:text-slate-500"
           }`}
         >
           <Search className="h-5 w-5 transition-transform duration-300" />
@@ -361,7 +361,7 @@ export default function TemplatesPage() {
           placeholder="Search templates by name, description, or role..."
           value={filters.search}
           onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-          className="pl-12 h-12 text-base rounded-xl border-0 bg-white/80 backdrop-blur-sm shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 transition-all duration-300 placeholder:text-slate-400"
+          className="pl-12 h-12 text-base rounded-xl border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 transition-all duration-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 dark:text-slate-200"
         />
         <div
           className={`absolute inset-0 rounded-xl pointer-events-none transition-all duration-300 ${
@@ -376,7 +376,7 @@ export default function TemplatesPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide">
               Role
             </span>
           </div>
@@ -384,15 +384,15 @@ export default function TemplatesPage() {
             value={filters.roleId}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, roleId: value }))}
           >
-            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[180px] text-sm">
+            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[180px] text-sm dark:text-slate-200">
               <SelectValue placeholder="All Roles" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm max-h-[300px]">
-              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50">
+            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm max-h-[300px]">
+              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/50 dark:text-slate-200 dark:focus:bg-indigo-900/50">
                 All Roles
               </SelectItem>
               {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id} className="rounded-lg hover:bg-indigo-50">
+                <SelectItem key={role.id} value={role.id} className="rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/50 dark:text-slate-200 dark:focus:bg-indigo-900/50">
                   {role.name}
                 </SelectItem>
               ))}
@@ -404,7 +404,7 @@ export default function TemplatesPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide">
               Status
             </span>
           </div>
@@ -412,17 +412,17 @@ export default function TemplatesPage() {
             value={filters.isActive}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, isActive: value }))}
           >
-            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[140px] text-sm">
+            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[140px] text-sm dark:text-slate-200">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
-              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50">
+            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/50 dark:text-slate-200 dark:focus:bg-indigo-900/50">
                 All Status
               </SelectItem>
-              <SelectItem value="true" className="rounded-lg hover:bg-indigo-50">
+              <SelectItem value="true" className="rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/50 dark:text-slate-200 dark:focus:bg-indigo-900/50">
                 Active Only
               </SelectItem>
-              <SelectItem value="false" className="rounded-lg hover:bg-indigo-50">
+              <SelectItem value="false" className="rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/50 dark:text-slate-200 dark:focus:bg-indigo-900/50">
                 Inactive Only
               </SelectItem>
             </SelectContent>
@@ -441,7 +441,7 @@ export default function TemplatesPage() {
                 search: "",
               })
             }
-            className="h-10 px-4 text-sm text-slate-600 hover:text-slate-900 hover:bg-indigo-50/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 gap-2"
+            className="h-10 px-4 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/30 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 gap-2"
           >
             <X className="h-3.5 w-3.5" />
             Clear
@@ -453,7 +453,7 @@ export default function TemplatesPage() {
 </Card>
         {/* Content */}
         {filteredTemplates.length === 0 ? (
-         <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
+         <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 dark:from-indigo-950/90 dark:to-purple-950/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:ring-indigo-800/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50 dark:hover:ring-indigo-700/50">
   <CardContent className="py-16 px-8">
     <div className="text-center max-w-md mx-auto space-y-6">
       {/* Perfectly centered premium icon with glow */}
@@ -462,16 +462,16 @@ export default function TemplatesPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-3xl opacity-30 animate-pulse-slow"></div>
         
         {/* Icon container - centered with flex */}
-        <div className="relative w-full h-full rounded-2xl bg-white/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-105">
-          <FileText className="h-10 w-10 text-indigo-600 drop-shadow-md" />
+        <div className="relative w-full h-full rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border border-indigo-200/50 dark:border-indigo-800/50 flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-105">
+          <FileText className="h-10 w-10 text-indigo-600 dark:text-indigo-400 drop-shadow-md" />
         </div>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
+        <h3 className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent tracking-tight">
           No Templates Found
         </h3>
-        <p className="text-base text-slate-600 leading-relaxed font-medium">
+        <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
           {filters.search ||
           filters.roleId !== "all" ||
           filters.isActive !== "all"
@@ -516,7 +516,7 @@ export default function TemplatesPage() {
           <BookOpen className={`h-5 w-5 ${roleColor.icon}`} />
         </div>
         <div>
-          <CardTitle className="text-lg font-bold bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent tracking-tight">
+          <CardTitle className="text-lg font-bold bg-gradient-to-r from-indigo-700 to-purple-700 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent tracking-tight">
             {roleName}
           </CardTitle>
           <CardDescription className="text-xs mt-1 text-slate-600 dark:text-slate-400 font-medium">
