@@ -23,6 +23,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
+import { useTheme } from "@/context/ThemeContext";
 import { formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
@@ -50,7 +51,7 @@ import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
-
+import { cn } from "@/lib/utils";
 // Fallback avatar used when candidate has no profileImage
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
@@ -60,6 +61,10 @@ export default function CandidateDetailPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const {} = useAppSelector((state) => state.auth);
+
+  // theme info
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -246,24 +251,24 @@ export default function CandidateDetailPage() {
     { bg: string; iconBg: string; text: string }
   > = {
     "from-blue-500 to-cyan-500": {
-      bg: "from-blue-50 to-blue-100/50",
-      iconBg: "bg-blue-200/40",
-      text: "text-blue-600",
+      bg: "from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/40",
+      iconBg: "bg-blue-200/40 dark:bg-blue-900/60",
+      text: "text-blue-600 dark:text-blue-400",
     },
     "from-purple-500 to-pink-500": {
-      bg: "from-purple-50 to-purple-100/50",
-      iconBg: "bg-purple-200/40",
-      text: "text-purple-600",
+      bg: "from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/40",
+      iconBg: "bg-purple-200/40 dark:bg-purple-900/60",
+      text: "text-purple-600 dark:text-purple-400",
     },
     "from-orange-500 to-red-500": {
-      bg: "from-orange-50 to-orange-100/50",
-      iconBg: "bg-orange-200/40",
-      text: "text-orange-600",
+      bg: "from-orange-50 to-orange-100/50 dark:from-orange-950/40 dark:to-orange-900/40",
+      iconBg: "bg-orange-200/40 dark:bg-orange-900/60",
+      text: "text-orange-600 dark:text-orange-400",
     },
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-black dark:to-slate-950 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="space-y-2 flex-1">
@@ -277,35 +282,35 @@ export default function CandidateDetailPage() {
             /> 
 
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">
                 {candidate.firstName} {candidate.lastName}
               </h1>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               {candidate.currentRole || "No role specified"}
             </span>
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-slate-400 dark:text-slate-500">
               Created {formatDate(candidate.createdAt)}
             </span>
           </div>
         </div>
-          <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
+          <div className="flex items-center gap-3 mt-1 bg-slate-50/50 dark:bg-slate-900/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 dark:border-slate-800 w-fit">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Candidate Status</span>
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Candidate Status</span>
               <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
             </div>
             
-            <div className="h-4 w-[1px] bg-slate-200 mx-1" />
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1" />
 
             {canWriteCandidates && (
             <button
   onClick={() => setIsStatusModalOpen(true)}
-  className="group relative flex items-center gap-2.5 px-3 py-1.5 bg-white/50 backdrop-blur-sm border border-slate-200/60 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300"
+  className="group relative flex items-center gap-2.5 px-3 py-1.5 bg-white/50 dark:bg-black/50 backdrop-blur-sm border border-slate-200/60 dark:border-slate-800 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300"
 >
-  <Edit className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-500 transition-transform group-hover:rotate-12" />
-  <span className="text-[10px] font-black text-slate-500 group-hover:text-blue-700 uppercase tracking-widest">
+  <Edit className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-transform group-hover:rotate-12" />
+  <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 uppercase tracking-widest">
     Update Status
   </span>
 </button>
@@ -336,21 +341,26 @@ export default function CandidateDetailPage() {
               transition={{ duration: 0.4, delay: i * 0.1 }}
             >
               <Card
-                className={`border-0 shadow-md bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
+                className={cn(
+                  "border-0 shadow-md",
+                  isDark ? "bg-slate-800" : `bg-gradient-to-br ${colors.bg}`,
+                  "dark:border dark:border-slate-800 backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5",
+                  isDark && "dark:text-white"
+                )}
               >
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className={`p-3 rounded-xl ${colors.iconBg}`}>
                     <Icon className={`h-6 w-6 ${colors.text}`} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-500">
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                       {stat.label}
                     </p>
                     <div className="flex items-baseline gap-2">
-                      <h3 className="text-2xl font-bold text-slate-900">
+                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
                         {stat.value}
                       </h3>
-                      <span className="text-xs text-slate-400 font-normal">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">
                         {stat.subtitle}
                       </span>
                     </div>
@@ -368,12 +378,12 @@ export default function CandidateDetailPage() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-2 bg-slate-100/50 dark:bg-slate-900 p-1 border border-slate-200/50 dark:border-slate-800 rounded-lg">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black data-[state=active]:text-slate-900 dark:data-[state=active]:text-white shadow-sm transition-all">Overview</TabsTrigger>
           {/* <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger> */}
-          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="metrics" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black data-[state=active]:text-slate-900 dark:data-[state=active]:text-white shadow-sm transition-all">Metrics</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -413,13 +423,13 @@ export default function CandidateDetailPage() {
       </Tabs>
 
       {/* Pipeline */}
-      <Card className="mt-6 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="flex items-center gap-2 text-slate-900">
-            <Target className="h-5 w-5 text-blue-600" />
+      <Card className="mt-6 border-0 shadow-lg bg-white/80 dark:bg-black backdrop-blur-sm border dark:border-slate-800">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+          <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+            <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             Candidate Status Pipeline
           </CardTitle>
-          <CardDescription className="text-slate-600">
+          <CardDescription className="text-slate-600 dark:text-slate-400">
             Track status changes and progression
           </CardDescription>
         </CardHeader>
@@ -427,14 +437,14 @@ export default function CandidateDetailPage() {
           {isPipelineLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Loading pipeline...
               </p>
             </div>
           ) : pipelineData?.data ? (
             <CandidatePipeline pipeline={pipelineData.data.pipeline} />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               <p>No pipeline data available</p>
             </div>
           )}
