@@ -44,6 +44,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
+import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -627,6 +628,20 @@ export default function ProjectDetailPage() {
       notes: "",
     });
   };
+
+  // Eligibility query for the screening modal
+  const screeningCandidateIds = React.useMemo(
+    () => (screeningConfirm.candidateId ? [screeningConfirm.candidateId] : []),
+    [screeningConfirm.candidateId]
+  );
+  const { data: screeningEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId: projectId!, candidateIds: screeningCandidateIds },
+    { skip: !projectId || screeningCandidateIds.length === 0 }
+  );
+  const screeningEligibilityData = React.useMemo(() => {
+    if (!screeningEligibilityResponse?.data || !Array.isArray(screeningEligibilityResponse.data)) return null;
+    return screeningEligibilityResponse.data.find((d) => d.candidateId === screeningConfirm.candidateId) || null;
+  }, [screeningEligibilityResponse, screeningConfirm.candidateId]);
 
   const handleAssignToProject = async () => {
     try {
@@ -1375,9 +1390,8 @@ export default function ProjectDetailPage() {
       />
 
       {/* Direct Screening Confirmation Dialog */}
-      <ConfirmationDialog
+      <DirectScreeningModal
         isOpen={screeningConfirm.isOpen}
-        className="sm:max-w-2xl"
         onClose={() =>
           setScreeningConfirm({
             isOpen: false,
@@ -1388,148 +1402,25 @@ export default function ProjectDetailPage() {
           })
         }
         onConfirm={handleSendForScreening}
-        title="Send for Direct Screening"
-        description={
-          <div className="space-y-4">
-            <p>
-              Are you sure you want to send {screeningConfirm.candidateName} for
-              direct screening? This will notify the screening team.
-            </p>
-
-            {/* Candidate Details */}
-            {(() => {
-              const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
-                (c) => (c.candidateId || c.id) === screeningConfirm.candidateId
-              );
-              if (!candidate) return null;
-              return (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                  {/* Match score summary */}
-                  <MatchScoreSummary candidate={candidate} />
-
-                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                    {/* Education column */}
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
-                      <div className="space-y-1">
-                        {candidate.qualifications && candidate.qualifications.length > 0 ? (
-                          candidate.qualifications.map((qual: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
-                              {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
-                              {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-xs text-slate-500">No education details</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Experience column */}
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
-                      <div className="space-y-1">
-                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
-                          candidate.workExperiences.map((exp: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {formatWorkExperienceEntry(exp)}
-                            </p>
-                          ))
-                        ) : candidate.candidateExperience ? (
-                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
-                        ) : (
-                          <p className="text-xs text-slate-500">No experience details</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Role match scores */}
-                  {candidate.roleMatches && candidate.roleMatches.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
-                      <div className="flex flex-wrap gap-2">
-                        {candidate.roleMatches.map((rm: any, idx: number) => {
-                          const isAssigned = Boolean(candidate.nominatedRole && candidate.nominatedRole.id === rm.roleId);
-                          return (
-                            <div
-                              key={idx}
-                              className={`flex items-center gap-2 rounded-full px-2 py-1 border ${isAssigned ? 'border-primary/30 bg-primary/10' : 'border-slate-100 bg-white/60'}`}
-                            >
-                              <span className="text-xs text-slate-700 max-w-[160px] truncate">
-                                {rm.designation || "Role"}
-                              </span>
-                              <span className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}>{rm.score ?? "-"}%</span>
-                              {isAssigned && <CheckCircle2 className="h-3 w-3 text-primary ml-1" aria-hidden />}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Role</label>
-              <Select
-                value={screeningConfirm.roleNeededId}
-                onValueChange={(v) =>
-                  setScreeningConfirm((prev) => ({ ...prev, roleNeededId: v }))
-                }
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {project?.rolesNeeded?.map((r: any) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.designation}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="text-xs text-red-600 font-medium">
-                This candidate should skip document verification because of
-                direct screening. Once screening is completed you should do
-                document verification.
-              </div>
-
-              <label
-                htmlFor="screening-notes"
-                className="text-sm font-medium text-gray-700"
-              >
-                Notes (Optional)
-              </label>
-              <Textarea
-                id="screening-notes"
-                placeholder="Add any notes for the screening team..."
-                value={screeningConfirm.notes}
-                onChange={(e) =>
-                  setScreeningConfirm((prev) => ({
-                    ...prev,
-                    notes: e.target.value,
-                  }))
-                }
-                rows={3}
-                className="w-full"
-              />
-            </div>
-          </div>
-        }
-        confirmText="Send for Screening"
-        cancelText="Cancel"
         isLoading={isSendingScreening}
-        variant="default"
-        icon={
-          <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-            <Send className="h-5 w-5 text-purple-600" />
-          </div>
+        candidateName={screeningConfirm.candidateName}
+        candidateId={screeningConfirm.candidateId}
+        roleNeededId={screeningConfirm.roleNeededId}
+        onRoleChange={(v) =>
+          setScreeningConfirm((prev) => ({ ...prev, roleNeededId: v }))
         }
+        notes={screeningConfirm.notes}
+        onNotesChange={(v) =>
+          setScreeningConfirm((prev) => ({
+            ...prev,
+            notes: v,
+          }))
+        }
+        projectRoles={project?.rolesNeeded}
+        allCandidates={[...projectCandidates, ...eligibleCandidates, ...allCandidates]}
+        eligibilityData={screeningEligibilityData}
+        formatWorkExperienceEntry={formatWorkExperienceEntry}
+        getMinimalScoreBadgeClass={getMinimalScoreBadgeClass}
       />
 
       {/* Verification Confirmation Dialog */}
