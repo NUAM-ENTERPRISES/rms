@@ -76,6 +76,7 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { useTheme } from "@/context/ThemeContext";
 import { MergeVerifiedModal } from "../components/MergeVerifiedModal";
 import { SendToClientModal } from "../components/SendToClientModal";
 // import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
@@ -90,6 +91,7 @@ import { ScreeningDetailsCard } from "../components/ScreeningDetailsCard";
 
 
 export default function CandidateDocumentVerificationPage() {
+  const { theme } = useTheme();
   const { candidateId, projectId: routeProjectId } = useParams<{
     candidateId: string;
     projectId?: string;
@@ -730,7 +732,7 @@ export default function CandidateDocumentVerificationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className={cn("min-h-screen", theme === "dark" ? "bg-black" : "bg-gradient-to-br from-slate-50 to-slate-100")}>
       <div className="container mx-auto px-1 pb-4 space-y-4">
         {/* Candidate Details Header */}
         {candidate && (
@@ -738,27 +740,37 @@ export default function CandidateDocumentVerificationPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg border-l-4 border-l-blue-500 overflow-hidden"
+            className={cn("relative rounded-xl border border-white/30 backdrop-blur-xl shadow-lg border-l-4 border-l-blue-500 overflow-hidden", theme === "dark" ? "bg-black text-white" : "bg-white/90")}
           >
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <ImageViewer
-                  src={candidate.profileImage}
-                  fallbackSrc={candidate.profileImage}
-                  title={`${candidate.firstName} ${candidate.lastName}`}
-                  className="h-20 w-20 rounded-full"
-                  enableHoverPreview={true}
-                  ariaLabel={`View profile image for ${candidate.firstName} ${candidate.lastName}`}
-                />
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    {candidate.firstName} {candidate.lastName}
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Candidate ID: {candidate.id}
-                  </p>
-                </div>
-              </div>
+            <div className={cn("px-4 py-3 flex items-center justify-between", theme === "dark" ? "border-slate-700 bg-black" : "border-slate-100 bg-white/90")}>
+             <div className="flex items-center gap-3">
+  <ImageViewer
+    src={candidate.profileImage}
+    fallbackSrc={candidate.profileImage}
+    title={`${candidate.firstName} ${candidate.lastName}`}
+    className="h-20 w-20 rounded-full"
+    enableHoverPreview={true}
+    ariaLabel={`View profile image for ${candidate.firstName} ${candidate.lastName}`}
+  />
+  <div>
+    <h2
+      className={cn(
+        "text-lg font-bold",
+        theme === "dark" ? "text-white" : "text-slate-900"
+      )}
+    >
+      {candidate.firstName} {candidate.lastName}
+    </h2>
+    <p
+      className={cn(
+        "text-xs",
+        theme === "dark" ? "text-slate-400" : "text-slate-500"
+      )}
+    >
+      Candidate ID: {candidate.id}
+    </p>
+  </div>
+</div>
               <div className="flex items-center gap-2">
                 {/* Bulk Actions moved here */}
                 {/* {canVerifyDocuments && !summary.isDocumentationReviewed && (
@@ -797,69 +809,140 @@ export default function CandidateDocumentVerificationPage() {
               </div>
             </div>
 
-            <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <Mail className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Email</p>
-                  <p className="font-semibold text-slate-700 truncate max-w-[150px]">
-                    {candidate.email || "N/A"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Phone</p>
-                  <p className="font-semibold text-slate-700">
-                    {candidate.countryCode && `+${candidate.countryCode} `}
-                    {candidate.mobileNumber || candidate.contact || "N/A"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Experience</p>
-                  <p className="font-semibold text-slate-700">
-                    {candidate.totalExperience || candidate.experience || 0} Years
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Current Employer</p>
-                  <p className="font-semibold text-slate-700 truncate max-w-[120px]">
-                    {candidate.currentEmployer || "N/A"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Cake className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">DOB</p>
-                  <p className="font-semibold text-slate-700">
-                    {candidate.dateOfBirth
-                      ? new Date(candidate.dateOfBirth).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "N/A"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <RefreshCw className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Source</p>
-                  <p className="font-semibold text-slate-700 capitalize">
-                    {candidate.source || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
+         <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
+  <div className="flex items-center gap-2">
+    <Mail className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-400"
+      )}>
+        Email
+      </p>
+      <p className={cn(
+        "font-semibold truncate max-w-[150px]",
+        theme === "dark" ? "text-slate-200" : "text-slate-700"
+      )}>
+        {candidate.email || "N/A"}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Phone className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-400"
+      )}>
+        Phone
+      </p>
+      <p className={cn(
+        "font-semibold",
+        theme === "dark" ? "text-slate-200" : "text-slate-700"
+      )}>
+        {candidate.countryCode && `+${candidate.countryCode} `}
+        {candidate.mobileNumber || candidate.contact || "N/A"}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Briefcase className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-400"
+      )}>
+        Experience
+      </p>
+      <p className={cn(
+        "font-semibold",
+        theme === "dark" ? "text-slate-200" : "text-slate-700"
+      )}>
+        {candidate.totalExperience || candidate.experience || 0} Years
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Building2 className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-400"
+      )}>
+        Current Employer
+      </p>
+      <p className={cn(
+        "font-semibold truncate max-w-[120px]",
+        theme === "dark" ? "text-slate-200" : "text-slate-700"
+      )}>
+        {candidate.currentEmployer || "N/A"}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Cake className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-400"
+      )}>
+        DOB
+      </p>
+      <p className={cn(
+        "font-semibold",
+        theme === "dark" ? "text-slate-200" : "text-slate-700"
+      )}>
+        {candidate.dateOfBirth
+          ? new Date(candidate.dateOfBirth).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : "N/A"}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <RefreshCw className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-400"
+      )}>
+        Source
+      </p>
+      <p className={cn(
+        "font-semibold capitalize",
+        theme === "dark" ? "text-slate-200" : "text-slate-700"
+      )}>
+        {candidate.source || "N/A"}
+      </p>
+    </div>
+  </div>
+</div>
 
             {candidate.skills && candidate.skills.length > 0 && (
               <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
@@ -891,8 +974,12 @@ export default function CandidateDocumentVerificationPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg overflow-hidden"
-          >
+className={cn(
+  "relative rounded-xl border shadow-lg overflow-hidden",
+  theme === "dark"
+    ? "bg-black border-white/10 shadow-black/30"
+    : "bg-white/90 border-white/30 backdrop-blur-xl shadow-lg"
+)}          >
             {/* Priority accent */}
             <div className={cn(
               "absolute inset-y-0 left-0 w-1",
@@ -902,114 +989,309 @@ export default function CandidateDocumentVerificationPage() {
               "bg-slate-300"
             )} />
             {/* Top Bar - Project Title & Status */}
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FlagIcon
-                  countryCode={projectResponse.data.countryCode || "UN"}
-                  className="w-8 h-8 rounded shadow-sm ring-1 ring-white/70"
-                />
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">{projectResponse.data.title}</h2>
-                  <p className="text-xs text-slate-500">
-                    Created by {projectResponse.data.creator?.name || "Unknown"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge className={cn(
-                  "text-xs font-semibold",
-                  projectResponse.data.status === "active" ? "bg-green-100 text-green-700" :
-                  projectResponse.data.status === "completed" ? "bg-blue-100 text-blue-700" :
-                  "bg-slate-100 text-slate-700"
-                )}>
-                  {projectResponse.data.status}
-                </Badge>
-                <Badge className={cn(
-                  "text-xs font-semibold",
-                  projectResponse.data.priority === "urgent" ? "bg-red-100 text-red-700" :
-                  projectResponse.data.priority === "high" ? "bg-orange-100 text-orange-700" :
-                  projectResponse.data.priority === "medium" ? "bg-yellow-100 text-yellow-700" :
-                  "bg-slate-100 text-slate-700"
-                )}>
-                  {projectResponse.data.priority}
-                </Badge>
-              </div>
-            </div>
+           <div 
+  className={cn(
+    "px-4 py-3 flex items-center justify-between border-t rounded-t-lg",
+    theme === "dark" 
+      ? "border-slate-700 bg-black" 
+      : "border-slate-100 bg-white/90"
+  )}
+>
+  <div className="flex items-center gap-3">
+    <FlagIcon
+      countryCode={projectResponse.data.countryCode || "UN"}
+      className="w-8 h-8 rounded shadow-sm ring-1 ring-white/70"
+    />
+    <div>
+      <h2 
+        className={cn(
+          "text-lg font-bold",
+          theme === "dark" ? "text-white" : "text-slate-900"
+        )}
+      >
+        {projectResponse.data.title}
+      </h2>
+      <p 
+        className={cn(
+          "text-xs",
+          theme === "dark" ? "text-slate-400" : "text-slate-500"
+        )}
+      >
+        Created by {projectResponse.data.creator?.name || "Unknown"}
+      </p>
+    </div>
+  </div>
 
+  <div className="flex items-center gap-2">
+    {/* Status Badge */}
+    <Badge 
+      className={cn(
+        "text-xs font-semibold px-2.5 py-0.5",
+        theme === "dark" ? "border border-slate-600" : "",
+        projectResponse.data.status === "active"
+          ? theme === "dark"
+            ? "bg-green-900/40 text-green-300 border-green-700/50"
+            : "bg-green-100 text-green-700"
+          : projectResponse.data.status === "completed"
+          ? theme === "dark"
+            ? "bg-blue-900/40 text-blue-300 border-blue-700/50"
+            : "bg-blue-100 text-blue-700"
+          : theme === "dark"
+            ? "bg-slate-800 text-slate-300 border-slate-600"
+            : "bg-slate-100 text-slate-700"
+      )}
+    >
+      {projectResponse.data.status}
+    </Badge>
+
+    {/* Priority Badge */}
+    <Badge 
+      className={cn(
+        "text-xs font-semibold px-2.5 py-0.5",
+        theme === "dark" ? "border border-slate-600" : "",
+        projectResponse.data.priority === "urgent"
+          ? theme === "dark"
+            ? "bg-red-900/40 text-red-300 border-red-700/50"
+            : "bg-red-100 text-red-700"
+          : projectResponse.data.priority === "high"
+          ? theme === "dark"
+            ? "bg-orange-900/40 text-orange-300 border-orange-700/50"
+            : "bg-orange-100 text-orange-700"
+          : projectResponse.data.priority === "medium"
+          ? theme === "dark"
+            ? "bg-amber-900/40 text-amber-300 border-amber-700/50"
+            : "bg-yellow-100 text-yellow-700"
+          : theme === "dark"
+            ? "bg-slate-800 text-slate-300 border-slate-600"
+            : "bg-slate-100 text-slate-700"
+      )}
+    >
+      {projectResponse.data.priority}
+    </Badge>
+  </div>
+</div>
             {/* Info Grid - Compact */}
-            <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Deadline</p>
-                  <p className="font-semibold text-slate-700">
-                    {new Date(projectResponse.data.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Type</p>
-                  <p className="font-semibold text-slate-700 capitalize">{projectResponse.data.projectType}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Scissors className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Grooming</p>
-                  <p className="font-semibold text-slate-700 capitalize">{projectResponse.data.groomingRequired || "N/A"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <FileCheck className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Resume Edit</p>
-                  <p className="font-semibold text-slate-700">{projectResponse.data.resumeEditable ? "Yes" : "No"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Hide Contact</p>
-                  <p className="font-semibold text-slate-700">{projectResponse.data.hideContactInfo ? "Yes" : "No"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Shield className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Screening</p>
-                  <p className="font-semibold text-slate-700">{projectResponse.data.requiredScreening ? "Required" : "Not Required"}</p>
-                </div>
-              </div>
-            </div>
+           <div 
+  className={cn(
+    "px-4 py-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-xs rounded-lg",
+    theme === "dark" ? "bg-black" : "bg-white/50"  // or "" / transparent if you prefer no bg in light mode
+  )}
+>
+  <div className="flex items-center gap-2">
+    <Calendar className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-500"
+      )}>
+        Deadline
+      </p>
+      <p className={cn(
+        "font-semibold",
+        theme === "dark" ? "text-white" : "text-slate-800"
+      )}>
+        {new Date(projectResponse.data.deadline).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Building2 className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-500"
+      )}>
+        Type
+      </p>
+      <p className={cn(
+        "font-semibold capitalize",
+        theme === "dark" ? "text-white" : "text-slate-800"
+      )}>
+        {projectResponse.data.projectType}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Scissors className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-500"
+      )}>
+        Grooming
+      </p>
+      <p className={cn(
+        "font-semibold capitalize",
+        theme === "dark" ? "text-white" : "text-slate-800"
+      )}>
+        {projectResponse.data.groomingRequired || "N/A"}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <FileCheck className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-500"
+      )}>
+        Resume Edit
+      </p>
+      <p className={cn(
+        "font-semibold",
+        theme === "dark" ? "text-white" : "text-slate-800"
+      )}>
+        {projectResponse.data.resumeEditable ? "Yes" : "No"}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Phone className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-500"
+      )}>
+        Hide Contact
+      </p>
+      <p className={cn(
+        "font-semibold",
+        theme === "dark" ? "text-white" : "text-slate-800"
+      )}>
+        {projectResponse.data.hideContactInfo ? "Yes" : "No"}
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <Shield className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-500" : "text-slate-400"
+    )} />
+    <div>
+      <p className={cn(
+        "font-medium",
+        theme === "dark" ? "text-slate-400" : "text-slate-500"
+      )}>
+        Screening
+      </p>
+      <p className={cn(
+        "font-semibold",
+        theme === "dark" ? "text-white" : "text-slate-800"
+      )}>
+        {projectResponse.data.requiredScreening ? "Required" : "Not Required"}
+      </p>
+    </div>
+  </div>
+</div>
 
             {/* Roles Needed - Compact Horizontal */}
             {projectResponse.data.rolesNeeded && projectResponse.data.rolesNeeded.length > 0 && (
-              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-xs font-semibold text-slate-600">Roles ({projectResponse.data.rolesNeeded.length})</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {projectResponse.data.rolesNeeded.map((role: any) => (
-                    <div key={role.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 text-xs">
-                      <span className="font-medium text-slate-800">{role.designation}</span>
-                      <span className="text-slate-400">×{role.quantity}</span>
-                      <span className="text-slate-400">|</span>
-                      <span className="text-slate-500">{role.minExperience}-{role.maxExperience}yr</span>
-                      <span className="text-slate-400">|</span>
-                      <span className="text-slate-500 capitalize">{role.genderRequirement}</span>
-                      {role.ageRequirement && (
-                        <>
-                          <span className="text-slate-400">|</span>
-                          <span className="text-slate-500">{role.ageRequirement}y</span>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <div 
+  className={cn(
+    "px-4 py-2 border-t rounded-lg",
+    theme === "dark" 
+      ? "bg-black border-slate-800" 
+      : "border-slate-100 bg-slate-50/50"
+  )}
+>
+  <div className="flex items-center gap-2 mb-2">
+    <Users className={cn(
+      "h-3.5 w-3.5",
+      theme === "dark" ? "text-slate-400" : "text-slate-500"
+    )} />
+    <span className={cn(
+      "text-xs font-semibold",
+      theme === "dark" ? "text-slate-300" : "text-slate-600"
+    )}>
+      Roles ({projectResponse.data.rolesNeeded.length})
+    </span>
+  </div>
+
+  <div className="flex flex-wrap gap-2">
+    {projectResponse.data.rolesNeeded.map((role: any) => (
+      <div 
+        key={role.id} 
+        className={cn(
+          "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs",
+          theme === "dark"
+            ? "bg-slate-900 border-slate-700 text-slate-200"
+            : "bg-white border-slate-200 text-slate-800"
+        )}
+      >
+        <span className={cn(
+          "font-medium",
+          theme === "dark" ? "text-white" : "text-slate-800"
+        )}>
+          {role.designation}
+        </span>
+        <span className={cn(
+          theme === "dark" ? "text-slate-400" : "text-slate-400"
+        )}>
+          ×{role.quantity}
+        </span>
+        <span className={cn(
+          theme === "dark" ? "text-slate-500" : "text-slate-400"
+        )}>
+          |
+        </span>
+        <span className={cn(
+          theme === "dark" ? "text-slate-300" : "text-slate-500"
+        )}>
+          {role.minExperience}-{role.maxExperience}yr
+        </span>
+        <span className={cn(
+          theme === "dark" ? "text-slate-500" : "text-slate-400"
+        )}>
+          |
+        </span>
+        <span className={cn(
+          "capitalize",
+          theme === "dark" ? "text-slate-300" : "text-slate-500"
+        )}>
+          {role.genderRequirement}
+        </span>
+        {role.ageRequirement && (
+          <>
+            <span className={cn(
+              theme === "dark" ? "text-slate-500" : "text-slate-400"
+            )}>
+              |
+            </span>
+            <span className={cn(
+              theme === "dark" ? "text-slate-300" : "text-slate-500"
+            )}>
+              {role.ageRequirement}y
+            </span>
+          </>
+        )}
+      </div>
+    ))}
+  </div>
+</div>
             )}
           </motion.div>
         )}
@@ -1033,45 +1315,81 @@ export default function CandidateDocumentVerificationPage() {
     initial={{ opacity: 0, y: 40 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.7 }}
-    className="rounded-2xl bg-white/95 backdrop-blur-2xl border border-white/30 shadow-2xl overflow-hidden"
+    className={cn("rounded-2xl backdrop-blur-2xl border border-white/30 shadow-2xl overflow-hidden", theme === "dark" ? "bg-black text-white" : "bg-white/95")}
   >
     {/* Header */}
-    <div className="p-6 lg:p-8 border-b border-white/20 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
+    <div className={cn("p-6 lg:p-8 border-b border-white/20", theme === "dark" ? "bg-black" : "bg-gradient-to-r from-blue-500/5 to-purple-500/5")}>
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div className="flex items-center gap-4">
           <div className="p-3.5 rounded-xl bg-blue-500/10">
             <FileText className="h-7 w-7 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800">Document Requirements & Verification</h2>
+          <h2 className={cn("text-2xl font-bold", theme === "dark" ? "text-white" : "text-slate-800")}>Document Requirements & Verification</h2>
         </div>
 
-        <div className="flex gap-5">
-          {[
-            { label: "Required", value: summary.totalRequired || 0, color: "blue" },
-            { label: "Submitted", value: summary.totalSubmitted || 0, color: "emerald" },
-            { label: "Verified", value: summary.totalVerified || 0, color: "green" },
-            { label: "Pending", value: summary.totalPending || 0, color: "amber" },
-          ].map((item) => (
-            <div key={item.label} className="text-center px-6 py-4 bg-white/80 rounded-2xl border border-white/40 shadow-lg">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">{item.label}</p>
-              <p className={`text-3xl font-extrabold mt-2 text-${item.color}-600`}>{item.value}</p>
-            </div>
-          ))}
-          {summary.isDocumentationReviewed && (
-            <div className="flex items-center ml-2">
-              <Badge className={cn(
-                "px-3 py-2 rounded-full font-semibold",
-                summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified"
-                  ? "bg-green-500 text-white"
-                  : summary.documentationStatus === "Documents Rejected" || summary.documentationStatus === "Document rejected"
-                  ? "bg-red-500 text-white"
-                  : "bg-emerald-100 text-emerald-800"
-              )}>
-                {summary.documentationStatus || "Document reviewed"}
-              </Badge>
-            </div>
-          )}
-        </div>
+       <div className="flex gap-5">
+  {[
+    { label: "Required", value: summary.totalRequired || 0, color: "blue" },
+    { label: "Submitted", value: summary.totalSubmitted || 0, color: "emerald" },
+    { label: "Verified", value: summary.totalVerified || 0, color: "green" },
+    { label: "Pending", value: summary.totalPending || 0, color: "amber" },
+  ].map((item) => (
+    <div
+      key={item.label}
+      className={cn(
+        "text-center px-6 py-4 rounded-2xl border shadow-lg transition-colors",
+        theme === "dark"
+          ? "bg-slate-900/90 border-slate-700/70 backdrop-blur-md"
+          : "bg-white/80 border-white/40 backdrop-blur-xl"
+      )}
+    >
+      <p
+        className={cn(
+          "text-xs font-bold uppercase tracking-wider",
+          theme === "dark" ? "text-slate-400" : "text-slate-600"
+        )}
+      >
+        {item.label}
+      </p>
+      <p
+        className={cn(
+          "text-3xl font-extrabold mt-2",
+          theme === "dark"
+            ? `text-${item.color}-400`
+            : `text-${item.color}-600`
+        )}
+      >
+        {item.value}
+      </p>
+    </div>
+  ))}
+
+  {summary.isDocumentationReviewed && (
+    <div className="flex items-center ml-2">
+      <Badge
+        className={cn(
+          "px-3 py-2 rounded-full font-semibold text-sm transition-colors",
+          theme === "dark" ? "border border-slate-600" : "",
+          summary.documentationStatus === "Documents Verified" ||
+          summary.documentationStatus === "Document verified"
+            ? theme === "dark"
+              ? "bg-green-800/60 text-green-200 border-green-700/50"
+              : "bg-green-500 text-white"
+            : summary.documentationStatus === "Documents Rejected" ||
+              summary.documentationStatus === "Document rejected"
+            ? theme === "dark"
+              ? "bg-red-800/60 text-red-200 border-red-700/50"
+              : "bg-red-500 text-white"
+            : theme === "dark"
+            ? "bg-emerald-900/50 text-emerald-200 border-emerald-800/40"
+            : "bg-emerald-100 text-emerald-800"
+        )}
+      >
+        {summary.documentationStatus || "Document reviewed"}
+      </Badge>
+    </div>
+  )}
+</div>
       </div>
     </div>
 
@@ -1084,200 +1402,415 @@ export default function CandidateDocumentVerificationPage() {
       ) : (
         <>
           {/* Your Full Table – 100% Logic Preserved */}
-          <div className="rounded-2xl overflow-x-auto border border-white/30 bg-white/50 backdrop-blur">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50">
-                  <TableHead className="font-bold text-slate-700">Document Type</TableHead>
-                  <TableHead className="font-bold text-slate-700 w-[150px]">Status</TableHead>
-                  <TableHead className="font-bold text-slate-700">Submitted Document</TableHead>
-                  <TableHead className="font-bold text-slate-700 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requirements.map((requirement: any) => {
-                  const verification = verifications.find((v: any) => v.document.docType === requirement.docType);
-                  const displayedStatus = verification ? localStatuses[verification.id] ?? verification.status : undefined;
+        <div 
+  className={cn(
+    "rounded-2xl overflow-x-auto border backdrop-blur transition-colors",
+    theme === "dark"
+      ? "bg-slate-950 border-slate-700/70"
+      : "bg-white/50 border-white/30"
+  )}
+>
+  <Table>
+    <TableHeader>
+      <TableRow 
+        className={cn(
+          "border-b",
+          theme === "dark"
+            ? "bg-slate-900/80 border-slate-700"
+            : "bg-gradient-to-r from-slate-100 to-slate-50 border-slate-200"
+        )}
+      >
+        <TableHead className={cn(
+          "font-bold",
+          theme === "dark" ? "text-slate-200" : "text-slate-700"
+        )}>
+          Document Type
+        </TableHead>
+        <TableHead className={cn(
+          "font-bold w-[150px]",
+          theme === "dark" ? "text-slate-200" : "text-slate-700"
+        )}>
+          Status
+        </TableHead>
+        <TableHead className={cn(
+          "font-bold",
+          theme === "dark" ? "text-slate-200" : "text-slate-700"
+        )}>
+          Submitted Document
+        </TableHead>
+        <TableHead className={cn(
+          "font-bold text-right",
+          theme === "dark" ? "text-slate-200" : "text-slate-700"
+        )}>
+          Actions
+        </TableHead>
+      </TableRow>
+    </TableHeader>
 
-                  return (
-                    <TableRow key={requirement.id} className="hover:bg-white/70 transition">
-                      <TableCell className="py-5">
-                        <div className="flex items-center gap-3">
-                          <FileIcon className="h-6 w-6 text-slate-500 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-800 truncate">{requirement.docType}</span>
-                              {requirement.mandatory && (
-                                <Badge className="bg-red-500/20 text-red-700 text-[10px] font-bold px-1.5 py-0 h-4 flex-shrink-0">REQ</Badge>
-                              )}
-                            </div>
-                            {requirement.description && (
-                              <p className="text-xs text-slate-500 mt-1 truncate max-w-[180px]">{requirement.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
+    <TableBody>
+      {requirements.map((requirement: any) => {
+        const verification = verifications.find((v: any) => v.document.docType === requirement.docType);
+        const displayedStatus = verification ? localStatuses[verification.id] ?? verification.status : undefined;
 
-                      <TableCell>{verification ? getStatusBadge(displayedStatus as string) : <Badge variant="outline">Not Submitted</Badge>}</TableCell>
-
-                      <TableCell>
-                        {verification ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
-                              {verification.document.fileName}
-                            </span>
-                            <div className="flex gap-1 flex-shrink-0">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
-                                onClick={() => { 
-                                  setUploadDocType(verification.document.docType); 
-                                  setIsReuploadMode(true);
-                                  setReuploadDocId(verification.document.id);
-                                  setShowUploadDialog(true); 
-                                  setUploadFile(null); 
-                                }}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-500 italic text-xs">No document</span>
+        return (
+          <TableRow 
+            key={requirement.id}
+            className={cn(
+              "border-b transition-colors",
+              theme === "dark"
+                ? "hover:bg-slate-900/60 border-slate-800"
+                : "hover:bg-white/70 border-slate-100"
+            )}
+          >
+            <TableCell className="py-5">
+              <div className="flex items-center gap-3">
+                <FileIcon 
+                  className={cn(
+                    "h-6 w-6 flex-shrink-0",
+                    theme === "dark" ? "text-slate-500" : "text-slate-500"
+                  )} 
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "font-semibold truncate",
+                      theme === "dark" ? "text-slate-100" : "text-slate-800"
+                    )}>
+                      {requirement.docType}
+                    </span>
+                    {requirement.mandatory && (
+                      <Badge 
+                        className={cn(
+                          "text-[10px] font-bold px-1.5 py-0 h-4 flex-shrink-0",
+                          theme === "dark"
+                            ? "bg-red-900/60 text-red-300 border border-red-800/40"
+                            : "bg-red-500/20 text-red-700"
                         )}
-                      </TableCell>
+                      >
+                        REQ
+                      </Badge>
+                    )}
+                  </div>
+                  {requirement.description && (
+                    <p className={cn(
+                      "text-xs mt-1 truncate max-w-[180px]",
+                      theme === "dark" ? "text-slate-500" : "text-slate-500"
+                    )}>
+                      {requirement.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </TableCell>
 
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {summary.isDocumentationReviewed ? (
-                            <Badge className={cn(
-                              "font-semibold text-xs",
-                              summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified"
-                                ? "bg-green-500 text-white"
-                                : summary.documentationStatus === "Documents Rejected" || summary.documentationStatus === "Document rejected"
-                                ? "bg-red-500 text-white"
-                                : "bg-slate-100 text-slate-700"
-                            )}>{summary.documentationStatus || "Reviewed"}</Badge>
-                          ) : verification ? (
-                            <>
-                              {canVerifyDocuments && displayedStatus === "pending" && (
+            <TableCell>
+              {verification ? getStatusBadge(displayedStatus as string) : (
+                <Badge 
+                  variant="outline"
+                  className={cn(
+                    "text-xs",
+                    theme === "dark" 
+                      ? "border-slate-600 text-slate-400 bg-slate-900/40" 
+                      : ""
+                  )}
+                >
+                  Not Submitted
+                </Badge>
+              )}
+            </TableCell>
+
+            <TableCell>
+              {verification ? (
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-sm font-medium truncate max-w-[120px]",
+                    theme === "dark" ? "text-slate-300" : "text-slate-700"
+                  )}>
+                    {verification.document.fileName}
+                  </span>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className={cn(
+                        "h-8 w-8",
+                        theme === "dark" ? "hover:bg-slate-800 hover:text-white" : ""
+                      )}
+                      onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}
+                    >
+                      <Eye className={cn(
+                        "h-4 w-4",
+                        theme === "dark" ? "text-slate-400" : "text-slate-600"
+                      )} 
+                    />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className={cn(
+                        "h-8 w-8",
+                        theme === "dark" 
+                          ? "text-amber-400 hover:text-amber-300 hover:bg-slate-800" 
+                          : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                      )}
+                      onClick={() => { 
+                        setUploadDocType(verification.document.docType); 
+                        setIsReuploadMode(true);
+                        setReuploadDocId(verification.document.id);
+                        setShowUploadDialog(true); 
+                        setUploadFile(null); 
+                      }}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <span className={cn(
+                  "italic text-xs",
+                  theme === "dark" ? "text-slate-500" : "text-slate-500"
+                )}>
+                  No document
+                </span>
+              )}
+            </TableCell>
+
+            <TableCell className="text-right">
+              <div className="flex items-center justify-end gap-2">
+                {summary.isDocumentationReviewed ? (
+                  <Badge className={cn(
+                    "font-semibold text-xs",
+                    theme === "dark" ? "border border-slate-600" : "",
+                    summary.documentationStatus === "Documents Verified" || 
+                    summary.documentationStatus === "Document verified"
+                      ? theme === "dark"
+                        ? "bg-green-900/60 text-green-200 border-green-700/50"
+                        : "bg-green-500 text-white"
+                      : summary.documentationStatus === "Documents Rejected" || 
+                        summary.documentationStatus === "Document rejected"
+                      ? theme === "dark"
+                        ? "bg-red-900/60 text-red-200 border-red-700/50"
+                        : "bg-red-500 text-white"
+                      : theme === "dark"
+                      ? "bg-slate-800 text-slate-300 border-slate-600"
+                      : "bg-slate-100 text-slate-700"
+                  )}>
+                    {summary.documentationStatus || "Reviewed"}
+                  </Badge>
+                ) : verification ? (
+                  <>
+                    {canVerifyDocuments && displayedStatus === "pending" && (
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className={cn(
+                            "h-8 px-3 text-white",
+                            theme === "dark"
+                              ? "bg-emerald-700 hover:bg-emerald-600"
+                              : "bg-emerald-600 hover:bg-emerald-700"
+                          )} 
+                          onClick={() => { 
+                            setSelectedVerification(verification); 
+                            setConfirmationAction("verify"); 
+                            setIsConfirmationOpen(true); 
+                          }}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className={cn(
+                            "h-8 px-3 border-red-600 text-red-600 hover:bg-red-50",
+                            theme === "dark" 
+                              ? "border-red-600/70 text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                              : ""
+                          )} 
+                          onClick={() => { 
+                            setSelectedVerification(verification); 
+                            setConfirmationAction("reject"); 
+                            setIsConfirmationOpen(true); 
+                          }}
+                        >
+                          <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
+                        </Button>
+                      </div>
+                    )}
+                    {canVerifyDocuments && displayedStatus === "verified" && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className={cn(
+                          "h-8 px-3 border-red-600 text-red-600 hover:bg-red-50",
+                          theme === "dark" 
+                            ? "border-red-600/70 text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                            : ""
+                        )} 
+                        onClick={() => { 
+                          setSelectedVerification(verification); 
+                          setConfirmationAction("reject"); 
+                          setIsConfirmationOpen(true); 
+                        }}
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
+                      </Button>
+                    )}
+                    {canVerifyDocuments && (displayedStatus === "rejected" || displayedStatus === "resubmission_required" || displayedStatus === "resubmitted") && (
+                      <div className="flex gap-2">
+                        {displayedStatus === "resubmission_required" ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
                                 <div className="flex gap-2">
-                                  <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
+                                  <Button 
+                                    size="sm" 
+                                    className={cn(
+                                      "h-8 px-3 text-white opacity-60 cursor-not-allowed",
+                                      theme === "dark" ? "bg-emerald-800" : "bg-emerald-600"
+                                    )} 
+                                    disabled
+                                  >
                                     <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
                                   </Button>
-                                  <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className={cn(
+                                      "h-8 px-3 border-red-600 text-red-600 hover:bg-red-50 opacity-60 cursor-not-allowed",
+                                      theme === "dark" 
+                                        ? "border-red-600/70 text-red-400 hover:bg-red-950/50"
+                                        : ""
+                                    )} 
+                                    disabled
+                                  >
                                     <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
                                   </Button>
                                 </div>
-                              )}
-                              {canVerifyDocuments && displayedStatus === "verified" && (
-                                <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
-                                  <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                </Button>
-                              )}
-                              {canVerifyDocuments && (displayedStatus === "rejected" || displayedStatus === "resubmission_required" || displayedStatus === "resubmitted") && (
-                                <div className="flex gap-2">
-                                  {displayedStatus === "resubmission_required" ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <div className="flex gap-2">
-                                            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" disabled>
-                                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                            </Button>
-                                            <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" disabled>
-                                              <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                            </Button>
-                                          </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Please wait for resubmission of the document</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    <>
-                                      <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
-                                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                      </Button>
-                                      {displayedStatus === "resubmitted" && (
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline" 
-                                          className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" 
-                                          onClick={() => { 
-                                            setSelectedVerification(verification); 
-                                            setConfirmationAction("reject"); 
-                                            setIsConfirmationOpen(true); 
-                                          }}
-                                        >
-                                          <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                        </Button>
-                                      )}
-                                      {canRequestResubmission && displayedStatus === "rejected" && (
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline" 
-                                          className="h-8 border-blue-600 text-blue-600 hover:bg-blue-50 px-3" 
-                                          onClick={() => { 
-                                            setSelectedResubmitVerification(verification); 
-                                            setIsResubmitDialogOpen(true); 
-                                          }}
-                                        >
-                                          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Resubmit
-                                        </Button>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-3"
-                              onClick={() => {
-                                setUploadDocType(requirement.docType);
-                                setIsReuploadMode(false);
-                                setReuploadDocId(null);
-                                setShowReuseDialog(true);
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Please wait for resubmission of the document</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <>
+                            <Button 
+                              size="sm" 
+                              className={cn(
+                                "h-8 px-3 text-white",
+                                theme === "dark"
+                                  ? "bg-emerald-700 hover:bg-emerald-600"
+                                  : "bg-emerald-600 hover:bg-emerald-700"
+                              )} 
+                              onClick={() => { 
+                                setSelectedVerification(verification); 
+                                setConfirmationAction("verify"); 
+                                setIsConfirmationOpen(true); 
                               }}
                             >
-                              Link
+                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
                             </Button>
-                            <Button
-                              size="sm"
-                              className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
-                              onClick={() => {
-                                setUploadDocType(requirement.docType);
-                                setIsReuploadMode(false);
-                                setReuploadDocId(null);
-                                setUploadFile(null);
-                                setShowUploadDialog(true);
-                              }}
-                            >
-                              <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
-                            </Button>
-                          </div>
-                          )}
-                        </div>
-                      </TableCell> 
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                            {displayedStatus === "resubmitted" && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className={cn(
+                                  "h-8 px-3 border-red-600 text-red-600 hover:bg-red-50",
+                                  theme === "dark" 
+                                    ? "border-red-600/70 text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                                    : ""
+                                )} 
+                                onClick={() => { 
+                                  setSelectedVerification(verification); 
+                                  setConfirmationAction("reject"); 
+                                  setIsConfirmationOpen(true); 
+                                }}
+                              >
+                                <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
+                              </Button>
+                            )}
+                            {canRequestResubmission && displayedStatus === "rejected" && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className={cn(
+                                  "h-8 px-3 border-blue-600 text-blue-600 hover:bg-blue-50",
+                                  theme === "dark" 
+                                    ? "border-blue-600/70 text-blue-400 hover:bg-blue-950/50 hover:text-blue-300"
+                                    : ""
+                                )} 
+                                onClick={() => { 
+                                  setSelectedResubmitVerification(verification); 
+                                  setIsResubmitDialogOpen(true); 
+                                }}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Resubmit
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        "h-8 px-3",
+                        theme === "dark" 
+                          ? "border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white"
+                          : ""
+                      )}
+                      onClick={() => {
+                        setUploadDocType(requirement.docType);
+                        setIsReuploadMode(false);
+                        setReuploadDocId(null);
+                        setShowReuseDialog(true);
+                      }}
+                    >
+                      Link
+                    </Button>
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 text-white",
+                        theme === "dark"
+                          ? "bg-blue-700 hover:bg-blue-600"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      )}
+                      onClick={() => {
+                        setUploadDocType(requirement.docType);
+                        setIsReuploadMode(false);
+                        setReuploadDocId(null);
+                        setUploadFile(null);
+                        setShowUploadDialog(true);
+                      }}
+                    >
+                      <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TableCell> 
+          </TableRow>
+        );
+      })}
+    </TableBody>
+  </Table>
+</div>
 
           {/* Final Actions */}
           {((summary.allDocumentsVerified && canVerifyDocuments) || (allRejected && canVerifyDocuments && !summary.isDocumentationReviewed)) && (
-       <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
+    <div 
+  className={cn(
+    "mt-10 pt-8 border-t flex justify-end gap-5",
+    theme === "dark"
+      ? "border-slate-700/70"
+      : "border-white/30"
+  )}
+>
 
   {summary.allDocumentsVerified && canVerifyDocuments && (
     <div className="flex gap-3">
@@ -1286,7 +1819,12 @@ export default function CandidateDocumentVerificationPage() {
       {summary.isDocumentationReviewed && (summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified") && (
         <Button
           size="sm"
-          className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[260px] flex items-center justify-center gap-3"
+          className={cn(
+            "font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[260px] flex items-center justify-center gap-3",
+            theme === "dark"
+              ? "bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white"
+              : "bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white"
+          )}
           onClick={() => setIsSendModalOpen(true)}
           disabled={verifiedCount === 0}
         >
@@ -1300,7 +1838,12 @@ export default function CandidateDocumentVerificationPage() {
   {summary.allDocumentsVerified && !summary.isDocumentationReviewed && (
     <Button
       size="sm"
-      className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
+      className={cn(
+        "font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3 text-white",
+        theme === "dark"
+          ? "bg-gradient-to-r from-emerald-700 to-emerald-800 hover:from-emerald-800 hover:to-emerald-900"
+          : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
+      )}
       onClick={() => { setCompletionAction("complete"); setIsCompletionConfirmationOpen(true); }}
       disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
     >
@@ -1313,7 +1856,12 @@ export default function CandidateDocumentVerificationPage() {
     <Button
       size="sm"
       variant="destructive"
-      className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
+      className={cn(
+        "font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3 text-white",
+        theme === "dark"
+          ? "bg-gradient-to-r from-red-700 to-rose-800 hover:from-red-800 hover:to-rose-900"
+          : "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700"
+      )}
       onClick={() => { setCompletionAction("reject"); setIsCompletionConfirmationOpen(true); }}
       disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
     >
