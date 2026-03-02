@@ -148,7 +148,7 @@ const STATUS_BADGE: Record<
 // -------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------
-export default function CandidatesOverviewPage() {
+export default function ProjectCandidatesOverviewPage() {
   const navigate = useNavigate();
 
   // Filter states

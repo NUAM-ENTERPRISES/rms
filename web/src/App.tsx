@@ -50,8 +50,8 @@ const CandidateDetailPage = lazy(
 const CandidateNominationPage = lazy(
   () => import("@/features/candidates/views/CandidateNominationPage")
 );
-const CandidatesOverviewPage = lazy(
-  () => import("@/features/candidates/views/CandidatesOverviewPage")
+const ProjectCandidatesOverviewPage = lazy(
+  () => import("@/features/candidates/views/ProjectCandidatesOverviewPage")
 );
 const RecruiterOverviewPage = lazy(
   () => import("@/features/analytics/views/RecruiterOverviewPage")
@@ -362,7 +362,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute>
                           <AppLayout>
-                            <CandidatesOverviewPage />
+                            <ProjectCandidatesOverviewPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
