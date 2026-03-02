@@ -158,11 +158,11 @@ function NavItemComponent({
   // Initialize expansion based on whether any child is active so that
   // navigating directly to a child keeps the parent open. Also sync
   // expansion when the active child changes (collapses when navigating away).
-  const [isExpanded, setIsExpanded] = useState<boolean>(isChildActive);
+  const [isExpanded, setIsExpanded] = useState<boolean>(isChildActive || false);
 
   useEffect(() => {
     if (hasChildren) {
-      setIsExpanded(isChildActive);
+      setIsExpanded(!!isChildActive);
     }
   }, [isChildActive, hasChildren]);
 
