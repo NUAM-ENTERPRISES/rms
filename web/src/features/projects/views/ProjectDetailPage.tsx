@@ -150,7 +150,8 @@ export default function ProjectDetailPage() {
     error,
     refetch: refetchProject,
   } = useGetProjectQuery(projectId!, {
-    refetchOnFocus: true,
+    refetchOnFocus: false,
+    refetchOnMountOrArgChange: false,
   });
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
@@ -168,7 +169,8 @@ export default function ProjectDetailPage() {
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
   }, {
-    refetchOnFocus: true,
+    refetchOnFocus: false,
+    refetchOnMountOrArgChange: false,
   });
   const eligibleCandidates: any[] = Array.isArray(eligibleResponse?.data)
     ? eligibleResponse.data
@@ -185,7 +187,8 @@ export default function ProjectDetailPage() {
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
   }, {
-    refetchOnFocus: true,
+    refetchOnFocus: false,
+    refetchOnMountOrArgChange: false,
   });
 
   const candidatesData = consolidatedCandidatesQuery.data?.data?.candidates;
@@ -212,7 +215,8 @@ export default function ProjectDetailPage() {
       },
       { 
         skip: !shouldLoadNominated,
-        refetchOnFocus: true,
+        refetchOnFocus: false,
+        refetchOnMountOrArgChange: false,
       }
     );
 
@@ -558,7 +562,11 @@ export default function ProjectDetailPage() {
   );
   const { data: bulkAssignEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
     { projectId: projectId!, candidateIds: bulkAssignCandidateIds },
-    { skip: !projectId || bulkAssignCandidateIds.length === 0 }
+    { 
+      skip: !projectId || bulkAssignCandidateIds.length === 0 || !bulkAssignState.isOpen,
+      refetchOnFocus: false,
+      refetchOnMountOrArgChange: false
+    }
   );
   const bulkAssignEligibilityMap = React.useMemo(() => {
     if (!bulkAssignEligibilityResponse?.data || !Array.isArray(bulkAssignEligibilityResponse.data)) return {};

@@ -359,14 +359,20 @@ const ProjectCandidatesBoard = ({
       search: searchTerm || undefined,
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
       limit: 10,
-    }, { refetchOnFocus: true });
+    }, { 
+      refetchOnFocus: false,
+      refetchOnMountOrArgChange: false
+    });
 
   const consolidatedCandidatesQuery = useGetConsolidatedCandidatesQuery({
     projectId,
     search: searchTerm || undefined,
     roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
     limit: 10,
-  }, { refetchOnFocus: true });
+  }, { 
+    refetchOnFocus: false,
+    refetchOnMountOrArgChange: false
+  });
 
   const eligibleCandidates: CandidateRecord[] = Array.isArray(
     eligibleResponse?.data
@@ -410,7 +416,8 @@ const ProjectCandidatesBoard = ({
     },
     {
       skip: !projectId || debouncedCandidateIds.length === 0,
-      refetchOnFocus: true,
+      refetchOnFocus: false,
+      refetchOnMountOrArgChange: false
     }
   );
 
