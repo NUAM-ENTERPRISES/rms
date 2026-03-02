@@ -54,6 +54,7 @@ import {
   useAssignToProjectMutation,
   useGetEligibleCandidatesQuery,
   useCheckBulkCandidateEligibilityQuery,
+  useBulkAssignToProjectMutation,
 } from "@/features/projects";
 import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
@@ -61,6 +62,7 @@ import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCa
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
+import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 
 // Helper function to format date
 const formatDate = (dateString?: string) => {
@@ -128,6 +130,7 @@ const formatWorkExperienceEntry = (exp: any) => {
 
 // Lazy-loaded project details modal (code-split)
 const ProjectDetailsModal = React.lazy(() => import("@/components/molecules/ProjectDetailsModal"));
+const BulkAssignModal = React.lazy(() => import("@/components/molecules/BulkAssignModal").then(module => ({ default: module.BulkAssignModal })));
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -229,7 +232,7 @@ export default function ProjectDetailPage() {
         refetchEligible?.(),
         consolidatedCandidatesQuery?.refetch?.(),
       ]);
-      toast.success("Project data refreshed");
+      // toast.success("Project data refreshed");
     } catch (e) {
       toast.error("Failed to refresh data");
     }
@@ -282,7 +285,9 @@ export default function ProjectDetailPage() {
         );
         
         if (!alreadyHasName) {
-          rolesMap.set(id, { id, name });
+          // Store original roleNeededId for backend compatibility if available
+          const roleNeededId = r.id || r.roleId || id;
+          rolesMap.set(id, { id, name, roleNeededId });
         }
       }
     };
@@ -300,7 +305,14 @@ export default function ProjectDetailPage() {
     // 2. From project response (Project's defined requirements)
     const project = projectData?.data;
     if (project && Array.isArray(project.rolesNeeded)) {
-      project.rolesNeeded.forEach(addRole);
+      project.rolesNeeded.forEach((r: any) => {
+        // When coming from project.rolesNeeded, r.id is the actual RoleNeeded.id
+        const id = (r.roleCatalogId || r.roleCatalog?.id || r.id).toString().trim();
+        const name = (r.designation || r.roleCatalog?.name || "Unknown").trim();
+        if (!rolesMap.has(id)) {
+            rolesMap.set(id, { id, name, roleNeededId: r.id });
+        }
+      });
     }
 
     // 3. Fallback: from candidates themselves if any
@@ -308,7 +320,7 @@ export default function ProjectDetailPage() {
       if (c.nominatedRole) addRole(c.nominatedRole);
     });
 
-    return Array.from(rolesMap.values()) as Array<{ id: string; name: string }>;
+    return Array.from(rolesMap.values()) as Array<{ id: string; name: string; roleNeededId?: string }>;
   }, [projectCandidatesData?.data, projectData?.data, projectCandidates]);
 
   // Local state
@@ -374,6 +386,16 @@ export default function ProjectDetailPage() {
     roleNeededId: undefined,
     notes: "",
   });
+
+  const [bulkAssignState, setBulkAssignState] = useState<{
+    isOpen: boolean;
+    candidateIds: string[];
+  }>({
+    isOpen: false,
+    candidateIds: [],
+  });
+
+  const [bulkAssignToProject, { isLoading: isBulkAssigning }] = useBulkAssignToProjectMutation();
 
   // Handle project deletion
   const handleDeleteProjectConfirm = async () => {
@@ -529,6 +551,23 @@ export default function ProjectDetailPage() {
     return assignEligibilityResponse.data.find((d) => d.candidateId === assignConfirm.candidateId) || null;
   }, [assignEligibilityResponse, assignConfirm.candidateId]);
 
+  // Eligibility query for the bulk assign modal
+  const bulkAssignCandidateIds = React.useMemo(
+    () => bulkAssignState.candidateIds,
+    [bulkAssignState.candidateIds]
+  );
+  const { data: bulkAssignEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId: projectId!, candidateIds: bulkAssignCandidateIds },
+    { skip: !projectId || bulkAssignCandidateIds.length === 0 }
+  );
+  const bulkAssignEligibilityMap = React.useMemo(() => {
+    if (!bulkAssignEligibilityResponse?.data || !Array.isArray(bulkAssignEligibilityResponse.data)) return {};
+    return bulkAssignEligibilityResponse.data.reduce((map: any, d: any) => {
+      map[d.candidateId] = d;
+      return map;
+    }, {});
+  }, [bulkAssignEligibilityResponse]);
+
   // Handle assignment
   const showAssignConfirmation = (
     candidateId: string,
@@ -602,6 +641,39 @@ export default function ProjectDetailPage() {
       toast.error(
         error?.data?.message || "Failed to assign candidate to project"
       );
+    }
+  };
+
+  const handleBulkAssignToProject = async (assignments: Array<{ candidateId: string; roleNeededId: string; notes?: string }>) => {
+    try {
+      const result = await bulkAssignToProject({
+        projectId: projectId!,
+        assignments: assignments.map(a => {
+          // Find the role in projectRoles to get the actual backend roleNeededId
+          const sourceRole = projectRoles.find(pr => pr.id === a.roleNeededId);
+          return {
+            candidateId: a.candidateId,
+            roleNeededId: sourceRole?.roleNeededId || a.roleNeededId,
+            notes: a.notes || `Bulk assigned by recruiter to project`
+          };
+        })
+      }).unwrap();
+      
+      const successCount = result.data?.successful || 0;
+      const totalCount = assignments.length;
+      
+      if (successCount === totalCount) {
+        toast.success(`Successfully assigned all ${successCount} candidates`);
+      } else if (successCount > 0) {
+        toast.warning(`Assigned ${successCount} out of ${totalCount} candidates. Check for errors.`);
+      } else {
+        toast.error("Failed to assign candidates");
+      }
+      
+      setBulkAssignState({ isOpen: false, candidateIds: [] });
+      handleRefreshAll();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to bulk assign candidates");
     }
   };
 
@@ -921,6 +993,9 @@ export default function ProjectDetailPage() {
                 }
                 onSendForScreening={(candidateId, candidateName) =>
                   showScreeningConfirmation(candidateId, candidateName)
+                }
+                onBulkAssign={(candidateIds) =>
+                  setBulkAssignState({ isOpen: true, candidateIds })
                 }
                 requiredScreening={projectRequiredScreening}
                 hideContactInfo={projectHideContactInfo}
@@ -2044,6 +2119,21 @@ export default function ProjectDetailPage() {
           </div>
         }
       />
+
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center"><LoadingSpinner /></div>}>
+        {bulkAssignState.isOpen && (
+          <BulkAssignModal
+            isOpen={bulkAssignState.isOpen}
+            onClose={() => setBulkAssignState({ isOpen: false, candidateIds: [] })}
+            onConfirm={handleBulkAssignToProject}
+            onRemoveCandidate={(id) => setBulkAssignState(prev => ({ ...prev, candidateIds: prev.candidateIds.filter(cid => cid !== id) }))}
+            candidates={eligibleCandidates.filter(c => bulkAssignState.candidateIds.includes(c.candidateId || c.id))}
+            roles={projectRoles}
+            isSubmitting={isBulkAssigning}
+            eligibilityMap={bulkAssignEligibilityMap}
+          />
+        )}
+      </React.Suspense>
     </div>
   );
 }

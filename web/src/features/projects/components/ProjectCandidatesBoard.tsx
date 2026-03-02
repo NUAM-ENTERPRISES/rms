@@ -1,5 +1,6 @@
 import { ReactNode, useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +20,7 @@ import {
   ChevronRight,
   Inbox,
   Filter,
+  UserPlus,
 } from "lucide-react";
 import {
   useGetEligibleCandidatesQuery,
@@ -66,6 +68,7 @@ interface ProjectCandidatesBoardProps {
   onVerifyCandidate: (candidateId: string, candidateName: string) => void;
   onSendForInterview?: (candidateId: string, candidateName: string) => void;
   onSendForScreening?: (candidateId: string, candidateName: string) => void;
+  onBulkAssign?: (candidateIds: string[]) => void;
   requiredScreening?: boolean;
   hideContactInfo?: boolean; // eslint-disable-line @typescript-eslint/no-unused-vars -- passed through to CandidateCard
 }
@@ -310,9 +313,12 @@ const ProjectCandidatesBoard = ({
   onSendForInterview,
   hideContactInfo = false,
   onSendForScreening,
+  onBulkAssign,
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
+
+  const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
 
   const handleDragStart = (e: React.DragEvent, candidateId: string) => {
     e.dataTransfer.setData("candidateId", candidateId);
@@ -467,6 +473,45 @@ const ProjectCandidatesBoard = ({
     [allCandidates, searchTerm]
   );
 
+
+  // Compute bulk-selectable eligible candidates (those not already assigned and eligible)
+  // Used for the select-all toolbar in the column header
+  const selectableEligibleCandidates = useMemo(() => {
+    return filteredEligible
+      .map((candidate) => {
+        const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
+        const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
+        const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
+        const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+        return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
+      })
+      .filter((c) => c.canSelect);
+  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap]);
+
+  const allSelectableSelected = selectableEligibleCandidates.length > 0 &&
+    selectableEligibleCandidates.every((c) => selectedEligibleIds.has(c.candidateId));
+
+  const toggleSelectAllEligible = () => {
+    if (allSelectableSelected) {
+      const newSelected = new Set(selectedEligibleIds);
+      selectableEligibleCandidates.forEach((c) => newSelected.delete(c.candidateId));
+      setSelectedEligibleIds(newSelected);
+    } else {
+      const newSelected = new Set(selectedEligibleIds);
+      selectableEligibleCandidates.forEach((c) => newSelected.add(c.candidateId));
+      setSelectedEligibleIds(newSelected);
+    }
+  };
+
+  const toggleSelectEligible = (id: string) => {
+    const newSelected = new Set(selectedEligibleIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedEligibleIds(newSelected);
+  };
 
   const renderNominatedColumn = () => {
     if (isLoadingNominated) {
@@ -659,45 +704,53 @@ const ProjectCandidatesBoard = ({
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
           const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
 
+          // Only show checkbox if candidate can actually be assigned (not already assigned AND eligible)
+          const canSelect = !assignmentInfo.isAssigned && !isNotEligible;
+
+          const isSelected = selectedEligibleIds.has(assignmentInfo.candidateId);
+
           return (
-            <CandidateCard
-              key={`eligible-${assignmentInfo.candidateId}`}
-              candidate={candidateWithProject}
-              projectId={projectId}
-              isRecruiter={isRecruiter}
-              hideContactInfo={hideContactInfo}
-              searchTerm={searchTerm}
-              onView={() => onViewCandidate(assignmentInfo.candidateId)}
-              onAction={(id, action) => {
-                if (action === "assign") {
-                  onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`);
+              <CandidateCard
+                key={`eligible-${assignmentInfo.candidateId}`}
+                className={isSelected ? "ring-1 ring-emerald-400/60 bg-emerald-50/30" : ""}
+                selected={canSelect ? isSelected : undefined}
+                onSelect={canSelect ? () => toggleSelectEligible(assignmentInfo.candidateId) : undefined}
+                candidate={candidateWithProject}
+                projectId={projectId}
+                isRecruiter={isRecruiter}
+                hideContactInfo={hideContactInfo}
+                searchTerm={searchTerm}
+                onView={() => onViewCandidate(assignmentInfo.candidateId)}
+                onAction={(id, action) => {
+                  if (action === "assign") {
+                    onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`);
+                  }
+                  if (action === "send_for_screening") {
+                    onSendForScreening?.(id, `${candidate.firstName} ${candidate.lastName}`);
+                  }
+                }}
+                actions={actions}
+                projectStatus={assignmentInfo.projectStatus}
+                showMatchScore
+                matchScore={candidate.matchScore}
+                showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
+                onVerify={() =>
+                  onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
                 }
-                if (action === "send_for_screening") {
-                  onSendForScreening?.(id, `${candidate.firstName} ${candidate.lastName}`);
+                showAssignButton={!assignmentInfo.isAssigned}
+                onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
+                onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
+                showSkipDocumentVerification={shouldSkipDocVerification}
+                skipDocumentVerificationMessage={
+                  "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
                 }
-              }}
-              actions={actions}
-              projectStatus={assignmentInfo.projectStatus}
-              showMatchScore
-              matchScore={candidate.matchScore}
-              showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
-              onVerify={() =>
-                onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
-              }
-              showAssignButton={!assignmentInfo.isAssigned}
-              onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
-              onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
-              showSkipDocumentVerification={shouldSkipDocVerification}
-              skipDocumentVerificationMessage={
-                "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
-              }
-              showInterviewButton={showInterviewButton}
-              onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
-              isAlreadyInProject={assignmentInfo.isAssigned}
-              showDocumentStatus={false}
-              eligibilityData={eligibilityData}
-              showContactButtons={true}
-            />
+                showInterviewButton={showInterviewButton}
+                onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
+                isAlreadyInProject={assignmentInfo.isAssigned}
+                showDocumentStatus={false}
+                eligibilityData={eligibilityData}
+                showContactButtons={true}
+              />
           );
         })}
 
@@ -840,6 +893,7 @@ const ProjectCandidatesBoard = ({
     ariaLabel: string;
     icon: typeof Trophy;
     iconClasses: string;
+    headerExtra?: ReactNode;
   }> = [
     {
       id: "nominated",
@@ -860,6 +914,36 @@ const ProjectCandidatesBoard = ({
       ariaLabel: "Eligible candidates column",
       icon: ShieldCheck,
       iconClasses: "bg-emerald-100 text-emerald-600",
+      headerExtra: selectableEligibleCandidates.length > 0 ? (
+        <div className="flex items-center justify-between px-4 py-1.5 border-t border-emerald-100/60 bg-emerald-50/40">
+          <label
+            htmlFor="select-all-eligible"
+            className="flex items-center gap-1.5 cursor-pointer select-none"
+          >
+            <Checkbox
+              id="select-all-eligible"
+              checked={allSelectableSelected}
+              onCheckedChange={toggleSelectAllEligible}
+              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+            />
+            <span className="text-[11px] font-medium text-slate-500">
+              {selectedEligibleIds.size > 0
+                ? `${selectedEligibleIds.size} selected`
+                : `Select all`}
+            </span>
+          </label>
+          {selectedEligibleIds.size > 0 && (
+            <Button
+              size="sm"
+              className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors"
+              onClick={() => onBulkAssign?.(Array.from(selectedEligibleIds))}
+            >
+              <UserPlus className="h-3 w-3" />
+              Assign ({selectedEligibleIds.size})
+            </Button>
+          )}
+        </div>
+      ) : null,
     },
     {
       id: "all",
@@ -960,6 +1044,7 @@ const ProjectCandidatesBoard = ({
                   </span>
                 </div>
               </CardHeader>
+              {column.headerExtra}
               <CardContent
                 className={`flex-1 px-3 py-2 overflow-y-auto ${COLUMN_MAX_HEIGHT} space-y-3 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent`}
                 role="list"

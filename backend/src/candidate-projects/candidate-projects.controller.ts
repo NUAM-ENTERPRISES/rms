@@ -29,6 +29,7 @@ import { BulkSendForInterviewDto } from './dto/bulk-send-for-interview.dto';
 import { SendToScreeningDto } from './dto/send-to-screening.dto';
 import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
+import { BulkAssignCandidateProjectDto } from './dto/bulk-assign-candidate-project.dto';
 import { ProjectOverviewQueryDto } from './dto/project-overview-query.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
@@ -71,6 +72,30 @@ export class CandidateProjectsController {
       success: true,
       data: result,
       message: 'Candidate successfully assigned to project',
+    };
+  }
+
+  @Post('bulk-assign')
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Bulk assign candidates to project',
+    description: 'Assigns multiple candidates to a project simultaneously',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk assignment operation completed',
+  })
+  async bulkAssignCandidatesToProject(
+    @Body() dto: BulkAssignCandidateProjectDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.bulkAssignCandidatesToProject(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
     };
   }
 

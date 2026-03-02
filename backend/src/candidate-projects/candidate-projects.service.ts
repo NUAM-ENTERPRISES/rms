@@ -14,6 +14,7 @@ import { UpdateProjectStatusDto } from './dto/update-project-status.dto';
 import { SendForInterviewDto } from './dto/send-for-interview.dto';
 import { BulkSendForInterviewDto } from './dto/bulk-send-for-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
+import { BulkAssignCandidateProjectDto } from './dto/bulk-assign-candidate-project.dto';
 import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-query.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
@@ -2632,5 +2633,151 @@ export class CandidateProjectsService {
     });
 
     return assignment?.recruiterId || null;
+  }
+
+  /**
+   * Bulk assign candidates to project
+   */
+  async bulkAssignCandidatesToProject(
+    dto: BulkAssignCandidateProjectDto,
+    userId: string,
+  ) {
+    const { projectId, assignments } = dto;
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    // Get project just once
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: { rolesNeeded: true },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    // Get common statuses once
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({
+      where: { name: 'nominated' },
+    });
+
+    const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
+      where: { name: 'nominated_initial' },
+    });
+
+    if (!mainStatus || !subStatus) {
+      throw new Error('Nominated status not found in database');
+    }
+
+    // Get current user for history snapshots
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    for (const assignmentDto of assignments) {
+      const { candidateId, roleNeededId, notes } = assignmentDto;
+
+      try {
+        // Simple verification - candidate exists
+        const candidate = await this.prisma.candidate.findUnique({
+          where: { id: candidateId },
+        });
+
+        if (!candidate) {
+          errors.push({ candidateId, error: 'Candidate not found' });
+          continue;
+        }
+
+        // Verify role exists and belongs to the project to avoid foreign key violations
+        if (roleNeededId) {
+          const roleExists = await this.prisma.roleNeeded.findFirst({
+            where: { 
+              id: roleNeededId,
+              projectId: projectId 
+            },
+          });
+
+          if (!roleExists) {
+            errors.push({ candidateId, error: `Role ${roleNeededId} does not exist in project ${projectId}` });
+            continue;
+          }
+        }
+
+        // Check for existing assignment
+        const exists = await this.prisma.candidateProjects.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleNeededId,
+          },
+        });
+
+        if (exists) {
+          errors.push({ candidateId, error: 'Already assigned to this project with this role' });
+          continue;
+        }
+
+        // Recruiter from assignment table or fallback to recruiter provided (not in bulk dto) or currently logged in user
+        const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateId);
+        const finalRecruiterId = activeRecruiterId || userId;
+
+        const assignment = await this.prisma.$transaction(async (tx) => {
+          const newAssignment = await tx.candidateProjects.create({
+            data: {
+              candidateId,
+              projectId,
+              roleNeededId: roleNeededId || null,
+              recruiterId: finalRecruiterId || null,
+              assignedAt: new Date(),
+              notes: notes || null,
+              mainStatusId: mainStatus.id,
+              subStatusId: subStatus.id,
+            },
+          });
+
+          await tx.candidateProjectStatusHistory.create({
+            data: {
+              candidateProjectMapId: newAssignment.id,
+              changedById: userId,
+              changedByName: user?.name,
+              mainStatusId: mainStatus.id,
+              subStatusId: subStatus.id,
+              mainStatusSnapshot: mainStatus.label,
+              subStatusSnapshot: subStatus.label,
+              reason: 'Bulk assignment to project',
+              notes: notes || 'Assigned to project via bulk operation',
+            },
+          });
+
+          // Auto-assign documents
+          if (roleNeededId) {
+            await this.autoAssignExistingDocuments(
+              tx,
+              candidateId,
+              roleNeededId,
+              newAssignment.id,
+              userId,
+              user?.name,
+            );
+          }
+
+          return newAssignment;
+        });
+
+        results.push(assignment);
+      } catch (error: any) {
+        this.logger.error(`Error in bulk assignment for candidate ${candidateId}: ${error.message}`);
+        errors.push({ candidateId, error: error.message });
+      }
+    }
+
+    return {
+      totalRequested: assignments.length,
+      successful: results.length,
+      failed: errors.length,
+      results,
+      errors,
+    };
   }
 }

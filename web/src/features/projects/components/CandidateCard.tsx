@@ -18,6 +18,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { CandidateDetailTooltip } from "./CandidateDetailTooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -273,6 +274,10 @@ interface CandidateCardProps {
   hideContactInfo?: boolean;
   /** Drag and Drop support */
   onDragStart?: (e: React.DragEvent, candidateId: string) => void;
+  /** Bulk-selection checkbox — when defined, a small checkbox is rendered in the card */
+  selected?: boolean;
+  /** Called when the selection checkbox is toggled */
+  onSelect?: (candidateId: string) => void;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -302,6 +307,8 @@ const CandidateCard = memo(function CandidateCard({
   hideContactInfo = false,
   searchTerm = "",
   onDragStart,
+  selected,
+  onSelect,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -670,6 +677,19 @@ const CandidateCard = memo(function CandidateCard({
       <CardContent className="px-3.5 py-3 space-y-2.5">
         {/* Header row */}
         <div className="flex items-center gap-3">
+          {/* Bulk-selection checkbox */}
+          {onSelect && (
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(e) => {
+                e; // prevent unused
+                onSelect(candidateId);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="h-3.5 w-3.5 flex-shrink-0 rounded-[3px] border-slate-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+              aria-label={`Select ${fullName}`}
+            />
+          )}
           <Avatar className="h-10 w-10 border-2 border-white shadow-sm flex-shrink-0 ring-2 ring-slate-100">
             <AvatarImage src={candidate.profileImage} alt={fullName} />
             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold">

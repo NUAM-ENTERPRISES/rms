@@ -740,6 +740,31 @@ export const projectsApi = baseApi.injectEndpoints({
         "Candidate",
       ],
     }),
+
+    // Bulk assign candidates to project
+    bulkAssignToProject: builder.mutation<
+      ApiResponse<any>,
+      {
+        projectId: string;
+        assignments: Array<{
+          candidateId: string;
+          roleNeededId: string;
+          notes?: string;
+        }>;
+      }
+    >({
+      query: (data) => ({
+        url: "/candidate-projects/bulk-assign",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+        "Candidate",
+        "CandidateProject",
+      ],
+    }),
   }),
 });
 
@@ -764,4 +789,5 @@ export const {
   useCheckBulkCandidateEligibilityQuery,
   useGetRoleDepartmentsQuery,
   useBulkSendForInterviewMutation,
+  useBulkAssignToProjectMutation,
 } = projectsApi;
