@@ -241,10 +241,10 @@ export default function ScreeningsDashboardPage() {
   }
 
 return (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/30 dark:text-white">
     <div className="w-full max-w-7xl mx-auto space-y-6 px-4 py-6">
       {/* Elegant Header */}
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30">
+      <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -303,7 +303,7 @@ return (
           <Card
             key={i}
             className={cn(
-              "group relative overflow-hidden border-0 shadow-lg bg-white/75 backdrop-blur-lg rounded-2xl ring-1 ring-slate-200/30",
+              "group relative overflow-hidden border-0 shadow-lg bg-white/75 dark:bg-slate-800/75 backdrop-blur-lg rounded-2xl ring-1 ring-slate-200/30 dark:ring-slate-700/30",
               "hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
             )}
           >
@@ -319,7 +319,7 @@ return (
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-500">{stat.title}</p>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{stat.title}</p>
                   <p
                     className={cn(
                       "text-3xl font-bold tracking-tight bg-gradient-to-br bg-clip-text text-transparent transition-transform duration-300 group-hover:scale-105",
@@ -331,7 +331,7 @@ return (
                   >
                     {stat.value}
                   </p>
-                  <p className="text-xs text-slate-500">{stat.label}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</p>
                 </div>
                 <div
                   className={cn(
@@ -353,8 +353,8 @@ return (
       {/* Two-Column Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assigned Interviews */}
-        <Card className="border-0 shadow-xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 hover:shadow-2xl transition-all duration-300">
-          <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30">
+        <Card className="border-0 shadow-xl bg-white/75 dark:bg-slate-800/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 hover:shadow-2xl transition-all duration-300">
+          <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30 dark:from-black dark:to-indigo-900/30 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
@@ -380,7 +380,7 @@ return (
           </CardHeader>
           <CardContent className="pt-4">
             {assignedNormalized.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                 <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="text-base font-medium">No Assigned screenings</p>
                 <p className="text-sm mt-1">Scheduled screenings will appear here</p>
@@ -398,7 +398,7 @@ return (
                       onClick={() => {
                         navigate("/screenings/assigned");
                       }}
-                      className="relative p-4 rounded-xl border bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
+                      className="relative p-4 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -414,7 +414,7 @@ return (
                             <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
                               {candidateName}
                             </p>
-                            <p className="text-sm text-slate-500 truncate mt-0.5">
+                            <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
                               {role?.designation || "Unknown Role"}
                             </p>
                           </div>
@@ -424,7 +424,7 @@ return (
                         </Badge>
                       </div> 
 
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-3">
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-3">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>
                           {interview.scheduledTime
@@ -462,8 +462,8 @@ return (
         </Card>
 
         {/* Upcoming Interviews */}
-        <Card className="border-0 shadow-xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 hover:shadow-2xl transition-all duration-300">
-          <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30">
+        <Card className="border-0 shadow-xl bg-white/75 dark:bg-slate-800/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 hover:shadow-2xl transition-all duration-300">
+          <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30 dark:from-black dark:to-indigo-900/30 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
@@ -499,7 +499,7 @@ return (
                   </AlertDescription>
                 </Alert>
               ) : (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                   <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p className="text-base font-medium">No upcoming interviews</p>
                   <p className="text-sm mt-1">Upcoming interviews will appear here</p>
@@ -516,7 +516,7 @@ return (
                     <div
                       key={interview.id}
                       onClick={() => navigate("/screenings/upcoming", { state: { selectedId: interview.id } })}
-                      className="relative p-4 rounded-xl border bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
+                      className="relative p-4 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -532,7 +532,7 @@ return (
                             <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
                               {candidateName}
                             </p>
-                            <p className="text-sm text-slate-500 truncate mt-0.5">
+                            <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
                               {role?.designation || "Unknown Role"}
                             </p>
                           </div>
@@ -548,7 +548,7 @@ return (
                       </div>
 
                       <div className="flex items-center justify-between mt-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                           <Calendar className="h-3.5 w-3.5" />
                           <span>
                             {interview.scheduledTime
@@ -572,48 +572,72 @@ return (
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-0 shadow-xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 hover:shadow-2xl transition-all duration-300">
-        <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30">
-          <CardTitle className="text-xl font-semibold">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { label: "View All Interviews", icon: ClipboardCheck, color: "blue", path: "/screenings/list" },
-              { label: "Manage Templates", icon: ClipboardCheck, color: "purple", path: "/screenings/templates" },
-              { label: "Training Programs", icon: Users, color: "orange", path: "/screenings/training" },
-            ].map((action, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                className={cn(
-                  "h-auto py-4 justify-start gap-3 rounded-xl border border-slate-200 hover:shadow-md hover:scale-[1.02] transition-all duration-300 bg-white/50",
-                  "hover:bg-gradient-to-r",
-                  action.color === "blue" && "hover:from-blue-50 hover:to-indigo-50",
-                  action.color === "purple" && "hover:from-purple-50 hover:to-pink-50",
-                  action.color === "orange" && "hover:from-orange-50 hover:to-amber-50"
-                )}
-                onClick={() => navigate(action.path)}
-              >
-                <div
-                  className={cn(
-                    "p-3 rounded-xl transition-transform duration-300 group-hover:scale-105",
-                    action.color === "blue" && "bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20",
-                    action.color === "purple" && "bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20",
-                    action.color === "orange" && "bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20"
-                  )}
-                >
-                  <action.icon className={cn("h-5 w-5", `text-${action.color}-600`)} />
-                </div>
-                <div className="text-left">
-                  <p className="text-base font-medium">{action.label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Manage your {action.label.toLowerCase()}</p>
-                </div>
-              </Button>
-            ))}
+    <Card className="border-0 shadow-xl bg-white/75 dark:bg-slate-800/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 hover:shadow-2xl transition-all duration-300">
+  <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30 dark:from-black dark:to-indigo-900/30 dark:border-slate-700">
+    <CardTitle className="text-xl font-semibold">Quick Actions</CardTitle>
+  </CardHeader>
+  <CardContent className="pt-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {[
+        { label: "View All Interviews", icon: ClipboardCheck, color: "blue", path: "/screenings/list" },
+        { label: "Manage Templates", icon: ClipboardCheck, color: "purple", path: "/screenings/templates" },
+        { label: "Training Programs", icon: Users, color: "orange", path: "/screenings/training" },
+      ].map((action, i) => (
+        <Button
+          key={i}
+          variant="outline"
+          className={cn(
+            "group h-auto py-4 justify-start gap-3 rounded-xl border border-slate-200",
+            "bg-white/50 dark:bg-slate-800/40",
+            "hover:shadow-md hover:scale-[1.02] transition-all duration-300",
+            // Light mode hover
+            "hover:bg-gradient-to-r hover:from-blue-50/70 hover:to-indigo-50/70",
+            action.color === "purple" && "hover:from-purple-50/70 hover:to-pink-50/70",
+            action.color === "orange" && "hover:from-orange-50/70 hover:to-amber-50/70",
+            // Dark mode hover
+            "dark:hover:from-slate-700/80 dark:hover:to-slate-700/60",
+            action.color === "blue" && "dark:hover:from-blue-900/40 dark:hover:to-indigo-900/40",
+            action.color === "purple" && "dark:hover:from-purple-900/40 dark:hover:to-pink-900/40",
+            action.color === "orange" && "dark:hover:from-orange-900/40 dark:hover:to-amber-900/40",
+            // Text/icon colors on hover
+            "group-hover:text-white",
+            "dark:group-hover:text-white"
+          )}
+          onClick={() => navigate(action.path)}
+        >
+          <div
+            className={cn(
+              "p-3 rounded-xl transition-transform duration-300 group-hover:scale-105",
+              action.color === "blue" && "bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20",
+              action.color === "purple" && "bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20",
+              action.color === "orange" && "bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20",
+              // Dark mode icon bg slight adjustment
+              "dark:from-slate-700/20 dark:to-slate-800/20"
+            )}
+          >
+            <action.icon
+              className={cn(
+                "h-5 w-5",
+                `text-${action.color}-600`,
+                "group-hover:text-white",
+                "dark:text-slate-300 dark:group-hover:text-white"
+              )}
+            />
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="text-left">
+            <p className="text-base font-medium group-hover:text-white dark:text-slate-100 dark:group-hover:text-white">
+              {action.label}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 group-hover:text-indigo-100/90 dark:group-hover:text-slate-300">
+              Manage your {action.label.toLowerCase()}
+            </p>
+          </div>
+        </Button>
+      ))}
+    </div>
+  </CardContent>
+</Card>
 
         {/* Schedule modal (extracted to separate component) */}
         <ScheduleScreeningModal

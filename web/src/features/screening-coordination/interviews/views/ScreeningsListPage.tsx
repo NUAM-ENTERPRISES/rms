@@ -395,7 +395,7 @@ export default function ScreeningsListPage() {
             )}
           </div>
         </TooltipTrigger>
-        <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl">
+        <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl dark:bg-slate-800 dark:border-slate-700">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-900">Project Documents</h4>
@@ -546,9 +546,9 @@ export default function ScreeningsListPage() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen flex flex-col overflow-hidden overflow-x-hidden max-w-full bg-slate-50/50">
+      <div className="h-screen flex flex-col overflow-hidden overflow-x-hidden max-w-full bg-slate-50/50 dark:bg-slate-900 dark:text-white">
       {/* Page Title */}
-     <div className="px-6 py-4 border-b bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-20 overflow-hidden flex-shrink-0">
+     <div className="px-6 py-4 border-b bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-20 overflow-hidden flex-shrink-0 dark:bg-slate-800/80 dark:border-slate-700">
   <div className="flex items-center justify-between max-w-7xl mx-auto min-w-0 w-full gap-4">
     {/* Logo + Title */}
     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -562,17 +562,17 @@ export default function ScreeningsListPage() {
       </div>
 
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-800 tracking-tight dark:text-white">
           Screenings
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Manage candidate screening sessions
         </p>
       </div>
     </div>
 
     {/* Status indicator */}
-    <div className="text-xs font-medium text-slate-500 flex items-center gap-2 flex-shrink-0 bg-slate-100 px-3 py-1.5 rounded-full">
+    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full">
       <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
       <span className="hidden sm:inline">Live</span>
     </div>
@@ -581,7 +581,7 @@ export default function ScreeningsListPage() {
 
       {/* Search & Filters Section */}
      <div className="w-full mx-auto pt-4 pb-4 px-4 max-w-7xl overflow-hidden flex-shrink-0">
-  <Card className="border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden">
+  <Card className="border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden dark:bg-slate-800 dark:border-slate-700">
     <CardContent className="p-4">
       <div className="flex flex-wrap items-center gap-2">
         {/* Search Bar */}
@@ -591,7 +591,7 @@ export default function ScreeningsListPage() {
             placeholder="Search candidates, projects, roles..."
             value={filters.search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white transition-colors"
+            className="pl-9 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white transition-colors dark:border-slate-600 dark:bg-slate-700/50 dark:focus:bg-slate-800"
           />
           {filters.search && (
             <Button
@@ -645,7 +645,7 @@ export default function ScreeningsListPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 px-3 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50"
+            className="h-9 px-3 text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-red-50"
             onClick={() =>
               setFilters({
                 search: "",
@@ -669,14 +669,14 @@ export default function ScreeningsListPage() {
       {/* Master-Detail Layout */}
       <div className="flex-1 flex overflow-hidden px-4 pb-4 gap-4 min-w-0 w-full max-w-full">
         {/* Left Panel - Interview List */}
-       <Card className="w-80 flex-shrink-0 border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden flex flex-col">
-  <CardHeader className="p-4 border-b bg-slate-50/50 flex-shrink-0">
+      <Card className="w-80 flex-shrink-0 border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden flex flex-col dark:bg-slate-900 dark:border-slate-700">
+  <CardHeader className="p-4 border-b bg-slate-50/70 dark:bg-slate-950/50 flex-shrink-0">
     <div className="flex items-center justify-between gap-2 min-w-0">
       <div className="min-w-0">
-        <CardTitle className="text-base font-semibold text-slate-800">
+        <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-100">
           All Screenings
         </CardTitle>
-        <CardDescription className="text-xs text-slate-500 mt-0.5">
+        <CardDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
           {displayedInterviews.length} found
         </CardDescription>
       </div>
@@ -684,16 +684,16 @@ export default function ScreeningsListPage() {
       {/* Compact Stats */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="text-center">
-          <div className="text-sm font-bold text-orange-600">{stats.needsTraining}</div>
-          <div className="text-[9px] text-slate-400 uppercase tracking-wide">Train</div>
+          <div className="text-sm font-bold text-orange-600 dark:text-orange-400">{stats.needsTraining}</div>
+          <div className="text-[9px] text-slate-500 dark:text-slate-500 uppercase tracking-wide">Train</div>
         </div>
         <div className="text-center">
-          <div className="text-sm font-bold text-emerald-600">{stats.approved}</div>
-          <div className="text-[9px] text-slate-400 uppercase tracking-wide">Pass</div>
+          <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{stats.approved}</div>
+          <div className="text-[9px] text-slate-500 dark:text-slate-500 uppercase tracking-wide">Pass</div>
         </div>
         <div className="text-center">
-          <div className="text-sm font-bold text-indigo-600">{stats.completed}</div>
-          <div className="text-[9px] text-slate-400 uppercase tracking-wide">Done</div>
+          <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{stats.completed}</div>
+          <div className="text-[9px] text-slate-500 dark:text-slate-500 uppercase tracking-wide">Done</div>
         </div>
       </div>
     </div>
@@ -702,207 +702,225 @@ export default function ScreeningsListPage() {
   <CardContent className="p-0 flex-1 overflow-hidden">
     <ScrollArea className="h-full">
       <div className="p-2">
-      {displayedInterviews.length === 0 ? (
-        <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-slate-400">
-          <ClipboardCheck className="h-12 w-12 text-slate-300 mb-3" />
-          <p className="text-sm font-medium text-slate-500">No interviews found</p>
-          <p className="text-xs mt-1">
-            {filters.search || filters.mode !== "all" || filters.decision !== "all" || filters.status !== "all"
-              ? "Try adjusting your filters"
-              : "Screenings will appear here"}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {displayedInterviews.map((interview: any) => {
-            const candidate = interview.candidateProjectMap?.candidate;
-            const role = interview.candidateProjectMap?.roleNeeded;
-            const ModeIcon = getModeIcon(interview.mode);
+        {displayedInterviews.length === 0 ? (
+          <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-slate-400 dark:text-slate-500">
+            <ClipboardCheck className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No interviews found</p>
+            <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+              {filters.search || filters.mode !== "all" || filters.decision !== "all" || filters.status !== "all"
+                ? "Try adjusting your filters"
+                : "Screenings will appear here"}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {displayedInterviews.map((interview: any) => {
+              const candidate = interview.candidateProjectMap?.candidate;
+              const role = interview.candidateProjectMap?.roleNeeded;
+              const ModeIcon = getModeIcon(interview.mode);
 
-            const explicitVerificationRequired =
-              interview.isDocumentVerificationRequired ||
-              interview.candidateProjectMap?.isDocumentVerificationRequired;
+              const explicitVerificationRequired =
+                interview.isDocumentVerificationRequired ||
+                interview.candidateProjectMap?.isDocumentVerificationRequired;
 
-            const verificationInProgress =
-              !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
-              interview.candidateProjectMap?.mainStatus?.name === "documents";
+              const verificationInProgress =
+                !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
+                interview.candidateProjectMap?.mainStatus?.name === "documents";
 
-            const _docVerified =
-              !!interview.isDocumentVerified ||
-              !!interview.candidateProjectMap?.isDocumentVerified;
+              const _docVerified =
+                !!interview.isDocumentVerified ||
+                !!interview.candidateProjectMap?.isDocumentVerified;
 
-            const isSelected = interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
-            const isCompleted = !!interview.conductedAt;
-            const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
+              const isSelected = interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
+              const isCompleted = !!interview.conductedAt;
+              const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
 
-            return (
-              <button
-                key={interview.id}
-                onClick={() => setSelectedInterviewId(interview.id)}
-                className={cn(
-                  "w-full text-left p-3 rounded-lg border transition-all duration-200 group relative",
-                  isSelected
-                    ? "bg-indigo-50 border-indigo-200 shadow-sm"
-                    : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200"
-                )}
-              >
+              return (
+                <button
+                  key={interview.id}
+                  onClick={() => setSelectedInterviewId(interview.id)}
+                  className={cn(
+                    "group w-full text-left p-3 rounded-lg border transition-all duration-200 relative",
+                    // Selected state (both modes)
+                    isSelected
+                      ? "bg-indigo-50/80 border-indigo-300 shadow-sm dark:bg-indigo-950/40 dark:border-indigo-700/70 dark:shadow-indigo-950/30"
+                      : // Normal + hover states
+                      "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200/80 hover:shadow-sm",
+                    "dark:bg-slate-900/60 dark:border-transparent",
+                    "dark:hover:bg-slate-800/90 dark:hover:border-slate-600/60 dark:hover:shadow-md"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <ImageViewer
+                          src={candidate?.profileImage}
+                          fallbackSrc={candidate?.profileImage}
+                          title={candidateName}
+                          className="h-10 w-10 rounded-lg flex-shrink-0"
+                          enableHoverPreview={false}
+                          previewClassName="w-40 h-40"
+                        />
+                        <div className="min-w-0">
+                          <p
+                            className={cn(
+                              "font-medium text-sm truncate transition-colors duration-200",
+                              isSelected
+                                ? "text-indigo-700 dark:text-indigo-300"
+                                : "text-slate-800 group-hover:text-slate-900 dark:text-slate-200 dark:group-hover:text-slate-50"
+                            )}
+                          >
+                            {candidateName}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {role?.designation || "Unknown Role"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
-                  <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <ImageViewer
-                      src={candidate?.profileImage}
-                      fallbackSrc={candidate?.profileImage}
-                      title={candidateName}
-                      className="h-10 w-10 rounded-lg flex-shrink-0"
-                      enableHoverPreview={false}
-                      previewClassName="w-40 h-40"
-                    />
-                    <div className="min-w-0">
-                      <p className={cn(
-                        "font-medium text-sm truncate transition-colors",
-                        isSelected ? "text-indigo-700" : "text-slate-800 group-hover:text-slate-900"
-                      )}>
-                        {candidateName}
-                      </p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {role?.designation || "Unknown Role"}
-                      </p>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {interview.decision === SCREENING_DECISION.APPROVED && renderDocStatusIcon(interview)}
+                      <ChevronRight
+                        className={cn(
+                          "h-5 w-5 transition-all duration-300",
+                          isSelected
+                            ? "text-indigo-600 dark:text-indigo-400 translate-x-1 scale-110"
+                            : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
+                        )}
+                      />
                     </div>
                   </div>
-                </div>
 
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {interview.decision === SCREENING_DECISION.APPROVED && renderDocStatusIcon(interview)}
-                    <ChevronRight
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span
                       className={cn(
-                        "h-5 w-5 transition-all duration-300",
-                        isSelected ? "text-indigo-600 translate-x-1 scale-110" : "text-slate-400 group-hover:text-slate-600"
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium",
+                        isCompleted
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"
+                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                       )}
-                    />
-                  </div>
-                </div>
+                    >
+                      <ModeIcon className="h-3 w-3" />
+                      <span className="capitalize">{interview.mode.replace("_", " ")}</span>
+                    </span>
 
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium",
-                      isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+                    {interview.decision && getDecisionBadge(interview.decision)}
+
+                    {verificationInProgress && !_docVerified && (
+                      <Badge className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0 dark:bg-amber-900/60 dark:text-amber-300">
+                        Verifying
+                      </Badge>
                     )}
-                  >
-                    <ModeIcon className="h-3 w-3" />
-                    <span className="capitalize">{interview.mode.replace("_", " ")}</span>
-                  </span>
-                  {interview.decision && getDecisionBadge(interview.decision)}
-                  {verificationInProgress && !_docVerified && (
-                    <Badge className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0">Verifying</Badge>
-                  )}
-                  {(() => {
-                    const isTrainingAssigned = interview.candidateProjectMap?.subStatus?.name === "training_assigned";
-                    const trainerName = getAssignedTrainerName(interview);
-                    const isMainAssigned = interview.status === "assigned" || !!interview.candidateProjectMap?.mainInterviewId;
 
-                    if (isTrainingAssigned) {
-                      return (
-                        <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300 truncate">
-                          {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
-                        </Badge>
-                      );
-                    }
+                    {(() => {
+                      const isTrainingAssigned = interview.candidateProjectMap?.subStatus?.name === "training_assigned";
+                      const trainerName = getAssignedTrainerName(interview);
+                      const isMainAssigned = interview.status === "assigned" || !!interview.candidateProjectMap?.mainInterviewId;
 
-                    if (isMainAssigned) {
-                      return (
-                        <>
-                          <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
-                            Main Interview
+                      if (isTrainingAssigned) {
+                        return (
+                          <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/60 dark:text-green-300 dark:hover:bg-green-900/80 truncate">
+                            {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
                           </Badge>
-                          {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                            interview.decision === SCREENING_DECISION.REJECTED) && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 rounded-lg hover:bg-indigo-50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAssignToTrainer(interview);
-                              }}
-                              title="Assign to Trainer"
-                            >
-                              <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
-                            </Button>
-                          )}
-                        </>
-                      );
-                    }
+                        );
+                      }
 
-                    if (interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
-                      const status = getDocStatus(interview);
-                      const isAllUploaded = status?.isAllUploaded;
+                      if (isMainAssigned) {
+                        return (
+                          <>
+                            <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/60 dark:text-green-300 dark:hover:bg-green-900/80">
+                              Main Interview
+                            </Badge>
+                            {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
+                              interview.decision === SCREENING_DECISION.REJECTED) && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAssignToTrainer(interview);
+                                }}
+                                title="Assign to Trainer"
+                              >
+                                <UserPlus className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                              </Button>
+                            )}
+                          </>
+                        );
+                      }
 
-                      return (
-                        <>
-                          {_docVerified ? (
-                            <Badge className="text-xs bg-green-100 text-green-700">Verified</Badge>
-                          ) : verificationInProgress ? (
-                            <Badge className="text-xs bg-amber-100 text-amber-700">Verifying</Badge>
-                          ) : null}
+                      if (interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
+                        const status = getDocStatus(interview);
+                        const isAllUploaded = status?.isAllUploaded;
 
+                        return (
+                          <>
+                            {_docVerified ? (
+                              <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300">
+                                Verified
+                              </Badge>
+                            ) : verificationInProgress ? (
+                              <Badge className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+                                Verifying
+                              </Badge>
+                            ) : null}
+                          </>
+                        );
+                      }
 
-                        </>
-                      );
-                    }
+                      if (interview.decision === SCREENING_DECISION.NEEDS_TRAINING || interview.decision === SCREENING_DECISION.REJECTED) {
+                        return (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAssignToTrainer(interview);
+                            }}
+                            title="Assign to Trainer"
+                          >
+                            <UserPlus className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                          </Button>
+                        );
+                      }
 
-                    if (interview.decision === SCREENING_DECISION.NEEDS_TRAINING || interview.decision === SCREENING_DECISION.REJECTED) {
-                      return (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 rounded-lg hover:bg-indigo-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAssignToTrainer(interview);
-                          }}
-                          title="Assign to Trainer"
-                        >
-                          <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
-                        </Button>
-                      );
-                    }
+                      return null;
+                    })()}
+                  </div>
 
-                    return null;
-                  })()}
-                </div>
-
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-2">
-                  <Calendar className="h-3 w-3" />
-                  <span>
-                    {interview.scheduledTime
-                      ? format(new Date(interview.scheduledTime), "MMM d, yyyy")
-                      : "Not scheduled"}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500 mt-2 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+                    <Calendar className="h-3 w-3" />
+                    <span>
+                      {interview.scheduledTime
+                        ? format(new Date(interview.scheduledTime), "MMM d, yyyy")
+                        : "Not scheduled"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </ScrollArea>
   </CardContent>
-</Card> 
+</Card>
 
         {/* Right Panel - Interview Details */}
-        <div className="flex-1 overflow-hidden bg-white border border-slate-200/60 rounded-xl min-w-0 min-h-0 max-w-full">
+      <div className="flex-1 overflow-hidden bg-white border border-slate-200/60 rounded-xl min-w-0 min-h-0 max-w-full dark:bg-slate-900 dark:border-slate-700">
   {selectedInterview ? (
     <ScrollArea className="h-full">
-      <div className="p-6 space-y-5">
+      <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 pb-5 border-b border-slate-100">
+        <div className="flex items-start justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-semibold text-slate-800">
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
               Screening Details
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               {selectedInterview.scheduledTime
                 ? `Scheduled for ${format(new Date(selectedInterview.scheduledTime), "MMMM d, yyyy 'at' h:mm a")}`
                 : "Not scheduled yet"}
@@ -913,7 +931,11 @@ export default function ScreeningsListPage() {
             {!selectedInterview.conductedAt && (
               <Button
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm"
+                className={cn(
+                  "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800",
+                  "dark:from-indigo-700 dark:to-indigo-800 dark:hover:from-indigo-600 dark:hover:to-indigo-700",
+                  "text-white shadow-sm hover:shadow-md transition-all duration-200 rounded-lg"
+                )}
                 onClick={() => navigate(`/screenings/${selectedInterview.id}/conduct`)}
               >
                 <CalendarCheck className="h-4 w-4 mr-1.5" />
@@ -932,7 +954,7 @@ export default function ScreeningsListPage() {
 
               if (isTrainingAssigned) {
                 return (
-                  <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
+                  <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 dark:bg-emerald-900/60 dark:text-emerald-300">
                     {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
                   </Badge>
                 );
@@ -941,7 +963,7 @@ export default function ScreeningsListPage() {
               if (isMainAssigned) {
                 return (
                   <div className="flex items-center gap-2">
-                    <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
+                    <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 dark:bg-emerald-900/60 dark:text-emerald-300">
                       Main Interview
                     </Badge>
                     {(selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
@@ -949,7 +971,7 @@ export default function ScreeningsListPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 text-xs rounded-lg"
+                        className="h-8 text-xs rounded-lg border-slate-300 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800 dark:text-slate-300"
                         onClick={() => handleAssignToTrainer(selectedInterview)}
                       >
                         <UserPlus className="h-3.5 w-3.5 mr-1" />
@@ -982,17 +1004,15 @@ export default function ScreeningsListPage() {
                 return (
                   <div className="flex items-center gap-2 flex-wrap">
                     {selected_docVerified ? (
-                      <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
+                      <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 dark:bg-emerald-900/60 dark:text-emerald-300">
                         {selectedInterview.isDocumentVerified ? "Document Verified" : "Verified"}
                       </Badge>
                     ) : selected_verificationInProgress ? (
-                      <Badge className="text-xs bg-amber-100 text-amber-700 px-2 py-1">
+                      <Badge className="text-xs bg-amber-100 text-amber-700 px-2 py-1 dark:bg-amber-900/60 dark:text-amber-300">
                         Verification in progress
                       </Badge>
                     ) : selected_explicitVerificationRequired ? (
                       <>
-                        {/* send-for-verification button removed */}
-                        {/* If there are no uploaded documents, allow notifying the recruiter to upload them */}
                         {!selectedInterview.candidateProjectMap?.documentVerifications?.length && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1000,7 +1020,11 @@ export default function ScreeningsListPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 text-black text-xs rounded-lg bg-green-600 hover:bg-green-800 hover:text-white"
+                                  className={cn(
+                                    "h-8 text-xs rounded-lg",
+                                    "bg-green-600 hover:bg-green-700 text-white",
+                                    "dark:bg-green-700 dark:hover:bg-green-600"
+                                  )}
                                   onClick={() =>
                                     setNotifyRecruiterConfirm({
                                       isOpen: true,
@@ -1031,8 +1055,6 @@ export default function ScreeningsListPage() {
                         {renderDocStatusIcon()}
                       </>
                     ) : null}
-
-
                   </div>
                 );
               }
@@ -1047,7 +1069,11 @@ export default function ScreeningsListPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-xs rounded-lg bg-red-500 hover:bg-red-600 text-white hover:text-white"
+                    className={cn(
+                      "h-8 text-xs rounded-lg",
+                      "bg-red-600 hover:bg-red-700 text-white",
+                      "dark:bg-red-700 dark:hover:bg-red-600"
+                    )}
                     onClick={() => handleAssignToTrainer(selectedInterview)}
                   >
                     <UserPlus className="h-3.5 w-3.5 mr-1" />
@@ -1061,15 +1087,15 @@ export default function ScreeningsListPage() {
           </div>
         </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Candidate Info */}
-                 <Card className="border border-slate-200/60 shadow-sm rounded-lg">
-            <CardContent className="p-4">
-              <h3 className="text-sm font-medium mb-3 flex items-center gap-2 text-slate-700">
-                <User className="h-4 w-4 text-indigo-500" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Candidate Info */}
+          <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-slate-800/60">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                <User className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
                 Candidate
               </h3>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-4">
                   <ImageViewer
                     src={selectedInterview.candidateProjectMap?.candidate?.profileImage}
@@ -1079,56 +1105,68 @@ export default function ScreeningsListPage() {
                     previewClassName="w-96 h-96"
                     enableHoverPreview={true}
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-2.5">
                     <div>
-                      <p className="text-xs text-slate-400">Name</p>
-                      <p className="font-medium text-slate-800">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Name</p>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
                         {selectedInterview.candidateProjectMap?.candidate?.firstName || ""} {selectedInterview.candidateProjectMap?.candidate?.lastName || ""}
                       </p>
                     </div>
 
                     {selectedInterview.candidateProjectMap?.candidate?.email && (
-                      <div className="mt-2">
-                        <p className="text-xs text-slate-400">Email</p>
-                        <p className="text-slate-700 break-all text-sm">{selectedInterview.candidateProjectMap?.candidate?.email}</p>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Email</p>
+                        <p className="text-slate-800 dark:text-slate-200 break-all">{selectedInterview.candidateProjectMap?.candidate?.email}</p>
                       </div>
                     )}
 
                     {selectedInterview.candidateProjectMap?.candidate?.phone && (
-                      <div className="mt-2">
-                        <p className="text-xs text-slate-400">Phone</p>
-                        <p className="text-slate-700 text-sm">{selectedInterview.candidateProjectMap?.candidate?.phone}</p>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Phone</p>
+                        <p className="text-slate-800 dark:text-slate-200">{selectedInterview.candidateProjectMap?.candidate?.phone}</p>
                       </div>
                     )}
 
-                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-4 mt-3">
                       <div>
-                        <p className="text-xs text-slate-400">Experience</p>
-                        <p className="font-medium text-slate-800">{selectedInterview.candidateProjectMap?.candidate?.experience ?? '—'} years</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Experience</p>
+                        <p className="font-medium text-slate-900 dark:text-slate-100">
+                          {selectedInterview.candidateProjectMap?.candidate?.experience ?? '—'} years
+                        </p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Current Role</p>
-                        <p className="font-medium text-slate-800">{selectedInterview.candidateProjectMap?.candidate?.currentRole || selectedInterview.candidateProjectMap?.candidate?.currentEmployer || '—'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Current Role</p>
+                        <p className="font-medium text-slate-900 dark:text-slate-100">
+                          {selectedInterview.candidateProjectMap?.candidate?.currentRole ||
+                           selectedInterview.candidateProjectMap?.candidate?.currentEmployer || '—'}
+                        </p>
                       </div>
                     </div>
 
                     {selectedInterview.candidateProjectMap?.candidate?.qualifications?.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs text-slate-400">Qualifications</p>
-                        <ul className="text-sm text-slate-700 list-disc list-inside mt-1">
+                      <div className="mt-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Qualifications</p>
+                        <ul className="text-sm text-slate-700 dark:text-slate-300 list-disc list-inside mt-1.5 space-y-1">
                           {selectedInterview.candidateProjectMap?.candidate?.qualifications.map((q: any) => (
-                            <li key={q.id}>{q.qualification?.name || q.university || q.gpa || "Qualification"}</li>
+                            <li key={q.id}>
+                              {q.qualification?.name || q.university || q.gpa || "Qualification"}
+                            </li>
                           ))}
                         </ul>
                       </div>
                     )}
 
                     {selectedInterview.candidateProjectMap?.candidate?.workExperiences?.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs text-slate-400">Work Experience</p>
-                        <div className="text-sm text-slate-700 mt-1">
+                      <div className="mt-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Work Experience</p>
+                        <div className="text-sm text-slate-700 dark:text-slate-300 mt-1.5 space-y-2">
                           {selectedInterview.candidateProjectMap?.candidate?.workExperiences.slice(0,2).map((we: any) => (
-                            <div key={we.id}>{we.jobTitle} @ {we.companyName} ({we.startDate ? new Date(we.startDate).getFullYear() : '?'} - {we.endDate ? new Date(we.endDate).getFullYear() : 'Present'})</div>
+                            <div key={we.id}>
+                              {we.jobTitle} @ {we.companyName} 
+                              <span className="text-slate-500 dark:text-slate-400 ml-1.5">
+                                ({we.startDate ? new Date(we.startDate).getFullYear() : '?'} — {we.endDate ? new Date(we.endDate).getFullYear() : 'Present'})
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1140,68 +1178,71 @@ export default function ScreeningsListPage() {
           </Card>
 
           {/* Project & Role */}
-          <Card className="border border-slate-200/60 shadow-sm rounded-lg">
-            <CardContent className="p-4">
-              <h3 className="text-sm font-medium mb-3 flex items-center gap-2 text-slate-700">
-                <Briefcase className="h-4 w-4 text-purple-500" />
+          <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-slate-800/60">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                <Briefcase className="h-4 w-4 text-purple-500 dark:text-purple-400" />
                 Project & Role
               </h3>
               <div className="space-y-3 text-sm">
                 <div>
-                  <p className="text-xs text-slate-400">Project</p>
-                  <p className="font-medium text-slate-800">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Project</p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
                     {selectedInterview.candidateProjectMap?.project?.title || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Role</p>
-                  <p className="text-slate-700">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Role</p>
+                  <p className="text-slate-800 dark:text-slate-200">
                     {selectedInterview.candidateProjectMap?.roleNeeded?.designation || "N/A"}
                   </p>
                 </div>
+
                 {selectedProjectDetails && (
-                  <div className="pt-2 border-t border-slate-100 mt-2 space-y-2">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-700 mt-3 space-y-3">
                     {selectedProjectDetails.description && (
                       <div>
-                        <p className="text-xs text-slate-400">Description</p>
-                        <p className="text-sm text-slate-700">{selectedProjectDetails.description}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Description</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{selectedProjectDetails.description}</p>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                       <div>
-                        <p className="text-xs text-slate-400">Client</p>
-                        <p className="font-medium text-slate-700">{selectedProjectDetails.client?.name || 'N/A'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Client</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">{selectedProjectDetails.client?.name || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Type</p>
-                        <p className="font-medium text-slate-700 capitalize">{selectedProjectDetails.projectType || 'N/A'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Type</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200 capitalize">{selectedProjectDetails.projectType || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Grooming</p>
-                        <p className="font-medium text-slate-700 capitalize">{selectedProjectDetails.groomingRequired || 'N/A'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Grooming</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200 capitalize">{selectedProjectDetails.groomingRequired || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Country</p>
-                        <p className="font-medium text-slate-700">{selectedProjectDetails.country?.name || 'N/A'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Country</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">{selectedProjectDetails.country?.name || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Creator</p>
-                        <p className="font-medium text-slate-700">{selectedProjectDetails.creator?.name || 'N/A'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Creator</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">{selectedProjectDetails.creator?.name || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Status</p>
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize border-slate-200">{selectedProjectDetails.status}</Badge>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Status</p>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize border-slate-200 dark:border-slate-600 dark:text-slate-300">
+                          {selectedProjectDetails.status}
+                        </Badge>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <p className="text-[11px] text-slate-400">Priority</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Priority</p>
                       <Badge className={cn(
                         "text-[10px] h-4 px-1.5 capitalize border-0",
-                        selectedProjectDetails.priority === 'urgent' ? 'bg-red-500 text-white' : 
-                        selectedProjectDetails.priority === 'high' ? 'bg-orange-500 text-white' : 
-                        'bg-blue-500 text-white'
+                        selectedProjectDetails.priority === 'urgent' ? 'bg-red-600 text-white' :
+                        selectedProjectDetails.priority === 'high' ? 'bg-orange-600 text-white' :
+                        'bg-blue-600 text-white'
                       )}>
                         {selectedProjectDetails.priority}
                       </Badge>
@@ -1209,17 +1250,22 @@ export default function ScreeningsListPage() {
 
                     {selectedProjectDetails.deadline && (
                       <div className="flex justify-between items-center">
-                        <p className="text-[11px] text-slate-400">Deadline</p>
-                        <p className="text-[11px] font-medium text-slate-700">{format(new Date(selectedProjectDetails.deadline), "MMM d, yyyy")}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Deadline</p>
+                        <p className="text-[11px] font-medium text-slate-800 dark:text-slate-200">
+                          {format(new Date(selectedProjectDetails.deadline), "MMM d, yyyy")}
+                        </p>
                       </div>
                     )}
 
                     {selectedProjectDetails.documentRequirements?.length > 0 && (
-                      <div>
-                        <p className="text-xs text-slate-400">Document Requirements</p>
-                        <ul className="mt-1 text-sm text-slate-700 list-disc list-inside">
+                      <div className="mt-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Document Requirements</p>
+                        <ul className="mt-1.5 text-sm text-slate-700 dark:text-slate-300 list-disc list-inside space-y-1">
                           {selectedProjectDetails.documentRequirements.map((dr: any) => (
-                            <li key={dr.id}>{dr.docType.replace(/_/g, ' ')} {dr.mandatory && <span className="text-xs text-red-500">(mandatory)</span>}</li>
+                            <li key={dr.id}>
+                              {dr.docType.replace(/_/g, ' ')}
+                              {dr.mandatory && <span className="text-xs text-red-500 ml-1.5">(mandatory)</span>}
+                            </li>
                           ))}
                         </ul>
                       </div>
@@ -1232,13 +1278,13 @@ export default function ScreeningsListPage() {
         </div>
 
         {/* Interview Details */}
-        <Card className="border border-slate-200/60 shadow-sm rounded-lg">
-          <CardContent className="p-4">
-            <h3 className="text-sm font-medium text-slate-700 mb-4">Interview Details</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+        <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-slate-800/60">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-medium text-slate-700 mb-4 dark:text-slate-200">Interview Details</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 text-sm">
               <div>
-                <p className="text-xs text-slate-400">Mode</p>
-                <p className="font-medium capitalize text-slate-800">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Mode</p>
+                <p className="font-medium capitalize text-slate-900 dark:text-slate-100">
                   {selectedInterview.mode.replace("_", " ")}
                 </p>
               </div>
@@ -1246,19 +1292,19 @@ export default function ScreeningsListPage() {
               {selectedInterview.conductedAt && (
                 <>
                   <div>
-                    <p className="text-xs text-slate-400">Conducted</p>
-                    <p className="text-slate-700">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Conducted</p>
+                    <p className="text-slate-800 dark:text-slate-200">
                       {format(new Date(selectedInterview.conductedAt), "MMM d, yyyy")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-400">Decision</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Decision</p>
                     <div className="mt-0.5">{getDecisionBadge(selectedInterview.decision)}</div>
                   </div>
                   {selectedInterview.overallRating != null && (
                     <div>
-                      <p className="text-xs text-slate-400">Score</p>
-                      <p className="font-bold text-indigo-600">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Score</p>
+                      <p className="font-bold text-indigo-600 dark:text-indigo-400">
                         {selectedInterview.overallRating}%
                       </p>
                     </div>
@@ -1268,9 +1314,9 @@ export default function ScreeningsListPage() {
             </div>
 
             {selectedInterview.notes && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <p className="text-xs text-slate-400 mb-1">Notes</p>
-                <p className="text-sm text-slate-600 whitespace-pre-wrap">
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Notes</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                   {selectedInterview.notes}
                 </p>
               </div>
@@ -1279,8 +1325,8 @@ export default function ScreeningsListPage() {
             {/* Checklist Items */}
             {Array.isArray(selectedInterview.checklistItems) &&
               selectedInterview.checklistItems.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Checklist Evaluation</h4>
+                <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-700">
+                  <h4 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Checklist Evaluation</h4>
                   {(() => {
                     type ChecklistItem = NonNullable<
                       typeof selectedInterview.checklistItems
@@ -1295,33 +1341,33 @@ export default function ScreeningsListPage() {
                     );
 
                     return Object.entries(grouped).map(([category, items]) => (
-                      <div key={category} className="mb-4">
-                        <div className="text-xs font-medium text-indigo-600 mb-2 capitalize">
+                      <div key={category} className="mb-5">
+                        <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-3 capitalize">
                           {category.replace(/_/g, " ")}
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {items.map((ci: ChecklistItem) => (
                             <div
                               key={ci.id}
-                              className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3"
+                              className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-3.5"
                             >
-                              <div className="flex-1 min-w-0 pr-3">
-                                <div className="text-sm text-slate-700">
+                              <div className="flex-1 min-w-0 pr-4">
+                                <div className="text-sm text-slate-800 dark:text-slate-200">
                                   {ci.criterion}
                                 </div>
                                 {ci.notes && (
-                                  <div className="text-xs text-slate-400 mt-0.5 truncate">
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                     {ci.notes}
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-3 flex-shrink-0">
-                                <span className="text-sm font-semibold text-indigo-600">
+                              <div className="flex items-center gap-3.5 flex-shrink-0">
+                                <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
                                   {ci.score != null ? `${ci.score}%` : "—"}
                                 </span>
                                 <Badge
                                   variant={ci.passed ? "default" : "destructive"}
-                                  className="text-[10px] px-2"
+                                  className="text-[10px] px-2.5 py-0.5"
                                 >
                                   {ci.passed ? "Pass" : "Fail"}
                                 </Badge>
@@ -1337,28 +1383,28 @@ export default function ScreeningsListPage() {
           </CardContent>
         </Card>
 
-                {/* Interview History (bottom) */}
-                {selectedInterview?.candidateProjectMap?.id && (
-                      <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
-                )}
-              </div>
-            </ScrollArea>
-          ) : (
-           <div className="h-full flex items-center justify-center">
-  <div className="text-center max-w-sm">
-    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-      <ClipboardCheck className="h-8 w-8 text-slate-400" />
-    </div>
-    <h3 className="text-lg font-medium text-slate-700">
-      No Interview Selected
-    </h3>
-    <p className="text-sm text-slate-500 mt-2">
-      Select an interview from the list to view details
-    </p>
-  </div>
-</div>
-          )}
+        {/* Interview History (bottom) */}
+        {selectedInterview?.candidateProjectMap?.id && (
+          <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
+        )}
+      </div>
+    </ScrollArea>
+  ) : (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-center max-w-sm">
+        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <ClipboardCheck className="h-8 w-8 text-slate-400 dark:text-slate-500" />
         </div>
+        <h3 className="text-lg font-medium text-slate-700 dark:text-slate-200">
+          No Interview Selected
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+          Select an interview from the list to view details
+        </p>
+      </div>
+    </div>
+  )}
+</div>
       </div>
 
       {/* Assign to Trainer Dialog */}

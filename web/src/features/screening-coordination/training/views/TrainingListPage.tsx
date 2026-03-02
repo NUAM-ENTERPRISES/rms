@@ -369,9 +369,9 @@ export default function TrainingListPage() {
   }
 
   return (
-  <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+  <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
     {/* Premium Header */}
-    <header className="border-b bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-20">
+    <header className="border-b bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-20 dark:bg-slate-800/90 dark:border-slate-700">
       <div className="px-6 py-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -385,7 +385,7 @@ export default function TrainingListPage() {
               <h1 className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
                 Screening Training Programs
               </h1>
-              <p className="text-sm text-slate-600 mt-0.5">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                 Manage candidate training and development
               </p>
             </div>
@@ -395,17 +395,17 @@ export default function TrainingListPage() {
           <div className="flex items-center gap-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-indigo-600">{stats.active}</div>
-              <div className="text-xs text-slate-500">Active</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Active</div>
             </div>
             <Separator orientation="vertical" className="h-8 opacity-50" />
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-              <div className="text-xs text-slate-500">Completed</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Completed</div>
             </div>
             <Separator orientation="vertical" className="h-8 opacity-50" />
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">{stats.total}</div>
-              <div className="text-xs text-slate-500">Total</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Total</div>
             </div>
           </div>
         </div>
@@ -418,7 +418,7 @@ export default function TrainingListPage() {
               placeholder="Search candidates, projects, type..."
               value={filters.search}
               onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-              className="pl-12 h-10 rounded-xl border-indigo-200/50 bg-white/80 shadow-inner focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-300"
+              className="pl-12 h-10 rounded-xl border-indigo-200/50 bg-white/80 shadow-inner focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-300 dark:bg-slate-800/80 dark:border-slate-600 dark:text-white"
             />
           </div>
 
@@ -472,7 +472,7 @@ export default function TrainingListPage() {
     {/* Master-Detail Layout */}
 <div className="flex-1 flex overflow-hidden">
   {/* Left Panel - Training List */}
-  <div className="w-96 border-r bg-white/90 backdrop-blur-2xl shadow-2xl rounded-l-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/30">
+  <div className="w-96 border-r bg-white/90 backdrop-blur-2xl shadow-2xl rounded-l-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/30 dark:bg-slate-800/90 dark:border-slate-700 dark:ring-slate-700">
     <ScrollArea className="flex-1">
       {filteredTrainings.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center p-10">
@@ -481,8 +481,8 @@ export default function TrainingListPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-3xl opacity-40 animate-pulse-slow"></div>
             <GraduationCap className="h-24 w-24 text-indigo-500/70 relative z-10 drop-shadow-lg" />
           </div>
-          <p className="text-2xl font-bold text-slate-800 mb-3">No Training Programs</p>
-          <p className="text-base text-slate-600 max-w-xs leading-relaxed">
+          <p className="text-2xl font-bold text-slate-800 dark:text-white mb-3">No Training Programs</p>
+          <p className="text-base text-slate-600 dark:text-slate-400 max-w-xs leading-relaxed">
             {filters.search || filters.status !== "all" || filters.priority !== "all"
               ? "Try adjusting your filters to find matches"
               : "Training programs will appear here once assigned to candidates"}
@@ -506,8 +506,8 @@ export default function TrainingListPage() {
                 className={cn(
                   "w-full text-left p-5 rounded-2xl border transition-all duration-300 group relative overflow-hidden shadow-sm",
                   isSelected
-                    ? "bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-400/50 shadow-2xl ring-2 ring-indigo-300/40 scale-[1.02]"
-                    : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-xl hover:scale-[1.02] hover:shadow-indigo-100/50"
+                    ? "bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-400/50 shadow-2xl ring-2 ring-indigo-300/40 scale-[1.02] dark:from-indigo-900 dark:to-purple-900 dark:border-indigo-600/50 dark:ring-indigo-600/40"
+                    : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-xl hover:scale-[1.02] hover:shadow-indigo-100/50 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-indigo-600/50 dark:hover:bg-slate-700"
                 )}
               >
                 {/* Subtle gradient overlay on hover */}
@@ -516,7 +516,7 @@ export default function TrainingListPage() {
                 <div className="relative flex items-start justify-between gap-4 mb-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1.5">
-                      <p className="font-bold text-lg text-slate-900 truncate group-hover:text-indigo-700 transition-colors">
+                      <p className="font-bold text-lg text-slate-900 dark:text-white truncate group-hover:text-indigo-700 transition-colors">
                         {candidateName}
                       </p>
                       {training.priority && getPriorityBadge(training.priority)}
@@ -527,7 +527,7 @@ export default function TrainingListPage() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-slate-600 truncate">{training.trainingType}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 truncate">{training.trainingType}</p>
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -553,7 +553,7 @@ export default function TrainingListPage() {
                     <ChevronRight
                       className={cn(
                         "h-5 w-5 transition-all duration-300",
-                        isSelected ? "text-indigo-600 translate-x-1 scale-110" : "text-slate-400 group-hover:text-slate-600"
+                        isSelected ? "text-indigo-600 translate-x-1 scale-110" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
                       )}
                     />
                   </div>
@@ -576,7 +576,7 @@ export default function TrainingListPage() {
                 {sessions.length > 0 && (
                   <div className="mb-3">
                     <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-slate-500 font-medium">Progress</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">Progress</span>
                       <span className="font-semibold text-slate-700">
                         {completedSessions}/{sessions.length}
                       </span>
@@ -590,7 +590,7 @@ export default function TrainingListPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <Calendar className="h-3.5 w-3.5" />
                   <span>{format(new Date(training.assignedAt), "MMM d, yyyy")}</span>
                 </div>
@@ -603,7 +603,7 @@ export default function TrainingListPage() {
   </div>
 
       {/* Right Panel - Training Details */}
-    <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20 min-w-0 min-h-0">
+    <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20 min-w-0 min-h-0 dark:from-slate-900 dark:to-indigo-900/20">
     {selectedTraining ? (
       <ScrollArea className="h-full">
         <div className="p-8 max-w-5xl mx-auto space-y-8">
@@ -613,7 +613,7 @@ export default function TrainingListPage() {
               <h2 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
                 {selectedTraining.trainingType}
               </h2>
-              <p className="text-lg text-slate-600 font-medium">
+              <p className="text-lg text-slate-600 dark:text-slate-400 font-medium">
                 Assigned on {format(new Date(selectedTraining.assignedAt), "MMMM d, yyyy")}
               </p>
             </div>
@@ -670,11 +670,11 @@ export default function TrainingListPage() {
 
           {/* Progress Card */}
           {getTrainingSessions(selectedTraining).length > 0 && (
-            <Card className="border-0 shadow-2xl bg-white/85 backdrop-blur-lg rounded-2xl overflow-hidden ring-1 ring-indigo-200/30">
+            <Card className="border-0 shadow-2xl bg-white/85 backdrop-blur-lg rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:bg-slate-800/85 dark:ring-slate-700">
               <CardContent className="p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-200/30">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-200/30 dark:from-indigo-900/10 dark:to-purple-900/10 dark:border-indigo-600/30">
                       <Target className="h-8 w-8 text-indigo-600" />
                     </div>
                     <h3 className="text-2xl font-bold text-indigo-800">Training Progress</h3>
@@ -689,7 +689,7 @@ export default function TrainingListPage() {
                     style={{ width: `${trainingPercent(selectedTraining)}%` }}
                   />
                 </div>
-                <p className="text-base text-slate-600 font-medium">
+                <p className="text-base text-slate-600 dark:text-slate-400 font-medium">
                   {trainingCompletedCount(selectedTraining)} of {trainingTotalCount(selectedTraining)} sessions completed
                 </p>
               </CardContent>
@@ -699,7 +699,7 @@ export default function TrainingListPage() {
           {/* Details Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Candidate */}
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30">
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:from-indigo-900/90 dark:to-purple-900/90 dark:ring-indigo-700/30">
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold text-indigo-700 mb-6 flex items-center gap-3">
                   <User className="h-6 w-6" />
@@ -711,22 +711,22 @@ export default function TrainingListPage() {
                     return (
                       <>
                         <div>
-                          <p className="text-sm text-slate-500 mb-1">Name</p>
-                          <p className="font-semibold text-slate-900">
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Name</p>
+                          <p className="font-semibold text-slate-900 dark:text-white">
                             {candidate?.firstName} {candidate?.lastName}
                           </p>
-                          <p className="text-sm text-slate-500">ID: {candidate?.id || "-"}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">ID: {candidate?.id || "-"}</p>
                         </div>
                         {candidate?.email && (
                           <div>
-                            <p className="text-sm text-slate-500 mb-1">Email</p>
-                            <p className="font-medium text-slate-900 break-all">{candidate?.email}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Email</p>
+                            <p className="font-medium text-slate-900 dark:text-white break-all">{candidate?.email}</p>
                           </div>
                         )}
                         {candidate?.phone && (
                           <div>
-                            <p className="text-sm text-slate-500 mb-1">Phone</p>
-                            <p className="font-medium text-slate-900">{candidate?.phone}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Phone</p>
+                            <p className="font-medium text-slate-900 dark:text-white">{candidate?.phone}</p>
                           </div>
                         )}
                       </>
@@ -737,7 +737,7 @@ export default function TrainingListPage() {
             </Card>
 
             {/* Project */}
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-2xl overflow-hidden ring-1 ring-purple-200/30">
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-2xl overflow-hidden ring-1 ring-purple-200/30 dark:from-purple-900/90 dark:to-pink-900/90 dark:ring-purple-700/30">
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold text-purple-700 mb-6 flex items-center gap-3">
                   <Briefcase className="h-6 w-6" />
@@ -745,17 +745,17 @@ export default function TrainingListPage() {
                 </h3>
                 <div className="space-y-4 text-base">
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Project</p>
-                    <p className="font-semibold text-slate-900">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Project</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">
                       {selectedTraining.candidateProjectMap?.project?.title || "N/A"}
                     </p>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
                       ID: {selectedTraining.candidateProjectMap?.project?.id || "-"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Role</p>
-                    <p className="font-semibold text-slate-900">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Role</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">
                       {selectedTraining.candidateProjectMap?.roleNeeded?.designation || "N/A"}
                     </p>
                   </div>
@@ -766,7 +766,7 @@ export default function TrainingListPage() {
             {/* Focus Areas */}
             {selectedTraining.focusAreas && (
               <div className="lg:col-span-2">
-                <Card className="border-0 shadow-2xl bg-gradient-to-br from-teal-50/90 to-emerald-50/90 rounded-2xl overflow-hidden ring-1 ring-teal-200/30">
+                <Card className="border-0 shadow-2xl bg-gradient-to-br from-teal-50/90 to-emerald-50/90 rounded-2xl overflow-hidden ring-1 ring-teal-200/30 dark:from-teal-900/90 dark:to-emerald-900/90 dark:ring-teal-700/30">
                   <CardContent className="p-8">
                     <h3 className="text-2xl font-bold text-teal-700 mb-6 flex items-center gap-3">
                       <Target className="h-6 w-6" />
@@ -785,7 +785,7 @@ export default function TrainingListPage() {
 
           {/* Final Assessment */}
           {selectedTraining.completedAt && selectedTraining.overallPerformance && (
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-green-50/90 to-emerald-50/90 rounded-2xl overflow-hidden ring-1 ring-green-200/30">
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-green-50/90 to-emerald-50/90 rounded-2xl overflow-hidden ring-1 ring-green-200/30 dark:from-green-900/90 dark:to-emerald-900/90 dark:ring-green-700/30">
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold text-green-700 mb-6 flex items-center gap-3">
                   <CheckCircle2 className="h-6 w-6" />
@@ -793,7 +793,7 @@ export default function TrainingListPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-base">
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Performance</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Performance</p>
                     <Badge
                       variant={selectedTraining.overallPerformance === "excellent" ? "default" : "secondary"}
                       className="text-xl px-6 py-2 shadow-sm"
@@ -803,15 +803,15 @@ export default function TrainingListPage() {
                   </div>
                   {selectedTraining.recommendations && (
                     <div className="md:col-span-2">
-                      <p className="text-sm text-slate-500 mb-2">Recommendations</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Recommendations</p>
                       <p className="whitespace-pre-wrap leading-relaxed">
                         {selectedTraining.recommendations}
                       </p>
                     </div>
                   )}
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Completed</p>
-                    <p className="font-semibold text-slate-900">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Completed</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">
                       {format(new Date(selectedTraining.completedAt), "MMMM d, yyyy")}
                     </p>
                   </div>
@@ -829,18 +829,33 @@ export default function TrainingListPage() {
         </div>
       </ScrollArea>
     ) : (
-      <div className="h-full flex items-center justify-center text-center">
-        <div className="space-y-6 max-w-md">
-          <div className="relative mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-3xl opacity-40 animate-pulse-slow"></div>
-            <GraduationCap className="h-28 w-28 text-indigo-500/70 relative z-10 mx-auto" />
-          </div>
-          <p className="text-3xl font-bold text-slate-800">No Training Selected</p>
-          <p className="text-lg text-slate-600 leading-relaxed">
-            Choose a training program from the list on the left to view details, progress, and actions
-          </p>
-        </div>
+    <div className="h-full flex items-center justify-center text-center px-4">
+  <div className="space-y-8 max-w-md">
+    {/* Icon with animated gradient background */}
+    <div className="relative mx-auto w-32 h-32">
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 rounded-full blur-2xl animate-pulse-slow opacity-70 dark:from-indigo-600/20 dark:to-purple-600/20"></div>
+      <div className="absolute inset-2 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-xl animate-pulse-slow delay-150 opacity-50 dark:opacity-30"></div>
+      <div className="relative z-10 flex items-center justify-center w-full h-full rounded-full bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-indigo-200/50 dark:border-indigo-700/40 shadow-xl">
+        <GraduationCap className="h-20 w-20 text-indigo-600 dark:text-indigo-400" />
       </div>
+    </div>
+
+    {/* Title */}
+    <h2 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+      No Training Selected
+    </h2>
+
+    {/* Description */}
+    <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+      Select a training program from the list on the left to view details, track progress, and take actions.
+    </p>
+
+    {/* Subtle hint / CTA */}
+    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+      Use the sidebar to browse available programs
+    </p>
+  </div>
+</div>
     )}
   </div>
 </div>
@@ -862,7 +877,7 @@ export default function TrainingListPage() {
       title="Send for Interview"
       description={
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Are you sure you want to send {interviewConfirm.candidateName} for an interview? Please select the type and optionally add notes.
           </p>
 

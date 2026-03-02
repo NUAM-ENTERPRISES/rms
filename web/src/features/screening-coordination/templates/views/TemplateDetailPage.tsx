@@ -328,14 +328,24 @@ return (
           </div>
 
           {canWrite && (
-            <Button
-              onClick={handleAddItem}
-              size="sm"
-              className="gap-2 h-9 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02] text-xs"
-            >
-              <Plus className="h-4 w-4" />
-              Add Question
-            </Button>
+           <Button
+  onClick={handleAddItem}
+  size="sm"
+  className={cn(
+    "group relative overflow-hidden",
+    "h-9 px-5 text-xs font-medium",
+    "bg-gradient-to-r from-indigo-600 to-purple-600",
+    "hover:from-indigo-700 hover:to-purple-700",
+    "dark:from-indigo-700 dark:to-purple-800",
+    "dark:hover:from-indigo-600 dark:hover:to-purple-700",
+    "text-white shadow-md hover:shadow-lg",
+    "transition-all duration-300 active:scale-[0.97]",
+    "rounded-xl"
+  )}
+>
+  <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
+  Add Question
+</Button>
           )}
         </div>
       </CardHeader>
