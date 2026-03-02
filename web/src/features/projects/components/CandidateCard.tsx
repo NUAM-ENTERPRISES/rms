@@ -711,16 +711,30 @@ const CandidateCard = memo(function CandidateCard({
                 )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                {isAlreadyInProject && (
-                  <Badge
-                    variant="outline"
-                    className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-2 py-0 h-5 rounded-md flex items-center gap-1 font-medium"
-                  >
-                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-                    Assigned
-                  </Badge>
+                {/* Screening icon moved from footer; shows inline next to other header actions */}
+                {filteredActions?.some(a => a.action === "send_for_screening") && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 text-purple-600 bg-purple-50 hover:bg-purple-100 hover:text-purple-700 rounded-full transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAction?.(candidateId, "send_for_screening");
+                        }}
+                        aria-label="Send for Screening"
+                      >
+                        <Send className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-[10px] font-medium">Send for Screening</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
-                {filteredActions && filteredActions.length > 0 && (
+
+                {(filteredActions && filteredActions.filter(a => a.action !== "send_for_screening").length > 0) && (
                   <DropdownMenu>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -773,7 +787,7 @@ const CandidateCard = memo(function CandidateCard({
                       align="end"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {filteredActions.map((action, index) => {
+                      {filteredActions.filter(a => a.action !== "send_for_screening").map((action, index) => {
                         const Icon = action.icon;
                         return (
                           <DropdownMenuItem
@@ -1087,6 +1101,16 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipContent>
             </Tooltip>
           )}
+
+          {isAlreadyInProject && (
+            <Badge
+              variant="outline"
+              className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-2 py-0 h-5 rounded-md flex items-center gap-1 font-medium ml-1"
+            >
+              <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+              Assigned
+            </Badge>
+          )}
         </div>
 
         {/* Detail pills */}
@@ -1137,7 +1161,12 @@ const CandidateCard = memo(function CandidateCard({
         )}
 
         {/* Unified footer: left = contact buttons, right = action buttons (assign / verify / interview) */}
-        {(showContactButtons || (showAssignButton && onAssignToProject) || (isRecruiter && showVerifyButton && onVerify) || (showInterviewButton && onSendForInterview)) && (
+        {(showContactButtons || 
+          (showAssignButton && onAssignToProject) || 
+          (isRecruiter && showVerifyButton && onVerify) || 
+          (showInterviewButton && onSendForInterview) ||
+          filteredActions?.some(a => a.action === "send_for_screening")
+        ) && (
           <div className="flex items-center justify-between border-t border-slate-100/80 pt-2.5 mt-1">
             <div className="flex items-center gap-2">
               {showContactButtons && (
@@ -1181,6 +1210,7 @@ const CandidateCard = memo(function CandidateCard({
                   </Button>
                 </>
               )}
+
             </div>
 
             <div className="flex items-center gap-2">
