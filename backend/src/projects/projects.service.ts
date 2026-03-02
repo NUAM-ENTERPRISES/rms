@@ -1364,9 +1364,16 @@ export class ProjectsService {
                   { qualification: { name: { contains: search, mode: 'insensitive' } } },
                   { qualification: { shortName: { contains: search, mode: 'insensitive' } } },
                   { qualification: { field: { contains: search, mode: 'insensitive' } } },
+                  { name: { contains: search, mode: 'insensitive' } },
                   { university: { contains: search, mode: 'insensitive' } },
                 ],
               },
+            },
+          },
+          // Match matching skills
+          {
+            skills: {
+              hasSome: [search],
             },
           },
         ],

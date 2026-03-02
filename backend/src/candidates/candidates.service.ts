@@ -772,6 +772,36 @@ export class CandidatesService {
         { lastName: { contains: s, mode: 'insensitive' } },
         { email: { contains: s, mode: 'insensitive' } },
         { mobileNumber: { contains: s, mode: 'insensitive' } },
+        {
+          qualifications: {
+            some: {
+              OR: [
+                {
+                  qualification: {
+                    name: { contains: s, mode: 'insensitive' },
+                  },
+                },
+                {
+                  qualification: {
+                    shortName: { contains: s, mode: 'insensitive' },
+                  },
+                },
+                {
+                  qualification: {
+                    field: { contains: s, mode: 'insensitive' },
+                  },
+                },
+                { name: { contains: s, mode: 'insensitive' } },
+                { university: { contains: s, mode: 'insensitive' } },
+              ],
+            },
+          },
+        },
+        {
+          skills: {
+            hasSome: [s],
+          },
+        },
       ];
     }
 
