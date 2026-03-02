@@ -357,6 +357,19 @@ function App() {
                   />
 
                   <Route
+                    path="/projects/overview"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <CandidatesOverviewPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
                     path="/projects/create"
                     element={
                       <RouteErrorBoundary>
@@ -442,19 +455,6 @@ function App() {
                         <ProtectedRoute>
                           <AppLayout>
                             <CandidatesPage />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      </RouteErrorBoundary>
-                    }
-                  />
-
-                  <Route
-                    path="/candidates/overview"
-                    element={
-                      <RouteErrorBoundary>
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <CandidatesOverviewPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

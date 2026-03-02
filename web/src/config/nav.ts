@@ -106,7 +106,6 @@ export const navigationConfig: NavItem[] = [
   {
     id: "projects",
     label: "Projects",
-    path: "/projects",
     icon: Building2,
     roles: [
       "CEO",
@@ -118,7 +117,18 @@ export const navigationConfig: NavItem[] = [
       "System Admin",
       // "Screening Trainer",
     ],
-    // Hidden from CRE - they only manage candidates
+    children: [
+      {
+        id: "projects-overview",
+        label: "Overview",
+        path: "/projects/overview",
+      },
+      {
+        id: "projects-management",
+        label: "Management",
+        path: "/projects",
+      },
+    ],
   },
   {
     id: "candidates",
@@ -138,11 +148,6 @@ export const navigationConfig: NavItem[] = [
       // "Screening Trainer",
     ],
     children: [
-       {
-        id: "candidates-overview",
-        label: "Overview",
-        path: "/candidates/overview",
-      },
       {
         id: "candidates-list",
         label: "Follow Up",
