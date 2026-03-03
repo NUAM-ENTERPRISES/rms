@@ -310,6 +310,18 @@ export class ScreeningsService {
     const cpWhere: any = {};
     const cpAND: any[] = [];
 
+    // Always exclude candidate-projects whose current sub-status is "screening_assigned".
+    // The UI callers prefer not to see candidates that have merely been assigned; they
+    // should appear only after an actual screening is scheduled. This mirrors the
+    // behavioural expectation expressed by the user when querying /screenings.
+    cpAND.push({
+      subStatus: {
+        name: {
+          not: 'screening_assigned',
+        },
+      },
+    });
+
     if (projectId) {
       cpAND.push({ projectId });
     }

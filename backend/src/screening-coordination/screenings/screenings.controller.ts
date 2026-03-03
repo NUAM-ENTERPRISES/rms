@@ -96,7 +96,7 @@ export class ScreeningsController {
   @ApiOperation({
     summary: 'Get all screenings (paginated)',
     description:
-      'Retrieve all screenings with pagination and optional filtering by candidate, coordinator, decision, project, or role catalog.',
+      'Retrieve all screenings with pagination and optional filtering by candidate, coordinator, decision, project, or role catalog. Screening assignments (subStatus=screening_assigned) are excluded by default.',
   })
   @ApiResponse({
     status: 200,
