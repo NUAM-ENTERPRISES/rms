@@ -32,32 +32,13 @@ import { MapPin, Video, PhoneCall, Save } from "lucide-react";
 import { useGetScreeningQuery, useUpdateScreeningMutation } from "../data";
 import { toast } from "sonner";
 
-const editScreeningSchema = z
-  .object({
-    scheduledTime: z.date({ message: "Please select a date and time" }),
-    mode: z.enum(["video", "phone", "in-person"]),
-    meetingLink: z.string().optional(),
-    notes: z.string().optional(),
-    // Allow number inputs (which can come through as strings) and coerce to number or undefined
-    duration: z.preprocess((v) => {
-      if (v === "" || v === undefined || v === null) return undefined;
-      return Number(v);
-    }, z.number().min(0).optional()),
-  })
-  .superRefine((data, ctx) => {
-    if (data.meetingLink && data.meetingLink.trim() !== "") {
-      try {
-        // eslint-disable-next-line no-new
-        new URL(data.meetingLink as string);
-      } catch (e) {
-        ctx.addIssue({
-          path: ["meetingLink"],
-          message: "Please enter a valid meeting link (valid URL)",
-          code: z.ZodIssueCode.custom,
-        });
-      }
-    }
-  });
+const editScreeningSchema = z.object({
+  scheduledTime: z.date({ message: "Please select a date and time" }),
+  mode: z.enum(["video", "phone", "in-person"]),
+  meetingLink: z.string().optional(),
+  notes: z.string().optional(),
+  duration: z.any().optional(),
+});
 
 type EditScreeningForm = z.infer<typeof editScreeningSchema>;
 
@@ -82,7 +63,7 @@ export default function EditScreeningDialog({
   const form = useForm<EditScreeningForm>({
     resolver: zodResolver(editScreeningSchema),
     defaultValues: {
-      scheduledTime: undefined,
+      scheduledTime: new Date(),
       mode: "video",
       meetingLink: "",
       notes: "",
@@ -90,25 +71,22 @@ export default function EditScreeningDialog({
     },
   });
 
+  const { control, handleSubmit: formHandleSubmit, reset, watch } = form as any;
+
   useEffect(() => {
-    if (interviewData?.data) {
-      const iv = interviewData.data;
-      form.reset({
-        scheduledTime: iv.scheduledTime ? new Date(iv.scheduledTime) : undefined,
-        mode: (iv.mode as "video" | "phone" | "in-person") || "video",
+    const iv = interviewData?.data || (interviewData as any);
+    if (iv && (iv.id || iv._id)) {
+      reset({
+        scheduledTime: iv.scheduledTime ? new Date(iv.scheduledTime) : new Date(),
+        mode: (iv.mode?.toLowerCase() as "video" | "phone" | "in-person") || "video",
         meetingLink: iv.meetingLink || "",
         notes: iv.notes || "",
         duration: iv.duration || undefined,
       });
     }
-  }, [interviewData, form]);
+  }, [interviewData, reset]);
 
   const handleSubmit = async (data: EditScreeningForm) => {
-    if (!data.scheduledTime) {
-      toast.error("Please select date and time");
-      return;
-    }
-
     try {
         if (!id) {
           toast.error("Screening ID is missing");
@@ -122,7 +100,7 @@ export default function EditScreeningDialog({
           mode: data.mode,
           meetingLink: data.meetingLink?.trim() || undefined,
           notes: data.notes || undefined,
-          duration: data.duration,
+          duration: data.duration ?? undefined,
         },
       }).unwrap();
 
@@ -155,15 +133,20 @@ export default function EditScreeningDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={formHandleSubmit(handleSubmit)} className="space-y-6">
             <FormField
-              control={form.control}
+              control={control}
               name="scheduledTime"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Date & Time *</FormLabel>
                   <FormControl>
-                      <DatePicker value={field.value} onChange={field.onChange} placeholder="Select screening date and time" />
+                    <DatePicker 
+                      value={field.value} 
+                      onChange={field.onChange} 
+                      placeholder="Select screening date and time"
+                      showTime={true}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -171,7 +154,7 @@ export default function EditScreeningDialog({
             />
 
             <FormField
-              control={form.control}
+              control={control}
               name="mode"
               render={({ field }) => (
                 <FormItem>
@@ -208,9 +191,9 @@ export default function EditScreeningDialog({
               )}
             />
 
-            {form.watch("mode") === "video" && (
+            {watch("mode") === "video" && (
               <FormField
-                control={form.control}
+                control={control}
                 name="meetingLink"
                 render={({ field }) => (
                   <FormItem>
@@ -225,13 +208,19 @@ export default function EditScreeningDialog({
             )}
 
             <FormField
-              control={form.control}
+              control={control}
               name="duration"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Duration (minutes)</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" placeholder="Duration in minutes" />
+                    <Input 
+                      {...field} 
+                      value={field.value ?? ""} 
+                      onChange={(e) => field.onChange(e.target.value)}
+                      type="number" 
+                      placeholder="Duration in minutes" 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -239,7 +228,7 @@ export default function EditScreeningDialog({
             />
 
             <FormField
-              control={form.control}
+              control={control}
               name="notes"
               render={({ field }) => (
                 <FormItem>

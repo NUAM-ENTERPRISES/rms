@@ -114,22 +114,38 @@ export interface Screening {
       totalExperience?: number;
       currentRole?: string;
       currentEmployer?: string;
+      referralCompanyName?: string;
       qualifications?: any[];
       workExperiences?: any[];
+      candidateContacts?: any[];
     };
     project: {
       id: string;
       title: string;
-      client?: { id: string; name: string; email?: string; phone?: string };
+      description?: string;
+      client?: { id: string; name: string; email?: string; phone?: string } | string;
+      clientEmail?: string;
+      clientPhone?: string;
       deadline?: string;
-      country?: { code: string; name: string };
+      country?: { code: string; name: string } | string;
       priority?: string;
       requiredScreening?: boolean;
       documentRequirements?: any[];
+      projectType?: string;
+      type?: string;
+      status?: string;
+      grooming?: boolean;
+      roleCatalog?: any;
+      createdAt?: string;
+      updatedAt?: string;
     };
     roleNeeded: {
       id: string;
       designation: string;
+      name?: string;
+      shortName?: string;
+      quantity?: number;
+      salaryRange?: string;
     };
     roleCatalog?: {
       id: string;
@@ -193,6 +209,7 @@ export interface UpdateScreeningRequest {
   duration?: number;
   meetingLink?: string;
   mode?: string;
+  notes?: string;
 }
 
 export interface ChecklistItemInput {

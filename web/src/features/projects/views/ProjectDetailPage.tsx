@@ -419,7 +419,8 @@ export default function ProjectDetailPage() {
 
   const { data: usersData } = usersApi.useGetUsersQuery(
     { 
-      limit: 10
+      limit: 10,
+      roles: ['Screening Trainer']
     }, 
     { 
       skip: !isBulkScreeningModalOpen && !isDirectScreeningModalOpen,

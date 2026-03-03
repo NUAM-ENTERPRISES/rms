@@ -1069,7 +1069,7 @@ export class NotificationsProcessor extends WorkerHost {
             type: 'candidate_sent_to_screening',
             title: 'Candidate assigned to screening',
             message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been assigned to you for screening for project ${candidateProjectMap.project.title}.`,
-            link: `/screenings/${screeningId}`,
+            link: `/screenings/assigned`,
             meta: { candidateProjectMapId, screeningId },
             idemKey,
           });

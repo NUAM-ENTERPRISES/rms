@@ -18,6 +18,7 @@ import {
   SCREENING_DECISION,
   SCREENING_STATUS,
 } from '../../common/constants/statuses';
+import { OutboxService } from '../../notifications/outbox.service';
 
 @Injectable()
 export class ScreeningsService {
@@ -27,6 +28,7 @@ export class ScreeningsService {
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => CandidateProjectsService))
     private readonly candidateProjectsService: CandidateProjectsService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   /**
@@ -1154,7 +1156,27 @@ export class ScreeningsService {
     // Auto-trigger "send for verification" if approved and no documents assigned yet
     if (dto.decision === SCREENING_DECISION.APPROVED) {
       const cpm = finalResult.candidateProjectMap;
-      
+
+      // Notify recruiter and handle approvals
+      if (cpm && userId) {
+        try {
+          // Publish event to notify recruiter and potentially others
+          await this.outboxService.publishCandidateApprovedForClientInterview(
+            cpm.id,
+            id,
+            userId, // coordinator (the trainer who passed them)
+            cpm.recruiterId || '', // recruiter
+          );
+          this.logger.log(
+            `Published CandidateApprovedForClientInterview event for candidate ${cpm.candidateId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to publish approved event: ${error.message}`,
+          );
+        }
+      }
+
       // Only auto-send if there are no existing document verifications for this candidate/project nomination
       // Check directly in DB since finalResult has stripped documentVerifications
       const hasExistingDocs = cpm ? await this.prisma.candidateProjectDocumentVerification.count({
