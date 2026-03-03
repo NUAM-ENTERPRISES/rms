@@ -56,15 +56,22 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
     socket.on("notification:new", (notification: any) => {
       console.log("[Socket] Notif Received:", notification);
-      toast(notification.title || "New Notification", {
-        description: notification.message || ""
-      });
+      
+      // Notify components to refresh data
+      window.dispatchEvent(new CustomEvent("notifications:refresh"));
       
       dispatch(baseApi.util.invalidateTags([
         { type: "NotificationBadge" },
         { type: "Notification", id: "LIST" }
       ]));
 
+      // Only show toast if it's NOT a verification notification (which triggers the bell animation)
+      if (notification.type !== "candidate_sent_for_verification") {
+        toast(notification.title || "New Notification", {
+          description: notification.message || ""
+        });
+      }
+      
       if (notification.type === "candidate_sent_to_screening") {
         console.log("[Socket] Invalidating Screening & Candidate lists");
         dispatch(baseApi.util.invalidateTags([

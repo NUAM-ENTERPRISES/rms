@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell, CheckCheck, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,13 +29,30 @@ export default function NotificationsBell() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [allNotifications, setAllNotifications] = useState<NotificationDto[]>([]);
   const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined);
+  const [isAnimating, setIsAnimating] = useState(false);
 
- 
   const { markAsRead } = useMarkNotificationRead();
   const { clearAll } = useClearNotifications();
 
   // Fetch badge count
   const { data: badgeData } = useNotificationsBadge();
+  const unreadCount = badgeData?.data?.unread || 0;
+  const prevUnreadCount = useRef(unreadCount);
+
+  // Animation effect when unread count INCREASES
+  useEffect(() => {
+    if (unreadCount > prevUnreadCount.current) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => setIsAnimating(false), 2000);
+      
+      // Auto-open popover on count increase
+      setOpen(true);
+      handleRefresh();
+
+      return () => clearTimeout(timer);
+    }
+    prevUnreadCount.current = unreadCount;
+  }, [unreadCount]);
 
   // Fetch notifications when popover is open
   const {
@@ -49,10 +66,18 @@ export default function NotificationsBell() {
     cursor: currentCursor 
   });
 
-  const unreadCount = badgeData?.data?.unread || 0;
   const totalCount = notificationsData?.data?.total || 0;
   const hasMore = notificationsData?.data?.hasMore || false;
   const nextCursor = notificationsData?.data?.nextCursor;
+
+  // Listen for custom event to trigger refresh manually if needed
+  useEffect(() => {
+    const handleForceRefresh = () => {
+      handleRefresh();
+    };
+    window.addEventListener("notifications:refresh", handleForceRefresh);
+    return () => window.removeEventListener("notifications:refresh", handleForceRefresh);
+  }, []);
 
   useEffect(() => {
     if (notificationsData?.data?.notifications) {
@@ -110,18 +135,24 @@ export default function NotificationsBell() {
                 )}
                 aria-label="Notifications"
               >
-                <Bell className="h-5 w-5" />
+                <Bell className={cn("h-5 w-5 transition-colors", isAnimating && "text-yellow-400 animate-pulse")} />
                 {unreadCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className={cn(
-                      "absolute -top-1 -right-1 h-5 w-5 rounded-full p-0",
-                      "text-xs font-medium bg-red-500 text-white",
-                      "border-2 border-white shadow-sm"
+                  <>
+                    <Badge
+                      variant="destructive"
+                      className={cn(
+                        "absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center",
+                        "text-xs font-bold bg-red-500 text-white",
+                        "border-2 border-white shadow-sm transition-transform duration-300",
+                        isAnimating ? "scale-125" : "scale-100"
+                      )}
+                    >
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Badge>
+                    {isAnimating && (
+                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 animate-ping opacity-75 border-2 border-white" />
                     )}
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </Badge>
+                  </>
                 )}
               </Button>
             </PopoverTrigger>

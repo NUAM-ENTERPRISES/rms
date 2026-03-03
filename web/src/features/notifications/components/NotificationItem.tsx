@@ -19,6 +19,11 @@ export default function NotificationItem({
   const navigate = useNavigate();
   const { markAsRead } = useMarkNotificationRead();
 
+  // Highlight only brand new notifications (created in last 30 seconds)
+  const isBrandNew = 
+    notification.status === "unread" && 
+    (new Date().getTime() - new Date(notification.createdAt).getTime()) < 30000;
+
   const handleClick = async (e: React.MouseEvent) => {
     // Don't trigger if clicking the mark as read button
     if ((e.target as HTMLElement).closest('button[data-mark-read]')) {
@@ -54,13 +59,22 @@ export default function NotificationItem({
   return (
     <div
       className={cn(
-        "relative p-4 rounded-lg border transition-all duration-200 cursor-pointer group",
+        "relative p-4 rounded-lg border transition-all duration-200 cursor-pointer group mb-2",
         isUnread
           ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:border-blue-300 hover:shadow-md"
-          : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+          : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm",
+        isBrandNew && "animate-pulse ring-2 ring-blue-400 border-blue-400"
       )}
       onClick={handleClick}
     >
+      {/* Brand New "Spot" Indicator */}
+      {isBrandNew && (
+        <div className="absolute top-2 right-2 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+        </div>
+      )}
+      
       {/* Unread Indicator */}
       {isUnread && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-l-lg" />
