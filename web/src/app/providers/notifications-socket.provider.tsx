@@ -72,6 +72,15 @@ export default function NotificationsSocketProvider({ children }: { children: Re
           { type: "Candidate", id: "LIST" }
         ]));
       }
+
+      if (notification.type === "candidate_sent_for_verification") {
+        console.log("[Socket] Invalidating VerificationCandidates & DocumentVerification lists");
+        dispatch(baseApi.util.invalidateTags([
+          { type: "VerificationCandidates" },
+          { type: "DocumentVerification" },
+          { type: "DocumentStats" }
+        ]));
+      }
     });
 
     socket.on("data:sync", (payload: any) => {

@@ -139,7 +139,6 @@ export default function DocumentVerificationPage() {
     },
     { 
       skip: statusFilter !== "verification_in_progress_document",
-      pollingInterval: 30000, // Poll every 30 seconds for live updates
     }
   );
 
