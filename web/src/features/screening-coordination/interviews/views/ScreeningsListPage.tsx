@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Upload
+  Upload,
+  Pencil,
+  MessageCircle
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import {
@@ -58,6 +60,7 @@ import { useAssignToMainScreeningMutation } from "../data";
 import { useSendForVerificationMutation } from "@/features/projects/api";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetCandidateProjectHistoryQuery } from "../data";
+import EditScreeningDialog from "../components/EditScreeningDialog";
 
 export default function ScreeningsListPage() {
   const navigate = useNavigate();
@@ -77,6 +80,7 @@ export default function ScreeningsListPage() {
     null
   );
   const [assignToTrainerOpen, setAssignToTrainerOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedInterviewForTraining, setSelectedInterviewForTraining] =
     useState<any>(null);
   const [sendForInterviewConfirm, setSendForInterviewConfirm] = useState<{
@@ -1147,14 +1151,86 @@ export default function ScreeningsListPage() {
         {/* Interview Details */}
         <Card className="border border-slate-200/60 shadow-sm rounded-lg">
           <CardContent className="p-4">
-            <h3 className="text-sm font-medium text-slate-700 mb-4">Interview Details</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-slate-700">Interview Details</h3>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-slate-400">Status</p>
+                <div className="mt-0.5">
+                  <Badge className={cn(
+                    "text-[10px] h-4 px-1.5 capitalize border-0",
+                    selectedInterview.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 
+                    selectedInterview.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 
+                    'bg-slate-100 text-slate-700'
+                  )}>
+                    {selectedInterview.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-slate-400">Scheduled Time</p>
+                <p className="font-medium text-slate-800">
+                  {selectedInterview.scheduledTime
+                    ? format(new Date(selectedInterview.scheduledTime), "MMM d, yyyy h:mm a")
+                    : "Not scheduled"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-slate-400">Duration</p>
+                <p className="font-medium text-slate-800">
+                  {selectedInterview.duration ? `${selectedInterview.duration} mins` : "N/A"}
+                </p>
+              </div>
+
               <div>
                 <p className="text-xs text-slate-400">Mode</p>
                 <p className="font-medium capitalize text-slate-800">
                   {selectedInterview.mode.replace("_", " ")}
                 </p>
               </div>
+
+              {selectedInterview.mode === 'video' && selectedInterview.meetingLink && (
+                <div className="col-span-2">
+                  <p className="text-xs text-slate-400">Meeting Link</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <a 
+                      href={selectedInterview.meetingLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800 text-xs truncate max-w-[200px]"
+                    >
+                      {selectedInterview.meetingLink}
+                    </a>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      onClick={() => {
+                        const phone = selectedInterview.candidateProjectMap?.candidate?.phone || selectedInterview.candidateProjectMap?.candidate?.mobileNumber;
+                        if (phone) {
+                          const message = `Hello ${selectedInterview.candidateProjectMap?.candidate?.firstName}, here is your interview meeting link: ${selectedInterview.meetingLink}`;
+                          window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                        } else {
+                          toast.error("Candidate phone number not found");
+                        }
+                      }}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {selectedInterview.conductedAt && (
                 <>
@@ -1286,6 +1362,13 @@ export default function ScreeningsListPage() {
             : undefined
         }
         screeningId={selectedInterviewForTraining?.id}
+      />
+
+      {/* Edit Screening Dialog */}
+      <EditScreeningDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        screeningId={selectedInterview?.id}
       />
 
       {/* Send For Verification Confirmation (Document Verification) */}

@@ -34,7 +34,7 @@ import { toast } from "sonner";
 
 const editScreeningSchema = z.object({
   scheduledTime: z.date({ message: "Please select a date and time" }),
-  mode: z.enum(["video", "phone", "in-person"]),
+  mode: z.enum(["video", "phone", "in_person"]),
   meetingLink: z.string().optional(),
   notes: z.string().optional(),
   duration: z.any().optional(),
@@ -78,7 +78,7 @@ export default function EditScreeningDialog({
     if (iv && (iv.id || iv._id)) {
       reset({
         scheduledTime: iv.scheduledTime ? new Date(iv.scheduledTime) : new Date(),
-        mode: (iv.mode?.toLowerCase() as "video" | "phone" | "in-person") || "video",
+        mode: (iv.mode?.toLowerCase() as "video" | "phone" | "in_person") || "video",
         meetingLink: iv.meetingLink || "",
         notes: iv.notes || "",
         duration: iv.duration || undefined,
@@ -178,7 +178,7 @@ export default function EditScreeningDialog({
                           Phone Call
                         </div>
                       </SelectItem>
-                      <SelectItem value="in-person">
+                      <SelectItem value="in_person">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-purple-600" />
                           In-Person
