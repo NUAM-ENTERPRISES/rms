@@ -49,6 +49,9 @@ model User {
   candidateRecruiterAssignments    CandidateRecruiterAssignment[]
   assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
   unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
+  
+  // user preference: should notification sounds be muted?
+  notificationSoundMuted           Boolean                        @default(false)
 
   assignedProcessingTasks    ProcessingCandidate[] @relation("AssignedToProcessing")
   processingHistoryChanges   ProcessingHistory[]   @relation("UserToProcessingHistory")

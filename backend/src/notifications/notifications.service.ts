@@ -194,6 +194,24 @@ export class NotificationsService {
     return { count: result.count };
   }
 
+  // user notification preferences
+  async getMuteStatus(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationSoundMuted: true },
+    });
+    return user?.notificationSoundMuted ?? false;
+  }
+
+  async setMuteStatus(userId: string, muted: boolean): Promise<{ muted: boolean }> {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { notificationSoundMuted: muted },
+      select: { notificationSoundMuted: true },
+    });
+    return { muted: updated.notificationSoundMuted };
+  }
+
   private mapToResponseDto(notification: any): NotificationResponseDto {
     return {
       id: notification.id,

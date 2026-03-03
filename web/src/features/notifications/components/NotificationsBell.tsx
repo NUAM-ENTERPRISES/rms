@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Bell, CheckCheck, Trash2, Loader2, Volume2, VolumeX } from "lucide-react";
+import { Bell, CheckCheck, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +62,7 @@ export default function NotificationsBell() {
   // Fetch notifications when popover is open
   const {
     data: notificationsData,
-    isLoading: notificationsLoading,
+    // isLoading: notificationsLoading, // unused
     isFetching: notificationsFetching,
     error: notificationsError,
     refetch: refetchNotifications,
@@ -180,9 +180,9 @@ export default function NotificationsBell() {
                     <h3 className="font-bold text-base text-slate-900">Notifications</h3>
                     <button
                       className="p-1 rounded hover:bg-gray-100"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        toggle();
+                        await toggle();
                         toast(
                           muted ? "Notifications unmuted" : "Notifications muted",
                           { duration: 1500 }

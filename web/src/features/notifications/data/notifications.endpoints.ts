@@ -155,6 +155,19 @@ export const notificationsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["NotificationBadge", { type: "Notification", id: "LIST" }],
     }),
+
+    // user settings
+    getSettings: builder.query<ApiResponse<{ muted: boolean }>, void>({
+      query: () => "/notifications/settings",
+    }),
+
+    updateSettings: builder.mutation<ApiResponse<{ muted: boolean }>, { muted: boolean }>({
+      query: (body) => ({
+        url: "/notifications/settings",
+        method: "PATCH",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -164,5 +177,7 @@ export const {
   useMarkAsReadMutation,
   useRecruiterNotifyMutation,
   useDocumentationNotifyMutation,
+  useGetSettingsQuery,
+  useUpdateSettingsMutation,
 } = notificationsApi;
 

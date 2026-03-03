@@ -5,8 +5,6 @@ describe("notificationSettingsSlice", () => {
 
   beforeEach(() => {
     initialState = { muted: false };
-    // clear any stored value
-    localStorage.removeItem("notifications-muted");
   });
 
   it("should return the initial state", () => {
@@ -18,18 +16,16 @@ describe("notificationSettingsSlice", () => {
   it("should handle toggleMute", () => {
     const state = notificationSettingsReducer(initialState, toggleMute());
     expect(state.muted).toBe(true);
-    expect(localStorage.getItem("notifications-muted")).toBe("true");
   });
 
   it("should handle setMuted(true)", () => {
     const state = notificationSettingsReducer(initialState, setMuted(true));
     expect(state.muted).toBe(true);
-    expect(localStorage.getItem("notifications-muted")).toBe("true");
   });
 
-  it("should read initial state from localStorage", () => {
-    localStorage.setItem("notifications-muted", "true");
+  // initial state should always default to false
+  it("should return default initial state", () => {
     const state = notificationSettingsReducer(undefined, { type: "@@INIT" } as any);
-    expect(state.muted).toBe(true);
+    expect(state.muted).toBe(false);
   });
 });

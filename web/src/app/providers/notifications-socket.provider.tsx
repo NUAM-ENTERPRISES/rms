@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { baseApi } from "@/app/api/baseApi";
+import { notificationsApi } from "@/features/notifications/data/notifications.endpoints";
+import { setMuted } from "@/features/notifications/notificationSettingsSlice";
 import { toast } from "sonner";
 
 export default function NotificationsSocketProvider({ children }: { children: React.ReactNode }) {
@@ -9,6 +11,16 @@ export default function NotificationsSocketProvider({ children }: { children: Re
   const dispatch = useAppDispatch();
   const { accessToken, user } = useAppSelector((state) => state.auth);
   const muted = useAppSelector((state) => state.notificationSettings?.muted);
+
+  // keep slice in sync with server setting on login
+  const { data: settings } = notificationsApi.useGetSettingsQuery(undefined, {
+    skip: !accessToken || process.env.NODE_ENV === 'test',
+  });
+  useEffect(() => {
+    if (settings?.data) {
+      dispatch(setMuted(settings.data.muted));
+    }
+  }, [settings, dispatch]);
   const mutedRef = useRef<boolean>(muted);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 

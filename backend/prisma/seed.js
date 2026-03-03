@@ -717,6 +717,7 @@ async function main() {
       password: hashedPassword,
       countryCode: '+91',
       mobileNumber: '9876543210',
+      notificationSoundMuted: false,
     },
     create: {
       email: 'admin@affiniks.com',
@@ -724,6 +725,7 @@ async function main() {
       password: hashedPassword,
       countryCode: '+91',
       mobileNumber: '9876543210',
+      notificationSoundMuted: false,
     },
   });
   const ceoRole = await prisma.role.findUnique({
@@ -873,6 +875,7 @@ async function main() {
         password: hashedPassword,
         countryCode: userData.countryCode,
         mobileNumber: userData.phone,
+        notificationSoundMuted: false,
       },
       create: {
         email: userData.email,
@@ -880,6 +883,7 @@ async function main() {
         password: hashedPassword,
         countryCode: userData.countryCode,
         mobileNumber: userData.phone,
+        notificationSoundMuted: false,
       },
     });
     const role = await prisma.role.findUnique({

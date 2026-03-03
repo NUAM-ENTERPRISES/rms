@@ -18,7 +18,7 @@ This feature provides real-time notifications for the Affiniks RMS application, 
 - **`useNotificationSettings`**: Read/toggle mute state (persisted in localStorage)
 
 ### Sound & mute support
-A notification sound (`/sounds/notification.mp3`) is played when a new item arrives.  You can mute or unmute from the bell popover using the speaker icon in the header.  The preference is saved between sessions.
+A notification sound (`/sounds/notification.mp3`) is played when a new item arrives.  You can mute or unmute from the bell popover using the speaker icon in the header.  The preference is saved on the server and synced when your session initializes, so it follows you across browsers/devices.
 ### Components (`/components`)
 
 - **`NotificationItem`**: Individual notification display with click handling

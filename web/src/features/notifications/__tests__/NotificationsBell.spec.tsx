@@ -15,6 +15,19 @@ jest.mock("sonner", () => ({
   },
 }));
 
+// stub RTK Query hooks used by the notifications feature
+jest.mock("../data/notifications.endpoints", () => {
+  const actual = jest.requireActual("../data/notifications.endpoints");
+  return {
+    ...actual,
+    notificationsApi: {
+      ...actual.notificationsApi,
+      useGetSettingsQuery: () => ({ data: { data: { muted: false } } }),
+      useUpdateSettingsMutation: () => [jest.fn()],
+    },
+  };
+});
+
 describe("NotificationsBell", () => {
   it("renders and toggles mute state", () => {
     render(

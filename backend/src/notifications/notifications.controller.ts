@@ -23,6 +23,8 @@ import {
   NotificationResponseDto,
   NotificationBadgeResponseDto,
   PaginatedNotificationsResponseDto,
+  NotificationSettingsResponseDto,
+  UpdateNotificationSettingsDto,
 } from './dto/notification-response.dto';
 import { NotifyRecruiterDto } from './dto/notify-recruiter.dto';
 import { NotifyDocumentationDto } from './dto/notify-documentation.dto';
@@ -149,6 +151,54 @@ export class NotificationsController {
       success: true,
       data,
       message: `${data.count} notifications marked as read successfully`,
+    };
+  }
+
+  @Get('settings')
+  @ApiOperation({ summary: 'Get user notification settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification settings retrieved successfully',
+    type: NotificationSettingsResponseDto,
+  })
+  async getSettings(@Req() req: any): Promise<{
+    success: boolean;
+    data: NotificationSettingsResponseDto;
+    message: string;
+  }> {
+    const userId = req.user.id;
+    const muted = await this.notificationsService.getMuteStatus(userId);
+    return {
+      success: true,
+      data: { muted },
+      message: 'Notification settings retrieved successfully',
+    };
+  }
+
+  @Patch('settings')
+  @ApiOperation({ summary: 'Update user notification settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification settings updated successfully',
+    type: NotificationSettingsResponseDto,
+  })
+  async updateSettings(
+    @Body() dto: UpdateNotificationSettingsDto,
+    @Req() req: any,
+  ): Promise<{
+    success: boolean;
+    data: NotificationSettingsResponseDto;
+    message: string;
+  }> {
+    const userId = req.user.id;
+    const data = await this.notificationsService.setMuteStatus(
+      userId,
+      dto.muted,
+    );
+    return {
+      success: true,
+      data,
+      message: 'Notification settings updated successfully',
     };
   }
 

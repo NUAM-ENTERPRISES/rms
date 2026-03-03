@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean } from 'class-validator';
 
 export class NotificationResponseDto {
   @ApiProperty({
@@ -101,4 +102,21 @@ export class PaginatedNotificationsResponseDto {
     example: 'clx1234567890',
   })
   nextCursor?: string;
+}
+
+export class NotificationSettingsResponseDto {
+  @ApiProperty({
+    description: 'Is notification sound muted',
+    example: false,
+  })
+  muted: boolean;
+}
+
+export class UpdateNotificationSettingsDto {
+  @ApiProperty({
+    description: 'Mute notifications?',
+    example: true,
+  })
+  @IsBoolean()
+  muted: boolean;
 }
