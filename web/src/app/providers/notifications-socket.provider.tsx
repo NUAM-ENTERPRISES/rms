@@ -8,6 +8,23 @@ export default function NotificationsSocketProvider({ children }: { children: Re
   const socketRef = useRef<Socket | null>(null);
   const dispatch = useAppDispatch();
   const { accessToken, user } = useAppSelector((state) => state.auth);
+  const muted = useAppSelector((state) => state.notificationSettings?.muted);
+  const mutedRef = useRef<boolean>(muted);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // keep ref up to date without restarting socket listener
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+
+  // create audio element once
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/sounds/notification.mp3");
+      audioRef.current.preload = "auto";
+      audioRef.current.volume = 0.5;
+    }
+  }, []);
 
   useEffect(() => {
     if (!accessToken || !user) {
@@ -57,13 +74,22 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     socket.on("notification:new", (notification: any) => {
       console.log("[Socket] Notif Received:", notification);
       
-      // Notify components to refresh data
+      // Notify components to refresh data and open bell
       window.dispatchEvent(new CustomEvent("notifications:refresh"));
+      window.dispatchEvent(new CustomEvent("notifications:open"));
       
       dispatch(baseApi.util.invalidateTags([
         { type: "NotificationBadge" },
         { type: "Notification", id: "LIST" }
       ]));
+
+      // play sound if not muted and this is a new notification
+      if (!mutedRef.current) {
+        audioRef.current?.play().catch((err) => {
+          // catch autoplay restrictions
+          console.warn("Notification sound play failed", err);
+        });
+      }
 
       // Only show toast if it's NOT a verification notification (which triggers the bell animation)
       if (notification.type !== "candidate_sent_for_verification") {

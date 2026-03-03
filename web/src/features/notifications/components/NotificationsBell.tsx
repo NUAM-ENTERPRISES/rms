@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Bell, CheckCheck, Trash2, Loader2 } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Loader2, Volume2, VolumeX } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,6 +21,7 @@ import {
   useNotificationsList,
   useMarkNotificationRead,
   useClearNotifications,
+  useNotificationSettings,
 } from "@/features/notifications/hooks";
 import NotificationsList from "./NotificationsList";
 import type { NotificationDto } from "@/features/notifications/data";
@@ -33,22 +35,25 @@ export default function NotificationsBell() {
 
   const { markAsRead } = useMarkNotificationRead();
   const { clearAll } = useClearNotifications();
+  const { muted, toggle } = useNotificationSettings();
 
   // Fetch badge count
   const { data: badgeData } = useNotificationsBadge();
   const unreadCount = badgeData?.data?.unread || 0;
   const prevUnreadCount = useRef(unreadCount);
 
-  // Animation effect when unread count INCREASES
+  // Animation effect when unread count INCREASES; skip initial mount
+  const firstRun = useRef(true);
   useEffect(() => {
+    if (firstRun.current) {
+      prevUnreadCount.current = unreadCount;
+      firstRun.current = false;
+      return;
+    }
+
     if (unreadCount > prevUnreadCount.current) {
       setIsAnimating(true);
       const timer = setTimeout(() => setIsAnimating(false), 2000);
-      
-      // Auto-open popover on count increase
-      setOpen(true);
-      handleRefresh();
-
       return () => clearTimeout(timer);
     }
     prevUnreadCount.current = unreadCount;
@@ -70,13 +75,22 @@ export default function NotificationsBell() {
   const hasMore = notificationsData?.data?.hasMore || false;
   const nextCursor = notificationsData?.data?.nextCursor;
 
-  // Listen for custom event to trigger refresh manually if needed
+  // Listen for open/refresh events from socket provider
   useEffect(() => {
     const handleForceRefresh = () => {
       handleRefresh();
     };
+    const handleOpen = () => {
+      setOpen(true);
+      handleRefresh();
+    };
+
     window.addEventListener("notifications:refresh", handleForceRefresh);
-    return () => window.removeEventListener("notifications:refresh", handleForceRefresh);
+    window.addEventListener("notifications:open", handleOpen);
+    return () => {
+      window.removeEventListener("notifications:refresh", handleForceRefresh);
+      window.removeEventListener("notifications:open", handleOpen);
+    };
   }, []);
 
   useEffect(() => {
@@ -162,7 +176,27 @@ export default function NotificationsBell() {
             <div className="px-4 py-3 border-b bg-gradient-to-r from-slate-50 to-blue-50">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base text-slate-900">Notifications</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-base text-slate-900">Notifications</h3>
+                    <button
+                      className="p-1 rounded hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggle();
+                        toast(
+                          muted ? "Notifications unmuted" : "Notifications muted",
+                          { duration: 1500 }
+                        );
+                      }}
+                      title={muted ? "Unmute notifications" : "Mute notifications"}
+                    >
+                      {muted ? (
+                        <VolumeX className="h-4 w-4 text-gray-600" />
+                      ) : (
+                        <Volume2 className="h-4 w-4 text-gray-600" />
+                      )}
+                    </button>
+                  </div>
                   <Badge className={cn(
                     "text-white text-xs px-2.5 py-0.5 shadow-sm",
                     unreadCount > 0 ? "bg-gradient-to-r from-blue-500 to-indigo-600" : "bg-slate-400"

@@ -4,11 +4,13 @@ import { baseApi } from "@/api/baseApi";
 import { authApi } from "@/features/auth/authApi";
 import authReducer from "@/features/auth/authSlice";
 import projectReducer from "@/features/project/projectSlice";
+import notificationSettingsReducer from "@/features/notifications/notificationSettingsSlice"; // new slice for mute state
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     project: projectReducer,
+    notificationSettings: notificationSettingsReducer,
     [baseApi.reducerPath]: baseApi.reducer, // inject baseApi reducer
     [authApi.reducerPath]: authApi.reducer, // inject authApi reducer
   },

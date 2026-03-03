@@ -15,7 +15,10 @@ This feature provides real-time notifications for the Affiniks RMS application, 
 - **`useNotificationsList`**: Fetch paginated notifications
 - **`useMarkNotificationRead`**: Mark notifications as read with optimistic updates
 - **`useNotificationsBadge`**: Get unread count for badge display
+- **`useNotificationSettings`**: Read/toggle mute state (persisted in localStorage)
 
+### Sound & mute support
+A notification sound (`/sounds/notification.mp3`) is played when a new item arrives.  You can mute or unmute from the bell popover using the speaker icon in the header.  The preference is saved between sessions.
 ### Components (`/components`)
 
 - **`NotificationItem`**: Individual notification display with click handling
