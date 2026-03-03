@@ -505,6 +505,7 @@ export const projectsApi = baseApi.injectEndpoints({
         { type: "Project", id: projectId },
         "ProjectCandidates",
         "DocumentVerification",
+        "VerificationCandidates",
         // Candidate queries should also refresh so lists that show candidate status update live
         "Candidate",
         "CandidateProject",

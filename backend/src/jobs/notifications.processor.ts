@@ -772,9 +772,48 @@ export class NotificationsProcessor extends WorkerHost {
       const idemKey = `${eventId}:${assignedToExecutive}:candidate_sent_for_verification`;
 
       if (!assignedToExecutive) {
-        // No executive was selected — skip creating notification to avoid foreign key violation
-        this.logger.debug(
-          `No executive assigned for candidateProjectMap ${candidateProjectMapId}; skipping notification`,
+        // Find all users with 'Documentation Executive' role
+        const documentationExecutives = await this.prisma.user.findMany({
+          where: {
+            userRoles: {
+              some: {
+                role: {
+                  name: 'Documentation Executive',
+                },
+              },
+            },
+          },
+          select: { id: true },
+        });
+
+        if (documentationExecutives.length === 0) {
+          this.logger.warn(
+            `No Documentation Executives found to notify for candidateProjectMap ${candidateProjectMapId}`,
+          );
+          return;
+        }
+
+        // Notify all documentation executives
+        await Promise.all(
+          documentationExecutives.map((exec) =>
+            this.notificationsService.createNotification({
+              userId: exec.id,
+              type: 'candidate_sent_for_verification',
+              title: 'New Candidate for Document Verification',
+              message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} is ready for document verification for project ${candidateProjectMap.project.title}.`,
+              link: `/candidates/${candidateProjectMap.candidate.id}/documents/${candidateProjectMap.project.id}`,
+              meta: {
+                candidateProjectMapId,
+                candidateId: candidateProjectMap.candidate.id,
+                projectId: candidateProjectMap.project.id,
+              },
+              idemKey: `${eventId}:${exec.id}:candidate_sent_for_verification`,
+            }),
+          ),
+        );
+
+        this.logger.log(
+          `Candidate sent for verification notification created for ${documentationExecutives.length} documentation executives`,
         );
       } else {
         await this.notificationsService.createNotification({
