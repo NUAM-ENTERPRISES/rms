@@ -220,14 +220,37 @@ export class OutboxService {
   }
 
   /**
+   * Publish candidate assigned to screening event
+   * Notifies the selected Interview Coordinator/Trainer when a candidate is first assigned
+   */
+  async publishCandidateAssignedToScreening(
+    candidateProjectMapId: string,
+    coordinatorId: string,
+    recruiterId: string | null,
+    assignedBy: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateAssignedToScreening',
+      {
+        candidateProjectMapId,
+        coordinatorId,
+        recruiterId,
+        assignedBy,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate sent to screening event
-   * Notifies the selected Interview Coordinator
+   * Notifies the selected Interview Coordinator when a screening is scheduled
    */
   async publishCandidateSentToScreening(
     candidateProjectMapId: string,
     screeningId: string,
     coordinatorId: string,
-    recruiterId: string,
+    recruiterId: string | null,
     tx?: any,
   ): Promise<void> {
     await this.publishEvent(
@@ -250,7 +273,7 @@ export class OutboxService {
     candidateProjectMapId: string,
     screeningId: string,
     coordinatorId: string,
-    recruiterId: string,
+    recruiterId: string | null,
     teamHeadId?: string,
     tx?: any,
   ): Promise<void> {
@@ -378,7 +401,7 @@ export class OutboxService {
     candidateProjectMapId: string,
     screeningId: string,
     coordinatorId: string,
-    recruiterId: string,
+    recruiterId: string | null,
     decision: string,
     teamHeadId?: string,
     tx?: any,

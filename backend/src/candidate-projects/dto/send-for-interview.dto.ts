@@ -26,6 +26,11 @@ export class SendForInterviewDto {
   @IsString()
   recruiterId?: string;
 
+  @ApiProperty({ description: 'Optional coordinator id for screening', required: false })
+  @IsOptional()
+  @IsString()
+  coordinatorId?: string;
+
   @ApiProperty({ description: 'Optional notes', required: false })
   @IsOptional()
   @IsString()

@@ -2147,7 +2147,16 @@ export class CandidateProjectsService {
       return assignment;
     });
 
-    // Optionally we could publish an outbox event here if needed
+    if (type === 'screening_assigned') {
+      await this.outboxService.publishCandidateAssignedToScreening(
+        candidateProject.id,
+        dto.coordinatorId || userId, // Fallback to current user if coordinator not provided in DTO
+        candidateProject.recruiterId || userId,
+        userId,
+      );
+    } else if (type === 'interview_assigned') {
+      // Future: Add publishCandidateAssignedToMainInterview if needed
+    }
 
     return candidateProject;
   }

@@ -266,6 +266,17 @@ export class ScreeningsService {
       return screening;
     });
 
+    // Notify coordinator and recruiter about scheduled screening
+    const recruiterToNotify =
+      candidateProject.recruiterId || scheduledBy || null;
+
+    await this.outboxService.publishCandidateSentToScreening(
+      dto.candidateProjectMapId,
+      created.id,
+      dto.coordinatorId,
+      recruiterToNotify,
+    );
+
     // Return the enriched, canonical object via existing read method
     return this.findOne(created.id);
   }

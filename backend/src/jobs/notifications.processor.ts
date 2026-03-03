@@ -49,6 +49,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateRecruiterAssigned(job);
         case 'CandidateTransferredBack':
           return await this.handleCandidateTransferredBack(job);
+        case 'CandidateAssignedToScreening':
+          return await this.handleCandidateAssignedToScreeningAssignment(job);
         case 'CandidateSentToScreening':
           return await this.handleCandidateSentToScreening(job);
         case 'CandidateApprovedForClientInterview':
@@ -1033,6 +1035,84 @@ export class NotificationsProcessor extends WorkerHost {
     }
   }
 
+  async handleCandidateAssignedToScreeningAssignment(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing candidate assigned for screening event: ${eventId}`);
+
+    try {
+      const { candidateProjectMapId, coordinatorId, recruiterId, assignedBy } =
+        payload as {
+          candidateProjectMapId: string;
+          coordinatorId: string;
+          recruiterId: string | null;
+          assignedBy: string;
+        };
+
+      // Load candidate project mapping with candidate and project details
+      const cp = await this.prisma.candidateProjects.findUnique({
+        where: { id: candidateProjectMapId },
+        include: {
+          candidate: { select: { id: true, firstName: true, lastName: true } },
+          project: { select: { id: true, title: true } },
+          roleNeeded: { select: { designation: true } },
+        },
+      });
+
+      if (!cp) {
+        this.logger.warn(
+          `Candidate project mapping ${candidateProjectMapId} not found`,
+        );
+        return;
+      }
+
+      const sender = await this.prisma.user.findUnique({
+        where: { id: assignedBy },
+        select: { name: true },
+      });
+
+      // Notify Coordinator/Trainer
+      const coordinator = await this.prisma.user.findUnique({
+        where: { id: coordinatorId },
+      });
+      if (coordinator) {
+        const idemKey = `${eventId}:${coordinator.id}:assignment`;
+
+        await this.notificationsService.createNotification({
+          userId: coordinator.id,
+          type: 'candidate_assigned_screening',
+          title: 'New Screening Assignment',
+          message: `Candidate ${cp.candidate.firstName} ${cp.candidate.lastName} has been assigned to you for screening for project ${cp.project.title} (${cp.roleNeeded?.designation}).`,
+          link: `/screenings/assigned`,
+          meta: { candidateProjectMapId },
+          idemKey,
+        });
+      }
+
+      // Notify Recruiter
+      if (recruiterId && recruiterId !== assignedBy) {
+        const idemKey = `${eventId}:${recruiterId}:assignment`;
+
+        await this.notificationsService.createNotification({
+          userId: recruiterId,
+          type: 'candidate_assigned_screening',
+          title: 'Candidate Sent to Screening',
+          message: `Candidate ${cp.candidate.firstName} ${cp.candidate.lastName} has been sent to the screening team by ${sender?.name || 'Recruiter'}.`,
+          link: `/candidates/${cp.candidate.id}?projectId=${cp.project.id}`,
+          meta: { candidateProjectMapId },
+          idemKey,
+        });
+      }
+
+      this.logger.log(`Screening assignment notifications processed`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle screening assignment: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   async handleCandidateSentToScreening(job: Job<NotificationJobData>) {
       const { eventId, payload } = job.data;
       this.logger.log(`Processing candidate sent to screening event: ${eventId}`);
@@ -1042,7 +1122,7 @@ export class NotificationsProcessor extends WorkerHost {
           candidateProjectMapId: string;
           screeningId: string;
           coordinatorId: string;
-          recruiterId: string;
+          recruiterId: string | null;
         };
 
         // Load candidate project mapping with candidate and project details
@@ -1119,7 +1199,7 @@ export class NotificationsProcessor extends WorkerHost {
         candidateProjectMapId: string;
         screeningId: string;
         coordinatorId: string;
-        recruiterId: string;
+        recruiterId: string | null;
         teamHeadId?: string;
       };
 
@@ -1360,7 +1440,7 @@ export class NotificationsProcessor extends WorkerHost {
         candidateProjectMapId: string;
         screeningId: string;
         coordinatorId: string;
-        recruiterId: string;
+        recruiterId: string | null;
         decision: string;
         teamHeadId?: string;
       };
