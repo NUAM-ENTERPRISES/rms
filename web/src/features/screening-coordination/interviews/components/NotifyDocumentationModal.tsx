@@ -33,23 +33,21 @@ export const NotifyDocumentationModal: React.FC<NotifyDocumentationModalProps> =
   setData,
   onSuccess,
 }) => {
-  const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsersQuery({ limit: 10 }, { skip: !isOpen });
+  const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsersQuery(
+    { limit: 10, roles: ["Documentation Executive"] },
+    { skip: !isOpen }
+  );
   const [recruiterNotify, { isLoading: isNotifying }] = useRecruiterNotifyMutation();
   const [documentationNotify, { isLoading: isNotifyingDocumentation }] = useDocumentationNotifyMutation();
 
   const documentationUsers = useMemo(() => {
     if (!usersResponse?.data?.users) return [];
-    
-    return usersResponse.data.users
-      .map(user => ({
-        id: user.id,
-        name: user.name,
-        role: user.userRoles?.[0]?.role?.name || "User"
-      }))
-      .filter(user => 
-        user.role.toLowerCase().includes("documentation") || 
-        user.role.toLowerCase().includes("processing")
-      );
+
+    return usersResponse.data.users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      role: user.userRoles?.[0]?.role?.name || "User",
+    }));
   }, [usersResponse]);
 
   const handleConfirm = async () => {

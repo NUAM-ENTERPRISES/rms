@@ -180,7 +180,7 @@ export class NotificationsController {
   }
 
   @Post('documentation-notify')
-  @Permissions('write:documents')
+  @Permissions('write:documents', 'write:screenings', 'manage:screenings', 'schedule:interviews')
   @ApiOperation({
     summary: 'Send a documentation notification',
     description: 'Sends a custom notification message to a documentation owner/coordinator. Useful for manual triggers related to document review.',

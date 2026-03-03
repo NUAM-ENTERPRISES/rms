@@ -62,6 +62,7 @@ export interface QueryUsersRequest {
   limit?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  roles?: string | string[];
 }
 
 export interface UsersResponse {
@@ -86,7 +87,11 @@ export const usersApi = baseApi.injectEndpoints({
         if (params) {
           Object.entries(params).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== "") {
-              searchParams.append(key, value.toString());
+              if (key === "roles" && Array.isArray(value)) {
+                value.forEach((role) => searchParams.append("roles", role));
+              } else {
+                searchParams.append(key, value.toString());
+              }
             }
           });
         }
