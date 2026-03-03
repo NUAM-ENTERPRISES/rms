@@ -20,7 +20,6 @@ import {
   useNotificationsList,
   useMarkNotificationRead,
   useClearNotifications,
-  useReceiveNotifications,
 } from "@/features/notifications/hooks";
 import NotificationsList from "./NotificationsList";
 import type { NotificationDto } from "@/features/notifications/data";
@@ -31,9 +30,7 @@ export default function NotificationsBell() {
   const [allNotifications, setAllNotifications] = useState<NotificationDto[]>([]);
   const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined);
 
-  // Synchronize real-time notifications via WebSockets
-  useReceiveNotifications();
-
+ 
   const { markAsRead } = useMarkNotificationRead();
   const { clearAll } = useClearNotifications();
 
