@@ -104,7 +104,6 @@ export class UsersController {
   }
 
   @Get()
-  @Permissions('read:users')
   @ApiOperation({
     summary: 'Get all users with pagination and search',
     description:
@@ -138,6 +137,15 @@ export class UsersController {
     required: false,
     description: 'Sort order',
     example: 'desc',
+  })
+  @ApiQuery({
+    name: 'roles',
+    required: false,
+    description: 'Filter by role name(s)',
+    style: 'form',
+    explode: true,
+    type: String,
+    isArray: true,
   })
   @ApiResponse({
     status: 200,

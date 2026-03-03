@@ -31,6 +31,9 @@ interface DirectScreeningModalProps {
   eligibilityData?: any;
   formatWorkExperienceEntry: (exp: any) => string;
   getMinimalScoreBadgeClass: (score?: number) => string;
+  coordinators?: any[];
+  selectedCoordinatorId?: string;
+  onCoordinatorChange?: (id: string) => void;
 }
 
 const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
@@ -49,6 +52,9 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
   eligibilityData,
   formatWorkExperienceEntry,
   getMinimalScoreBadgeClass,
+  coordinators = [],
+  selectedCoordinatorId,
+  onCoordinatorChange,
 }) => {
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const candidate = allCandidates.find(
@@ -194,6 +200,33 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
                 direct screening. Once screening is completed you should do
                 document verification.
               </div>
+
+              {coordinators.length > 0 && onCoordinatorChange && (
+                <div className="space-y-2 mt-3">
+                  <label className="text-sm font-medium text-gray-700 block">
+                    Assign Coordinator (Optional)
+                  </label>
+                  <Select
+                    value={selectedCoordinatorId || "round-robin"}
+                    onValueChange={(val) => onCoordinatorChange(val === "round-robin" ? "" : val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a coordinator" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="round-robin">Round Robin (Auto)</SelectItem>
+                      {coordinators.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-slate-500 italic">
+                    If not selected, the system will use round-robin to assign a Screening Trainer.
+                  </p>
+                </div>
+              )}
 
               <label
                 htmlFor="screening-notes"

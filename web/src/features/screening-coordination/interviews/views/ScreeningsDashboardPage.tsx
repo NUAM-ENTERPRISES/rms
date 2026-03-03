@@ -25,19 +25,22 @@ import { Badge } from "@/components/ui/badge";
 import {
   useGetScreeningsQuery,
   useGetAssignedScreeningsQuery,
-  useGetUpcomingScreeningsQuery,
 } from "../data";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { SCREENING_DECISION } from "../../types";
 import { startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
 import { cn } from "@/lib/utils";
 // note: using native <select> for simplicity in modal
-import { Button as UiButton } from "@/components/ui/button";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 
 export default function ScreeningsDashboardPage() {
   const navigate = useNavigate();
-  const { data, isLoading, error } = useGetScreeningsQuery(undefined);
+  const { data, isLoading, error } = useGetScreeningsQuery({
+    limit: 5,
+    page: 1,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
   const interviews = useMemo(() => {
     if (Array.isArray(data?.data?.items)) return data.data.items;
     if (Array.isArray(data?.data)) return data.data;
@@ -125,55 +128,14 @@ export default function ScreeningsDashboardPage() {
       completedThisMonth,
       passRate,
       inTraining,
-      totalScheduled: interviews.filter((i) => !i.conductedAt).length,
+      totalScheduled: (interviews || []).filter((i: any) => !i.conductedAt).length,
       totalCompleted: completedInterviews.length,
     };
   }, [interviews, assignedItems]);
 
-  // Get upcoming interviews
-  const upcomingInterviews = useMemo(() => {
-    // normalize scheduled mock interviews (MockInterview[]) and assigned
-    // candidate-project items so the UI can display them uniformly.
-    const scheduled = interviews
-      .filter((i) => i.scheduledTime && !i.conductedAt)
-      .sort(
-        (a, b) =>
-          new Date(a.scheduledTime!).getTime() -
-          new Date(b.scheduledTime!).getTime()
-      )
-      .slice(0, 5);
-
-    const assignedNormalized = assignedItems
-      .filter((it) => it.assignedAt)
-      .map((it) => ({
-        // map assigned item into a shape the UI expects for display
-        id: `assignment-${it.id}`,
-        scheduledTime: it.assignedAt,
-        // put information where existing code looks for it
-        candidateProjectMap: {
-          id: it.id,
-          candidate: it.candidate,
-          project: it.project,
-          roleNeeded: it.roleNeeded,
-          recruiter: it.recruiter,
-        },
-        // use subStatus label (e.g. "Mock Interview Assigned") or fall back
-        // to a simple Assigned tag
-        mode: it.subStatus?.label || it.subStatus?.name || "Assigned",
-        // keep subStatus name available so callers can show the schedule button
-        subStatusName: it.subStatus?.name,
-        // expose the expiry flag for UI (API returns isExpired at root)
-        isExpired: Boolean((it as any).isExpired),
-      }))
-      .slice(0, 10);
-
-    return [...scheduled, ...assignedNormalized]
-      .sort(
-        (a, b) =>
-          new Date(a.scheduledTime!).getTime() -
-          new Date(b.scheduledTime!).getTime()
-      )
-      .slice(0, 5);
+  const scheduledInterviewsFromMainApi = useMemo(() => {
+    return (interviews || [])
+      .filter((i: any) => i.status === "scheduled" || !i.conductedAt)
   }, [interviews]);
 
   // Open schedule modal for an assigned candidate-project
@@ -187,11 +149,6 @@ export default function ScreeningsDashboardPage() {
   // Get recent completed
   // Fetch recent completed from local list (kept for other stats) -- not used by Upcoming card
   // NOTE: recent completed list is no longer used for the 'Upcoming Interviews' card
-
-  // Fetch upcoming screenings from API (uses /screenings/upcoming?page=1&limit=5)
-  const { data: upcomingData, error: upcomingError } =
-    useGetUpcomingScreeningsQuery({ page: 1, limit: 5 });
-  const upcomingInterviewsFromApi = upcomingData?.data?.items || [];
 
   const getDecisionBadge = (decision: string | null | undefined) => {
     if (!decision) return null;
@@ -461,7 +418,7 @@ return (
           </CardContent>
         </Card>
 
-        {/* Upcoming Interviews */}
+        {/* Scheduled Interviews */}
         <Card className="border-0 shadow-xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 hover:shadow-2xl transition-all duration-300">
           <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30">
             <div className="flex items-center justify-between">
@@ -470,9 +427,9 @@ return (
                   <CheckCircle2 className="h-5 w-5 text-indigo-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-semibold">Upcoming Screening</CardTitle>
+                  <CardTitle className="text-xl font-semibold">Scheduled Interviews</CardTitle>
                   <CardDescription className="text-sm mt-1">
-                    {upcomingInterviewsFromApi.length} upcoming interview{upcomingInterviewsFromApi.length !== 1 ? "s" : ""}
+                    {scheduledInterviewsFromMainApi.length} scheduled interview{scheduledInterviewsFromMainApi.length !== 1 ? "s" : ""}
                   </CardDescription>
                 </div>
               </div>
@@ -480,34 +437,23 @@ return (
                 variant="outline"
                 size="sm"
                 className="h-8 px-4 rounded-xl border-indigo-200 hover:bg-indigo-50"
-                onClick={() => navigate("/screenings/upcoming")}
+                onClick={() => navigate("/screenings/list")}
               >
-                View All
+                View My Interviews
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            {upcomingInterviewsFromApi.length === 0 ? (
-              upcomingError ? (
-                <Alert variant="destructive" className="py-3">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {typeof upcomingError === "object" && (upcomingError as any)?.data?.message
-                      ? (upcomingError as any).data.message
-                      : "Failed to load upcoming interviews"}
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-base font-medium">No upcoming interviews</p>
-                  <p className="text-sm mt-1">Upcoming interviews will appear here</p>
-                </div>
-              )
+            {scheduledInterviewsFromMainApi.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-base font-medium">No scheduled interviews</p>
+                <p className="text-sm mt-1">Scheduled interviews will appear here</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {upcomingInterviewsFromApi.map((interview) => {
+                {scheduledInterviewsFromMainApi.map((interview: any) => {
                   const candidate = interview.candidateProjectMap?.candidate;
                   const role = interview.candidateProjectMap?.roleNeeded;
                   const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
@@ -515,7 +461,7 @@ return (
                   return (
                     <div
                       key={interview.id}
-                      onClick={() => navigate("/screenings/upcoming", { state: { selectedId: interview.id } })}
+                      onClick={() => navigate("/screenings/list", { state: { selectedId: interview.id } })}
                       className="relative p-4 rounded-xl border bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -539,9 +485,9 @@ return (
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           {getDecisionBadge(interview.decision)}
-                          {(interview as any)?.candidateProjectMap?.subStatus?.label && (
+                          {interview.candidateProjectMap?.subStatus?.label && (
                             <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-indigo-100 text-indigo-700 border border-indigo-200">
-                              {(interview as any).candidateProjectMap.subStatus.label}
+                              {interview.candidateProjectMap.subStatus.label}
                             </div>
                           )}
                         </div>
@@ -556,7 +502,7 @@ return (
                               : "Not scheduled"}
                           </span>
                         </div>
-                        {(interview as any).isExpired && (
+                        {interview.isExpired && (
                           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">
                             Expired
                           </div>

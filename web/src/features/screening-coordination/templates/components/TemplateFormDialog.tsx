@@ -35,30 +35,42 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import { toast } from "sonner";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   ScreeningTemplate,
   CreateTemplateItemRequest,
   SCREENING_CATEGORY,
 } from "../../types";
 import { useCreateTemplateMutation, useUpdateTemplateMutation } from "../data";
+import { DepartmentSelect } from "@/components/molecules/DepartmentSelect";
+import { JobTitleSelect } from "@/components/molecules/JobTitleSelect";
 
 // Validation schema
 const itemSchema = z.object({
   category: z.string().min(1, "Category is required"),
   criterion: z.string().min(3, "Criterion must be at least 3 characters"),
-  order: z.coerce.number().int().min(0).default(0),
+  order: z.number().int().min(0).default(0),
 });
 
 const templateFormSchema = z.object({
-  roleId: z.string().min(1, "Role is required"),
+  roleId: z.string().optional().nullable(),
   name: z.string().min(3, "Template name must be at least 3 characters"),
   description: z.string().optional(),
   isActive: z.boolean(),
   items: z.array(itemSchema).optional(),
 });
 
-type TemplateFormValues = z.infer<typeof templateFormSchema>;
+type TemplateFormValues = {
+  roleId?: string | null;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  items?: {
+    category: string;
+    criterion: string;
+    order?: number;
+  }[];
+};
 
 const categoryLabels: Record<string, string> = {
   [SCREENING_CATEGORY.TECHNICAL_SKILLS]: "Technical Skills",
@@ -71,14 +83,12 @@ interface TemplateFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   template?: ScreeningTemplate;
-  roles: Array<{ id: string; name: string }>;
 }
 
 export function TemplateFormDialog({
   open,
   onOpenChange,
   template,
-  roles,
 }: TemplateFormDialogProps) {
   const [createTemplate, { isLoading: isCreating }] =
     useCreateTemplateMutation();
@@ -91,7 +101,10 @@ export function TemplateFormDialog({
     Object.keys(categoryLabels)[0] ?? ""
   );
 
-  const form = useForm<TemplateFormValues>({
+  // Separate state for department selection since it's not in the schema
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
+
+  const form = useForm<TemplateFormValues, any, TemplateFormValues>({
     resolver: zodResolver(templateFormSchema),
     defaultValues: {
       roleId: "",
@@ -105,8 +118,9 @@ export function TemplateFormDialog({
   // Populate form when editing
   useEffect(() => {
     if (template) {
+      setSelectedDepartmentId(template.role?.roleDepartmentId || "");
       form.reset({
-        roleId: template.roleId,
+        roleId: template.roleId || "",
         name: template.name,
         description: template.description || "",
         isActive: template.isActive,
@@ -114,6 +128,7 @@ export function TemplateFormDialog({
       });
       setItems([]);
     } else {
+      setSelectedDepartmentId("");
       form.reset({
         roleId: "",
         name: "",
@@ -195,6 +210,7 @@ export function TemplateFormDialog({
 
       const payload = {
         ...data,
+        roleId: data.roleId || null,
         items: !template && items.length > 0 ? items : undefined,
       };
 
@@ -235,34 +251,51 @@ export function TemplateFormDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="roleId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem>
+                <FormLabel>Department</FormLabel>
+                <FormControl>
+                  <DepartmentSelect
+                    value={selectedDepartmentId}
+                    onValueChange={(val) => {
+                      setSelectedDepartmentId(val);
+                      form.setValue("roleId", ""); // Reset role when department changes
+                    }}
                     disabled={isCreating || isUpdating}
-                  >
+                    allowEmpty
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+
+              <FormField
+                control={form.control}
+                name="roleId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role / Job Title</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role..." />
-                      </SelectTrigger>
+                      <JobTitleSelect
+                        departmentId={selectedDepartmentId}
+                        value={field.value || ""}
+                        onRoleChange={(role) => {
+                          field.onChange(role?.id || "");
+                        }}
+                        onValueChange={(val) => {
+                          // Allow internal value to update so the ID is stored
+                          if (val && val.match(/^[0-9a-fA-F-]+$/)) {
+                            field.onChange(val);
+                          }
+                        }}
+                        disabled={isCreating || isUpdating}
+                        allowEmpty
+                      />
                     </FormControl>
-                    <SelectContent className="max-h-[200px]">
-                      {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

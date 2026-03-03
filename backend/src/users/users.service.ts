@@ -137,17 +137,31 @@ export class UsersService {
       limit = 10,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      roles,
     } = query;
     const skip = (page - 1) * limit;
 
-    const where = search
-      ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { email: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {};
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { email: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+
+    if (roles) {
+      const roleArray = Array.isArray(roles) ? roles : [roles];
+      where.userRoles = {
+        some: {
+          role: {
+            name: {
+              in: roleArray,
+            },
+          },
+        },
+      };
+    }
 
     const total = await this.prisma.user.count({ where });
 

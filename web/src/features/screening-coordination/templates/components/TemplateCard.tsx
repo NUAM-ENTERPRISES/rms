@@ -135,38 +135,52 @@ export function TemplateCard({
         </div>
 
         {/* Bottom row: Badges aligned like the screenshot */}
-        <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {template.role && (
+        <div className="flex flex-col gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+              {template.role && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5 truncate max-w-full",
+                    colors.roleBadge
+                  )}
+                  title={template.role.label || template.role.name}
+                >
+                  {template.role.label || template.role.name}
+                </Badge>
+              )}
+              {template.role?.roleDepartment && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5 truncate max-w-full bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800"
+                  )}
+                  title={template.role.roleDepartment.name}
+                >
+                  {template.role.roleDepartment.name}
+                </Badge>
+              )}
               <Badge
                 variant="outline"
                 className={cn(
                   "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5",
-                  colors.roleBadge
+                  colors.questionBadge
                 )}
               >
-                {template.role.name}
+                <ListChecks className="h-2.5 w-2.5 mr-1" />
+                {itemCount} {itemCount === 1 ? "item" : "items"}
               </Badge>
-            )}
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5",
-                colors.questionBadge
-              )}
-            >
-              <ListChecks className="h-2.5 w-2.5 mr-1" />
-              {itemCount} {itemCount === 1 ? "item" : "items"}
-            </Badge>
-          </div>
+            </div>
 
-          {/* Status indicator - compact dot */}
-          <div className="flex-shrink-0">
-            {isActive ? (
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            ) : (
-              <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700" />
-            )}
+            {/* Status indicator - compact dot */}
+            <div className="flex-shrink-0">
+              {isActive ? (
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              ) : (
+                <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700" />
+              )}
+            </div>
           </div>
         </div>
       </div>

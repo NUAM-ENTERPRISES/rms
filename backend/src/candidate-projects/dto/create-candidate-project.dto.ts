@@ -25,4 +25,9 @@ export class CreateCandidateProjectDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Coordinator ID (must have Screening Trainer or Interview Coordinator role)' })
+  @IsString()
+  @IsOptional()
+  coordinatorId?: string;
 }

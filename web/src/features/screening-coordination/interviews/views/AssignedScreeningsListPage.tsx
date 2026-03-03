@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { ClipboardCheck, Search, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, Plus, CheckSquare, Square } from "lucide-react";
+import { ClipboardCheck, Search, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, CheckSquare, Square } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import ImageViewer from "@/components/molecules/ImageViewer";
@@ -38,24 +38,6 @@ export default function AssignedInterviewsListPage() {
     roleCatalogId: filters.roleCatalogId === "all" ? undefined : filters.roleCatalogId
   });
   const items = data?.data?.items || [];
-
-  // Derive unique projects from the currently loaded screenings
-  const projects = useMemo(() => {
-    const map = new Map();
-    items.forEach((it: any) => {
-      if (it.project && !map.has(it.project.id)) {
-        map.set(it.project.id, it.project);
-      }
-    });
-    // Add currently selected project to ensure it stays in list when filtered
-    if (filters.projectId !== "all" && !map.has(filters.projectId)) {
-      const selectedItem = items.find(it => it.project?.id === filters.projectId);
-      if (selectedItem?.project) {
-        map.set(filters.projectId, selectedItem.project);
-      }
-    }
-    return Array.from(map.values());
-  }, [items, filters.projectId]);
 
   // Project & role filtering is handled by the `ProjectRoleFilter` component
 
@@ -469,7 +451,7 @@ export default function AssignedInterviewsListPage() {
                           </div>
 
                           {/* Qualifications */}
-                          {selected.candidate?.qualifications?.length > 0 && (
+                          {!!selected.candidate?.qualifications?.length && (
                             <div className="mt-3">
                               <p className="text-xs text-slate-500">Qualifications</p>
                               <ul className="mt-1 space-y-2 text-xs">
@@ -487,7 +469,7 @@ export default function AssignedInterviewsListPage() {
                           )}
 
                           {/* Work experiences (most recent first) */}
-                          {selected.candidate?.workExperiences?.length > 0 && (
+                          {!!selected.candidate?.workExperiences?.length && (
                             <div className="mt-3">
                               <p className="text-xs text-slate-500">Work experience</p>
                               <ul className="mt-1 space-y-2 text-xs">
@@ -565,7 +547,7 @@ export default function AssignedInterviewsListPage() {
                           <p className="font-medium text-slate-900">{selected.roleNeeded?.designation || "Unknown"}</p>
                         </div>
 
-                        {selectedProjectDetails?.documentRequirements?.length > 0 && (
+                        {!!selectedProjectDetails?.documentRequirements?.length && (
                           <div className="mt-2">
                             <p className="text-xs text-slate-500">Document requirements</p>
                             <ul className="mt-1 space-y-1 text-xs">

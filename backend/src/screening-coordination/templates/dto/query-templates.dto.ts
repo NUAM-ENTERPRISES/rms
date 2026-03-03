@@ -12,6 +12,14 @@ export class QueryScreeningTemplatesDto {
   @IsString()
   roleId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Filter by Department ID',
+    example: 'cmm1w5269002bq491iwver7zw',
+  })
+  @IsOptional()
+  @IsString()
+  roleDepartmentId?: string;
+
   @ApiProperty({
     description: 'Filter by active status',
     example: true,

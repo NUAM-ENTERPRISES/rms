@@ -30,18 +30,20 @@ import { toast } from "sonner";
 import {
   useGetTemplatesQuery,
   useDeleteTemplateMutation,
-  useGetRoleCatalogQuery,
 } from "../data";
 import { useCan } from "@/hooks/useCan";
 import { TemplateCard, type ColorScheme } from "../components/TemplateCard";
 import { TemplateFormDialog } from "../components/TemplateFormDialog";
 import { ScreeningTemplate } from "../../types";
+import { DepartmentSelect } from "@/components/molecules/DepartmentSelect";
+import { JobTitleSelect } from "@/components/molecules/JobTitleSelect";
 
 export default function TemplatesPage() {
   const canWrite = useCan("write:interview_templates");
   const canDelete = useCan("manage:interview_templates");
 
   const [filters, setFilters] = useState({
+    roleDepartmentId: "all",
     roleId: "all",
     isActive: "all",
     search: "",
@@ -55,6 +57,8 @@ export default function TemplatesPage() {
     const params: any = {};
     if (filters.roleId && filters.roleId !== "all") {
       params.roleId = filters.roleId;
+    } else if (filters.roleDepartmentId && filters.roleDepartmentId !== "all") {
+      params.roleDepartmentId = filters.roleDepartmentId;
     }
     if (filters.isActive && filters.isActive !== "all") {
       params.isActive = filters.isActive === "true";
@@ -68,10 +72,6 @@ export default function TemplatesPage() {
     error,
   } = useGetTemplatesQuery(queryParams);
   const [deleteTemplate] = useDeleteTemplateMutation();
-  const { data: roleCatalogData } = useGetRoleCatalogQuery({
-    isActive: true,
-    limit: 100,
-  });
 
   const templates = useMemo(() => {
     const data: any = templatesData?.data;
@@ -81,33 +81,38 @@ export default function TemplatesPage() {
     return [];
   }, [templatesData]);
 
-  const roles = roleCatalogData?.data?.roles || [];
-
   // Filter templates by search
-  const filteredTemplates = useMemo(() => {
+  const filteredTemplates = useMemo((): ScreeningTemplate[] => {
     if (!filters.search) return templates;
     const searchLower = filters.search.toLowerCase();
     return templates.filter(
-      (t) =>
+      (t: ScreeningTemplate) =>
         t.name.toLowerCase().includes(searchLower) ||
         t.description?.toLowerCase().includes(searchLower) ||
-        t.role?.name.toLowerCase().includes(searchLower)
+        t.role?.name.toLowerCase().includes(searchLower) ||
+        t.role?.label?.toLowerCase().includes(searchLower)
     );
   }, [templates, filters.search]);
 
   // Group templates by role
   const templatesByRole = useMemo(() => {
-    const grouped: Record<string, typeof filteredTemplates> = {};
-    filteredTemplates.forEach((template) => {
-      const roleKey = template.role?.name || "Unknown Role";
-      if (!grouped[roleKey]) {
-        grouped[roleKey] = [];
+    const grouped: Record<string, ScreeningTemplate[]> = {};
+    filteredTemplates.forEach((template: ScreeningTemplate) => {
+      // Use label or shortName, fallback to name or "Generic Template"
+      const roleDisplayName =
+        template.role?.label ||
+        template.role?.shortName ||
+        template.role?.name ||
+        "Generic Template";
+
+      if (!grouped[roleDisplayName]) {
+        grouped[roleDisplayName] = [];
       }
-      grouped[roleKey].push(template);
+      grouped[roleDisplayName].push(template);
     });
     Object.keys(grouped).forEach((key) => {
       grouped[key].sort(
-        (a, b) =>
+        (a: ScreeningTemplate, b: ScreeningTemplate) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     });
@@ -326,7 +331,7 @@ export default function TemplatesPage() {
           </CardTitle>
           <CardDescription className="text-sm text-slate-600 mt-1 font-medium">
             {filteredTemplates.length} template{filteredTemplates.length !== 1 ? "s" : ""} found •{" "}
-            {filteredTemplates.filter((t) => t.isActive).length} active
+            {filteredTemplates.filter((t: ScreeningTemplate) => t.isActive).length} active
           </CardDescription>
         </div>
       </div>
@@ -372,6 +377,28 @@ export default function TemplatesPage() {
 
       {/* Filters Row */}
       <div className="flex flex-wrap items-center gap-4">
+        {/* Department Filter */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+              Department
+            </span>
+          </div>
+          <DepartmentSelect
+            value={filters.roleDepartmentId === "all" ? "" : filters.roleDepartmentId}
+            onValueChange={(value) =>
+              setFilters((prev) => ({
+                ...prev,
+                roleDepartmentId: value || "all",
+                roleId: "all",
+              }))
+            }
+            className="min-w-[180px]"
+            allowEmpty
+          />
+        </div>
+
         {/* Role Filter */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -380,24 +407,13 @@ export default function TemplatesPage() {
               Role
             </span>
           </div>
-          <Select
-            value={filters.roleId}
-            onValueChange={(value) => setFilters((prev) => ({ ...prev, roleId: value }))}
-          >
-            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[180px] text-sm">
-              <SelectValue placeholder="All Roles" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm max-h-[300px]">
-              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50">
-                All Roles
-              </SelectItem>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id} className="rounded-lg hover:bg-indigo-50">
-                  {role.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <JobTitleSelect
+            departmentId={filters.roleDepartmentId === "all" ? undefined : filters.roleDepartmentId}
+            value={filters.roleId === "all" ? "" : filters.roleId}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, roleId: value || "all" }))}
+            className="min-w-[180px]"
+            allowEmpty
+          />
         </div>
 
         {/* Status Filter */}
@@ -430,12 +446,13 @@ export default function TemplatesPage() {
         </div>
 
         {/* Clear Filters */}
-        {(filters.search || filters.roleId !== "all" || filters.isActive !== "all") && (
+        {(filters.search || filters.roleId !== "all" || filters.roleDepartmentId !== "all" || filters.isActive !== "all") && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() =>
               setFilters({
+                roleDepartmentId: "all",
                 roleId: "all",
                 isActive: "all",
                 search: "",
@@ -474,6 +491,7 @@ export default function TemplatesPage() {
         <p className="text-base text-slate-600 leading-relaxed font-medium">
           {filters.search ||
           filters.roleId !== "all" ||
+          filters.roleDepartmentId !== "all" ||
           filters.isActive !== "all"
             ? "Try adjusting your filters to find matches"
             : "Get started by creating your first interview template"}
@@ -483,6 +501,7 @@ export default function TemplatesPage() {
       {canWrite &&
         !filters.search &&
         filters.roleId === "all" &&
+        filters.roleDepartmentId === "all" &&
         filters.isActive === "all" && (
           <Button
             onClick={handleCreate}
@@ -498,10 +517,10 @@ export default function TemplatesPage() {
 </Card>
         ) : (
           <div className="space-y-4">
-            {Object.keys(templatesByRole).map((roleName, roleIndex) => {
+            {Object.keys(templatesByRole).map((roleName: string, roleIndex: number) => {
               const roleColor = getRoleGroupColor(roleIndex);
               const activeCount = templatesByRole[roleName].filter(
-                (t) => t.isActive
+                (t: ScreeningTemplate) => t.isActive
               ).length;
               const totalCount = templatesByRole[roleName].length;
 
@@ -540,7 +559,7 @@ export default function TemplatesPage() {
   <CardContent className="p-5">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
       {templatesByRole[roleName].map(
-        (template, templateIndex) => {
+        (template: ScreeningTemplate, templateIndex: number) => {
           const cardColor = getTemplateCardColor(
             templateIndex,
             template.isActive
@@ -571,7 +590,6 @@ export default function TemplatesPage() {
           open={dialogOpen}
           onOpenChange={handleDialogClose}
           template={selectedTemplate}
-          roles={roles}
         />
       </div>
     </div>

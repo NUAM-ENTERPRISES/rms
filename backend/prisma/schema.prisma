@@ -631,12 +631,12 @@ model ScreeningChecklistItem {
 /// Interview Coordinators can create multiple templates per role
 /// Each template contains questions organized by categories
 model ScreeningTemplate {
-  id     String      @id @default(cuid())
-  roleId String
-  role   RoleCatalog @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  id     String       @id @default(cuid())
+  roleId String?
+  role   RoleCatalog? @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  name        String // e.g., "Standard RN Screening Template"
-  description String? // Optional description
+  name        String
+  description String?
   isActive    Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -645,7 +645,7 @@ model ScreeningTemplate {
   items      ScreeningTemplateItem[]
   screenings Screening[]
 
-  @@unique([roleId, name]) // Prevent duplicate template names for same role
+  @@unique([roleId, name])
   @@index([roleId])
   @@index([isActive])
   @@map("screening_templates")

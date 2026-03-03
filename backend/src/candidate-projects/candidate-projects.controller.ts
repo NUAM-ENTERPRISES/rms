@@ -30,6 +30,7 @@ import { SendToScreeningDto } from './dto/send-to-screening.dto';
 import { ApproveForClientInterviewDto } from './dto/approve-for-client-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
 import { BulkAssignCandidateProjectDto } from './dto/bulk-assign-candidate-project.dto';
+import { BulkSendForScreeningDto } from './dto/bulk-send-for-screening.dto';
 import { ProjectOverviewQueryDto } from './dto/project-overview-query.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
@@ -156,6 +157,30 @@ export class CandidateProjectsController {
       success: true,
       data: result,
       message: 'Candidate sent for screening successfully',
+    };
+  }
+
+  @Post('bulk-send-for-screening')
+  @Permissions('manage:candidates', 'schedule:screenings')
+  @ApiOperation({
+    summary: 'Bulk send candidates for screening',
+    description: 'Assigns multiple candidates to screening simultaneously',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk screening assignment operation completed',
+  })
+  async bulkSendForScreening(
+    @Body() dto: BulkSendForScreeningDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.bulkSendForScreening(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
     };
   }
 

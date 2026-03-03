@@ -11,11 +11,14 @@ import { CreateTemplateItemDto } from './create-template-item.dto';
 
 export class CreateScreeningTemplateDto {
   @ApiProperty({
-    description: 'Role ID from RoleCatalog',
+    description: 'Role ID from RoleCatalog (Optional)',
     example: 'ckx7r1234abcd',
+    required: false,
+    nullable: true,
   })
   @IsString()
-  roleId: string;
+  @IsOptional()
+  roleId?: string;
 
   @ApiProperty({
     description: 'Template name',

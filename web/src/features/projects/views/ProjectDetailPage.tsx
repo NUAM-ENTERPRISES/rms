@@ -56,7 +56,9 @@ import {
   useGetEligibleCandidatesQuery,
   useCheckBulkCandidateEligibilityQuery,
   useBulkAssignToProjectMutation,
+  useBulkSendForScreeningMutation,
 } from "@/features/projects";
+import { usersApi } from "@/features/admin/api";
 import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
@@ -132,6 +134,7 @@ const formatWorkExperienceEntry = (exp: any) => {
 // Lazy-loaded project details modal (code-split)
 const ProjectDetailsModal = React.lazy(() => import("@/components/molecules/ProjectDetailsModal"));
 const BulkAssignModal = React.lazy(() => import("@/components/molecules/BulkAssignModal").then(module => ({ default: module.BulkAssignModal })));
+const BulkScreeningModal = React.lazy(() => import("@/components/molecules/BulkScreeningModal").then(module => ({ default: module.BulkScreeningModal })));
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -400,7 +403,35 @@ export default function ProjectDetailPage() {
     candidateIds: [],
   });
 
+  const [bulkScreeningState, setBulkScreeningState] = useState<{
+    isOpen: boolean;
+    candidateIds: string[];
+  }>({
+    isOpen: false,
+    candidateIds: [],
+  });
+
   const [bulkAssignToProject, { isLoading: isBulkAssigning }] = useBulkAssignToProjectMutation();
+  const [bulkSendForScreening, { isLoading: isBulkScreening }] = useBulkSendForScreeningMutation();
+
+  const isBulkScreeningModalOpen = bulkScreeningState.isOpen;
+  const isDirectScreeningModalOpen = screeningConfirm.isOpen;
+
+  const { data: usersData } = usersApi.useGetUsersQuery(
+    { 
+      limit: 10
+    }, 
+    { 
+      skip: !isBulkScreeningModalOpen && !isDirectScreeningModalOpen,
+      refetchOnMountOrArgChange: true
+    }
+  );
+  const coordinators = React.useMemo(() => {
+    if (!usersData?.data?.users) return [];
+    return usersData.data.users.map((u: any) => ({ id: u.id, name: u.name }));
+  }, [usersData]);
+
+  const [screeningCoordinatorId, setScreeningCoordinatorId] = useState<string>("");
 
   // Handle project deletion
   const handleDeleteProjectConfirm = async () => {
@@ -569,6 +600,16 @@ export default function ProjectDetailPage() {
       refetchOnMountOrArgChange: false
     }
   );
+
+  const { data: bulkScreeningEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId: projectId!, candidateIds: bulkScreeningState.candidateIds },
+    { 
+      skip: !projectId || bulkScreeningState.candidateIds.length === 0 || !bulkScreeningState.isOpen,
+      refetchOnFocus: false,
+      refetchOnMountOrArgChange: false
+    }
+  );
+
   const bulkAssignEligibilityMap = React.useMemo(() => {
     if (!bulkAssignEligibilityResponse?.data || !Array.isArray(bulkAssignEligibilityResponse.data)) return {};
     return bulkAssignEligibilityResponse.data.reduce((map: any, d: any) => {
@@ -576,6 +617,14 @@ export default function ProjectDetailPage() {
       return map;
     }, {});
   }, [bulkAssignEligibilityResponse]);
+
+  const bulkScreeningEligibilityMap = React.useMemo(() => {
+    if (!bulkScreeningEligibilityResponse?.data || !Array.isArray(bulkScreeningEligibilityResponse.data)) return {};
+    return bulkScreeningEligibilityResponse.data.reduce((map: any, d: any) => {
+      map[d.candidateId] = d;
+      return map;
+    }, {});
+  }, [bulkScreeningEligibilityResponse]);
 
   // Handle assignment
   const showAssignConfirmation = (
@@ -700,6 +749,43 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleBulkSendForScreening = async (
+    assignments: Array<{ candidateId: string; roleNeededId: string; notes?: string; coordinatorId?: string }>,
+    coordinatorId?: string
+  ) => {
+    try {
+      const result = await bulkSendForScreening({
+        projectId: projectId!,
+        assignments: assignments.map(a => {
+          const sourceRole = projectRoles.find(pr => pr.id === a.roleNeededId);
+          return {
+            candidateId: a.candidateId,
+            roleNeededId: sourceRole?.roleNeededId || a.roleNeededId,
+            notes: a.notes || `Screening requested via bulk action`,
+            coordinatorId: a.coordinatorId
+          };
+        }),
+        coordinatorId: coordinatorId || undefined
+      }).unwrap();
+      
+      const successCount = result.data?.successful || 0;
+      const totalCount = assignments.length;
+      
+      if (successCount === totalCount) {
+        toast.success(`Successfully sent ${successCount} candidates for screening`);
+      } else if (successCount > 0) {
+        toast.warning(`Sent ${successCount} out of ${totalCount} candidates for screening. Check for errors.`);
+      } else {
+        toast.error("Failed to send candidates for screening");
+      }
+      
+      setBulkScreeningState({ isOpen: false, candidateIds: [] });
+      handleRefreshAll();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to bulk send candidates for screening");
+    }
+  };
+
   const handleSendForScreening = async () => {
     try {
       await sendForScreening({
@@ -708,6 +794,7 @@ export default function ProjectDetailPage() {
         roleNeededId: screeningConfirm.roleNeededId || "",
         recruiterId: user?.id,
         notes: screeningConfirm.notes || undefined,
+        coordinatorId: screeningCoordinatorId || undefined,
       }).unwrap();
       toast.success("Candidate sent for screening successfully");
       setScreeningConfirm({
@@ -1019,6 +1106,9 @@ export default function ProjectDetailPage() {
                 }
                 onBulkAssign={(candidateIds) =>
                   setBulkAssignState({ isOpen: true, candidateIds })
+                }
+                onBulkSendForScreening={(candidateIds) =>
+                  setBulkScreeningState({ isOpen: true, candidateIds })
                 }
                 requiredScreening={projectRequiredScreening}
                 hideContactInfo={projectHideContactInfo}
@@ -1421,7 +1511,26 @@ export default function ProjectDetailPage() {
         eligibilityData={screeningEligibilityData}
         formatWorkExperienceEntry={formatWorkExperienceEntry}
         getMinimalScoreBadgeClass={getMinimalScoreBadgeClass}
+        coordinators={coordinators}
+        selectedCoordinatorId={screeningCoordinatorId}
+        onCoordinatorChange={setScreeningCoordinatorId}
       />
+
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center"><LoadingSpinner /></div>}>
+        {bulkScreeningState.isOpen && (
+          <BulkScreeningModal
+            isOpen={bulkScreeningState.isOpen}
+            onClose={() => setBulkScreeningState({ isOpen: false, candidateIds: [] })}
+            onConfirm={handleBulkSendForScreening}
+            onRemoveCandidate={(id) => setBulkScreeningState(prev => ({ ...prev, candidateIds: prev.candidateIds.filter(cid => cid !== id) }))}
+            candidates={[...projectCandidates, ...eligibleCandidates, ...allCandidates].filter(c => bulkScreeningState.candidateIds.includes(c.candidateId || c.id))}
+            roles={projectRoles}
+            coordinators={coordinators}
+            isSubmitting={isBulkScreening}
+            eligibilityMap={bulkScreeningEligibilityMap}
+          />
+        )}
+      </React.Suspense>
 
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog

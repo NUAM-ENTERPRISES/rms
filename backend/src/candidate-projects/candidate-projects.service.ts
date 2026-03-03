@@ -15,6 +15,7 @@ import { SendForInterviewDto } from './dto/send-for-interview.dto';
 import { BulkSendForInterviewDto } from './dto/bulk-send-for-interview.dto';
 import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
 import { BulkAssignCandidateProjectDto } from './dto/bulk-assign-candidate-project.dto';
+import { BulkSendForScreeningDto } from './dto/bulk-send-for-screening.dto';
 import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-query.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
@@ -527,7 +528,7 @@ export class CandidateProjectsService {
     // -------------------------------
     // CREATE OR UPDATE ASSIGNMENT
     // -------------------------------
-    const candidateProject = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       let assignment;
 
       if (existingAssignment) {
@@ -561,6 +562,19 @@ export class CandidateProjectsService {
         });
       }
 
+      // CREATE Screening record if coordinator is assigned
+      let screeningId: string | null = null;
+      if (createDto.coordinatorId) {
+        const screening = await tx.screening.create({
+          data: {
+            candidateProjectMapId: assignment.id,
+            coordinatorId: createDto.coordinatorId,
+            status: 'scheduled',
+          },
+        });
+        screeningId = screening.id;
+      }
+
       // CREATE NEW STATUS HISTORY RECORD
       await tx.candidateProjectStatusHistory.create({
         data: {
@@ -583,7 +597,7 @@ export class CandidateProjectsService {
       await tx.interviewStatusHistory.create({
         data: {
           interviewType: 'screening',
-          interviewId: null,
+          interviewId: screeningId,
           candidateProjectMapId: assignment.id,
           previousStatus: null,
           status: 'assigned',
@@ -607,18 +621,92 @@ export class CandidateProjectsService {
         );
       }
 
-      return assignment;
+      return { ...assignment, screeningId };
     });
 
     // Publish an outbox event so downstream services notify coordinators
     await this.outboxService.publishCandidateSentToScreening(
-      candidateProject.id,
-      '', // screeningId (none for assignment)
-      '', // coordinatorId (not selected yet)
+      result.id,
+      result.screeningId || '', // screeningId
+      createDto.coordinatorId || '', // Use the provided coordinator or empty string
       recruiterId || userId || '',
     );
 
-    return candidateProject;
+    return result;
+  }
+
+  /**
+   * Bulk send candidates for screening
+   * Iterates through assignments and calls sendForScreening for each
+   * Uses round-robin if no coordinatorId is provided
+   */
+  async bulkSendForScreening(dto: BulkSendForScreeningDto, userId: string) {
+    const { assignments, projectId, coordinatorId } = dto;
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    // Get all available coordinators for round-robin if no global coordinator is selected
+    let availableCoordinators: string[] = [];
+    let coordinatorCursor = 0;
+
+    if (!coordinatorId) {
+      const coordinators = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  in: ['Screening Trainer'],
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      });
+      availableCoordinators = coordinators.map((c) => c.id);
+    }
+
+    for (const assignment of assignments) {
+      const { candidateId, roleNeededId, notes, coordinatorId: individualCoordinatorId } = assignment;
+
+      try {
+        // Determine coordinator for this candidate
+        // Priority: 1. Individual Coordinator, 2. Global Coordinator, 3. Round Robin
+        let finalCoordinatorId = individualCoordinatorId || coordinatorId;
+
+        if (!finalCoordinatorId && availableCoordinators.length > 0) {
+          finalCoordinatorId = availableCoordinators[coordinatorCursor];
+          coordinatorCursor = (coordinatorCursor + 1) % availableCoordinators.length;
+        }
+
+        const res = await this.sendForScreening(
+          {
+            candidateId,
+            projectId,
+            roleNeededId,
+            notes,
+            coordinatorId: finalCoordinatorId,
+          },
+          userId,
+        );
+        results.push(res);
+      } catch (error: any) {
+        this.logger.error(
+          `Error sending candidate ${candidateId} for screening in bulk: ${error.message}`,
+        );
+        errors.push({ candidateId, error: error.message });
+      }
+    }
+
+    return {
+      totalRequested: assignments.length,
+      successful: results.length,
+      failed: errors.length,
+      results,
+      errors,
+    };
   }
 
   /**

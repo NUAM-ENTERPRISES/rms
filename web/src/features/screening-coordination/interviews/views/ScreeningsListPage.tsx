@@ -19,11 +19,9 @@ import {
   UserPlus,
   Clipboard,
   CalendarCheck,
-  Plus,
   CheckCircle2,
   AlertTriangle,
   FileText,
-  CheckCircle,
   Upload
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -45,7 +43,6 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { useGetScreeningsQuery } from "../data";
@@ -60,7 +57,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAssignToMainScreeningMutation } from "../data";
 import { useSendForVerificationMutation } from "@/features/projects/api";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
-import { useGetCandidateProjectHistoryQuery, useGetAssignedScreeningsQuery } from "../data";
+import { useGetCandidateProjectHistoryQuery } from "../data";
 
 export default function ScreeningsListPage() {
   const navigate = useNavigate();
@@ -135,61 +132,22 @@ export default function ScreeningsListPage() {
     useCreateTrainingAssignmentMutation();
   // Backend returns array directly or wrapped in { data: [...] } or { data: { items: [...] } }
   const interviews = useMemo(() => {
-    if (Array.isArray(data?.data?.items)) return data.data.items;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray((data as any)?.data?.items)) return (data as any).data.items;
+    if (Array.isArray((data as any)?.data)) return (data as any).data;
+    if (Array.isArray((data as any)?.items)) return (data as any).items;
     if (Array.isArray(data)) return data;
     return [];
   }, [data]);
 
-  // Derive unique projects from the currently loaded screenings
-  const projects = useMemo(() => {
-    const map = new Map();
-    interviews.forEach((it: any) => {
-      const p = it.candidateProjectMap?.project || it.project;
-      if (p && !map.has(p.id)) {
-        map.set(p.id, p);
-      }
-    });
-    // Add currently selected project to ensure it stays in list when filtered
-    if (filters.projectId !== "all" && !map.has(filters.projectId)) {
-      const selectedItem = interviews.find(it => (it.candidateProjectMap?.project?.id || it.project?.id) === filters.projectId);
-      const proj = selectedItem?.candidateProjectMap?.project || selectedItem?.project;
-      if (proj) {
-        map.set(filters.projectId, proj);
-      }
-    }
-    return Array.from(map.values());
-  }, [interviews, filters.projectId]);
-
-  // Derive roles for selected project from already-loaded projects (avoid extra API call)
-  const projectFiltersRoles = useMemo(() => {
-    if (filters.projectId === "all") return [];
-    const proj = projects.find((p: any) => p.id === filters.projectId);
-    return proj?.rolesNeeded || [];
-  }, [projects, filters.projectId]);
-
-  const uniqueRoles = useMemo(() => {
-    const rolesMap = new Map();
-    projectFiltersRoles.forEach((r: any) => {
-      const id = (r.roleCatalogId || r.roleCatalog?.id || r.id).toString();
-      const name = r.designation || r.roleCatalog?.name || "Unknown Role";
-      if (!rolesMap.has(id)) {
-        rolesMap.set(id, { id, name });
-      }
-    });
-    return Array.from(rolesMap.values());
-  }, [projectFiltersRoles]);
-
   const { upcomingInterviews, completedInterviews, allInterviews } =
     useMemo(() => {
-      let filtered = interviews;
+      let filtered: any[] = interviews;
 
       // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         filtered = filtered.filter(
-          (i) =>
+          (i: any) =>
             i.candidateProjectMap?.candidate?.firstName
               ?.toLowerCase()
               .includes(searchLower) ||
@@ -207,32 +165,32 @@ export default function ScreeningsListPage() {
 
       // Mode filter
       if (filters.mode && filters.mode !== "all") {
-        filtered = filtered.filter((i) => i.mode === filters.mode);
+        filtered = filtered.filter((i: any) => i.mode === filters.mode);
       }
 
       // Decision filter
       if (filters.decision && filters.decision !== "all") {
-        filtered = filtered.filter((i) => i.decision === filters.decision);
+        filtered = filtered.filter((i: any) => i.decision === filters.decision);
       }
 
       const upcoming = filtered
-        .filter((i) => i.scheduledTime && !i.conductedAt)
+        .filter((i: any) => i.scheduledTime && !i.conductedAt)
         .sort(
-          (a, b) =>
+          (a: any, b: any) =>
             new Date(a.scheduledTime!).getTime() -
             new Date(b.scheduledTime!).getTime()
         );
 
       const completed = filtered
-        .filter((i) => i.conductedAt)
+        .filter((i: any) => i.conductedAt)
         .sort(
-          (a, b) =>
+          (a: any, b: any) =>
             new Date(b.conductedAt!).getTime() -
             new Date(a.conductedAt!).getTime()
         );
 
       const unscheduled = filtered
-        .filter((i) => !i.scheduledTime && !i.conductedAt);
+        .filter((i: any) => !i.scheduledTime && !i.conductedAt);
 
       return {
         upcomingInterviews: upcoming,
@@ -251,19 +209,18 @@ export default function ScreeningsListPage() {
   // Auto-select first interview
   const selectedInterview = useMemo(() => {
     if (selectedInterviewId) {
-      return displayedInterviews.find((i) => i.id === selectedInterviewId);
+      return displayedInterviews.find((i: any) => i.id === selectedInterviewId);
     }
     return displayedInterviews[0];
   }, [displayedInterviews, selectedInterviewId]);
 
-  // Derive selected project details from selected interview or loaded projects (avoid API call)
+  // Derive selected project details from selected interview
   const selectedProjectDetails = useMemo(() => {
     return (
       selectedInterview?.candidateProjectMap?.project ||
-      projects.find((p: any) => p.id === selectedInterview?.candidateProjectMap?.project?.id) ||
       undefined
     );
-  }, [selectedInterview, projects]);
+  }, [selectedInterview]);
 
   const getDocStatus = (interview: any) => {
     if (!interview) return null;
@@ -306,11 +263,11 @@ export default function ScreeningsListPage() {
 
   const stats = useMemo(() => {
     const needsTraining = interviews.filter(
-      (i) => i.decision === SCREENING_DECISION.NEEDS_TRAINING
+      (i: any) => i.decision === SCREENING_DECISION.NEEDS_TRAINING
     ).length;
-    const completed = interviews.filter((i) => i.conductedAt).length;
+    const completed = interviews.filter((i: any) => i.conductedAt).length;
     const approved = interviews.filter(
-      (i) => i.decision === SCREENING_DECISION.APPROVED
+      (i: any) => i.decision === SCREENING_DECISION.APPROVED
     ).length;
     return { needsTraining, completed, approved };
   }, [interviews]);
@@ -719,21 +676,10 @@ export default function ScreeningsListPage() {
             const role = interview.candidateProjectMap?.roleNeeded;
             const ModeIcon = getModeIcon(interview.mode);
 
-            const explicitVerificationRequired =
-              interview.isDocumentVerificationRequired ||
-              interview.candidateProjectMap?.isDocumentVerificationRequired;
-
-            const verificationInProgress =
-              !!interview.candidateProjectMap?.subStatus?.name?.includes("verification") ||
-              interview.candidateProjectMap?.mainStatus?.name === "documents";
-
-            const _docVerified =
-              !!interview.isDocumentVerified ||
-              !!interview.candidateProjectMap?.isDocumentVerified;
-
-            const isSelected = interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
             const isCompleted = !!interview.conductedAt;
             const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
+            const isSelected = interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
+            const trainerName = getAssignedTrainerName(interview);
 
             return (
               <button
@@ -794,12 +740,8 @@ export default function ScreeningsListPage() {
                     <span className="capitalize">{interview.mode.replace("_", " ")}</span>
                   </span>
                   {interview.decision && getDecisionBadge(interview.decision)}
-                  {verificationInProgress && !_docVerified && (
-                    <Badge className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0">Verifying</Badge>
-                  )}
                   {(() => {
                     const isTrainingAssigned = interview.candidateProjectMap?.subStatus?.name === "training_assigned";
-                    const trainerName = getAssignedTrainerName(interview);
                     const isMainAssigned = interview.status === "assigned" || !!interview.candidateProjectMap?.mainInterviewId;
 
                     if (isTrainingAssigned) {
@@ -836,18 +778,11 @@ export default function ScreeningsListPage() {
                     }
 
                     if (interview.decision === SCREENING_DECISION.APPROVED && interview.status === "completed") {
-                      const status = getDocStatus(interview);
-                      const isAllUploaded = status?.isAllUploaded;
-
                       return (
                         <>
-                          {_docVerified ? (
+                          {(interview.isDocumentVerified || interview.candidateProjectMap?.isDocumentVerified) && (
                             <Badge className="text-xs bg-green-100 text-green-700">Verified</Badge>
-                          ) : verificationInProgress ? (
-                            <Badge className="text-xs bg-amber-100 text-amber-700">Verifying</Badge>
-                          ) : null}
-
-
+                          )}
                         </>
                       );
                     }
@@ -960,38 +895,18 @@ export default function ScreeningsListPage() {
                 );
               }
 
-              const selected_explicitVerificationRequired =
-                selectedInterview.isDocumentVerificationRequired ||
-                selectedInterview.candidateProjectMap?.isDocumentVerificationRequired;
-
-              const selected_verificationInProgress =
-                !!selectedInterview.candidateProjectMap?.subStatus?.name?.includes(
-                  "verification"
-                ) || selectedInterview.candidateProjectMap?.mainStatus?.name === "documents";
-
-              const selected_docVerified =
-                !!selectedInterview.isDocumentVerified ||
-                !!selectedInterview.candidateProjectMap?.isDocumentVerified;
-
               if (
                 selectedInterview.decision === SCREENING_DECISION.APPROVED &&
                 selectedInterview.status === "completed"
               ) {
-                const isAllUploaded = docStatus?.isAllUploaded;
-
                 return (
                   <div className="flex items-center gap-2 flex-wrap">
-                    {selected_docVerified ? (
+                    {(selectedInterview.isDocumentVerified || selectedInterview.candidateProjectMap?.isDocumentVerified) ? (
                       <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
                         {selectedInterview.isDocumentVerified ? "Document Verified" : "Verified"}
                       </Badge>
-                    ) : selected_verificationInProgress ? (
-                      <Badge className="text-xs bg-amber-100 text-amber-700 px-2 py-1">
-                        Verification in progress
-                      </Badge>
-                    ) : selected_explicitVerificationRequired ? (
+                    ) : (
                       <>
-                        {/* send-for-verification button removed */}
                         {/* If there are no uploaded documents, allow notifying the recruiter to upload them */}
                         {!selectedInterview.candidateProjectMap?.documentVerifications?.length && (
                           <Tooltip>
@@ -1030,9 +945,7 @@ export default function ScreeningsListPage() {
                         )}
                         {renderDocStatusIcon()}
                       </>
-                    ) : null}
-
-
+                    )}
                   </div>
                 );
               }

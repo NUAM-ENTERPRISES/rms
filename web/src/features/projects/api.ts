@@ -546,12 +546,39 @@ export const projectsApi = baseApi.injectEndpoints({
         roleNeededId: string;
         recruiterId?: string;
         notes?: string;
+        coordinatorId?: string;
       }
     >({
-      query: ({ projectId, candidateId, roleNeededId, recruiterId, notes }) => ({
+      query: ({ projectId, candidateId, roleNeededId, recruiterId, notes, coordinatorId }) => ({
         url: `/candidate-projects/send-for-screening`,
         method: "POST",
-        body: { candidateId, projectId, roleNeededId, recruiterId, notes },
+        body: { candidateId, projectId, roleNeededId, recruiterId, notes, coordinatorId },
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        "ProjectCandidates",
+        "Screening",
+        "Candidate",
+        "CandidateProject",
+      ],
+    }),
+
+    bulkSendForScreening: builder.mutation<
+      ApiResponse<any>,
+      {
+        projectId: string;
+        assignments: Array<{
+          candidateId: string;
+          roleNeededId: string;
+          notes?: string;
+        }>;
+        coordinatorId?: string;
+      }
+    >({
+      query: (body) => ({
+        url: `/candidate-projects/bulk-send-for-screening`,
+        method: "POST",
+        body,
       }),
       invalidatesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
@@ -783,6 +810,7 @@ export const {
   useSendForVerificationMutation,
   useSendForInterviewMutation,
   useSendForScreeningMutation,
+  useBulkSendForScreeningMutation,
   useGetNominatedCandidatesQuery,
   useGetCandidateProjectStatusesQuery,
   useGetProjectRoleCatalogQuery,

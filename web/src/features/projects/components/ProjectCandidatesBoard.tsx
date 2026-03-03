@@ -69,6 +69,7 @@ interface ProjectCandidatesBoardProps {
   onSendForInterview?: (candidateId: string, candidateName: string) => void;
   onSendForScreening?: (candidateId: string, candidateName: string) => void;
   onBulkAssign?: (candidateIds: string[]) => void;
+  onBulkSendForScreening?: (candidateIds: string[]) => void;
   requiredScreening?: boolean;
   hideContactInfo?: boolean; // eslint-disable-line @typescript-eslint/no-unused-vars -- passed through to CandidateCard
 }
@@ -314,11 +315,13 @@ const ProjectCandidatesBoard = ({
   hideContactInfo = false,
   onSendForScreening,
   onBulkAssign,
+  onBulkSendForScreening,
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
+  const [selectedNominatedIds, setSelectedNominatedIds] = useState<Set<string>>(new Set());
 
   const handleDragStart = (e: React.DragEvent, candidateId: string) => {
     e.dataTransfer.setData("candidateId", candidateId);
@@ -520,6 +523,44 @@ const ProjectCandidatesBoard = ({
     setSelectedEligibleIds(newSelected);
   };
 
+  const toggleSelectNominated = (id: string) => {
+    const newSelected = new Set(selectedNominatedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedNominatedIds(newSelected);
+  };
+
+  const selectableNominatedCandidates = useMemo(() => {
+    return sanitizedNominated.filter((candidate) => {
+      const subStatusName =
+        candidate.projectSubStatus?.name ||
+        candidate.projectSubStatus?.statusName ||
+        "";
+
+      const mainStatusName =
+        candidate.projectMainStatus?.name ||
+        (candidate as any).mainStatus?.name ||
+        "";
+
+      // Only allow selection if it's strictly in nominated stage
+      return (
+        mainStatusName === "nominated" || 
+        subStatusName.startsWith("nominated_initial")
+      );
+    });
+  }, [sanitizedNominated]);
+
+  const toggleSelectAllNominated = () => {
+    if (selectedNominatedIds.size === selectableNominatedCandidates.length) {
+      setSelectedNominatedIds(new Set());
+    } else {
+      setSelectedNominatedIds(new Set(selectableNominatedCandidates.map(c => c.candidateId || c.id || "")));
+    }
+  };
+
   const renderNominatedColumn = () => {
     if (isLoadingNominated) {
       return (
@@ -595,9 +636,15 @@ const ProjectCandidatesBoard = ({
               ]
             : [];
 
+          const isSelectable = selectableNominatedCandidates.some(c => (c.candidateId || c.id) === candidateId);
+          const isSelected = selectedNominatedIds.has(candidateId);
+
           return (
             <CandidateCard
               key={`nominated-${candidateId}`}
+              className={isSelected ? "ring-1 ring-purple-400/60 bg-purple-50/30" : ""}
+              selected={isSelectable ? isSelected : undefined}
+              onSelect={isSelectable ? () => toggleSelectNominated(candidateId) : undefined}
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={isRecruiter}
@@ -911,6 +958,32 @@ const ProjectCandidatesBoard = ({
       ariaLabel: "Nominated candidates column",
       icon: Trophy,
       iconClasses: "bg-amber-100 text-amber-600",
+      headerExtra: selectableNominatedCandidates.length > 0 ? (
+        <div className="flex items-center justify-between px-4 py-1.5 border-t border-amber-100/60 bg-amber-50/40">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <Checkbox
+              checked={selectedNominatedIds.size === selectableNominatedCandidates.length && selectableNominatedCandidates.length > 0}
+              onCheckedChange={toggleSelectAllNominated}
+              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+            />
+            <span className="text-[11px] font-medium text-slate-500">
+              {selectedNominatedIds.size > 0
+                ? `${selectedNominatedIds.size} selected`
+                : `Select all`}
+            </span>
+          </label>
+          {selectedNominatedIds.size > 0 && requiredScreening && (
+            <Button
+              size="sm"
+              className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-purple-600 text-white shadow-sm hover:bg-purple-700 transition-colors"
+              onClick={() => onBulkSendForScreening?.(Array.from(selectedNominatedIds))}
+            >
+              <Send className="h-3 w-3" />
+              Bulk Screening ({selectedNominatedIds.size})
+            </Button>
+          )}
+        </div>
+      ) : null,
     },
     {
       id: "eligible",

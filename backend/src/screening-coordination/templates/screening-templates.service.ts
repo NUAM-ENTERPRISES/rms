@@ -20,28 +20,30 @@ export class ScreeningTemplatesService {
    * Create a new screening template with items
    */
   async create(dto: CreateScreeningTemplateDto) {
-    // Verify role exists
-    const roleExists = await this.prisma.roleCatalog.findUnique({
-      where: { id: dto.roleId },
-    });
+    // Verify role exists if provided
+    if (dto.roleId) {
+      const roleExists = await this.prisma.roleCatalog.findUnique({
+        where: { id: dto.roleId },
+      });
 
-    if (!roleExists) {
-      throw new NotFoundException(`Role with ID "${dto.roleId}" not found`);
+      if (!roleExists) {
+        throw new NotFoundException(`Role with ID "${dto.roleId}" not found`);
+      }
     }
 
-    // Check for duplicate template name for this role
-    const existingTemplate = await this.prisma.screeningTemplate.findUnique({
+    // Check for duplicate template name for this role (or generic if roleId is null)
+    const existingTemplate = await this.prisma.screeningTemplate.findFirst({
       where: {
-        roleId_name: {
-          roleId: dto.roleId,
-          name: dto.name,
-        },
+        roleId: dto.roleId || null,
+        name: dto.name,
       },
     });
 
     if (existingTemplate) {
       throw new ConflictException(
-        `Template with name "${dto.name}" already exists for this role`,
+        `Template with name "${dto.name}" already exists${
+          dto.roleId ? ' for this role' : ' as a generic template'
+        }`,
       );
     }
 
@@ -49,7 +51,7 @@ export class ScreeningTemplatesService {
     return this.prisma.$transaction(async (tx) => {
       const template = await tx.screeningTemplate.create({
         data: {
-          roleId: dto.roleId,
+          roleId: dto.roleId || null,
           name: dto.name,
           description: dto.description,
           isActive: dto.isActive ?? true,
@@ -77,12 +79,16 @@ export class ScreeningTemplatesService {
               id: true,
               name: true,
               shortName: true,
+              label: true,
+              roleDepartment: {
+                select: { id: true, name: true },
+              },
             },
           },
           items: {
             orderBy: [{ category: 'asc' }, { order: 'asc' }],
           },
-        },
+        } as any,
       });
     });
   }
@@ -91,12 +97,24 @@ export class ScreeningTemplatesService {
    * Find all templates with optional filtering
    */
   async findAll(query: QueryScreeningTemplatesDto) {
-    const { page = 1, limit = 20, roleId, isActive, search } = query as any;
+    const {
+      page = 1,
+      limit = 20,
+      roleId,
+      roleDepartmentId,
+      isActive,
+      search,
+    } = query as any;
     const skip = (page - 1) * limit;
 
     const where: any = {};
 
     if (roleId) where.roleId = roleId;
+    if (roleDepartmentId) {
+      where.role = {
+        roleDepartmentId: roleDepartmentId,
+      };
+    }
     if (isActive !== undefined) where.isActive = isActive;
 
     if (search && typeof search === 'string' && search.trim().length > 0) {
@@ -113,7 +131,20 @@ export class ScreeningTemplatesService {
       this.prisma.screeningTemplate.findMany({
         where,
         include: {
-          role: { select: { id: true, name: true, shortName: true } },
+          role: {
+            select: {
+              id: true,
+              name: true,
+              shortName: true,
+              label: true,
+              roleDepartment: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
           items: { orderBy: [{ category: 'asc' }, { order: 'asc' }] },
           _count: { select: { items: true, screenings: true } },
         },
@@ -141,12 +172,16 @@ export class ScreeningTemplatesService {
             id: true,
             name: true,
             shortName: true,
+            label: true,
+            roleDepartment: {
+              select: { id: true, name: true },
+            },
           },
         },
         items: {
           orderBy: [{ category: 'asc' }, { order: 'asc' }],
         },
-      },
+      } as any,
     });
 
     if (!template) {
@@ -195,19 +230,26 @@ export class ScreeningTemplatesService {
     // Verify template exists
     await this.findOne(id);
 
-    // If updating name, check for duplicates
-    if (dto.name) {
+    // If updating name or roleId, check for duplicates
+    if (dto.name || dto.roleId !== undefined) {
+      const template = await this.findOne(id);
+
+      const nameToMatch = dto.name ?? template.name;
+      const roleIdToMatch = dto.roleId !== undefined ? dto.roleId : template.roleId;
+
       const existing = await this.prisma.screeningTemplate.findFirst({
         where: {
           id: { not: id },
-          roleId: dto.roleId,
-          name: dto.name,
+          roleId: roleIdToMatch || null,
+          name: nameToMatch,
         },
       });
 
       if (existing) {
         throw new ConflictException(
-          `Template with name "${dto.name}" already exists for this role`,
+          `Template with name "${nameToMatch}" already exists${
+            roleIdToMatch ? ' for this role' : ' as a generic template'
+          }`,
         );
       }
     }
@@ -217,6 +259,7 @@ export class ScreeningTemplatesService {
       data: {
         name: dto.name,
         description: dto.description,
+        roleId: dto.roleId !== undefined ? dto.roleId : undefined,
         isActive: dto.isActive,
       },
       include: {
@@ -225,12 +268,16 @@ export class ScreeningTemplatesService {
             id: true,
             name: true,
             shortName: true,
+            label: true,
+            roleDepartment: {
+              select: { id: true, name: true },
+            },
           },
         },
         items: {
           orderBy: [{ category: 'asc' }, { order: 'asc' }],
         },
-      },
+      } as any,
     });
   }
 

@@ -17,7 +17,7 @@ export interface ScreeningTemplateItem {
 
 export interface ScreeningTemplate {
   id: string;
-  roleId: string;
+  roleId: string | null;
   name: string;
   description?: string;
   isActive: boolean;
@@ -27,6 +27,13 @@ export interface ScreeningTemplate {
     id: string;
     name: string;
     slug: string;
+    label?: string;
+    shortName?: string;
+    roleDepartmentId?: string;
+    roleDepartment?: {
+      id: string;
+      name: string;
+    };
   };
   items?: ScreeningTemplateItem[];
   _count?: {
@@ -48,7 +55,7 @@ export interface UpdateTemplateItemRequest {
 }
 
 export interface CreateTemplateRequest {
-  roleId: string;
+  roleId?: string | null;
   name: string;
   description?: string;
   isActive?: boolean;
@@ -98,10 +105,27 @@ export interface Screening {
       lastName: string;
       email?: string;
       phone?: string;
+      profileImage?: string;
+      dateOfBirth?: string;
+      gender?: string;
+      countryCode?: string;
+      mobileNumber?: string;
+      experience?: number;
+      totalExperience?: number;
+      currentRole?: string;
+      currentEmployer?: string;
+      qualifications?: any[];
+      workExperiences?: any[];
     };
     project: {
       id: string;
       title: string;
+      client?: { id: string; name: string; email?: string; phone?: string };
+      deadline?: string;
+      country?: { code: string; name: string };
+      priority?: string;
+      requiredScreening?: boolean;
+      documentRequirements?: any[];
     };
     roleNeeded: {
       id: string;
@@ -201,6 +225,8 @@ export interface QueryScreeningsRequest {
   roleCatalogId?: string;
   page?: number;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }
 
 // Query params for assigned mock interviews list
@@ -211,6 +237,7 @@ export interface QueryAssignedScreeningsRequest {
   roleCatalogId?: string;
   candidateId?: string;
   recruiterId?: string;
+  coordinatorId?: string;
 }
 
 export interface QueryApprovedScreeningsRequest {
@@ -272,8 +299,34 @@ export interface ApprovedScreeningItem {
 // Item returned by the assigned-mock-interviews endpoint
 export interface AssignedScreeningItem {
   id: string; // candidateProject id
-  candidate: { id: string; firstName: string; lastName: string; email?: string };
-  project: { id: string; title: string };
+  candidate: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    profileImage?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    countryCode?: string;
+    mobileNumber?: string;
+    phone?: string;
+    experience?: number;
+    totalExperience?: number;
+    currentRole?: string;
+    currentEmployer?: string;
+    qualifications?: any[];
+    workExperiences?: any[];
+  };
+  project: {
+    id: string;
+    title: string;
+    client?: { id: string; name: string; email?: string; phone?: string };
+    deadline?: string;
+    country?: { code: string; name: string };
+    priority?: string;
+    requiredScreening?: boolean;
+    documentRequirements?: any[];
+  };
   roleNeeded?: { id: string; designation?: string };
   recruiter?: { id: string; name?: string; email?: string };
   mainStatus?: { id?: string; name?: string; label?: string; color?: string };

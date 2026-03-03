@@ -12,6 +12,14 @@ export class QueryRolesDto {
   q?: string;
 
   @ApiPropertyOptional({
+    description: 'Search term for role name (alias for q)',
+    example: 'nurse',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({
     description: 'Filter by category',
     example: 'Clinical',
     enum: ['Clinical', 'Non-Clinical'],

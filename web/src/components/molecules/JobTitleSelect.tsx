@@ -3,7 +3,7 @@
  * Following FE_GUIDELINES.md molecules pattern
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Check, ChevronsUpDown, Briefcase, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,6 @@ export function JobTitleSelect({
   disabled = false,
   error,
   className,
-  filterByCategory,
   departmentId,
   allowEmpty = true,
   pageSize = 10,

@@ -61,19 +61,21 @@ export class ScreeningsService {
     });
 
     if (existingInterview) {
-      throw new ConflictException(
-        'This candidate already has a pending screening',
-      );
+      // throw new ConflictException(
+      //   'This candidate already has a pending screening',
+      // );
     }
 
-    // Verify coordinator exists and has correct role
+    // Verify coordinator exists and has correct role (Interview Coordinator or Screening Trainer)
     const coordinator = await this.prisma.user.findFirst({
       where: {
         id: dto.coordinatorId,
         userRoles: {
           some: {
             role: {
-              name: 'Interview Coordinator',
+              name: {
+                in: ['Screening Trainer'],
+              },
             },
           },
         },
@@ -82,7 +84,7 @@ export class ScreeningsService {
 
     if (!coordinator) {
       throw new NotFoundException(
-        `Interview Coordinator with ID "${dto.coordinatorId}" not found`,
+        `Authorized Screening Coordinator with ID "${dto.coordinatorId}" not found`,
       );
     }
 
@@ -146,48 +148,76 @@ export class ScreeningsService {
           }
         }
       }
+
       let screening: any;
-      try {
-        screening = await tx.screening.create({
-        data: {
-          candidateProjectMapId: dto.candidateProjectMapId,
-          coordinatorId: dto.coordinatorId,
-          // templateId: dto.templateId,
-          scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,
-          duration: dto.duration ?? 60,
-          meetingLink: dto.meetingLink,
-          mode: dto.mode ?? 'video',
-          status: SCREENING_STATUS.SCHEDULED,
-        },
-        include: {
-          candidateProjectMap: {
-            include: {
-              candidate: {
-                select: { firstName: true, lastName: true, email: true },
+
+      if (existingInterview) {
+        // If there is an existing pending screening, update it instead of creating a new one.
+        screening = await tx.screening.update({
+          where: { id: existingInterview.id },
+          data: {
+            coordinatorId: dto.coordinatorId,
+            scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,
+            duration: dto.duration ?? 60,
+            meetingLink: dto.meetingLink,
+            mode: dto.mode ?? 'video',
+            status: SCREENING_STATUS.SCHEDULED,
+          },
+          include: {
+            candidateProjectMap: {
+              include: {
+                candidate: {
+                  select: { firstName: true, lastName: true, email: true },
+                },
+                project: { select: { title: true } },
+                roleNeeded: { select: { designation: true } },
               },
-              project: { select: { title: true } },
-              roleNeeded: { select: { designation: true } },
             },
           },
-        },
         });
-      } catch (e: any) {
-        // Translate common FK constraint failures into clear HTTP exceptions
-        // to avoid leaking Prisma errors to the client.
-        if (e?.code === 'P2003' && e?.meta?.constraint) {
-          const constraint: string = e.meta.constraint;
-          if (constraint.includes('templateId')) {
-            throw new NotFoundException(`Template with ID "${dto.templateId}" not found`);
+      } else {
+        try {
+          screening = await tx.screening.create({
+            data: {
+              candidateProjectMapId: dto.candidateProjectMapId,
+              coordinatorId: dto.coordinatorId,
+              // templateId: dto.templateId,
+              scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,
+              duration: dto.duration ?? 60,
+              meetingLink: dto.meetingLink,
+              mode: dto.mode ?? 'video',
+              status: SCREENING_STATUS.SCHEDULED,
+            },
+            include: {
+              candidateProjectMap: {
+                include: {
+                  candidate: {
+                    select: { firstName: true, lastName: true, email: true },
+                  },
+                  project: { select: { title: true } },
+                  roleNeeded: { select: { designation: true } },
+                },
+              },
+            },
+          });
+        } catch (e: any) {
+          // Translate common FK constraint failures into clear HTTP exceptions
+          // to avoid leaking Prisma errors to the client.
+          if (e?.code === 'P2003' && e?.meta?.constraint) {
+            const constraint: string = e.meta.constraint;
+            if (constraint.includes('templateId')) {
+              throw new NotFoundException(`Template with ID "${dto.templateId}" not found`);
+            }
+            if (constraint.includes('candidateProjectMapId')) {
+              throw new NotFoundException(`Candidate-Project with ID "${dto.candidateProjectMapId}" not found`);
+            }
+            if (constraint.includes('coordinatorId')) {
+              throw new NotFoundException(`Coordinator with ID "${dto.coordinatorId}" not found`);
+            }
           }
-          if (constraint.includes('candidateProjectMapId')) {
-            throw new NotFoundException(`Candidate-Project with ID "${dto.candidateProjectMapId}" not found`);
-          }
-          if (constraint.includes('coordinatorId')) {
-            throw new NotFoundException(`Coordinator with ID "${dto.coordinatorId}" not found`);
-          }
+          // Re-throw unknown errors
+          throw e;
         }
-        // Re-throw unknown errors
-        throw e;
       }
 
       // Update candidate-project status to SCREENING_SCHEDULED (use constant)
@@ -201,6 +231,7 @@ export class ScreeningsService {
       });
 
       // Create candidate-project status history entry
+      const actionVerb = existingInterview ? 're-scheduled' : 'scheduled';
       await tx.candidateProjectStatusHistory.create({
         data: {
           candidateProjectMapId: dto.candidateProjectMapId,
@@ -210,7 +241,7 @@ export class ScreeningsService {
           changedById: scheduledBy ?? dto.coordinatorId ?? null,
           // Use resolved schedulerName when available; otherwise coordinator.name
           changedByName: schedulerName ?? coordinator.name ?? null,
-          reason: `Screening scheduled${schedulerName ? ` by ${schedulerName}` : dto.coordinatorId ? ` with coordinator ${coordinator.name}` : ''}`,
+          reason: `Screening ${actionVerb}${schedulerName ? ` by ${schedulerName}` : dto.coordinatorId ? ` with coordinator ${coordinator.name}` : ''}`,
         },
       });
 
@@ -220,13 +251,13 @@ export class ScreeningsService {
           interviewType: 'screening',
           interviewId: screening.id,
           candidateProjectMapId: dto.candidateProjectMapId,
-          previousStatus: null, // No previous status on creation
+          previousStatus: existingInterview ? 'scheduled' : null,
           status: 'scheduled',
           statusSnapshot: 'Screening Scheduled',
           statusAt: new Date(),
           changedById: scheduledBy ?? dto.coordinatorId ?? null,
           changedByName: schedulerName ?? coordinator.name ?? null,
-          reason: `Screening scheduled${schedulerName ? ` by ${schedulerName}` : dto.coordinatorId ? ` with coordinator ${coordinator.name}` : ''}`,
+          reason: `Screening ${actionVerb}${schedulerName ? ` by ${schedulerName}` : dto.coordinatorId ? ` with coordinator ${coordinator.name}` : ''}`,
         },
       });
 
@@ -241,7 +272,18 @@ export class ScreeningsService {
    * Find all screenings with optional filtering
    */
   async findAll(query: QueryScreeningsDto) {
-    const { page = 1, limit = 10, candidateProjectMapId, coordinatorId, decision, projectId, roleCatalogId, search } = query;
+    const {
+      page = 1,
+      limit = 10,
+      candidateProjectMapId,
+      coordinatorId,
+      decision,
+      projectId,
+      roleCatalogId,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
     const skip = (page - 1) * limit;
     const take = limit;
 
@@ -353,7 +395,7 @@ export class ScreeningsService {
             orderBy: { category: 'asc' },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [sortBy as string]: sortOrder },
         skip,
         take,
       }),
@@ -1238,7 +1280,7 @@ export class ScreeningsService {
    * This ensures the "latest assignment" appears first.
    */
   async getAssignedCandidateProjects(query: any) {
-    const { page = 1, limit = 10, projectId, candidateId, recruiterId, roleCatalogId, search } = query;
+    const { page = 1, limit = 10, projectId, candidateId, recruiterId, roleCatalogId, search, coordinatorId } = query;
 
     const where: any = {
       subStatus: { is: { name: 'screening_assigned' } },
@@ -1247,6 +1289,12 @@ export class ScreeningsService {
     if (projectId) where.projectId = projectId;
     if (candidateId) where.candidateId = candidateId;
     if (recruiterId) where.recruiterId = recruiterId;
+    
+    // Filter by coordinatorId via the Screenings relation
+    if (coordinatorId) {
+      where.screenings = { some: { coordinatorId: coordinatorId } };
+    }
+
     // Filter by roleCatalogId via the RoleNeeded relation
     if (roleCatalogId) {
       where.roleNeeded = { is: { roleCatalogId: roleCatalogId } };

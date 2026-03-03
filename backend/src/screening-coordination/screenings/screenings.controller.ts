@@ -59,11 +59,19 @@ export class ScreeningsController {
   async create(@Body() body: CreateScreeningDto | CreateScreeningDto[], @Request() req: any) {
     const scheduledBy = req.user?.sub ?? req.user?.userId ?? null;
 
+    // Use current user as coordinator if not provided
+    const updateDtoWithUser = (dto: CreateScreeningDto) => ({
+      ...dto,
+      coordinatorId: dto.coordinatorId || scheduledBy,
+    });
+
     // Support both single object and array (batch scheduling)
     if (Array.isArray(body)) {
       // Create all screenings concurrently (each create does its own transaction/validation)
       const creations = await Promise.all(
-        body.map((dto) => this.screeningsService.create(dto, scheduledBy)),
+        body.map((dto) =>
+          this.screeningsService.create(updateDtoWithUser(dto), scheduledBy),
+        ),
       );
       return {
         success: true,
@@ -72,7 +80,10 @@ export class ScreeningsController {
       };
     }
 
-    const created = await this.screeningsService.create(body, scheduledBy);
+    const created = await this.screeningsService.create(
+      updateDtoWithUser(body),
+      scheduledBy,
+    );
     return {
       success: true,
       data: created,
@@ -91,7 +102,19 @@ export class ScreeningsController {
     status: 200,
     description: 'Screenings retrieved successfully',
   })
-  findAll(@Query() query: QueryScreeningsDto) {
+  findAll(@Query() query: QueryScreeningsDto, @Request() req: any) {
+    const user = req.user;
+    const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
+    const isAdmin = roles.some((role: string) =>
+      ['CEO', 'Director', 'System Admin'].includes(role),
+    );
+    const isCoordinator = roles.includes('Interview Coordinator');
+
+    // If not admin/coordinator (e.g., Screening Trainer), they can only see their own screenings
+    if (!isAdmin && !isCoordinator) {
+      query.coordinatorId = user.sub ?? user.userId ?? user.id;
+    }
+
     return this.screeningsService.findAll(query);
   }
 
@@ -136,7 +159,20 @@ export class ScreeningsController {
     description: 'Return candidate-projects that have been assigned to screenings (latest assignments first). Supports pagination and optional filters (projectId, candidateId, recruiterId, roleCatalogId) — roleCatalogId filters by the role catalog of the assigned role.',
   })
   @ApiResponse({ status: 200, description: 'Assigned screening candidate-projects retrieved' })
-  getAssignedScreenings(@Query() query: QueryAssignedScreeningsDto) {
+  getAssignedScreenings(
+    @Query() query: QueryAssignedScreeningsDto,
+    @Request() req: any,
+  ) {
+    const user = req.user;
+    const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
+    const isAdmin = roles.some((role: string) => ['CEO', 'Director', 'System Admin'].includes(role));
+    const isCoordinator = roles.includes('Interview Coordinator');
+
+    // If not admin/coordinator, they can only see their own assignments
+    if (!isAdmin && !isCoordinator) {
+      query.coordinatorId = user.id;
+    }
+
     return this.screeningsService.getAssignedCandidateProjects(query);
   }
 
@@ -148,7 +184,19 @@ export class ScreeningsController {
       'Return screenings that are scheduled and upcoming. Ordered by scheduledTime (soonest first). Supports pagination and filters.',
   })
   @ApiResponse({ status: 200, description: 'Upcoming screenings retrieved' })
-  getUpcoming(@Query() query: QueryUpcomingScreeningsDto) {
+  getUpcoming(@Query() query: QueryUpcomingScreeningsDto, @Request() req: any) {
+    const user = req.user;
+    const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
+    const isAdmin = roles.some((role: string) =>
+      ['CEO', 'Director', 'System Admin'].includes(role),
+    );
+    const isCoordinator = roles.includes('Interview Coordinator');
+
+    // If not admin/coordinator (e.g., Screening Trainer), they can only see their own upcoming screenings
+    if (!isAdmin && !isCoordinator) {
+      query.coordinatorId = user.sub ?? user.userId ?? user.id;
+    }
+
     return this.screeningsService.getUpcoming(query);
   }
 

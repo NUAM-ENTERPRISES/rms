@@ -52,4 +52,14 @@ export class QueryUsersDto {
   @IsOptional()
   @IsString({ message: 'Sort order must be a string' })
   sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @ApiPropertyOptional({
+    description: 'Filter users by role name(s)',
+    example: 'Recruiter',
+    type: String,
+    isArray: true,
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  roles?: string | string[];
 }

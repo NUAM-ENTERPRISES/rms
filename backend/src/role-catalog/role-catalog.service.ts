@@ -9,6 +9,7 @@ export class RoleCatalogService {
   async findAll(queryDto: QueryRolesDto) {
     const {
       q,
+      search,
       category,
       type,
       isClinical,
@@ -18,15 +19,18 @@ export class RoleCatalogService {
       limit,
       sortBy,
       sortOrder,
-    } = queryDto;
+    } = queryDto as any;
 
     // Build where clause
     const where: any = {};
 
-    if (q) {
+    const searchTerm = search || q;
+    if (searchTerm) {
       where.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { description: { contains: q, mode: 'insensitive' } },
+        { name: { contains: searchTerm, mode: 'insensitive' } },
+        { label: { contains: searchTerm, mode: 'insensitive' } },
+        { description: { contains: searchTerm, mode: 'insensitive' } },
+        { shortName: { contains: searchTerm, mode: 'insensitive' } },
       ];
     }
 
@@ -77,6 +81,14 @@ export class RoleCatalogService {
           isActive: true,
           createdAt: true,
           updatedAt: true,
+          roleDepartment: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+              shortName: true,
+            },
+          },
         },
       }),
       this.prisma.roleCatalog.count({ where }),
