@@ -25,6 +25,7 @@ import {
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
 } from '../common/constants';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
 export class CandidateProjectsService {
@@ -34,6 +35,7 @@ export class CandidateProjectsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly outboxService: OutboxService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   /**
@@ -632,6 +634,25 @@ export class CandidateProjectsService {
       recruiterId || userId || '',
     );
 
+    // Emit real-time synchronization event
+    try {
+      if (result.id) {
+        // Find assigned coordinator if any
+        const coordinatorId = createDto.coordinatorId || result.screening?.coordinatorId;
+        const recipients = [userId]; // Current user
+        if (coordinatorId) recipients.push(coordinatorId);
+        if (recruiterId && recruiterId !== userId) recipients.push(recruiterId);
+
+        await this.notificationsGateway.emitToUsers([...new Set(recipients)], 'data:sync', {
+          type: 'Screening',
+          id: result.id,
+          message: `Candidate has been sent for screening.`,
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to emit real-time update for screening ${result.id}`, err.stack);
+    }
+
     return result;
   }
 
@@ -697,6 +718,19 @@ export class CandidateProjectsService {
           `Error sending candidate ${candidateId} for screening in bulk: ${error.message}`,
         );
         errors.push({ candidateId, error: error.message });
+      }
+    }
+
+    // Emit bulk real-time synchronization event if there are results
+    if (results.length > 0) {
+      try {
+        await this.notificationsGateway.emitToUser(userId, 'data:sync', {
+          type: 'Screening',
+          id: 'LIST',
+          message: `${results.length} candidates sent for screening successfully.`,
+        });
+      } catch (err) {
+        this.logger.error(`Failed to emit bulk real-time update for screenings`, err.stack);
       }
     }
 

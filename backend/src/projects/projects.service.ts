@@ -28,6 +28,7 @@ import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
 } from '../common/constants/statuses';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
 export class ProjectsService {
@@ -38,6 +39,7 @@ export class ProjectsService {
     private readonly countriesService: CountriesService,
     private readonly qualificationsService: QualificationsService,
     private readonly roleCatalogService: RoleCatalogService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   // Helper method to safely parse JSON fields
@@ -1094,6 +1096,32 @@ export class ProjectsService {
         ageRequirement: role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : null,
       })),
     };
+
+    // Notify relevant users about the project update
+    try {
+      // Find team members or admins to notify
+      const involvedUserIds = [normalizedProject.createdBy];
+      if (normalizedProject.teamId) {
+        const teamUsers = await this.prisma.userTeam.findMany({
+          where: { teamId: normalizedProject.teamId },
+          select: { userId: true },
+        });
+        teamUsers.forEach(u => involvedUserIds.push(u.userId));
+      }
+
+      // Remove current user from notifications to avoid self-refresh if not needed (optional)
+      const notifyIds = [...new Set(involvedUserIds)].filter(uId => uId !== userId);
+
+      if (notifyIds.length > 0) {
+        await this.notificationsGateway.emitToUsers(notifyIds, 'data:sync', {
+          type: 'Project',
+          id: id,
+          message: `Project "${normalizedProject.title}" has been updated.`,
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to emit real-time update for project ${id}`, err.stack);
+    }
 
     return normalizedProject;
   }
