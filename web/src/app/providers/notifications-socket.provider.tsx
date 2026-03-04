@@ -172,7 +172,9 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         notification.type === "document_resubmission_requested" ||
         notification.type === "document_resubmitted" ||
         notification.type === "documentation_notification" ||
-        notification.type === "recruiter_notification"
+        notification.type === "recruiter_notification" ||
+        notification.type === "candidate_documents_verified" ||
+        notification.type === "candidate_documents_rejected"
       ) {
         console.log("[Socket] document update notification, invalidating caches", notification);
         const candidateId =

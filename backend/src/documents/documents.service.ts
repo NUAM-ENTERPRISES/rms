@@ -509,7 +509,10 @@ export class DocumentsService {
       );
     }
 
-    // Check if all documents are now verified and publish event
+    /* 
+    NOT WANTED: The user wants notification ONLY on explicit "complete-verification" button click.
+    Removing automatic "CandidateDocumentsVerified" trigger here.
+    
     if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
       const summary = await this.getDocumentSummary(
         verifyDto.candidateProjectMapId,
@@ -523,6 +526,7 @@ export class DocumentsService {
         );
       }
     }
+    */
 
     return verification;
   }

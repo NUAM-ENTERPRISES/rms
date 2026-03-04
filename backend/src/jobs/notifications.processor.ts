@@ -221,8 +221,8 @@ export class NotificationsProcessor extends WorkerHost {
       await this.notificationsService.createNotification({
         userId: recruiter.id,
         type: 'candidate_documents_verified',
-        title: 'Candidate Documents Verified',
-        message: `Documents for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} have been verified for project ${candidateProjectMap.project.title}. You can now proceed with project allocation.`,
+        title: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} Document verification fully completed`,
+        message: `All required documents for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} have been successfully verified for project ${candidateProjectMap.project.title}. You can now proceed with allocation.`,
         link: `/recruiter-docs/${candidateProjectMap.project.id}/${candidateProjectMap.candidate.id}`,
         meta: {
           candidateProjectMapId,
