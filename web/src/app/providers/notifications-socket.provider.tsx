@@ -23,6 +23,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
   }, [settings, dispatch]);
   const mutedRef = useRef<boolean>(muted);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const unlockedRef = useRef(false);
 
   // keep ref up to date without restarting socket listener
   useEffect(() => {
@@ -36,6 +37,27 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       audioRef.current.preload = "auto";
       audioRef.current.volume = 0.5;
     }
+  }, []);
+
+  // unlock audio on user interaction to bypass browser autoplay restrictions
+  useEffect(() => {
+    const unlock = () => {
+      if (audioRef.current && !unlockedRef.current && !mutedRef.current) {
+        audioRef.current.play()
+          .then(() => {
+            audioRef.current?.pause();
+            audioRef.current!.currentTime = 0;
+            unlockedRef.current = true;
+            console.log('[Socket] Audio unlocked by user interaction');
+          })
+          .catch((err) => {
+            console.warn('[Socket] Audio unlock attempt failed', err);
+          });
+      }
+    };
+
+    window.addEventListener('click', unlock);
+    return () => window.removeEventListener('click', unlock);
   }, []);
 
   useEffect(() => {
@@ -97,10 +119,16 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
       // play sound if not muted and this is a new notification
       if (!mutedRef.current) {
-        audioRef.current?.play().catch((err) => {
-          // catch autoplay restrictions
-          console.warn("Notification sound play failed", err);
-        });
+        if (audioRef.current) {
+          audioRef.current.play()
+            .then(() => {
+              unlockedRef.current = true;
+            })
+            .catch((err) => {
+              // If failed, try to unlock it now by force on the next user interaction
+              console.warn("Notification sound play failed, browser blocked it", err);
+            });
+        }
       }
 
       // Only show toast if it's NOT a verification notification (which triggers the bell animation)
