@@ -662,6 +662,72 @@ export class DocumentsController {
     };
   }
 
+  @Post(':id/reupload/recruiter')
+  @Permissions('write:documents', 'write:assigned_candidates')
+  @ApiOperation({
+    summary: 'Recruiter re-upload a document',
+    description:
+      'Recruiter re-uploads a document after a resubmission request. Notifies the documentation team.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Document ID',
+    example: 'doc_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document re-uploaded by recruiter successfully',
+  })
+  async reuploadRecruiter(
+    @Param('id') id: string,
+    @Body() reuploadDto: ReuploadDocumentDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.reuploadRecruiter(
+      id,
+      reuploadDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document re-uploaded by recruiter successfully',
+    };
+  }
+
+  @Post(':id/reupload/documentation')
+  @Permissions('verify:documents')
+  @ApiOperation({
+    summary: 'Documentation team re-upload a document',
+    description:
+      'Documentation team re-uploads a document instead of requesting resubmission. Notifies the recruiter.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Document ID',
+    example: 'doc_123abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document re-uploaded by documentation team successfully',
+  })
+  async reuploadDocumentation(
+    @Param('id') id: string,
+    @Body() reuploadDto: ReuploadDocumentDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.reuploadDocumentation(
+      id,
+      reuploadDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Document re-uploaded by documentation team successfully',
+    };
+  }
+
   @Post(':id/reupload')
   @Permissions('write:documents')
   @ApiOperation({

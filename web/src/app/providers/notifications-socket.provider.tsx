@@ -148,11 +148,45 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
       if (notification.type === "candidate_sent_for_verification") {
         console.log("[Socket] Invalidating VerificationCandidates & DocumentVerification lists");
-        dispatch(baseApi.util.invalidateTags([
+        const sentCandidateId = notification.data?.candidateId || notification.candidateId;
+        const tags: Array<any> = [
           { type: "VerificationCandidates" },
-          { type: "DocumentVerification" },
-          { type: "DocumentStats" }
-        ]));
+          { type: "DocumentStats" },
+        ];
+        if (sentCandidateId) {
+          tags.push({ type: "DocumentVerification", id: sentCandidateId });
+        } else {
+          tags.push({ type: "DocumentVerification" });
+        }
+        dispatch(baseApi.util.invalidateTags(tags));
+      }
+
+      // when a document is verified/rejected/resubmission or a generic update comes through,
+      // trigger the same set of invalidations so that any open verification
+      // pages refresh automatically. many notifications carry candidateId in
+      // `notification.data` but fall back to `notification.candidateId`.
+      if (
+        notification.type === "candidate_document_updated" ||
+        notification.type === "document_verified" ||
+        notification.type === "document_rejected" ||
+        notification.type === "document_resubmission_requested" ||
+        notification.type === "document_resubmitted" ||
+        notification.type === "documentation_notification" ||
+        notification.type === "recruiter_notification"
+      ) {
+        console.log("[Socket] document update notification, invalidating caches", notification);
+        const candidateId =
+          notification.data?.candidateId || notification.candidateId || notification.meta?.candidateId || undefined;
+        const tags: Array<any> = [
+          { type: "VerificationCandidates" },
+          { type: "DocumentStats" },
+        ];
+        if (candidateId) {
+          tags.push({ type: "DocumentVerification", id: candidateId });
+        } else {
+          tags.push({ type: "DocumentVerification" });
+        }
+        dispatch(baseApi.util.invalidateTags(tags));
       }
     });
 
@@ -167,6 +201,77 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
       }
       if (payload.message) toast.info(payload.message);
+    });
+
+    // direct socket events that bypass notification wrapping
+    socket.on("candidate_document_updated", (data: { candidateId?: string }) => {
+      console.log("[Socket] direct event candidate_document_updated", data);
+      const tags: Array<any> = [
+        { type: "VerificationCandidates" },
+        { type: "DocumentStats" },
+      ];
+      if (data.candidateId) {
+        tags.push({ type: "DocumentVerification", id: data.candidateId });
+      } else {
+        tags.push({ type: "DocumentVerification" });
+      }
+      dispatch(baseApi.util.invalidateTags(tags));
+    });
+
+    socket.on("document_verified", (data: { candidateId?: string }) => {
+      console.log("[Socket] direct event document_verified", data);
+      const tags: Array<any> = [
+        { type: "VerificationCandidates" },
+        { type: "DocumentStats" },
+      ];
+      if (data.candidateId) {
+        tags.push({ type: "DocumentVerification", id: data.candidateId });
+      } else {
+        tags.push({ type: "DocumentVerification" });
+      }
+      dispatch(baseApi.util.invalidateTags(tags));
+    });
+
+    socket.on("document_rejected", (data: { candidateId?: string }) => {
+      console.log("[Socket] direct event document_rejected", data);
+      const tags: Array<any> = [
+        { type: "VerificationCandidates" },
+        { type: "DocumentStats" },
+      ];
+      if (data.candidateId) {
+        tags.push({ type: "DocumentVerification", id: data.candidateId });
+      } else {
+        tags.push({ type: "DocumentVerification" });
+      }
+      dispatch(baseApi.util.invalidateTags(tags));
+    });
+
+    socket.on("document_resubmission_requested", (data: { candidateId?: string }) => {
+      console.log("[Socket] direct event document_resubmission_requested", data);
+      const tags: Array<any> = [
+        { type: "VerificationCandidates" },
+        { type: "DocumentStats" },
+      ];
+      if (data.candidateId) {
+        tags.push({ type: "DocumentVerification", id: data.candidateId });
+      } else {
+        tags.push({ type: "DocumentVerification" });
+      }
+      dispatch(baseApi.util.invalidateTags(tags));
+    });
+
+    socket.on("document_resubmitted", (data: { candidateId?: string }) => {
+      console.log("[Socket] direct event document_resubmitted", data);
+      const tags: Array<any> = [
+        { type: "VerificationCandidates" },
+        { type: "DocumentStats" },
+      ];
+      if (data.candidateId) {
+        tags.push({ type: "DocumentVerification", id: data.candidateId });
+      } else {
+        tags.push({ type: "DocumentVerification" });
+      }
+      dispatch(baseApi.util.invalidateTags(tags));
     });
 
     return () => {

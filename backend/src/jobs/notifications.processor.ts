@@ -392,7 +392,15 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
-      // Get the recruiter who uploaded the document
+      // Identify the appropriate notification recipient. by default we used to notify the
+      // user who originally uploaded the document (uploader). however if the document is
+      // tied to a candidate-project map we prefer to notify the recruiter assigned to that
+      // nomination. this ensures that when the documentation team verifies a file the
+      // recruiter (not the documentation user) gets informed.
+      const recruiterId = candidateProjectMap?.recruiterId;
+
+      // Fetch the uploader for fallback only; we'll still load their name in case we need it in
+      // the message.
       const uploader = await this.prisma.user.findUnique({
         where: { id: document.uploadedBy },
         select: {
@@ -401,18 +409,34 @@ export class NotificationsProcessor extends WorkerHost {
         },
       });
 
-      if (!uploader) {
-        this.logger.error(`Uploader ${document.uploadedBy} not found`);
+      // Determine who should receive the notification
+      const recipientId = recruiterId || uploader?.id;
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for document verified event (${documentId})`,
+        );
         return;
       }
 
-      const idemKey = `${eventId}:${uploader.id}:document_verified`;
+      const idemKey = `${eventId}:${recipientId}:document_verified`;
+
+      // Build a generic message; include verifier/uploader info if available
+      const recipientIsRecruiter = recruiterId && recruiterId === recipientId;
+      const verifierUser = await this.prisma.user.findUnique({
+        where: { id: verifiedBy },
+        select: { name: true },
+      });
+      const verifierName = verifierUser?.name || 'A team member';
+
+      const message = recipientIsRecruiter
+        ? `Document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been verified by ${verifierName} for project ${candidateProjectMap.project.title}.`
+        : `Your uploaded document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been verified for project ${candidateProjectMap.project.title}.`;
 
       await this.notificationsService.createNotification({
-        userId: uploader.id,
+        userId: recipientId,
         type: 'document_verified',
         title: 'Document Verified',
-        message: `Your uploaded document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been verified for project ${candidateProjectMap.project.title}.`,
+        message,
         link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
         meta: {
           documentId,
@@ -423,8 +447,9 @@ export class NotificationsProcessor extends WorkerHost {
         idemKey,
       });
 
+      // log recipient instead of uploader to avoid null issues
       this.logger.log(
-        `Document verified notification created for uploader ${uploader.id}`,
+        `Document verified notification created for user ${recipientId}`,
       );
     } catch (error) {
       this.logger.error(
@@ -487,7 +512,8 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
-      // Get the recruiter who uploaded the document
+      // Determine recipient similar to verified event. recruiter first, fall back to uploader
+      const recruiterId = candidateProjectMap?.recruiterId;
       const uploader = await this.prisma.user.findUnique({
         where: { id: document.uploadedBy },
         select: {
@@ -496,18 +522,28 @@ export class NotificationsProcessor extends WorkerHost {
         },
       });
 
-      if (!uploader) {
-        this.logger.error(`Uploader ${document.uploadedBy} not found`);
+      const recipientId = recruiterId || uploader?.id;
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for document rejected event (${documentId})`,
+        );
         return;
       }
 
-      const idemKey = `${eventId}:${uploader.id}:document_rejected`;
+      const idemKey = `${eventId}:${recipientId}:document_rejected`;
+
+      const recipientIsRecruiter = recruiterId && recruiterId === recipientId;
+      const messageBase = recipientIsRecruiter
+        ? `Document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been rejected for project ${candidateProjectMap.project.title}.`
+        : `Your uploaded document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been rejected for project ${candidateProjectMap.project.title}.`;
+
+      const message = reason ? `${messageBase} Reason: ${reason}` : messageBase;
 
       await this.notificationsService.createNotification({
-        userId: uploader.id,
+        userId: recipientId,
         type: 'document_rejected',
         title: 'Document Rejected',
-        message: `Your uploaded document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been rejected for project ${candidateProjectMap.project.title}.${reason ? ` Reason: ${reason}` : ''}`,
+        message,
         link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
         meta: {
           documentId,
@@ -520,7 +556,7 @@ export class NotificationsProcessor extends WorkerHost {
       });
 
       this.logger.log(
-        `Document rejected notification created for uploader ${uploader.id}`,
+        `Document rejected notification created for user ${recipientId}`,
       );
     } catch (error) {
       this.logger.error(
@@ -585,27 +621,35 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
-      // Get the recruiter who uploaded the document
+      // Determine recipient for resubmission request. prefer recruiter if the candidate
+      // project map has one; otherwise fall back to uploader (the original behaviour).
+      const recruiterId = candidateProjectMap?.recruiterId;
+
       const uploader = await this.prisma.user.findUnique({
         where: { id: document.uploadedBy },
-        select: {
-          id: true,
-          name: true,
-        },
+        select: { id: true, name: true },
       });
 
-      if (!uploader) {
-        this.logger.error(`Uploader ${document.uploadedBy} not found`);
+      const recipientId = recruiterId || uploader?.id;
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for document resubmission request event (${documentId})`,
+        );
         return;
       }
 
-      const idemKey = `${eventId}:${uploader.id}:document_resubmission_requested`;
+      const idemKey = `${eventId}:${recipientId}:document_resubmission_requested`;
+
+      const recipientIsRecruiter = recruiterId && recruiterId === recipientId;
+      const message = recipientIsRecruiter
+        ? `Resubmission requested for document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} for project ${candidateProjectMap.project.title}.${reason ? ` Reason: ${reason}` : ''}`
+        : `Resubmission requested for document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} for project ${candidateProjectMap.project.title}.${reason ? ` Reason: ${reason}` : ''}`;
 
       await this.notificationsService.createNotification({
-        userId: uploader.id,
+        userId: recipientId,
         type: 'document_resubmission_requested',
         title: 'Document Resubmission Requested',
-        message: `Resubmission requested for document "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} for project ${candidateProjectMap.project.title}.${reason ? ` Reason: ${reason}` : ''}`,
+        message,
         link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
         meta: {
           documentId,
@@ -618,7 +662,7 @@ export class NotificationsProcessor extends WorkerHost {
       });
 
       this.logger.log(
-        `Document resubmission requested notification created for uploader ${uploader.id}`,
+        `Document resubmission requested notification created for user ${recipientId}`,
       );
     } catch (error) {
       this.logger.error(
@@ -689,21 +733,27 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
-      // Find the user who requested the resubmission
+      // Determine who should be notified when a document is resubmitted.
+      // Ideally the recruiter should know; fall back to the original requester if no
+      // recruiter is assigned.
+      const recruiterId = candidateProjectMap?.recruiterId;
+
+      // original requester tracking
       const verification = candidateProjectMap.documentVerifications[0];
       const requesterId = verification?.verificationHistory[0]?.performedBy;
 
-      if (!requesterId) {
+      const recipientId = recruiterId || requesterId;
+      if (!recipientId) {
         this.logger.warn(
-          `No resubmission requester found for document ${documentId} in project ${candidateProjectMapId}`,
+          `No recipient found for document resubmitted event ${documentId}`,
         );
         return;
       }
 
-      const idemKey = `${eventId}:${requesterId}:document_resubmitted`;
+      const idemKey = `${eventId}:${recipientId}:document_resubmitted`;
 
       await this.notificationsService.createNotification({
-        userId: requesterId,
+        userId: recipientId,
         type: 'document_resubmitted',
         title: 'Document Resubmitted',
         message: `Candidate ${document.candidate.firstName} ${document.candidate.lastName} has resubmitted the document "${document.fileName}" for project ${candidateProjectMap.project.title}.`,
@@ -718,7 +768,7 @@ export class NotificationsProcessor extends WorkerHost {
       });
 
       this.logger.log(
-        `Document resubmitted notification created for requester ${requesterId}`,
+        `Document resubmitted notification created for user ${recipientId}`,
       );
     } catch (error) {
       this.logger.error(

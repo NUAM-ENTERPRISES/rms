@@ -632,6 +632,30 @@ export const documentsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification"],
     }),
 
+    reuploadRecruiterDocument: builder.mutation<
+      { success: boolean; data: Document; message: string },
+      { documentId: string } & ReuploadDocumentRequest
+    >({
+      query: ({ documentId, ...reuploadData }) => ({
+        url: `/documents/${documentId}/reupload/recruiter`,
+        method: "POST",
+        body: reuploadData,
+      }),
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates"],
+    }),
+
+    reuploadDocumentationDocument: builder.mutation<
+      { success: boolean; data: Document; message: string },
+      { documentId: string } & ReuploadDocumentRequest
+    >({
+      query: ({ documentId, ...reuploadData }) => ({
+        url: `/documents/${documentId}/reupload/documentation`,
+        method: "POST",
+        body: reuploadData,
+      }),
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates"],
+    }),
+
     getDocumentStats: builder.query<
       { success: boolean; data: DocumentStats },
       void
@@ -728,7 +752,10 @@ export const documentsApi = baseApi.injectEndpoints({
       string
     >({
       query: (candidateId) => `/documents/candidates/${candidateId}/projects`,
-      providesTags: ["DocumentVerification"],
+      providesTags: (result, error, candidateId) => [
+        // tag by candidate so we can invalidate only the relevant cache
+        { type: "DocumentVerification", id: candidateId },
+      ],
     }),
 
     getCandidateProjectRequirements: builder.query<
@@ -737,7 +764,9 @@ export const documentsApi = baseApi.injectEndpoints({
     >({
       query: ({ candidateId, projectId }) =>
         `/documents/candidates/${candidateId}/projects/${projectId}/requirements`,
-      providesTags: ["DocumentVerification"],
+      providesTags: (result, error, { candidateId }) => [
+        { type: "DocumentVerification", id: candidateId },
+      ],
     }),
 
     // Eligibility and Matchmaking APIs
@@ -917,6 +946,8 @@ export const {
   useVerifyDocumentMutation,
   useRequestResubmissionMutation,
   useReuploadDocumentMutation,
+  useReuploadRecruiterDocumentMutation,
+  useReuploadDocumentationDocumentMutation,
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,
   useGetVerificationCandidatesQuery,

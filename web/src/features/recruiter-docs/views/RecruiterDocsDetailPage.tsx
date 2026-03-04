@@ -91,7 +91,7 @@ import {
   useCreateDocumentMutation,
   useReuseDocumentMutation,
   useGetDocumentsQuery,
-  useReuploadDocumentMutation
+  useReuploadRecruiterDocumentMutation as useReuploadDocumentMutation
 } from "@/features/documents/api";
 import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification, Document as CandidateDocument } from "@/features/candidates/api";
 import { useAppSelector } from "@/app/hooks";

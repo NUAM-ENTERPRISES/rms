@@ -68,7 +68,7 @@ import {
   useVerifyDocumentMutation,
   useCreateDocumentMutation,
   useRequestResubmissionMutation,
-  useReuploadDocumentMutation,
+  useReuploadDocumentationDocumentMutation as useReuploadDocumentMutation,
 } from "@/features/documents";
 import { useGetProjectQuery } from "@/features/projects";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
@@ -157,6 +157,10 @@ export default function CandidateDocumentVerificationPage() {
     skip: !candidateId,
   });
 
+  // this query provides a `DocumentVerification` tag scoped to the candidate
+  // (see api slice). the socket provider invalidates that tag when a document
+  // is verified/rejected, so the hook will automatically refetch and update
+  // the UI without needing a manual call or a page reload.
   const { data: requirementsData, isLoading: requirementsLoading, refetch: refetchRequirements } =
     useGetCandidateProjectRequirementsQuery(
       { candidateId: candidateId!, projectId: selectedProjectId },

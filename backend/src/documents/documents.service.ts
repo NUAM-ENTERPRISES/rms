@@ -638,6 +638,98 @@ export class DocumentsService {
   }
 
   /**
+   * Re-upload a document by a recruiter (notifies documentation team)
+   */
+  async reuploadRecruiter(
+    documentId: string,
+    reuploadDto: ReuploadDocumentDto,
+    userId: string,
+  ): Promise<any> {
+    const result = await this.reupload(documentId, reuploadDto, userId);
+
+    // Find the documentation team members or the person who requested resubmission
+    const lastResubmissionHistory = await this.prisma.documentVerificationHistory.findFirst({
+      where: {
+        verification: {
+          candidateProjectMapId: reuploadDto.candidateProjectMapId,
+          document: {
+            docType: result.updatedDocument.docType,
+          },
+        },
+        action: 'resubmission_required',
+      },
+      orderBy: { performedAt: 'desc' },
+      select: { performedBy: true },
+    });
+
+    const candidate = await this.prisma.candidate.findFirst({
+      where: { documents: { some: { id: result.updatedDocument.id } } },
+    });
+
+    const project = await this.prisma.project.findFirst({
+      where: { candidateProjects: { some: { id: reuploadDto.candidateProjectMapId } } },
+    });
+
+    if (lastResubmissionHistory?.performedBy) {
+      await this.outboxService.publishDocumentationNotification(
+        lastResubmissionHistory.performedBy,
+        `Recruiter has re-uploaded document "${result.updatedDocument.fileName}" for candidate ${candidate?.firstName} ${candidate?.lastName} in project ${project?.title}.`,
+        'Document Re-uploaded by Recruiter',
+        `/candidates/${candidate?.id}/documents/${project?.id}`,
+        {
+          documentId: result.updatedDocument.id,
+          candidateId: candidate?.id,
+          projectId: project?.id,
+          reuploadedBy: userId,
+        },
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Re-upload a document by the documentation team (notifies recruiter)
+   */
+  async reuploadDocumentation(
+    documentId: string,
+    reuploadDto: ReuploadDocumentDto,
+    userId: string,
+  ): Promise<any> {
+    const result = await this.reupload(documentId, reuploadDto, userId);
+
+    const cpMap = await this.prisma.candidateProjects.findUnique({
+      where: { id: reuploadDto.candidateProjectMapId },
+      select: { recruiterId: true },
+    });
+
+    const candidate = await this.prisma.candidate.findFirst({
+      where: { documents: { some: { id: result.updatedDocument.id } } },
+    });
+
+    const project = await this.prisma.project.findFirst({
+      where: { candidateProjects: { some: { id: reuploadDto.candidateProjectMapId } } },
+    });
+
+    if (cpMap?.recruiterId) {
+      await this.outboxService.publishRecruiterNotification(
+        cpMap.recruiterId,
+        `Documentation team has re-uploaded document "${result.updatedDocument.fileName}" for candidate ${candidate?.firstName} ${candidate?.lastName} in project ${project?.title}.`,
+        'Document Re-uploaded by Documentation Team',
+        `/candidates/${candidate?.id}/documents/${project?.id}`,
+        {
+          documentId: result.updatedDocument.id,
+          candidateId: candidate?.id,
+          projectId: project?.id,
+          reuploadedBy: userId,
+        },
+      );
+    }
+
+    return result;
+  }
+
+  /**
    * Re-upload a document after resubmission request
    */
   async reupload(
