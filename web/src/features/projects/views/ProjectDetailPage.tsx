@@ -570,7 +570,7 @@ export default function ProjectDetailPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:bg-black p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-slate-200 rounded w-1/3"></div>
@@ -593,7 +593,7 @@ export default function ProjectDetailPage() {
   // Error state
   if (error || !projectData?.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:bg-black p-6">
         <div className="max-w-4xl mx-auto">
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center">
@@ -646,7 +646,7 @@ export default function ProjectDetailPage() {
   // Access control
   if (!canReadProjects) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:bg-black p-6">
         <div className="max-w-4xl mx-auto">
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center">
@@ -664,17 +664,16 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="w-full mx-auto space-y-6">
+<div className="min-h-screen bg-white dark:bg-black">      <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
+        <Card className="border-0 shadow-xl bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50 dark:ring-slate-800/50">
           <CardContent className="p-6 lg:p-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               {/* Left Side — Title (Black) + Country */}
               <div className="flex items-center gap-5 flex-1 min-w-0">
                 <div className="flex-1">
                   {/* Title — Strong Black Text */}
-                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
+                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
                     {project.title}
                   </h1>
 
@@ -780,7 +779,7 @@ export default function ProjectDetailPage() {
           {/* Right Column: Project Info + Supporting Cards */}
           <div className="space-y-4 text-sm lg:space-y-5 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2 px-3 pb-6 lg:px-0">
             {/* Project Overview Card */}
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
+            <Card className="border-0 shadow-md bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded-xl">
               <CardContent className="p-3 lg:p-4 space-y-4">
                 {/* 4 Stats — Fully Responsive & No Cutoff */}
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
@@ -790,7 +789,7 @@ export default function ProjectDetailPage() {
                     <div className="text-xl lg:text-2xl font-bold text-blue-700">
                       {project.rolesNeeded.reduce((s, r) => s + r.quantity, 0)}
                     </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5">
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5">
                       Positions
                     </div>
                   </div>
@@ -801,7 +800,7 @@ export default function ProjectDetailPage() {
                     <div className="text-xl lg:text-2xl font-bold text-emerald-700">
                       {pagination?.total || 0}
                     </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5 leading-tight">
                       <span className="hidden lg:inline">Nominated</span>
                       <span className="lg:hidden">Noms</span>
                     </div>
@@ -813,7 +812,7 @@ export default function ProjectDetailPage() {
                     <div className="text-xl lg:text-2xl font-bold text-purple-700">
                       {project.rolesNeeded.length}
                     </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5">
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5">
                       Roles
                     </div>
                   </div>
@@ -830,7 +829,7 @@ export default function ProjectDetailPage() {
                         )
                       )}
                     </div>
-                    <div className="text-xs text-center text-slate-600 font-medium mt-0.5 leading-tight">
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5 leading-tight">
                       <span className="hidden sm:inline">Days Left</span>
                       <span className="sm:hidden">Days</span>
                     </div>
@@ -838,93 +837,93 @@ export default function ProjectDetailPage() {
                 </div>
 
                 {/* Compact Details List — No overflow */}
-                <div className="space-y-1.5 border-t border-slate-200 pt-3">
-                  {[
-                    {
-                      icon: Calendar,
-                      color: "text-blue-600",
-                      label: "Deadline",
-                      value: formatDateTime(project.deadline),
-                    },
-                    {
-                      icon: Clock,
-                      color: "text-green-600",
-                      label: "Created",
-                      value: formatDate(project.createdAt),
-                    },
-                    {
-                      icon: MapPin,
-                      color: "text-purple-600",
-                      label: "Country",
-                      value: (
-                        <ProjectCountryCell
-                          countryCode={project.countryCode}
-                          size="sm"
-                          fallbackText="—"
-                        />
-                      ),
-                    },
-                    {
-                      icon: UserCheck,
-                      color: "text-emerald-600",
-                      label: "Status",
-                      value: (
-                        <Badge variant="outline" className="text-xs h-5">
-                          {project.status}
-                        </Badge>
-                      ),
-                    },
-                    {
-                      icon: User,
-                      color: "text-indigo-600",
-                      label: "Creator",
-                      value: project.creator.name,
-                    },
-                    {
-                      icon: Building2,
-                      color: "text-orange-600",
-                      label: "Type",
-                      value:
-                        project.projectType === "ministry" ? "Gov" : "Private",
-                    },
-                    {
-                      icon: FileText,
-                      color: "text-cyan-600",
-                      label: "Resume",
-                      value: projectResumeEditable ? "Edit" : "Fixed",
-                    },
-                    {
-                      icon: User,
-                      color: "text-pink-600",
-                      label: "Grooming",
-                      value:
-                        projectGroomingRequirement?.[0]?.toUpperCase() || "—",
-                    },
-                    {
-                      icon: Target,
-                      color: "text-red-600",
-                      label: "Contact",
-                      value: projectHideContactInfo ? "Hidden" : "Visible",
-                    },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between gap-2 py-1.5 hover:bg-slate-50 rounded px-1"
-                    >
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <item.icon
-                          className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`}
-                        />
-                        <span className="text-xs font-medium text-slate-600 truncate">
-                          {item.label}
-                        </span>
-                      </div>
-                      <div className="text-xs font-semibold text-slate-900 text-right truncate max-w-[45%]">
-                        {item.value}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+             <div className="space-y-1.5 border-t border-slate-200 dark:border-slate-800 pt-3 bg-white dark:bg-black">
+  {[
+    {
+      icon: Calendar,
+      color: "text-blue-600 dark:text-blue-400",
+      label: "Deadline",
+      value: formatDateTime(project.deadline),
+    },
+    {
+      icon: Clock,
+      color: "text-green-600 dark:text-green-400",
+      label: "Created",
+      value: formatDate(project.createdAt),
+    },
+    {
+      icon: MapPin,
+      color: "text-purple-600 dark:text-purple-400",
+      label: "Country",
+      value: (
+        <ProjectCountryCell
+          countryCode={project.countryCode}
+          size="sm"
+          fallbackText="—"
+        />
+      ),
+    },
+    {
+      icon: UserCheck,
+      color: "text-emerald-600 dark:text-emerald-400",
+      label: "Status",
+      value: (
+        <Badge variant="outline" className="text-xs h-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+          {project.status}
+        </Badge>
+      ),
+    },
+    {
+      icon: User,
+      color: "text-indigo-600 dark:text-indigo-400",
+      label: "Creator",
+      value: project.creator.name,
+    },
+    {
+      icon: Building2,
+      color: "text-orange-600 dark:text-orange-400",
+      label: "Type",
+      value:
+        project.projectType === "ministry" ? "Gov" : "Private",
+    },
+    {
+      icon: FileText,
+      color: "text-cyan-600 dark:text-cyan-400",
+      label: "Resume",
+      value: projectResumeEditable ? "Edit" : "Fixed",
+    },
+    {
+      icon: User,
+      color: "text-pink-600 dark:text-pink-400",
+      label: "Grooming",
+      value:
+        projectGroomingRequirement?.[0]?.toUpperCase() || "—",
+    },
+    {
+      icon: Target,
+      color: "text-red-600 dark:text-red-400",
+      label: "Contact",
+      value: projectHideContactInfo ? "Hidden" : "Visible",
+    },
+  ].map((item, i) => (
+    <div
+      key={i}
+      className="flex items-center justify-between gap-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded px-1 transition-colors"
+    >
+      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        <item.icon
+          className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`}
+        />
+        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+          {item.label}
+        </span>
+      </div>
+      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 text-right truncate max-w-[45%]">
+        {item.value}
+      </div>
+    </div>
+  ))}
+</div>
 
                 {/* Description — Safe & Compact */}
                 {project.description && (
@@ -937,147 +936,147 @@ export default function ProjectDetailPage() {
 
             {/* Other Cards — Same Compact & Responsive Style */}
             {documentRequirements.length > 0 && (
-              <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-                <CardHeader className="pb-2 px-3">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-orange-600" /> Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-3 pb-3 space-y-2">
-                  {documentRequirements.map((req: any, i: number) => (
-                    <div
-                      key={i}
-                      className="p-2.5 bg-orange-50/30 rounded-lg border border-orange-100/50 space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                          <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">
-                            {req.docType
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                          </span>
-                        </div>
-                        {req.mandatory && (
-                          <Badge className="h-4 text-[9px] bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100 px-1.5 font-bold">
-                            REQUIRED
-                          </Badge>
-                        )}
-                      </div>
-                      {req.description && (
-                        <div className="flex items-start gap-1.5 pl-3">
-                          <AlertCircle className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                          <p className="text-[11px] text-slate-600 leading-relaxed italic">
-                            {req.description}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+            <Card className="border-0 shadow-md bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded-xl">
+  <CardHeader className="pb-2 px-3">
+    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+      <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" /> Documents
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="px-3 pb-3 space-y-2">
+    {documentRequirements.map((req: any, i: number) => (
+      <div
+        key={i}
+        className="p-2.5 bg-orange-50/30 dark:bg-orange-950/30 rounded-lg border border-orange-100/50 dark:border-orange-900/50 space-y-1.5"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-orange-400 dark:bg-orange-500" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">
+              {req.docType
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c: string) => c.toUpperCase())}
+            </span>
+          </div>
+          {req.mandatory && (
+            <Badge className="h-4 text-[9px] bg-orange-100 dark:bg-orange-900/60 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/70 px-1.5 font-bold">
+              REQUIRED
+            </Badge>
+          )}
+        </div>
+        {req.description && (
+          <div className="flex items-start gap-1.5 pl-3">
+            <AlertCircle className="h-3 w-3 text-slate-400 dark:text-slate-500 mt-0.5 flex-shrink-0" />
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed italic">
+              {req.description}
+            </p>
+          </div>
+        )}
+      </div>
+    ))}
+  </CardContent>
+</Card>
             )}
 
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
-              <CardHeader className="pb-2 px-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Target className="h-4 w-4 text-purple-600" /> Roles (
-                  {project.rolesNeeded.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 px-3 pb-3">
-                {project.rolesNeeded.map((role) => (
-                  <div
-                    key={role.id}
-                    className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-slate-900 text-sm truncate">
-                        {role.designation}
-                      </span>
-                      <Badge className="text-[10px] h-5 bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0">
-                        {role.quantity} pos
-                      </Badge>
-                    </div>
+         <Card className="border-0 shadow-md bg-white dark:bg-black rounded-xl">
+  <CardHeader className="pb-2 px-3 border-b border-slate-200 dark:border-slate-800">
+    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+      <Target className="h-4 w-4 text-purple-600 dark:text-purple-400" /> Roles (
+      {project.rolesNeeded.length})
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-3 px-3 pb-3">
+    {project.rolesNeeded.map((role) => (
+      <div
+        key={role.id}
+        className="p-3 bg-slate-50 dark:bg-black rounded-lg border border-slate-200 dark:border-slate-800 space-y-2"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">
+            {role.designation}
+          </span>
+          <Badge className="text-[10px] h-5 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-700 dark:to-pink-700 flex-shrink-0 text-white">
+            {role.quantity} pos
+          </Badge>
+        </div>
 
-                    {/* Experience & Age & Gender */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
-                      <div className="flex items-center gap-1">
-                        <Briefcase className="h-3 w-3 text-slate-400" />
-                        <span>
-                          {role.minExperience || 0}-{role.maxExperience || "Any"} yrs
-                        </span>
-                      </div>
-                      {role.ageRequirement && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-400" />
-                          <span>Age: {role.ageRequirement}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-slate-400" />
-                        <span className="capitalize">
-                          {role.genderRequirement || "All"}
-                        </span>
-                      </div>
-                    </div>
+        {/* Experience & Age & Gender */}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+          <div className="flex items-center gap-1">
+            <Briefcase className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+            <span>
+              {role.minExperience || 0}-{role.maxExperience || "Any"} yrs
+            </span>
+          </div>
+          {role.ageRequirement && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+              <span>Age: {role.ageRequirement}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <Users className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+            <span className="capitalize">
+              {role.genderRequirement || "All"}
+            </span>
+          </div>
+        </div>
 
-                    {/* Education */}
-                    {role.educationRequirementsList &&
-                      role.educationRequirementsList.length > 0 && (
-                        <div className="flex items-start gap-1 text-[11px] text-slate-600">
-                          <GraduationCap className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                          <div className="flex flex-wrap gap-1">
-                            {role.educationRequirementsList.map(
-                              (edu: any, idx: number) => (
-                                <span
-                                  key={idx}
-                                  className="bg-white px-1.5 py-0.5 rounded border border-slate-200"
-                                >
-                                  {edu.qualification?.shortName ||
-                                    edu.qualification?.name}
-                                </span>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
+        {/* Education */}
+        {role.educationRequirementsList &&
+          role.educationRequirementsList.length > 0 && (
+            <div className="flex items-start gap-1 text-[11px] text-slate-600 dark:text-slate-400">
+              <GraduationCap className="h-3 w-3 text-slate-400 dark:text-slate-500 mt-0.5 flex-shrink-0" />
+              <div className="flex flex-wrap gap-1">
+                {role.educationRequirementsList.map(
+                  (edu: any, idx: number) => (
+                    <span
+                      key={idx}
+                      className="bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[10px]"
+                    >
+                      {edu.qualification?.shortName ||
+                        edu.qualification?.name}
+                    </span>
+                  )
+                )}
+              </div>
+            </div>
+          )}
 
-                    {/* Benefits & Type */}
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                      <div className="flex gap-2">
-                          {role.accommodation && (
-                            <Home
-                              className="h-3 w-3 text-emerald-600"
-                              aria-label="Accommodation provided"
-                              role="img"
-                            />
-                          )}
-                          {role.food && (
-                            <Utensils
-                              className="h-3 w-3 text-orange-600"
-                              aria-label="Food provided"
-                              role="img"
-                            />
-                          )}
-                          {role.transport && (
-                            <Bus
-                              className="h-3 w-3 text-blue-600"
-                              aria-label="Transport provided"
-                              role="img"
-                            />
-                          )}
-                        </div>
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        {role.employmentType || "Permanent"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+        {/* Benefits & Type */}
+        <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+          <div className="flex gap-2">
+            {role.accommodation && (
+              <Home
+                className="h-3 w-3 text-emerald-600 dark:text-emerald-400"
+                aria-label="Accommodation provided"
+                role="img"
+              />
+            )}
+            {role.food && (
+              <Utensils
+                className="h-3 w-3 text-orange-600 dark:text-orange-400"
+                aria-label="Food provided"
+                role="img"
+              />
+            )}
+            {role.transport && (
+              <Bus
+                className="h-3 w-3 text-blue-600 dark:text-blue-400"
+                aria-label="Transport provided"
+                role="img"
+              />
+            )}
+          </div>
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {role.employmentType || "Permanent"}
+          </span>
+        </div>
+      </div>
+    ))}
+  </CardContent>
+</Card>
 
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl">
+            <Card className="border-0 shadow-md bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded-xl">
               <CardHeader className="pb-2 px-3">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-teal-600" /> Client
@@ -1215,7 +1214,7 @@ export default function ProjectDetailPage() {
                           return (
                             <div
                               key={idx}
-                              className={`flex items-center gap-2 rounded-full px-2 py-1 border ${isAssigned ? 'border-primary/30 bg-primary/10' : 'border-slate-100 bg-white/60'}`}
+                              className={`flex items-center gap-2 rounded-full px-2 py-1 border ${isAssigned ? 'border-primary/30 bg-primary/10' : 'border-slate-100 bg-white/60 dark:bg-black/60'}`}
                             >
                               <span className="text-xs text-slate-700 max-w-[160px] truncate">
                                 {rm.designation || "Role"}

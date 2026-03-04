@@ -32,6 +32,7 @@ import { useTheme } from "@/context/ThemeContext"; // ← added this import
 export default function TeamsPage() {
   const navigate = useNavigate();
   const { theme } = useTheme(); // ← added this line
+  const isDark = theme === "dark";
   const canWriteTeams = useCan("write:teams");
   const canReadTeams = useCan("read:teams");
 
@@ -123,13 +124,13 @@ export default function TeamsPage() {
   return (
     <div className={cn(
       "min-h-screen",
-      theme === "dark" ? "bg-black" : ""
+      isDark ? "bg-black" : ""
     )}>
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Search & Filters Section */}
         <Card className={cn(
           "border-0 shadow-lg backdrop-blur-sm",
-          theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+          isDark ? "bg-black" : "bg-white/80"
         )}>
           <CardContent>
             <div className="space-y-6">
@@ -194,8 +195,8 @@ export default function TeamsPage() {
                   variant="outline"
                   className={cn(
                     "h-10 px-3 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm",
-                    theme === "dark"
-                      ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                    isDark
+                      ? "border-slate-700 text-slate-300 hover:bg-black/80 hover:text-slate-100"
                       : "text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 border-slate-200"
                   )}
                 >
@@ -215,7 +216,7 @@ export default function TeamsPage() {
                 key={i}
                 className={cn(
                   "border-0 shadow-lg animate-pulse backdrop-blur-sm",
-                  theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+                  isDark ? "bg-black/80" : "bg-white/80"
                 )}
               >
                 <CardHeader className="pb-3">
@@ -244,7 +245,7 @@ export default function TeamsPage() {
         ) : filteredTeams.length === 0 ? (
           <Card className={cn(
             "border-0 shadow-lg backdrop-blur-sm",
-            theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+            isDark ? "bg-black/80" : "bg-white/80"
           )}>
             <CardContent className="pt-12 pb-12 text-center">
               <Users className={cn(
@@ -286,7 +287,7 @@ export default function TeamsPage() {
             {/* Teams Grid */}
             <Card className={cn(
               "border-0 shadow-lg backdrop-blur-sm",
-              theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+              isDark ? "bg-black/80" : "bg-white/80"
             )}>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -321,7 +322,7 @@ export default function TeamsPage() {
                         className={cn(
                           "group border-0 shadow-lg transition-all duration-200 transform hover:-translate-y-1 cursor-pointer backdrop-blur-sm",
                           theme === "dark"
-                            ? "bg-slate-900/80 hover:bg-slate-800/90 hover:shadow-2xl"
+                            ? "bg-black border border-slate-800 hover:bg-black/90 hover:shadow-2xl"
                             : "bg-white/80 hover:shadow-xl"
                         )}
                         onClick={() => navigate(`/teams/${team.id}`)}

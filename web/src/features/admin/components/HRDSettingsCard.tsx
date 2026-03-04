@@ -126,7 +126,7 @@ function SectionHeader({
   return (
     <div className="flex items-center justify-between">
       <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800">
+        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-black/80">
           <Icon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
         </div>
         {title}
@@ -219,7 +219,7 @@ export function HRDSettingsCard() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-xl bg-white dark:bg-slate-900 overflow-hidden">
+      <Card className="border-0 shadow-xl bg-white dark:bg-black overflow-hidden">
         <CardContent className="flex items-center justify-center py-20">
           <div className="text-center space-y-4">
             <LoadingSpinner className="h-10 w-10 mx-auto" />
@@ -234,7 +234,7 @@ export function HRDSettingsCard() {
 
   return (
     <>
-      <Card className="border-0 shadow-xl bg-white dark:bg-slate-900 overflow-hidden">
+      <Card className="border-0 shadow-xl bg-white dark:bg-black overflow-hidden">
         {/* Header */}
         <CardHeader className="border-b bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 text-white p-6">
           <div className="flex items-center justify-between">
@@ -283,7 +283,7 @@ export function HRDSettingsCard() {
                 {/* Reminder Configuration */}
                 <div className="space-y-4">
                   <SectionHeader icon={Timer} title="Reminder Configuration" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-black/50 rounded-xl">
                     <FormField
                       control={form.control}
                       name="daysAfterSubmission"
@@ -296,7 +296,7 @@ export function HRDSettingsCard() {
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                              className="bg-white dark:bg-black border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Start reminders after</FormDescription>
@@ -316,7 +316,7 @@ export function HRDSettingsCard() {
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                              className="bg-white dark:bg-black border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Duration for reminders</FormDescription>
@@ -336,7 +336,7 @@ export function HRDSettingsCard() {
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                              className="bg-white dark:bg-black border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Daily reminders count</FormDescription>
@@ -356,7 +356,7 @@ export function HRDSettingsCard() {
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={0}
-                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                              className="bg-white dark:bg-black border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Minutes between reminders</FormDescription>
@@ -400,7 +400,7 @@ export function HRDSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-900/50 dark:text-slate-200"
+                                className="bg-white dark:bg-black border-purple-200 dark:border-purple-900/50 dark:text-slate-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -416,7 +416,7 @@ export function HRDSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-900/50 dark:text-slate-200"
+                                className="bg-white dark:bg-black border-purple-200 dark:border-purple-900/50 dark:text-slate-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -461,7 +461,7 @@ export function HRDSettingsCard() {
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white dark:bg-slate-900 border-orange-200 dark:border-orange-900/50"
+                                className="bg-white dark:bg-black border-orange-200 dark:border-orange-900/50"
                               />
                             </FormControl>
                             <FormDescription>Days before escalation</FormDescription>
@@ -476,7 +476,7 @@ export function HRDSettingsCard() {
                             <FormLabel className="text-orange-700 dark:text-orange-400">Assignment Strategy</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-white dark:bg-slate-900 border-orange-200 dark:border-orange-900/50 dark:text-slate-200">
+                                <SelectTrigger className="bg-white dark:bg-black border-orange-200 dark:border-orange-900/50 dark:text-slate-200">
                                   <SelectValue placeholder="Select strategy" />
                                 </SelectTrigger>
                               </FormControl>
@@ -534,7 +534,7 @@ export function HRDSettingsCard() {
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white dark:bg-slate-900 border-red-200 dark:border-red-900/50"
+                                className="bg-white dark:bg-black border-red-200 dark:border-red-900/50"
                               />
                             </FormControl>
                             <FormDescription className="dark:text-red-300/70">Minutes delay in test mode</FormDescription>
@@ -609,7 +609,7 @@ export function HRDSettingsCard() {
                 )}
               </div>
 
-              <Separator className="dark:bg-slate-800" />
+              <Separator className="dark:bg-black/80" />
 
               {/* Office Hours Display */}
               <div className="space-y-4">
@@ -637,7 +637,7 @@ export function HRDSettingsCard() {
                 )}
               </div>
 
-              <Separator className="dark:bg-slate-800" />
+              <Separator className="dark:bg-black/80" />
 
               {/* Escalation Display */}
               <div className="space-y-4">
@@ -665,7 +665,7 @@ export function HRDSettingsCard() {
                 )}
               </div>
 
-              <Separator className="dark:bg-slate-800" />
+              <Separator className="dark:bg-black/80" />
 
               {/* Test Mode Display */}
               <div className="space-y-4">

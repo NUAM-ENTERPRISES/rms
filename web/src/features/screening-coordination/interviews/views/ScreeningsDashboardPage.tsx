@@ -241,10 +241,10 @@ export default function ScreeningsDashboardPage() {
   }
 
 return (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/30 dark:text-white">
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-black dark:via-black dark:to-black/30 dark:text-white">
     <div className="w-full max-w-7xl mx-auto space-y-6 px-4 py-6">
       {/* Elegant Header */}
-      <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30">
+      <Card className="border-0 shadow-xl bg-white/80 dark:bg-black/80 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -303,7 +303,7 @@ return (
           <Card
             key={i}
             className={cn(
-              "group relative overflow-hidden border-0 shadow-lg bg-white/75 dark:bg-slate-800/75 backdrop-blur-lg rounded-2xl ring-1 ring-slate-200/30 dark:ring-slate-700/30",
+              "group relative overflow-hidden border-0 shadow-lg bg-white/75 dark:bg-black/75 backdrop-blur-lg rounded-2xl ring-1 ring-slate-200/30 dark:ring-slate-700/30",
               "hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
             )}
           >
@@ -353,7 +353,7 @@ return (
       {/* Two-Column Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assigned Interviews */}
-        <Card className="border-0 shadow-xl bg-white/75 dark:bg-slate-800/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 hover:shadow-2xl transition-all duration-300">
+        <Card className="border-0 shadow-xl bg-white/75 dark:bg-black/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 dark:border dark:border-slate-700 hover:shadow-2xl transition-all duration-300">
           <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30 dark:from-black dark:to-indigo-900/30 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -380,7 +380,7 @@ return (
           </CardHeader>
           <CardContent className="pt-4">
             {assignedNormalized.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+              <div className="text-center py-8 text-slate-500 dark:text-slate-400 dark:bg-black">
                 <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="text-base font-medium">No Assigned screenings</p>
                 <p className="text-sm mt-1">Scheduled screenings will appear here</p>
@@ -462,7 +462,7 @@ return (
         </Card>
 
         {/* Upcoming Interviews */}
-        <Card className="border-0 shadow-xl bg-white/75 dark:bg-slate-800/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 hover:shadow-2xl transition-all duration-300">
+        <Card className="border-0 shadow-xl bg-white/75 dark:bg-black/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 dark:border dark:border-slate-700 hover:shadow-2xl transition-all duration-300">
           <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30 dark:from-black dark:to-indigo-900/30 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -499,7 +499,7 @@ return (
                   </AlertDescription>
                 </Alert>
               ) : (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400 dark:bg-black">
                   <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p className="text-base font-medium">No upcoming interviews</p>
                   <p className="text-sm mt-1">Upcoming interviews will appear here</p>
@@ -572,7 +572,7 @@ return (
       </div>
 
       {/* Quick Actions */}
-    <Card className="border-0 shadow-xl bg-white/75 dark:bg-slate-800/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 hover:shadow-2xl transition-all duration-300">
+    <Card className="border-0 shadow-xl bg-white/75 dark:bg-black/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 dark:ring-indigo-700/30 hover:shadow-2xl transition-all duration-300">
   <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30 dark:from-black dark:to-indigo-900/30 dark:border-slate-700">
     <CardTitle className="text-xl font-semibold">Quick Actions</CardTitle>
   </CardHeader>

@@ -16,9 +16,12 @@ interface ProjectCreationProgressProps {
   className?: string;
 }
 
-export const ProjectCreationProgress: React.FC<
-  ProjectCreationProgressProps
-> = ({ steps, currentStep, onStepClick, className }) => {
+export const ProjectCreationProgress: React.FC<ProjectCreationProgressProps> = ({
+  steps,
+  currentStep,
+  onStepClick,
+  className,
+}) => {
   return (
     <div className={cn("w-full", className)}>
       {/* Desktop Progress Bar */}
@@ -38,11 +41,11 @@ export const ProjectCreationProgress: React.FC<
                   className={cn(
                     "relative flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-200",
                     step.status === "completed" &&
-                      "border-green-500 bg-green-500 text-white shadow-md shadow-green-500/20",
+                      "border-green-500 bg-green-500 dark:bg-green-600 text-white shadow-md shadow-green-500/20 dark:shadow-green-500/30",
                     step.status === "current" &&
-                      "border-blue-500 bg-blue-500 text-white shadow-md shadow-blue-500/20",
+                      "border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-md shadow-blue-500/20 dark:shadow-blue-500/30",
                     step.status === "upcoming" &&
-                      "border-slate-300 bg-white text-slate-400"
+                      "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500"
                   )}
                 >
                   {step.status === "completed" ? (
@@ -57,9 +60,9 @@ export const ProjectCreationProgress: React.FC<
                   <h3
                     className={cn(
                       "text-xs font-semibold transition-colors duration-200",
-                      step.status === "completed" && "text-green-600",
-                      step.status === "current" && "text-blue-600",
-                      step.status === "upcoming" && "text-slate-500"
+                      step.status === "completed" && "text-green-600 dark:text-green-400",
+                      step.status === "current" && "text-blue-600 dark:text-blue-400",
+                      step.status === "upcoming" && "text-slate-500 dark:text-slate-400"
                     )}
                   >
                     {step.title}
@@ -67,9 +70,9 @@ export const ProjectCreationProgress: React.FC<
                   <p
                     className={cn(
                       "text-xs transition-colors duration-200 hidden lg:block",
-                      step.status === "completed" && "text-green-500",
-                      step.status === "current" && "text-blue-500",
-                      step.status === "upcoming" && "text-slate-400"
+                      step.status === "completed" && "text-green-500 dark:text-green-400",
+                      step.status === "current" && "text-blue-500 dark:text-blue-400",
+                      step.status === "upcoming" && "text-slate-400 dark:text-slate-500"
                     )}
                   >
                     {step.description}
@@ -82,9 +85,9 @@ export const ProjectCreationProgress: React.FC<
                 <div
                   className={cn(
                     "h-0.5 flex-1 mx-2 transition-colors duration-200",
-                    step.status === "completed" && "bg-green-500",
-                    step.status === "current" && "bg-blue-500",
-                    step.status === "upcoming" && "bg-slate-300"
+                    step.status === "completed" && "bg-green-500 dark:bg-green-600",
+                    step.status === "current" && "bg-blue-500 dark:bg-blue-600",
+                    step.status === "upcoming" && "bg-slate-300 dark:bg-slate-700"
                   )}
                 />
               )}
@@ -95,12 +98,12 @@ export const ProjectCreationProgress: React.FC<
 
       {/* Mobile Progress Bar */}
       <div className="md:hidden">
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
           {steps.map((step, index) => (
             <React.Fragment key={step.id}>
               <div
                 className={cn(
-                  "flex items-center space-x-1 cursor-pointer transition-all duration-200",
+                  "flex items-center space-x-1 cursor-pointer transition-all duration-200 min-w-[100px]",
                   onStepClick && "hover:scale-105"
                 )}
                 onClick={() => onStepClick?.(index)}
@@ -108,13 +111,13 @@ export const ProjectCreationProgress: React.FC<
                 {/* Step Circle */}
                 <div
                   className={cn(
-                    "relative flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200",
+                    "relative flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 flex-shrink-0",
                     step.status === "completed" &&
-                      "border-green-500 bg-green-500 text-white",
+                      "border-green-500 bg-green-500 dark:bg-green-600 text-white",
                     step.status === "current" &&
-                      "border-blue-500 bg-blue-500 text-white",
+                      "border-blue-500 bg-blue-500 dark:bg-blue-600 text-white",
                     step.status === "upcoming" &&
-                      "border-slate-300 bg-white text-slate-400"
+                      "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500"
                   )}
                 >
                   {step.status === "completed" ? (
@@ -129,9 +132,9 @@ export const ProjectCreationProgress: React.FC<
                   <h3
                     className={cn(
                       "text-xs font-semibold truncate transition-colors duration-200",
-                      step.status === "completed" && "text-green-600",
-                      step.status === "current" && "text-blue-600",
-                      step.status === "upcoming" && "text-slate-500"
+                      step.status === "completed" && "text-green-600 dark:text-green-400",
+                      step.status === "current" && "text-blue-600 dark:text-blue-400",
+                      step.status === "upcoming" && "text-slate-500 dark:text-slate-400"
                     )}
                   >
                     {step.title}
@@ -143,10 +146,10 @@ export const ProjectCreationProgress: React.FC<
               {index < steps.length - 1 && (
                 <ChevronRight
                   className={cn(
-                    "h-3 w-3 transition-colors duration-200",
-                    step.status === "completed" && "text-green-500",
-                    step.status === "current" && "text-blue-500",
-                    step.status === "upcoming" && "text-slate-300"
+                    "h-3 w-3 transition-colors duration-200 flex-shrink-0",
+                    step.status === "completed" && "text-green-500 dark:text-green-400",
+                    step.status === "current" && "text-blue-500 dark:text-blue-400",
+                    step.status === "upcoming" && "text-slate-300 dark:text-slate-600"
                   )}
                 />
               )}

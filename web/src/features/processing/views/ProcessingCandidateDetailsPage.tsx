@@ -209,7 +209,7 @@ export default function ProcessingCandidateDetailsPage() {
 
   if (isLoading || isLoadingSteps) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 dark:bg-black">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-violet-400/20 animate-ping" />
@@ -226,7 +226,7 @@ export default function ProcessingCandidateDetailsPage() {
 
   if (error || !data) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-6">
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-6 dark:bg-black">
         <Card className="w-full max-w-md text-center p-8 shadow-2xl border-0">
           <div className="h-20 w-20 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="h-10 w-10 text-rose-500" />
@@ -246,7 +246,7 @@ export default function ProcessingCandidateDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-4 lg:p-6">
+    <div className="min-h-screen bg-gradient-to-br p-4 lg:p-6 dark:bg-black dark:text-white">
       <div className="mx-auto max-w-7xl space-y-4">
         {/* Header */}
         <ProcessingCandidateHeader

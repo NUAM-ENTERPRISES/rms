@@ -120,7 +120,7 @@ function SectionHeader({
   return (
     <div className="flex items-center justify-between">
       <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800">
+        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-black/80">
           <Icon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
         </div>
         {title}
@@ -209,7 +209,7 @@ export function RNRSettingsCard() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-xl bg-white dark:bg-slate-900 overflow-hidden">
+      <Card className="border-0 shadow-xl bg-white dark:bg-black overflow-hidden">
         <CardContent className="flex items-center justify-center py-20">
           <div className="text-center space-y-4">
             <LoadingSpinner className="h-10 w-10 mx-auto" />
@@ -224,8 +224,7 @@ export function RNRSettingsCard() {
 
   return (
     <>
-      <Card className="border-0 shadow-xl bg-white dark:bg-slate-900 overflow-hidden">
-        {/* Header */}
+        <Card className="border-0 shadow-xl bg-white dark:bg-black overflow-hidden">        {/* Header */}
         <CardHeader className="border-b bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -273,7 +272,7 @@ export function RNRSettingsCard() {
                 {/* Reminder Configuration */}
                 <div className="space-y-4">
                   <SectionHeader icon={Timer} title="Reminder Configuration" />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-black/50 rounded-xl">
                     <FormField
                       control={form.control}
                       name="totalDays"
@@ -286,7 +285,7 @@ export function RNRSettingsCard() {
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                              className="bg-white dark:bg-black border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Duration for reminders</FormDescription>
@@ -306,7 +305,7 @@ export function RNRSettingsCard() {
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                              className="bg-white dark:bg-black border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Number of daily reminders</FormDescription>
@@ -326,7 +325,7 @@ export function RNRSettingsCard() {
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={0}
-                              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                              className="bg-white dark:bg-black border-slate-200 dark:border-slate-800"
                             />
                           </FormControl>
                           <FormDescription>Hours between reminders</FormDescription>
@@ -370,7 +369,7 @@ export function RNRSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-900/50 dark:text-slate-200"
+                                className="bg-white dark:bg-black border-blue-200 dark:border-blue-900/50 dark:text-slate-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -386,7 +385,7 @@ export function RNRSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-900/50 dark:text-slate-200"
+                                className="bg-white dark:bg-black border-blue-200 dark:border-blue-900/50 dark:text-slate-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -431,7 +430,7 @@ export function RNRSettingsCard() {
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/50"
+                                className="bg-white dark:bg-black border-indigo-200 dark:border-indigo-900/50"
                               />
                             </FormControl>
                             <FormDescription>Days before auto-assignment</FormDescription>
@@ -446,7 +445,7 @@ export function RNRSettingsCard() {
                             <FormLabel className="text-indigo-700 dark:text-indigo-400">Assignment Strategy</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/50 dark:text-slate-200">
+                                <SelectTrigger className="bg-white dark:bg-black border-indigo-200 dark:border-indigo-900/50 dark:text-slate-200">
                                   <SelectValue placeholder="Select strategy" />
                                 </SelectTrigger>
                               </FormControl>

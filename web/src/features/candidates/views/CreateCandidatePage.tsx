@@ -436,11 +436,20 @@ export default function CreateCandidatePage() {
       }
 
       // Physical information
-      if (data.height !== undefined && data.height !== null) {
-        payload.height = data.height;
+      // height/weight come from text inputs so they may be strings; coerce and
+      // only include when a valid number is present. This avoids submitting
+      // empty strings which trigger the backend validation errors seen above.
+      if (data.height !== undefined && data.height !== null && data.height !== "") {
+        const h = Number(data.height);
+        if (!isNaN(h)) {
+          payload.height = h;
+        }
       }
-      if (data.weight !== undefined && data.weight !== null) {
-        payload.weight = data.weight;
+      if (data.weight !== undefined && data.weight !== null && data.weight !== "") {
+        const w = Number(data.weight);
+        if (!isNaN(w)) {
+          payload.weight = w;
+        }
       }
       if (data.skinTone) {
         payload.skinTone = data.skinTone;
@@ -582,22 +591,22 @@ export default function CreateCandidatePage() {
 
   return (
   <>
-  <div className="min-h-screen bg-slate-100">
+  <div className="min-h-screen bg-slate-100 dark:bg-black">
     <div className="mx-auto w-full max-w-6xl px-6 py-10 space-y-10">
 
       {/* Header */}
-      <div className="pb-4">
-        <h1 className="text-4xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+      <div className="pb-4 dark:bg-black">
+        <h1 className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
           <UserPlus className="h-9 w-9 text-blue-600" />
           Create New Candidate
         </h1>
-        <p className="text-slate-600 mt-2 text-lg">
+        <p className="text-slate-600 dark:text-slate-300 mt-2 text-lg">
           Follow the guided steps to add a new candidate.
         </p>
       </div>
 
       {/* Stepper in Card */}
-      <div className="rounded-lg bg-white shadow-sm border border-slate-200 p-6">
+      <div className="rounded-lg bg-white dark:bg-black shadow-sm border border-slate-200 dark:border-slate-700 p-6">
         <CandidateCreationStepper
           currentStep={currentStep}
           steps={STEPS}
@@ -606,21 +615,21 @@ export default function CreateCandidatePage() {
       </div>
 
       {/* Step Content (No card) */}
-      <div className="pt-2">
+      <div className="pt-2 dark:bg-black">
         {renderCurrentStep()}
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-between pt-8">
+      <div className="flex items-center justify-between pt-8 dark:bg-black">
 
         {/* Left Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 dark:bg-black">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate("/candidates")}
             disabled={isLoading || uploadingImage}
-            className="min-w-[120px] border-slate-300"
+            className="min-w-[120px] border-slate-300 dark:border-slate-700"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Cancel
@@ -632,7 +641,7 @@ export default function CreateCandidatePage() {
               variant="outline"
               onClick={handlePreviousStep}
               disabled={isLoading || uploadingImage}
-              className="min-w-[120px] border-slate-300"
+              className="min-w-[120px] border-slate-300 dark:border-slate-700"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
@@ -641,7 +650,7 @@ export default function CreateCandidatePage() {
         </div>
 
         {/* Right Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 dark:bg-black">
           {/* Allow finishing early if personal info (step 1) is valid */}
           {completedSteps.includes(1) && currentStep < STEPS.length && (
             <Button

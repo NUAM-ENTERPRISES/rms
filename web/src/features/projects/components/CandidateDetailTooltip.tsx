@@ -183,14 +183,14 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
       <TooltipContent 
         side="right" 
         align="start"
-        className="w-80 p-0 bg-white border-2 border-blue-100 shadow-2xl rounded-2xl overflow-hidden"
+        className="w-80 p-0 bg-white dark:bg-black border-2 border-blue-100 dark:border-blue-900 shadow-2xl rounded-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-3 text-white">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border-2 border-white shadow-lg">
               <AvatarImage src={candidate.profileImage} alt={fullName} />
-              <AvatarFallback className="bg-white text-blue-600 font-bold text-xs">
+              <AvatarFallback className="bg-white dark:bg-black text-blue-600 font-bold text-xs">
                 {getInitials(candidate.firstName, candidate.lastName)}
               </AvatarFallback>
             </Avatar>
@@ -203,24 +203,24 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           </div>
         </div>
 
-        <div className="p-3 space-y-3 max-h-72 overflow-y-auto">
+        <div className="p-3 space-y-3 max-h-72 overflow-y-auto bg-white dark:bg-black">
           {/* Contact Information */}
           {(candidate.email || contactValue) && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-1">
                 <Mail className="h-3 w-3" />
                 Contact
               </h4>
-              <div className="space-y-1.5 text-[11px] text-slate-600">
+              <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
                 {candidate.email && (
                   <div className="flex items-center gap-2">
-                    <Mail className="h-3 w-3 text-slate-400" />
+                    <Mail className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     <span className="break-all">{candidate.email}</span>
                   </div>
                 )}
                 {contactValue && (
                   <div className="flex items-center gap-2">
-                    <Phone className="h-3 w-3 text-slate-400" />
+                    <Phone className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     <span>{contactValue}</span>
                   </div>
                 )}
@@ -231,21 +231,21 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           {/* Personal Details */}
           {(age || candidate.gender || department) && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 Personal
               </h4>
               <div className="grid grid-cols-1 gap-2 text-[11px]">
                 {age && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Age:</span>
-                    <span className="text-slate-700 font-medium">{age}</span>
+                    <span className="text-slate-500 dark:text-white">Age:</span>
+                    <span className="text-slate-700 dark:text-white font-medium">{age}</span>
                   </div>
                 )}
                 {candidate.gender && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Gender:</span>
-                    <span className="text-slate-700 font-medium capitalize">
+                    <span className="text-slate-500 dark:text-white">Gender:</span>
+                    <span className="text-slate-700 dark:text-white font-medium capitalize">
                       {candidate.gender.charAt(0).toUpperCase() + candidate.gender.slice(1).toLowerCase()}
                     </span>
                   </div>
@@ -253,8 +253,8 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
 
                 {department && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Department:</span>
-                    <span className="text-slate-700 font-medium">{department}</span>
+                    <span className="text-slate-500 dark:text-white">Department:</span>
+                    <span className="text-slate-700 dark:text-white font-medium">{department}</span>
                   </div>
                 )}
               </div>
@@ -264,13 +264,13 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           {/* Qualification */}
           {qualificationLabel && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-1">
                 <GraduationCap className="h-3 w-3" />
                 Qualification
               </h4>
               <div className="text-[11px] flex items-center gap-2">
-                <span className="text-slate-500">Qualification:</span>
-                <span className="text-slate-700 font-medium">{qualificationLabel}</span>
+                <span className="text-slate-500 dark:text-white">Qualification:</span>
+                <span className="text-slate-700 dark:text-white font-medium">{qualificationLabel}</span>
               </div>
             </div>
           )}
@@ -278,27 +278,27 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           {/* Experience */}
           {workExpDuration && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-1">
                 <Briefcase className="h-3 w-3" />
                 Experience
               </h4>
 
               <div className="text-[11px] flex items-center gap-2">
-                <span className="text-slate-500">Total Experience:</span>
-                <span className="text-slate-700 font-medium">{workExpDuration}</span>
+                <span className="text-slate-500 dark:text-white">Total Experience:</span>
+                <span className="text-slate-700 dark:text-white font-medium">{workExpDuration}</span>
               </div>
 
               {experienceYearsNumeric !== null && (
                 <div className="text-[11px] flex items-center gap-2">
-                  <span className="text-slate-500">Years:</span>
-                  <span className="text-slate-700 font-medium">{experienceYearsNumeric} {Number(experienceYearsNumeric) === 1 ? 'year' : 'years'}</span>
+                  <span className="text-slate-500 dark:text-white">Years:</span>
+                  <span className="text-slate-700 dark:text-white font-medium">{experienceYearsNumeric} {Number(experienceYearsNumeric) === 1 ? 'year' : 'years'}</span>
                 </div>
               )}
 
               {/* Work history details (show up to 3 recent entries) with per-entry duration */}
               {Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0 && (
                 <div className="pt-2 space-y-2">
-                  <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work Experience</h5>
+                  <h5 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wide">Work Experience</h5>
                   <div className="space-y-2 text-[11px]">
                     {candidate.workExperiences.slice(0, 3).map((we: any, idx: number) => {
                       const start = we.startDate || we.start_date;
@@ -340,10 +340,10 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                       return (
                         <div key={idx} className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate text-black">{jobTitle}</div>
-                            <div className="text-[11px] text-black truncate">{company}{we.location ? ` • ${we.location}` : ""}{roleShort ? ` • ${roleShort}` : ""}</div>
+                            <div className="text-sm font-medium truncate text-black dark:text-white">{jobTitle}</div>
+                            <div className="text-[11px] text-black dark:text-white truncate">{company}{we.location ? ` • ${we.location}` : ""}{roleShort ? ` • ${roleShort}` : ""}</div>
                           </div>
-                          <div className="text-[11px] text-black whitespace-nowrap">
+                          <div className="text-[11px] text-black dark:text-white whitespace-nowrap">
                             {period}{duration ? ` • ${duration}` : ""}
                           </div>
                         </div>

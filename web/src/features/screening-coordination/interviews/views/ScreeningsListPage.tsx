@@ -395,7 +395,7 @@ export default function ScreeningsListPage() {
             )}
           </div>
         </TooltipTrigger>
-        <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl dark:bg-slate-800 dark:border-slate-700">
+        <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl dark:bg-black dark:border-slate-700">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-900">Project Documents</h4>
@@ -546,9 +546,9 @@ export default function ScreeningsListPage() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen flex flex-col overflow-hidden overflow-x-hidden max-w-full bg-slate-50/50 dark:bg-slate-900 dark:text-white">
+      <div className="h-screen flex flex-col overflow-hidden overflow-x-hidden max-w-full bg-slate-50/50 dark:bg-black dark:text-white">
       {/* Page Title */}
-     <div className="px-6 py-4 border-b bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-20 overflow-hidden flex-shrink-0 dark:bg-slate-800/80 dark:border-slate-700">
+     <div className="px-6 py-4 border-b bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-20 overflow-hidden flex-shrink-0 dark:bg-black/80 dark:border-slate-700">
   <div className="flex items-center justify-between max-w-7xl mx-auto min-w-0 w-full gap-4">
     {/* Logo + Title */}
     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -572,7 +572,7 @@ export default function ScreeningsListPage() {
     </div>
 
     {/* Status indicator */}
-    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full">
+    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-shrink-0 bg-slate-100 dark:bg-black px-3 py-1.5 rounded-full">
       <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
       <span className="hidden sm:inline">Live</span>
     </div>
@@ -581,7 +581,7 @@ export default function ScreeningsListPage() {
 
       {/* Search & Filters Section */}
      <div className="w-full mx-auto pt-4 pb-4 px-4 max-w-7xl overflow-hidden flex-shrink-0">
-  <Card className="border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden dark:bg-slate-800 dark:border-slate-700">
+  <Card className="border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden dark:bg-black dark:border-slate-700">
     <CardContent className="p-4">
       <div className="flex flex-wrap items-center gap-2">
         {/* Search Bar */}
@@ -591,7 +591,7 @@ export default function ScreeningsListPage() {
             placeholder="Search candidates, projects, roles..."
             value={filters.search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white transition-colors dark:border-slate-600 dark:bg-slate-700/50 dark:focus:bg-slate-800"
+            className="pl-9 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white transition-colors dark:border-slate-600 dark:bg-black/50 dark:focus:bg-black"
           />
           {filters.search && (
             <Button
@@ -669,8 +669,8 @@ export default function ScreeningsListPage() {
       {/* Master-Detail Layout */}
       <div className="flex-1 flex overflow-hidden px-4 pb-4 gap-4 min-w-0 w-full max-w-full">
         {/* Left Panel - Interview List */}
-      <Card className="w-80 flex-shrink-0 border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden flex flex-col dark:bg-slate-900 dark:border-slate-700">
-  <CardHeader className="p-4 border-b bg-slate-50/70 dark:bg-slate-950/50 flex-shrink-0">
+      <Card className="w-80 flex-shrink-0 border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden flex flex-col dark:bg-black dark:border-slate-700">
+  <CardHeader className="p-4 border-b bg-slate-50/70 dark:bg-black/50 flex-shrink-0">
     <div className="flex items-center justify-between gap-2 min-w-0">
       <div className="min-w-0">
         <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-100">
@@ -746,7 +746,7 @@ export default function ScreeningsListPage() {
                       ? "bg-indigo-50/80 border-indigo-300 shadow-sm dark:bg-indigo-950/40 dark:border-indigo-700/70 dark:shadow-indigo-950/30"
                       : // Normal + hover states
                       "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200/80 hover:shadow-sm",
-                    "dark:bg-slate-900/60 dark:border-transparent",
+                    "dark:bg-black/60 dark:border-transparent",
                     "dark:hover:bg-slate-800/90 dark:hover:border-slate-600/60 dark:hover:shadow-md"
                   )}
                 >
@@ -798,7 +798,7 @@ export default function ScreeningsListPage() {
                         "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium",
                         isCompleted
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"
-                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                          : "bg-slate-100 text-slate-600 dark:bg-black dark:text-slate-300"
                       )}
                     >
                       <ModeIcon className="h-3 w-3" />
@@ -910,7 +910,7 @@ export default function ScreeningsListPage() {
 </Card>
 
         {/* Right Panel - Interview Details */}
-      <div className="flex-1 overflow-hidden bg-white border border-slate-200/60 rounded-xl min-w-0 min-h-0 max-w-full dark:bg-slate-900 dark:border-slate-700">
+      <div className="flex-1 overflow-hidden bg-white border border-slate-200/60 rounded-xl min-w-0 min-h-0 max-w-full dark:bg-black dark:border-slate-700">
   {selectedInterview ? (
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
@@ -1089,7 +1089,7 @@ export default function ScreeningsListPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Candidate Info */}
-          <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-slate-800/60">
+          <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-black/60">
             <CardContent className="p-5">
               <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200">
                 <User className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
@@ -1178,7 +1178,7 @@ export default function ScreeningsListPage() {
           </Card>
 
           {/* Project & Role */}
-          <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-slate-800/60">
+          <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-black/60">
             <CardContent className="p-5">
               <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200">
                 <Briefcase className="h-4 w-4 text-purple-500 dark:text-purple-400" />
@@ -1278,7 +1278,7 @@ export default function ScreeningsListPage() {
         </div>
 
         {/* Interview Details */}
-        <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-slate-800/60">
+        <Card className="border border-slate-200/60 shadow-sm rounded-lg dark:border-slate-700 dark:bg-black/60">
           <CardContent className="p-5">
             <h3 className="text-sm font-medium text-slate-700 mb-4 dark:text-slate-200">Interview Details</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 text-sm">
@@ -1349,7 +1349,7 @@ export default function ScreeningsListPage() {
                           {items.map((ci: ChecklistItem) => (
                             <div
                               key={ci.id}
-                              className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-3.5"
+                              className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-black/40 p-3.5"
                             >
                               <div className="flex-1 min-w-0 pr-4">
                                 <div className="text-sm text-slate-800 dark:text-slate-200">
@@ -1392,7 +1392,7 @@ export default function ScreeningsListPage() {
   ) : (
     <div className="h-full flex items-center justify-center">
       <div className="text-center max-w-sm">
-        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-black flex items-center justify-center mx-auto mb-4">
           <ClipboardCheck className="h-8 w-8 text-slate-400 dark:text-slate-500" />
         </div>
         <h3 className="text-lg font-medium text-slate-700 dark:text-slate-200">

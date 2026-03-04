@@ -133,9 +133,9 @@ export default function UsersPage() {
 
   if (!canReadUsers) {
     return (
-      <div className="min-h-screen p-6 bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-screen p-6 bg-slate-50 dark:bg-black">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+          <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                 Access Denied
@@ -152,9 +152,9 @@ export default function UsersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen p-6 bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-screen p-6 bg-slate-50 dark:bg-black">
         <div className="w-full mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+          <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
             <CardContent className="pt-12 pb-12 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
               <p className="text-slate-600 dark:text-slate-400">Loading users...</p>
@@ -166,10 +166,10 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-black">
       <div className="w-full mx-auto space-y-6">
         {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
           <CardContent className="pt-6">
             <div className="space-y-6">
               {/* Premium Search Bar with Enhanced Styling */}
@@ -225,7 +225,7 @@ export default function UsersPage() {
         </Card>
 
         {/* Users Table Card */}
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <UsersIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -240,7 +240,7 @@ export default function UsersPage() {
           <CardContent>
             <div className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
               <Table>
-                <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
+                <TableHeader className="bg-slate-50 dark:bg-black/50">
                   <TableRow className="border-slate-200 dark:border-slate-800">
                     <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                       User
@@ -354,7 +354,7 @@ export default function UsersPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="dark:bg-slate-900 dark:border-slate-800">
+                          <DropdownMenuContent align="end" className="dark:bg-black dark:border-slate-800">
                             <DropdownMenuItem
                               onClick={() =>
                                 navigate(`/admin/users/${user.id}`)
@@ -375,7 +375,7 @@ export default function UsersPage() {
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit User
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator className="dark:bg-slate-800" />
+                                <DropdownMenuSeparator className="dark:bg-black" />
                                 <DropdownMenuItem
                                   onClick={() =>
                                     handleDeleteUserClick(user.id, user.name)
@@ -424,7 +424,7 @@ export default function UsersPage() {
 
         {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+          <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-slate-600 dark:text-slate-400">

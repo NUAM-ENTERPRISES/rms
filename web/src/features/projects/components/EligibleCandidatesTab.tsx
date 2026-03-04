@@ -234,21 +234,21 @@ export default function EligibleCandidatesTab({
 
       {filteredCandidates.length === 0 ? (
         <div className="text-center py-12">
-          <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <UserCheck className="h-12 w-12 text-gray-400 dark:text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No Eligible Candidates
           </h3>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-slate-400">
             No eligible candidates found matching the project requirements.
           </p>
         </div>
       ) : (
         <div>
-          <div className="bg-blue-50 rounded-lg p-4 mb-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">
+          <div className="bg-blue-50 dark:bg-blue-900/40 rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
               Eligible Candidates
             </h3>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-slate-400">
               Candidates matching project requirements with match scores
             </p>
           </div>

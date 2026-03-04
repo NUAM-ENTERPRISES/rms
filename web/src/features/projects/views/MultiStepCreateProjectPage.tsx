@@ -57,10 +57,8 @@ export default function MultiStepCreateProjectPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
 
-  // RTK Query hooks
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
 
-  // Form setup
   const {
     control,
     handleSubmit,
@@ -75,7 +73,6 @@ export default function MultiStepCreateProjectPage() {
     defaultValues: defaultProjectValues,
   });
 
-  // Create progress steps with status
   const progressSteps: ProgressStep[] = STEPS.map((step, index) => ({
     ...step,
     status:
@@ -86,37 +83,34 @@ export default function MultiStepCreateProjectPage() {
         : "upcoming",
   }));
 
-  // Navigation functions
   const goToNextStep = async () => {
-    // Local pre-validation for Requirement Criteria (step 1): ensure Qty is present and > 0
     if (currentStep === 1) {
       const roles = watch("rolesNeeded") || [];
       let hasQtyError = false;
       roles.forEach((r: any, idx: number) => {
         clearErrors([`rolesNeeded.${idx}.quantity`]);
         if (r.quantity == null || r.quantity <= 0) {
-          setError(`rolesNeeded.${idx}.quantity`, { type: "manual", message: "Quantity is required — enter number of positions" });
+          setError(`rolesNeeded.${idx}.quantity`, {
+            type: "manual",
+            message: "Quantity is required — enter number of positions",
+          });
           hasQtyError = true;
         }
       });
       if (hasQtyError) {
-        // show the same friendly message used in the UI so users see consistent feedback
         toast.error("Quantity is required — enter number of positions");
-        return; // block navigation and avoid showing Zod's generic message
+        return;
       }
     }
 
-    // Validate current step before proceeding
     const stepFields = getStepFields(currentStep);
     const isStepValid = await trigger(stepFields);
 
-    // Additional local validation for Candidate Criteria (step 2)
     if (currentStep === 2) {
       const roles = watch("rolesNeeded") || [];
       const invalidRoleIndexes: number[] = [];
 
       roles.forEach((r: any, idx: number) => {
-        // clear any previous manual errors for these specific candidate fields
         clearErrors([
           `rolesNeeded.${idx}.minExperience`,
           `rolesNeeded.${idx}.maxExperience`,
@@ -127,23 +121,49 @@ export default function MultiStepCreateProjectPage() {
         let roleHasError = false;
 
         if (r.minExperience == null) {
-          setError(`rolesNeeded.${idx}.minExperience`, { type: "manual", message: "Minimum experience is required" });
+          setError(`rolesNeeded.${idx}.minExperience`, {
+            type: "manual",
+            message: "Minimum experience is required",
+          });
           roleHasError = true;
         }
         if (r.maxExperience == null) {
-          setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Maximum experience is required" });
+          setError(`rolesNeeded.${idx}.maxExperience`, {
+            type: "manual",
+            message: "Maximum experience is required",
+          });
           roleHasError = true;
         }
-        if (r.minExperience != null && r.maxExperience != null && r.minExperience > r.maxExperience) {
-          setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Minimum experience must be less than or equal to maximum experience" });
+        if (
+          r.minExperience != null &&
+          r.maxExperience != null &&
+          r.minExperience > r.maxExperience
+        ) {
+          setError(`rolesNeeded.${idx}.maxExperience`, {
+            type: "manual",
+            message:
+              "Minimum experience must be less than or equal to maximum experience",
+          });
           roleHasError = true;
         }
-        if (!r.ageRequirement || !/^\s*\d+\s*to\s*\d+\s*$/.test(r.ageRequirement)) {
-          setError(`rolesNeeded.${idx}.ageRequirement`, { type: "manual", message: "Age is required in format '18 to 25'" });
+        if (
+          !r.ageRequirement ||
+          !/^\s*\d+\s*to\s*\d+\s*$/.test(r.ageRequirement)
+        ) {
+          setError(`rolesNeeded.${idx}.ageRequirement`, {
+            type: "manual",
+            message: "Age is required in format '18 to 25'",
+          });
           roleHasError = true;
         }
-        if (!r.educationRequirementsList || r.educationRequirementsList.length === 0) {
-          setError(`rolesNeeded.${idx}.educationRequirementsList`, { type: "manual", message: "Select at least one education requirement" });
+        if (
+          !r.educationRequirementsList ||
+          r.educationRequirementsList.length === 0
+        ) {
+          setError(`rolesNeeded.${idx}.educationRequirementsList`, {
+            type: "manual",
+            message: "Select at least one education requirement",
+          });
           roleHasError = true;
         }
 
@@ -151,8 +171,10 @@ export default function MultiStepCreateProjectPage() {
       });
 
       if (invalidRoleIndexes.length) {
-        toast.error("Please fix required candidate fields (experience, age, education) for the highlighted roles");
-        return; // block navigation
+        toast.error(
+          "Please fix required candidate fields (experience, age, education) for the highlighted roles"
+        );
+        return;
       }
     }
 
@@ -161,33 +183,33 @@ export default function MultiStepCreateProjectPage() {
         setCurrentStep(currentStep + 1);
       }
     } else {
-      // Log errors for debugging
       console.log("Validation errors:", errors);
-      
+
       let errorMessage = "Please fix the errors before proceeding";
-      
-      // Better error message extraction for complex schemas
+
       if (errors.rolesNeeded) {
         if ((errors.rolesNeeded as any).root) {
           errorMessage = (errors.rolesNeeded as any).root.message;
         } else if (Array.isArray(errors.rolesNeeded)) {
-          // Find first entry that has errors
-          const firstRoleErrorEntry = errors.rolesNeeded.find(e => e);
+          const firstRoleErrorEntry = errors.rolesNeeded.find((e) => e);
           if (firstRoleErrorEntry) {
-            // Find first field error in that role
-            const firstFieldError = Object.values(firstRoleErrorEntry).find(err => (err as any)?.message);
+            const firstFieldError = Object.values(firstRoleErrorEntry).find(
+              (err) => (err as any)?.message
+            );
             if (firstFieldError) {
               errorMessage = `Role Error: ${(firstFieldError as any).message}`;
             }
           }
         }
       } else {
-        const firstError = Object.values(errors).find(err => (err as any)?.message);
+        const firstError = Object.values(errors).find(
+          (err) => (err as any)?.message
+        );
         if (firstError) {
           errorMessage = (firstError as any).message;
         }
       }
-      
+
       toast.error(errorMessage);
     }
   };
@@ -204,87 +226,79 @@ export default function MultiStepCreateProjectPage() {
     }
   };
 
-  // Get fields to validate for each step
   const getStepFields = (stepIndex: number): (keyof ProjectFormData)[] => {
     switch (stepIndex) {
-      case 0: // Project Details
+      case 0:
         return ["title", "deadline", "projectType", "description"];
-      case 1: // Requirement Criteria
+      case 1:
         return ["rolesNeeded"];
-      case 2: // Candidate Criteria
+      case 2:
         return ["rolesNeeded"];
-      case 3: // Document Requirements
+      case 3:
         return ["documentRequirements"];
-      case 4: // Preview
+      case 4:
         return [];
       default:
         return [];
     }
   };
 
-  // Handle form submission - only called when user clicks "Create Project" button
   const onSubmit = async (data: ProjectFormData) => {
     try {
-      // Transform the data for backend
       const transformedData = {
         ...data,
         deadline:
           data.deadline instanceof Date
             ? data.deadline.toISOString()
             : data.deadline,
-        // API requires clientId to be a string
         clientId: data.clientId || "",
         rolesNeeded: data.rolesNeeded.map((role: any) => {
           const { departmentId, ...roleWithoutDepartmentId } = role;
           return {
             ...roleWithoutDepartmentId,
-            // Candidate criteria fields
             ageRequirement: role.ageRequirement || undefined,
             accommodation: !!role.accommodation,
             food: !!role.food,
             transport: !!role.transport,
             target: role.target !== undefined ? role.target : undefined,
-            // Convert arrays to JSON strings for backend
             requiredSkills: JSON.stringify(role.requiredSkills || []),
             candidateStates: JSON.stringify(role.candidateStates || []),
             candidateReligions: JSON.stringify(role.candidateReligions || []),
-          // Convert string arrays to JSON strings if needed
-          specificExperience: role.specificExperience
-            ? JSON.stringify(
-                role.specificExperience.split(",").map((s: string) => s.trim())
-              )
-            : undefined,
-          requiredCertifications: role.requiredCertifications
-            ? JSON.stringify(
-                role.requiredCertifications
-                  .split(",")
-                  .map((s: string) => s.trim())
-              )
-            : undefined,
-          skills: role.skills
-            ? JSON.stringify(
-                role.skills.split(",").map((s: string) => s.trim())
-              )
-            : undefined,
-          languageRequirements: role.languageRequirements
-            ? JSON.stringify(
-                role.languageRequirements
-                  .split(",")
-                  .map((s: string) => s.trim())
-              )
-            : undefined,
-          licenseRequirements: role.licenseRequirements
-            ? JSON.stringify(
-                role.licenseRequirements.split(",").map((s: string) => s.trim())
-              )
-            : undefined,
-          institutionRequirements: role.institutionRequirements
-            ? role.institutionRequirements
-            : undefined,
-          // salaryRange must be a JSON string as per backend requirement
-          salaryRange: role.salaryRange
-            ? JSON.stringify(role.salaryRange)
-            : undefined,
+            specificExperience: role.specificExperience
+              ? JSON.stringify(
+                  role.specificExperience.split(",").map((s: string) => s.trim())
+                )
+              : undefined,
+            requiredCertifications: role.requiredCertifications
+              ? JSON.stringify(
+                  role.requiredCertifications
+                    .split(",")
+                    .map((s: string) => s.trim())
+                )
+              : undefined,
+            skills: role.skills
+              ? JSON.stringify(
+                  role.skills.split(",").map((s: string) => s.trim())
+                )
+              : undefined,
+            languageRequirements: role.languageRequirements
+              ? JSON.stringify(
+                  role.languageRequirements
+                    .split(",")
+                    .map((s: string) => s.trim())
+                )
+              : undefined,
+            licenseRequirements: role.licenseRequirements
+              ? JSON.stringify(
+                  role.licenseRequirements.split(",").map((s: string) => s.trim())
+                )
+              : undefined,
+            institutionRequirements: role.institutionRequirements
+              ? role.institutionRequirements
+              : undefined,
+            salaryRange: role.salaryRange
+              ? JSON.stringify(role.salaryRange)
+              : undefined,
           };
         }),
         documentRequirements: data.documentRequirements || [],
@@ -301,7 +315,6 @@ export default function MultiStepCreateProjectPage() {
     }
   };
 
-  // Render current step
   const renderCurrentStep = () => {
     const stepProps = {
       control,
@@ -333,13 +346,13 @@ export default function MultiStepCreateProjectPage() {
 
   if (!canCreateProjects) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:bg-black p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">
+          <div className="bg-white dark:bg-black rounded-lg shadow-lg p-8 text-center border border-slate-200 dark:border-slate-800">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-4">
               Access Denied
             </h2>
-            <p className="text-slate-600">
+            <p className="text-slate-600 dark:text-slate-400">
               You don't have permission to create projects.
             </p>
           </div>
@@ -349,10 +362,10 @@ export default function MultiStepCreateProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="w-full mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br dark:bg-black">
+      <div className="w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
         {/* Progress Bar */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-white dark:bg-black rounded-lg shadow-lg p-4 border border-slate-200 dark:border-slate-800">
           <ProjectCreationProgress
             steps={progressSteps}
             currentStep={currentStep}
@@ -365,13 +378,13 @@ export default function MultiStepCreateProjectPage() {
           {renderCurrentStep()}
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200 bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between pt-6 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-black rounded-lg shadow-lg p-6">
             {currentStep === 0 ? (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/projects")}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900"
               >
                 Cancel
               </Button>
@@ -380,9 +393,9 @@ export default function MultiStepCreateProjectPage() {
                 type="button"
                 variant="outline"
                 onClick={goToPreviousStep}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
                 Back
               </Button>
             )}
@@ -392,7 +405,7 @@ export default function MultiStepCreateProjectPage() {
                 <Button
                   type="button"
                   onClick={goToNextStep}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 h-11 px-8"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-700 dark:to-blue-800 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 h-11 px-8"
                 >
                   Continue
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -402,7 +415,7 @@ export default function MultiStepCreateProjectPage() {
                   type="button"
                   onClick={handleSubmit(onSubmit)}
                   disabled={!isValid || isCreating}
-                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 h-11 px-8"
+                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 dark:from-green-700 dark:to-green-800 dark:hover:from-green-600 dark:hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 h-11 px-8"
                 >
                   {isCreating ? (
                     <>

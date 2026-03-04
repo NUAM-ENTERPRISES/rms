@@ -537,7 +537,7 @@ export default function MultiStepEditProjectPage() {
               </div>
               <div className="space-y-4">
                 <div className="h-32 bg-slate-200 rounded-lg"></div>
-                <div className="h-48 bg-slate-200 rounded-lg"></div>
+                <div className="h-48 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
               </div>
             </div>
           </div>
@@ -586,30 +586,30 @@ export default function MultiStepEditProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="w-full mx-auto space-y-6">
+<div className="min-h-screen bg-gradient-to-br  dark:bg-black">      
+  <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-              Edit Project
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Update project details and requirements
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/projects/${projectId}`)}
-            className="h-11 px-6 border-slate-200 hover:border-slate-300"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-        </div>
+      <div className="flex items-center justify-between">
+  <div>
+    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white ml-2 mt-2">
+      Edit Project
+    </h1>
+    <p className="text-slate-600 dark:text-slate-300 mt-2 ml-2">
+      Update project details and requirements
+    </p>
+  </div>
+  <Button
+    variant="outline"
+    onClick={() => navigate(`/projects/${projectId}`)}
+    className="h-11 px-6 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
+  >
+    <X className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
+    Cancel
+  </Button>
+</div>
 
         {/* Progress Bar */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-white dark:bg-black rounded-lg shadow-lg p-4 dark:border dark:border-slate-700">
           <ProjectCreationProgress
             steps={progressSteps}
             currentStep={currentStep}
@@ -622,7 +622,7 @@ export default function MultiStepEditProjectPage() {
           {renderCurrentStep()}
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200 bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between pt-6 border-t border-slate-200 bg-white dark:bg-black rounded-lg shadow-lg p-6 dark:border-slate-700">
             {currentStep === 0 ? (
               <Button
                 type="button"

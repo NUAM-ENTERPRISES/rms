@@ -517,6 +517,7 @@ import { useTheme } from "@/context/ThemeContext"; // ← added this import
 export default function ClientsPage() {
   const navigate = useNavigate();
   const { theme } = useTheme(); // ← added this line
+  const isDark = theme === "dark";
   const canWriteClients = useCan("write:clients");
   const canReadClients = useCan("read:clients");
 
@@ -601,7 +602,7 @@ export default function ClientsPage() {
       )}>
         <Card className={cn(
           "max-w-md w-full border-0 shadow-xl rounded-2xl text-center py-12",
-          theme === "dark" ? "bg-slate-900 text-white" : "bg-white"
+          isDark ? "bg-black text-white" : "bg-white"
         )}>
           <CardHeader>
             <CardTitle className={cn(
@@ -631,7 +632,7 @@ export default function ClientsPage() {
         {/* Search & Filters Section */}
         <Card className={cn(
           "border-0 shadow-lg backdrop-blur-sm",
-          theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+          isDark ? "bg-black" : "bg-white/80"
         )}>
           <CardContent>
             <div className="space-y-6">
@@ -705,7 +706,7 @@ export default function ClientsPage() {
                     </SelectTrigger>
                     <SelectContent className={cn(
                       "rounded-xl border-0 shadow-2xl backdrop-blur-sm",
-                      theme === "dark" ? "bg-slate-900 border-slate-700" : "bg-white/95"
+                      isDark ? "bg-black border-slate-800" : "bg-white/95"
                     )}>
                       <SelectItem
                         value="all"
@@ -785,7 +786,7 @@ export default function ClientsPage() {
                 key={i}
                 className={cn(
                   "border-0 shadow-lg animate-pulse",
-                  theme === "dark" ? "bg-slate-900/80" : "bg-white/80 backdrop-blur-sm"
+                  isDark ? "bg-black" : "bg-white/80 backdrop-blur-sm"
                 )}
               >
                 <CardHeader className="pb-3">
@@ -835,7 +836,7 @@ export default function ClientsPage() {
             {/* Clients Grid */}
             <Card className={cn(
               "border-0 shadow-lg backdrop-blur-sm",
-              theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+              isDark ? "bg-black" : "bg-white/80"
             )}>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -866,8 +867,8 @@ export default function ClientsPage() {
                         key={client.id}
                         className={cn(
                           "group border-0 shadow-lg transition-all duration-200 transform hover:-translate-y-1 cursor-pointer backdrop-blur-sm",
-                          theme === "dark"
-                            ? "bg-slate-900/80 hover:bg-slate-800/90 hover:shadow-2xl"
+                          isDark
+                            ? "bg-black border border-slate-800 hover:bg-black/90 hover:shadow-2xl"
                             : "bg-white/80 hover:shadow-xl"
                         )}
                         onClick={() => navigate(`/clients/${client.id}`)}
@@ -924,7 +925,7 @@ export default function ClientsPage() {
                                     align="end"
                                     className={cn(
                                       "rounded-xl",
-                                      theme === "dark" ? "bg-slate-900 border-slate-700" : ""
+                                      isDark ? "bg-black border-slate-800" : ""
                                     )}
                                   >
                                     <DropdownMenuItem

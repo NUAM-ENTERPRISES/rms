@@ -205,7 +205,7 @@ export default function MyInterviewsListPage() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
       {/* Comfortable Header */}
-      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+      <div className="border-b bg-white/80 dark:bg-black/80 backdrop-blur">
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -342,7 +342,7 @@ export default function MyInterviewsListPage() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Comfortable List Panel */}
-        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60 flex flex-col">
+        <div className="w-80 border-r bg-white/60 dark:bg-black/60 flex flex-col">
           {filteredList.length > 0 && filters.projectId !== "all" && (
             <div className="p-3 border-b flex items-center justify-between bg-white/40 dark:bg-gray-800/40">
               <div className="flex items-center gap-2">

@@ -369,9 +369,9 @@ export default function TrainingListPage() {
   }
 
   return (
-  <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
+  <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:bg-gradient-to-br dark:from-black dark:via-black dark:to-black/30">
     {/* Premium Header */}
-    <header className="border-b bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-20 dark:bg-slate-800/90 dark:border-slate-700">
+    <header className="border-b bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-20 dark:bg-black/90 dark:border-slate-700">
       <div className="px-6 py-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -418,7 +418,7 @@ export default function TrainingListPage() {
               placeholder="Search candidates, projects, type..."
               value={filters.search}
               onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-              className="pl-12 h-10 rounded-xl border-indigo-200/50 bg-white/80 shadow-inner focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-300 dark:bg-slate-800/80 dark:border-slate-600 dark:text-white"
+              className="pl-12 h-10 rounded-xl border-indigo-200/50 bg-white/80 shadow-inner focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-300 dark:bg-black/80 dark:border-slate-600 dark:text-white"
             />
           </div>
 
@@ -472,7 +472,7 @@ export default function TrainingListPage() {
     {/* Master-Detail Layout */}
 <div className="flex-1 flex overflow-hidden">
   {/* Left Panel - Training List */}
-  <div className="w-96 border-r bg-white/90 backdrop-blur-2xl shadow-2xl rounded-l-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/30 dark:bg-slate-800/90 dark:border-slate-700 dark:ring-slate-700">
+  <div className="w-96 border-r bg-white/90 backdrop-blur-2xl shadow-2xl rounded-l-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/30 dark:bg-black/90 dark:border-slate-700 dark:ring-slate-700">
     <ScrollArea className="flex-1">
       {filteredTrainings.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center p-10">
@@ -507,7 +507,7 @@ export default function TrainingListPage() {
                   "w-full text-left p-5 rounded-2xl border transition-all duration-300 group relative overflow-hidden shadow-sm",
                   isSelected
                     ? "bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-400/50 shadow-2xl ring-2 ring-indigo-300/40 scale-[1.02] dark:from-indigo-900 dark:to-purple-900 dark:border-indigo-600/50 dark:ring-indigo-600/40"
-                    : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-xl hover:scale-[1.02] hover:shadow-indigo-100/50 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-indigo-600/50 dark:hover:bg-slate-700"
+                    : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-xl hover:scale-[1.02] hover:shadow-indigo-100/50 dark:bg-black dark:border-slate-700 dark:hover:border-indigo-600/50 dark:hover:bg-black"
                 )}
               >
                 {/* Subtle gradient overlay on hover */}
@@ -603,7 +603,7 @@ export default function TrainingListPage() {
   </div>
 
       {/* Right Panel - Training Details */}
-    <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20 min-w-0 min-h-0 dark:from-slate-900 dark:to-indigo-900/20">
+    <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20 min-w-0 min-h-0 dark:from-black dark:to-black/20">
     {selectedTraining ? (
       <ScrollArea className="h-full">
         <div className="p-8 max-w-5xl mx-auto space-y-8">
@@ -670,7 +670,7 @@ export default function TrainingListPage() {
 
           {/* Progress Card */}
           {getTrainingSessions(selectedTraining).length > 0 && (
-            <Card className="border-0 shadow-2xl bg-white/85 backdrop-blur-lg rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:bg-slate-800/85 dark:ring-slate-700">
+            <Card className="border-0 shadow-2xl bg-white/85 backdrop-blur-lg rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:bg-black/85 dark:ring-slate-700">
               <CardContent className="p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
@@ -835,7 +835,7 @@ export default function TrainingListPage() {
     <div className="relative mx-auto w-32 h-32">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 rounded-full blur-2xl animate-pulse-slow opacity-70 dark:from-indigo-600/20 dark:to-purple-600/20"></div>
       <div className="absolute inset-2 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-xl animate-pulse-slow delay-150 opacity-50 dark:opacity-30"></div>
-      <div className="relative z-10 flex items-center justify-center w-full h-full rounded-full bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-indigo-200/50 dark:border-indigo-700/40 shadow-xl">
+      <div className="relative z-10 flex items-center justify-center w-full h-full rounded-full bg-white/80 dark:bg-black/70 backdrop-blur-sm border border-indigo-200/50 dark:border-indigo-700/40 shadow-xl">
         <GraduationCap className="h-20 w-20 text-indigo-600 dark:text-indigo-400" />
       </div>
     </div>

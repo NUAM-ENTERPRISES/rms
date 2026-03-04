@@ -421,7 +421,7 @@ export default function InterviewsPage() {
           <CardHeader className={cn(
             "border-b pb-6 backdrop-blur-sm",
             theme === "dark" 
-              ? "border-slate-800/60 bg-slate-900/70" 
+              ? "border-slate-800/60 bg-black/70" 
               : "border-slate-100/60 bg-white/70"
           )}>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -447,7 +447,8 @@ export default function InterviewsPage() {
               {/* Short Listing Pending Candidates */}
               <Card className={cn(
                 "border-0 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72 backdrop-blur-sm",
-                theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+                theme === "dark" ? "bg-black/80" : "bg-white/80",
+                theme === "dark" ? "dark:border dark:border-slate-700" : ""
               )}>
                 <CardHeader className={cn(
                   "pb-5",
@@ -511,7 +512,7 @@ export default function InterviewsPage() {
                   {shortlistingCount === 0 ? (
                     <div className={cn(
                       "text-center py-12",
-                      theme === "dark" ? "text-slate-500" : "text-slate-500"
+                      theme === "dark" ? "text-slate-500 bg-black" : "text-slate-500"
                     )}>
                       <Calendar className={cn(
                         "h-14 w-14 mx-auto mb-5 opacity-40",
@@ -633,7 +634,8 @@ export default function InterviewsPage() {
               {/* Shortlisted Candidates */}
               <Card className={cn(
                 "border-0 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72 backdrop-blur-sm",
-                theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+                theme === "dark" ? "bg-black/80" : "bg-white/80",
+                theme === "dark" ? "dark:border dark:border-slate-700" : ""
               )}>
                 <CardHeader className={cn(
                   "pb-5",
@@ -697,7 +699,7 @@ export default function InterviewsPage() {
                   {shortlistedCountPreview === 0 ? (
                     <div className={cn(
                       "text-center py-12",
-                      theme === "dark" ? "text-slate-500" : "text-slate-500"
+                      theme === "dark" ? "text-slate-500 bg-black" : "text-slate-500"
                     )}>
                       <Calendar className={cn(
                         "h-14 w-14 mx-auto mb-5 opacity-40",
@@ -820,7 +822,8 @@ export default function InterviewsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <Card className={cn(
                 "border-0 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72 backdrop-blur-sm",
-                theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+                theme === "dark" ? "bg-black/80" : "bg-white/80",
+                theme === "dark" ? "dark:border dark:border-slate-700" : ""
               )}>
                 <CardHeader className={cn(
                   "pb-5",
@@ -877,7 +880,7 @@ export default function InterviewsPage() {
                   {notShortlistedCountPreview === 0 ? (
                     <div className={cn(
                       "text-center py-12",
-                      theme === "dark" ? "text-slate-500" : "text-slate-500"
+                      theme === "dark" ? "text-slate-500 bg-black" : "text-slate-500"
                     )}>
                       <Calendar className={cn(
                         "h-14 w-14 mx-auto mb-5 opacity-40",

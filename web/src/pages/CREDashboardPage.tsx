@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useCan } from "@/hooks/useCan";
 import { useTheme } from "@/context/ThemeContext";
 
+export default function CREDashboardPage() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);

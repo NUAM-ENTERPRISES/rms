@@ -197,7 +197,7 @@ export default function ProjectCard({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                  <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} dark:text-white`}>
                     Positions
                   </span>
                 </div>

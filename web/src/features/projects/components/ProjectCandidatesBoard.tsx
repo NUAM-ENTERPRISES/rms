@@ -550,7 +550,7 @@ const ProjectCandidatesBoard = ({
 
     if (filteredEligible.length === 0) {
       return (
-        <div className="text-center py-8 text-slate-500 text-sm">
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
           No eligible candidates
         </div>
       );
@@ -823,7 +823,7 @@ const ProjectCandidatesBoard = ({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-white dark:bg-black">
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
@@ -857,10 +857,10 @@ const ProjectCandidatesBoard = ({
         {columns.map((column) => (
           <Card
             key={column.id}
-            className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col"
+            className="border-0 shadow-lg bg-white/80 dark:bg-black/80 dark:border dark:border-slate-700 backdrop-blur-sm rounded-2xl flex flex-col"
             aria-labelledby={`column-${column.id}-title`}
           >
-            <CardHeader className="!px-3 !py-1.5 !pb-1.5 border-b border-slate-200">
+            <CardHeader className="!px-3 !py-1.5 !pb-1.5 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div
@@ -872,17 +872,17 @@ const ProjectCandidatesBoard = ({
                   <div className="min-w-0">
                     <CardTitle
                       id={`column-${column.id}-title`}
-                      className="text-sm font-semibold text-slate-900 truncate leading-tight"
+                      className="text-sm font-semibold text-slate-900 dark:text-white truncate leading-tight"
                     >
                       {column.title}
                     </CardTitle>
-                    <p className="text-[10px] text-slate-500 truncate leading-tight mt-0.5">
+                    <p className="text-[10px] text-slate-500 dark:text-white truncate leading-tight mt-0.5">
                       {column.subtitle}
                     </p>
                   </div>
                 </div>
                 <span
-                  className="text-xs font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full flex-shrink-0"
+                  className="text-xs font-medium text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full flex-shrink-0"
                   aria-live="polite"
                   aria-atomic="true"
                 >

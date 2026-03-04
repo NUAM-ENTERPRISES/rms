@@ -73,7 +73,7 @@ export function DepartmentSelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
@@ -137,7 +137,7 @@ export function DepartmentSelect({
                     >
                       <Check className={cn("mr-3 h-4 w-4 flex-shrink-0", value === d.id ? "opacity-100 text-blue-600" : "opacity-0")} />
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="truncate flex-1 text-slate-700 font-medium">{d.label || d.name}</span>
+                        <span className="truncate flex-1 text-slate-700 dark:text-slate-200 font-medium">{d.label || d.name}</span>
                       </div>
                     </button>
                   ))}
@@ -146,7 +146,7 @@ export function DepartmentSelect({
 
               {hasMore && (
                 <div className="p-2 border-t bg-slate-50 sticky bottom-0">
-                  <Button variant="ghost" size="sm" onClick={loadMore} disabled={isFetching} className="w-full hover:bg-white text-slate-700">
+                  <Button variant="ghost" size="sm" onClick={loadMore} disabled={isFetching} className="w-full hover:bg-white text-slate-700 dark:text-slate-200">
                     {isFetching ? (
                       <>
                         <Loader2 className="h-3 w-3 animate-spin mr-2" />
