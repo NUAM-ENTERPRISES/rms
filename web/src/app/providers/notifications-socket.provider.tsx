@@ -5,6 +5,10 @@ import { baseApi } from "@/app/api/baseApi";
 import { notificationsApi } from "@/features/notifications/data/notifications.endpoints";
 import { setMuted } from "@/features/notifications/notificationSettingsSlice";
 import { toast } from "sonner";
+import { handleDocumentNotifications, registerDocumentSocketEvents } from "./notification-handlers/document-handler";
+import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
+
+const invalidateTags = baseApi.util.invalidateTags;
 
 export default function NotificationsSocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
@@ -138,69 +142,21 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         });
       }
       
-      if (notification.type === "candidate_sent_to_screening") {
-        console.log("[Socket] Invalidating Screening & Candidate lists");
-        dispatch(baseApi.util.invalidateTags([
-          { type: "Screening", id: "LIST" },
-          { type: "Candidate", id: "LIST" }
-        ]));
-      }
-
-      if (notification.type === "candidate_sent_for_verification") {
-        console.log("[Socket] Invalidating VerificationCandidates & DocumentVerification lists");
-        const sentCandidateId = notification.data?.candidateId || notification.candidateId;
-        const tags: Array<any> = [
-          { type: "VerificationCandidates" },
-          { type: "DocumentStats" },
-        ];
-        if (sentCandidateId) {
-          tags.push({ type: "DocumentVerification", id: sentCandidateId });
-        } else {
-          tags.push({ type: "DocumentVerification" });
-        }
-        dispatch(baseApi.util.invalidateTags(tags));
-      }
-
-      // when a document is verified/rejected/resubmission or a generic update comes through,
-      // trigger the same set of invalidations so that any open verification
-      // pages refresh automatically. many notifications carry candidateId in
-      // `notification.data` but fall back to `notification.candidateId`.
-      if (
-        notification.type === "candidate_document_updated" ||
-        notification.type === "document_verified" ||
-        notification.type === "document_rejected" ||
-        notification.type === "document_resubmission_requested" ||
-        notification.type === "document_resubmitted" ||
-        notification.type === "documentation_notification" ||
-        notification.type === "recruiter_notification" ||
-        notification.type === "candidate_documents_verified" ||
-        notification.type === "candidate_documents_rejected"
-      ) {
-        console.log("[Socket] document update notification, invalidating caches", notification);
-        const candidateId =
-          notification.data?.candidateId || notification.candidateId || notification.meta?.candidateId || undefined;
-        const tags: Array<any> = [
-          { type: "VerificationCandidates" },
-          { type: "DocumentStats" },
-        ];
-        if (candidateId) {
-          tags.push({ type: "DocumentVerification", id: candidateId });
-        } else {
-          tags.push({ type: "DocumentVerification" });
-        }
-        tags.push({ type: "RecruiterDocuments" });
-        dispatch(baseApi.util.invalidateTags(tags));
-      }
+      const context = { notification, dispatch, invalidateTags };
+      
+      // Handle domain-specific notifications
+      handleScreeningNotifications(context);
+      handleDocumentNotifications(context);
     });
 
     socket.on("data:sync", (payload: any) => {
       console.log("[Socket] Sync Received:", payload);
-      if (payload.type === "Screening") {
-        dispatch(baseApi.util.invalidateTags([
-          { type: "Screening", id: "LIST" },
-          { type: "Candidate", id: "LIST" }
-        ]));
-      } else if (payload.type === "RecruiterDocuments") {
+      
+      const context = { dispatch, invalidateTags };
+      
+      if (handleScreeningSync(payload, context)) return;
+      
+      if (payload.type === "RecruiterDocuments") {
         dispatch(baseApi.util.invalidateTags([{ type: "RecruiterDocuments" }]));
       } else if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
@@ -208,81 +164,8 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (payload.message) toast.info(payload.message);
     });
 
-    // direct socket events that bypass notification wrapping
-    socket.on("candidate_document_updated", (data: { candidateId?: string }) => {
-      console.log("[Socket] direct event candidate_document_updated", data);
-      const tags: Array<any> = [
-        { type: "VerificationCandidates" },
-        { type: "DocumentStats" },
-        { type: "RecruiterDocuments" },
-      ];
-      if (data.candidateId) {
-        tags.push({ type: "DocumentVerification", id: data.candidateId });
-      } else {
-        tags.push({ type: "DocumentVerification" });
-      }
-      dispatch(baseApi.util.invalidateTags(tags));
-    });
-
-    socket.on("document_verified", (data: { candidateId?: string }) => {
-      console.log("[Socket] direct event document_verified", data);
-      const tags: Array<any> = [
-        { type: "VerificationCandidates" },
-        { type: "DocumentStats" },
-        { type: "RecruiterDocuments" },
-      ];
-      if (data.candidateId) {
-        tags.push({ type: "DocumentVerification", id: data.candidateId });
-      } else {
-        tags.push({ type: "DocumentVerification" });
-      }
-      dispatch(baseApi.util.invalidateTags(tags));
-    });
-
-    socket.on("document_rejected", (data: { candidateId?: string }) => {
-      console.log("[Socket] direct event document_rejected", data);
-      const tags: Array<any> = [
-        { type: "VerificationCandidates" },
-        { type: "DocumentStats" },
-        { type: "RecruiterDocuments" },
-      ];
-      if (data.candidateId) {
-        tags.push({ type: "DocumentVerification", id: data.candidateId });
-      } else {
-        tags.push({ type: "DocumentVerification" });
-      }
-      dispatch(baseApi.util.invalidateTags(tags));
-    });
-
-    socket.on("document_resubmission_requested", (data: { candidateId?: string }) => {
-      console.log("[Socket] direct event document_resubmission_requested", data);
-      const tags: Array<any> = [
-        { type: "VerificationCandidates" },
-        { type: "DocumentStats" },
-        { type: "RecruiterDocuments" },
-      ];
-      if (data.candidateId) {
-        tags.push({ type: "DocumentVerification", id: data.candidateId });
-      } else {
-        tags.push({ type: "DocumentVerification" });
-      }
-      dispatch(baseApi.util.invalidateTags(tags));
-    });
-
-    socket.on("document_resubmitted", (data: { candidateId?: string }) => {
-      console.log("[Socket] direct event document_resubmitted", data);
-      const tags: Array<any> = [
-        { type: "VerificationCandidates" },
-        { type: "DocumentStats" },
-        { type: "RecruiterDocuments" },
-      ];
-      if (data.candidateId) {
-        tags.push({ type: "DocumentVerification", id: data.candidateId });
-      } else {
-        tags.push({ type: "DocumentVerification" });
-      }
-      dispatch(baseApi.util.invalidateTags(tags));
-    });
+    // Handle domain-specific direct socket events
+    registerDocumentSocketEvents(socket, { dispatch, invalidateTags });
 
     return () => {
       console.log("[Socket] Cleaning up...");
