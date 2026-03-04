@@ -177,60 +177,69 @@ export function ProjectRoleFilter({
             </div>
 
             {/* Project List */}
-            <div className="max-h-[200px] overflow-y-auto">
-              {/* All Projects Option */}
-              <button
-                onClick={() => handleProjectChange("all")}
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 transition-colors",
-                  value.projectId === "all" && "bg-blue-50 text-blue-700"
-                )}
-              >
-                <Check
-                  className={cn(
-                    "h-4 w-4",
-                    value.projectId === "all" ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                <span>All Projects</span>
-              </button>
+          <div className="max-h-[200px] overflow-y-auto bg-black text-white rounded-b-lg border-t border-gray-800/70 shadow-inner">
+  {/* All Projects Option */}
+  <button
+    onClick={() => handleProjectChange("all")}
+    className={cn(
+      "w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150",
+      "hover:bg-zinc-900/80 active:bg-zinc-800",
+      value.projectId === "all" && "bg-indigo-950/60 text-indigo-300 font-medium"
+    )}
+  >
+    <div className="w-5 flex items-center justify-center shrink-0">
+      <Check
+        className={cn(
+          "h-4 w-4 transition-opacity duration-200",
+          value.projectId === "all" ? "opacity-100 text-indigo-400" : "opacity-0"
+        )}
+      />
+    </div>
+    <span className="font-medium">All Projects</span>
+  </button>
 
-              {projectsLoading ? (
-                <div className="px-3 py-4 text-center text-sm text-gray-500">
-                  Loading...
-                </div>
-              ) : projects.length === 0 ? (
-                <div className="px-3 py-4 text-center text-sm text-gray-500">
-                  No projects found
-                </div>
-              ) : (
-                projects.map((project: any) => (
-                  <button
-                    key={project.id}
-                    onClick={() => handleProjectChange(project.id)}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 transition-colors text-left",
-                      value.projectId === project.id && "bg-blue-50 text-blue-700"
-                    )}
-                  >
-                    <Check
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        value.projectId === project.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="truncate">
-                      <div className="font-medium truncate">{project.title}</div>
-                      {project.client?.name && (
-                        <div className="text-xs text-gray-500 truncate">
-                          {project.client.name}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))
-              )}
+  {projectsLoading ? (
+    <div className="px-4 py-5 text-center text-sm text-zinc-500 animate-pulse">
+      Loading projects...
+    </div>
+  ) : projects.length === 0 ? (
+    <div className="px-4 py-5 text-center text-sm text-zinc-500">
+      No projects found
+    </div>
+  ) : (
+    projects.map((project: any) => (
+      <button
+        key={project.id}
+        onClick={() => handleProjectChange(project.id)}
+        className={cn(
+          "w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150 text-left",
+          "hover:bg-zinc-900/80 active:bg-zinc-800",
+          value.projectId === project.id && "bg-indigo-950/60 text-indigo-300 font-medium"
+        )}
+      >
+        <div className="w-5 flex items-center justify-center shrink-0">
+          <Check
+            className={cn(
+              "h-4 w-4 transition-opacity duration-200",
+              value.projectId === project.id ? "opacity-100 text-indigo-400" : "opacity-0"
+            )}
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="font-medium truncate text-zinc-100">
+            {project.title}
+          </div>
+          {project.client?.name && (
+            <div className="text-xs text-zinc-500 truncate mt-0.5">
+              {project.client.name}
             </div>
+          )}
+        </div>
+      </button>
+    ))
+  )}
+</div>
 
             {/* Pagination */}
             {projectsPagination.totalPages > 1 && (
@@ -268,21 +277,60 @@ export function ProjectRoleFilter({
 
       {/* Role Filter */}
       {showRoleFilter && (
-        <div className="w-full md:w-auto min-w-[180px]">
-          <Select value={value.roleCatalogId} onValueChange={handleRoleChange}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={roleLabel} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {availableRoles.map((role: any) => (
-                <SelectItem key={role.id} value={role.id}>
-                  {role.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+       <div className="w-full md:w-auto min-w-[180px]">
+  <Select value={value.roleCatalogId} onValueChange={handleRoleChange}>
+    <SelectTrigger 
+      className={cn(
+        "h-9 text-sm rounded-lg border-slate-300 bg-white",
+        "dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100",
+        "focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60",
+        "data-[placeholder]:text-slate-500 dark:data-[placeholder]:text-slate-400",
+        "transition-all duration-200"
+      )}
+    >
+      <SelectValue placeholder={roleLabel} />
+    </SelectTrigger>
+
+    <SelectContent 
+      className={cn(
+        "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700",
+        "text-slate-900 dark:text-slate-100 shadow-xl",
+        "max-h-[300px] overflow-y-auto"
+      )}
+    >
+      <SelectItem 
+        value="all"
+        className={cn(
+          "text-sm py-2.5 px-3 cursor-pointer",
+          "hover:bg-slate-100 dark:hover:bg-slate-800",
+          "focus:bg-indigo-50 dark:focus:bg-indigo-950/40",
+          "data-[state=checked]:bg-indigo-50 dark:data-[state=checked]:bg-indigo-950/50",
+          "data-[state=checked]:text-indigo-700 dark:data-[state=checked]:text-indigo-300",
+          "transition-colors duration-150"
+        )}
+      >
+        All Roles
+      </SelectItem>
+
+      {availableRoles.map((role: any) => (
+        <SelectItem 
+          key={role.id} 
+          value={role.id}
+          className={cn(
+            "text-sm py-2.5 px-3 cursor-pointer",
+            "hover:bg-slate-100 dark:hover:bg-slate-800",
+            "focus:bg-indigo-50 dark:focus:bg-indigo-950/40",
+            "data-[state=checked]:bg-indigo-50 dark:data-[state=checked]:bg-indigo-950/50",
+            "data-[state=checked]:text-indigo-700 dark:data-[state=checked]:text-indigo-300",
+            "transition-colors duration-150"
+          )}
+        >
+          {role.label}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
       )}
     </div>
   );

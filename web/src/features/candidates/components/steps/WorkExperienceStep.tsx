@@ -108,80 +108,71 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   };
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-          <Briefcase className="h-5 w-5 text-blue-600" />
+    <Card className="border-0 shadow-lg bg-white/80 dark:bg-black backdrop-blur-sm dark:backdrop-blur-none">
+      <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800 dark:text-slate-100">
+          <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           Work Experience
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-slate-600 dark:text-slate-400">
           Add work experience entries for the candidate (optional)
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6 bg-white dark:bg-black">
         {/* Work Experience List */}
         {workExperiences.length > 0 && (
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800">Added Work Experiences</h4>
+          <div className="space-y-5">
+            <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+              Added Work Experiences
+            </h4>
             {workExperiences.map((experience) => (
               <div
                 key={experience.id}
-                className="p-4 border border-slate-200 rounded-lg bg-slate-50"
+                className="p-5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/70"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900">
+                    <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-lg">
                       {experience.jobTitle}
                     </h4>
-                    <p className="text-slate-600">
+                    <p className="text-slate-700 dark:text-slate-300 mt-1">
                       {experience.companyName}
                     </p>
-                    <p className="text-sm text-slate-500">
-                      {new Date(
-                        experience.startDate
-                      ).toLocaleDateString()}{" "}
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                      {new Date(experience.startDate).toLocaleDateString()}{" "}
                       -{" "}
                       {experience.isCurrent
                         ? "Present"
-                        : new Date(
-                            experience.endDate
-                          ).toLocaleDateString()}
+                        : new Date(experience.endDate).toLocaleDateString()}
                     </p>
                     {experience.location && (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                         {experience.location}
                       </p>
                     )}
-                    {experience.skills &&
-                      experience.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {experience.skills.map(
-                            (skill: string, index: number) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200"
-                              >
-                                <Star className="h-3 w-3" />
-                                {skill}
-                              </span>
-                            )
-                          )}
-                        </div>
-                      )}
+                    {experience.skills && experience.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {experience.skills.map((skill: string, index: number) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800/50 text-sm"
+                          >
+                            <Star className="h-3.5 w-3.5" />
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        removeWorkExperience(experience.id)
-                      }
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      Remove
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeWorkExperience(experience.id)}
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 border-red-200 dark:border-red-800/50"
+                  >
+                    Remove
+                  </Button>
                 </div>
               </div>
             ))}
@@ -189,17 +180,17 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
         )}
 
         {/* Add New Work Experience Form */}
-        <div className="border border-slate-200 rounded-lg p-6 bg-slate-50">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-slate-800">
+        <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-6 bg-slate-50 dark:bg-slate-900/70">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
               Add New Work Experience (Optional)
             </h4>
-            <p className="text-sm text-slate-500 italic">
+            <p className="text-sm text-slate-500 dark:text-slate-400 italic">
               You can skip this step and add experience later
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Department */}
             <div className="space-y-2">
               <DepartmentSelect
@@ -246,7 +237,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
             {/* Company Name */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-slate-700 dark:text-slate-300 font-medium">
                 Company Name *
               </Label>
               <Input
@@ -258,13 +249,13 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   })
                 }
                 placeholder="ABC Hospital"
-                className="h-11 bg-white border-slate-200"
+                className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500"
               />
             </div>
 
             {/* Start Date */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-slate-700 dark:text-slate-300 font-medium">
                 Start Date *
               </Label>
               <Input
@@ -276,13 +267,13 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                     startDate: e.target.value,
                   })
                 }
-                className="h-11 bg-white border-slate-200"
+                className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500"
               />
             </div>
 
             {/* End Date */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-slate-700 dark:text-slate-300 font-medium">
                 End Date
               </Label>
               <Input
@@ -295,12 +286,12 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   })
                 }
                 disabled={newWorkExperience.isCurrent}
-                className="h-11 bg-white border-slate-200"
+                className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500"
               />
             </div>
 
             {/* Current Position */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 py-2">
               <input
                 type="checkbox"
                 id="isCurrent"
@@ -311,11 +302,11 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                     isCurrent: e.target.checked,
                   })
                 }
-                className="border-slate-300"
+                className="h-5 w-5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 dark:bg-slate-900"
               />
               <Label
                 htmlFor="isCurrent"
-                className="text-slate-700 font-medium cursor-pointer"
+                className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
               >
                 This is my current position
               </Label>
@@ -323,7 +314,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
             {/* Salary */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-slate-700 dark:text-slate-300 font-medium">
                 Salary
               </Label>
               <Input
@@ -339,13 +330,13 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                 }
                 placeholder="50000"
                 min="0"
-                className="h-11 bg-white border-slate-200"
+                className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500"
               />
             </div>
 
             {/* Location */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-slate-700 dark:text-slate-300 font-medium">
                 Location
               </Label>
               <Input
@@ -357,14 +348,14 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   })
                 }
                 placeholder="New York, NY"
-                className="h-11 bg-white border-slate-200"
+                className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500"
               />
             </div>
           </div>
 
           {/* Description */}
-          <div className="space-y-2 mt-4">
-            <Label className="text-slate-700 font-medium">
+          <div className="space-y-2 mt-6">
+            <Label className="text-slate-700 dark:text-slate-300 font-medium">
               Job Description
             </Label>
             <textarea
@@ -376,13 +367,13 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                 })
               }
               placeholder="Describe your responsibilities and achievements..."
-              className="w-full min-h-[80px] p-3 border border-slate-200 rounded-md bg-white"
+              className="w-full min-h-[120px] p-3 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 resize-y"
             />
           </div>
 
           {/* Skills */}
-          <div className="space-y-3 mt-4">
-            <Label className="text-slate-700 font-medium">
+          <div className="space-y-4 mt-6">
+            <Label className="text-slate-700 dark:text-slate-300 font-medium">
               Skills Gained/Used
             </Label>
             <div className="flex gap-2">
@@ -396,14 +387,14 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   }
                 }}
                 placeholder="Add a skill..."
-                className="flex-1"
+                className="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500"
               />
               <Button
                 type="button"
                 onClick={addSkillToNewExperience}
                 variant="outline"
                 size="sm"
-                className="px-3"
+                className="px-4 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -415,18 +406,16 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                 {newWorkExperience.skills.map((skill, index) => (
                   <div
                     key={index}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-200 text-sm"
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800/50 text-sm"
                   >
-                    <Star className="h-3 w-3" />
+                    <Star className="h-3.5 w-3.5" />
                     {skill}
                     <button
                       type="button"
-                      onClick={() =>
-                        removeSkillFromNewExperience(skill)
-                      }
-                      className="ml-1 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
+                      onClick={() => removeSkillFromNewExperience(skill)}
+                      className="ml-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full p-1 transition-colors"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ))}
@@ -435,11 +424,11 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
           </div>
 
           {/* Add Button */}
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-8">
             <Button
               type="button"
               onClick={addWorkExperience}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-700 dark:to-blue-800 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white shadow-md"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Work Experience

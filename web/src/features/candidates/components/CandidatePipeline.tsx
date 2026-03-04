@@ -37,88 +37,88 @@ interface CandidatePipelineProps {
 const statusConfig: Record<string, any> = {
   untouched: { 
     color: 'from-orange-400 to-orange-600',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-300',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    borderColor: 'border-orange-300 dark:border-orange-800',
     icon: AlertCircle,
     animation: 'https://lottie.host/469a87a5-dc06-4451-8ba9-681430f82815/FrdEAaIdQk.lottie',
     description: "New candidate",
   },
   interested: { 
     color: 'from-green-400 to-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-300',
+    bgColor: 'bg-green-50 dark:bg-green-900/20',
+    borderColor: 'border-green-300 dark:border-green-800',
     icon: UserCheck,
     animation: 'https://lottie.host/a806adc8-29ef-4a09-956d-0105a35c4f86/PHBSwoLAGL.lottie',
     description: "Showing interest",
   },
   "not interested": { 
     color: 'from-red-400 to-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-300',
+    bgColor: 'bg-red-50 dark:bg-red-900/20',
+    borderColor: 'border-red-300 dark:border-red-800',
     icon: XCircle,
     animation: 'https://lottie.host/e3165fc5-a6b7-43d8-a693-46f58759df55/BuGUAAd26d.lottie',
     description: "Not interested",
   },
   "not eligible": { 
     color: 'from-red-400 to-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-300',
+    bgColor: 'bg-red-50 dark:bg-red-900/20',
+    borderColor: 'border-red-300 dark:border-red-800',
     icon: XCircle,
     animation: "https://lottie.host/5c18032e-4995-4426-9cb5-5ce4416622ca/XTGAviAX0z.lottie",
     description: "Not eligible",
   },
   "other enquiry": { 
     color: 'from-purple-400 to-purple-600',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-300',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    borderColor: 'border-purple-300 dark:border-purple-800',
     icon: Mail,
     animation: "https://lottie.host/9f5f113c-1331-416c-844e-8ca7ef1ef832/9IJATbJipi.lottie",
     description: "Other enquiry",
   },
   future: { 
     color: 'from-indigo-400 to-indigo-600',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-300',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
+    borderColor: 'border-indigo-300 dark:border-indigo-800',
     icon: Calendar,
     animation: "https://lottie.host/f66d26fc-d8b5-460e-af75-5c145db78bb6/Y3qUMmgWdm.lottie",
     description: "Future opportunity",
   },
   "on hold": { 
     color: 'from-yellow-400 to-yellow-600',
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-300',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+    borderColor: 'border-yellow-300 dark:border-yellow-800',
     icon: Clock,
     animation: "https://lottie.host/fe8c550c-98c1-425b-9c15-ea7ff3022a9f/SBNnDbuqvV.lottie",
     description: "Temporarily paused",
   },
   onhold: { 
     color: 'from-yellow-400 to-yellow-600',
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-300',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+    borderColor: 'border-yellow-300 dark:border-yellow-800',
     icon: Clock,
     animation: "https://lottie.host/fe8c550c-98c1-425b-9c15-ea7ff3022a9f/SBNnDbuqvV.lottie",
     description: "Temporarily paused",
   },
   rnr: { 
     color: 'from-pink-400 to-pink-600',
-    bgColor: 'bg-pink-50',
-    borderColor: 'border-pink-300',
+    bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+    borderColor: 'border-pink-300 dark:border-pink-800',
     icon: AlertCircle,
     animation: 'https://lottie.host/ad125a14-24a5-4405-83f7-d0e9a0aa3bbc/PHmcJLa3EF.lottie',
     description: "Ready & Referred",
   },
   qualified: { 
     color: 'from-emerald-400 to-emerald-600',
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-300',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+    borderColor: 'border-emerald-300 dark:border-emerald-800',
     icon: CheckCircle2,
     animation: 'https://lottie.host/5cdfb2aa-272f-48bd-b4a9-2beb4b179343/MM6t6RYOjD.lottie',
     description: "Qualified candidate",
   },
   working: { 
     color: 'from-blue-400 to-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-300',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    borderColor: 'border-blue-300 dark:border-blue-800',
     icon: Briefcase,
     animation: 'https://lottie.host/b9ab373a-6e93-4979-a51d-c7d125934846/xBU65diZEL.lottie',
     description: "Currently working",
@@ -126,63 +126,63 @@ const statusConfig: Record<string, any> = {
   selected: {
     icon: CheckCircle,
     color: "from-green-400 to-green-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-300",
+    bgColor: "bg-green-50 dark:bg-green-900/20",
+    borderColor: "border-green-300 dark:border-green-800",
     description: "Selected for process",
   },
   rejected: {
     icon: XCircle,
     color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-300",
+    bgColor: "bg-red-50 dark:bg-red-900/20",
+    borderColor: "border-red-300 dark:border-red-800",
     description: "Not suitable",
   },
   "in-process": {
     icon: FileText,
     color: "from-indigo-400 to-indigo-600",
-    bgColor: "bg-indigo-50",
-    borderColor: "border-indigo-300",
+    bgColor: "bg-indigo-50 dark:bg-indigo-900/20",
+    borderColor: "border-indigo-300 dark:border-indigo-800",
     description: "Under review",
   },
   shortlisted: {
     icon: UserCheck,
     color: "from-cyan-400 to-cyan-600",
-    bgColor: "bg-cyan-50",
-    borderColor: "border-cyan-300",
+    bgColor: "bg-cyan-50 dark:bg-cyan-900/20",
+    borderColor: "border-cyan-300 dark:border-cyan-800",
     description: "Passed screening",
   },
   interviewed: {
     icon: Calendar,
     color: "from-purple-400 to-purple-600",
-    bgColor: "bg-purple-50",
-    borderColor: "border-purple-300",
+    bgColor: "bg-purple-50 dark:bg-purple-900/20",
+    borderColor: "border-purple-300 dark:border-purple-800",
     description: "Interview completed",
   },
   offered: {
     icon: Award,
     color: "from-orange-400 to-orange-600",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-300",
+    bgColor: "bg-orange-50 dark:bg-orange-900/20",
+    borderColor: "border-orange-300 dark:border-orange-800",
     description: "Offer extended",
   },
   placed: {
     icon: Briefcase,
     color: "from-emerald-400 to-emerald-600",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-300",
+    bgColor: "bg-emerald-50 dark:bg-emerald-900/20",
+    borderColor: "border-emerald-300 dark:border-emerald-800",
     description: "Successfully placed",
   },
   withdrawn: {
     icon: UserX,
     color: "from-rose-400 to-rose-600",
-    bgColor: "bg-rose-50",
-    borderColor: "border-rose-300",
+    bgColor: "bg-rose-50 dark:bg-rose-900/20",
+    borderColor: "border-rose-300 dark:border-rose-800",
     description: "Candidate withdrew",
   },
   default: { 
     color: 'from-gray-400 to-gray-600',
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-300',
+    bgColor: 'bg-gray-50 dark:bg-gray-900/20',
+    borderColor: 'border-gray-300 dark:border-gray-800',
     icon: AlertCircle,
     description: "Status update",
   },
@@ -243,12 +243,12 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
 }) => {
   if (!pipeline || pipeline.length === 0) {
     return (
-      <div className={cn("bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-8 text-center border border-slate-200", className)}>
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-sm mb-4">
+      <div className={cn("bg-gradient-to-br from-slate-50 to-slate-100 dark:from-black dark:to-slate-950 rounded-xl p-8 text-center border border-slate-200 dark:border-slate-800", className)}>
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-white dark:bg-slate-900 rounded-full shadow-sm mb-4">
           <Clock className="h-8 w-8 text-slate-400" />
         </div>
-        <h3 className="font-semibold text-slate-700 mb-2">No Status History</h3>
-        <p className="text-sm text-slate-500">This candidate has no status changes recorded yet</p>
+        <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">No Status History</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">This candidate has no status changes recorded yet</p>
       </div>
     );
   }
@@ -261,13 +261,13 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Summary Card */}
-      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200 shadow-sm">
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-black dark:via-black dark:to-black rounded-xl p-6 border border-indigo-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 flex-1">
             <div className={cn(
               "w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-gradient-to-br",
               currentConfig.color,
-              "ring-4 ring-white"
+              "ring-4 ring-white dark:ring-slate-900"
             )}>
               {currentConfig.animation ? (
                 <div className="w-10 h-10">
@@ -283,7 +283,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                   Current Status: {currentStatusName || "Unknown"}
                 </h3>
                 <span className={cn(
@@ -294,8 +294,8 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                   Active
                 </span>
               </div>
-              <p className="text-sm text-slate-600 mb-2">{currentConfig.description}</p>
-              <div className="flex items-center gap-4 text-xs text-slate-500">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{currentConfig.description}</p>
+              <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-500">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
                   Since {formatDate(currentStatus.enteredAt)}
@@ -315,10 +315,10 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
       </div>
 
       {/* Route Map Journey */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b border-slate-200">
-          <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <Target className="h-4 w-4 text-slate-600" />
+      <div className="bg-white dark:bg-black rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-black dark:to-slate-900 px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Target className="h-4 w-4 text-slate-600 dark:text-slate-400" />
             Status Journey Route Map
           </h4>
         </div>
@@ -358,10 +358,10 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                           <div className="flex flex-col items-center min-w-[160px] max-w-[200px] relative">
                             {/* Date & Duration Above */}
                             <div className="mb-3 text-center h-12 flex flex-col justify-end">
-                              <div className="text-xs font-medium text-slate-700 mb-0.5">
+                              <div className="text-xs font-medium text-slate-700 dark:text-slate-400 mb-0.5">
                                 {formatDate(stage.enteredAt)}
                               </div>
-                              <div className="text-xs text-slate-500">
+                              <div className="text-xs text-slate-500 dark:text-slate-500">
                                 ⏱️ {duration}
                               </div>
                             </div>
@@ -411,7 +411,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                   "absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md",
                                   isCurrent 
                                     ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white"
-                                    : "bg-slate-200 text-slate-700"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                                 )}>
                                   {actualIndex + 1}
                                 </div>
@@ -422,11 +422,11 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                             <div className="text-center px-2">
                               <h5 className={cn(
                                 "font-bold mb-1 leading-tight",
-                                isCurrent ? "text-base text-slate-900" : "text-sm text-slate-700"
+                                isCurrent ? "text-base text-slate-900 dark:text-white" : "text-sm text-slate-700 dark:text-slate-400"
                               )}>
                                 {stage.statusName || "Unknown"}
                               </h5>
-                              <p className="text-xs text-slate-500 leading-tight">
+                              <p className="text-xs text-slate-500 dark:text-slate-500 leading-tight">
                                 {config.description}
                               </p>
                               
@@ -449,13 +449,13 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                   "h-1 w-12 rounded-full relative",
                                   isCurrent 
                                     ? "bg-gradient-to-r from-amber-400 via-orange-400 to-slate-200"
-                                    : "bg-slate-300"
+                                    : "bg-slate-300 dark:bg-slate-700"
                                 )}>
                                   {/* Road markings */}
                                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1">
-                                    <div className="w-1 h-0.5 bg-white/60 rounded-full"></div>
-                                    <div className="w-1 h-0.5 bg-white/60 rounded-full"></div>
-                                    <div className="w-1 h-0.5 bg-white/60 rounded-full"></div>
+                                    <div className="w-1 h-0.5 bg-white/60 dark:bg-black/60 rounded-full"></div>
+                                    <div className="w-1 h-0.5 bg-white/60 dark:bg-black/60 rounded-full"></div>
+                                    <div className="w-1 h-0.5 bg-white/60 dark:bg-black/60 rounded-full"></div>
                                   </div>
                                 </div>
                                 
@@ -463,12 +463,12 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                 {isEvenRow ? (
                                   <ArrowRight className={cn(
                                     "absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 h-5 w-5",
-                                    isCurrent ? "text-orange-500" : "text-slate-400"
+                                    isCurrent ? "text-orange-500" : "text-slate-400 dark:text-slate-600"
                                   )} />
                                 ) : (
                                   <ArrowRight className={cn(
                                     "absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 h-5 w-5 rotate-180",
-                                    isCurrent ? "text-orange-500" : "text-slate-400"
+                                    isCurrent ? "text-orange-500" : "text-slate-400 dark:text-slate-600"
                                   )} />
                                 )}
                               </div>
@@ -480,18 +480,18 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                             <div className="absolute top-[88px] right-0 translate-x-1/2 z-20">
                               <div className="flex flex-col items-center">
                                 {/* Vertical Road/Path */}
-                                <div className="w-1 h-16 rounded-full relative bg-slate-300">
+                                <div className="w-1 h-16 rounded-full relative bg-slate-300 dark:bg-slate-700">
                                   {/* Road markings */}
                                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1">
-                                    <div className="h-1 w-0.5 bg-white/60 rounded-full"></div>
-                                    <div className="h-1 w-0.5 bg-white/60 rounded-full"></div>
-                                    <div className="h-1 w-0.5 bg-white/60 rounded-full"></div>
+                                    <div className="h-1 w-0.5 bg-white/60 dark:bg-black/60 rounded-full"></div>
+                                    <div className="h-1 w-0.5 bg-white/60 dark:bg-black/60 rounded-full"></div>
+                                    <div className="h-1 w-0.5 bg-white/60 dark:bg-black/60 rounded-full"></div>
                                   </div>
                                 </div>
                                 
                                 {/* Down Arrow */}
                                 <svg 
-                                  className="h-6 w-6 text-slate-400 -mt-1" 
+                                  className="h-6 w-6 text-slate-400 dark:text-slate-600 -mt-1" 
                                   fill="none" 
                                   viewBox="0 0 24 24" 
                                   stroke="currentColor"
@@ -512,12 +512,12 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
             {/* Journey Progress Bar */}
             <div className="mt-8 px-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="text-xs font-semibold text-slate-600">Journey Progress</div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Journey Progress</div>
+                <div className="text-xs text-slate-500 dark:text-slate-500">
                   {pipeline.length} / {pipeline.length} milestones reached
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500"
                   style={{ width: '100%' }}

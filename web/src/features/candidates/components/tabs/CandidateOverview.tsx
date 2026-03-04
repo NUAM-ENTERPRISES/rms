@@ -58,11 +58,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
     <div className="space-y-6">
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Candidate Information */}
-        <Card className="xl:col-span-2 border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
-          <CardHeader className="border-b border-gray-300 px-6 py-4">
+        <Card className="xl:col-span-2 border border-gray-300 dark:border-slate-800 rounded-lg shadow-lg bg-white/90 dark:bg-black backdrop-blur-md transition-shadow hover:shadow-2xl">
+          <CardHeader className="border-b border-gray-300 dark:border-slate-800 px-6 py-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 select-none">
-                <User className="h-6 w-6 text-blue-600" />
+              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white select-none">
+                <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 Candidate Information
               </CardTitle>
               {canWriteCandidates && onEditPersonalInfo && (
@@ -70,7 +70,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={onEditPersonalInfo}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1.5 h-8"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 gap-1.5 h-8"
                 >
                   <Edit className="h-4 w-4" />
                   <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
@@ -82,56 +82,56 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Email
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Mail className="h-3 w-3 text-slate-400" />
+                  <p className="text-sm flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-200">
+                    <Mail className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     {candidate.email || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Phone
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Phone className="h-3 w-3 text-slate-400" />
+                  <p className="text-sm flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-200">
+                    <Phone className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     {candidate.mobileNumber || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Date of Birth
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Calendar className="h-3 w-3 text-slate-400" />
+                  <p className="text-sm flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-200">
+                    <Calendar className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     {formatDate(candidate.dateOfBirth)}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Age
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <User className="h-3 w-3 text-slate-400" />
+                  <p className="text-sm flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-200">
+                    <User className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     {age !== null ? `${age} years` : "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Gender
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1 lowercase capitalize">
-                    <User className="h-3 w-3 text-slate-400" />
+                  <p className="text-sm flex items-center gap-2 mt-1 lowercase capitalize text-slate-900 dark:text-slate-200">
+                    <User className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     {candidate.gender || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Experience
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Clock className="h-3 w-3 text-slate-400" />
+                  <p className="text-sm flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-200">
+                    <Clock className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     {(() => {
                       if (
                         candidate.workExperiences &&
@@ -167,26 +167,26 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Source
                   </label>
-                  <p className="text-sm mt-1 capitalize">
+                  <p className="text-sm mt-1 capitalize text-slate-900 dark:text-slate-200">
                     {candidate.source || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Created
                   </label>
-                  <p className="text-sm mt-1">
+                  <p className="text-sm mt-1 text-slate-900 dark:text-slate-200">
                     {formatDate(candidate.createdAt)}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Last Updated
                   </label>
-                  <p className="text-sm mt-1">
+                  <p className="text-sm mt-1 text-slate-900 dark:text-slate-200">
                     {formatDate(candidate.updatedAt)}
                   </p>
                 </div>
@@ -195,28 +195,28 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 {candidate.source === "referral" && (
                   <>
                     <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Referral Company
                       </label>
-                      <p className="text-sm mt-1">
+                      <p className="text-sm mt-1 text-slate-900 dark:text-slate-200">
                         {candidate.referralCompanyName || "N/A"}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Referral Email
                       </label>
-                      <p className="text-sm flex items-center gap-2 mt-1">
-                        <Mail className="h-3 w-3 text-slate-400" />
+                      <p className="text-sm flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-200">
+                        <Mail className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                         {candidate.referralEmail || "N/A"}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Referral Phone
                       </label>
-                      <p className="text-sm flex items-center gap-2 mt-1">
-                        <Phone className="h-3 w-3 text-slate-400" />
+                      <p className="text-sm flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-200">
+                        <Phone className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                         {candidate.referralCountryCode}
                         {candidate.referralPhone || "N/A"}
                       </p>
@@ -228,11 +228,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               {/* Referral Description Integrated */}
               {candidate.source === "referral" &&
                 candidate.referralDescription && (
-                  <div className="mt-6 pt-4 border-t border-slate-200">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+                  <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">
                       Referral Description
                     </label>
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                       {candidate.referralDescription}
                     </p>
                   </div>
@@ -240,8 +240,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
               {/* Skills Section */}
               {candidate.skills && candidate.skills.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-slate-200">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">
                     Skills
                   </label>
                   <div className="flex wrap gap-1">
@@ -249,7 +249,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       <Badge
                         key={skill}
                         variant="secondary"
-                        className="text-xs px-2 py-1"
+                        className="text-xs px-2 py-1 dark:bg-slate-800 dark:text-slate-300"
                       >
                         {skill}
                       </Badge>
@@ -259,10 +259,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               )}
 
               {/* Physical Information Section */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                    <Sparkles className="h-5 w-5 text-teal-600" />
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-white">
+                    <Sparkles className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                     Physical Information
                   </h3>
                   {canWriteCandidates && onEditPhysicalInfo && (
@@ -270,7 +270,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={onEditPhysicalInfo}
-                      className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 gap-1.5 h-8"
+                      className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 gap-1.5 h-8"
                     >
                       <Edit className="h-4 w-4" />
                       <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
@@ -279,46 +279,46 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Height
                     </label>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm mt-1 text-slate-900 dark:text-slate-200">
                       {candidate.height != null
                         ? `${candidate.height} cm`
                         : "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Weight
                     </label>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm mt-1 text-slate-900 dark:text-slate-200">
                       {candidate.weight != null
                         ? `${candidate.weight} kg`
                         : "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Skin Tone
                     </label>
-                    <p className="text-sm mt-1 capitalize">
+                    <p className="text-sm mt-1 capitalize text-slate-900 dark:text-slate-200">
                       {candidate.skinTone || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Language Proficiency
                     </label>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm mt-1 text-slate-900 dark:text-slate-200">
                       {candidate.languageProficiency || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Smartness
                     </label>
-                    <p className="text-sm mt-1 capitalize">
+                    <p className="text-sm mt-1 capitalize text-slate-900 dark:text-slate-200">
                       {candidate.smartness || "N/A"}
                     </p>
                   </div>
@@ -326,10 +326,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               </div>
 
               {/* Job Preferences Section */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                    <Briefcase className="h-5 w-5 text-indigo-600" />
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-white">
+                    <Briefcase className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                     Job Preferences
                   </h3>
                   {canWriteCandidates && (
@@ -337,7 +337,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={onEditJobPreferences}
-                      className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5 h-8"
+                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 gap-1.5 h-8"
                     >
                       <Edit className="h-4 w-4" />
                       <span className="text-xs font-semibold uppercase tracking-wider">Edit</span>
@@ -346,10 +346,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Expected Salary
                     </label>
-                    <div className="text-sm flex items-center gap-2 mt-1 font-medium text-blue-700">
+                    <div className="text-sm flex items-center gap-2 mt-1 font-medium text-blue-700 dark:text-blue-400">
                       <IndianRupee className="h-3.5 w-3.5" />
                       {candidate.expectedMinSalary !== undefined
                         ? `${formatCurrency(candidate.expectedMinSalary)}${
@@ -363,12 +363,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Sector Type
                     </label>
                     <Badge
                       variant="outline"
-                      className="text-slate-700 border-slate-300"
+                      className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600"
                     >
                       {candidate.sectorType
                         ? candidate.sectorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
@@ -376,12 +376,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </Badge>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Visa Type
                     </label>
                     <Badge
                       variant="outline"
-                      className="text-slate-700 border-slate-300"
+                      className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600"
                     >
                       {candidate.visaType
                         ? candidate.visaType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
@@ -389,7 +389,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </Badge>
                   </div>
                   <div className="lg:col-span-1">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Preferred Countries
                     </label>
                     <div className="flex flex-wrap gap-1">
@@ -398,20 +398,20 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         candidate.preferredCountries.map((pc, idx) => (
                           <Badge
                             key={idx}
-                            className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"
+                            className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40"
                           >
                             {pc.country.name}
                           </Badge>
                         ))
                       ) : (
-                        <span className="text-sm text-slate-400 italic">
+                        <span className="text-sm text-slate-400 dark:text-slate-500 italic">
                           N/A
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="lg:col-span-1">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">
                       Facility Preferences
                     </label>
                     <div className="flex flex-wrap gap-1">
@@ -420,13 +420,13 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         candidate.facilityPreferences.map((fp, idx) => (
                           <Badge
                             key={idx}
-                            className="bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100"
+                            className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-100 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/40"
                           >
                             {fp.facilityType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                           </Badge>
                         ))
                       ) : (
-                        <span className="text-sm text-slate-400 italic">
+                        <span className="text-sm text-slate-400 dark:text-slate-500 italic">
                           N/A
                         </span>
                       )}
@@ -504,13 +504,13 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               </div>
 
               {/* Educational Qualifications & Work Experience - Integrated Side by Side */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Educational Qualifications Column */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                        <GraduationCap className="h-5 w-5 text-blue-600" />
+                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-white">
+                        <GraduationCap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         Educational Qualifications
                       </h3>
                       {canWriteCandidates && (
@@ -518,7 +518,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => openAddModal("qualification")}
-                          className="h-8 flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                          className="h-8 flex items-center gap-1 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                         >
                           <Plus className="h-3.5 w-3.5" />
                           Add
@@ -532,14 +532,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         {candidate.qualifications.map((qual) => (
                           <div
                             key={qual.id}
-                            className="group relative bg-slate-50/50 border border-slate-200 rounded-lg p-4 transition-all hover:border-blue-300 hover:bg-blue-50/30"
+                            className="group relative bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg p-4 transition-all hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/30 dark:hover:bg-blue-900/10"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="font-bold text-slate-900 line-clamp-1">
+                                <h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-1">
                                   {qual.qualification.name}
                                 </h4>
-                                <p className="text-xs text-slate-600 font-medium line-clamp-1">
+                                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium line-clamp-1">
                                   {qual.university ||
                                     "University not specified"}
                                 </p>
@@ -552,7 +552,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                     onClick={() =>
                                       openEditModal("qualification", qual)
                                     }
-                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all"
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200 dark:hover:bg-slate-700"
                                   >
                                     <Edit className="h-3 w-3" />
                                   </Button>
@@ -560,7 +560,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               </div>
                             </div>
                             <div className="flex items-center justify-between mt-3">
-                              <div className="flex gap-3 text-[10px] text-slate-500 font-medium">
+                              <div className="flex gap-3 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                                 {qual.graduationYear && (
                                   <span className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />{" "}
@@ -579,7 +579,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   Completed
                                 </Badge>
                               ) : (
-                                <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] h-4 px-1.5 shadow-none">
+                                <Badge className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 text-[10px] h-4 px-1.5 shadow-none">
                                   Ongoing
                                 </Badge>
                               )}
@@ -588,8 +588,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                        <p className="text-sm text-slate-500 italic">
+                      <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                           No educational qualifications added.
                         </p>
                       </div>
@@ -599,8 +599,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   {/* Work Experience Column */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                        <Briefcase className="h-5 w-5 text-emerald-600" />
+                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-white">
+                        <Briefcase className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                         Work Experience
                       </h3>
                       {canWriteCandidates && (
@@ -608,7 +608,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => openAddModal("workExperience")}
-                          className="h-8 flex items-center gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                          className="h-8 flex items-center gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                         >
                           <Plus className="h-3.5 w-3.5" />
                           Add
@@ -622,21 +622,21 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         {candidate.workExperiences.map((exp) => (
                           <div
                             key={exp.id}
-                            className="group relative bg-slate-50/50 border border-slate-200 rounded-lg p-4 transition-all hover:border-emerald-300 hover:bg-emerald-50/30"
+                            className="group relative bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg p-4 transition-all hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <h4 className="font-bold text-slate-900">
+                                  <h4 className="font-bold text-slate-900 dark:text-slate-100">
                                     {exp.jobTitle}
                                   </h4>
                                   {exp.isCurrent && (
-                                    <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] h-4 px-1.5 shadow-none">
+                                    <Badge className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 text-[10px] h-4 px-1.5 shadow-none">
                                       Current
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-sm text-emerald-700 font-semibold">
+                                <p className="text-sm text-emerald-700 dark:text-emerald-400 font-semibold">
                                   {exp.companyName || "N/A"}
                                 </p>
                               </div>
@@ -647,13 +647,13 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   onClick={() =>
                                     openEditModal("workExperience", exp)
                                   }
-                                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all"
+                                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200 dark:hover:bg-slate-700"
                                 >
                                   <Edit className="h-3.5 w-3.5" />
                                 </Button>
                               )}
                             </div>
-                            <div className="flex gap-4 mt-2 text-[11px] text-slate-500 font-medium">
+                            <div className="flex gap-4 mt-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 {formatDate(exp.startDate)} –{" "}
@@ -669,14 +669,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                 </span>
                               )}
                               {exp.salary && (
-                                <span className="flex items-center gap-1 text-emerald-600">
+                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                                   <IndianRupee className="h-3 w-3" />
                                   {formatCurrency(exp.salary)}
                                 </span>
                               )}
                             </div>
                             {exp.description && (
-                              <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 line-clamp-2 leading-relaxed">
                                 {exp.description}
                               </p>
                             )}
@@ -684,8 +684,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                        <p className="text-sm text-slate-500 italic">
+                      <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                           No work experience added.
                         </p>
                       </div>
@@ -699,65 +699,65 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
         {/* Quick Stats */}
         <Card
-          className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden 
-               ring-1 ring-gray-200/50 hover:ring-blue-400/30 hover:shadow-2xl 
+          className="border-0 shadow-xl bg-white/95 dark:bg-black backdrop-blur-xl rounded-2xl overflow-hidden 
+               ring-1 ring-gray-200/50 dark:ring-slate-800/50 hover:ring-blue-400/30 hover:shadow-2xl 
                transition-all duration-500"
         >
-          <CardHeader className="border-b border-gray-200 bg-gradient-to-r px-6 py-5 relative overflow-hidden">
-            <div className="absolute inset-0 bg-black/5" />
+          <CardHeader className="border-b border-gray-200 dark:border-slate-800 bg-gradient-to-r px-6 py-5 relative overflow-hidden">
+            <div className="absolute inset-0 bg-black/5 dark:bg-white/5" />
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-16 translate-x-16" />
 
-            <CardTitle className="relative flex items-center gap-3 text-black text-lg font-semibold tracking-tight">
-              <div className="p-2.5 backdrop-blur-md rounded-xl border shadow-lg">
-                <Plus className="h-6 w-6 text-black" />
+            <CardTitle className="relative flex items-center gap-3 text-black dark:text-white text-lg font-semibold tracking-tight">
+              <div className="p-2.5 backdrop-blur-md rounded-xl border border-black/10 dark:border-white/10 shadow-lg">
+                <Plus className="h-6 w-6 text-black dark:text-white" />
               </div>
               <span>Quick Stats</span>
               <div className="ml-auto flex items-center gap-1">
                 <span className="h-2 w-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-xs font-medium opacity-90">Live</span>
+                <span className="text-xs font-medium opacity-90 text-slate-800 dark:text-slate-200">Live</span>
               </div>
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white">
+          <CardContent className="p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white dark:from-black dark:to-black">
             {[
               {
                 label: "Applications",
                 value: candidate.metrics?.totalApplications ?? 0,
                 icon: "paper-plane",
-                color: "from-gray-500 to-slate-600",
-                bg: "bg-gray-100",
-                hoverBg: "hover:bg-gray-200",
+                color: "from-gray-500 to-slate-600 dark:from-gray-400 dark:to-slate-500",
+                bg: "bg-gray-100 dark:bg-slate-800",
+                hoverBg: "hover:bg-gray-200 dark:hover:bg-slate-700",
               },
               {
                 label: "Interviews",
                 value: candidate.metrics?.interviewsScheduled ?? 0,
                 icon: "calendar-check",
-                color: "from-blue-500 to-blue-600",
-                bg: "bg-blue-50",
-                hoverBg: "hover:bg-blue-100",
+                color: "from-blue-500 to-blue-600 dark:from-blue-400 dark:to-blue-500",
+                bg: "bg-blue-50 dark:bg-blue-900/20",
+                hoverBg: "hover:bg-blue-100 dark:hover:bg-blue-900/40",
               },
               {
                 label: "Offers",
                 value: candidate.metrics?.offersReceived ?? 0,
                 icon: "handshake",
-                color: "from-emerald-500 to-green-600",
-                bg: "bg-emerald-50",
-                hoverBg: "hover:bg-emerald-100",
+                color: "from-emerald-500 to-green-600 dark:from-emerald-400 dark:to-green-500",
+                bg: "bg-emerald-50 dark:bg-emerald-900/20",
+                hoverBg: "hover:bg-emerald-100 dark:hover:bg-emerald-900/40",
               },
               {
                 label: "Placements",
                 value: candidate.metrics?.placements ?? 0,
                 icon: "trophy",
-                color: "from-purple-500 to-indigo-600",
-                bg: "bg-purple-50",
-                hoverBg: "hover:bg-purple-100",
+                color: "from-purple-500 to-indigo-600 dark:from-purple-400 dark:to-indigo-500",
+                bg: "bg-purple-50 dark:bg-purple-900/20",
+                hoverBg: "hover:bg-purple-100 dark:hover:bg-purple-900/40",
               },
             ].map(({ label, value, color, bg, hoverBg }) => (
               <div
                 key={label}
                 className={`group relative flex items-center justify-between px-5 py-4 rounded-xl ${bg} ${hoverBg} 
-                  border border-transparent hover:border-gray-300 shadow-sm hover:shadow-md 
+                  border border-transparent hover:border-gray-300 dark:hover:border-slate-600 shadow-sm hover:shadow-md 
                   transition-all duration-300 cursor-default backdrop-blur-sm`}
               >
                 <div
@@ -782,7 +782,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       <Trophy className="h-5 w-5 text-white" />
                     )}
                   </div>
-                  <span className="text-sm font-medium text-gray-700 tracking-wide">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 tracking-wide">
                     {label}
                   </span>
                 </div>

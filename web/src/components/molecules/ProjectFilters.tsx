@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Search,
   Filter,
@@ -53,6 +54,8 @@ export default function ProjectFilters({
   className,
   showCountryFilter = true,
 }: ProjectFiltersProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [isOpen, setIsOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
@@ -114,9 +117,9 @@ export default function ProjectFilters({
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-6 ${className} ${isDark ? 'text-white bg-black' : 'text-black bg-white'}`}>
       {/* Premium Search Bar with Enhanced Styling */}
-      <div className="relative group">
+      <div className={`relative group ${isDark ? 'bg-black' : 'bg-white'}`}>
         <div
           className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
             searchFocused ? "text-blue-600" : "text-gray-400"
@@ -125,7 +128,7 @@ export default function ProjectFilters({
           <Search
             className={`h-5 w-5 transition-transform duration-300 ${
               searchFocused ? "scale-110" : "scale-100"
-            }`}
+            } ${isDark ? 'text-gray-300' : ''}`}
           />
         </div>
         <Input
@@ -134,7 +137,7 @@ export default function ProjectFilters({
           onChange={(e) => handleFilterChange("search", e.target.value)}
           onFocus={() => setSearchFocused(true)}
           onBlur={() => setSearchFocused(false)}
-          className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+          className={`pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md ${isDark ? 'bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 focus:from-gray-800 focus:to-gray-700 text-white' : ''}`}
         />
         <div
           className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
@@ -144,12 +147,12 @@ export default function ProjectFilters({
       </div>
 
       {/* Premium Filter Row with Enhanced Visual Design */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className={`flex flex-wrap items-center gap-4 ${isDark ? 'bg-black' : 'bg-white'}`}>
         {/* Status Filter with Premium Styling */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-gray-700 tracking-wide">
+            <span className={`text-sm font-semibold tracking-wide ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               Status
             </span>
           </div>
@@ -159,14 +162,14 @@ export default function ProjectFilters({
               handleFilterChange("status", value === "all" ? undefined : value)
             }
           >
-            <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 focus:from-white focus:to-white focus:ring-2 focus:ring-emerald-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
+            <SelectTrigger className={`h-11 px-4 border-0 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 focus:from-white focus:to-white focus:ring-2 focus:ring-emerald-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px] ${isDark ? 'bg-gradient-to-r from-emerald-900 to-emerald-800 hover:from-emerald-800 hover:to-emerald-700 text-white' : ''}`}>
               <SelectValue placeholder="All Status" />
               <ChevronDown className="h-4 w-4 text-emerald-600 ml-2 transition-transform duration-200" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 dark:bg-black dark:text-white backdrop-blur-sm">
               <SelectItem
                 value="all"
-                className="rounded-lg hover:bg-emerald-50"
+                className={`rounded-lg hover:bg-emerald-50 ${isDark ? 'hover:bg-emerald-700' : ''}`}
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
@@ -195,7 +198,7 @@ export default function ProjectFilters({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-gray-700 tracking-wide">
+            <span className={`text-sm font-semibold tracking-wide ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               Sort
             </span>
           </div>
@@ -208,14 +211,14 @@ export default function ProjectFilters({
               )
             }
           >
-            <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
+            <SelectTrigger className={`h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px] ${isDark ? 'bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white' : ''}`}>
               <SelectValue placeholder="Default" />
               <ChevronDown className="h-4 w-4 text-blue-600 ml-2 transition-transform duration-200" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 dark:bg-black dark:text-white backdrop-blur-sm">
               <SelectItem
                 value="default"
-                className="rounded-lg hover:bg-blue-50"
+                className={`rounded-lg hover:bg-blue-50 ${isDark ? 'hover:bg-blue-700' : ''}`}
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
@@ -243,7 +246,7 @@ export default function ProjectFilters({
           <SheetTrigger asChild>
             <Button
               variant="ghost"
-              className="h-11 px-6 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-purple-100 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md group"
+              className="h-11 px-6 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-purple-100 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md group dark:text-white dark:hover:text-white"
             >
               <div className="relative">
                 <Filter className="h-5 w-5 mr-3 text-purple-600 transition-transform duration-300 group-hover:rotate-12" />
@@ -259,19 +262,19 @@ export default function ProjectFilters({
           </SheetTrigger>
 
           {/* Premium Sheet Design */}
-          <SheetContent className="w-[500px] sm:w-[600px] p-0 border-0 shadow-2xl">
-            <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50">
+          <SheetContent className={`w-[500px] sm:w-[600px] p-0 border-0 shadow-2xl ${isDark ? 'bg-slate-800 text-white' : ''}`}>
+            <div className={`h-full flex flex-col ${isDark ? 'bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800' : 'bg-gradient-to-br from-gray-50 via-white to-gray-50'}`}>
               {/* Premium Header */}
-              <div className="px-8 py-8 border-b border-gray-100 bg-gradient-to-r from-purple-50 via-blue-50 to-emerald-50">
+              <div className={`px-8 py-8 border-b ${isDark ? 'border-slate-700' : 'border-gray-100'} ${isDark ? 'bg-gradient-to-r from-purple-900 via-blue-900 to-emerald-900' : 'bg-gradient-to-r from-purple-50 via-blue-50 to-emerald-50'}`}>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
                     <Filter className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 tracking-tight">
+                    <h3 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       Advanced Filters
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                       Refine your project search with precision
                     </p>
                   </div>
@@ -295,14 +298,14 @@ export default function ProjectFilters({
                       )
                     }
                   >
-                    <SelectTrigger className="h-12 border-gray-200 bg-white hover:bg-gray-50 focus:bg-white focus:ring-2 focus:ring-purple-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md">
+                    <SelectTrigger className={`h-12 ${isDark ? 'border-slate-600 bg-slate-700 hover:bg-slate-600 focus:bg-slate-700' : 'border-gray-200 bg-white hover:bg-gray-50 focus:bg-white'} focus:ring-purple-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md`}>
                       <SelectValue placeholder="Select a client" />
                       <ChevronDown className="h-4 w-4 text-purple-600 ml-2" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-gray-200 shadow-2xl bg-white/95 backdrop-blur-sm">
+                    <SelectContent className="rounded-xl border-gray-200 shadow-2xl bg-white/95 dark:bg-black dark:text-white backdrop-blur-sm">
                       <SelectItem
                         value="all"
-                        className="rounded-lg hover:bg-purple-50"
+                        className={`rounded-lg hover:bg-purple-50 ${isDark ? 'hover:bg-purple-700' : ''}`}
                       >
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
@@ -351,7 +354,7 @@ export default function ProjectFilters({
                       <SelectValue placeholder="Select a team" />
                       <ChevronDown className="h-4 w-4 text-emerald-600 ml-2" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-gray-200 shadow-2xl bg-white/95 backdrop-blur-sm">
+                    <SelectContent className="rounded-xl border-gray-200 shadow-2xl bg-white/95 dark:bg-black dark:text-white backdrop-blur-sm">
                       <SelectItem
                         value="all"
                         className="rounded-lg hover:bg-emerald-50"
@@ -418,7 +421,7 @@ export default function ProjectFilters({
                       <SelectValue placeholder="Choose sort order" />
                       <ChevronDown className="h-4 w-4 text-blue-600 ml-2" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-gray-200 shadow-2xl bg-white/95 backdrop-blur-sm">
+                    <SelectContent className="rounded-xl border-gray-200 shadow-2xl bg-white/95 dark:bg-black dark:text-white backdrop-blur-sm">
                       <SelectItem
                         value="desc"
                         className="rounded-lg hover:bg-blue-50"
@@ -464,7 +467,7 @@ export default function ProjectFilters({
           <Button
             variant="outline"
             onClick={onExport}
-            className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
+            className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm dark:text-white dark:hover:text-white"
           >
             <Download className="h-3 w-3" />
             Export

@@ -67,15 +67,17 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
   });
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-          <User className="h-5 w-5 text-blue-600" />
+    <Card className="border-0 shadow-lg bg-white/80 dark:bg-black backdrop-blur-sm dark:backdrop-blur-none">
+      <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800 dark:text-slate-100">
+          <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           Personal Information
         </CardTitle>
-        <CardDescription>Basic candidate information and contact details</CardDescription>
+        <CardDescription className="text-slate-600 dark:text-slate-400">
+          Basic candidate information and contact details
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6 bg-white dark:bg-black">
         <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
           {/* Profile Image - Left Side */}
           <div className="flex flex-col items-center">
@@ -94,7 +96,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="firstName"
-                className="text-slate-700 font-medium"
+                className="text-slate-700 dark:text-slate-300 font-medium"
               >
                 First Name *
               </Label>
@@ -106,12 +108,12 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     {...field}
                     id="firstName"
                     placeholder="John"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                   />
                 )}
               />
               {errors.firstName && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-red-600 dark:text-red-400">
                   {errors.firstName.message as string}
                 </p>
               )}
@@ -121,7 +123,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="lastName"
-                className="text-slate-700 font-medium"
+                className="text-slate-700 dark:text-slate-300 font-medium"
               >
                 Last Name *
               </Label>
@@ -133,12 +135,12 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     {...field}
                     id="lastName"
                     placeholder="Doe"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                   />
                 )}
               />
               {errors.lastName && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-red-600 dark:text-red-400">
                   {errors.lastName.message as string}
                 </p>
               )}
@@ -146,8 +148,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Contact Number */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium flex items-center gap-2">
-                <Phone className="h-4 w-4 text-slate-500" />
+              <Label className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                <Phone className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                 Contact Number *
               </Label>
               <div className="flex gap-2">
@@ -176,14 +178,14 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         id="mobileNumber"
                         type="tel"
                         placeholder="9876543210"
-                        className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                       />
                     )}
                   />
                 </div>
               </div>
               {errors.mobileNumber && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-red-600 dark:text-red-400">
                   {errors.mobileNumber.message as string}
                 </p>
               )}
@@ -193,12 +195,12 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="email"
-                className="text-slate-700 font-medium"
+                className="text-slate-700 dark:text-slate-300 font-medium"
               >
                 Email Address
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <Controller
                   name="email"
                   control={control}
@@ -208,13 +210,13 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       id="email"
                       type="email"
                       placeholder="john.doe@example.com"
-                      className="h-11 pl-10 bg-white border-slate-200"
+                      className="h-11 pl-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                     />
                   )}
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-red-600 dark:text-red-400">
                   {errors.email.message as string}
                 </p>
               )}
@@ -224,12 +226,12 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="dateOfBirth"
-                className="text-slate-700 font-medium"
+                className="text-slate-700 dark:text-slate-300 font-medium"
               >
                 Date of Birth (optional)
               </Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <Controller
                   name="dateOfBirth"
                   control={control}
@@ -238,13 +240,13 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       {...field}
                       id="dateOfBirth"
                       type="date"
-                      className="h-11 pl-10 bg-white border-slate-200"
+                      className="h-11 pl-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                     />
                   )}
                 />
               </div>
               {errors.dateOfBirth && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-red-600 dark:text-red-400">
                   {errors.dateOfBirth.message as string}
                 </p>
               )}
@@ -252,7 +254,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Gender */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-slate-700 dark:text-slate-300 font-medium">
                 Gender *
               </Label>
               <Controller
@@ -263,10 +265,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     value={field.value}
                     onValueChange={field.onChange}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       <SelectItem value="MALE">Male</SelectItem>
                       <SelectItem value="FEMALE">Female</SelectItem>
                       <SelectItem value="OTHER">Other</SelectItem>
@@ -275,7 +277,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 )}
               />
               {errors.gender && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-red-600 dark:text-red-400">
                   {errors.gender.message as string}
                 </p>
               )}
@@ -283,7 +285,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Source */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-slate-700 dark:text-slate-300 font-medium">
                 Source
               </Label>
               <Controller
@@ -294,10 +296,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     value={field.value}
                     onValueChange={field.onChange}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       <SelectItem value="manual">Manual</SelectItem>
                       <SelectItem value="meta">Meta</SelectItem>
                       <SelectItem value="referral">Referral</SelectItem>
@@ -306,7 +308,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 )}
               />
               {errors.source && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-red-600 dark:text-red-400">
                   {errors.source.message as string}
                 </p>
               )}
@@ -314,15 +316,15 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Physical Information subsection */}
             <div className="col-span-full">
-              <h3 className="text-lg font-semibold text-slate-800 mt-6">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-6">
                 Physical Information
               </h3>
             </div>
 
             {/* Height */}
             <div className="space-y-2">
-              <Label htmlFor="height" className="text-slate-700 font-medium flex items-center gap-2">
-                <Ruler className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="height" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                <Ruler className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                 Height (cm)
               </Label>
               <Controller
@@ -335,7 +337,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="number"
                     step="0.1"
                     placeholder="175"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                   />
                 )}
               />
@@ -343,8 +345,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Weight */}
             <div className="space-y-2">
-              <Label htmlFor="weight" className="text-slate-700 font-medium flex items-center gap-2">
-                <Weight className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="weight" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                <Weight className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                 Weight (kg)
               </Label>
               <Controller
@@ -357,7 +359,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="number"
                     step="0.1"
                     placeholder="70"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                   />
                 )}
               />
@@ -365,8 +367,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Skin Tone */}
             <div className="space-y-2">
-              <Label htmlFor="skinTone" className="text-slate-700 font-medium flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="skinTone" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                 Skin Tone
               </Label>
               <Controller
@@ -378,10 +380,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       <SelectValue placeholder="Select skin tone" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       {SKIN_TONES.map((tone) => (
                         <SelectItem key={tone} value={tone}>
                           {tone}
@@ -395,8 +397,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Language Proficiency */}
             <div className="space-y-2">
-              <Label htmlFor="languageProficiency" className="text-slate-700 font-medium flex items-center gap-2">
-                <Languages className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="languageProficiency" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                <Languages className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                 Language Proficiency
               </Label>
               <Controller
@@ -407,7 +409,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     {...field}
                     id="languageProficiency"
                     placeholder="English (Fluent), Arabic (Basic)"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                   />
                 )}
               />
@@ -415,8 +417,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Smartness */}
             <div className="space-y-2">
-              <Label htmlFor="smartness" className="text-slate-700 font-medium flex items-center gap-2">
-                <Brain className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="smartness" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                <Brain className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                 Smartness
               </Label>
               <Controller
@@ -428,10 +430,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       <SelectValue placeholder="Select rating" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                       {SMARTNESS_LEVELS.map((level) => (
                         <SelectItem key={level} value={level}>
                           {level}
@@ -447,7 +449,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             {source === "referral" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="referralCompanyName" className="text-slate-700 font-medium">
+                  <Label htmlFor="referralCompanyName" className="text-slate-700 dark:text-slate-300 font-medium">
                     Referral Company Name *
                   </Label>
                   <Controller
@@ -458,19 +460,19 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         {...field}
                         id="referralCompanyName"
                         placeholder="Global Staffing Solutions"
-                        className="h-11 bg-white border-slate-200"
+                        className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                       />
                     )}
                   />
                   {errors.referralCompanyName && (
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {errors.referralCompanyName.message as string}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="referralEmail" className="text-slate-700 font-medium">
+                  <Label htmlFor="referralEmail" className="text-slate-700 dark:text-slate-300 font-medium">
                     Referral Email
                   </Label>
                   <Controller
@@ -482,19 +484,19 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         id="referralEmail"
                         type="email"
                         placeholder="referrals@globalstaffing.com"
-                        className="h-11 bg-white border-slate-200"
+                        className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                       />
                     )}
                   />
                   {errors.referralEmail && (
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {errors.referralEmail.message as string}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="referralPhone" className="text-slate-700 font-medium">
+                  <Label htmlFor="referralPhone" className="text-slate-700 dark:text-slate-300 font-medium">
                     Referral Phone
                   </Label>
                   <div className="flex gap-2">
@@ -522,21 +524,21 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                             {...field}
                             id="referralPhone"
                             placeholder="9876543210"
-                            className="h-11 bg-white border-slate-200"
+                            className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                           />
                         )}
                       />
                     </div>
                   </div>
                   {errors.referralPhone && (
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {errors.referralPhone.message as string}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="referralDescription" className="text-slate-700 font-medium">
+                  <Label htmlFor="referralDescription" className="text-slate-700 dark:text-slate-300 font-medium">
                     Referral Description
                   </Label>
                   <Controller
@@ -547,12 +549,12 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         {...field}
                         id="referralDescription"
                         placeholder="Candidate recommended by our partner agency."
-                        className="bg-white border-slate-200 min-h-[100px]"
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 min-h-[100px] focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                       />
                     )}
                   />
                   {errors.referralDescription && (
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {errors.referralDescription.message as string}
                     </p>
                   )}

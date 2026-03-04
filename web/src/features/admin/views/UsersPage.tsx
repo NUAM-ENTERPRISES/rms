@@ -133,14 +133,14 @@ export default function UsersPage() {
 
   if (!canReadUsers) {
     return (
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen p-6 bg-slate-50 dark:bg-black">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                 Access Denied
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-slate-600 dark:text-slate-400">
                 You don't have permission to view users.
               </CardDescription>
             </CardHeader>
@@ -152,12 +152,12 @@ export default function UsersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen p-6 bg-slate-50 dark:bg-black">
         <div className="w-full mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
             <CardContent className="pt-12 pb-12 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-              <p className="text-slate-600">Loading users...</p>
+              <p className="text-slate-600 dark:text-slate-400">Loading users...</p>
             </CardContent>
           </Card>
         </div>
@@ -166,17 +166,17 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-50 dark:bg-black">
       <div className="w-full mx-auto space-y-6">
         {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardContent>
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+          <CardContent className="pt-6">
             <div className="space-y-6">
               {/* Premium Search Bar with Enhanced Styling */}
               <div className="relative group">
                 <div
                   className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
+                    filters.search ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-slate-500"
                   }`}
                 >
                   <Search
@@ -189,7 +189,7 @@ export default function UsersPage() {
                   placeholder="Search users by name or email..."
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-950 dark:to-slate-900 hover:from-gray-100 hover:to-gray-200 dark:hover:from-slate-900 dark:hover:to-slate-800 focus:from-white focus:to-white dark:focus:from-slate-950 dark:focus:to-slate-950 focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md dark:text-white dark:placeholder:text-slate-500"
                 />
                 <div
                   className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
@@ -214,7 +214,7 @@ export default function UsersPage() {
                 {/* Export Button */}
                 <Button
                   variant="outline"
-                  className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
+                  className="h-10 px-3 text-gray-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-gray-900 dark:hover:text-white hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-slate-800 dark:hover:to-slate-800 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
                 >
                   <Download className="h-3 w-3" />
                   Export
@@ -225,36 +225,36 @@ export default function UsersPage() {
         </Card>
 
         {/* Users Table Card */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-              <UsersIcon className="h-5 w-5 text-blue-600" />
+            <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <UsersIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               Users
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="dark:text-slate-400">
               {pagination?.total
                 ? `Showing ${users.length} of ${pagination.total} users`
                 : "Manage system users and their roles"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
               <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead className="font-semibold text-slate-700">
+                <TableHeader className="bg-slate-50 dark:bg-black/50">
+                  <TableRow className="border-slate-200 dark:border-slate-800">
+                    <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                       User
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700">
+                    <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                       Contact
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700">
+                    <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                       Roles
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700">
+                    <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                       Created
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">
+                    <TableHead className="font-semibold text-slate-700 dark:text-slate-300 text-right">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -263,7 +263,7 @@ export default function UsersPage() {
                   {users.map((user) => (
                     <TableRow
                       key={user.id}
-                      className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border-slate-200 dark:border-slate-800"
                       onClick={() => navigate(`/admin/users/${user.id}`)}
                     >
                       <TableCell>
@@ -272,7 +272,7 @@ export default function UsersPage() {
                             <img
                               src={user.profileImage}
                               alt={user.name}
-                              className="w-10 h-10 rounded-full object-cover border-2 border-blue-100"
+                              className="w-10 h-10 rounded-full object-cover border-2 border-blue-100 dark:border-blue-900"
                             />
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
@@ -280,10 +280,10 @@ export default function UsersPage() {
                             </div>
                           )}
                           <div>
-                            <div className="font-medium text-slate-800">
+                            <div className="font-medium text-slate-800 dark:text-slate-100">
                               {user.name}
                             </div>
-                            <div className="text-sm text-slate-500">
+                            <div className="text-sm text-slate-500 dark:text-slate-400">
                               {user.email}
                             </div>
                           </div>
@@ -292,16 +292,16 @@ export default function UsersPage() {
                       <TableCell>
                         <div className="space-y-1">
                           {user.email && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Mail className="h-3 w-3 text-slate-400" />
+                            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                              <Mail className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                               <span className="truncate max-w-[200px]">
                                 {user.email}
                               </span>
                             </div>
                           )}
                           {user.phone && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Phone className="h-3 w-3 text-slate-400" />
+                            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                              <Phone className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                               {user.phone}
                             </div>
                           )}
@@ -328,15 +328,15 @@ export default function UsersPage() {
                               </Badge>
                             ))}
                           {user.userRoles.length === 0 && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
                               No roles
                             </Badge>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Calendar className="h-3 w-3 text-slate-400" />
+                        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                          <Calendar className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                           {formatDate(user.createdAt)}
                         </div>
                       </TableCell>
@@ -349,16 +349,17 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="dark:bg-black dark:border-slate-800">
                             <DropdownMenuItem
                               onClick={() =>
                                 navigate(`/admin/users/${user.id}`)
                               }
+                              className="dark:focus:bg-slate-800 dark:text-slate-200"
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
@@ -369,16 +370,17 @@ export default function UsersPage() {
                                   onClick={() =>
                                     navigate(`/admin/users/${user.id}/edit`)
                                   }
+                                  className="dark:focus:bg-slate-800 dark:text-slate-200"
                                 >
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit User
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
+                                <DropdownMenuSeparator className="dark:bg-black" />
                                 <DropdownMenuItem
                                   onClick={() =>
                                     handleDeleteUserClick(user.id, user.name)
                                   }
-                                  className="text-red-600"
+                                  className="text-red-600 dark:text-red-400 dark:focus:bg-slate-800"
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete User
@@ -397,11 +399,11 @@ export default function UsersPage() {
             {/* Empty State */}
             {users.length === 0 && (
               <div className="pt-12 pb-12 text-center">
-                <UsersIcon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-600 mb-2">
+                <UsersIcon className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-600 dark:text-slate-300 mb-2">
                   No users found
                 </h3>
-                <p className="text-slate-500 mb-6">
+                <p className="text-slate-500 dark:text-slate-400 mb-6">
                   {filters.search
                     ? "Try adjusting your search criteria."
                     : "Get started by creating your first user."}
@@ -422,16 +424,17 @@ export default function UsersPage() {
 
         {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-600">
+                <div className="text-sm text-slate-600 dark:text-slate-400">
                   Page {pagination.page} of {pagination.totalPages}
                 </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                     onClick={() =>
                       setFilters((prev) => ({
                         ...prev,
@@ -445,6 +448,7 @@ export default function UsersPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                     onClick={() =>
                       setFilters((prev) => ({
                         ...prev,

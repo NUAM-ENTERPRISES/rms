@@ -308,7 +308,7 @@ export function DocumentUploadSection({
 
 
   {/* ===== UPLOADED DOCUMENTS LIST ===== */}
-  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden">
+  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden dark:border dark:border-slate-700">
     <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-slate-100">
       <div className="flex items-center w-full justify-between">
         <div>

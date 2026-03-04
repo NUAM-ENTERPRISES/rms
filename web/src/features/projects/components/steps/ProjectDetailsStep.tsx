@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React,{useEffect} from "react";
 import {
   Control,
   Controller,
@@ -48,7 +48,6 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
 }) => {
   const projectType = watch("projectType");
 
-  // Set default contact visibility based on project type
   useEffect(() => {
     if (projectType === "private") {
       setValue("hideContactInfo", true);
@@ -58,21 +57,23 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
   }, [projectType, setValue]);
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-blue-600" />
+    <Card className="border-0 shadow-lg bg-white/80 dark:bg-black backdrop-blur-sm dark:backdrop-blur-none">
+      <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+        <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           Project Details
         </CardTitle>
-        <CardDescription>Basic information about the project</CardDescription>
+        <CardDescription className="text-slate-600 dark:text-slate-400">
+          Basic information about the project
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 bg-white dark:bg-black">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Project Title */}
           <div className="space-y-1">
             <Label
               htmlFor="title"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Project Title *
             </Label>
@@ -83,12 +84,12 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 <Input
                   {...field}
                   placeholder="e.g., Emergency Department Staffing"
-                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                 />
               )}
             />
             {errors.title && (
-              <p className="text-sm text-red-600">{errors.title.message}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
             )}
           </div>
 
@@ -96,7 +97,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="deadline"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Project Deadline *
             </Label>
@@ -108,11 +109,12 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                   value={field.value}
                   onChange={field.onChange}
                   placeholder="Select project deadline"
+                  className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500"
                 />
               )}
             />
             {errors.deadline && (
-              <p className="text-sm text-red-600">{errors.deadline.message}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{errors.deadline.message}</p>
             )}
           </div>
 
@@ -120,7 +122,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="priority"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Project Priority
             </Label>
@@ -129,10 +131,10 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     <SelectItem value="low">
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
@@ -162,7 +164,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               )}
             />
             {errors.priority && (
-              <span className="text-sm text-red-600">{errors.priority.message}</span>
+              <span className="text-sm text-red-600 dark:text-red-400">{errors.priority.message}</span>
             )}
           </div>
 
@@ -170,7 +172,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="projectType"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Project Type *
             </Label>
@@ -179,19 +181,19 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     <SelectItem value="private">
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-blue-600" />
+                        <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         Private Sector
                       </div>
                     </SelectItem>
                     <SelectItem value="ministry">
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-purple-600" />
+                        <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         Ministry/Government
                       </div>
                     </SelectItem>
@@ -200,7 +202,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               )}
             />
             {errors.projectType && (
-              <p className="text-sm text-red-600">
+              <p className="text-sm text-red-600 dark:text-red-400">
                 {errors.projectType.message}
               </p>
             )}
@@ -252,7 +254,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
         <div className="space-y-2">
           <Label
             htmlFor="description"
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-slate-700 dark:text-slate-300"
           >
             Project Description*
           </Label>
@@ -264,20 +266,20 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 {...field}
                 placeholder="Describe the project scope, requirements, and objectives..."
                 rows={4}
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
               />
             )}
           />
           {errors.description && (
-            <span className="text-sm text-red-600">{errors.description.message}</span>
+            <span className="text-sm text-red-600 dark:text-red-400">{errors.description.message}</span>
           )}
         </div>
 
         {/* New Project-Specific Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
           {/* Resume Editable */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">
+            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
               Resume Editing Policy
             </Label>
             <Controller
@@ -288,19 +290,19 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                   onValueChange={(value) => field.onChange(value === "true")}
                   value={field.value.toString()}
                 >
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     <SelectItem value="true">
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-green-600" />
+                        <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
                         Resume can be edited
                       </div>
                     </SelectItem>
                     <SelectItem value="false">
                       <div className="flex items-center gap-2">
-                        <Target className="h-3 w-3 text-red-600" />
+                        <Target className="h-3 w-3 text-red-600 dark:text-red-400" />
                         Resume cannot be edited
                       </div>
                     </SelectItem>
@@ -309,13 +311,13 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               )}
             />
             {errors.resumeEditable && (
-              <span className="text-sm text-red-600">{errors.resumeEditable.message}</span>
+              <span className="text-sm text-red-600 dark:text-red-400">{errors.resumeEditable.message}</span>
             )}
           </div>
 
           {/* Grooming Required */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">
+            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
               Grooming/Dressing Requirements
             </Label>
             <Controller
@@ -323,10 +325,10 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     <SelectItem value="formal">
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
@@ -350,13 +352,13 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               )}
             />
             {errors.groomingRequired && (
-              <span className="text-sm text-red-600">{errors.groomingRequired.message}</span>
+              <span className="text-sm text-red-600 dark:text-red-400">{errors.groomingRequired.message}</span>
             )}
           </div>
 
           {/* Contact Information Visibility */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">
+            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
               Contact Information Visibility
             </Label>
             <Controller
@@ -367,19 +369,19 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                   onValueChange={(value) => field.onChange(value === "true")}
                   value={field.value.toString()}
                 >
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     <SelectItem value="false">
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-green-600" />
+                        <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
                         Show email and mobile
                       </div>
                     </SelectItem>
                     <SelectItem value="true">
                       <div className="flex items-center gap-2">
-                        <Target className="h-3 w-3 text-red-600" />
+                        <Target className="h-3 w-3 text-red-600 dark:text-red-400" />
                         Hide email and mobile
                       </div>
                     </SelectItem>
@@ -388,14 +390,14 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               )}
             />
             {errors.hideContactInfo && (
-              <span className="text-sm text-red-600">{errors.hideContactInfo.message}</span>
+              <span className="text-sm text-red-600 dark:text-red-400">{errors.hideContactInfo.message}</span>
             )}
           </div>
         </div>
 
         {/* Required Screening Checkbox */}
-        <div className="pt-4 border-t border-slate-200">
-          <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-900/50">
             <Controller
               name="requiredScreening"
               control={control}
@@ -404,23 +406,23 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                   id="requiredScreening"
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  className="mt-1"
+                  className="mt-1 border-slate-300 dark:border-slate-600 data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-600 focus:ring-blue-500 dark:focus:ring-blue-500"
                 />
               )}
             />
             <div className="flex-1">
               <Label
                 htmlFor="requiredScreening"
-                className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+                className="text-sm font-medium text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-2"
               >
-                <Shield className="h-4 w-4 text-blue-600" />
+                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 Required Screening Process
               </Label>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 Enable this if candidates must complete a mandatory screening process before being considered for this project
               </p>
               {errors.requiredScreening && (
-                <span className="text-sm text-red-600 mt-1 block">{errors.requiredScreening.message}</span>
+                <span className="text-sm text-red-600 dark:text-red-400 mt-1 block">{errors.requiredScreening.message}</span>
               )}
             </div>
           </div>

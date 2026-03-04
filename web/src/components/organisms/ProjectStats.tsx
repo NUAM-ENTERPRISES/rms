@@ -3,6 +3,7 @@ import { ProjectStats as ProjectStatsType } from "@/features/projects";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ProjectStatsProps {
   stats: ProjectStatsType;
@@ -10,6 +11,8 @@ interface ProjectStatsProps {
 }
 
 export default function ProjectStats({ stats, className }: ProjectStatsProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const statsData = [
     {
       label: "Total Projects",
@@ -68,26 +71,30 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
             >
               <Card
                 className={cn(
-                  "relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br",
-                  stat.lightBg,
-                  "hover:shadow-md transition-all duration-300 group cursor-default"
+                  "relative overflow-hidden rounded-2xl border bg-gradient-to-br",
+                  isDark ? "border-slate-700" : "border-slate-100",
+                  isDark
+                    ? "bg-slate-800"
+                    : stat.lightBg,
+                  "hover:shadow-md transition-all duration-300 group cursor-default",
+                  isDark && "dark:text-white"
                 )}
               >
                 <CardContent className="px-3 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                         {stat.label}
                       </p>
                       <h3
                         className={cn(
                           "text-xl font-bold leading-tight",
-                          stat.textColor
+                          isDark ? "text-white" : stat.textColor
                         )}
                       >
                         {stat.value}
                       </h3>
-                      <p className="text-[10px] text-slate-500 mt-1">
+                      <p className="text-[10px] text-slate-500 mt-1 dark:text-slate-400">
                         {stat.subtitle}
                       </p>
                     </div>

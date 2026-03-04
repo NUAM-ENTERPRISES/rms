@@ -42,6 +42,7 @@ import { useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation 
 import { useGetCandidatesToTransferQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProjectsQuery } from "@/services/projectsApi";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext";
 import { toast } from "sonner";
 import { SingleTransferToProcessingModal } from "../components/SingleTransferToProcessingModal";
 import { MultiTransferToProcessingModal } from "../components/MultiTransferToProcessingModal";
@@ -52,6 +53,7 @@ import { useAppDispatch } from "@/app/hooks";
 import { processingApi } from "@/features/processing/data/processing.endpoints";
 
 export default function PassedCandidatesPage() {
+  const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
@@ -263,7 +265,7 @@ export default function PassedCandidatesPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
-      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+      <div className="border-b bg-white/80 dark:bg-black/80 backdrop-blur">
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -399,7 +401,7 @@ export default function PassedCandidatesPage() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60 flex flex-col">
+        <div className="w-80 border-r bg-white/60 dark:bg-black/60 flex flex-col">
           {filters.projectId !== "all" && filteredList.length > 0 && (
             <div className="p-3 border-b flex items-center justify-between bg-white/40 dark:bg-gray-800/40">
               <div className="flex items-center gap-2">
@@ -513,7 +515,7 @@ export default function PassedCandidatesPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50"
+                                  className={cn("h-6 w-6 p-0 dark:text-white", theme === "dark" ? "text-white" : "text-blue-600 hover:bg-blue-50")}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     const fileUrl = offerLetterOverrides[candidate?.id] || it.offerLetterData?.document?.fileUrl;
@@ -536,10 +538,10 @@ export default function PassedCandidatesPage() {
                                   variant="ghost"
                                   size="sm"
                                   className={cn(
-                                    "h-6 w-6 p-0",
-                                    (it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) 
+                                    "h-6 w-6 p-0 dark:text-white",
+                                    theme === "dark" ? "text-white" : (it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) 
                                       ? "text-amber-600 hover:bg-amber-50" 
-                                      : "text-indigo-600 hover:bg-indigo-50"
+                                      : "text-indigo-6̧00 hover:bg-indigo-50"
                                   )}
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -625,7 +627,7 @@ export default function PassedCandidatesPage() {
                       className={cn(
                         "shadow-md transition-all hover:scale-105 h-9 min-w-[120px]",
                         selected.isTransferredToProcessing 
-                          ? "bg-slate-200 text-slate-500 cursor-not-allowed hover:scale-100" 
+                          ? cn("bg-slate-200", theme === "dark" ? "text-white" : "text-slate-500", "cursor-not-allowed hover:scale-100") 
                           : "bg-emerald-600 hover:bg-emerald-700 text-white"
                       )}
                     >

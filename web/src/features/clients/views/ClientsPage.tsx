@@ -512,9 +512,12 @@ import {
 import { useGetClientsQuery } from "@/features/clients";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext"; // ← added this import
 
 export default function ClientsPage() {
   const navigate = useNavigate();
+  const { theme } = useTheme(); // ← added this line
+  const isDark = theme === "dark";
   const canWriteClients = useCan("write:clients");
   const canReadClients = useCan("read:clients");
 
@@ -593,13 +596,25 @@ export default function ClientsPage() {
 
   if (!canReadClients) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-0 shadow-xl bg-white rounded-2xl text-center py-12">
+      <div className={cn(
+        "min-h-screen flex items-center justify-center p-4",
+        theme === "dark" ? "bg-black" : "bg-gray-50"
+      )}>
+        <Card className={cn(
+          "max-w-md w-full border-0 shadow-xl rounded-2xl text-center py-12",
+          isDark ? "bg-black text-white" : "bg-white"
+        )}>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900">
+            <CardTitle className={cn(
+              "text-2xl font-bold",
+              theme === "dark" ? "text-slate-100" : "text-gray-900"
+            )}>
               Access Denied
             </CardTitle>
-            <p className="text-gray-600 mt-3">
+            <p className={cn(
+              "mt-3",
+              theme === "dark" ? "text-slate-400" : "text-gray-600"
+            )}>
               You don't have permission to view clients.
             </p>
           </CardHeader>
@@ -609,35 +624,53 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className={cn(
+      "min-h-screen",
+      theme === "dark" ? "bg-black" : ""
+    )}>
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className={cn(
+          "border-0 shadow-lg backdrop-blur-sm",
+          isDark ? "bg-black" : "bg-white/80"
+        )}>
           <CardContent>
             <div className="space-y-6">
               {/* Premium Search Bar with Enhanced Styling */}
               <div className="relative group">
                 <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
-                  }`}
+                  className={cn(
+                    "absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300",
+                    filters.search
+                      ? theme === "dark" ? "text-blue-400" : "text-blue-600"
+                      : theme === "dark" ? "text-slate-500" : "text-gray-400"
+                  )}
                 >
                   <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
+                    className={cn(
+                      "h-5 w-5 transition-transform duration-300",
                       filters.search ? "scale-110" : "scale-100"
-                    }`}
+                    )}
                   />
                 </div>
                 <Input
                   placeholder="Search clients by name, contact, or description..."
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+                  className={cn(
+                    "pl-14 h-14 text-base border-0 transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md",
+                    theme === "dark"
+                      ? "bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:ring-blue-500/40"
+                      : "bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30"
+                  )}
                 />
                 <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    filters.search ? "ring-2 ring-blue-500/20" : ""
-                  }`}
+                  className={cn(
+                    "absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none",
+                    filters.search
+                      ? theme === "dark" ? "ring-2 ring-blue-500/30" : "ring-2 ring-blue-500/20"
+                      : ""
+                  )}
                 />
               </div>
 
@@ -646,8 +679,14 @@ export default function ClientsPage() {
                 {/* Client Type Filter */}
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full animate-pulse",
+                      theme === "dark" ? "bg-blue-400" : "bg-blue-500"
+                    )}></div>
+                    <span className={cn(
+                      "text-sm font-semibold tracking-wide",
+                      theme === "dark" ? "text-slate-300" : "text-gray-700"
+                    )}>
                       Type
                     </span>
                   </div>
@@ -657,16 +696,30 @@ export default function ClientsPage() {
                       setFilters((prev) => ({ ...prev, type: value, page: 1 }))
                     }
                   >
-                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
+                    <SelectTrigger className={cn(
+                      "h-11 px-4 border-0 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]",
+                      theme === "dark"
+                        ? "bg-slate-800 text-slate-100 hover:bg-slate-700 focus:ring-blue-500/40"
+                        : "bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30"
+                    )}>
                       <SelectValue placeholder="All Client Types" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+                    <SelectContent className={cn(
+                      "rounded-xl border-0 shadow-2xl backdrop-blur-sm",
+                      isDark ? "bg-black border-slate-800" : "bg-white/95"
+                    )}>
                       <SelectItem
                         value="all"
-                        className="rounded-lg hover:bg-blue-50"
+                        className={cn(
+                          "rounded-lg",
+                          theme === "dark" ? "hover:bg-slate-800" : "hover:bg-blue-50"
+                        )}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            theme === "dark" ? "bg-slate-500" : "bg-gray-400"
+                          )}></div>
                           All Types
                         </div>
                       </SelectItem>
@@ -674,14 +727,14 @@ export default function ClientsPage() {
                         <SelectItem
                           key={option.value}
                           value={option.value}
-                          className="rounded-lg hover:bg-blue-50"
+                          className={cn(
+                            "rounded-lg",
+                            theme === "dark" ? "hover:bg-slate-800" : "hover:bg-blue-50"
+                          )}
                         >
                           <div className="flex items-center gap-2">
                             <div
-                              className={cn(
-                                "w-2 h-2 rounded-full",
-                                option.color
-                              )}
+                              className={cn("w-2 h-2 rounded-full", option.color)}
                             ></div>
                             {option.label}
                           </div>
@@ -695,7 +748,12 @@ export default function ClientsPage() {
                 {canWriteClients && (
                   <Button
                     onClick={() => navigate("/clients/create")}
-                    className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
+                    className={cn(
+                      "h-10 px-3 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm",
+                      theme === "dark"
+                        ? "bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900"
+                        : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                    )}
                   >
                     <Plus className="h-3 w-3" />
                     Add New Client
@@ -705,7 +763,12 @@ export default function ClientsPage() {
                 {/* Export Button */}
                 <Button
                   variant="outline"
-                  className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
+                  className={cn(
+                    "h-10 px-3 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm",
+                    theme === "dark"
+                      ? "border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                      : "text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 border-slate-200"
+                  )}
                 >
                   <Download className="h-3 w-3" />
                   Export
@@ -721,26 +784,49 @@ export default function ClientsPage() {
             {[...Array(6)].map((_, i) => (
               <Card
                 key={i}
-                className="border-0 shadow-lg bg-white/80 backdrop-blur-sm animate-pulse"
+                className={cn(
+                  "border-0 shadow-lg animate-pulse",
+                  isDark ? "bg-black" : "bg-white/80 backdrop-blur-sm"
+                )}
               >
                 <CardHeader className="pb-3">
-                  <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                  <div className={cn(
+                    "h-4 rounded w-3/4",
+                    theme === "dark" ? "bg-slate-700" : "bg-slate-200"
+                  )}></div>
+                  <div className={cn(
+                    "h-3 rounded w-1/2 mt-2",
+                    theme === "dark" ? "bg-slate-700" : "bg-slate-200"
+                  )}></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-3 bg-slate-200 rounded w-full mb-2"></div>
-                  <div className="h-3 bg-slate-200 rounded w-2/3"></div>
+                  <div className={cn(
+                    "h-3 rounded w-full mb-2",
+                    theme === "dark" ? "bg-slate-700" : "bg-slate-200"
+                  )}></div>
+                  <div className={cn(
+                    "h-3 rounded w-2/3",
+                    theme === "dark" ? "bg-slate-700" : "bg-slate-200"
+                  )}></div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : error ? (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className={cn(
+            "border-0 shadow-lg backdrop-blur-sm",
+            theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+          )}>
             <CardContent className="pt-6 text-center">
-              <p className="text-slate-600">
+              <p className={cn(
+                theme === "dark" ? "text-slate-400" : "text-slate-600"
+              )}>
                 Failed to load clients. Please try again.
               </p>
-              <Button onClick={() => refetch()} className="mt-4">
+              <Button 
+                onClick={() => refetch()} 
+                className="mt-4"
+              >
                 Retry
               </Button>
             </CardContent>
@@ -748,14 +834,22 @@ export default function ClientsPage() {
         ) : (
           <>
             {/* Clients Grid */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <Card className={cn(
+              "border-0 shadow-lg backdrop-blur-sm",
+              isDark ? "bg-black" : "bg-white/80"
+            )}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-semibold text-slate-800">
+                    <CardTitle className={cn(
+                      "text-lg font-semibold",
+                      theme === "dark" ? "text-slate-100" : "text-slate-800"
+                    )}>
                       All Clients
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className={cn(
+                      theme === "dark" ? "text-slate-400" : ""
+                    )}>
                       {clients.length} client{clients.length !== 1 ? "s" : ""}{" "}
                       found
                     </CardDescription>
@@ -771,7 +865,12 @@ export default function ClientsPage() {
                     return (
                       <Card
                         key={client.id}
-                        className="group border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
+                        className={cn(
+                          "group border-0 shadow-lg transition-all duration-200 transform hover:-translate-y-1 cursor-pointer backdrop-blur-sm",
+                          isDark
+                            ? "bg-black border border-slate-800 hover:bg-black/90 hover:shadow-2xl"
+                            : "bg-white/80 hover:shadow-xl"
+                        )}
                         onClick={() => navigate(`/clients/${client.id}`)}
                       >
                         <CardHeader className="pb-3">
@@ -780,15 +879,23 @@ export default function ClientsPage() {
                               <div
                                 className={cn("p-2 rounded-lg", typeInfo.color)}
                               >
-                                <IconComponent className="h-5 w-5" />
+                                <IconComponent className="h-5 w-5 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <CardTitle className="text-lg font-semibold text-slate-800 truncate">
+                                <CardTitle className={cn(
+                                  "text-lg font-semibold truncate",
+                                  theme === "dark" ? "text-slate-100" : "text-slate-800"
+                                )}>
                                   {client.name}
                                 </CardTitle>
                                 <Badge
                                   variant="outline"
-                                  className="mt-1 border-slate-200 text-slate-600"
+                                  className={cn(
+                                    "mt-1 text-xs",
+                                    theme === "dark"
+                                      ? "border-slate-600 text-slate-400 bg-slate-800/40"
+                                      : "border-slate-200 text-slate-600"
+                                  )}
                                 >
                                   {typeInfo.label}
                                 </Badge>
@@ -802,26 +909,41 @@ export default function ClientsPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-8 w-8 p-0"
+                                      className={cn(
+                                        "h-8 w-8 p-0",
+                                        theme === "dark" ? "hover:bg-slate-800" : ""
+                                      )}
                                       onClick={(e) => e.stopPropagation()}
                                     >
-                                      <MoreVertical className="h-4 w-4" />
+                                      <MoreVertical className={cn(
+                                        "h-4 w-4",
+                                        theme === "dark" ? "text-slate-400" : ""
+                                      )} />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent
                                     align="end"
-                                    className="rounded-xl"
+                                    className={cn(
+                                      "rounded-xl",
+                                      isDark ? "bg-black border-slate-800" : ""
+                                    )}
                                   >
                                     <DropdownMenuItem
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         navigate(`/clients/${client.id}/edit`);
                                       }}
+                                      className={cn(
+                                        theme === "dark" ? "text-slate-200 hover:bg-slate-800" : ""
+                                      )}
                                     >
                                       <Edit className="h-4 w-4 mr-2" /> Edit
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      className="text-red-600"
+                                      className={cn(
+                                        "text-red-600",
+                                        theme === "dark" ? "hover:bg-red-950/50" : ""
+                                      )}
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -836,8 +958,14 @@ export default function ClientsPage() {
                         <CardContent className="space-y-3">
                           {/* Contact Info */}
                           {client.pointOfContact && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Users className="h-4 w-4 text-slate-400" />
+                            <div className={cn(
+                              "flex items-center gap-2 text-sm",
+                              theme === "dark" ? "text-slate-400" : "text-slate-600"
+                            )}>
+                              <Users className={cn(
+                                "h-4 w-4",
+                                theme === "dark" ? "text-slate-500" : "text-slate-400"
+                              )} />
                               <span className="truncate">
                                 {client.pointOfContact}
                               </span>
@@ -845,23 +973,41 @@ export default function ClientsPage() {
                           )}
 
                           {client.email && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Mail className="h-4 w-4 text-slate-400" />
+                            <div className={cn(
+                              "flex items-center gap-2 text-sm",
+                              theme === "dark" ? "text-slate-400" : "text-slate-600"
+                            )}>
+                              <Mail className={cn(
+                                "h-4 w-4",
+                                theme === "dark" ? "text-slate-500" : "text-slate-400"
+                              )} />
                               <span className="truncate">{client.email}</span>
                             </div>
                           )}
 
                           {client.phone && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Phone className="h-4 w-4 text-slate-400" />
+                            <div className={cn(
+                              "flex items-center gap-2 text-sm",
+                              theme === "dark" ? "text-slate-400" : "text-slate-600"
+                            )}>
+                              <Phone className={cn(
+                                "h-4 w-4",
+                                theme === "dark" ? "text-slate-500" : "text-slate-400"
+                              )} />
                               <span className="truncate">{client.phone}</span>
                             </div>
                           )}
 
                           {/* Projects count */}
                           {client.projects && client.projects.length > 0 && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Briefcase className="h-4 w-4 text-slate-400" />
+                            <div className={cn(
+                              "flex items-center gap-2 text-sm",
+                              theme === "dark" ? "text-slate-400" : "text-slate-600"
+                            )}>
+                              <Briefcase className={cn(
+                                "h-4 w-4",
+                                theme === "dark" ? "text-slate-500" : "text-slate-400"
+                              )} />
                               <span>
                                 {client.projects.length} active project
                                 {client.projects.length !== 1 ? "s" : ""}
@@ -870,8 +1016,14 @@ export default function ClientsPage() {
                           )}
 
                           {/* Created date */}
-                          <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <Calendar className="h-4 w-4 text-slate-400" />
+                          <div className={cn(
+                            "flex items-center gap-2 text-sm",
+                            theme === "dark" ? "text-slate-500" : "text-slate-500"
+                          )}>
+                            <Calendar className={cn(
+                              "h-4 w-4",
+                              theme === "dark" ? "text-slate-500" : "text-slate-400"
+                            )} />
                             <span>Added {formatDate(client.createdAt)}</span>
                           </div>
                         </CardContent>
@@ -884,13 +1036,25 @@ export default function ClientsPage() {
 
             {/* Empty State */}
             {clients.length === 0 && (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <Card className={cn(
+                "border-0 shadow-lg backdrop-blur-sm",
+                theme === "dark" ? "bg-slate-900/80" : "bg-white/80"
+              )}>
                 <CardContent className="pt-12 pb-12 text-center">
-                  <Building2 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-600 mb-2">
+                  <Building2 className={cn(
+                    "h-16 w-16 mx-auto mb-4",
+                    theme === "dark" ? "text-slate-600" : "text-slate-300"
+                  )} />
+                  <h3 className={cn(
+                    "text-lg font-semibold mb-2",
+                    theme === "dark" ? "text-slate-200" : "text-slate-600"
+                  )}>
                     No clients found
                   </h3>
-                  <p className="text-slate-500 mb-6">
+                  <p className={cn(
+                    "mb-6",
+                    theme === "dark" ? "text-slate-400" : "text-slate-500"
+                  )}>
                     {filters.search || filters.type !== "all"
                       ? "Try adjusting your search criteria or filters."
                       : "Get started by adding your first client."}
@@ -900,7 +1064,12 @@ export default function ClientsPage() {
                     canWriteClients && (
                       <Button
                         onClick={() => navigate("/clients/create")}
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                        className={cn(
+                          "text-white",
+                          theme === "dark"
+                            ? "bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900"
+                            : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                        )}
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         Add Your First Client
@@ -912,8 +1081,11 @@ export default function ClientsPage() {
 
             {/* Pagination and Count - Moved to Bottom */}
             {clients.length > 0 && (
-              <div className="flex items-center justify-between pt-6 border-t border-slate-200">
-                <p className="text-slate-600">
+              <div className={cn(
+                "flex items-center justify-between pt-6 border-t",
+                theme === "dark" ? "border-slate-800 text-slate-400" : "border-slate-200 text-slate-600"
+              )}>
+                <p>
                   Showing {clients.length} of {pagination?.total || 0} clients
                 </p>
                 {pagination && pagination.pages > 1 && (
@@ -923,11 +1095,13 @@ export default function ClientsPage() {
                       size="sm"
                       onClick={() => handlePageChange(pagination.page - 1)}
                       disabled={pagination.page <= 1}
-                      className="border-slate-200"
+                      className={cn(
+                        theme === "dark" ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200"
+                      )}
                     >
                       Previous
                     </Button>
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm">
                       Page {pagination.page} of {pagination.pages}
                     </span>
                     <Button
@@ -935,7 +1109,9 @@ export default function ClientsPage() {
                       size="sm"
                       onClick={() => handlePageChange(pagination.page + 1)}
                       disabled={pagination.page >= pagination.pages}
-                      className="border-slate-200"
+                      className={cn(
+                        theme === "dark" ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200"
+                      )}
                     >
                       Next
                     </Button>

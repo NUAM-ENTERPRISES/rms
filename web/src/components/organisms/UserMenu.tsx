@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { clearCredentials } from "@/features/auth/authSlice";
 import { authApi } from "@/services/authApi";
-import { User, Settings, LogOut, ChevronDown } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 export default function UserMenu() {
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
@@ -171,8 +173,26 @@ export default function UserMenu() {
         >
           <Settings className="h-4 w-4 text-gray-500" />
           <span>Settings</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator className="bg-gray-200" />
+        </DropdownMenuItem>        <DropdownMenuItem
+          onClick={() => {
+            toggleTheme();
+            setIsOpen(false);
+          }}
+          className={cn(
+            "flex items-center gap-2 px-3 py-2 text-sm",
+            "text-gray-700 hover:text-gray-900",
+            "hover:bg-gray-50 focus:bg-gray-50",
+            "focus:outline-none cursor-pointer",
+            "transition-colors duration-150"
+          )}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4 text-yellow-500" />
+          ) : (
+            <Moon className="h-4 w-4 text-gray-500" />
+          )}
+          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+        </DropdownMenuItem>        <DropdownMenuSeparator className="bg-gray-200" />
         <DropdownMenuItem
           onClick={handleLogout}
           className={cn(

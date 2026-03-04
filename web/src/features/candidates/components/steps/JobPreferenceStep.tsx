@@ -48,19 +48,21 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
   isLoading,
 }) => {
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-          <Briefcase className="h-5 w-5 text-blue-600" />
+    <Card className="border-0 shadow-lg bg-white/80 dark:bg-black backdrop-blur-sm dark:backdrop-blur-none">
+      <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800 dark:text-slate-100">
+          <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           Job Preferences
         </CardTitle>
-        <CardDescription>Candidate's expectations and work constraints</CardDescription>
+        <CardDescription className="text-slate-600 dark:text-slate-400">
+          Candidate's expectations and work constraints
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6 bg-white dark:bg-black">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Salary Range */}
           <div className="space-y-2">
-            <Label htmlFor="expectedMinSalary" className="text-slate-700 font-medium">
+            <Label htmlFor="expectedMinSalary" className="text-slate-700 dark:text-slate-300 font-medium">
               Expected Min Salary
             </Label>
             <Controller
@@ -73,16 +75,18 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   type="number"
                   placeholder="40000"
                   disabled={isLoading}
-                  className="h-11 bg-white border-slate-200"
+                  className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                 />
               )}
             />
             {errors.expectedMinSalary && (
-              <p className="text-sm text-red-600">{errors.expectedMinSalary.message as string}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {errors.expectedMinSalary.message as string}
+              </p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="expectedMaxSalary" className="text-slate-700 font-medium">
+            <Label htmlFor="expectedMaxSalary" className="text-slate-700 dark:text-slate-300 font-medium">
               Expected Max Salary
             </Label>
             <Controller
@@ -95,18 +99,20 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   type="number"
                   placeholder="60000"
                   disabled={isLoading}
-                  className="h-11 bg-white border-slate-200"
+                  className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20 dark:focus:ring-blue-500/20"
                 />
               )}
             />
             {errors.expectedMaxSalary && (
-              <p className="text-sm text-red-600">{errors.expectedMaxSalary.message as string}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {errors.expectedMaxSalary.message as string}
+              </p>
             )}
           </div>
 
           {/* Sector Type */}
           <div className="space-y-2">
-            <Label className="text-slate-700 font-medium">Sector Type</Label>
+            <Label className="text-slate-700 dark:text-slate-300 font-medium">Sector Type</Label>
             <Controller
               name="sectorType"
               control={control}
@@ -116,10 +122,10 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   onValueChange={field.onChange}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-11 bg-white border-slate-200">
+                  <SelectTrigger className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     <SelectValue placeholder="Select sector" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     {Object.entries(SECTOR_TYPES).map(([key, value]) => (
                       <SelectItem key={value} value={value}>
                         {key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
@@ -133,7 +139,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
 
           {/* Visa Type */}
           <div className="space-y-2">
-            <Label className="text-slate-700 font-medium">Visa Type</Label>
+            <Label className="text-slate-700 dark:text-slate-300 font-medium">Visa Type</Label>
             <Controller
               name="visaType"
               control={control}
@@ -143,10 +149,10 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   onValueChange={field.onChange}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-11 bg-white border-slate-200">
+                  <SelectTrigger className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     <SelectValue placeholder="Select visa type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
                     {Object.entries(VISA_TYPES).map(([key, value]) => (
                       <SelectItem key={value} value={value}>
                         {key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
@@ -159,7 +165,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
           </div>
 
           <div className="md:col-span-2">
-             <Separator className="my-2" />
+            <Separator className="my-2 border-slate-200 dark:border-slate-800" />
           </div>
 
           {/* Preferred Countries */}

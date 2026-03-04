@@ -379,348 +379,341 @@ export function ProcessingStepsCard({
   };
 
   return (
-    <Card className="min-h-[950px] border-0 shadow-xl overflow-hidden bg-white">
-
-
-      <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            Processing Steps
-          </CardTitle>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs">
-              <div className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span className="text-white/70">{completedCount}</span>
-              <div className="h-2 w-2 rounded-full bg-blue-400 ml-2" />
-              <span className="text-white/70">{inProgressCount}</span>
-              <div className="h-2 w-2 rounded-full bg-slate-400 ml-2" />
-              <span className="text-white/70">{totalSteps - completedCount - inProgressCount}</span>
-            </div>
-            <div className="h-10 w-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
-              <span className="text-sm font-black">{progressPercent}%</span>
-            </div>
-
-
-          </div>
+    <Card className="min-h-[950px] border-0 shadow-xl overflow-hidden bg-white dark:bg-black">
+  <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-950 dark:to-black text-white py-4">
+    <div className="flex items-center justify-between">
+      <CardTitle className="text-base font-bold flex items-center gap-2">
+        <ClipboardList className="h-5 w-5" />
+        Processing Steps
+      </CardTitle>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 text-xs">
+          <div className="h-2 w-2 rounded-full bg-emerald-400 dark:bg-emerald-500" />
+          <span className="text-white/70">{completedCount}</span>
+          <div className="h-2 w-2 rounded-full bg-blue-400 dark:bg-blue-500 ml-2" />
+          <span className="text-white/70">{inProgressCount}</span>
+          <div className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500 ml-2" />
+          <span className="text-white/70">{totalSteps - completedCount - inProgressCount}</span>
         </div>
-
-        {/* Progress Bar */}
-        <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
+        <div className="h-10 w-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10 dark:bg-white/5">
+          <span className="text-sm font-black">{progressPercent}%</span>
         </div>
-      </CardHeader>
+      </div>
+    </div>
 
-      {/* Status Message Banner */}
+    {/* Progress Bar */}
+    <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 dark:bg-white/5 overflow-hidden">
       <div
-        className={`px-4 py-3 flex items-center gap-3 border-b ${
-          statusMessage.type === "success"
-            ? "bg-emerald-50 border-emerald-200"
-            : statusMessage.type === "info"
-            ? "bg-blue-50 border-blue-200"
-            : statusMessage.type === "hold"
-            ? "bg-amber-50 border-amber-200"
-            : "bg-orange-50 border-orange-200"
-        }`}
-      >
-        <div
-          className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-            statusMessage.type === "success"
-              ? "bg-emerald-100"
-              : statusMessage.type === "info"
-              ? "bg-blue-100"
-              : statusMessage.type === "hold"
-              ? "bg-amber-100"
-              : "bg-orange-100"
-          }`}
-        >
-          {statusMessage.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          ) : statusMessage.type === "info" ? (
-            <PlayCircle className="h-4 w-4 text-blue-600" />
-          ) : statusMessage.type === "hold" ? (
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-          ) : (
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
+        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 dark:from-emerald-500 dark:to-emerald-600 transition-all duration-500"
+        style={{ width: `${progressPercent}%` }}
+      />
+    </div>
+  </CardHeader>
+
+  {/* Status Message Banner */}
+  <div
+    className={cn(
+      "px-4 py-3 flex items-center gap-3 border-b",
+      statusMessage.type === "success"
+        ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50"
+        : statusMessage.type === "info"
+        ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50"
+        : statusMessage.type === "hold"
+        ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50"
+        : "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800/50"
+    )}
+  >
+    <div
+      className={cn(
+        "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+        statusMessage.type === "success"
+          ? "bg-emerald-100 dark:bg-emerald-900/50"
+          : statusMessage.type === "info"
+          ? "bg-blue-100 dark:bg-blue-900/50"
+          : statusMessage.type === "hold"
+          ? "bg-amber-100 dark:bg-amber-900/50"
+          : "bg-orange-100 dark:bg-orange-900/50"
+      )}
+    >
+      {statusMessage.type === "success" ? (
+        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+      ) : statusMessage.type === "info" ? (
+        <PlayCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+      ) : statusMessage.type === "hold" ? (
+        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      ) : (
+        <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+      )}
+    </div>
+    <div className="flex-1">
+      <div className="flex items-center gap-3 justify-between">
+        <div className="min-w-0 pr-4">
+          <p
+            className={cn(
+              "text-sm font-semibold truncate",
+              statusMessage.type === "success"
+                ? "text-emerald-800 dark:text-emerald-300"
+                : statusMessage.type === "info"
+                ? "text-blue-800 dark:text-blue-300"
+                : statusMessage.type === "hold"
+                ? "text-amber-800 dark:text-amber-300"
+                : "text-orange-800 dark:text-orange-300"
+            )}
+            title={statusMessage.message}
+          >
+            {statusMessage.message}
+          </p>
+        </div>
+
+        {/* Hire button */}
+        <div className="flex-shrink-0 ml-4">
+          {isHired ? (
+            <Badge className="inline-flex items-center gap-2 bg-emerald-600 dark:bg-emerald-700 text-white text-sm px-3 py-1 rounded-full">
+              <CheckCircle2 className="h-4 w-4" />
+              Hired
+            </Badge>
+          ) : completedCount === totalSteps && (
+            <Button
+              size="sm"
+              onClick={async () => {
+                if (onOpenHire) {
+                  onOpenHire();
+                  return;
+                }
+                if (!onCompleteProcessing) return;
+                try {
+                  setLocalCompleting(true);
+                  await onCompleteProcessing();
+                } catch (err) {
+                  console.error("Complete processing fallback failed", err);
+                } finally {
+                  setLocalCompleting(false);
+                }
+              }}
+              disabled={!onOpenHire && !onCompleteProcessing || localCompleting}
+              className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white"
+            >
+              {localCompleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Hire
+            </Button>
           )}
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 justify-between">
-            <div className="min-w-0 pr-4">
-              <p
-                className={`text-sm font-semibold truncate ${
-                  statusMessage.type === "success"
-                    ? "text-emerald-800"
-                    : statusMessage.type === "info"
-                    ? "text-blue-800"
-                    : statusMessage.type === "hold"
-                    ? "text-amber-800"
-                    : "text-orange-800"
-                }`}
-                title={statusMessage.message}
-              >
-                {statusMessage.message}
-              </p>
-            </div>
-
-            {/* Hire button (prefers opening Hire modal via `onOpenHire`; falls back to `onCompleteProcessing`) */}
-            <div className="flex-shrink-0 ml-4">
-              {isHired ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Badge className="inline-flex items-center gap-2 bg-emerald-600 text-white text-sm px-3 py-1 rounded-full">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Hired
-                        </Badge>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Candidate already hired for this project</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : completedCount === totalSteps && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Button
-                          size="sm"
-                          onClick={async () => {
-                            if (onOpenHire) {
-                              onOpenHire();
-                              return;
-                            }
-
-                            if (!onCompleteProcessing) return;
-                            try {
-                              setLocalCompleting(true);
-                              await onCompleteProcessing();
-                            } catch (err) {
-                              console.error("Complete processing fallback failed", err);
-                            } finally {
-                              setLocalCompleting(false);
-                            }
-                          }}
-                          disabled={!onOpenHire && !onCompleteProcessing || localCompleting}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                          {localCompleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                          Hire
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{onOpenHire ? 'Open hire modal' : onCompleteProcessing ? 'Finalize processing' : 'Handler not provided'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-          </div>
-        </div>
-        {activeStep && (activeStep.status === "not_started" || activeStep.status === "in_progress") && (
-          <Badge className="bg-orange-500 text-white text-[10px] uppercase font-bold">
-            Action Required
-          </Badge>
-        )}
       </div>
+    </div>
+    {activeStep && (activeStep.status === "not_started" || activeStep.status === "in_progress") && (
+      <Badge className="bg-orange-500 dark:bg-orange-600 text-white text-[10px] uppercase font-bold">
+        Action Required
+      </Badge>
+    )}
+  </div>
 
-      <CardContent className="p-0">
-        <div 
-          className="overflow-visible"
-          style={{ minHeight: maxHeight }}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-            {/* Left Column */}
-            <div className="divide-y divide-slate-100">
-              {mergedSteps.slice(0, 6).map((step, index) => (
-                <StepItem 
-                  key={step.key} 
-                  step={step} 
-                  index={index} 
-                  getStatusConfig={getStatusConfig} 
-                  onOpen={() => setOpenStepKey(step.key)}
-                  // If all steps are completed, treat every step as completed; enable all steps so uploads are always possible
-                  isCompleted={completedCount === totalSteps ? true : index < activeStepIndex}
-                  isEnabled={true}
-                  offerLetterStatus={step.key === "offer_letter" ? offerLetterStatus : undefined}
-                  onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
-                  onStepClick={onStepClick}
-                  submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
-                  completedAt={step.completedAt}
-                  onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
-                />
-              ))}
-            </div>
-            {/* Right Column */}
-            <div className="divide-y divide-slate-100">
-              {mergedSteps.slice(6).map((step, index) => (
-                <StepItem 
-                  key={step.key} 
-                  step={step} 
-                  index={index + 6} 
-                  getStatusConfig={getStatusConfig} 
-                  onOpen={() => setOpenStepKey(step.key)}
-                  // Show completed state + eye button for all steps when everything is completed
-                  isCompleted={completedCount === totalSteps ? true : index + 6 < activeStepIndex}
-                  isEnabled={true}
-                  onStepClick={onStepClick}
-                  submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
-                  completedAt={step.completedAt}
-                  onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
-                />
-              ))}
-            </div>
-          </div>
+  <CardContent className="p-0 bg-white dark:bg-black">
+    <div 
+      className="overflow-visible"
+      style={{ minHeight: maxHeight }}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800">
+        {/* Left Column */}
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          {mergedSteps.slice(0, 6).map((step, index) => (
+            <StepItem 
+              key={step.key} 
+              step={step} 
+              index={index} 
+              getStatusConfig={getStatusConfig} 
+              onOpen={() => setOpenStepKey(step.key)}
+              isCompleted={completedCount === totalSteps ? true : index < activeStepIndex}
+              isEnabled={true}
+              offerLetterStatus={step.key === "offer_letter" ? offerLetterStatus : undefined}
+              onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
+              onStepClick={onStepClick}
+              submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
+              completedAt={step.completedAt}
+              onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
+            />
+          ))}
         </div>
-      </CardContent>
+        {/* Right Column */}
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          {mergedSteps.slice(6).map((step, index) => (
+            <StepItem 
+              key={step.key} 
+              step={step} 
+              index={index + 6} 
+              getStatusConfig={getStatusConfig} 
+              onOpen={() => setOpenStepKey(step.key)}
+              isCompleted={completedCount === totalSteps ? true : index + 6 < activeStepIndex}
+              isEnabled={true}
+              onStepClick={onStepClick}
+              submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
+              completedAt={step.completedAt}
+              onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  </CardContent>
 
-      {/* Step Details Dialog */}
-      <Dialog open={!!openStepKey} onOpenChange={(isOpen) => { if (!isOpen) setOpenStepKey(null); }}>
-        <DialogContent className="sm:max-w-lg">
-          {openStepKey && (() => {
-            const selected = mergedSteps.find((s) => s.key === openStepKey);
-            if (!selected) return null;
-            const SelectedIcon = selected.icon as any;
-            const statusCfg = getStatusConfig(selected.status);
-            return (
-              <div>
-                <DialogHeader>
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${selected.status === 'completed' ? 'bg-emerald-50' : selected.status === 'not_started' ? 'bg-orange-50' : selected.status === 'in_progress' ? 'bg-blue-50' : 'bg-slate-100'}`}>
-                      <SelectedIcon className={`h-5 w-5 ${statusCfg.color}`} />
-                    </div>
-                    <div className="flex-1">
-                      <DialogTitle className="text-lg font-bold text-slate-900">{selected.label}</DialogTitle>
-                      <DialogDescription className="text-sm text-slate-500">{selected.description}</DialogDescription>
-                    </div>
-                  </div>
-                </DialogHeader>
+  {/* Step Details Dialog */}
+  <Dialog open={!!openStepKey} onOpenChange={(isOpen) => { if (!isOpen) setOpenStepKey(null); }}>
+    <DialogContent className="sm:max-w-lg bg-white dark:bg-black border-slate-200 dark:border-slate-800">
+      {openStepKey && (() => {
+        const selected = mergedSteps.find((s) => s.key === openStepKey);
+        if (!selected) return null;
+        const SelectedIcon = selected.icon as any;
+        const statusCfg = getStatusConfig(selected.status);
+        return (
+          <div>
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center",
+                  selected.status === 'completed' ? 'bg-emerald-50 dark:bg-emerald-950/50' : 
+                  selected.status === 'not_started' ? 'bg-orange-50 dark:bg-orange-950/50' : 
+                  selected.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-950/50' : 
+                  'bg-slate-100 dark:bg-slate-800'
+                )}>
+                  <SelectedIcon className={cn(statusCfg.color)} />
+                </div>
+                <div className="flex-1">
+                  <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{selected.label}</DialogTitle>
+                  <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">{selected.description}</DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
 
-                <div className="mt-4 text-sm text-slate-700">
-                  <p className="font-semibold">Status: <span className={`ml-2 px-2 py-0.5 rounded ${statusCfg.bg} ${statusCfg.color} text-[10px] uppercase`}>{statusCfg.label}</span></p>
+            <div className="mt-4 text-sm text-slate-700 dark:text-slate-300">
+              <p className="font-semibold">
+                Status: <span className={cn("ml-2 px-2 py-0.5 rounded text-[10px] uppercase", statusCfg.bg, statusCfg.color)}>
+                  {statusCfg.label}
+                </span>
+              </p>
 
-                  {selected.notes && (
-                    <div className="mt-3">
-                      <p className="font-semibold text-sm">Notes</p>
-                      <p className="text-sm text-slate-600 mt-1">{selected.notes}</p>
-                    </div>
-                  )}
+              {selected.notes && (
+                <div className="mt-3">
+                  <p className="font-semibold text-sm">Notes</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{selected.notes}</p>
+                </div>
+              )}
 
-                  {selected.updatedAt && (
-                    <p className="mt-3 text-xs text-slate-400">Updated: {selected.updatedAt}</p>
-                  )}
+              {selected.updatedAt && (
+                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">Updated: {selected.updatedAt}</p>
+              )}
 
-                  {/* Show submitted date and edit control in the details modal */}
-                  {!selected.key.startsWith("offer_letter") && (
-                    <div className="mt-3">
-                      {selected.status === 'completed' ? (
-                        <div className="w-full flex items-start justify-between gap-4">
-                          <div className="text-xs">
-                            <div className="text-[10px] text-slate-400">Submitted at</div>
-                            <div className="text-sm font-semibold">{formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt) || '—'}</div>
-                          </div>
-
-                          <div className="text-xs text-right">
-                            <div className="text-[10px] text-slate-400">Completed at</div>
-                            <div className={`text-sm font-semibold ${statusCfg.color}`}>{formatDisplayDate(selected.completedAt ?? submittedDates[selected.stepId] ?? selected.submittedAt) || '—'}</div>
-                          </div>
+              {!selected.key.startsWith("offer_letter") && (
+                <div className="mt-3">
+                  {selected.status === 'completed' ? (
+                    <div className="w-full flex items-start justify-between gap-4">
+                      <div className="text-xs">
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500">Submitted at</div>
+                        <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                          {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt) || '—'}
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-slate-500">Submitted: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}</div>
-
-                          <div>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"
-                                    onClick={() => openEditSubmitted(selected.stepId, submittedDates[selected.stepId] ?? selected.submittedAt)}
-                                  >
-                                    <Edit3 className={`h-4 w-4 ${statusCfg.color}`} />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Edit submitted date</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
+                      </div>
+                      <div className="text-xs text-right">
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500">Completed at</div>
+                        <div className={cn("text-sm font-semibold", statusCfg.color)}>
+                          {formatDisplayDate(selected.completedAt ?? submittedDates[selected.stepId] ?? selected.submittedAt) || '—'}
                         </div>
-                      )}
+                      </div>
                     </div>
-                  )}  
-
-                  {selected.subStepStatuses && (
-                    <div className="mt-4">
-                      <h4 className="font-bold text-sm mb-2">Sub-steps</h4>
-                      <div className="space-y-2">
-                        {selected.subStepStatuses.map((ss) => (
-                          <div key={ss.key} className="flex items-center justify-between bg-slate-50 p-2 rounded">
-                            <div className="text-sm font-medium">{ss.label}</div>
-                            <div className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">{getStatusConfig(ss.status).label}</div>
-                          </div>
-                        ))}
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        Submitted: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}
+                      </div>
+                      <div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                onClick={() => openEditSubmitted(selected.stepId, submittedDates[selected.stepId] ?? selected.submittedAt)}
+                              >
+                                <Edit3 className={cn("h-4 w-4", statusCfg.color)} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit submitted date</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                   )}
                 </div>
+              )}
 
-                <DialogFooter className="mt-6">
-                  <Button variant="outline" onClick={() => setOpenStepKey(null)}>Close</Button>
-                </DialogFooter>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+              {selected.subStepStatuses && (
+                <div className="mt-4">
+                  <h4 className="font-bold text-sm mb-2">Sub-steps</h4>
+                  <div className="space-y-2">
+                    {selected.subStepStatuses.map((ss) => (
+                      <div key={ss.key} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-2 rounded border border-slate-100 dark:border-slate-800">
+                        <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{ss.label}</div>
+                        <div className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
+                          {getStatusConfig(ss.status).label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
+            <DialogFooter className="mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setOpenStepKey(null)}
+                className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
+        );
+      })()}
+    </DialogContent>
+  </Dialog>
 
+  {/* Confirm modals */}
+  <ConfirmSubmitDateModal
+    isOpen={confirmSubmitOpen}
+    onClose={() => setConfirmSubmitOpen(false)}
+    date={editingDate ? new Date(editingDate) : null}
+    isSubmitting={confirmSubmitting}
+    onConfirm={async () => {
+      if (!openSubmittedEditorKey) return;
+      setConfirmSubmitting(true);
+      try {
+        await saveSubmitted(openSubmittedEditorKey);
+      } finally {
+        setConfirmSubmitting(false);
+        setConfirmSubmitOpen(false);
+      }
+    }}
+  />
 
-      {/* Confirm modals (reuse HRD confirm dialogs) */}
-      <ConfirmSubmitDateModal
-        isOpen={confirmSubmitOpen}
-        onClose={() => setConfirmSubmitOpen(false)}
-        date={editingDate ? new Date(editingDate) : null}
-        isSubmitting={confirmSubmitting}
-        onConfirm={async () => {
-          if (!openSubmittedEditorKey) return;
-          setConfirmSubmitting(true);
-          try {
-            await saveSubmitted(openSubmittedEditorKey);
-          } finally {
-            setConfirmSubmitting(false);
-            setConfirmSubmitOpen(false);
-          }
-        }}
-      />
-
-      <ConfirmEditSubmitDateModal
-        isOpen={confirmEditOpen}
-        onClose={() => setConfirmEditOpen(false)}
-        existingDate={openSubmittedEditorKey ? (submittedDates[openSubmittedEditorKey] ?? mergedSteps.find(s => s.stepId === openSubmittedEditorKey)?.submittedAt) : undefined}
-        initialDate={editingDate ? new Date(editingDate).toISOString() : undefined}
-        isSubmitting={confirmSubmitting}
-        onConfirm={async (newDate: Date) => {
-          if (!openSubmittedEditorKey) return false;
-          setConfirmSubmitting(true);
-          try {
-            const ok = await saveSubmitted(openSubmittedEditorKey, newDate);
-            return ok;
-          } finally {
-            setConfirmSubmitting(false);
-            setConfirmEditOpen(false);
-          }
-        }}
-      />
-    </Card>
+  <ConfirmEditSubmitDateModal
+    isOpen={confirmEditOpen}
+    onClose={() => setConfirmEditOpen(false)}
+    existingDate={openSubmittedEditorKey ? (submittedDates[openSubmittedEditorKey] ?? mergedSteps.find(s => s.stepId === openSubmittedEditorKey)?.submittedAt) : undefined}
+    initialDate={editingDate ? new Date(editingDate).toISOString() : undefined}
+    isSubmitting={confirmSubmitting}
+    onConfirm={async (newDate: Date) => {
+      if (!openSubmittedEditorKey) return false;
+      setConfirmSubmitting(true);
+      try {
+        const ok = await saveSubmitted(openSubmittedEditorKey, newDate);
+        return ok;
+      } finally {
+        setConfirmSubmitting(false);
+        setConfirmEditOpen(false);
+      }
+    }}
+  />
+</Card>
   );
 }
 
@@ -822,19 +815,19 @@ function StepItem({
   if (step.hasSubSteps && step.subStepStatuses) {
     return (
       <div className={cn(
-        "m-2 rounded-lg overflow-hidden flex flex-col bg-white",
+        "m-2 rounded-lg overflow-hidden flex flex-col bg-white dark:bg-black",
         cardBorderClass,
         stepCompleted ? "ring-1 ring-emerald-200" : ""
       )}>
         {/* Main Step Header */}
         <div className={`flex items-center gap-3 p-3 ${
           stepCompleted 
-            ? "bg-gradient-to-r from-emerald-50 to-emerald-100/50" 
+            ? "bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-900/50 dark:to-emerald-800/50" 
             : isPending
-            ? "bg-white"
+            ? "bg-white dark:bg-black"
             : isInProgress
-            ? "bg-blue-50"
-            : "bg-white"
+            ? "bg-blue-50 dark:bg-blue-900/50"
+            : "bg-white dark:bg-black"
         }`}>
           <div
             className={`h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
@@ -932,21 +925,21 @@ function StepItem({
         {/* Sub-steps */}
         <div className={`pl-6 ${
           step.status === "completed" 
-            ? "bg-gradient-to-r from-emerald-50/50 to-transparent" 
-            : "bg-gradient-to-r from-rose-50/50 to-transparent"
+            ? "bg-gradient-to-r from-emerald-50/50 to-transparent dark:from-emerald-900/50" 
+            : "bg-gradient-to-r from-rose-50/50 to-transparent dark:from-rose-900/50"
         }`}>
           {step.subStepStatuses.map((subStep, subIndex) => {
             const subConfig = getStatusConfig(subStep.status);
             return (
               <div
                 key={subStep.key}
-                className={`flex items-center gap-3 py-2 px-3 border-b last:border-b-0 hover:bg-white/50 transition-colors ${
+                className={`flex items-center gap-3 py-2 px-3 border-b last:border-b-0 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors ${
                   step.status === "completed" 
                     ? "border-emerald-100/50" 
                     : "border-rose-100/50"
                 }`}
               >
-                <div className={`h-5 w-5 rounded-md bg-white border flex items-center justify-center text-[10px] font-bold ${
+                <div className={`h-5 w-5 rounded-md bg-white dark:bg-slate-900 border flex items-center justify-center text-[10px] font-bold ${
                   step.status === "completed" 
                     ? "border-emerald-200 text-emerald-400" 
                     : "border-rose-200 text-rose-400"
@@ -970,7 +963,7 @@ function StepItem({
         <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs">
             {!isOfferLetterStep ? (
-              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : isPending ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300' : isInProgress ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' : offerLetterRejected ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}>
                 <span className="text-[10px] text-slate-400">Submitted at</span>
                 <div className="inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
@@ -1002,7 +995,7 @@ function StepItem({
                   <TooltipTrigger asChild>
                     <button
                       onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
-                      className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
+                      className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                       aria-label="Edit submitted date"
                     >
                       <Edit3 className="h-4 w-4" />
@@ -1023,23 +1016,23 @@ function StepItem({
 
   // Regular step without sub-steps
   return (
-    <div className={cn("m-2 rounded-lg overflow-hidden flex flex-col bg-white", cardBorderClass, stepCompleted ? "ring-1 ring-emerald-200" : "") }>
+    <div className={cn("m-2 rounded-lg overflow-hidden flex flex-col bg-white dark:bg-black", cardBorderClass, stepCompleted ? "ring-1 ring-emerald-200" : "") }>
       <div
         className={cn(
           "flex items-center gap-3 p-3 transition-colors group",
           stepCompleted
-            ? "bg-emerald-50/50 hover:bg-emerald-50"
+            ? "bg-emerald-50/50 dark:bg-emerald-900/50 hover:bg-emerald-50 dark:hover:bg-emerald-800"
             : isPending
-            ? "bg-white"
+            ? "bg-white dark:bg-black"
             : isInProgress
-            ? "bg-blue-50/50 hover:bg-blue-50"
+            ? "bg-blue-50/50 dark:bg-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-800"
             : offerLetterRejected
-            ? "bg-red-50/50 hover:bg-red-50"
+            ? "bg-red-50/50 dark:bg-red-900/50 hover:bg-red-50 dark:hover:bg-red-800"
             : step.apiStatus === 'cancelled'
-            ? "bg-rose-50/50 hover:bg-rose-50"
+            ? "bg-rose-50/50 dark:bg-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-800"
             : !stepEnabled
-            ? "bg-slate-100/30 opacity-90"
-            : "hover:bg-slate-50",
+            ? "bg-slate-100/30 dark:bg-slate-800/30 opacity-90"
+            : "hover:bg-slate-50 dark:hover:bg-slate-700",
           stepEnabled ? "cursor-pointer" : "cursor-not-allowed"
         )}
         onClick={() => {
@@ -1200,7 +1193,7 @@ function StepItem({
       <div className="mt-2 px-3 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs">
           {!isOfferLetterStep ? (
-            <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+            <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : isPending ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300' : isInProgress ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' : offerLetterRejected ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}>
               <span className="text-[10px] text-slate-400">Submitted at</span>
               <div className="inline-flex items-center gap-2">
                 <Calendar className="h-4 w-4" />

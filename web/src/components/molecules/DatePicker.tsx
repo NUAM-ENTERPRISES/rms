@@ -107,7 +107,7 @@ export function DatePicker({
         <Button
           variant="outline"
           className={cn(
-            `${buttonHeightClasses} w-full justify-start text-left font-normal border-slate-200 focus:border-blue-500 focus:ring-blue-500/20`,
+            `${buttonHeightClasses} w-full justify-start text-left font-normal border-black-200 focus:border-blue-500 focus:ring-blue-500/20`,
             !value && "text-muted-foreground",
             className
           )}
@@ -128,7 +128,7 @@ export function DatePicker({
             {/* Left side - Date Calendar */}
             <div className="flex-1 space-y-3">
               <Label className="text-sm font-medium text-slate-700">Select Date</Label>
-              <div className="flex justify-center p-2 bg-slate-50 rounded-lg">
+              <div className="flex justify-center p-2 bg-slate-50 dark:bg-black rounded-lg">
                 <div className="w-full max-w-[320px]">
                   <Calendar
                     mode="single"
@@ -180,7 +180,7 @@ export function DatePicker({
         ) : (
           <div className="space-y-3">
             <Label className="text-sm font-medium text-slate-700">Select Date</Label>
-            <div className="flex justify-center p-2 bg-slate-50 rounded-lg">
+            <div className="flex justify-center p-2 bg-slate-50 dark:bg-black rounded-lg">
               <div className="w-full max-w-[320px]">
                 <Calendar
                   mode="single"

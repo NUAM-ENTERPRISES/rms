@@ -112,17 +112,17 @@ export function CandidateResumeList({
   if (isLoading || documentsLoading) {
     return (
       <Card
-        className={`border-0 shadow-lg bg-white/80 backdrop-blur-sm ${className}`}
+        className={`border-0 shadow-lg bg-white/80 dark:bg-black backdrop-blur-sm ${className}`}
       >
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="flex items-center gap-2 text-slate-900">
-            <FileText className="h-5 w-5 text-blue-600" />
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+          <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             Resumes
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="flex items-center justify-center py-8">
-            <div className="h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <div className="h-6 w-6 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
           </div>
         </CardContent>
       </Card>
@@ -132,12 +132,12 @@ export function CandidateResumeList({
   return (
     <>
       <Card
-        className={`border-0 shadow-lg bg-white/80 backdrop-blur-sm ${className}`}
+        className={`border-0 shadow-lg bg-white/80 dark:bg-black backdrop-blur-sm ${className}`}
       >
-        <CardHeader className="border-b border-slate-200">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-slate-900">
-              <FileText className="h-5 w-5 text-blue-600" />
+            <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               Resumes ({resumes.length})
             </CardTitle>
             <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export function CandidateResumeList({
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <Plus className="h-4 w-4" />
                 Add Resume
@@ -167,15 +167,15 @@ export function CandidateResumeList({
                 {resumes.map((resume) => (
                   <div
                     key={resume.id}
-                    className="flex items-center justify-between p-3 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors duration-150"
+                    className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-150"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <FileText className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                      <FileText className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-900 truncate text-sm">
+                        <p className="font-medium text-slate-900 dark:text-slate-200 truncate text-sm">
                           {resume.fileName}
                         </p>
-                        <div className="flex items-center gap-3 text-xs text-slate-600">
+                        <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             <span>
@@ -198,7 +198,7 @@ export function CandidateResumeList({
                         variant="ghost"
                         size="icon"
                         onClick={() => handleResumeClick(resume)}
-                        className="h-7 w-7"
+                        className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         <Eye className="h-3 w-3" />
                       </Button>
@@ -206,7 +206,7 @@ export function CandidateResumeList({
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDownload(resume)}
-                        className="h-7 w-7"
+                        className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         <Download className="h-3 w-3" />
                       </Button>
@@ -217,11 +217,11 @@ export function CandidateResumeList({
             </ScrollArea>
           ) : (
             <div className="text-center py-6">
-              <FileText className="h-8 w-8 text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600 text-sm mb-1">
+              <FileText className="h-8 w-8 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+              <p className="text-slate-600 dark:text-slate-400 text-sm mb-1">
                 No resumes uploaded yet
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-500">
                 Upload resumes to view them here
               </p>
             </div>
@@ -229,15 +229,15 @@ export function CandidateResumeList({
 
           {/* Upload Preview */}
           {selectedFile && (
-            <div className="mt-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
+            <div className="mt-4 p-4 border border-blue-200 dark:border-blue-900 rounded-lg bg-blue-50 dark:bg-blue-900/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-blue-600" />
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   <div>
-                    <p className="font-medium text-slate-900 text-sm">
+                    <p className="font-medium text-slate-900 dark:text-slate-100 text-sm">
                       {selectedFile.name}
                     </p>
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
                       {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
                     </p>
                   </div>
@@ -247,7 +247,7 @@ export function CandidateResumeList({
                     variant="outline"
                     size="sm"
                     onClick={() => setIsPreviewOpen(true)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/40"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     Preview
@@ -257,6 +257,7 @@ export function CandidateResumeList({
                     size="sm"
                     onClick={handleCancelUpload}
                     disabled={isUploading}
+                    className="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     Cancel
                   </Button>

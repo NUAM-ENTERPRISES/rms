@@ -558,21 +558,21 @@ export default function RecruiterCandidatesTab({
 
       {filteredCandidates.length === 0 ? (
         <div className="text-center py-12">
-          <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <UserCheck className="h-12 w-12 text-gray-400 dark:text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No Candidates Assigned
           </h3>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-slate-400">
             You don't have any candidates assigned to you yet.
           </p>
         </div>
       ) : (
         <div>
-          <div className="bg-blue-50 rounded-lg p-4 mb-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">
+          <div className="bg-blue-50 dark:bg-blue-900/40 rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
               {isRecruiter && !isManager ? "My Candidates" : "All Candidates"}
             </h3>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-slate-400">
               Available candidates to assign to project
             </p>
           </div>

@@ -232,159 +232,160 @@ export function PDFViewer({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className={cn(
-          "flex flex-col h-[92vh] w-[95vw] max-w-7xl overflow-hidden p-0 shadow-2xl sm:max-w-7xl",
-          isFullscreen && "h-screen w-screen max-w-none sm:max-w-none",
-          className
-        )}
-      >
-        <DialogHeader className="flex-shrink-0 border-b border-slate-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-blue-600" />
-              <div>
-                <DialogTitle className="text-lg font-semibold text-slate-900">
-                  {fileName}
-                </DialogTitle>
-                <DialogDescription className="text-sm text-slate-600">
-                  PDF Document Viewer
-                </DialogDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Toolbar */}
-              {showZoomControls && (
-                <div className="flex items-center gap-1 border border-slate-200 rounded-md">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleZoomOut}
-                    disabled={zoom <= 50}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <span className="px-2 py-1 text-xs font-medium text-slate-600 min-w-[3rem] text-center">
-                    {zoom}%
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleZoomIn}
-                    disabled={zoom >= 300}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+   <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+  <DialogContent
+    className={cn(
+      "flex flex-col h-[92vh] w-[95vw] max-w-7xl overflow-hidden p-0 shadow-2xl sm:max-w-7xl bg-white dark:bg-black border-slate-200 dark:border-slate-800",
+      isFullscreen && "h-screen w-screen max-w-none sm:max-w-none",
+      className
+    )}
+  >
+    <DialogHeader className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-black">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <div>
+            <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {fileName}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
+              PDF Document Viewer
+            </DialogDescription>
+          </div>
+        </div>
 
-              {showRotationControls && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRotate}
-                  className="h-8 w-8 p-0"
-                >
-                  <RotateCw className="h-4 w-4" />
-                </Button>
-              )}
-
-              {showFullscreenToggle && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleFullscreenToggle}
-                  className="h-8 w-8 p-0"
-                >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" />
-                  ) : (
-                    <Maximize2 className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-
-              {showDownload && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDownload}
-                  className="h-8 w-8 p-0"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              )}
-
+        <div className="flex items-center gap-2">
+          {/* Toolbar */}
+          {showZoomControls && (
+            <div className="flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleClose}
-                className="h-8 w-8 p-0"
+                onClick={handleZoomOut}
+                disabled={zoom <= 50}
+                className="h-8 w-8 p-0 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <X className="h-4 w-4" />
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 min-w-[3rem] text-center">
+                {zoom}%
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleZoomIn}
+                disabled={zoom >= 300}
+                className="h-8 w-8 p-0 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <ZoomIn className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-hidden p-2">
-          {isLoading && (
-            <div className="flex items-center justify-center h-64">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <p className="text-sm text-slate-600">Loading PDF...</p>
-              </div>
-            </div>
           )}
 
-          {error && (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-sm text-slate-600 mb-2">{error}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownload}
-                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
-              </div>
-            </div>
+          {showRotationControls && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRotate}
+              className="h-8 w-8 p-0 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <RotateCw className="h-4 w-4" />
+            </Button>
           )}
 
-          {!error && displayUrl && (
-            <div className="h-full w-full overflow-hidden bg-white">
-              <iframe
-                ref={iframeRef}
-                src={`${displayUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-                className="h-full w-full border-0 min-h-[600px]"
-                onLoad={handleLoad}
-                onError={handleError}
-                title={fileName}
-                style={{
-                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                  transformOrigin: "center top",
-                }}
-              />
-            </div>
+          {showFullscreenToggle && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleFullscreenToggle}
+              className="h-8 w-8 p-0 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
           )}
 
-          {!error && !displayUrl && !isLoading && (
-            <div className="flex items-center justify-center h-64">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <p className="text-sm text-slate-600">Preparing PDF...</p>
-              </div>
-            </div>
+          {showDownload && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDownload}
+              className="h-8 w-8 p-0 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
           )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="h-8 w-8 p-0 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </DialogHeader>
+
+    <div className="flex-1 overflow-hidden p-2 bg-white dark:bg-black">
+      {isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+            <p className="text-sm text-slate-600 dark:text-slate-400">Loading PDF...</p>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <FileText className="h-12 w-12 text-slate-400 dark:text-slate-500 mx-auto mb-4" />
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              className="text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!error && displayUrl && (
+        <div className="h-full w-full overflow-hidden bg-white dark:bg-black">
+          <iframe
+            ref={iframeRef}
+            src={`${displayUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+            className="h-full w-full border-0 min-h-[600px]"
+            onLoad={handleLoad}
+            onError={handleError}
+            title={fileName}
+            style={{
+              transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+              transformOrigin: "center top",
+            }}
+          />
+        </div>
+      )}
+
+      {!error && !displayUrl && !isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+            <p className="text-sm text-slate-600 dark:text-slate-400">Preparing PDF...</p>
+          </div>
+        </div>
+      )}
+    </div>
+  </DialogContent>
+</Dialog>
   );
 }

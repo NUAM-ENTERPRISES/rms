@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,14 +12,12 @@ import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
 import EditInterviewDialog from "../components/EditInterviewDialog";
 import { ClientDecisionModal } from "../components/ClientDecisionModal";
 import { toast } from "sonner";
-
-// STATUS_KEYS not used in dashboard layout (kept for compatibility if table-based view is readded)
-
-// Dashboard uses a simplified overview — helper formatters available here if needed
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext"; // ← added this import
 
 export default function InterviewsPage() {
   const navigate = useNavigate();
-  // Search and filter UI removed for dashboard; retain state if table is reintroduced later
+  const { theme } = useTheme(); // ← added this line
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleDialogInitial] = useState<{
     candidateProjectMapId?: string;
@@ -38,22 +36,19 @@ export default function InterviewsPage() {
     page: 1,
     limit: 50,
   });
-  // Fetch shortlisted preview for dashboard (replaces previous upcoming hook)
+
   const { data: shortlistedData, refetch: refetchShortlistedPreview } = useGetShortlistedQuery({ page: 1, limit: 5 });
 
-  // Preview for Not Shortlisted (server-driven)
   const { data: notShortlistedData, refetch: refetchNotShortlistedPreview } = useGetNotShortlistedQuery({ page: 1, limit: 5 });
 
   type InterviewRecord = Record<string, any>;
-  const interviews = (interviewsData?.data?.interviews ??
-    []) as InterviewRecord[];
+  const interviews = (interviewsData?.data?.interviews ?? []) as InterviewRecord[];
   const totalInterviews = interviewsData?.data?.pagination?.total ?? 0;
 
   const { data: dashboardData, refetch: refetchDashboard } = useGetInterviewsDashboardQuery();
 
   const { data: shortlistData, refetch: refetchShortlist } = useGetShortlistPendingQuery({ page: 1, limit: 5 });
 
-  // Dashboard: client-decision modal for shortlist preview
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [selectedShortlisting, setSelectedShortlisting] = useState<any | null>(null);
   const [updateClientDecision, { isLoading: isUpdatingDecision }] = useUpdateClientDecisionMutation();
@@ -78,56 +73,9 @@ export default function InterviewsPage() {
     }
   }
 
-  // legacy: status breakdown removed; dashboard uses card-based stats
-
   useCan("schedule:interviews");
 
-  // Compute derived values and memoized hooks before any conditional returns to keep hooks order stable
-  
-
-  // Edit/Delete actions are available on the InterviewsPage table UI only. Not used on dashboard widgets.
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
-          <p className="mt-3 text-sm text-slate-500">Loading interviews…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-        <Card className="max-w-sm border border-slate-100 shadow-xl">
-          <CardContent className="space-y-4 pt-8 text-center">
-            <RefreshCw className="mx-auto h-10 w-10 text-rose-500" />
-            <p className="text-lg font-semibold text-slate-900">
-              Failed to load
-            </p>
-            <Button size="sm" onClick={() => {
-                try {
-                  refetch?.();
-                  refetchShortlistedPreview?.();
-                  refetchNotShortlistedPreview?.();
-                  refetchDashboard?.();
-                } catch (e) {
-                  // ignore
-                }
-              }}>
-                <RefreshCw className="mr-2 h-4 w-4" /> Retry
-              </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const now = new Date();
-
-  
 
   const shortlistedPreview = shortlistedData?.data?.items ?? [];
   const shortlistedCountPreview = shortlistedData?.data?.pagination?.total ?? 0;
@@ -138,7 +86,6 @@ export default function InterviewsPage() {
   const shortlistingPreview = shortlistData?.data?.items ?? [];
   const shortlistingCount = shortlistData?.data?.pagination?.total ?? 0;
 
-  // Build stats using server-provided dashboard data when available, otherwise fall back to local calculations
   const scheduledThisWeek = dashboardData?.data?.thisWeek?.count ?? interviews.filter((iv) => {
     if (!iv.scheduledTime) return false;
     const d = new Date(iv.scheduledTime);
@@ -147,13 +94,12 @@ export default function InterviewsPage() {
     return d >= weekAgo && d <= now && !iv.conductedAt;
   }).length;
 
-  // API no longer provides per-day or previous totals; keep simple count only
-
   const completedThisMonth = dashboardData?.data?.thisMonth?.completedCount ?? interviews.filter((iv) => {
     if (!iv.conductedAt) return false;
     const d = new Date(iv.conductedAt);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
+
   const passRate = dashboardData?.data?.thisMonth?.passRate !== undefined
     ? dashboardData.data.thisMonth.passRate
     : (() => {
@@ -162,7 +108,6 @@ export default function InterviewsPage() {
         return completed === 0 ? 0 : (passed / completed) * 100;
       })();
 
-  // helper counts for display
   const passedCount = dashboardData?.data?.thisMonth?.passedCount ?? undefined;
   const completedCount = dashboardData?.data?.thisMonth?.completedCount ?? completedThisMonth;
   const failedCount = Number.isFinite(completedCount) ? (completedCount - (passedCount ?? 0)) : undefined;
@@ -170,448 +115,912 @@ export default function InterviewsPage() {
   const inTraining = 0;
   const stats = { scheduledThisWeek, completedThisMonth, passRate, inTraining };
 
-  // Dashboard layout similar to mock interviews
+  if (isLoading) {
+    return (
+      <div className={cn(
+        "flex min-h-screen items-center justify-center",
+        theme === "dark" ? "bg-black" : "bg-slate-50"
+      )}>
+        <div className="text-center">
+          <div className={cn(
+            "mx-auto h-12 w-12 animate-spin rounded-full border-4",
+            theme === "dark" ? "border-slate-700 border-t-blue-500" : "border-slate-200 border-t-blue-600"
+          )} />
+          <p className={cn(
+            "mt-3 text-sm",
+            theme === "dark" ? "text-slate-400" : "text-slate-500"
+          )}>
+            Loading interviews…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={cn(
+        "flex min-h-screen items-center justify-center p-6",
+        theme === "dark" ? "bg-black" : "bg-slate-50"
+      )}>
+        <Card className={cn(
+          "max-w-sm border shadow-xl",
+          theme === "dark" ? "bg-slate-900 border-slate-700" : "border-slate-100 bg-white"
+        )}>
+          <CardContent className="space-y-4 pt-8 text-center">
+            <RefreshCw className={cn(
+              "mx-auto h-10 w-10",
+              theme === "dark" ? "text-rose-400" : "text-rose-500"
+            )} />
+            <p className={cn(
+              "text-lg font-semibold",
+              theme === "dark" ? "text-slate-100" : "text-slate-900"
+            )}>
+              Failed to load
+            </p>
+            <Button 
+              size="sm" 
+              onClick={() => {
+                try {
+                  refetch?.();
+                  refetchShortlistedPreview?.();
+                  refetchNotShortlistedPreview?.();
+                  refetchDashboard?.();
+                } catch (e) {}
+              }}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen">
+    <div className={cn(
+      "min-h-screen",
+      theme === "dark" ? "bg-black" : ""
+    )}>
       <div className="mx-auto w-full space-y-6 py-2">
-      <section className="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-lg backdrop-blur-sm">
-  {/* Header */}
-  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-    <div className="flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 border border-blue-200">
-        <Calendar className="h-5 w-5 text-blue-600" />
-      </div>
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
-          Interview Dashboard
-        </p>
-        <h2 className="text-lg font-bold text-slate-900 mt-0.5">
-          Orchestrate every panel with clarity
-        </h2>
-      </div>
-    </div>
-
-    <Button
-      variant="outline"
-      size="sm"
-      className="h-9 px-4 text-sm font-medium border-slate-300 hover:bg-slate-50"
-      onClick={() => {
-        try {
-          refetch?.();
-          refetchShortlistedPreview?.();
-          refetchNotShortlistedPreview?.();
-          refetchDashboard?.();
-        } catch (e) {}
-      }}
-    >
-      <RefreshCw className="mr-2 h-4 w-4" />
-      Refresh
-    </Button>
-  </div>
-
-  {/* Stats Grid – Medium & Compact */}
-  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-    {/* Scheduled This Week */}
-    <div className="group relative rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 hover:shadow-md transition-all duration-300">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600 rounded-l-xl" />
-      
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold text-slate-600">Scheduled (7d)</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900">
-            {stats.scheduledThisWeek}
-          </p>
-          <p className="text-xs text-slate-500 mt-1">last 7 days</p>
-        </div>
-        <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200">
-          <Calendar className="h-5 w-5 text-blue-600" />
-        </div>
-      </div>
-    </div>
-
-    {/* Completed This Month */}
-    <div className="group relative rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 hover:shadow-md transition-all duration-300">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-purple-600 rounded-l-xl" />
-      
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold text-slate-600">This Month</p>
-          <p className="mt-2 text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
-            {stats.completedThisMonth}
-          </p>
-          <p className="text-xs text-slate-500 mt-1">completed</p>
-        </div>
-        <div className="p-2.5 rounded-lg bg-purple-50 border border-purple-200">
-          <ClipboardCheck className="h-5 w-5 text-purple-600" />
-        </div>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-3 gap-3 text-center text-xs">
-        <div>
-          <div className="font-bold text-slate-900">{passedCount ?? "-"}</div>
-          <div className="text-slate-500">Passed</div>
-        </div>
-        <div>
-          <div className="font-bold text-slate-900">{failedCount !== undefined ? failedCount : "-"}</div>
-          <div className="text-slate-500">Failed</div>
-        </div>
-        <div>
-          <div className="font-bold text-purple-600">{Number(passRate ?? stats.passRate).toFixed(1)}%</div>
-          <div className="text-slate-500">Pass Rate</div>
-        </div>
-      </div>
-    </div>
-
-    {/* Overall Pass Rate */}
-    <div className="group relative rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 hover:shadow-md transition-all duration-300">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-l-xl" />
-      
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold text-slate-600">Overall Pass Rate</p>
-          <p className="mt-2 text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
-            {Number(passRate ?? stats.passRate).toFixed(1)}%
-          </p>
-          <p className="text-xs text-slate-500 mt-1">
-            {passedCount ?? "-"} passed • {failedCount !== undefined ? failedCount : "-"} failed
-          </p>
-        </div>
-        <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
-          <TrendingUp className="h-5 w-5 text-emerald-600" />
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-       <Card className="border-0 shadow-2xl bg-white/90 backdrop-blur-md rounded-3xl overflow-hidden">
-  <CardHeader className="border-b border-slate-100/60 bg-white/70 backdrop-blur-sm pb-6">
-    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-      <div className="space-y-1.5">
-        <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight">
-          Interview Dashboard
-        </CardTitle>
-        <CardDescription className="text-base text-slate-600">
-          Track and manage your assigned and upcoming candidate interviews
-        </CardDescription>
-      </div>
-    </div>
-  </CardHeader>
-
-  <CardContent className="p-8 space-y-10">
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Short Listing Pending Candidates */}
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72">
-        <CardHeader className="pb-5 bg-gradient-to-r from-amber-50/80 to-transparent">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-gradient-to-br from-amber-100 to-amber-50 rounded-2xl shadow-md border border-amber-200/60">
-                <Mail className="h-7 w-7 text-amber-600" />
+        <section className={cn(
+          "rounded-2xl border p-5 shadow-lg backdrop-blur-sm",
+          theme === "dark" 
+            ? "border-slate-700/70 bg-slate-950/80" 
+            : "border-slate-200/70 bg-white/95"
+        )}>
+          {/* Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-xl border",
+                theme === "dark" 
+                  ? "bg-blue-950/50 border-blue-800/50" 
+                  : "bg-blue-50 border-blue-200"
+              )}>
+                <Calendar className={cn(
+                  "h-5 w-5",
+                  theme === "dark" ? "text-blue-400" : "text-blue-600"
+                )} />
               </div>
               <div>
-                <CardTitle className="text-xl font-bold text-slate-900">
-                  Short Listing Pending Candidates
+                <p className={cn(
+                  "text-xs font-bold uppercase tracking-widest",
+                  theme === "dark" ? "text-blue-400" : "text-blue-600"
+                )}>
+                  Interview Dashboard
+                </p>
+                <h2 className={cn(
+                  "text-lg font-bold mt-0.5",
+                  theme === "dark" ? "text-slate-100" : "text-slate-900"
+                )}>
+                  Orchestrate every panel with clarity
+                </h2>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-9 px-4 text-sm font-medium transition-colors",
+                theme === "dark" 
+                  ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100" 
+                  : "border-slate-300 hover:bg-slate-50"
+              )}
+              onClick={() => {
+                try {
+                  refetch?.();
+                  refetchShortlistedPreview?.();
+                  refetchNotShortlistedPreview?.();
+                  refetchDashboard?.();
+                } catch (e) {}
+              }}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+
+          {/* Stats Grid – Medium & Compact */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Scheduled This Week */}
+            <div className={cn(
+              "group relative rounded-xl border p-5 hover:shadow-md transition-all duration-300",
+              theme === "dark" 
+                ? "border-slate-700/70 bg-slate-900/60" 
+                : "border-slate-200 bg-gradient-to-br from-slate-50 to-white"
+            )}>
+              <div className={cn(
+                "absolute top-0 left-0 w-1 h-full rounded-l-xl",
+                theme === "dark" ? "bg-gradient-to-b from-blue-600 to-blue-700" : "bg-gradient-to-b from-blue-500 to-blue-600"
+              )} />
+              
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className={cn(
+                    "text-xs font-semibold",
+                    theme === "dark" ? "text-slate-400" : "text-slate-600"
+                  )}>Scheduled (7d)</p>
+                  <p className={cn(
+                    "mt-2 text-3xl font-bold",
+                    theme === "dark" ? "text-slate-100" : "text-slate-900"
+                  )}>
+                    {stats.scheduledThisWeek}
+                  </p>
+                  <p className={cn(
+                    "text-xs mt-1",
+                    theme === "dark" ? "text-slate-500" : "text-slate-500"
+                  )}>last 7 days</p>
+                </div>
+                <div className={cn(
+                  "p-2.5 rounded-lg border",
+                  theme === "dark" 
+                    ? "bg-blue-950/50 border-blue-800/50" 
+                    : "bg-blue-50 border-blue-200"
+                )}>
+                  <Calendar className={cn(
+                    "h-5 w-5",
+                    theme === "dark" ? "text-blue-400" : "text-blue-600"
+                  )} />
+                </div>
+              </div>
+            </div>
+
+            {/* Completed This Month */}
+            <div className={cn(
+              "group relative rounded-xl border p-5 hover:shadow-md transition-all duration-300",
+              theme === "dark" 
+                ? "border-slate-700/70 bg-slate-900/60" 
+                : "border-slate-200 bg-gradient-to-br from-slate-50 to-white"
+            )}>
+              <div className={cn(
+                "absolute top-0 left-0 w-1 h-full rounded-l-xl",
+                theme === "dark" ? "bg-gradient-to-b from-purple-600 to-purple-700" : "bg-gradient-to-b from-purple-500 to-purple-600"
+              )} />
+              
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className={cn(
+                    "text-xs font-semibold",
+                    theme === "dark" ? "text-slate-400" : "text-slate-600"
+                  )}>This Month</p>
+                  <p className={cn(
+                    "mt-2 text-3xl font-bold bg-gradient-to-r bg-clip-text text-transparent",
+                    theme === "dark" 
+                      ? "from-purple-400 to-purple-500 text-transparent" 
+                      : "from-purple-600 to-purple-700 text-transparent"
+                  )}>
+                    {stats.completedThisMonth}
+                  </p>
+                  <p className={cn(
+                    "text-xs mt-1",
+                    theme === "dark" ? "text-slate-500" : "text-slate-500"
+                  )}>completed</p>
+                </div>
+                <div className={cn(
+                  "p-2.5 rounded-lg border",
+                  theme === "dark" 
+                    ? "bg-purple-950/50 border-purple-800/50" 
+                    : "bg-purple-50 border-purple-200"
+                )}>
+                  <ClipboardCheck className={cn(
+                    "h-5 w-5",
+                    theme === "dark" ? "text-purple-400" : "text-purple-600"
+                  )} />
+                </div>
+              </div>
+
+              <div className={cn(
+                "mt-4 pt-4 border-t grid grid-cols-3 gap-3 text-center text-xs",
+                theme === "dark" ? "border-slate-800" : "border-slate-200"
+              )}>
+                <div>
+                  <div className={cn(
+                    "font-bold",
+                    theme === "dark" ? "text-slate-100" : "text-slate-900"
+                  )}>{passedCount ?? "-"}</div>
+                  <div className={cn(
+                    theme === "dark" ? "text-slate-400" : "text-slate-500"
+                  )}>Passed</div>
+                </div>
+                <div>
+                  <div className={cn(
+                    "font-bold",
+                    theme === "dark" ? "text-slate-100" : "text-slate-900"
+                  )}>{failedCount !== undefined ? failedCount : "-"}</div>
+                  <div className={cn(
+                    theme === "dark" ? "text-slate-400" : "text-slate-500"
+                  )}>Failed</div>
+                </div>
+                <div>
+                  <div className={cn(
+                    "font-bold",
+                    theme === "dark" ? "text-purple-400" : "text-purple-600"
+                  )}>{Number(passRate ?? stats.passRate).toFixed(1)}%</div>
+                  <div className={cn(
+                    theme === "dark" ? "text-slate-400" : "text-slate-500"
+                  )}>Pass Rate</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Overall Pass Rate */}
+            <div className={cn(
+              "group relative rounded-xl border p-5 hover:shadow-md transition-all duration-300",
+              theme === "dark" 
+                ? "border-slate-700/70 bg-slate-900/60" 
+                : "border-slate-200 bg-gradient-to-br from-slate-50 to-white"
+            )}>
+              <div className={cn(
+                "absolute top-0 left-0 w-1 h-full rounded-l-xl",
+                theme === "dark" ? "bg-gradient-to-b from-emerald-600 to-emerald-700" : "bg-gradient-to-b from-emerald-500 to-emerald-600"
+              )} />
+              
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className={cn(
+                    "text-xs font-semibold",
+                    theme === "dark" ? "text-slate-400" : "text-slate-600"
+                  )}>Overall Pass Rate</p>
+                  <p className={cn(
+                    "mt-2 text-4xl font-extrabold bg-gradient-to-r bg-clip-text text-transparent",
+                    theme === "dark" 
+                      ? "from-emerald-400 to-emerald-500 text-transparent" 
+                      : "from-emerald-600 to-emerald-700 text-transparent"
+                  )}>
+                    {Number(passRate ?? stats.passRate).toFixed(1)}%
+                  </p>
+                  <p className={cn(
+                    "text-xs mt-1",
+                    theme === "dark" ? "text-slate-400" : "text-slate-500"
+                  )}>
+                    {passedCount ?? "-"} passed • {failedCount !== undefined ? failedCount : "-"} failed
+                  </p>
+                </div>
+                <div className={cn(
+                  "p-2.5 rounded-lg border",
+                  theme === "dark" 
+                    ? "bg-emerald-950/50 border-emerald-800/50" 
+                    : "bg-emerald-50 border-emerald-200"
+                )}>
+                  <TrendingUp className={cn(
+                    "h-5 w-5",
+                    theme === "dark" ? "text-emerald-400" : "text-emerald-600"
+                  )} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <Card className={cn(
+          "border-0 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-md",
+          theme === "dark" ? "bg-slate-950/95" : "bg-white/90"
+        )}>
+          <CardHeader className={cn(
+            "border-b pb-6 backdrop-blur-sm",
+            theme === "dark" 
+              ? "border-slate-800/60 bg-black/70" 
+              : "border-slate-100/60 bg-white/70"
+          )}>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-1.5">
+                <CardTitle className={cn(
+                  "text-2xl font-bold tracking-tight",
+                  theme === "dark" ? "text-slate-100" : "text-slate-900"
+                )}>
+                  Interview Dashboard
                 </CardTitle>
-                <CardDescription className="text-sm mt-1.5 text-slate-600">
-                  {shortlistingCount} candidate{shortlistingCount !== 1 ? "s" : ""} sent to client for review
+                <CardDescription className={cn(
+                  "text-base",
+                  theme === "dark" ? "text-slate-400" : "text-slate-600"
+                )}>
+                  Track and manage your assigned and upcoming candidate interviews
                 </CardDescription>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (shortlistingPreview[0]?.id) {
-                  navigate("/interviews/shortlisting", { state: { selectedId: shortlistingPreview[0]?.id } });
-                } else {
-                  navigate("/interviews/shortlisting");
-                }
-              }}
-              disabled={shortlistingCount === 0}
-              className="group text-sm font-medium text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-            >
-              View All
-              <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <CardContent className="pt-4">
-          {shortlistingCount === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <Calendar className="h-14 w-14 mx-auto mb-5 opacity-40" />
-              <p className="font-semibold text-lg">No shortlisting items</p>
-              <p className="text-sm mt-2">Candidates sent to clients will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {shortlistingPreview.slice(0, 3).map((c) => (
-                <div
-                  key={c.id}
-                  onClick={() => navigate(`/interviews/shortlisting`, { state: { selectedId: c.id } })}
-                  className="group relative p-5 rounded-2xl border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                >
-                  <div className="flex items-start justify-between pr-28">
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <ImageViewer
-                        src={c.candidate?.profileImage}
-                        title={c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
-                        className="h-12 w-12 shrink-0 shadow-sm"
-                        enableHoverPreview={false}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-semibold text-slate-900 truncate">
-                          {c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
-                        </p>
-                        <p className="text-sm text-slate-600 truncate mt-1">
-                          {c.roleNeeded?.designation || "Unknown Role"}
-                          {c.candidate?.qualifications?.[0]?.qualification?.shortName || c.candidate?.qualifications?.[0]?.qualification?.name ? (
-                            <span className="text-xs text-muted-foreground ml-2">• {c.candidate.qualifications[0].qualification.shortName || c.candidate.qualifications[0].qualification.name}</span>
-                          ) : null}
-                          <span className="text-slate-500 ml-2">• {c.project?.title || "No Project"}</span>
-                        </p>
+          <CardContent className="p-8 space-y-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Short Listing Pending Candidates */}
+              <Card className={cn(
+                "border-0 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72 backdrop-blur-sm",
+                theme === "dark" ? "bg-black/80" : "bg-white/80",
+                theme === "dark" ? "dark:border dark:border-slate-700" : ""
+              )}>
+                <CardHeader className={cn(
+                  "pb-5",
+                  theme === "dark" 
+                    ? "bg-gradient-to-r from-amber-950/40 to-transparent" 
+                    : "bg-gradient-to-r from-amber-50/80 to-transparent"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "p-3.5 rounded-2xl shadow-md border",
+                        theme === "dark" 
+                          ? "bg-gradient-to-br from-amber-900/60 to-amber-950/60 border-amber-800/50" 
+                          : "bg-gradient-to-br from-amber-100 to-amber-50 border-amber-200/60"
+                      )}>
+                        <Mail className={cn(
+                          "h-7 w-7",
+                          theme === "dark" ? "text-amber-400" : "text-amber-600"
+                        )} />
+                      </div>
+                      <div>
+                        <CardTitle className={cn(
+                          "text-xl font-bold",
+                          theme === "dark" ? "text-slate-100" : "text-slate-900"
+                        )}>
+                          Short Listing Pending Candidates
+                        </CardTitle>
+                        <CardDescription className={cn(
+                          "text-sm mt-1.5",
+                          theme === "dark" ? "text-slate-400" : "text-slate-600"
+                        )}>
+                          {shortlistingCount} candidate{shortlistingCount !== 1 ? "s" : ""} sent to client for review
+                        </CardDescription>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
-                    <Calendar className="h-4.5 w-4.5" />
-                    <span className="font-medium">
-                      {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "Just now"}
-                    </span>
-                    {c.latestForward?.sender?.name && (
-                      <span className="text-xs text-muted-foreground ml-2">• forwarded by {c.latestForward.sender.name}</span>
-                    )}
-                    <Badge className="ml-auto text-xs bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
-                      {c.subStatus?.label || "Sent to Client"}
-                    </Badge>
-                  </div>
-
-                  <div className="absolute right-4 top-4">
                     <Button
+                      variant="ghost"
                       size="sm"
-                      className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedShortlisting(c);
-                        setDecisionModalOpen(true);
+                      onClick={() => {
+                        if (shortlistingPreview[0]?.id) {
+                          navigate("/interviews/shortlisting", { state: { selectedId: shortlistingPreview[0]?.id } });
+                        } else {
+                          navigate("/interviews/shortlisting");
+                        }
                       }}
-                      aria-label={`Update client decision for ${c.candidate?.firstName ?? 'candidate'}`}
+                      disabled={shortlistingCount === 0}
+                      className={cn(
+                        "group text-sm font-medium transition-colors",
+                        theme === "dark" 
+                          ? "text-amber-400 hover:bg-amber-950/50 hover:text-amber-300" 
+                          : "text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                      )}
                     >
-                      Update
+                      View All
+                      <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </CardHeader>
 
-      {/* Shortlisted Candidates (replaces Upcoming Interviews) */}
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72">
-        <CardHeader className="pb-5 bg-gradient-to-r from-teal-50/80 to-transparent">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-gradient-to-br from-teal-100 to-teal-50 rounded-2xl shadow-md border border-teal-200/60">
-                <CheckCircle2 className="h-7 w-7 text-teal-600" />
-              </div>
-              <div>
-                <CardTitle className="text-xl font-bold text-slate-900">
-                  Shortlisted Candidates
-                </CardTitle>
-                <CardDescription className="text-sm mt-1.5 text-slate-600">
-                  {shortlistedCountPreview} shortlisted candidate{shortlistedCountPreview !== 1 ? "s" : ""} ready to schedule
-                </CardDescription>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (shortlistedPreview[0]?.id) {
-                  navigate("/interviews/shortlisted", { state: { selectedId: shortlistedPreview[0]?.id } });
-                } else {
-                  navigate("/interviews/shortlisted");
-                }
-              }}
-              disabled={shortlistedCountPreview === 0}
-              className="group text-sm font-medium text-teal-600 hover:bg-teal-50 hover:text-teal-700"
-            >
-              View All
-              <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </div>
-        </CardHeader>
+                <CardContent className="pt-4">
+                  {shortlistingCount === 0 ? (
+                    <div className={cn(
+                      "text-center py-12",
+                      theme === "dark" ? "text-slate-500 bg-black" : "text-slate-500"
+                    )}>
+                      <Calendar className={cn(
+                        "h-14 w-14 mx-auto mb-5 opacity-40",
+                        theme === "dark" ? "text-slate-600" : ""
+                      )} />
+                      <p className={cn(
+                        "font-semibold text-lg",
+                        theme === "dark" ? "text-slate-200" : ""
+                      )}>No shortlisting items</p>
+                      <p className="text-sm mt-2">Candidates sent to clients will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {shortlistingPreview.slice(0, 3).map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => navigate(`/interviews/shortlisting`, { state: { selectedId: c.id } })}
+                          className={cn(
+                            "group relative p-5 rounded-2xl border transition-all duration-300 cursor-pointer",
+                            theme === "dark"
+                              ? "border-slate-700/70 hover:border-amber-700/70 hover:bg-amber-950/30"
+                              : "border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/60 hover:shadow-lg"
+                          )}
+                        >
+                          <div className="flex items-start justify-between pr-28">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <ImageViewer
+                                src={c.candidate?.profileImage}
+                                title={c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
+                                className="h-12 w-12 shrink-0 shadow-sm"
+                                enableHoverPreview={false}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className={cn(
+                                  "text-lg font-semibold truncate",
+                                  theme === "dark" ? "text-slate-100" : "text-slate-900"
+                                )}>
+                                  {c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
+                                </p>
+                                <p className={cn(
+                                  "text-sm truncate mt-1",
+                                  theme === "dark" ? "text-slate-400" : "text-slate-600"
+                                )}>
+                                  {c.roleNeeded?.designation || "Unknown Role"}
+                                  {c.candidate?.qualifications?.[0]?.qualification?.shortName || c.candidate?.qualifications?.[0]?.qualification?.name ? (
+                                    <span className={cn(
+                                      "text-xs ml-2",
+                                      theme === "dark" ? "text-slate-500" : "text-muted-foreground"
+                                    )}>
+                                      • {c.candidate.qualifications[0].qualification.shortName || c.candidate.qualifications[0].qualification.name}
+                                    </span>
+                                  ) : null}
+                                  <span className={cn(
+                                    "ml-2",
+                                    theme === "dark" ? "text-slate-500" : "text-slate-500"
+                                  )}>
+                                    • {c.project?.title || "No Project"}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
 
-        <CardContent className="pt-4">
-          {shortlistedCountPreview === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <Calendar className="h-14 w-14 mx-auto mb-5 opacity-40" />
-              <p className="font-semibold text-lg">No shortlisted candidates</p>
-              <p className="text-sm mt-2">Shortlisted candidates will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {shortlistedPreview.slice(0, 3).map((c) => (
-                <div
-                  key={c.id}
-                  onClick={() => navigate(`/interviews/shortlisted`, { state: { selectedId: c.id } })}
-                  className="group relative p-5 rounded-2xl border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                >
-                  <div className="flex items-start justify-between pr-28">
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <ImageViewer
-                        src={c.candidate?.profileImage}
-                        title={c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
-                        className="h-12 w-12 shrink-0 shadow-sm"
-                        enableHoverPreview={false}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-semibold text-slate-900 truncate">
-                          {c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
-                        </p>
-                        <p className="text-sm text-slate-600 truncate mt-1">
-                          {c.roleNeeded?.designation || "Unknown Role"}
-                          {c.candidate?.qualifications?.[0]?.qualification?.shortName || c.candidate?.qualifications?.[0]?.qualification?.name ? (
-                            <span className="text-xs text-muted-foreground ml-2">• {c.candidate.qualifications[0].qualification.shortName || c.candidate.qualifications[0].qualification.name}</span>
-                          ) : null}
-                          <span className="text-slate-500 ml-2">• {c.project?.title || "No Project"}</span>
-                        </p>
+                          <div className={cn(
+                            "flex items-center gap-3 mt-4 text-sm",
+                            theme === "dark" ? "text-slate-400" : "text-slate-600"
+                          )}>
+                            <Calendar className={cn(
+                              "h-4.5 w-4.5",
+                              theme === "dark" ? "text-slate-500" : ""
+                            )} />
+                            <span className="font-medium">
+                              {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "Just now"}
+                            </span>
+                            {c.latestForward?.sender?.name && (
+                              <span className={cn(
+                                "text-xs ml-2",
+                                theme === "dark" ? "text-slate-500" : "text-muted-foreground"
+                              )}>
+                                • forwarded by {c.latestForward.sender.name}
+                              </span>
+                            )}
+                            <Badge className={cn(
+                              "ml-auto text-xs font-medium border",
+                              theme === "dark" 
+                                ? "bg-emerald-900/50 text-emerald-300 border-emerald-800/50" 
+                                : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                            )}>
+                              {c.subStatus?.label || "Sent to Client"}
+                            </Badge>
+                          </div>
+
+                          <div className="absolute right-4 top-4">
+                            <Button
+                              size="sm"
+                              className={cn(
+                                "h-8 px-3 text-xs shadow-sm hover:shadow-md transition-colors",
+                                theme === "dark"
+                                  ? "bg-amber-700 hover:bg-amber-600 text-white"
+                                  : "bg-amber-600 hover:bg-amber-700 text-white"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedShortlisting(c);
+                                setDecisionModalOpen(true);
+                              }}
+                              aria-label={`Update client decision for ${c.candidate?.firstName ?? 'candidate'}`}
+                            >
+                              Update
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Shortlisted Candidates */}
+              <Card className={cn(
+                "border-0 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72 backdrop-blur-sm",
+                theme === "dark" ? "bg-black/80" : "bg-white/80",
+                theme === "dark" ? "dark:border dark:border-slate-700" : ""
+              )}>
+                <CardHeader className={cn(
+                  "pb-5",
+                  theme === "dark" 
+                    ? "bg-gradient-to-r from-teal-950/40 to-transparent" 
+                    : "bg-gradient-to-r from-teal-50/80 to-transparent"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "p-3.5 rounded-2xl shadow-md border",
+                        theme === "dark" 
+                          ? "bg-gradient-to-br from-teal-900/60 to-teal-950/60 border-teal-800/50" 
+                          : "bg-gradient-to-br from-teal-100 to-teal-50 border-teal-200/60"
+                      )}>
+                        <CheckCircle2 className={cn(
+                          "h-7 w-7",
+                          theme === "dark" ? "text-teal-400" : "text-teal-600"
+                        )} />
+                      </div>
+                      <div>
+                        <CardTitle className={cn(
+                          "text-xl font-bold",
+                          theme === "dark" ? "text-slate-100" : "text-slate-900"
+                        )}>
+                          Shortlisted Candidates
+                        </CardTitle>
+                        <CardDescription className={cn(
+                          "text-sm mt-1.5",
+                          theme === "dark" ? "text-slate-400" : "text-slate-600"
+                        )}>
+                          {shortlistedCountPreview} shortlisted candidate{shortlistedCountPreview !== 1 ? "s" : ""} ready to schedule
+                        </CardDescription>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
-                    <Calendar className="h-4.5 w-4.5" />
-                    <span className="font-medium">
-                      {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "Just now"}
-                    </span>
-                    {c.latestForward?.sender?.name && (
-                      <span className="text-xs text-muted-foreground ml-2">• forwarded by {c.latestForward.sender.name}</span>
-                    )}
-                    <Badge className="ml-auto text-xs bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
-                      {c.subStatus?.label || "Shortlisted"}
-                    </Badge>
-                  </div>
-
-                  <div className="absolute right-4 top-4">
                     <Button
+                      variant="ghost"
                       size="sm"
-                      className="h-8 px-3 text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-sm hover:shadow-md"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate('/interviews/shortlisted', { state: { selectedId: c.id } });
+                      onClick={() => {
+                        if (shortlistedPreview[0]?.id) {
+                          navigate("/interviews/shortlisted", { state: { selectedId: shortlistedPreview[0]?.id } });
+                        } else {
+                          navigate("/interviews/shortlisted");
+                        }
                       }}
-                      aria-label={`Schedule interview for ${c.candidate?.firstName ?? 'candidate'}`}
+                      disabled={shortlistedCountPreview === 0}
+                      className={cn(
+                        "group text-sm font-medium transition-colors",
+                        theme === "dark" 
+                          ? "text-teal-400 hover:bg-teal-950/50 hover:text-teal-300" 
+                          : "text-teal-600 hover:bg-teal-50 hover:text-teal-700"
+                      )}
                     >
-                      Schedule
+                      View All
+                      <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </CardHeader>
 
-    </div>
+                <CardContent className="pt-4">
+                  {shortlistedCountPreview === 0 ? (
+                    <div className={cn(
+                      "text-center py-12",
+                      theme === "dark" ? "text-slate-500 bg-black" : "text-slate-500"
+                    )}>
+                      <Calendar className={cn(
+                        "h-14 w-14 mx-auto mb-5 opacity-40",
+                        theme === "dark" ? "text-slate-600" : ""
+                      )} />
+                      <p className={cn(
+                        "font-semibold text-lg",
+                        theme === "dark" ? "text-slate-200" : ""
+                      )}>No shortlisted candidates</p>
+                      <p className="text-sm mt-2">Shortlisted candidates will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {shortlistedPreview.slice(0, 3).map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => navigate(`/interviews/shortlisted`, { state: { selectedId: c.id } })}
+                          className={cn(
+                            "group relative p-5 rounded-2xl border transition-all duration-300 cursor-pointer",
+                            theme === "dark"
+                              ? "border-slate-700/70 hover:border-teal-700/70 hover:bg-teal-950/30"
+                              : "border-slate-200/80 hover:border-teal-300 hover:bg-teal-50/60 hover:shadow-lg"
+                          )}
+                        >
+                          <div className="flex items-start justify-between pr-28">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <ImageViewer
+                                src={c.candidate?.profileImage}
+                                title={c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
+                                className="h-12 w-12 shrink-0 shadow-sm"
+                                enableHoverPreview={false}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className={cn(
+                                  "text-lg font-semibold truncate",
+                                  theme === "dark" ? "text-slate-100" : "text-slate-900"
+                                )}>
+                                  {c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : "Unknown"}
+                                </p>
+                                <p className={cn(
+                                  "text-sm truncate mt-1",
+                                  theme === "dark" ? "text-slate-400" : "text-slate-600"
+                                )}>
+                                  {c.roleNeeded?.designation || "Unknown Role"}
+                                  {c.candidate?.qualifications?.[0]?.qualification?.shortName || c.candidate?.qualifications?.[0]?.qualification?.name ? (
+                                    <span className={cn(
+                                      "text-xs ml-2",
+                                      theme === "dark" ? "text-slate-500" : "text-muted-foreground"
+                                    )}>
+                                      • {c.candidate.qualifications[0].qualification.shortName || c.candidate.qualifications[0].qualification.name}
+                                    </span>
+                                  ) : null}
+                                  <span className={cn(
+                                    "ml-2",
+                                    theme === "dark" ? "text-slate-500" : "text-slate-500"
+                                  )}>
+                                    • {c.project?.title || "No Project"}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
 
-    {/* Not Shortlisted Candidates (dummy preview) */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72">
-        <CardHeader className="pb-5 bg-gradient-to-r from-rose-50/80 to-transparent">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-gradient-to-br from-rose-100 to-rose-50 rounded-2xl shadow-md border border-rose-200/60">
-                <X className="h-7 w-7 text-rose-600" />
-              </div>
-              <div>
-                <CardTitle className="text-xl font-bold text-slate-900">Not Shortlisted Candidates</CardTitle>
-                <CardDescription className="text-sm mt-1.5 text-slate-600">{notShortlistedCountPreview} candidate{notShortlistedCountPreview !== 1 ? 's' : ''} marked not shortlisted</CardDescription>
-              </div>
+                          <div className={cn(
+                            "flex items-center gap-3 mt-4 text-sm",
+                            theme === "dark" ? "text-slate-400" : "text-slate-600"
+                          )}>
+                            <Calendar className={cn(
+                              "h-4.5 w-4.5",
+                              theme === "dark" ? "text-slate-500" : ""
+                            )} />
+                            <span className="font-medium">
+                              {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "Just now"}
+                            </span>
+                            {c.latestForward?.sender?.name && (
+                              <span className={cn(
+                                "text-xs ml-2",
+                                theme === "dark" ? "text-slate-500" : "text-muted-foreground"
+                              )}>
+                                • forwarded by {c.latestForward.sender.name}
+                              </span>
+                            )}
+                            <Badge className={cn(
+                              "ml-auto text-xs font-medium border",
+                              theme === "dark" 
+                                ? "bg-emerald-900/50 text-emerald-300 border-emerald-800/50" 
+                                : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                            )}>
+                              {c.subStatus?.label || "Shortlisted"}
+                            </Badge>
+                          </div>
+
+                          <div className="absolute right-4 top-4">
+                            <Button
+                              size="sm"
+                              className={cn(
+                                "h-8 px-3 text-xs shadow-sm hover:shadow-md transition-colors",
+                                theme === "dark"
+                                  ? "bg-teal-700 hover:bg-teal-600 text-white"
+                                  : "bg-teal-600 hover:bg-teal-700 text-white"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate('/interviews/shortlisted', { state: { selectedId: c.id } });
+                              }}
+                              aria-label={`Schedule interview for ${c.candidate?.firstName ?? 'candidate'}`}
+                            >
+                              Schedule
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/interviews/not-shortlisted')} disabled={notShortlistedCountPreview === 0} className="group text-sm font-medium text-rose-600 hover:bg-rose-50 hover:text-rose-700">View All<ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" /></Button>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {notShortlistedCountPreview === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <Calendar className="h-14 w-14 mx-auto mb-5 opacity-40" />
-              <p className="font-semibold text-lg">No not-shortlisted items</p>
-              <p className="text-sm mt-2">Not-shortlisted candidates will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {notShortlistedPreview.slice(0, 3).map((c) => (
-                <div key={c.id} onClick={() => navigate('/interviews/not-shortlisted', { state: { selectedId: c.id } })} className="group relative p-5 rounded-2xl border border-slate-200/80 hover:border-rose-300 hover:bg-rose-50/60 hover:shadow-lg transition-all duration-300 cursor-pointer">
-                  <div className="flex items-start justify-between pr-28">
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <ImageViewer src={c.candidate?.profileImage} title={c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : 'Unknown'} className="h-12 w-12 shrink-0 shadow-sm" enableHoverPreview={false} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-semibold text-slate-900 truncate">{c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : 'Unknown'}</p>
-                        <p className="text-sm text-slate-600 truncate mt-1">
-                          {c.roleNeeded?.designation || 'Unknown Role'}
-                          {c.candidate?.qualifications?.[0]?.qualification?.shortName || c.candidate?.qualifications?.[0]?.qualification?.name ? (
-                            <span className="text-xs text-muted-foreground ml-2">• {c.candidate.qualifications[0].qualification.shortName || c.candidate.qualifications[0].qualification.name}</span>
-                          ) : null}
-                          <span className="text-slate-500 ml-2">• {c.project?.title || 'No Project'}</span>
-                        </p>
+
+            {/* Not Shortlisted Candidates */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className={cn(
+                "border-0 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden h-full min-h-72 backdrop-blur-sm",
+                theme === "dark" ? "bg-black/80" : "bg-white/80",
+                theme === "dark" ? "dark:border dark:border-slate-700" : ""
+              )}>
+                <CardHeader className={cn(
+                  "pb-5",
+                  theme === "dark" 
+                    ? "bg-gradient-to-r from-rose-950/40 to-transparent" 
+                    : "bg-gradient-to-r from-rose-50/80 to-transparent"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "p-3.5 rounded-2xl shadow-md border",
+                        theme === "dark" 
+                          ? "bg-gradient-to-br from-rose-900/60 to-rose-950/60 border-rose-800/50" 
+                          : "bg-gradient-to-br from-rose-100 to-rose-50 border-rose-200/60"
+                      )}>
+                        <X className={cn(
+                          "h-7 w-7",
+                          theme === "dark" ? "text-rose-400" : "text-rose-600"
+                        )} />
+                      </div>
+                      <div>
+                        <CardTitle className={cn(
+                          "text-xl font-bold",
+                          theme === "dark" ? "text-slate-100" : "text-slate-900"
+                        )}>
+                          Not Shortlisted Candidates
+                        </CardTitle>
+                        <CardDescription className={cn(
+                          "text-sm mt-1.5",
+                          theme === "dark" ? "text-slate-400" : "text-slate-600"
+                        )}>
+                          {notShortlistedCountPreview} candidate{notShortlistedCountPreview !== 1 ? 's' : ''} marked not shortlisted
+                        </CardDescription>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-4 text-sm text-slate-600">
-                    <Calendar className="h-4.5 w-4.5" />
-                    <span className="font-medium">{c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : 'Just now'}</span>
-                    {c.latestForward?.sender?.name && (
-                      <span className="text-xs text-muted-foreground ml-2">• forwarded by {c.latestForward.sender.name}</span>
-                    )}
-                    <Badge className="ml-auto text-xs bg-rose-100 text-rose-700 border-rose-200 font-medium">{c.subStatus?.label || 'Not Shortlisted'}</Badge>
-                  </div>
-
-                  <div className="absolute right-4 top-4">
-                    <Button
-                      size="sm"
-                      className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedShortlisting(c);
-                        setDecisionModalOpen(true);
-                      }}
-                      aria-label={`Update client decision for ${c.candidate?.firstName ?? 'candidate'}`}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => navigate('/interviews/not-shortlisted')} 
+                      disabled={notShortlistedCountPreview === 0} 
+                      className={cn(
+                        "group text-sm font-medium transition-colors",
+                        theme === "dark" 
+                          ? "text-rose-400 hover:bg-rose-950/50 hover:text-rose-300" 
+                          : "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                      )}
                     >
-                      Update
+                      View All
+                      <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </div>
-                </div>
-              ))}
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {notShortlistedCountPreview === 0 ? (
+                    <div className={cn(
+                      "text-center py-12",
+                      theme === "dark" ? "text-slate-500 bg-black" : "text-slate-500"
+                    )}>
+                      <Calendar className={cn(
+                        "h-14 w-14 mx-auto mb-5 opacity-40",
+                        theme === "dark" ? "text-slate-600" : ""
+                      )} />
+                      <p className={cn(
+                        "font-semibold text-lg",
+                        theme === "dark" ? "text-slate-200" : ""
+                      )}>No not-shortlisted items</p>
+                      <p className="text-sm mt-2">Not-shortlisted candidates will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {notShortlistedPreview.slice(0, 3).map((c) => (
+                        <div 
+                          key={c.id} 
+                          onClick={() => navigate('/interviews/not-shortlisted', { state: { selectedId: c.id } })} 
+                          className={cn(
+                            "group relative p-5 rounded-2xl border transition-all duration-300 cursor-pointer",
+                            theme === "dark"
+                              ? "border-slate-700/70 hover:border-rose-700/70 hover:bg-rose-950/30"
+                              : "border-slate-200/80 hover:border-rose-300 hover:bg-rose-50/60 hover:shadow-lg"
+                          )}
+                        >
+                          <div className="flex items-start justify-between pr-28">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <ImageViewer 
+                                src={c.candidate?.profileImage} 
+                                title={c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : 'Unknown'} 
+                                className="h-12 w-12 shrink-0 shadow-sm" 
+                                enableHoverPreview={false} 
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className={cn(
+                                  "text-lg font-semibold truncate",
+                                  theme === "dark" ? "text-slate-100" : "text-slate-900"
+                                )}>
+                                  {c.candidate ? `${c.candidate.firstName} ${c.candidate.lastName}` : 'Unknown'}
+                                </p>
+                                <p className={cn(
+                                  "text-sm truncate mt-1",
+                                  theme === "dark" ? "text-slate-400" : "text-slate-600"
+                                )}>
+                                  {c.roleNeeded?.designation || 'Unknown Role'}
+                                  {c.candidate?.qualifications?.[0]?.qualification?.shortName || c.candidate?.qualifications?.[0]?.qualification?.name ? (
+                                    <span className={cn(
+                                      "text-xs ml-2",
+                                      theme === "dark" ? "text-slate-500" : "text-muted-foreground"
+                                    )}>
+                                      • {c.candidate.qualifications[0].qualification.shortName || c.candidate.qualifications[0].qualification.name}
+                                    </span>
+                                  ) : null}
+                                  <span className={cn(
+                                    "ml-2",
+                                    theme === "dark" ? "text-slate-500" : "text-slate-500"
+                                  )}>
+                                    • {c.project?.title || 'No Project'}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={cn(
+                            "flex items-center gap-3 mt-4 text-sm",
+                            theme === "dark" ? "text-slate-400" : "text-slate-600"
+                          )}>
+                            <Calendar className={cn(
+                              "h-4.5 w-4.5",
+                              theme === "dark" ? "text-slate-500" : ""
+                            )} />
+                            <span className="font-medium">
+                              {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : 'Just now'}
+                            </span>
+                            {c.latestForward?.sender?.name && (
+                              <span className={cn(
+                                "text-xs ml-2",
+                                theme === "dark" ? "text-slate-500" : "text-muted-foreground"
+                              )}>
+                                • forwarded by {c.latestForward.sender.name}
+                              </span>
+                            )}
+                            <Badge className={cn(
+                              "ml-auto text-xs font-medium border",
+                              theme === "dark" 
+                                ? "bg-rose-900/50 text-rose-300 border-rose-800/50" 
+                                : "bg-rose-100 text-rose-700 border-rose-200"
+                            )}>
+                              {c.subStatus?.label || 'Not Shortlisted'}
+                            </Badge>
+                          </div>
+
+                          <div className="absolute right-4 top-4">
+                            <Button
+                              size="sm"
+                              className={cn(
+                                "h-8 px-3 text-xs shadow-sm hover:shadow-md transition-colors",
+                                theme === "dark"
+                                  ? "bg-amber-700 hover:bg-amber-600 text-white"
+                                  : "bg-amber-600 hover:bg-amber-700 text-white"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedShortlisting(c);
+                                setDecisionModalOpen(true);
+                              }}
+                              aria-label={`Update client decision for ${c.candidate?.firstName ?? 'candidate'}`}
+                            >
+                              Update
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
 
-    {interviews.length > 0 && (
-      <div className="text-center pt-6">
-        <p className="text-sm font-medium text-slate-500">
-          Showing {interviews.length} of {totalInterviews} total interviews
-        </p>
-      </div>
-    )}
-  </CardContent>
-</Card>
+            {interviews.length > 0 && (
+              <div className={cn(
+                "text-center pt-6 text-sm font-medium",
+                theme === "dark" ? "text-slate-400" : "text-slate-500"
+              )}>
+                Showing {interviews.length} of {totalInterviews} total interviews
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <ClientDecisionModal
-        open={decisionModalOpen}
-        onOpenChange={(open) => {
-          setDecisionModalOpen(open);
-          if (!open) setSelectedShortlisting(null);
-        }}
-        candidateName={selectedShortlisting?.candidate ? `${selectedShortlisting.candidate.firstName} ${selectedShortlisting.candidate.lastName}` : 'Unknown Candidate'}
-        onSubmit={handleClientDecision}
-        isSubmitting={isUpdatingDecision}
-      />
+        <ClientDecisionModal
+          open={decisionModalOpen}
+          onOpenChange={(open) => {
+            setDecisionModalOpen(open);
+            if (!open) setSelectedShortlisting(null);
+          }}
+          candidateName={selectedShortlisting?.candidate ? `${selectedShortlisting.candidate.firstName} ${selectedShortlisting.candidate.lastName}` : 'Unknown Candidate'}
+          onSubmit={handleClientDecision}
+          isSubmitting={isUpdatingDecision}
+        />
 
         <ScheduleInterviewDialog
           open={scheduleDialogOpen}

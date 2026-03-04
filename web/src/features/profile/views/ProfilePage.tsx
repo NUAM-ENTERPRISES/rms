@@ -145,12 +145,12 @@ export default function ProfilePage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-slate-600">Loading profile...</p>
+              <p className="text-slate-600 dark:text-slate-400">Loading profile...</p>
             </div>
           </div>
         </div>
@@ -161,17 +161,17 @@ export default function ProfilePage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="text-red-600 mb-4">
                 <Shield className="h-12 w-12 mx-auto" />
               </div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
                 Failed to load profile
               </h2>
-              <p className="text-slate-600 mb-4">
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
                 There was an error loading your profile information.
               </p>
               <Button onClick={() => window.location.reload()}>
@@ -187,17 +187,17 @@ export default function ProfilePage() {
   // No data state
   if (!userData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="text-slate-400 mb-4">
                 <User className="h-12 w-12 mx-auto" />
               </div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
                 No profile data
               </h2>
-              <p className="text-slate-600">
+              <p className="text-slate-600 dark:text-slate-400">
                 Unable to load your profile information.
               </p>
             </div>
@@ -208,13 +208,13 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
-            <p className="text-slate-600">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Profile</h1>
+            <p className="text-slate-600 dark:text-slate-400">
               Manage your personal information and preferences
             </p>
           </div>
@@ -229,7 +229,7 @@ export default function ProfilePage() {
               </Button>
             ) : (
               <div className="flex items-center space-x-2">
-                <Button variant="outline" onClick={handleCancel}>
+                <Button variant="outline" onClick={handleCancel} className="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
@@ -258,7 +258,7 @@ export default function ProfilePage() {
           {/* Left Column - Profile Overview */}
           <div className="lg:col-span-1 space-y-6">
             {/* Profile Card */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="text-center space-y-4">
                   <div className="relative inline-block">
@@ -280,16 +280,16 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-900">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                       {userData.name}
                     </h2>
-                    <p className="text-slate-600">{userData.email}</p>
+                    <p className="text-slate-600 dark:text-slate-400">{userData.email}</p>
                     <div className="flex items-center justify-center space-x-2 mt-2">
                       {userData.roles.map((role) => (
                         <Badge
                           key={role}
                           variant="secondary"
-                          className="text-xs"
+                          className="text-xs dark:bg-slate-800 dark:text-slate-300"
                         >
                           {role}
                         </Badge>
@@ -304,122 +304,128 @@ export default function ProfilePage() {
           {/* Right Column - Profile Details */}
           <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="personal" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="personal">Personal</TabsTrigger>
-                <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 dark:bg-slate-800">
+                <TabsTrigger value="personal" className="dark:data-[state=active]:bg-slate-700 dark:text-slate-400 dark:data-[state=active]:text-white">Personal</TabsTrigger>
+                <TabsTrigger value="security" className="dark:data-[state=active]:bg-slate-700 dark:text-slate-400 dark:data-[state=active]:text-white">Security</TabsTrigger>
               </TabsList>
 
               {/* Personal Information Tab */}
               <TabsContent value="personal" className="space-y-6">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <User className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="flex items-center space-x-2 text-slate-900 dark:text-slate-100">
+                      <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       <span>Personal Information</span>
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
                       Your personal details and contact information
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="name" className="dark:text-slate-300">Full Name</Label>
                         {isEditing ? (
                           <Input
                             id="name"
                             {...form.register("name")}
                             placeholder="Enter your full name"
+                            className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                           />
                         ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg">
-                            <span className="font-medium">{userData.name}</span>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                            <span className="font-medium text-slate-900 dark:text-slate-200">{userData.name}</span>
                           </div>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
+                        <Label htmlFor="email" className="dark:text-slate-300">Email Address</Label>
                         {isEditing ? (
                           <Input
                             id="email"
                             type="email"
                             {...form.register("email")}
                             placeholder="Enter your email"
+                            className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                           />
                         ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Mail className="h-4 w-4 text-slate-400" />
-                            <span>{userData.email}</span>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center space-x-2">
+                            <Mail className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <span className="text-slate-900 dark:text-slate-200">{userData.email}</span>
                           </div>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="mobile">Mobile Number</Label>
+                        <Label htmlFor="mobile" className="dark:text-slate-300">Mobile Number</Label>
                         {isEditing ? (
                           <div className="flex space-x-2">
                             <Input
                               id="countryCode"
                               {...form.register("countryCode")}
                               placeholder="+1"
-                              className="w-20"
+                              className="w-20 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                             />
                             <Input
                               id="mobileNumber"
                               {...form.register("mobileNumber")}
                               placeholder="1234567890"
+                              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                             />
                           </div>
                         ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Phone className="h-4 w-4 text-slate-400" />
-                            <span>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center space-x-2">
+                            <Phone className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <span className="text-slate-900 dark:text-slate-200">
                               {userData.countryCode} {userData.mobileNumber}
                             </span>
                           </div>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="dob">Date of Birth</Label>
+                        <Label htmlFor="dob" className="dark:text-slate-300">Date of Birth</Label>
                         {isEditing ? (
                           <Input
                             id="dob"
                             type="date"
                             {...form.register("dateOfBirth")}
+                            className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                           />
                         ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            <span>{formatDate(userData.dateOfBirth)}</span>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center space-x-2">
+                            <Calendar className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <span className="text-slate-900 dark:text-slate-200">{formatDate(userData.dateOfBirth)}</span>
                           </div>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
+                        <Label htmlFor="location" className="dark:text-slate-300">Location</Label>
                         {isEditing ? (
                           <Input
                             id="location"
                             {...form.register("location")}
                             placeholder="City, State"
+                            className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                           />
                         ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <MapPin className="h-4 w-4 text-slate-400" />
-                            <span>{userData.location}</span>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center space-x-2">
+                            <MapPin className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <span className="text-slate-900 dark:text-slate-200">{userData.location}</span>
                           </div>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="timezone">Timezone</Label>
+                        <Label htmlFor="timezone" className="dark:text-slate-300">Timezone</Label>
                         {isEditing ? (
                           <Input
                             id="timezone"
                             {...form.register("timezone")}
                             placeholder="America/New_York"
+                            className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                           />
                         ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Globe className="h-4 w-4 text-slate-400" />
-                            <span>{userData.timezone}</span>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center space-x-2">
+                            <Globe className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <span className="text-slate-900 dark:text-slate-200">{userData.timezone}</span>
                           </div>
                         )}
                       </div>
@@ -503,24 +509,24 @@ export default function ProfilePage() {
 
               {/* Security Tab */}
               <TabsContent value="security" className="space-y-6">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Shield className="h-5 w-5 text-red-600" />
+                    <CardTitle className="flex items-center space-x-2 text-slate-900 dark:text-slate-100">
+                      <Shield className="h-5 w-5 text-red-600 dark:text-red-400" />
                       <span>Security Settings</span>
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
                       Manage your account security and privacy
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <Key className="h-5 w-5 text-slate-600" />
+                          <Key className="h-5 w-5 text-slate-600 dark:text-slate-300" />
                           <div>
-                            <p className="font-medium">Password</p>
-                            <p className="text-sm text-slate-600">
+                            <p className="font-medium text-slate-900 dark:text-slate-200">Password</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
                               Last changed 30 days ago
                             </p>
                           </div>
@@ -528,23 +534,24 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           onClick={() => setShowPasswordDialog(true)}
+                          className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
                           Change
                         </Button>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <Bell className="h-5 w-5 text-slate-600" />
+                          <Bell className="h-5 w-5 text-slate-600 dark:text-slate-300" />
                           <div>
-                            <p className="font-medium">
+                            <p className="font-medium text-slate-900 dark:text-slate-200">
                               Two-Factor Authentication
                             </p>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
                               Add an extra layer of security
                             </p>
                           </div>
                         </div>
-                        <Button variant="outline">Enable</Button>
+                        <Button variant="outline" className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Enable</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -555,13 +562,13 @@ export default function ProfilePage() {
         </div>
 
         {/* Login Sessions Table */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-blue-600" />
+            <CardTitle className="flex items-center space-x-2 text-slate-900 dark:text-slate-100">
+              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <span>Login Sessions</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-slate-600 dark:text-slate-400">
               Your recent login sessions and security information
             </CardDescription>
           </CardHeader>
@@ -569,126 +576,126 @@ export default function ProfilePage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                  <tr className="border-b border-slate-200 dark:border-slate-800">
+                    <th className="text-left py-3 px-4 font-medium text-slate-700 dark:text-slate-300">
                       Device
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    <th className="text-left py-3 px-4 font-medium text-slate-700 dark:text-slate-300">
                       Location
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    <th className="text-left py-3 px-4 font-medium text-slate-700 dark:text-slate-300">
                       IP Address
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    <th className="text-left py-3 px-4 font-medium text-slate-700 dark:text-slate-300">
                       Login Time
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    <th className="text-left py-3 px-4 font-medium text-slate-700 dark:text-slate-300">
                       Status
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-slate-100 dark:border-slate-800/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <span className="text-blue-600 text-sm">💻</span>
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                          <span className="text-blue-600 dark:text-blue-400 text-sm">💻</span>
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">
+                          <div className="font-medium text-slate-900 dark:text-slate-200">
                             Chrome on Windows
                           </div>
-                          <div className="text-sm text-slate-500">
+                          <div className="text-sm text-slate-500 dark:text-slate-400">
                             Current Session
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600">New York, NY</td>
-                    <td className="py-3 px-4 text-slate-600">192.168.1.100</td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">New York, NY</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">192.168.1.100</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
                       {format(new Date(), "MMM dd, yyyy 'at' h:mm a")}
                     </td>
                     <td className="py-3 px-4">
                       <Badge
                         variant="default"
-                        className="bg-green-100 text-green-800"
+                        className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
                       >
                         Active
                       </Badge>
                     </td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-slate-100 dark:border-slate-800/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-600 text-sm">📱</span>
+                        <div className="w-8 h-8 bg-gray-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-600 dark:text-slate-300 text-sm">📱</span>
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">
+                          <div className="font-medium text-slate-900 dark:text-slate-200">
                             Safari on iPhone
                           </div>
-                          <div className="text-sm text-slate-500">
+                          <div className="text-sm text-slate-500 dark:text-slate-400">
                             Mobile Device
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600">New York, NY</td>
-                    <td className="py-3 px-4 text-slate-600">192.168.1.101</td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">New York, NY</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">192.168.1.101</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
                       {format(
                         new Date(Date.now() - 2 * 60 * 60 * 1000),
                         "MMM dd, yyyy 'at' h:mm a"
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant="secondary">Inactive</Badge>
+                      <Badge variant="secondary" className="dark:bg-slate-800 dark:text-slate-300">Inactive</Badge>
                     </td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-slate-100 dark:border-slate-800/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-600 text-sm">💻</span>
+                        <div className="w-8 h-8 bg-gray-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-600 dark:text-slate-300 text-sm">💻</span>
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">
+                          <div className="font-medium text-slate-900 dark:text-slate-200">
                             Firefox on Mac
                           </div>
-                          <div className="text-sm text-slate-500">Desktop</div>
+                          <div className="text-sm text-slate-500 dark:text-slate-400">Desktop</div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
                       San Francisco, CA
                     </td>
-                    <td className="py-3 px-4 text-slate-600">10.0.0.50</td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">10.0.0.50</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
                       {format(
                         new Date(Date.now() - 24 * 60 * 60 * 1000),
                         "MMM dd, yyyy 'at' h:mm a"
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant="secondary">Inactive</Badge>
+                      <Badge variant="secondary" className="dark:bg-slate-800 dark:text-slate-300">Inactive</Badge>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 p-4 bg-slate-50 rounded-lg">
+            <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-slate-900">
+                  <h4 className="font-medium text-slate-900 dark:text-slate-200">
                     Security Notice
                   </h4>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
                     If you notice any suspicious activity, please change your
                     password immediately.
                   </p>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
                   <Key className="h-4 w-4 mr-2" />
                   Change Password
                 </Button>
@@ -699,10 +706,10 @@ export default function ProfilePage() {
 
         {/* Password Change Dialog */}
         <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <DialogHeader>
-              <DialogTitle>Change Password</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-slate-900 dark:text-slate-100">Change Password</DialogTitle>
+              <DialogDescription className="text-slate-600 dark:text-slate-400">
                 Enter your current password and choose a new one.
               </DialogDescription>
             </DialogHeader>
@@ -720,33 +727,36 @@ export default function ProfilePage() {
             >
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Label htmlFor="currentPassword" className="dark:text-slate-300">Current Password</Label>
                   <Input
                     id="currentPassword"
                     name="currentPassword"
                     type="password"
                     placeholder="Enter current password"
                     required
+                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
+                  <Label htmlFor="newPassword" className="dark:text-slate-300">New Password</Label>
                   <Input
                     id="newPassword"
                     name="newPassword"
                     type="password"
                     placeholder="Enter new password"
                     required
+                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Label htmlFor="confirmPassword" className="dark:text-slate-300">Confirm New Password</Label>
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
                     type="password"
                     placeholder="Confirm new password"
                     required
+                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200"
                   />
                 </div>
               </div>
@@ -755,6 +765,7 @@ export default function ProfilePage() {
                   type="button"
                   variant="outline"
                   onClick={() => setShowPasswordDialog(false)}
+                  className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </Button>
@@ -775,17 +786,17 @@ export default function ProfilePage() {
 
         {/* Delete Account Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <DialogHeader>
-              <DialogTitle className="text-red-600">Delete Account</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-red-600 dark:text-red-500">Delete Account</DialogTitle>
+              <DialogDescription className="text-slate-600 dark:text-slate-400">
                 This action cannot be undone. This will permanently delete your
                 account and remove all data.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="p-4 bg-red-50 rounded-lg">
-                <p className="text-sm text-red-800">
+              <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-300">
                   <strong>Warning:</strong> This will permanently delete your
                   account and all associated data.
                 </p>
@@ -796,6 +807,7 @@ export default function ProfilePage() {
                 variant="outline"
                 onClick={() => setShowDeleteDialog(false)}
                 disabled={isDeleting}
+                className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Cancel
               </Button>

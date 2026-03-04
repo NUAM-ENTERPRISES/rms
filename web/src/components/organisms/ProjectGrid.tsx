@@ -1,4 +1,5 @@
 import React from "react";
+import { useTheme } from "@/context/ThemeContext";
 import { Project } from "@/features/projects";
 import ProjectCard from "./ProjectCard";
 import { Button } from "@/components/ui/button";
@@ -26,19 +27,22 @@ export default function ProjectGrid({
   loading = false,
   className,
 }: ProjectGridProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   if (loading) {
     return (
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 ${className}`}>
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-white border border-gray-200/60 shadow-lg overflow-hidden"
+            className={`rounded-2xl ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-200/60'} shadow-lg overflow-hidden`}
           >
-            <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
+            <div className={`${isDark ? 'h-48 bg-gradient-to-br from-slate-600 to-slate-700' : 'h-48 bg-gradient-to-br from-gray-100 to-gray-200'} animate-pulse`} />
             <div className="p-6 space-y-4">
-              <div className="h-7 w-3/4 bg-gray-200 rounded-xl animate-pulse" />
-              <div className="h-4 w-full bg-gray-100 rounded-lg animate-pulse" />
-              <div className="h-4 w-5/6 bg-gray-100 rounded-lg animate-pulse" />
+              <div className={`${isDark ? 'h-7 w-3/4 bg-slate-600' : 'h-7 w-3/4 bg-gray-200'} rounded-xl animate-pulse"`} />
+              <div className={`${isDark ? 'h-4 w-full bg-slate-600' : 'h-4 w-full bg-gray-100'} rounded-lg animate-pulse"`} />
+              <div className={`${isDark ? 'h-4 w-5/6 bg-slate-600' : 'h-4 w-5/6 bg-gray-100'} rounded-lg animate-pulse"`} />
             </div>
           </div>
         ))}
@@ -48,15 +52,15 @@ export default function ProjectGrid({
 
   if (projects.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center py-24 ${className}`}>
+      <div className={`flex flex-col items-center justify-center py-24 ${className} ${isDark ? 'text-white' : ''}`}>
         <div className="text-center">
-          <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-2xl">
+          <div className={`mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-3xl ${isDark ? 'bg-gradient-to-br from-indigo-900 to-purple-900' : 'bg-gradient-to-br from-indigo-500 to-purple-600'} shadow-2xl`}>
             <FolderOpen className="h-12 w-12 text-white" />
           </div>
-          <h3 className="mb-3 text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+          <h3 className={`mb-3 text-3xl font-bold bg-gradient-to-r ${isDark ? 'from-gray-200 to-gray-400' : 'from-gray-800 to-gray-600'} bg-clip-text text-transparent`}>
             No projects found
           </h3>
-          <p className="text-lg text-gray-500 max-w-md mx-auto">
+          <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-500'} max-w-md mx-auto`}>
             Try adjusting your search or filter criteria to find what you're looking for.
           </p>
         </div>
@@ -65,7 +69,7 @@ export default function ProjectGrid({
   }
 
   return (
-    <div className={className}>
+    <div className={`${className} ${isDark ? 'text-white' : ''}`}>
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
         {projects.map((project) => (
@@ -73,7 +77,7 @@ export default function ProjectGrid({
             key={project.id}
             className="group transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
           >
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md group-hover:shadow-xl transition-shadow">
+            <div className={`rounded-2xl overflow-hidden border ${isDark ? 'border-slate-600 bg-slate-800' : 'border-gray-200 bg-white'} shadow-md group-hover:shadow-xl transition-shadow`}>
               <ProjectCard project={project} onView={onView} />
             </div>
           </div>
