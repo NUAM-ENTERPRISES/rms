@@ -718,7 +718,15 @@ const ProjectCandidatesBoard = ({
     }
 
     if (filteredEligible.length === 0) {
+<<<<<<< HEAD
       return <EmptyColumnState message="No eligible candidates" icon={ShieldCheck} />;
+=======
+      return (
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+          No eligible candidates
+        </div>
+      );
+>>>>>>> copy/dark-theme
     }
 
     const totalEligible = filteredEligible.length;
@@ -1051,9 +1059,14 @@ const ProjectCandidatesBoard = ({
   };
 
   return (
+<<<<<<< HEAD
     <div className="space-y-5">
       {/* Search & Filter Bar */}
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-slate-100 shadow-sm">
+=======
+    <div className="space-y-4 bg-white dark:bg-black">
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+>>>>>>> copy/dark-theme
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
           <Input
@@ -1082,6 +1095,7 @@ const ProjectCandidatesBoard = ({
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Board Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {columns.map((column) => {
@@ -1093,6 +1107,49 @@ const ProjectCandidatesBoard = ({
               aria-labelledby={`column-${column.id}-title`}
               onDragOver={column.id === "nominated" ? handleDragOver : undefined}
               onDrop={column.id === "nominated" ? (e) => handleDrop(e, column.id) : undefined}
+=======
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {columns.map((column) => (
+          <Card
+            key={column.id}
+            className="border-0 shadow-lg bg-white/80 dark:bg-black/80 dark:border dark:border-slate-700 backdrop-blur-sm rounded-2xl flex flex-col"
+            aria-labelledby={`column-${column.id}-title`}
+          >
+            <CardHeader className="!px-3 !py-1.5 !pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 ${column.iconClasses}`}
+                    aria-hidden="true"
+                  >
+                    <column.icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <CardTitle
+                      id={`column-${column.id}-title`}
+                      className="text-sm font-semibold text-slate-900 dark:text-white truncate leading-tight"
+                    >
+                      {column.title}
+                    </CardTitle>
+                    <p className="text-[10px] text-slate-500 dark:text-white truncate leading-tight mt-0.5">
+                      {column.subtitle}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className="text-xs font-medium text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full flex-shrink-0"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {column.count}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent
+              className={`flex-1 px-2 overflow-y-auto ${COLUMN_MAX_HEIGHT} space-y-3`}
+              role="list"
+              aria-label={column.ariaLabel}
+>>>>>>> copy/dark-theme
             >
               <CardHeader className="!px-4 !py-3 !pb-2.5 border-b border-slate-100/80">
                 <div className="flex items-center justify-between gap-2">

@@ -831,6 +831,7 @@ export default function ProjectDetailPage() {
   // Loading state
   if (isLoading) {
     return (
+<<<<<<< HEAD
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
         <div className="w-full mx-auto space-y-6">
           {/* Header skeleton */}
@@ -839,6 +840,16 @@ export default function ProjectDetailPage() {
               <div className="flex-1 space-y-3">
                 <div className="h-8 w-72 bg-slate-100 rounded-lg animate-pulse" />
                 <div className="h-4 w-40 bg-slate-50 rounded-md animate-pulse" />
+=======
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:bg-black p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-slate-200 rounded w-1/3"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-4">
+                <div className="h-64 bg-slate-200 rounded-lg"></div>
+                <div className="h-32 bg-slate-200 rounded-lg"></div>
+>>>>>>> copy/dark-theme
               </div>
               <div className="flex items-center gap-3">
                 <div className="h-10 w-28 bg-slate-100 rounded-lg animate-pulse" />
@@ -911,6 +922,7 @@ export default function ProjectDetailPage() {
   // Error state
   if (error || !projectData?.data) {
     return (
+<<<<<<< HEAD
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
           <CardContent className="flex flex-col items-center py-12 px-8">
@@ -926,6 +938,27 @@ export default function ProjectDetailPage() {
             </Button>
           </CardContent>
         </Card>
+=======
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:bg-black p-6">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-slate-800">
+                Project Not Found
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                The project you're looking for doesn't exist or you don't have
+                access to it.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button onClick={() => navigate("/projects")} className="mt-4">
+                Back to Projects
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+>>>>>>> copy/dark-theme
       </div>
     );
   }
@@ -948,6 +981,7 @@ export default function ProjectDetailPage() {
   // Access control
   if (!canReadProjects) {
     return (
+<<<<<<< HEAD
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
           <CardContent className="flex flex-col items-center py-12 px-8">
@@ -963,14 +997,29 @@ export default function ProjectDetailPage() {
             </Button>
           </CardContent>
         </Card>
+=======
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:bg-black p-6">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-slate-800">
+                Access Denied
+              </CardTitle>
+              <CardDescription className="text-slate-600">
+                You don't have permission to view this project.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+>>>>>>> copy/dark-theme
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="w-full mx-auto space-y-6">
+<div className="min-h-screen bg-white dark:bg-black">      <div className="w-full mx-auto space-y-6">
         {/* Header */}
+<<<<<<< HEAD
         <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
           <CardContent className="p-5 lg:p-6">
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -978,6 +1027,39 @@ export default function ProjectDetailPage() {
               <div className="flex items-start gap-4 flex-1 min-w-0">
                 {/* Country flag */}
                 <div className="flex-shrink-0 mt-1">
+=======
+        <Card className="border-0 shadow-xl bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50 dark:ring-slate-800/50">
+          <CardContent className="p-6 lg:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              {/* Left Side — Title (Black) + Country */}
+              <div className="flex items-center gap-5 flex-1 min-w-0">
+                <div className="flex-1">
+                  {/* Title — Strong Black Text */}
+                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+                    {project.title}
+                  </h1>
+
+                  {/* Optional Subtitle (Client Name) */}
+                  {project.client && (
+                    <p className="text-sm text-slate-600 mt-2 font-medium flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-slate-500" />
+                      {project.client.name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Country Flag & View Details — Clean & Elevated */}
+                <div className="flex-shrink-0 flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowDetails(true)}
+                    className="font-semibold"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View details
+                  </Button>
+>>>>>>> copy/dark-theme
                   <ProjectCountryCell
                     countryCode={project.countryCode}
                     countryName={project.country?.name}
@@ -1118,6 +1200,7 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Right Column: Project Info + Supporting Cards */}
+<<<<<<< HEAD
           <div className="space-y-4 text-sm lg:space-y-4 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2 px-3 pb-6 lg:px-0 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
             {/* Quick Stats Strip */}
             <div className="grid grid-cols-4 gap-2">
@@ -1166,10 +1249,70 @@ export default function ProjectDetailPage() {
                   <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none truncate">
                     {stat.label}
                   </span>
+=======
+          <div className="space-y-4 text-sm lg:space-y-5 lg:col-span-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2 px-3 pb-6 lg:px-0">
+            {/* Project Overview Card */}
+            <Card className="border-0 shadow-md bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded-xl">
+              <CardContent className="p-3 lg:p-4 space-y-4">
+                {/* 4 Stats — Fully Responsive & No Cutoff */}
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+                  {/* Positions */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-lg border border-blue-200/30">
+                    <Briefcase className="h-5 w-5 text-blue-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-blue-700">
+                      {project.rolesNeeded.reduce((s, r) => s + r.quantity, 0)}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5">
+                      Positions
+                    </div>
+                  </div>
+
+                  {/* Nominated — NOW NEVER CUTS OFF */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-emerald-500/5 to-teal-600/10 rounded-lg border border-emerald-200/30">
+                    <UserCheck className="h-5 w-5 text-emerald-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-emerald-700">
+                      {pagination?.total || 0}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5 leading-tight">
+                      <span className="hidden lg:inline">Nominated</span>
+                      <span className="lg:hidden">Noms</span>
+                    </div>
+                  </div>
+
+                  {/* Roles */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-purple-500/5 to-pink-600/10 rounded-lg border border-purple-200/30">
+                    <Layers className="h-5 w-5 text-purple-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-purple-700">
+                      {project.rolesNeeded.length}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5">
+                      Roles
+                    </div>
+                  </div>
+
+                  {/* Days Left */}
+                  <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-orange-500/5 to-red-600/10 rounded-lg border border-orange-200/30">
+                    <Calendar className="h-5 w-5 text-orange-600 mb-1" />
+                    <div className="text-xl lg:text-2xl font-bold text-orange-700">
+                      {Math.max(
+                        0,
+                        Math.ceil(
+                          (new Date(project.deadline).getTime() - Date.now()) /
+                            86400000
+                        )
+                      )}
+                    </div>
+                    <div className="text-xs text-center text-slate-600 dark:text-white font-medium mt-0.5 leading-tight">
+                      <span className="hidden sm:inline">Days Left</span>
+                      <span className="sm:hidden">Days</span>
+                    </div>
+                  </div>
+>>>>>>> copy/dark-theme
                 </div>
               ))}
             </div>
 
+<<<<<<< HEAD
             {/* Project Overview Card */}
             <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
               <CardContent className="p-0">
@@ -1192,6 +1335,96 @@ export default function ProjectDetailPage() {
                     </div>
                   ))}
                 </div>
+=======
+                {/* Compact Details List — No overflow */}
+             <div className="space-y-1.5 border-t border-slate-200 dark:border-slate-800 pt-3 bg-white dark:bg-black">
+  {[
+    {
+      icon: Calendar,
+      color: "text-blue-600 dark:text-blue-400",
+      label: "Deadline",
+      value: formatDateTime(project.deadline),
+    },
+    {
+      icon: Clock,
+      color: "text-green-600 dark:text-green-400",
+      label: "Created",
+      value: formatDate(project.createdAt),
+    },
+    {
+      icon: MapPin,
+      color: "text-purple-600 dark:text-purple-400",
+      label: "Country",
+      value: (
+        <ProjectCountryCell
+          countryCode={project.countryCode}
+          size="sm"
+          fallbackText="—"
+        />
+      ),
+    },
+    {
+      icon: UserCheck,
+      color: "text-emerald-600 dark:text-emerald-400",
+      label: "Status",
+      value: (
+        <Badge variant="outline" className="text-xs h-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+          {project.status}
+        </Badge>
+      ),
+    },
+    {
+      icon: User,
+      color: "text-indigo-600 dark:text-indigo-400",
+      label: "Creator",
+      value: project.creator.name,
+    },
+    {
+      icon: Building2,
+      color: "text-orange-600 dark:text-orange-400",
+      label: "Type",
+      value:
+        project.projectType === "ministry" ? "Gov" : "Private",
+    },
+    {
+      icon: FileText,
+      color: "text-cyan-600 dark:text-cyan-400",
+      label: "Resume",
+      value: projectResumeEditable ? "Edit" : "Fixed",
+    },
+    {
+      icon: User,
+      color: "text-pink-600 dark:text-pink-400",
+      label: "Grooming",
+      value:
+        projectGroomingRequirement?.[0]?.toUpperCase() || "—",
+    },
+    {
+      icon: Target,
+      color: "text-red-600 dark:text-red-400",
+      label: "Contact",
+      value: projectHideContactInfo ? "Hidden" : "Visible",
+    },
+  ].map((item, i) => (
+    <div
+      key={i}
+      className="flex items-center justify-between gap-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded px-1 transition-colors"
+    >
+      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        <item.icon
+          className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`}
+        />
+        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+          {item.label}
+        </span>
+      </div>
+      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 text-right truncate max-w-[45%]">
+        {item.value}
+      </div>
+    </div>
+  ))}
+</div>
+>>>>>>> copy/dark-theme
 
                 <div className="mx-3.5 border-t border-slate-100" />
 
@@ -1248,6 +1481,7 @@ export default function ProjectDetailPage() {
 
             {/* Documents Card */}
             {documentRequirements.length > 0 && (
+<<<<<<< HEAD
               <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
                   <div className="h-6 w-6 rounded-md bg-orange-100 flex items-center justify-center">
@@ -1312,50 +1546,115 @@ export default function ProjectDetailPage() {
                         {role.quantity} pos
                       </span>
                     </div>
+=======
+            <Card className="border-0 shadow-md bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded-xl">
+  <CardHeader className="pb-2 px-3">
+    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+      <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" /> Documents
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="px-3 pb-3 space-y-2">
+    {documentRequirements.map((req: any, i: number) => (
+      <div
+        key={i}
+        className="p-2.5 bg-orange-50/30 dark:bg-orange-950/30 rounded-lg border border-orange-100/50 dark:border-orange-900/50 space-y-1.5"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-orange-400 dark:bg-orange-500" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">
+              {req.docType
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c: string) => c.toUpperCase())}
+            </span>
+          </div>
+          {req.mandatory && (
+            <Badge className="h-4 text-[9px] bg-orange-100 dark:bg-orange-900/60 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/70 px-1.5 font-bold">
+              REQUIRED
+            </Badge>
+          )}
+        </div>
+        {req.description && (
+          <div className="flex items-start gap-1.5 pl-3">
+            <AlertCircle className="h-3 w-3 text-slate-400 dark:text-slate-500 mt-0.5 flex-shrink-0" />
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed italic">
+              {req.description}
+            </p>
+          </div>
+        )}
+      </div>
+    ))}
+  </CardContent>
+</Card>
+            )}
 
-                    {/* Experience & Age & Gender */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
-                      <div className="flex items-center gap-1">
-                        <Briefcase className="h-3 w-3 text-slate-400" />
-                        <span>
-                          {role.minExperience || 0}-{role.maxExperience || "Any"} yrs
-                        </span>
-                      </div>
-                      {role.ageRequirement && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-400" />
-                          <span>Age: {role.ageRequirement}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-slate-400" />
-                        <span className="capitalize">
-                          {role.genderRequirement || "All"}
-                        </span>
-                      </div>
-                    </div>
+         <Card className="border-0 shadow-md bg-white dark:bg-black rounded-xl">
+  <CardHeader className="pb-2 px-3 border-b border-slate-200 dark:border-slate-800">
+    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+      <Target className="h-4 w-4 text-purple-600 dark:text-purple-400" /> Roles (
+      {project.rolesNeeded.length})
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-3 px-3 pb-3">
+    {project.rolesNeeded.map((role) => (
+      <div
+        key={role.id}
+        className="p-3 bg-slate-50 dark:bg-black rounded-lg border border-slate-200 dark:border-slate-800 space-y-2"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">
+            {role.designation}
+          </span>
+          <Badge className="text-[10px] h-5 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-700 dark:to-pink-700 flex-shrink-0 text-white">
+            {role.quantity} pos
+          </Badge>
+        </div>
+>>>>>>> copy/dark-theme
 
-                    {/* Education */}
-                    {role.educationRequirementsList &&
-                      role.educationRequirementsList.length > 0 && (
-                        <div className="flex items-start gap-1 text-[11px] text-slate-600">
-                          <GraduationCap className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                          <div className="flex flex-wrap gap-1">
-                            {role.educationRequirementsList.map(
-                              (edu: any, idx: number) => (
-                                <span
-                                  key={idx}
-                                  className="bg-white px-1.5 py-0.5 rounded border border-slate-200"
-                                >
-                                  {edu.qualification?.shortName ||
-                                    edu.qualification?.name}
-                                </span>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
+        {/* Experience & Age & Gender */}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+          <div className="flex items-center gap-1">
+            <Briefcase className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+            <span>
+              {role.minExperience || 0}-{role.maxExperience || "Any"} yrs
+            </span>
+          </div>
+          {role.ageRequirement && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+              <span>Age: {role.ageRequirement}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <Users className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+            <span className="capitalize">
+              {role.genderRequirement || "All"}
+            </span>
+          </div>
+        </div>
 
+        {/* Education */}
+        {role.educationRequirementsList &&
+          role.educationRequirementsList.length > 0 && (
+            <div className="flex items-start gap-1 text-[11px] text-slate-600 dark:text-slate-400">
+              <GraduationCap className="h-3 w-3 text-slate-400 dark:text-slate-500 mt-0.5 flex-shrink-0" />
+              <div className="flex flex-wrap gap-1">
+                {role.educationRequirementsList.map(
+                  (edu: any, idx: number) => (
+                    <span
+                      key={idx}
+                      className="bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[10px]"
+                    >
+                      {edu.qualification?.shortName ||
+                        edu.qualification?.name}
+                    </span>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+
+<<<<<<< HEAD
                     {/* Benefits & Type */}
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/60">
                       {(role.accommodation || role.food || role.transport) && (
@@ -1422,6 +1721,58 @@ export default function ProjectDetailPage() {
               <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
                 <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
                   <Building2 className="h-3.5 w-3.5 text-teal-600" />
+=======
+        {/* Benefits & Type */}
+        <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+          <div className="flex gap-2">
+            {role.accommodation && (
+              <Home
+                className="h-3 w-3 text-emerald-600 dark:text-emerald-400"
+                aria-label="Accommodation provided"
+                role="img"
+              />
+            )}
+            {role.food && (
+              <Utensils
+                className="h-3 w-3 text-orange-600 dark:text-orange-400"
+                aria-label="Food provided"
+                role="img"
+              />
+            )}
+            {role.transport && (
+              <Bus
+                className="h-3 w-3 text-blue-600 dark:text-blue-400"
+                aria-label="Transport provided"
+                role="img"
+              />
+            )}
+          </div>
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {role.employmentType || "Permanent"}
+          </span>
+        </div>
+      </div>
+    ))}
+  </CardContent>
+</Card>
+
+            <Card className="border-0 shadow-md bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded-xl">
+              <CardHeader className="pb-2 px-3">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-teal-600" /> Client
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <div className="p-2.5 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200">
+                  <div className="font-semibold text-slate-900 text-sm truncate">
+                    {project.client?.name || "Not assigned"}
+                  </div>
+                  {project.client && (
+                    <Badge className="text-xs mt-1 bg-teal-700 text-white">
+                      {project.client.type}
+                    </Badge>
+                  )}
+>>>>>>> copy/dark-theme
                 </div>
                 <span className="text-xs font-bold text-slate-800">Client</span>
               </div>
@@ -1493,6 +1844,144 @@ export default function ProjectDetailPage() {
           })
         }
         onConfirm={handleSendForScreening}
+<<<<<<< HEAD
+=======
+        title="Send for Direct Screening"
+        description={
+          <div className="space-y-4">
+            <p>
+              Are you sure you want to send {screeningConfirm.candidateName} for
+              direct screening? This will notify the screening team.
+            </p>
+
+            {/* Candidate Details */}
+            {(() => {
+              const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
+                (c) => (c.candidateId || c.id) === screeningConfirm.candidateId
+              );
+              if (!candidate) return null;
+              return (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  {/* Match score summary */}
+                  <MatchScoreSummary candidate={candidate} />
+
+                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                    {/* Education column */}
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
+                      <div className="space-y-1">
+                        {candidate.qualifications && candidate.qualifications.length > 0 ? (
+                          candidate.qualifications.map((qual: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
+                              {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
+                              {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-500">No education details</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Experience column */}
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
+                      <div className="space-y-1">
+                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
+                          candidate.workExperiences.map((exp: any, idx: number) => (
+                            <p key={idx} className="text-xs text-slate-700">
+                              {formatWorkExperienceEntry(exp)}
+                            </p>
+                          ))
+                        ) : candidate.candidateExperience ? (
+                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
+                        ) : (
+                          <p className="text-xs text-slate-500">No experience details</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Role match scores */}
+                  {candidate.roleMatches && candidate.roleMatches.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
+                      <div className="flex flex-wrap gap-2">
+                        {candidate.roleMatches.map((rm: any, idx: number) => {
+                          const isAssigned = Boolean(candidate.nominatedRole && candidate.nominatedRole.id === rm.roleId);
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex items-center gap-2 rounded-full px-2 py-1 border ${isAssigned ? 'border-primary/30 bg-primary/10' : 'border-slate-100 bg-white/60 dark:bg-black/60'}`}
+                            >
+                              <span className="text-xs text-slate-700 max-w-[160px] truncate">
+                                {rm.designation || "Role"}
+                              </span>
+                              <span className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}>{rm.score ?? "-"}%</span>
+                              {isAssigned && <CheckCircle2 className="h-3 w-3 text-primary ml-1" aria-hidden />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <Select
+                value={screeningConfirm.roleNeededId}
+                onValueChange={(v) =>
+                  setScreeningConfirm((prev) => ({ ...prev, roleNeededId: v }))
+                }
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {project?.rolesNeeded?.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.designation}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="text-xs text-red-600 font-medium">
+                This candidate should skip document verification because of
+                direct screening. Once screening is completed you should do
+                document verification.
+              </div>
+
+              <label
+                htmlFor="screening-notes"
+                className="text-sm font-medium text-gray-700"
+              >
+                Notes (Optional)
+              </label>
+              <Textarea
+                id="screening-notes"
+                placeholder="Add any notes for the screening team..."
+                value={screeningConfirm.notes}
+                onChange={(e) =>
+                  setScreeningConfirm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Send for Screening"
+        cancelText="Cancel"
+>>>>>>> copy/dark-theme
         isLoading={isSendingScreening}
         candidateName={screeningConfirm.candidateName}
         candidateId={screeningConfirm.candidateId}

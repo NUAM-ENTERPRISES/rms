@@ -28,7 +28,7 @@ import { CompleteScreeningDialog } from "../components/CompleteScreeningDialog";
 import EditScreeningDialog from "../components/EditScreeningDialog";
 import { useDebounce } from "@/hooks";
 import { format } from "date-fns";
-
+import { cn } from "@/lib/utils";
 const TEMPLATES_PER_PAGE = 10;
 
 export default function ConductScreeningPage() {
@@ -317,18 +317,18 @@ export default function ConductScreeningPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
+    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-6 dark:text-white">
       {/* Header */}
       <div className="relative">
   {/* Premium Header with Aurora Glow */}
   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 rounded-2xl blur-3xl opacity-20 animate-pulse-slow"></div>
   
-  <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-white/95 backdrop-blur-xl border-b border-indigo-200/50 rounded-2xl shadow-xl">
+  <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-b border-indigo-200/50 dark:border-slate-700 rounded-2xl shadow-xl">
     <div className="space-y-1 flex-1 min-w-0">
       <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
         Conduct Screening
       </h1>
-      <p className="text-base text-slate-600 font-medium">
+      <p className="text-base text-slate-600 dark:text-slate-400 font-medium">
         Interview for {candidate?.firstName} {candidate?.lastName}
       </p>
     </div>
@@ -337,7 +337,7 @@ export default function ConductScreeningPage() {
     {interview?.status && (
       <Badge 
         variant="outline" 
-        className="text-sm px-4 py-1.5 bg-white/80 border-indigo-300 text-indigo-700 shadow-sm"
+        className="text-sm px-4 py-1.5 bg-white/80 dark:bg-slate-800/80 border-indigo-300 dark:border-slate-600 text-indigo-700 shadow-sm dark:text-indigo-200"
       >
         {interview.status}
       </Badge>
@@ -348,73 +348,85 @@ export default function ConductScreeningPage() {
       {/* Candidate & Project Details - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Candidate Details */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 h-fit">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-bold text-indigo-700 mb-5 flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Candidate Information
-            </h3>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <ImageViewer
-                  src={candidate?.profileImage}
-                  fallbackSrc={""}
-                  title={`${candidate?.firstName || ""} ${candidate?.lastName || ""}`.trim() || "Profile image"}
-                  className="h-20 w-20 rounded-lg"
-                  enableHoverPreview={true}
-                  previewClassName="w-72 h-72"
-                  hoverPosition="right"
-                />
-              </div>
+       <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 h-fit dark:from-indigo-950/60 dark:to-purple-950/50 dark:ring-indigo-700/30">
+  <CardContent className="p-6">
+    <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-300 mb-5 flex items-center gap-2">
+      <User className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+      Candidate Information
+    </h3>
 
-              <div className="w-full space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Name</p>
-                    <p className="font-semibold text-slate-900">{candidate?.firstName} {candidate?.lastName}</p>
-                  </div>
+    <div className="flex items-start gap-5">
+      <div className="flex-shrink-0">
+        <ImageViewer
+          src={candidate?.profileImage}
+          fallbackSrc={""}
+          title={`${candidate?.firstName || ""} ${candidate?.lastName || ""}`.trim() || "Profile image"}
+          className="h-20 w-20 rounded-lg ring-1 ring-slate-200/60 dark:ring-slate-700/60"
+          enableHoverPreview={true}
+          previewClassName="w-72 h-72"
+          hoverPosition="right"
+        />
+      </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Email</p>
-                    <p className="font-medium text-slate-900 break-all text-xs">{candidate?.email || "N/A"}</p>
-                  </div>
+      <div className="w-full space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Name</p>
+            <p className="font-semibold text-slate-900 dark:text-slate-100">
+              {candidate?.firstName} {candidate?.lastName}
+            </p>
+          </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Phone</p>
-                    <p className="font-medium text-slate-900">{candidate?.phone || "N/A"}</p>
-                  </div>
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Email</p>
+            <p className="font-medium text-slate-800 dark:text-slate-200 break-all">
+              {candidate?.email || "N/A"}
+            </p>
+          </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">DOB / Age</p>
-                    <p className="font-medium text-slate-900">
-                      {candidate?.dateOfBirth ? new Date(candidate.dateOfBirth).toLocaleDateString() : 'N/A'}
-                      {candidate?.dateOfBirth && getAge(candidate.dateOfBirth) ? ` (${getAge(candidate.dateOfBirth)} yrs)` : ''}
-                    </p>
-                  </div>
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Phone</p>
+            <p className="font-medium text-slate-800 dark:text-slate-200">
+              {candidate?.phone || "N/A"}
+            </p>
+          </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Gender</p>
-                    <p className="font-medium text-slate-900">{candidate?.gender ? (candidate.gender.charAt(0) + candidate.gender.slice(1).toLowerCase()) : 'N/A'}</p>
-                  </div>
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">DOB / Age</p>
+            <p className="font-medium text-slate-800 dark:text-slate-200">
+              {candidate?.dateOfBirth
+                ? new Date(candidate.dateOfBirth).toLocaleDateString()
+                : "N/A"}
+              {candidate?.dateOfBirth && getAge(candidate.dateOfBirth)
+                ? ` (${getAge(candidate.dateOfBirth)} yrs)`
+                : ""}
+            </p>
+          </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Position Applied</p>
-                    <p className="font-semibold text-slate-900">{roleNeeded?.designation || roleNeeded?.name || "N/A"}</p>
-                  </div>
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Gender</p>
+            <p className="font-medium text-slate-800 dark:text-slate-200">
+              {candidate?.gender
+                ? candidate.gender.charAt(0) + candidate.gender.slice(1).toLowerCase()
+                : "N/A"}
+            </p>
+          </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Coordinator</p>
-                    <p className="font-semibold text-slate-900">{coordinator?.name || "Unassigned"}</p>
-                  </div>
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Position Applied</p>
+            <p className="font-semibold text-slate-900 dark:text-slate-100">
+              {roleNeeded?.designation || roleNeeded?.name || "N/A"}
+            </p>
+          </div>
 
-                  {candidate?.referralCompanyName && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">Referral</p>
-                      <p className="font-medium text-slate-900">{candidate.referralCompanyName}</p>
-                    </div>
-                  )}
-                </div>
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Coordinator</p>
+            <p className="font-semibold text-slate-900 dark:text-slate-100">
+              {coordinator?.name || "Unassigned"}
+            </p>
+          </div>
 
+<<<<<<< HEAD
                 {/* Qualifications */}
                 {candidate?.qualifications && candidate.qualifications.length > 0 && (
                   <div>
@@ -482,24 +494,108 @@ export default function ConductScreeningPage() {
                 )} */}
                 
               </div>
+=======
+          {candidate?.referralCompanyName && (
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Referral</p>
+              <p className="font-medium text-slate-800 dark:text-slate-200">
+                {candidate.referralCompanyName}
+              </p>
+>>>>>>> copy/dark-theme
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+
+        {/* Qualifications */}
+        {candidate?.qualifications?.length > 0 && (
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Qualifications</p>
+            <ul className="space-y-2 text-sm">
+              {candidate.qualifications.map((q: any) => (
+                <li key={q.id} className="text-slate-800 dark:text-slate-200">
+                  <div className="font-medium">
+                    {q.qualification?.shortName || q.qualification?.name}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {q.university
+                      ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ""}`
+                      : ""}
+                    {q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ""}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Work experience */}
+        {candidate?.workExperiences?.length > 0 && (
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Work Experience</p>
+            <ul className="space-y-2.5 text-sm">
+              {candidate.workExperiences
+                .slice()
+                .sort((a: any, b: any) => (new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime()))
+                .slice(0, 3)
+                .map((w: any) => (
+                  <li key={w.id} className="text-slate-800 dark:text-slate-200">
+                    <div className="font-medium">
+                      {w.jobTitle || "Role"}
+                      {w.companyName ? ` • ${w.companyName}` : ""}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {w.startDate ? format(new Date(w.startDate), "MMM yyyy") : ""}
+                      {w.endDate
+                        ? ` — ${format(new Date(w.endDate), "MMM yyyy")}`
+                        : w.isCurrent
+                        ? " — Present"
+                        : ""}
+                    </div>
+                  </li>
+                ))}
+              {candidate.workExperiences.length > 3 && (
+                <li className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+                  +{candidate.workExperiences.length - 3} more
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* Candidate contacts */}
+        {candidate?.candidateContacts?.length > 0 && (
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Contacts</p>
+            <ul className="space-y-2 text-sm">
+              {candidate.candidateContacts.slice(0, 2).map((c: any) => (
+                <li key={c.id} className="text-slate-800 dark:text-slate-200">
+                  <div className="font-medium">
+                    {c.name || c.type || "Contact"}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {c.phone ? c.phone : ""}
+                    {c.email ? ` • ${c.email}` : ""}
+                    {c.relationship ? ` • ${c.relationship}` : ""}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  </CardContent>
+</Card>
 
         {/* Project Details */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-white/90 to-slate-50 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 h-fit">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-bold text-indigo-700 mb-5 flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Project Information
-            </h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Title</p>
-                  <p className="font-semibold text-slate-900">{project?.title || "N/A"}</p>
-                </div>
+       <Card className="border-0 shadow-xl bg-gradient-to-br from-white/90 to-slate-50 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 h-fit dark:from-slate-900/90 dark:to-slate-800/70 dark:ring-indigo-800/30">
+  <CardContent className="p-6">
+    <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-300 mb-5 flex items-center gap-2">
+      <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+      Project Information
+    </h3>
 
+<<<<<<< HEAD
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Client</p>
                   <p className="font-semibold text-slate-900">
@@ -513,120 +609,174 @@ export default function ConductScreeningPage() {
                     {typeof project?.country === 'object' ? project?.country?.name : (project?.country || "N/A")}
                   </p>
                 </div>
+=======
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Title</p>
+          <p className="font-semibold text-slate-900 dark:text-slate-100">{project?.title || "N/A"}</p>
+        </div>
 
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Deadline</p>
-                  <p className="font-medium text-slate-900">{project?.deadline ? format(new Date(project.deadline), "MMM d, yyyy") : "N/A"}</p>
-                </div>
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Client</p>
+          <p className="font-semibold text-slate-900 dark:text-slate-100">
+            {project?.client?.name || project?.client || "N/A"}
+          </p>
+        </div>
+>>>>>>> copy/dark-theme
 
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Priority</p>
-                  <Badge variant={project?.priority === 'HIGH' || project?.priority === 'URGENT' ? 'destructive' : 'secondary'} className="text-xs">
-                    {project?.priority || "N/A"}
-                  </Badge>
-                </div>
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Country</p>
+          <p className="font-medium text-slate-900 dark:text-slate-100">
+            {project?.country?.name || project?.country || "N/A"}
+          </p>
+        </div>
 
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Project Type</p>
-                  <p className="font-medium text-slate-900">{project?.projectType || project?.type || "N/A"}</p>
-                </div>
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Deadline</p>
+          <p className="font-medium text-slate-900 dark:text-slate-100">
+            {project?.deadline ? format(new Date(project.deadline), "MMM d, yyyy") : "N/A"}
+          </p>
+        </div>
 
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Status</p>
-                  <Badge variant="outline" className="text-xs">{project?.status || "N/A"}</Badge>
-                </div>
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Priority</p>
+          <Badge
+            variant={project?.priority === 'HIGH' || project?.priority === 'URGENT' ? 'destructive' : 'secondary'}
+            className="text-xs dark:bg-slate-700 dark:text-slate-200"
+          >
+            {project?.priority || "N/A"}
+          </Badge>
+        </div>
 
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Grooming</p>
-                  <p className="font-medium text-slate-900">{project?.grooming ? 'Yes' : 'No'}</p>
-                </div>
-              </div>
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Project Type</p>
+          <p className="font-medium text-slate-900 dark:text-slate-100">
+            {project?.projectType || project?.type || "N/A"}
+          </p>
+        </div>
 
-              {project?.description && (
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Description</p>
-                  <p className="text-sm text-slate-900 whitespace-pre-wrap line-clamp-3">{project.description}</p>
-                </div>
-              )}
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Status</p>
+          <Badge variant="outline" className="text-xs dark:border-slate-600 dark:text-slate-300">
+            {project?.status || "N/A"}
+          </Badge>
+        </div>
 
-              {(project?.clientEmail || project?.clientPhone) && (
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Client Contacts</p>
-                  <p className="text-sm text-slate-900">
-                    {project?.clientEmail && <a className="text-indigo-600 hover:underline text-xs" href={`mailto:${project.clientEmail}`}>{project.clientEmail}</a>}
-                    {project?.clientPhone && <span className="text-xs">{project?.clientEmail ? ` • ${project.clientPhone}` : project.clientPhone}</span>}
-                  </p>
-                </div>
-              )}
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Grooming</p>
+          <p className="font-medium text-slate-900 dark:text-slate-100">
+            {project?.grooming ? 'Yes' : 'No'}
+          </p>
+        </div>
+      </div>
 
-              {/* Role Needed Details */}
-              {roleNeeded && (
-                <div>
-                  <p className="text-xs text-slate-500 mb-2">Role Details</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm bg-indigo-50/50 p-3 rounded-lg">
-                    <div>
-                      <p className="text-xs text-slate-500">Designation</p>
-                      <p className="font-medium text-slate-900">{roleNeeded.designation || roleNeeded.name || "N/A"}</p>
-                    </div>
-                    {roleNeeded.shortName && (
-                      <div>
-                        <p className="text-xs text-slate-500">Short Name</p>
-                        <p className="font-medium text-slate-900">{roleNeeded.shortName}</p>
-                      </div>
-                    )}
-                    {roleNeeded.quantity && (
-                      <div>
-                        <p className="text-xs text-slate-500">Quantity</p>
-                        <p className="font-medium text-slate-900">{roleNeeded.quantity}</p>
-                      </div>
-                    )}
-                    {roleNeeded.salaryRange && (
-                      <div>
-                        <p className="text-xs text-slate-500">Salary Range</p>
-                        <p className="font-medium text-slate-900">{roleNeeded.salaryRange}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+      {project?.description && (
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Description</p>
+          <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap line-clamp-4 leading-relaxed">
+            {project.description}
+          </p>
+        </div>
+      )}
 
-            
-              {project?.roleCatalog && (
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Role Catalog</p>
-                  <p className="text-sm text-slate-900">{project.roleCatalog?.name || project.roleCatalog || "N/A"}</p>
-                </div>
-              )}
+      {(project?.clientEmail || project?.clientPhone) && (
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Client Contacts</p>
+          <div className="text-sm space-y-1">
+            {project?.clientEmail && (
+              <a
+                className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 hover:underline text-xs block"
+                href={`mailto:${project.clientEmail}`}
+              >
+                {project.clientEmail}
+              </a>
+            )}
+            {project?.clientPhone && (
+              <span className="text-slate-800 dark:text-slate-200 text-xs">
+                {project.clientPhone}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
-              {/* Additional Project Fields */}
-              {(project?.createdAt || project?.updatedAt) && (
-                <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-slate-200">
-                  {project?.createdAt && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">Created</p>
-                      <p className="text-xs text-slate-700">{format(new Date(project.createdAt), "MMM d, yyyy")}</p>
-                    </div>
-                  )}
-                  {project?.updatedAt && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">Updated</p>
-                      <p className="text-xs text-slate-700">{format(new Date(project.updatedAt), "MMM d, yyyy")}</p>
-                    </div>
-                  )}
-                </div>
-              )}
+      {/* Role Needed Details */}
+      {roleNeeded && (
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Role Details</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm bg-indigo-50/60 dark:bg-indigo-950/30 p-4 rounded-xl border border-indigo-100/50 dark:border-indigo-900/40">
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Designation</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">
+                {roleNeeded.designation || roleNeeded.name || "N/A"}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            {roleNeeded.shortName && (
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Short Name</p>
+                <p className="font-medium text-slate-900 dark:text-slate-100">{roleNeeded.shortName}</p>
+              </div>
+            )}
+            {roleNeeded.quantity && (
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Quantity</p>
+                <p className="font-medium text-slate-900 dark:text-slate-100">{roleNeeded.quantity}</p>
+              </div>
+            )}
+            {roleNeeded.salaryRange && (
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Salary Range</p>
+                <p className="font-medium text-slate-900 dark:text-slate-100">{roleNeeded.salaryRange}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {project?.roleCatalog && (
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Role Catalog</p>
+          <p className="text-sm text-slate-900 dark:text-slate-100">
+            {project.roleCatalog?.name || project.roleCatalog || "N/A"}
+          </p>
+        </div>
+      )}
+
+      {/* Additional Project Fields */}
+      {(project?.createdAt || project?.updatedAt) && (
+        <div className="grid grid-cols-2 gap-5 text-sm pt-3 border-t border-slate-200 dark:border-slate-700">
+          {project?.createdAt && (
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Created</p>
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                {format(new Date(project.createdAt), "MMM d, yyyy")}
+              </p>
+            </div>
+          )}
+          {project?.updatedAt && (
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Updated</p>
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                {format(new Date(project.updatedAt), "MMM d, yyyy")}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </CardContent>
+</Card>
       </div>
 
       {/* Interview Details */}
-     <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
-  <CardHeader className="pb-3 border-b border-indigo-200/50">
-    <div className="flex items-center justify-between w-full">
+  <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50 dark:from-indigo-950/70 dark:to-purple-950/50 dark:ring-indigo-700/40 dark:hover:ring-indigo-600/60">
+  <CardHeader className="pb-4 border-b border-indigo-200/50 dark:border-indigo-800/40">
+    <div className="flex items-center justify-between w-full flex-wrap gap-4">
       <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
         Interview Details
       </CardTitle>
+<<<<<<< HEAD
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -637,32 +787,40 @@ export default function ConductScreeningPage() {
           <Edit2 className="h-4 w-4" />
           <span>Edit</span>
         </Button>
+=======
+
+      <div className="flex items-center gap-4 flex-wrap">
+>>>>>>> copy/dark-theme
         {/* Status Badge */}
-        <Badge className="text-base px-4 py-1.5 bg-white/90 shadow-sm border border-indigo-200/50 text-indigo-700 font-medium">
+        <Badge className="text-base px-4 py-1.5 bg-white/90 dark:bg-slate-800/90 shadow-sm border border-indigo-200/50 dark:border-slate-600 text-indigo-700 dark:text-indigo-200 font-medium">
           {interview.status || "Pending"}
         </Badge>
 
         {/* Rating */}
         {interview.overallRating && (
-          <div className="text-right">
-            <div className="text-2xl font-bold text-indigo-600">{interview.overallRating}/5</div>
-            <div className="text-xs text-slate-500">Rating</div>
+          <div className="text-right min-w-[80px]">
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              {interview.overallRating}/5
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Rating</div>
           </div>
         )}
 
         {/* Score */}
         {interview.overallScore && (
-          <div className="text-right">
-            <div className="text-2xl font-bold text-indigo-600">{interview.overallScore}%</div>
-            <div className="text-xs text-slate-500">Score</div>
+          <div className="text-right min-w-[80px]">
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              {interview.overallScore}%
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Score</div>
           </div>
         )}
 
         {/* Decision */}
         {interview.decision && (
           <Badge
-            variant={interview.decision === "SELECTED" ? "default" : "destructive"}
-            className="text-base px-4 py-1.5 shadow-sm font-medium"
+            variant={interview.decision === "SELECTED" || interview.decision === "APPROVED" ? "default" : "destructive"}
+            className="text-base px-4 py-1.5 shadow-sm font-medium dark:bg-opacity-90"
           >
             {interview.decision}
           </Badge>
@@ -675,10 +833,10 @@ export default function ConductScreeningPage() {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
       {/* Scheduled Time */}
       <div className="flex items-start gap-3">
-        <Calendar className="h-5 w-5 text-indigo-600 mt-0.5" />
+        <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
         <div>
-          <p className="text-xs text-slate-500 mb-1">Scheduled Time</p>
-          <p className="font-medium text-slate-900">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Scheduled Time</p>
+          <p className="font-medium text-slate-900 dark:text-slate-100">
             {interview.scheduledTime
               ? format(new Date(interview.scheduledTime), "MMMM d, yyyy 'at' h:mm a")
               : "Not scheduled"}
@@ -688,10 +846,10 @@ export default function ConductScreeningPage() {
 
       {/* Duration */}
       <div className="flex items-start gap-3">
-        <Clock className="h-5 w-5 text-indigo-600 mt-0.5" />
+        <Clock className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
         <div>
-          <p className="text-xs text-slate-500 mb-1">Duration</p>
-          <p className="font-medium text-slate-900">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Duration</p>
+          <p className="font-medium text-slate-900 dark:text-slate-100">
             {interview.duration ? `${interview.duration} minutes` : "N/A"}
           </p>
         </div>
@@ -699,10 +857,13 @@ export default function ConductScreeningPage() {
 
       {/* Mode */}
       <div className="flex items-start gap-3">
-        <MapPin className="h-5 w-5 text-indigo-600 mt-0.5" />
+        <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
         <div>
-          <p className="text-xs text-slate-500 mb-1">Mode</p>
-          <Badge variant="outline" className="text-sm px-3 py-1 bg-white/80 border-indigo-200/50">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Mode</p>
+          <Badge
+            variant="outline"
+            className="text-sm px-3 py-1 bg-white/80 dark:bg-slate-800/80 border-indigo-200/50 dark:border-indigo-700/50 dark:text-slate-100 font-medium"
+          >
             {interview.mode || "N/A"}
           </Badge>
         </div>
@@ -710,6 +871,7 @@ export default function ConductScreeningPage() {
 
       {/* Meeting Link */}
       <div className="flex items-start gap-3">
+<<<<<<< HEAD
         <Link className="h-5 w-5 text-indigo-600 mt-0.5" />
         <div className="flex-1 min-w-0">
           <p className="text-xs text-slate-500 mb-1">Meeting Link</p>
@@ -745,6 +907,24 @@ export default function ConductScreeningPage() {
               <p className="text-sm text-slate-500">No link</p>
             )}
           </div>
+=======
+        <Link className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Meeting Link</p>
+          {interview.meetingLink ? (
+            <a
+              href={interview.meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline break-all transition-colors inline-flex items-center gap-1"
+            >
+              Join Meeting
+              <span className="text-xs opacity-70">↗</span>
+            </a>
+          ) : (
+            <p className="text-sm text-slate-500 dark:text-slate-400">No link</p>
+          )}
+>>>>>>> copy/dark-theme
         </div>
       </div>
     </div>
@@ -755,54 +935,64 @@ export default function ConductScreeningPage() {
 
       {/* Feedback Section */}
       {interview.conductedAt && (
-       <Card className="border-0 shadow-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/90 rounded-2xl overflow-hidden ring-1 ring-teal-200/30 hover:shadow-3xl transition-all duration-300">
-  <CardHeader className="pb-3 border-b border-teal-200/50">
-    <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-2">
-      <CheckCircle2 className="h-6 w-6" />
+       <Card className="border-0 shadow-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/90 rounded-2xl overflow-hidden ring-1 ring-teal-200/30 hover:shadow-3xl hover:ring-teal-300/50 transition-all duration-300 dark:from-emerald-950/60 dark:to-teal-950/50 dark:ring-teal-800/40 dark:hover:ring-teal-700/60">
+  <CardHeader className="pb-4 border-b border-teal-200/50 dark:border-teal-800/40">
+    <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-2.5">
+      <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
       Feedback & Remarks
     </CardTitle>
   </CardHeader>
+
   <CardContent className="p-6 space-y-6">
     {interview.remarks && (
       <div className="space-y-2">
-        <p className="text-sm font-medium text-emerald-700">Remarks</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
-          {interview.remarks}
-        </p>
+        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Remarks</p>
+        <div className="bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl border border-emerald-200/60 dark:border-emerald-800/50 shadow-inner">
+          <p className="text-base leading-relaxed text-slate-800 dark:text-slate-100 whitespace-pre-wrap">
+            {interview.remarks}
+          </p>
+        </div>
       </div>
     )}
 
     {interview.strengths && (
       <div className="space-y-2">
-        <p className="text-sm font-medium text-emerald-700">Strengths</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
-          {interview.strengths}
-        </p>
+        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Strengths</p>
+        <div className="bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl border border-emerald-200/60 dark:border-emerald-800/50 shadow-inner">
+          <p className="text-base leading-relaxed text-slate-800 dark:text-slate-100 whitespace-pre-wrap">
+            {interview.strengths}
+          </p>
+        </div>
       </div>
     )}
 
     {interview.areasOfImprovement && (
       <div className="space-y-2">
-        <p className="text-sm font-medium text-emerald-700">Areas of Improvement</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
-          {interview.areasOfImprovement}
-        </p>
+        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Areas of Improvement</p>
+        <div className="bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl border border-emerald-200/60 dark:border-emerald-800/50 shadow-inner">
+          <p className="text-base leading-relaxed text-slate-800 dark:text-slate-100 whitespace-pre-wrap">
+            {interview.areasOfImprovement}
+          </p>
+        </div>
       </div>
     )}
 
     {interview.notes && (
       <div className="space-y-2">
-        <p className="text-sm font-medium text-emerald-700">Notes</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
-          {interview.notes}
-        </p>
+        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Notes</p>
+        <div className="bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl border border-emerald-200/60 dark:border-emerald-800/50 shadow-inner">
+          <p className="text-base leading-relaxed text-slate-800 dark:text-slate-100 whitespace-pre-wrap">
+            {interview.notes}
+          </p>
+        </div>
       </div>
     )}
 
-    {/* Subtle empty state if no feedback */}
+    {/* Empty state */}
     {!interview.remarks && !interview.strengths && !interview.areasOfImprovement && !interview.notes && (
-      <div className="text-center py-8 text-slate-500">
-        <p className="text-sm">No feedback recorded yet</p>
+      <div className="text-center py-10 text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-slate-200/50 dark:border-slate-700">
+        <p className="text-base font-medium">No feedback recorded yet</p>
+        <p className="text-sm mt-1">Feedback will appear here once added</p>
       </div>
     )}
   </CardContent>
@@ -812,14 +1002,16 @@ export default function ConductScreeningPage() {
       {/* Interview Template Section */}
       {!interview.templateId || isUpdatingTemplate ? (
         // Show template selector if no template is assigned OR updating
-       <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
-  <CardHeader className="pb-3 border-b border-indigo-200/50">
-    <div className="flex items-center justify-between w-full">
+     <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50 dark:from-indigo-950/70 dark:to-purple-950/60 dark:ring-indigo-700/40 dark:hover:ring-indigo-600/60">
+  <CardHeader className="pb-4 border-b border-indigo-200/50 dark:border-indigo-800/40">
+    <div className="flex items-center justify-between w-full flex-wrap gap-4">
       <div className="space-y-1">
         <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
           {isUpdatingTemplate ? "Update Template" : "Select Template"}
         </CardTitle>
-        <p className="text-sm text-slate-500">Choose an interview template to evaluate the candidate</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Choose an interview template to evaluate the candidate
+        </p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -828,7 +1020,7 @@ export default function ConductScreeningPage() {
             onClick={handleCancelUpdate}
             variant="outline"
             size="sm"
-            className="h-9 px-4 text-sm rounded-lg border-indigo-300 hover:bg-indigo-50 transition-all"
+            className="h-9 px-4 text-sm rounded-lg border-indigo-300 hover:bg-indigo-50 dark:border-indigo-700 dark:hover:bg-indigo-950/40 dark:text-indigo-300 transition-all"
           >
             Cancel
           </Button>
@@ -837,7 +1029,7 @@ export default function ConductScreeningPage() {
           onClick={handleSelectTemplate}
           disabled={!selectedTemplateId || isLoadingByRole || isLoadingAll}
           size="sm"
-          className="h-9 px-5 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+          className="h-9 px-5 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-700 dark:to-purple-800 dark:hover:from-indigo-600 dark:hover:to-purple-700 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02] text-white"
         >
           {isUpdatingTemplate ? "Update Template" : "Assign Template"}
         </Button>
@@ -848,35 +1040,34 @@ export default function ConductScreeningPage() {
   <CardContent className="p-6">
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
       {/* Left: Template List with Search */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="lg:col-span-2 space-y-5">
         <div className="space-y-3">
-          <Label className="text-sm font-semibold text-indigo-700">Search Templates</Label>
-          {/* Search Input */}
+          <Label className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Search Templates</Label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
             <Input
               placeholder="Search by name..."
               value={templateSearch}
               onChange={(e) => setTemplateSearch(e.target.value)}
-              className="pl-9 h-10 rounded-lg border-indigo-200/50 bg-white/90 focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400"
+              className="pl-9 h-10 rounded-lg border-indigo-200/50 bg-white/90 dark:bg-slate-800/70 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 transition-all"
             />
           </div>
         </div>
 
         {/* Loading State */}
         {(isLoadingByRole || isLoadingAll) && (
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-indigo-200/50 bg-white/50 px-4 py-8 text-sm shadow-inner">
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
-            <span className="text-slate-600">Loading templates...</span>
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-indigo-200/50 bg-white/60 dark:bg-slate-800/60 px-4 py-10 text-sm shadow-inner dark:text-slate-300">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" />
+            <span className="text-slate-600 dark:text-slate-300">Loading templates...</span>
           </div>
         )}
 
         {/* Empty State */}
         {!isLoadingByRole && !isLoadingAll && templates.length === 0 && (
-          <div className="rounded-xl border border-indigo-200/50 bg-white/50 p-6 text-center shadow-inner">
-            <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-            <p className="text-sm font-medium text-slate-600">No templates found</p>
-            <p className="text-xs text-slate-400 mt-1">
+          <div className="rounded-xl border border-indigo-200/50 bg-white/60 dark:bg-slate-800/60 p-8 text-center shadow-inner dark:text-slate-300">
+            <FileText className="h-12 w-12 mx-auto text-slate-300 dark:text-slate-500 mb-4" />
+            <p className="text-base font-medium text-slate-700 dark:text-slate-200">No templates found</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
               {templateSearch ? "Try a different search term" : "No templates available for this role"}
             </p>
           </div>
@@ -884,41 +1075,65 @@ export default function ConductScreeningPage() {
 
         {/* Template List */}
         {!isLoadingByRole && !isLoadingAll && templates.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
             {templates.map((t) => (
               <div
                 key={t.id}
                 onClick={() => setSelectedTemplateId(t.id)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+                className={cn(
+                  "p-4 rounded-xl border cursor-pointer transition-all duration-200 group",
                   selectedTemplateId === t.id
-                    ? 'border-indigo-400 bg-indigo-50/80 ring-2 ring-indigo-400/30 shadow-md'
-                    : 'border-indigo-200/50 bg-white/70 hover:border-indigo-300 hover:bg-white/90 hover:shadow-sm'
-                }`}
+                    ? "border-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/40 ring-2 ring-indigo-400/30 shadow-md"
+                    : "border-indigo-200/50 bg-white/80 dark:bg-slate-800/70 hover:border-indigo-300 dark:hover:border-indigo-600/50 hover:bg-white/90 dark:hover:bg-slate-750 hover:shadow-md"
+                )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <FileText className={`h-4 w-4 flex-shrink-0 ${selectedTemplateId === t.id ? 'text-indigo-600' : 'text-slate-400'}`} />
-                      <p className={`font-semibold truncate ${selectedTemplateId === t.id ? 'text-indigo-700' : 'text-slate-800'}`}>
+                    <div className="flex items-center gap-2.5">
+                      <FileText
+                        className={cn(
+                          "h-4.5 w-4.5 flex-shrink-0",
+                          selectedTemplateId === t.id ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"
+                        )}
+                      />
+                      <p
+                        className={cn(
+                          "font-semibold truncate",
+                          selectedTemplateId === t.id
+                            ? "text-indigo-800 dark:text-indigo-200"
+                            : "text-slate-900 dark:text-slate-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-300"
+                        )}
+                      >
                         {t.name}
                       </p>
                     </div>
+
                     {t.description && (
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">{t.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2">
+                        {t.description}
+                      </p>
                     )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="secondary" className="text-xs px-2 py-0.5">
+
+                    <div className="flex items-center flex-wrap gap-2 mt-2.5">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs px-2.5 py-0.5 bg-indigo-100/70 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
+                      >
                         {t.items?.length || 0} questions
                       </Badge>
                       {t.role && (
-                        <Badge variant="outline" className="text-xs px-2 py-0.5">
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-2.5 py-0.5 border-slate-300 dark:border-slate-600"
+                        >
                           {t.role.shortName || t.role.name}
                         </Badge>
                       )}
                     </div>
                   </div>
+
                   {selectedTemplateId === t.id && (
-                    <CheckCircle2 className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-1" />
                   )}
                 </div>
               </div>
@@ -928,20 +1143,22 @@ export default function ConductScreeningPage() {
 
         {/* Pagination */}
         {!isLoadingByRole && !isLoadingAll && totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 border-t border-indigo-200/50">
-            <p className="text-xs text-slate-500">
+          <div className="flex items-center justify-between pt-5 border-t border-indigo-200/50 dark:border-indigo-800/40">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Page {templatePage} of {totalPages} • {totalTemplates} templates
             </p>
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setTemplatePage(p => Math.max(1, p - 1))}
                 disabled={templatePage <= 1}
-                className="h-8 w-8 p-0 rounded-lg border-indigo-200/50"
+                className="h-8 w-8 p-0 rounded-lg border-indigo-200/50 dark:border-slate-600"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum: number;
@@ -960,23 +1177,25 @@ export default function ConductScreeningPage() {
                       variant={templatePage === pageNum ? "default" : "outline"}
                       size="sm"
                       onClick={() => setTemplatePage(pageNum)}
-                      className={`h-8 w-8 p-0 rounded-lg text-xs ${
-                        templatePage === pageNum 
-                          ? 'bg-indigo-600 hover:bg-indigo-700' 
-                          : 'border-indigo-200/50'
-                      }`}
+                      className={cn(
+                        "h-8 w-8 p-0 rounded-lg text-xs",
+                        templatePage === pageNum
+                          ? "bg-indigo-600 hover:bg-indigo-700 text-white"
+                          : "border-indigo-200/50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                      )}
                     >
                       {pageNum}
                     </Button>
                   );
                 })}
               </div>
+
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setTemplatePage(p => Math.min(totalPages, p + 1))}
                 disabled={templatePage >= totalPages}
-                className="h-8 w-8 p-0 rounded-lg border-indigo-200/50"
+                className="h-8 w-8 p-0 rounded-lg border-indigo-200/50 dark:border-slate-600"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -987,34 +1206,40 @@ export default function ConductScreeningPage() {
 
       {/* Right: Items Preview */}
       <div className="lg:col-span-3">
-        <div className="text-sm font-semibold text-indigo-700 mb-3">Template Preview</div>
+        <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-3">Template Preview</div>
 
         {!selectedTemplate && (
-          <div className="rounded-xl border border-indigo-200/50 bg-white/50 p-8 text-center shadow-inner">
-            <FileText className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-sm font-medium text-slate-600">No template selected</p>
-            <p className="text-xs text-slate-400 mt-1">Select a template from the list to preview its questions</p>
+          <div className="rounded-xl border border-indigo-200/50 bg-white/60 dark:bg-slate-800/60 p-10 text-center shadow-inner dark:text-slate-300">
+            <FileText className="h-14 w-14 mx-auto text-slate-300 dark:text-slate-500 mb-4" />
+            <p className="text-base font-medium text-slate-700 dark:text-slate-200">No template selected</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              Select a template from the list to preview its questions
+            </p>
           </div>
         )}
 
         {selectedTemplate && (
-          <div className="rounded-xl border border-indigo-200/50 bg-white/70 backdrop-blur-sm p-5 shadow-sm">
+          <div className="rounded-xl border border-indigo-200/50 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm p-6 shadow-sm dark:border-indigo-800/40">
             {/* Selected Template Header */}
-            <div className="flex items-start justify-between gap-4 pb-4 border-b border-indigo-200/50 mb-4">
+            <div className="flex items-start justify-between gap-4 pb-4 border-b border-indigo-200/50 dark:border-indigo-800/40 mb-5">
               <div>
-                <h4 className="font-bold text-lg text-indigo-700">{selectedTemplate.name}</h4>
+                <h4 className="font-bold text-lg text-indigo-800 dark:text-indigo-200">
+                  {selectedTemplate.name}
+                </h4>
                 {selectedTemplate.description && (
-                  <p className="text-sm text-slate-600 mt-1">{selectedTemplate.description}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                    {selectedTemplate.description}
+                  </p>
                 )}
               </div>
-              <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200/50">
+              <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200/50 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/40 px-3 py-1">
                 {selectedTemplate.items?.length || 0} Questions
               </Badge>
             </div>
 
             {/* Questions Preview */}
             {selectedTemplate.items?.length === 0 && (
-              <div className="text-center py-6 text-slate-500">
+              <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                 <p className="text-sm">No questions in this template</p>
               </div>
             )}
@@ -1031,26 +1256,37 @@ export default function ConductScreeningPage() {
               });
 
               return (
-                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                <div className="space-y-5 max-h-[520px] overflow-y-auto pr-2">
                   {Object.entries(itemsByCategory).map(([category, items]) => (
-                    <div key={category} className="rounded-lg border border-indigo-100 bg-indigo-50/30 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="text-sm font-semibold text-indigo-700 capitalize flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    <div
+                      key={category}
+                      className="rounded-xl border border-indigo-100/70 dark:border-indigo-800/40 bg-indigo-50/40 dark:bg-indigo-950/30 p-5"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 capitalize flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 dark:bg-indigo-400"></span>
                           {category.replace(/_/g, ' ')}
                         </div>
-                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-white/80">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs px-3 py-1 bg-white/80 dark:bg-slate-800/80 dark:text-slate-200"
+                        >
                           {items?.length} {items?.length === 1 ? 'question' : 'questions'}
                         </Badge>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {items?.map((item) => (
-                          <div key={item.id} className="flex gap-2 text-sm p-2 rounded-lg bg-white/60 hover:bg-white/80 transition-colors">
-                            <span className="font-medium text-indigo-500 min-w-[24px]">
+                          <div
+                            key={item.id}
+                            className="flex gap-3 text-sm p-3 rounded-lg bg-white/70 dark:bg-slate-800/60 hover:bg-white/90 dark:hover:bg-slate-750 transition-colors border border-slate-100 dark:border-slate-700"
+                          >
+                            <span className="font-medium text-indigo-600 dark:text-indigo-400 min-w-[28px] mt-0.5">
                               {item.order ?? 0}.
                             </span>
-                            <span className="text-slate-700">{item.criterion}</span>
+                            <span className="text-slate-800 dark:text-slate-200">
+                              {item.criterion}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -1067,27 +1303,27 @@ export default function ConductScreeningPage() {
 </Card>
       ) : (
         // Show assigned template with questions when template is assigned
-      <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
-  <CardHeader className="pb-3 border-b border-indigo-200/50">
-    <div className="flex items-center justify-between w-full">
+   <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50 dark:from-indigo-950/70 dark:to-purple-950/60 dark:ring-indigo-700/40 dark:hover:ring-indigo-600/60">
+  <CardHeader className="pb-4 border-b border-indigo-200/50 dark:border-indigo-800/40">
+    <div className="flex items-center justify-between w-full flex-wrap gap-4">
       <div className="space-y-1">
         <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
           Interview Questions
         </CardTitle>
-        <p className="text-sm text-indigo-600/80 font-medium">
-          Template: <span className="font-bold text-indigo-700">{interview.template?.name || "N/A"}</span>
+        <p className="text-sm text-indigo-600/80 dark:text-indigo-400/90 font-medium">
+          Template: <span className="font-bold text-indigo-700 dark:text-indigo-300">{interview.template?.name || "N/A"}</span>
         </p>
       </div>
 
       <div className="flex items-center gap-3">
-        <Badge className="text-sm px-3 py-1 bg-white/90 shadow-sm border border-indigo-200/50 text-indigo-700 font-medium">
+        <Badge className="text-sm px-3 py-1 bg-white/90 dark:bg-slate-800/90 shadow-sm border border-indigo-200/50 dark:border-slate-600 text-indigo-700 dark:text-indigo-200 font-medium">
           Template Assigned
         </Badge>
         <Button
           onClick={handleUpdateTemplate}
           variant="outline"
           size="sm"
-          className="h-9 px-4 text-sm rounded-lg border-indigo-300 hover:bg-indigo-50 transition-all hover:shadow-md"
+          className="h-9 px-4 text-sm rounded-lg border-indigo-300 hover:bg-indigo-50 dark:border-indigo-700 dark:hover:bg-indigo-950/40 dark:text-indigo-300 transition-all hover:shadow-md"
         >
           Update Template
         </Button>
@@ -1112,15 +1348,22 @@ export default function ConductScreeningPage() {
       });
 
       return (
-        <div className="space-y-6">
+        <div className="space-y-7">
           {Object.entries(itemsByCategory).map(([category, items]) => (
-            <div key={category} className="rounded-xl border border-indigo-200/50 bg-white/70 backdrop-blur-sm p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div 
+              key={category} 
+              className="rounded-xl border border-indigo-200/50 dark:border-indigo-800/40 bg-white/70 dark:bg-slate-800/60 backdrop-blur-sm p-5 shadow-sm hover:shadow-md transition-all duration-200"
+            >
               {/* Category header */}
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-indigo-200/50">
-                <div className="text-xl font-bold text-indigo-700 capitalize">
-                  {category}
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-indigo-200/50 dark:border-indigo-800/40">
+                <div className="text-xl font-bold text-indigo-700 dark:text-indigo-300 capitalize flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 dark:bg-indigo-400"></span>
+                  {category.replace(/_/g, ' ')}
                 </div>
-                <Badge variant="secondary" className="text-xs px-3 py-1 bg-indigo-100/80 text-indigo-700">
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs px-3 py-1 bg-indigo-100/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
+                >
                   {items.length} {items.length === 1 ? 'question' : 'questions'}
                 </Badge>
               </div>
@@ -1132,24 +1375,33 @@ export default function ConductScreeningPage() {
                   const itemData = checklistItems[item.id];
 
                   return (
-                    <Collapsible key={item.id} open={isChecked} onOpenChange={(open) => {
-                      if (open && !isChecked) {
-                        handleToggleChecklistItem(item.id);
-                      } else if (!open && isChecked) {
-                        handleToggleChecklistItem(item.id);
-                      }
-                    }}>
-                      <div className="flex gap-3 p-3 rounded-lg bg-white/80 border border-indigo-200/50 hover:border-indigo-400/50 transition-colors shadow-sm">
-                        <CollapsibleTrigger className="flex items-start gap-3 flex-1 text-left">
+                    <Collapsible 
+                      key={item.id} 
+                      open={isChecked} 
+                      onOpenChange={(open) => {
+                        if (open && !isChecked) {
+                          handleToggleChecklistItem(item.id);
+                        } else if (!open && isChecked) {
+                          handleToggleChecklistItem(item.id);
+                        }
+                      }}
+                    >
+                      <div className={cn(
+                        "flex gap-3 p-4 rounded-xl transition-all duration-200",
+                        isChecked 
+                          ? "bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-300/60 dark:border-indigo-700/50 shadow-sm" 
+                          : "bg-white/80 dark:bg-slate-800/70 border border-indigo-200/50 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600/60 hover:shadow-sm"
+                      )}>
+                        <CollapsibleTrigger className="flex items-start gap-3 flex-1 text-left group">
                           {isChecked ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 mt-1 flex-shrink-0" />
                           ) : (
-                            <Circle className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                            <Circle className="w-5 h-5 text-slate-400 dark:text-slate-500 mt-1 flex-shrink-0 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" />
                           )}
-                          <span className="font-bold text-indigo-600 min-w-[24px] text-base">
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400 min-w-[28px] text-base mt-0.5">
                             {item.order ?? idx}.
                           </span>
-                          <span className="flex-1 text-base leading-relaxed text-slate-900">
+                          <span className="flex-1 text-base leading-relaxed text-slate-900 dark:text-slate-100 group-hover:text-indigo-800 dark:group-hover:text-indigo-200 transition-colors">
                             {item.criterion}
                           </span>
                         </CollapsibleTrigger>
@@ -1157,19 +1409,22 @@ export default function ConductScreeningPage() {
 
                       {isChecked && (
                         <CollapsibleContent>
-                          <div className="mt-3 ml-10 p-4 bg-white/90 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-md space-y-4">
+                          <div className="mt-4 ml-9 p-5 bg-white/90 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-indigo-200/60 dark:border-indigo-800/50 shadow-md space-y-5">
                             <div className="flex items-center gap-3">
                               <Checkbox 
                                 checked={itemData?.passed ?? true}
                                 onCheckedChange={(checked) => 
                                   handleUpdateChecklistItem(item.id, 'passed', checked)
                                 }
+                                className="border-indigo-400 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 dark:border-indigo-600 dark:data-[state=checked]:bg-indigo-700"
                               />
-                              <Label className="text-sm font-medium text-indigo-700">Passed</Label>
+                              <Label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 cursor-pointer">
+                                Passed
+                              </Label>
                             </div>
 
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-indigo-700">Score (out of 100)</Label>
+                              <Label className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Score (out of 100)</Label>
                               <input
                                 type="number"
                                 step="0.1"
@@ -1182,17 +1437,24 @@ export default function ConductScreeningPage() {
                                   handleUpdateChecklistItem(item.id, 'score', next);
                                 }}
                                 aria-invalid={itemData?.score === undefined}
-                                className={`flex h-9 w-full rounded-lg border bg-white/80 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40 focus-visible:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-50 ${itemData?.score === undefined ? 'border-red-500' : 'border-indigo-200/50'}`}
+                                className={cn(
+                                  "flex h-10 w-full rounded-lg border bg-white/90 dark:bg-slate-800/90 px-3 py-2 text-sm ring-offset-background dark:text-white placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+                                  itemData?.score === undefined 
+                                    ? "border-red-500 focus:border-red-500 focus:ring-red-400/40" 
+                                    : "border-indigo-200/60 dark:border-indigo-700/50 focus:border-indigo-400"
+                                )}
                                 placeholder="Enter score (0-100)"
                                 required
                               />
                               {itemData?.score === undefined && (
-                                <p className="text-xs text-red-600">Score is required for this question.</p>
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                  Score is required for this question.
+                                </p>
                               )}
                             </div>
 
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-indigo-700">Notes</Label>
+                              <Label className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Notes</Label>
                               <Textarea 
                                 value={itemData?.notes ?? ''}
                                 onChange={(e) => 
@@ -1200,7 +1462,7 @@ export default function ConductScreeningPage() {
                                 }
                                 placeholder="Add notes about this criterion..."
                                 rows={3}
-                                className="rounded-lg border border-indigo-200/50 bg-white/80 focus:border-indigo-400 focus:ring-indigo-400/40"
+                                className="rounded-lg border border-indigo-200/60 dark:border-indigo-700/50 bg-white/90 dark:bg-slate-800/90 focus:border-indigo-400 focus:ring-indigo-400/40 dark:text-white transition-all"
                               />
                             </div>
                           </div>
@@ -1214,13 +1476,13 @@ export default function ConductScreeningPage() {
           ))}
 
           {/* Complete Interview Button */}
-          <div className="mt-6 flex justify-end">
+          <div className="mt-8 flex justify-end">
             <Button
               onClick={handleCompleteInterview}
               variant="default"
               size="lg"
               disabled={hasValidationErrors}
-              className="px-8 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] text-base"
+              className="px-10 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-700 dark:to-purple-800 dark:hover:from-indigo-600 dark:hover:to-purple-700 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] text-base font-medium text-white"
             >
               Complete Interview
             </Button>
@@ -1228,8 +1490,9 @@ export default function ConductScreeningPage() {
         </div>
       );
     })() : (
-      <div className="text-center py-8 text-slate-500 bg-white/50 rounded-xl border border-indigo-200/50">
+      <div className="text-center py-10 text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-indigo-200/50 dark:border-indigo-800/40 shadow-inner">
         <p className="text-base font-medium">No questions found in this template.</p>
+        <p className="text-sm mt-2">Template may be empty or not loaded correctly.</p>
       </div>
     )}
   </CardContent>

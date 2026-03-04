@@ -655,9 +655,13 @@ const CandidateCard = memo(function CandidateCard({
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, candidateId)}
       className={cn(
+<<<<<<< HEAD
         "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-200/80 hover:shadow-lg hover:shadow-blue-100/30 focus-within:border-blue-300 focus-within:shadow-lg py-0",
         isAlreadyInProject && "border-l-[3px] border-l-emerald-400",
         isNotEligible && !isAlreadyInProject && "border-l-[3px] border-l-red-300 opacity-75",
+=======
+        "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200 bg-white/95 dark:border-slate-700 dark:bg-black/80 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-md focus-within:border-blue-300 dark:focus-within:border-blue-700 focus-within:shadow-md py-2",
+>>>>>>> copy/dark-theme
         className
       )}
       onClick={() => onView?.(candidateId)}
@@ -700,7 +704,11 @@ const CandidateCard = memo(function CandidateCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
+<<<<<<< HEAD
                 <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+=======
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate leading-tight">
+>>>>>>> copy/dark-theme
                   {fullName || "Unnamed Candidate"}
                 </p>
                 {/* Show current role / employer as subtitle */}
@@ -711,6 +719,7 @@ const CandidateCard = memo(function CandidateCard({
                 )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+<<<<<<< HEAD
                 {/* Screening icon moved from footer; shows inline next to other header actions */}
                 {filteredActions?.some(a => a.action === "send_for_screening") && (
                   <Tooltip>
@@ -732,6 +741,16 @@ const CandidateCard = memo(function CandidateCard({
                       <p className="text-[10px] font-medium">Send for Screening</p>
                     </TooltipContent>
                   </Tooltip>
+=======
+                {isAlreadyInProject && (
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-2 py-0 h-5 rounded-full flex items-center gap-1 dark:bg-slate-800 dark:text-white dark:border-slate-700"
+                  >
+                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                    In Project
+                  </Badge>
+>>>>>>> copy/dark-theme
                 )}
 
                 {(filteredActions && filteredActions.filter(a => a.action !== "send_for_screening").length > 0) && (
@@ -846,7 +865,11 @@ const CandidateCard = memo(function CandidateCard({
                 </Badge>
               </TooltipTrigger>
 
+<<<<<<< HEAD
               <TooltipContent className="bg-white text-slate-700 border shadow-sm p-0 rounded-md max-w-xs">
+=======
+              <TooltipContent className="bg-white dark:bg-black/90 text-slate-700 dark:text-slate-200 border dark:border-slate-800 shadow-sm p-2 rounded-md max-w-xs">
+>>>>>>> copy/dark-theme
                 {primaryRoleMatch.designation ? (
                   <>
                     {/* Include a concise, screen-reader-friendly sentence describing
@@ -870,16 +893,25 @@ const CandidateCard = memo(function CandidateCard({
                           {primaryRoleMatch.designation}
                         </div>
                         {primaryRoleMatch.department && (
+<<<<<<< HEAD
                           <div className="text-[10px] text-slate-400 mt-0.5 truncate uppercase tracking-wider font-medium">
+=======
+                          <div className="text-xs text-slate-400 dark:text-slate-300 mt-0.5 truncate">
+>>>>>>> copy/dark-theme
                             {primaryRoleMatch.department}
                           </div>
                         )}
                       </div>
                     </div>
 
+<<<<<<< HEAD
                     <div className="mt-4">
                       <div className="text-xs font-semibold text-slate-500 mb-1.5">{displayMatchScore}% match</div>
                       <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+=======
+                    <div className="mt-3">
+                      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+>>>>>>> copy/dark-theme
                         <div
                           className={`${getMatchScoreColor(
                             displayMatchScore ?? 0
@@ -974,14 +1006,14 @@ const CandidateCard = memo(function CandidateCard({
                   )}
                 </div>
               </TooltipTrigger>
-              <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl">
+              <TooltipContent className="w-64 p-3 bg-white dark:bg-black/90 border dark:border-slate-800 shadow-lg rounded-xl">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-slate-900">Project Documents</h4>
                     {isAllUploaded ? (
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px] h-5">Complete</Badge>
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px] h-5 dark:bg-green-800 dark:text-green-200 dark:border-0">Complete</Badge>
                     ) : (
-                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-[10px] h-5">Pending</Badge>
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-[10px] h-5 dark:bg-amber-800 dark:text-amber-200 dark:border-0">Pending</Badge>
                     )}
                   </div>
                   
@@ -1033,7 +1065,7 @@ const CandidateCard = memo(function CandidateCard({
                   <AlertTriangle className="h-4 w-4" aria-hidden />
                 </div>
               </TooltipTrigger>
-              <TooltipContent className="bg-white text-red-600 border border-red-100 shadow-sm max-w-xs p-2 rounded-md">
+              <TooltipContent className="bg-white dark:bg-black/90 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800 shadow-sm max-w-xs p-2 rounded-md">
                 <p className="text-xs text-red-600">
                   {skipDocumentVerificationMessage ||
                     "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."}
@@ -1056,7 +1088,7 @@ const CandidateCard = memo(function CandidateCard({
                   <AlertCircle className="h-3.5 w-3.5" aria-hidden />
                 </div>
               </TooltipTrigger>
-              <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs p-3 rounded-xl">
+              <TooltipContent className="bg-white dark:bg-black/90 text-slate-900 dark:text-slate-200 border border-red-200 dark:border-red-800 shadow-lg max-w-xs p-3 rounded-xl">
                 <div className="space-y-2">
                   <div className={cn(
                     "flex items-center gap-2 font-bold text-xs",
@@ -1065,10 +1097,26 @@ const CandidateCard = memo(function CandidateCard({
                     <AlertCircle className="h-3.5 w-3.5" />
                     <span>{isNotEligible ? "Not Eligible for Project" : "Eligibility Mismatch"}</span>
                   </div>
+<<<<<<< HEAD
                   <div className="text-[10px] text-slate-500 mb-2">
                     {isNotEligible 
                       ? "This candidate does not meet the minimum requirements for any role in this project."
                       : "This candidate is eligible but has some soft mismatches or requires verification."}
+=======
+                  <div className="space-y-1.5">
+                    {(eligibilityData?.roleEligibility || []).map((role, rIdx) => (
+                      <div key={rIdx} className="space-y-1">
+                        <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{role.designation}</div>
+                        <ul className="list-disc list-inside space-y-0.5">
+                          {role.reasons.map((reason, idx) => (
+                            <li key={idx} className="text-[10px] text-slate-600 dark:text-slate-200 leading-relaxed">
+                              {reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+>>>>>>> copy/dark-theme
                   </div>
                   
                   {eligibilityData?.roleEligibility && (
@@ -1114,6 +1162,7 @@ const CandidateCard = memo(function CandidateCard({
         </div>
 
         {/* Detail pills */}
+<<<<<<< HEAD
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
           {!hideContactInfo && candidate.email && (
             <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
@@ -1131,14 +1180,37 @@ const CandidateCard = memo(function CandidateCard({
             <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
               <Building className="h-3 w-3 text-slate-400" aria-hidden="true" />
               <span className="truncate max-w-[130px]">
+=======
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+          {candidate.email && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1">
+              <Mail className="h-3 w-3 text-slate-400 dark:text-slate-300" aria-hidden="true" />
+              <span className="truncate max-w-[140px]">{candidate.email}</span>
+            </span>
+          )}
+          {contactValue && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1">
+              <Phone className="h-3 w-3 text-slate-400 dark:text-slate-300" aria-hidden="true" />
+              <span className="truncate max-w-[120px]">{contactValue}</span>
+            </span>
+          )}
+          {candidate.currentEmployer && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1">
+              <Building className="h-3 w-3 text-slate-400 dark:text-slate-300" aria-hidden="true" />
+              <span className="truncate max-w-[140px]">
+>>>>>>> copy/dark-theme
                 {candidate.currentEmployer}
               </span>
             </span>
           )}
           {candidate.expectedSalary && (
+<<<<<<< HEAD
             <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
+=======
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1">
+>>>>>>> copy/dark-theme
               <DollarSign
-                className="h-3 w-3 text-slate-400"
+                className="h-3 w-3 text-slate-400 dark:text-slate-300"
                 aria-hidden="true"
               />
               <span className="truncate max-w-[110px]">
@@ -1152,15 +1224,22 @@ const CandidateCard = memo(function CandidateCard({
         {Array.isArray(matchingQualifications) && matchingQualifications.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
             {matchingQualifications.map((mq, idx) => (
+<<<<<<< HEAD
               <span key={idx} className="inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 border border-blue-100 font-medium">
                 <GraduationCap className="h-3 w-3 text-blue-400" aria-hidden />
                 <span className="truncate max-w-[150px]">{mq.shortName || mq.name || mq.field || mq.university}</span>
+=======
+              <span key={idx} className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 dark:bg-slate-700 px-2.5 py-1">
+                <GraduationCap className="h-3 w-3 text-slate-400 dark:text-slate-300" aria-hidden />
+                <span className="truncate max-w-[160px]">{mq.shortName || mq.name || mq.field || mq.university}</span>
+>>>>>>> copy/dark-theme
               </span>
             ))}
           </div>
         )}
 
         {/* Unified footer: left = contact buttons, right = action buttons (assign / verify / interview) */}
+<<<<<<< HEAD
         {(showContactButtons || 
           (showAssignButton && onAssignToProject) || 
           (isRecruiter && showVerifyButton && onVerify) || 
@@ -1168,6 +1247,10 @@ const CandidateCard = memo(function CandidateCard({
           filteredActions?.some(a => a.action === "send_for_screening")
         ) && (
           <div className="flex items-center justify-between border-t border-slate-100/80 pt-2.5 mt-1">
+=======
+        {(showContactButtons || (showAssignButton && onAssignToProject) || (isRecruiter && showVerifyButton && onVerify) || (showInterviewButton && onSendForInterview)) && (
+          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-2">
+>>>>>>> copy/dark-theme
             <div className="flex items-center gap-2">
               {showContactButtons && (
                 <>
@@ -1176,7 +1259,11 @@ const CandidateCard = memo(function CandidateCard({
                     variant="ghost"
                     size="sm"
                     data-testid="candidate-whatsapp-btn"
+<<<<<<< HEAD
                     className="h-8 w-8 p-0 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-lg transition-colors"
+=======
+                    className="h-7 w-9 p-0 bg-green-100 dark:bg-black dark:text-green-400 text-green-900 hover:bg-green-200 dark:hover:bg-gray-800 focus:ring-2 focus:ring-green-200 dark:border dark:border-green-600"
+>>>>>>> copy/dark-theme
                     onClick={(e) => {
                       e.stopPropagation();
                       const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;
@@ -1188,7 +1275,11 @@ const CandidateCard = memo(function CandidateCard({
                     }}
                   >
                     <span className="sr-only">WhatsApp</span>
+<<<<<<< HEAD
                     <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
+=======
+                    <FaWhatsapp className="h-4 w-4 text-green-600 dark:text-green-400" aria-hidden="true" />
+>>>>>>> copy/dark-theme
                   </Button>
 
                   {/* Call button — uses tel: link */}
@@ -1222,14 +1313,23 @@ const CandidateCard = memo(function CandidateCard({
                         variant="default"
                         size="sm"
                         disabled={isNotEligible}
+<<<<<<< HEAD
                         className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-3 rounded-lg font-medium shadow-sm shadow-emerald-200 transition-all"
+=======
+                        className="h-7 text-[11px] bg-green-600 dark:text-white hover:bg-green-700 px-2.5"
+>>>>>>> copy/dark-theme
                         onClick={(event) => {
                           event.stopPropagation();
                           onAssignToProject(candidateId);
                         }}
                       >
+<<<<<<< HEAD
                         <UserPlus className="h-3 w-3 mr-1.5" aria-hidden="true" />
                         Assign
+=======
+                        <UserPlus className="h-2.5 w-2.5 mr-1" aria-hidden="true" />Assign to project
+                          
+>>>>>>> copy/dark-theme
                       </Button>
                     </span>
                   </TooltipTrigger>

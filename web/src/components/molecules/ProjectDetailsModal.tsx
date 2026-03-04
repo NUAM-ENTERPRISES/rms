@@ -51,15 +51,15 @@ export default function ProjectDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="w-full max-w-5xl lg:max-w-6xl max-h-[70vh] p-0 overflow-hidden rounded-xl border border-slate-200 shadow-xl bg-white">
+      <DialogContent className="w-full max-w-5xl lg:max-w-6xl max-h-[70vh] p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 dark:!border-slate-700 shadow-xl bg-white dark:bg-black">
         {/* Header - Compact */}
-        <div className="px-5 py-3 border-b bg-slate-50">
+        <div className="px-5 py-3 border-b bg-slate-50 dark:bg-slate-900 dark:border-slate-800">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-lg sm:text-xl font-semibold text-indigo-700 leading-tight truncate">
+              <DialogTitle className="text-lg sm:text-xl font-semibold text-indigo-700 dark:text-indigo-300 leading-tight truncate">
                 {project.title}
               </DialogTitle>
-              <DialogDescription className="mt-1.5 text-sm text-slate-600 flex items-center gap-3 flex-wrap">
+              <DialogDescription className="mt-1.5 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-3 flex-wrap">
                 {project.countryCode ? (
                   <ProjectCountryCell
                     countryCode={project.countryCode}
@@ -69,10 +69,10 @@ export default function ProjectDetailsModal({
                     className="inline-flex items-center text-sm"
                   />
                 ) : (
-                  <span className="text-slate-500 text-sm">No country specified</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-sm">No country specified</span>
                 )}
-                <span className="hidden sm:inline text-slate-400 text-sm">•</span>
-                <Badge variant="outline" className="text-xs px-3 py-0.5 bg-white">
+                <span className="hidden sm:inline text-slate-400 dark:text-slate-500 text-sm">•</span>
+                <Badge variant="outline" className="text-xs px-3 py-0.5 bg-white dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700">
                   {project.status?.toUpperCase() || "ACTIVE"}
                 </Badge>
               </DialogDescription>
@@ -81,45 +81,45 @@ export default function ProjectDetailsModal({
         </div>
 
         {/* Content */}
-        <ScrollArea className="max-h-[calc(70vh-90px)] px-5 py-4 sm:px-6 sm:py-5 bg-white">
+        <ScrollArea className="max-h-[calc(70vh-90px)] px-5 py-4 sm:px-6 sm:py-5 bg-white dark:bg-black">
           <div className="space-y-5">
 
             {/* Overview */}
             <section>
-              <h3 className="text-base font-semibold text-blue-700 mb-3 flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-blue-600" />
+              <h3 className="text-base font-semibold text-blue-700 dark:text-blue-300 mb-3 flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 Overview
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
-                <div><span className="text-xs text-slate-500">Client:</span> {project.client?.name || "—"}</div>
-                <div><span className="text-xs text-slate-500">Created by:</span> {project.creator?.name || "—"}</div>
-                <div><span className="text-xs text-slate-500">Deadline:</span> {formatDate(project.deadline)}</div>
-                <div><span className="text-xs text-slate-500">Created:</span> {formatDate(project.createdAt)}</div>
-                <div><span className="text-xs text-slate-500">Priority:</span> {project.priority?.toUpperCase() || "MEDIUM"}</div>
-                <div><span className="text-xs text-slate-500">Status:</span> {project.status}</div>
+                <div><span className="text-xs text-slate-500 dark:text-slate-400">Client:</span> <span className="text-slate-900 dark:text-slate-100">{project.client?.name || "—"}</span></div>
+                <div><span className="text-xs text-slate-500 dark:text-slate-400">Created by:</span> <span className="text-slate-900 dark:text-slate-100">{project.creator?.name || "—"}</span></div>
+                <div><span className="text-xs text-slate-500 dark:text-slate-400">Deadline:</span> <span className="text-slate-900 dark:text-slate-100">{formatDate(project.deadline)}</span></div>
+                <div><span className="text-xs text-slate-500 dark:text-slate-400">Created:</span> <span className="text-slate-900 dark:text-slate-100">{formatDate(project.createdAt)}</span></div>
+                <div><span className="text-xs text-slate-500 dark:text-slate-400">Priority:</span> <span className="text-slate-900 dark:text-slate-100">{project.priority?.toUpperCase() || "MEDIUM"}</span></div>
+                <div><span className="text-xs text-slate-500 dark:text-slate-400">Status:</span> <span className="text-slate-900 dark:text-slate-100">{project.status}</span></div>
               </div>
             </section>
 
             {/* Settings */}
             <section>
-              <h3 className="text-base font-semibold text-indigo-700 mb-3 flex items-center gap-2">
-                <Settings className="h-4 w-4 text-indigo-600" />
+              <h3 className="text-base font-semibold text-indigo-700 dark:text-indigo-300 mb-3 flex items-center gap-2">
+                <Settings className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 Settings
               </h3>
               <div className="flex flex-wrap gap-2">
-                <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300">
                   Resume Editable: {project.resumeEditable ? "Yes" : "No"}
                 </div>
-                <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300">
                   Hide Contact: {project.hideContactInfo ? "Yes" : "No"}
                 </div>
-                <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300">
                   Screening: {project.requiredScreening ? "Required" : "No"}
                 </div>
-                <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300">
                   Grooming: {project.groomingRequired || "—"}
                 </div>
-                <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
+                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300">
                   Type: {project.projectType || "Private"}
                 </div>
                 {project.licensingExam && (
@@ -143,12 +143,13 @@ export default function ProjectDetailsModal({
             {/* Roles - Grid layout */}
             {project.rolesNeeded?.length > 0 && (
               <section>
-                <h3 className="text-base font-semibold text-purple-700 mb-3 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-purple-600" />
+                <h3 className="text-base font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   Roles ({project.rolesNeeded.length})
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {project.rolesNeeded.map((role: any) => (
+<<<<<<< HEAD
                     <div key={role.id} className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex flex-col">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                         <div className="flex flex-col min-w-0">
@@ -160,10 +161,17 @@ export default function ProjectDetailsModal({
                           )}
                         </div>
                         <Badge variant="outline" className="text-xs px-3 py-0.5 w-fit flex-shrink-0">
+=======
+                    <div key={role.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-900 flex flex-col">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                        <h4 className="text-base font-semibold text-purple-700 dark:text-purple-300 truncate">{role.designation}</h4>
+                        <Badge variant="outline" className="text-xs px-3 py-0.5 w-fit bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+>>>>>>> copy/dark-theme
                           {role.quantity} pos
                         </Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
+<<<<<<< HEAD
                         <div><strong>Exp:</strong> {role.minExperience}–{role.maxExperience || "Any"}</div>
                         <div><strong>Age:</strong> {role.ageRequirement || "—"}</div>
                         <div><strong>Gender:</strong> {role.genderRequirement || "All"}</div>
@@ -174,6 +182,12 @@ export default function ProjectDetailsModal({
                             ? `${role.minSalaryRange || "N/A"}–${role.maxSalaryRange || "N/A"}`
                             : "As per policy"}
                         </div>
+=======
+                        <div><strong>Exp:</strong> <span className="text-slate-900 dark:text-slate-100">{role.minExperience}–{role.maxExperience || "Any"}</span></div>
+                        <div><strong>Age:</strong> <span className="text-slate-900 dark:text-slate-100">{role.ageRequirement || "—"}</span></div>
+                        <div><strong>Gender:</strong> <span className="text-slate-900 dark:text-slate-100">{role.genderRequirement || "All"}</span></div>
+                        <div><strong>Visa:</strong> <span className="text-slate-900 dark:text-slate-100">{role.visaType || "Any"}</span></div>
+>>>>>>> copy/dark-theme
                       </div>
 
                       {/* Education List */}
@@ -218,7 +232,7 @@ export default function ProjectDetailsModal({
                       </div>
 
                       {role.notes && (
-                        <p className="mt-2 text-xs text-slate-600 italic">
+                        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 italic">
                           Note: {role.notes}
                         </p>
                       )}
@@ -231,18 +245,18 @@ export default function ProjectDetailsModal({
             {/* Documents - Grid layout */}
             {project.documentRequirements?.length > 0 && (
               <section>
-                <h3 className="text-base font-semibold text-amber-700 mb-3 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-amber-600" />
+                <h3 className="text-base font-semibold text-amber-700 dark:text-amber-300 mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   Documents
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {project.documentRequirements.map((doc: any) => (
-                    <div key={doc.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+                    <div key={doc.id} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col">
                       <div className="flex-1">
-                        <p className="font-medium text-amber-700 truncate capitalize">{doc.docType.replace(/_/g, ' ')}</p>
-                        {doc.description && <p className="text-xs text-slate-600 mt-1 line-clamp-2">{doc.description}</p>}
+                        <p className="font-medium text-amber-700 dark:text-amber-300 truncate capitalize">{doc.docType.replace(/_/g, ' ')}</p>
+                        {doc.description && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{doc.description}</p>}
                       </div>
-                      <Badge variant={doc.mandatory ? "default" : "secondary"} className="text-xs px-3 py-0.5 mt-2 w-fit">
+                      <Badge variant={doc.mandatory ? "default" : "secondary"} className="text-xs px-3 py-0.5 mt-2 w-fit bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
                         {doc.mandatory ? "Mandatory" : "Optional"}
                       </Badge>
                     </div>
@@ -254,12 +268,12 @@ export default function ProjectDetailsModal({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t bg-slate-50 flex justify-end">
+        <div className="px-5 py-3 border-t bg-slate-50 dark:bg-slate-900 dark:border-slate-800 flex justify-end">
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="min-w-[90px]"
+            className="min-w-[90px] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             Close
           </Button>
