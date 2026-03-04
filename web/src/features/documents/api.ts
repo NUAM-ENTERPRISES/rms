@@ -529,7 +529,7 @@ export const documentsApi = baseApi.injectEndpoints({
           queryString ? `?${queryString}` : ""
         }`;
       },
-      providesTags: ["Document"],
+      providesTags: ["RecruiterDocuments"],
     }),
 
     getRecruiterVerifiedRejectedDocuments: builder.query<
@@ -548,7 +548,7 @@ export const documentsApi = baseApi.injectEndpoints({
         url: "/documents/recruiter-verified-rejected-documents",
         params,
       }),
-      providesTags: ["Document"],
+      providesTags: ["RecruiterDocuments"],
     }),
 
     getDocumentById: builder.query<

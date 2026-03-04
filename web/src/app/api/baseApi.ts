@@ -52,6 +52,7 @@ export const baseApi = createApi({
     "MergedDocument",
     "CandidateProjectVerifications",
     "ForwardingHistory",
+    "RecruiterDocuments",
   ],
   endpoints: () => ({}),
 });

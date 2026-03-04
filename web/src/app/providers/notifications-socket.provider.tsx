@@ -186,6 +186,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         } else {
           tags.push({ type: "DocumentVerification" });
         }
+        tags.push({ type: "RecruiterDocuments" });
         dispatch(baseApi.util.invalidateTags(tags));
       }
     });
@@ -197,6 +198,8 @@ export default function NotificationsSocketProvider({ children }: { children: Re
           { type: "Screening", id: "LIST" },
           { type: "Candidate", id: "LIST" }
         ]));
+      } else if (payload.type === "RecruiterDocuments") {
+        dispatch(baseApi.util.invalidateTags([{ type: "RecruiterDocuments" }]));
       } else if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
       }
@@ -209,6 +212,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       const tags: Array<any> = [
         { type: "VerificationCandidates" },
         { type: "DocumentStats" },
+        { type: "RecruiterDocuments" },
       ];
       if (data.candidateId) {
         tags.push({ type: "DocumentVerification", id: data.candidateId });
@@ -223,6 +227,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       const tags: Array<any> = [
         { type: "VerificationCandidates" },
         { type: "DocumentStats" },
+        { type: "RecruiterDocuments" },
       ];
       if (data.candidateId) {
         tags.push({ type: "DocumentVerification", id: data.candidateId });
@@ -237,6 +242,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       const tags: Array<any> = [
         { type: "VerificationCandidates" },
         { type: "DocumentStats" },
+        { type: "RecruiterDocuments" },
       ];
       if (data.candidateId) {
         tags.push({ type: "DocumentVerification", id: data.candidateId });
@@ -251,6 +257,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       const tags: Array<any> = [
         { type: "VerificationCandidates" },
         { type: "DocumentStats" },
+        { type: "RecruiterDocuments" },
       ];
       if (data.candidateId) {
         tags.push({ type: "DocumentVerification", id: data.candidateId });
@@ -265,6 +272,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       const tags: Array<any> = [
         { type: "VerificationCandidates" },
         { type: "DocumentStats" },
+        { type: "RecruiterDocuments" },
       ];
       if (data.candidateId) {
         tags.push({ type: "DocumentVerification", id: data.candidateId });

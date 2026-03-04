@@ -645,7 +645,7 @@ export class DocumentsService {
     reuploadDto: ReuploadDocumentDto,
     userId: string,
   ): Promise<any> {
-    const result = await this.reupload(documentId, reuploadDto, userId);
+    const result = await this.reupload(documentId, reuploadDto, userId, true);
 
     // Find the documentation team members or the person who requested resubmission
     const lastResubmissionHistory = await this.prisma.documentVerificationHistory.findFirst({
@@ -696,7 +696,7 @@ export class DocumentsService {
     reuploadDto: ReuploadDocumentDto,
     userId: string,
   ): Promise<any> {
-    const result = await this.reupload(documentId, reuploadDto, userId);
+    const result = await this.reupload(documentId, reuploadDto, userId, true);
 
     const cpMap = await this.prisma.candidateProjects.findUnique({
       where: { id: reuploadDto.candidateProjectMapId },
@@ -716,7 +716,7 @@ export class DocumentsService {
         cpMap.recruiterId,
         `Documentation team has re-uploaded document "${result.updatedDocument.fileName}" for candidate ${candidate?.firstName} ${candidate?.lastName} in project ${project?.title}.`,
         'Document Re-uploaded by Documentation Team',
-        `/candidates/${candidate?.id}/documents/${project?.id}`,
+        `/recruiter-docs/${project?.id}/${candidate?.id}`,
         {
           documentId: result.updatedDocument.id,
           candidateId: candidate?.id,
@@ -736,6 +736,7 @@ export class DocumentsService {
     documentId: string,
     reuploadDto: ReuploadDocumentDto,
     userId: string,
+    skipEvent: boolean = false,
   ): Promise<any> {
     // Check document exists
     const document = await this.prisma.document.findUnique({
@@ -837,12 +838,14 @@ export class DocumentsService {
     // Update CandidateProjectMap status
     await this.updateCandidateProjectStatus(reuploadDto.candidateProjectMapId);
 
-    // Publish event for notification
-    await this.outboxService.publishDocumentResubmitted(
-      result.updatedDocument.id,
-      userId,
-      reuploadDto.candidateProjectMapId,
-    );
+    // Publish event for notification if not skipped
+    if (!skipEvent) {
+      await this.outboxService.publishDocumentResubmitted(
+        result.updatedDocument.id,
+        userId,
+        reuploadDto.candidateProjectMapId,
+      );
+    }
 
     return result;
   }
