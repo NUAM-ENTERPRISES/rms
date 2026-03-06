@@ -147,6 +147,10 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       // Handle domain-specific notifications
       handleScreeningNotifications(context);
       handleDocumentNotifications(context);
+
+      if (notification.type === "documents_forwarded") {
+        dispatch(baseApi.util.invalidateTags([{ type: "Interview" }]));
+      }
     });
 
     socket.on("data:sync", (payload: any) => {

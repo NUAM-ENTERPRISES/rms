@@ -59,6 +59,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateTransferredToProcessing(job);
         case 'CandidateHired':
           return await this.handleCandidateHired(job);
+        case 'DocumentsForwardedToClient':
+          return await this.handleDocumentsForwardedToClient(job);
         case 'CandidateFailedScreening':
           return await this.handleCandidateFailedScreening(job);
         case 'RecruiterNotification':
@@ -1510,6 +1512,68 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (err) {
       this.logger.error(`Failed to process CandidateHired event ${eventId}: ${err?.message || err}`, err?.stack);
       throw err;
+    }
+  }
+
+  async handleDocumentsForwardedToClient(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing documents forwarded event: ${eventId}`);
+
+    try {
+      const { candidateId, projectId, senderId, recipientEmail } = payload as any;
+
+      // 1. Load candidate name
+      const candidate = await this.prisma.candidate.findUnique({
+        where: { id: candidateId },
+        select: { firstName: true, lastName: true },
+      });
+      const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : 'Unknown';
+
+      // 2. Load project title
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { title: true },
+      });
+      const projectTitle = project?.title || 'Unknown Project';
+
+      // 3. Find Interview Coordinators, Directors, and CEOs
+      const recipients = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: { in: ['Interview Coordinator', 'Director', 'CEO', 'System Admin'] }
+              }
+            }
+          }
+        },
+        select: { id: true },
+      });
+
+      this.logger.log(`Found ${recipients.length} users to notify for documents forwarding`);
+
+      // 4. Create notifications for each
+      for (const recipient of recipients) {
+        const idemKey = `${eventId}:${recipient.id}:docs_forwarded`;
+        
+        await this.notificationsService.createNotification({
+          userId: recipient.id,
+          type: 'documents_forwarded',
+          title: 'Documents Forwarded to Client',
+          message: `${candidateName}'s documents for project "${projectTitle}" have been forwarded to ${recipientEmail}.`,
+          link: `/interviews/shortlist-pending?search=${encodeURIComponent(candidateName)}`,
+          meta: { candidateId, projectId },
+          idemKey,
+        });
+      }
+
+      return { success: true, count: recipients.length };
+    } catch (error) {
+      this.logger.error(
+        `Failed to process documents forwarded notification: ${error.message}`,
+        error.stack,
+      );
+      throw error;
     }
   }
 

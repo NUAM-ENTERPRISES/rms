@@ -394,6 +394,28 @@ export class OutboxService {
   }
 
   /**
+   * Publish documents forwarded to client event
+   */
+  async publishDocumentsForwardedToClient(
+    candidateId: string,
+    projectId: string,
+    senderId: string,
+    recipientEmail: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'DocumentsForwardedToClient',
+      {
+        candidateId,
+        projectId,
+        senderId,
+        recipientEmail,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate failed screening event
    * Notifies recruiter and team head when candidate fails screening
    */

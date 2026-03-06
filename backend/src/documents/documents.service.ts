@@ -3916,6 +3916,15 @@ export class DocumentsService {
           });
         }
       }
+
+      // 7. Notify Interview Coordinators about forwarding
+      await this.outboxService.publishDocumentsForwardedToClient(
+        candidateId,
+        projectId,
+        senderId,
+        recipientEmail,
+      );
+
     } catch (e) {
       // best-effort: do not fail the forwarding if status update/history creation fails
       this.logger.warn(`Failed to update candidate project status after forwarding: ${e?.message || e}`);
