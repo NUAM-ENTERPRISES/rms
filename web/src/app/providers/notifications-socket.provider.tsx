@@ -5,8 +5,9 @@ import { baseApi } from "@/app/api/baseApi";
 import { notificationsApi } from "@/features/notifications/data/notifications.endpoints";
 import { setMuted } from "@/features/notifications/notificationSettingsSlice";
 import { toast } from "sonner";
-import { handleDocumentNotifications, registerDocumentSocketEvents } from "./notification-handlers/document-handler";
+import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocumentSync } from "./notification-handlers/document-handler";
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
+import { handleInterviewNotifications } from "./notification-handlers/interview-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -147,10 +148,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       // Handle domain-specific notifications
       handleScreeningNotifications(context);
       handleDocumentNotifications(context);
-
-      if (notification.type === "documents_forwarded") {
-        dispatch(baseApi.util.invalidateTags([{ type: "Interview" }]));
-      }
+      handleInterviewNotifications(context);
     });
 
     socket.on("data:sync", (payload: any) => {
@@ -159,10 +157,9 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       const context = { dispatch, invalidateTags };
       
       if (handleScreeningSync(payload, context)) return;
+      if (handleDocumentSync(payload, context)) return;
       
-      if (payload.type === "RecruiterDocuments") {
-        dispatch(baseApi.util.invalidateTags([{ type: "RecruiterDocuments" }]));
-      } else if (payload.type) {
+      if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
       }
       if (payload.message) toast.info(payload.message);

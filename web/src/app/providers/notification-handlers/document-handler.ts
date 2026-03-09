@@ -40,6 +40,15 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
   return true;
 };
 
+export const handleDocumentSync = (payload: any, { dispatch, invalidateTags }: { dispatch: any, invalidateTags: any }) => {
+  if (payload.type === "RecruiterDocuments") {
+    console.log("[Socket] Recruiter documents data sync");
+    dispatch(invalidateTags([{ type: "RecruiterDocuments" }]));
+    return true;
+  }
+  return false;
+};
+
 export const registerDocumentSocketEvents = (socket: any, { dispatch, invalidateTags }: { dispatch: any, invalidateTags: any }) => {
   const eventTypes = [
     "candidate_document_updated",
