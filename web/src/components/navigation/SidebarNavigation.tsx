@@ -54,9 +54,22 @@ const navigationItems: NavigationItem[] = [
   },
   {
     label: "Candidates",
-    href: "/candidates",
     icon: UserCheck,
     permissions: ["read:candidates"],
+    children: [
+      {
+        label: "Candidate Overview",
+        href: "/candidates/overview",
+        icon: BarChart3,
+        permissions: ["read:candidates"],
+      },
+      {
+        label: "All Candidates",
+        href: "/candidates",
+        icon: Users,
+        permissions: ["read:candidates"],
+      },
+    ],
   },
   {
     label: "Interviews",

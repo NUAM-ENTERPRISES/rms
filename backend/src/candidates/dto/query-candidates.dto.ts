@@ -8,7 +8,7 @@ import {
   IsDateString,
 } from 'class-validator';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Gender } from './create-candidate.dto';
 
@@ -23,20 +23,20 @@ export class QueryCandidatesDto {
 
   @ApiPropertyOptional({
     description: 'Filter by candidate status',
-    enum: CANDIDATE_STATUS,
-    example: CANDIDATE_STATUS.UNTOUCHED,
+    example: 'untouched',
   })
   @IsOptional()
-  @IsEnum(CANDIDATE_STATUS)
+  @Transform(({ value }) => (value === 'all' ? undefined : value))
+  @IsString()
   currentStatus?: string;
 
   @ApiPropertyOptional({
     description: 'Alias for currentStatus (keeps compatibility with clients using `status`)',
-    enum: CANDIDATE_STATUS,
-    example: CANDIDATE_STATUS.UNTOUCHED,
+    example: 'untouched',
   })
   @IsOptional()
-  @IsEnum(CANDIDATE_STATUS)
+  @Transform(({ value }) => (value === 'all' ? undefined : value))
+  @IsString()
   status?: string;
 
   @ApiPropertyOptional({

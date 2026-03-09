@@ -10,6 +10,10 @@ export class QueryNotificationsDto {
   })
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => {
+    if (value === 'unread' || value === 'read') return value;
+    return undefined;
+  })
   status?: 'unread' | 'read';
 
   @ApiPropertyOptional({

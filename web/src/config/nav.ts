@@ -149,6 +149,11 @@ export const navigationConfig: NavItem[] = [
     ],
     children: [
       {
+        id: "candidate-overview",
+        label: "Overview",
+        path: "/candidates/overview",
+      },
+      {
         id: "candidates-list",
         label: "Follow Up",
         path: "/candidates",

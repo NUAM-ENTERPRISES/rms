@@ -16,6 +16,7 @@ import { PipelineService } from './pipeline.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
+import { QueryCandidateOverviewDto } from './dto/query-candidate-overview.dto';
 import { AssignProjectDto } from './dto/assign-project.dto';
 import { NominateCandidateDto } from './dto/nominate-candidate.dto';
 import { ApproveCandidateDto } from './dto/approve-candidate.dto';
@@ -2748,5 +2749,427 @@ export class CandidatesService {
       },
     });
     return mapping;
+  }
+
+  /**
+   * Get candidate overview for a specific recruiter or all (admin)
+   */
+  async getCandidateOverview(
+    query: QueryCandidateOverviewDto,
+    userId: string,
+    roles: string[],
+  ): Promise<any> {
+    const isManagerOrAdmin = roles.some((role) =>
+      ['CEO', 'Director', 'Manager', 'Team Head', 'Team Lead', 'System Admin'].includes(role),
+    );
+
+    // If a specific recruiter ID is passed and requester is manager/admin, use it.
+    // Otherwise, if recruiter, force filter by their ID.
+    const targetRecruiterId = isManagerOrAdmin ? query.recruiterId : userId;
+
+    const where: any = {};
+
+    // Base filter for list and counts: candidates assigned to the recruiter
+    if (targetRecruiterId) {
+      where.recruiterAssignments = {
+        some: {
+          recruiterId: targetRecruiterId,
+          isActive: true,
+        },
+      };
+    }
+
+    // Date Range logic
+    if (query.dateFilter && query.dateFilter !== 'custom' && query.dateFilter !== 'all') {
+      const now = new Date();
+      let start: Date | undefined;
+      let end: Date | undefined;
+
+      switch (query.dateFilter) {
+        case 'today':
+          start = new Date(new Date().setHours(0, 0, 0, 0));
+          end = new Date(new Date().setHours(23, 59, 59, 999));
+          break;
+        case 'yesterday':
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          start = new Date(yesterday.setHours(0, 0, 0, 0));
+          end = new Date(yesterday.setHours(23, 59, 59, 999));
+          break;
+        case 'this_week':
+          const first = now.getDate() - now.getDay();
+          const sunday = new Date(new Date().setDate(first));
+          start = new Date(sunday.setHours(0, 0, 0, 0));
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+          break;
+        case 'last_week':
+          const lastFirst = now.getDate() - now.getDay() - 7;
+          const lastSunday = new Date(new Date().setDate(lastFirst));
+          start = new Date(lastSunday.setHours(0, 0, 0, 0));
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          end.setHours(23, 59, 59, 999);
+          break;
+        case 'this_month':
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+          break;
+        case 'this_year':
+          start = new Date(now.getFullYear(), 0, 1);
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+          break;
+      }
+      if (start && end) {
+        where.createdAt = { gte: start, lte: end };
+      }
+    } else if (query.dateFrom || query.dateTo) {
+      const dateRange: any = {};
+      if (query.dateFrom) dateRange.gte = new Date(query.dateFrom);
+      if (query.dateTo) dateRange.lte = new Date(query.dateTo);
+      where.createdAt = dateRange;
+    }
+
+    // Add list filters
+    if (query.search) {
+      where.OR = [
+        { firstName: { contains: query.search, mode: 'insensitive' } },
+        { lastName: { contains: query.search, mode: 'insensitive' } },
+        { mobileNumber: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.gender) {
+      where.gender = query.gender.toUpperCase();
+    }
+
+    if (query.sources && query.sources.length > 0) {
+      where.source = { in: query.sources };
+    } else if (query.source) {
+      where.source = query.source;
+    }
+
+    if (query.countryPreferences && query.countryPreferences.length > 0) {
+      where.preferredCountries = { some: { countryCode: { in: query.countryPreferences } } };
+    }
+
+    if (query.sectorTypes && query.sectorTypes.length > 0) {
+      where.sectorType = { in: query.sectorTypes };
+    }
+
+    if (query.facilityPreferences && query.facilityPreferences.length > 0) {
+      where.facilityPreferences = { some: { facilityType: { in: query.facilityPreferences } } };
+    }
+
+    if (query.currentStatus || query.status) {
+      const rawStatus = query.currentStatus || query.status;
+      const statusValue = rawStatus ? rawStatus.toLowerCase() : '';
+
+      if (statusValue === 'nominated') {
+        where.projects = { some: {} };
+      } else if (statusValue === 'positive' || statusValue === 'interested' || statusValue === 'qualified') {
+        where.OR = [
+          { currentStatus: { statusName: { in: ['Interested', 'Qualified', 'Deployed'] } } },
+          { projects: { some: {} } },
+        ];
+      } else if (statusValue === 'negative' || [
+        'untouched', 'not_interested', 'not_eligible', 'other_enquiry', 'future', 'on_hold', 'rnr'
+      ].includes(statusValue)) {
+        where.currentStatus = {
+          statusName: {
+            in: ['Untouched', 'Not Interested', 'Not Eligible', 'Other Enquiry', 'Future', 'On Hold', 'RNR'],
+          },
+        };
+        where.projects = { none: {} };
+      } else if (statusValue === 'interview_assigned') {
+        // Updated logic: Filter by candidates who have EVER been in specific interview sub-statuses
+        where.projects = {
+          some: {
+            projectStatusHistory: {
+              some: {
+                subStatus: {
+                  name: {
+                    in: [
+                      'interview_assigned',
+                      'interview_scheduled',
+                      'interview_rescheduled',
+                      'interview_completed',
+                      'interview_passed',
+                      'shortlisted',
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        };
+      } else if (statusValue === 'document_received') {
+        where.projects = {
+          some: {
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'document_received' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        };
+      } else if (statusValue === 'medical') {
+        where.projects = {
+          some: {
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'medical' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        };
+      } else if (statusValue === 'visa') {
+        where.projects = {
+          some: {
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'visa' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        };
+      } else if (statusValue === 'deployed') {
+        where.currentStatus = { statusName: 'Deployed' };
+      } else {
+        where.currentStatus = { statusName: { contains: statusValue, mode: 'insensitive' } };
+      }
+    }
+
+    // Common query options for counts
+    // We create a base where clause that EXCLUDES the status/currentStatus filters
+    // so that clicking a tile doesn't recalculate the other tiles based on the filtered list.
+    const baseWhereForCounts = { ...where };
+    delete baseWhereForCounts.OR;
+    delete baseWhereForCounts.currentStatus;
+    // Also remove projects filter if it was added for specific status filtering
+    if (query.currentStatus || query.status) {
+      delete baseWhereForCounts.projects;
+    }
+
+    const countOptions = (extraWhere: any = {}) => ({
+      where: { ...baseWhereForCounts, ...extraWhere },
+    });
+
+    // 1. Total Candidates (filtered by recruiter, date, AND active status/search for table paging)
+    const tableTotalCount = await this.prisma.candidate.count({ where });
+
+    // 1. Total Summary Count (already filtered by recruiter and date)
+    const totalCandidatesCount = await this.prisma.candidate.count({ where: baseWhereForCounts });
+
+    // 2. Positive Candidates ('Interested', 'Qualified', 'Deployed' OR nominated)
+    const positiveCandidates = await this.prisma.candidate.count({
+      where: {
+        ...baseWhereForCounts,
+        OR: [
+          { currentStatus: { statusName: { in: ['Interested', 'Qualified', 'Deployed'] } } },
+          { projects: { some: {} } },
+        ],
+      },
+    });
+
+    // 3. Negative Candidates ('Untouched', 'Not Interested', etc. AND NOT nominated)
+    const negativeCandidates = await this.prisma.candidate.count({
+      where: {
+        ...baseWhereForCounts,
+        currentStatus: {
+          statusName: {
+            in: [
+              'Untouched',
+              'Not Interested',
+              'Not Eligible',
+              'Other Enquiry',
+              'Future',
+              'On Hold',
+              'RNR',
+            ],
+          },
+        },
+        projects: { none: {} },
+      },
+    });
+
+    // 4. Nominated Candidates (unique count)
+    // Needs careful count since unique candidates might be in multiple projects.
+    const nominatedSubQuery = {
+      ...baseWhereForCounts,
+      projects: {
+        some: targetRecruiterId ? { recruiterId: targetRecruiterId } : {},
+      },
+    };
+    const nominatedCandidates = await this.prisma.candidate.count({ where: nominatedSubQuery });
+
+    // 5. Interview Assigned (unique count where candidate HAS EVER been in an interview-related status for a project)
+    const interviewAssignedCandidates = await this.prisma.candidate.count({
+      where: {
+        ...baseWhereForCounts,
+        projects: {
+          some: {
+            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+            projectStatusHistory: {
+              some: {
+                subStatus: {
+                  name: {
+                    in: [
+                      'interview_assigned',
+                      'interview_scheduled',
+                      'interview_rescheduled',
+                      'interview_completed',
+                      'interview_passed',
+                      'shortlisted',
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 6. Document Received (Processing step 'document_received' is completed)
+    const docReceivedCandidates = await this.prisma.candidate.count({
+      where: {
+        ...baseWhereForCounts,
+        projects: {
+          some: {
+            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'document_received' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 7. Medical Step Count
+    const medicalCandidates = await this.prisma.candidate.count({
+      where: {
+        ...baseWhereForCounts,
+        projects: {
+          some: {
+            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'medical' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 8. Visa Stamped count
+    const visaCandidates = await this.prisma.candidate.count({
+      where: {
+        ...baseWhereForCounts,
+        projects: {
+          some: {
+            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'visa' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 9. Deployed
+    const deployedCandidatesCount = await this.prisma.candidate.count(
+      countOptions({
+        currentStatus: { statusName: 'Deployed' },
+      }),
+    );
+
+    // Pagination for the table
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const sortBy = query.sortBy || 'createdAt';
+    const sortOrder = query.sortOrder || 'desc';
+
+    const skip = (page - 1) * limit;
+    const candidatesData = await this.prisma.candidate.findMany({
+      where,
+      include: {
+        currentStatus: true,
+        team: true,
+        preferredCountries: {
+          include: { country: true },
+        },
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: {
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { [sortBy as string]: sortOrder },
+      skip,
+      take: limit,
+    });
+
+    const candidates = candidatesData.map((c) => {
+      const activeAssignment = c.recruiterAssignments?.find((a) => a.isActive);
+      return {
+        ...c,
+        recruiter: activeAssignment?.recruiter || null,
+      };
+    });
+
+    return {
+      candidates,
+      pagination: {
+        page,
+        limit,
+        total: tableTotalCount,
+        totalPages: Math.ceil(tableTotalCount / limit),
+      },
+      stats: {
+        total: totalCandidatesCount,
+        positive: positiveCandidates,
+        negative: negativeCandidates,
+        nominated: nominatedCandidates,
+        interviewAssigned: interviewAssignedCandidates,
+        documentReceived: docReceivedCandidates,
+        medical: medicalCandidates,
+        visa: visaCandidates,
+        deployed: deployedCandidatesCount,
+      },
+    };
   }
 }

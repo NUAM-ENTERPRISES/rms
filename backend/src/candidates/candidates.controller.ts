@@ -24,6 +24,7 @@ import { CandidatesService } from './candidates.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
+import { QueryCandidateOverviewDto } from './dto/query-candidate-overview.dto';
 import { AssignProjectDto } from './dto/assign-project.dto';
 import { NominateCandidateDto } from './dto/nominate-candidate.dto';
 import { ApproveCandidateDto } from './dto/approve-candidate.dto';
@@ -55,6 +56,29 @@ export class CandidatesController {
     private readonly rnrCreAssignmentService: RnrCreAssignmentService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {}
+
+  @Get('overview')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get candidate dashboard overview',
+    description: 'Returns dashboard tiles and a paginated list of candidates.',
+  })
+  async getOverview(@Query() query: QueryCandidateOverviewDto, @Request() req) {
+    const roles = req.user.roles || [];
+    const userId = req.user.id;
+    const result = await this.candidatesService.getCandidateOverview(
+      query,
+      userId,
+      roles,
+    );
+    return {
+      success: true,
+      data: result.candidates,
+      stats: result.stats,
+      pagination: result.pagination,
+      message: 'Candidate overview retrieved successfully',
+    };
+  }
 
   @Post()
   @Permissions('write:candidates')

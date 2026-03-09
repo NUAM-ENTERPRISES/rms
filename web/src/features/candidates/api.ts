@@ -698,6 +698,72 @@ export interface GetCandidateProjectPipelineResponse {
 
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getCandidateOverview: builder.query<
+      {
+        data: Candidate[];
+        stats: {
+          total: number;
+          positive: number;
+          negative: number;
+          nominated: number;
+          interviewAssigned: number;
+          documentReceived: number;
+          medical: number;
+          visa: number;
+          deployed: number;
+        };
+        pagination?: any;
+      },
+      any
+    >({
+      query: (params: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        status?: string;
+        currentStatus?: string;
+        recruiterId?: string;
+        dateFilter?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        gender?: string;
+        countryPreferences?: string[];
+        sectorTypes?: string[];
+        facilityPreferences?: string[];
+        sources?: string[];
+        source?: string;
+      }) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+        if (params.search) queryParams.append("search", params.search);
+        if (params.status) queryParams.append("status", params.status);
+        if (params.currentStatus) queryParams.append("currentStatus", params.currentStatus);
+        if (params.recruiterId) queryParams.append("recruiterId", params.recruiterId);
+        if (params.dateFilter) queryParams.append("dateFilter", params.dateFilter);
+        if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
+        if (params.dateTo) queryParams.append("dateTo", params.dateTo);
+        if (params.gender) queryParams.append("gender", params.gender);
+        
+        if (params.countryPreferences) {
+          params.countryPreferences.forEach((cp: string) => queryParams.append("countryPreferences", cp));
+        }
+        if (params.sectorTypes) {
+          params.sectorTypes.forEach((st: string) => queryParams.append("sectorTypes", st));
+        }
+        if (params.facilityPreferences) {
+          params.facilityPreferences.forEach((fp: string) => queryParams.append("facilityPreferences", fp));
+        }
+        if (params.sources) {
+          params.sources.forEach((s: string) => queryParams.append("sources", s));
+        } else if (params.source) {
+          queryParams.append("source", params.source);
+        }
+
+        return `/candidates/overview?${queryParams.toString()}`;
+      },
+      providesTags: ["Candidate"],
+    }),
     getCandidates: builder.query<
       {
         data: Candidate[];
@@ -1177,6 +1243,7 @@ export const candidatesApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetCandidateOverviewQuery,
   useGetCandidatesQuery,
   useGetCandidateByIdQuery,
   useCreateCandidateMutation,
