@@ -53,6 +53,7 @@ import {
   ChevronRight,
   Globe,
   Building2,
+  Share2,
   Stethoscope,
   FilterX,
   User,
@@ -331,7 +332,7 @@ export default function CandidateOverviewPage() {
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-slate-400" />
-                  <div className="min-w-[200px]">
+                  <div className="min-w-[180px]">
                     <MultiCountrySelect
                       placeholder="All Countries"
                       value={filters.countryPreferences}
@@ -342,7 +343,7 @@ export default function CandidateOverviewPage() {
 
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-slate-400" />
-                  <div className="min-w-[200px]">
+                  <div className="min-w-[180px]">
                     <MultiSelect
                       placeholder="All Sectors"
                       options={Object.entries(SECTOR_TYPES).map(([key, value]) => ({
@@ -351,6 +352,26 @@ export default function CandidateOverviewPage() {
                       }))}
                       value={filters.sectorTypes}
                       onValueChange={(val) => setFilters(f => ({ ...f, sectorTypes: val, page: 1 }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-slate-400" />
+                  <div className="min-w-[180px]">
+                    <MultiSelect
+                      placeholder="All Sources"
+                      options={[
+                        { label: "Manual", value: "manual" },
+                        { label: "WhatsApp", value: "whatsapp" },
+                        { label: "Referral", value: "referral" },
+                        { label: "LinkedIn", value: "linkedin" },
+                        { label: "Facebook", value: "facebook" },
+                        { label: "Indeed", value: "indeed" },
+                        { label: "Other", value: "other" },
+                      ]}
+                      value={filters.sources}
+                      onValueChange={(val) => setFilters(f => ({ ...f, sources: val, page: 1 }))}
                     />
                   </div>
                 </div>

@@ -356,7 +356,7 @@ export class RecruiterAssignmentService {
     recruiterId: string,
     dto: GetRecruiterCandidatesDto,
   ) {
-    const { page = 1, limit = 10, status, search, roleCatalogId } = dto;
+    const { page = 1, limit = 10, status, search, roleCatalogId, source } = dto;
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -429,7 +429,9 @@ export class RecruiterAssignmentService {
         },
       ];
     }
-
+    if (source && source !== 'all') {
+      whereClause.source = source;
+    }
     if (roleCatalogId && roleCatalogId !== 'all') {
       whereClause.workExperiences = {
         some: {

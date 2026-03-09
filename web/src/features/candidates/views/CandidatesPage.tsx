@@ -11,6 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -97,6 +104,7 @@ export default function CandidatesPage() {
     search: "",
     status: "all",
     experience: "all",
+    source: "all" as string,
     // date range filter (date added)
     dateRange: "all" as string,
     dateFrom: undefined as Date | undefined,
@@ -111,6 +119,7 @@ export default function CandidatesPage() {
       page: filters.page,
       limit: filters.limit,
       status: filters.status !== "all" ? filters.status : undefined,
+      source: filters.source !== "all" ? filters.source : undefined,
       // send server-side date filters as date-only (YYYY-MM-DD) to avoid timezone shifts
       dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
       dateTo: filters.dateTo ? format(filters.dateTo, 'yyyy-MM-dd') : undefined,
@@ -132,6 +141,7 @@ export default function CandidatesPage() {
       limit: filters.limit,
       search: filters.search || undefined,
       status: filters.status !== "all" ? filters.status : undefined,
+      source: filters.source !== "all" ? filters.source : undefined,
       // server-side date filtering: send date-only strings (YYYY-MM-DD)
       dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
       dateTo: filters.dateTo ? format(filters.dateTo, 'yyyy-MM-dd') : undefined,
@@ -874,6 +884,59 @@ export default function CandidatesPage() {
 
               {/* Filters Row */}
               <div className="flex flex-wrap items-center gap-4">
+                {/* Source Filter */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
+                      Source
+                    </span>
+                  </div>
+                  <Select
+                    value={filters.source}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        source: value,
+                        page: 1,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
+                      <SelectValue placeholder="All Sources" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+                      <SelectItem
+                        value="all"
+                        className="rounded-lg hover:bg-blue-50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          All Sources
+                        </div>
+                      </SelectItem>
+                      {[
+                        { value: "manual", label: "Manual", color: "blue" },
+                        { value: "meta", label: "Meta", color: "green" },
+                        { value: "referral", label: "Referral", color: "purple" },
+                      ].map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="rounded-lg hover:bg-blue-50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-2 h-2 bg-${option.color}-500 rounded-full`}
+                            ></div>
+                            {option.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Status Filter */}
                 {/* <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">

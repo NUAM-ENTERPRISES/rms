@@ -52,6 +52,15 @@ export class GetRecruiterCandidatesDto {
   roleCatalogId?: string;
 
   @ApiPropertyOptional({
+    description: 'Filter by source',
+    enum: ['manual', 'meta', 'referral'],
+    example: 'manual',
+  })
+  @IsOptional()
+  @IsString()
+  source?: string;
+
+  @ApiPropertyOptional({
     description: 'Filter by candidate createdAt (from) - ISO datetime',
     example: '2026-02-19T00:00:00.000Z',
   })
