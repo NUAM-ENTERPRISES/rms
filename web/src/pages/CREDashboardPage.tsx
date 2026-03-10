@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye } from "lucide-react";
+import { UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useGetMyAssignedCandidatesQuery } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 import {
@@ -13,42 +13,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function CREDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
+  const [page, setPage] = useState(1);
+  const limitCount = 10;
+  
   // Fetch only candidates assigned to this CRE with RNR status
   const { data: assignedCandidatesData, isLoading } = useGetMyAssignedCandidatesQuery({
     currentStatus: 8, // RNR status
-    page: 1,
-    limit: 10,
+    page: page,
+    limit: limitCount,
+    search: debouncedSearch,
   });
 
-  // Double-check: Filter to ensure only candidates assigned to this user are shown
-  // This is a safety check in case backend doesn't filter properly
-  const allCandidates = Array.isArray(assignedCandidatesData?.data) 
-    ? assignedCandidatesData.data 
-    : [];
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const candidates = assignedCandidatesData?.data || [];
+  const totalCount = assignedCandidatesData?.total || 0;
+  const totalPages = assignedCandidatesData?.totalPages || 0;
   
-  // Filter candidates that have active recruiter assignments to this user
-  const candidates = allCandidates
-    .filter((candidate: any) => {
-      return candidate.recruiterAssignments?.some((assignment: any) => 
-        assignment.recruiterId === user?.id && assignment.isActive
-      );
-    })
-    .sort((a: any, b: any) => {
-      // Sort by most recent assignment date
-      const aDate = a.recruiterAssignments?.[0]?.assignedAt || a.createdAt;
-      const bDate = b.recruiterAssignments?.[0]?.assignedAt || b.createdAt;
-      return new Date(bDate).getTime() - new Date(aDate).getTime();
-    });
-  
-  const totalCount = candidates.length;
-  const recentCandidates = candidates.slice(0, 5);
-  
-  // Calculate stats
+  // Calculate stats based on current view/total
   const totalAssigned = totalCount;
   const todayAssigned = candidates.filter((candidate: any) => {
     const assignedDate = new Date(candidate.updatedAt || new Date());
@@ -135,12 +130,21 @@ export default function CREDashboardPage() {
         {/* Recent Assigned Candidates */}
         <Card className="border-0 shadow-xl bg-white/90">
           <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-blue-50">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl font-bold text-slate-800">Recently Assigned Candidates</CardTitle>
+                <CardTitle className="text-2xl font-bold text-slate-800">Assigned Candidates</CardTitle>
                 <CardDescription className="text-slate-600 mt-1">
                   RNR candidates escalated to you
                 </CardDescription>
+              </div>
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search by name, email or phone..."
+                  className="pl-10 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
             </div>
           </CardHeader>
@@ -155,17 +159,18 @@ export default function CREDashboardPage() {
                 <div className="h-20 w-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="h-10 w-10 text-slate-400" />
                 </div>
-                <p className="font-semibold text-lg text-slate-700">No RNR candidates assigned yet</p>
+                <p className="font-semibold text-lg text-slate-700">No RNR candidates found</p>
                 <p className="text-sm mt-2">
-                  You'll see candidates here once they're escalated to you
+                  {search ? "Try adjusting your search query" : "You'll see candidates here once they're escalated to you"}
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {recentCandidates.map((candidate: any) => {
-                  const assignment = candidate.recruiterAssignments?.find((a: any) => 
-                    a.recruiterId === user?.id && a.isActive
-                  );
+              <>
+                <div className="space-y-4">
+                  {candidates.map((candidate: any) => {
+                    const assignment = candidate.recruiterAssignments?.find((a: any) => 
+                      a.recruiterId === user?.id && a.isActive
+                    );
                   const assignedDate = assignment?.assignedAt || candidate.createdAt;
                   const assignedByUser = assignment?.assignedByUser;
                   const assignmentReason = assignment?.reason;
@@ -260,6 +265,67 @@ export default function CREDashboardPage() {
                   );
                 })}
               </div>
+
+              {/* Pagination UI */}
+              {totalPages > 1 && (
+                <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-6">
+                  <p className="text-sm text-slate-500">
+                    Showing <span className="font-semibold">{candidates.length}</span> of{" "}
+                    <span className="font-semibold">{totalCount}</span> candidates
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="gap-1 border-slate-200 hover:bg-slate-50 text-slate-600"
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Previous
+                    </Button>
+                    <div className="flex items-center gap-1.5 mx-2">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                        // Simple pagination: show all for small counts, or current + neighbors for large
+                        if (
+                          totalPages <= 7 ||
+                          p === 1 ||
+                          p === totalPages ||
+                          (p >= page - 1 && p <= page + 1)
+                        ) {
+                          return (
+                            <Button
+                              key={p}
+                              variant={page === p ? "default" : "ghost"}
+                              size="sm"
+                              onClick={() => setPage(p)}
+                              className={`h-8 w-8 p-0 ${
+                                page === p 
+                                  ? "bg-blue-600 hover:bg-blue-700 shadow-md" 
+                                  : "text-slate-600 hover:bg-slate-100"
+                              }`}
+                            >
+                              {p}
+                            </Button>
+                          );
+                        } else if (p === page - 2 || p === page + 2) {
+                          return <span key={p} className="text-slate-400">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="gap-1 border-slate-200 hover:bg-slate-50 text-slate-600"
+                    >
+                      Next <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </CardContent>
         </Card>
