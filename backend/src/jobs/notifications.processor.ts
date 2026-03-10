@@ -1131,6 +1131,18 @@ export class NotificationsProcessor extends WorkerHost {
         idemKey: `${eventId}:${recruiterId}:candidate_transferred_back`,
       });
 
+      // Also publish a sync event for real-time UI updates
+      await this.prisma.outboxEvent.create({
+        data: {
+          type: 'DataSync',
+          payload: {
+            type: 'Candidate',
+            candidateId,
+            message: `Candidate ${candidate.firstName} ${candidate.lastName} transferred back to you`,
+          },
+        },
+      });
+
       this.logger.log(
         `Candidate transferred back notification created for recruiter ${recruiterId}`,
       );

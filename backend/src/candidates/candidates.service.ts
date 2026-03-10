@@ -396,6 +396,13 @@ export class CandidatesService {
       );
     }
 
+    // Notify about candidate creation for real-time UI
+    await this.outboxService.publishEvent('DataSync', {
+      type: 'Candidate',
+      candidateId: candidate.id,
+      message: `New candidate ${candidate.firstName} ${candidate.lastName} created`,
+    });
+
     return candidate;
   }
 
@@ -1323,6 +1330,13 @@ export class CandidatesService {
       },
     });
 
+    // Notify about candidate update for real-time UI
+    await this.outboxService.publishEvent('DataSync', {
+      type: 'Candidate',
+      candidateId: id,
+      message: `Candidate ${candidate.firstName} ${candidate.lastName} updated`,
+    });
+
     return candidate;
   }
 
@@ -1352,6 +1366,13 @@ export class CandidatesService {
     // Delete candidate (related records will be deleted via cascade)
     await this.prisma.candidate.delete({
       where: { id },
+    });
+
+    // Notify about candidate deletion for real-time UI
+    await this.outboxService.publishEvent('DataSync', {
+      type: 'Candidate',
+      candidateId: id,
+      message: `Candidate ${candidate.firstName} ${candidate.lastName} deleted`,
     });
 
     return {

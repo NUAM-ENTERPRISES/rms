@@ -52,14 +52,24 @@ export function MergeVerifiedModal({
   );
 
   // Extract verified documents
-  const { verifiedDocuments, activeRoleCatalogId, candidateProjectMapId } = useMemo(() => {
+  const { verifiedDocuments, activeRoleCatalogId, candidateProjectMapId, candidateName } = useMemo(() => {
     if (!verificationsResponse?.data) {
-      return { verifiedDocuments: [], activeRoleCatalogId: roleCatalogId, candidateProjectMapId: undefined };
+      return { 
+        verifiedDocuments: [], 
+        activeRoleCatalogId: roleCatalogId, 
+        candidateProjectMapId: undefined,
+        candidateName: '' 
+      };
     }
 
     const docs = verificationsResponse.data.verifications
       .filter(v => v.status === 'verified')
       .map(v => v.document);
+
+    const candidate = verificationsResponse.data.candidateProject?.candidate;
+    const candidateName = candidate 
+      ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() 
+      : '';
 
     // Get the roleCatalogId from the first verification if available, 
     // fall back to the one from the candidateProject, then the prop
@@ -70,7 +80,8 @@ export function MergeVerifiedModal({
     return { 
       verifiedDocuments: docs, 
       activeRoleCatalogId: roleId,
-      candidateProjectMapId: verificationsResponse.data.candidateProject?.id
+      candidateProjectMapId: verificationsResponse.data.candidateProject?.id,
+      candidateName,
     };
   }, [verificationsResponse, roleCatalogId]);
 
@@ -222,7 +233,11 @@ export function MergeVerifiedModal({
       
       // Try to get filename from content-disposition
       const disposition = response.headers.get('content-disposition');
-      let filename = 'Merged_Documents.pdf';
+      
+      // Default name with candidate name if available
+      const formattedCandidateName = candidateName ? candidateName.toLowerCase().replace(/\s+/g, '-') : '';
+      let filename = formattedCandidateName ? `${formattedCandidateName}-merged-documents.pdf` : 'Merged_Documents.pdf';
+      
       if (disposition && disposition.indexOf('attachment') !== -1) {
         const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
         const matches = filenameRegex.exec(disposition);

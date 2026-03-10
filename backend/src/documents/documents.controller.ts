@@ -364,6 +364,17 @@ export class DocumentsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const docIds = documentIds ? documentIds.split(',') : undefined;
+
+    // Fetch candidate name for the filename
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { firstName: true, lastName: true },
+    });
+
+    const formattedName = candidate 
+      ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim().toLowerCase().replace(/\s+/g, '-')
+      : 'candidate';
+
     const buffer = await this.documentsService.mergeVerifiedDocuments(
       candidateId,
       projectId,
@@ -373,7 +384,7 @@ export class DocumentsController {
     );
 
     // 1. Upload the merged PDF to storage
-    const fileName = `merged_${candidateId}_${projectId}_${roleCatalogId || 'all'}.pdf`;
+    const fileName = `${formattedName}-merged-documents.pdf`;
     const uploadResult = await this.uploadService.uploadBuffer(
       buffer,
       `merged-documents/${candidateId}`,

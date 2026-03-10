@@ -366,6 +366,12 @@ export interface CandidateProjectVerificationsResponse {
     recruiterId: string;
     createdAt: string;
     updatedAt: string;
+    candidate?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email?: string;
+    };
   };
   roleNeeded: CandidateProjectRole;
   verifications: CandidateProjectVerification[];

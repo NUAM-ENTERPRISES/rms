@@ -630,7 +630,9 @@ export function SendToClientModal({
                       Unified PDF (All Documents Merged)
                     </Label>
                     <p className={`text-xs mt-0.5 ${hasIndividualSelected ? "text-slate-400" : "text-emerald-700"}`}>
-                      {mergedDoc.fileName ? abbreviateFileName(mergedDoc.fileName) : "merged_documents.pdf"} 
+                      {mergedDoc.fileName && !mergedDoc.fileName.startsWith('merged_') 
+                        ? abbreviateFileName(mergedDoc.fileName) 
+                        : `${candidateName.toLowerCase().replace(/\s+/g, '-')}-merged-documents.pdf`} 
                       <span className="mx-2">•</span>
                       {mergedDoc.fileSize > 0 && (
                         <>
