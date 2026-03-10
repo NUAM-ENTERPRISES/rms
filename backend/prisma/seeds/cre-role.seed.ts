@@ -23,9 +23,13 @@ export async function seedCRERole() {
   const crePermissions = [
     // Candidate Permissions
     { key: 'read:candidates', description: 'View candidates' },
+    { key: 'write:candidates', description: 'Create candidates' },
     { key: 'manage:candidates', description: 'Manage candidates (full access)' },
     { key: 'update:candidates', description: 'Update candidates' },
     { key: 'transfer_back:candidates', description: 'Can transfer candidate back to previous recruiter' },
+    
+    // Document Permissions
+    { key: 'read:documents', description: 'Read candidate documents' },
     
     // View their own notifications
     { key: 'read:notifications', description: 'View notifications' },

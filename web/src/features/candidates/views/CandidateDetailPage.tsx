@@ -286,13 +286,20 @@ export default function CandidateDetailPage() {
               </h1>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm text-slate-500">
               {candidate.currentRole || "No role specified"}
             </span>
             <span className="text-sm text-slate-400">
-              Created {formatDate(candidate.createdAt)}
+              Added {formatDate(candidate.createdAt)}
             </span>
+            {candidate.createdBy && (
+              <div className="flex items-center gap-2 bg-blue-50/50 px-2.5 py-1 rounded-full border border-blue-100/50">
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Created By:</span>
+                <span className="text-xs font-semibold text-blue-700">{candidate.createdBy.name}</span>
+                <span className="text-[10px] text-blue-400 font-medium">({candidate.createdBy.email})</span>
+              </div>
+            )}
           </div>
         </div>
           <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">

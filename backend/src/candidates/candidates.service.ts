@@ -694,6 +694,13 @@ export class CandidatesService {
                 email: true,
               },
             },
+            assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
           orderBy: {
             assignedAt: 'desc',
@@ -713,9 +720,17 @@ export class CandidatesService {
       },
     });
 
+    const candidatesWithCreator = candidates.map((candidate: any) => {
+      const activeAssignment = candidate.recruiterAssignments?.[0];
+      return {
+        ...candidate,
+        createdBy: activeAssignment?.assignedByUser || null,
+        recruiter: activeAssignment?.recruiter || null,
+      };
+    });
 
     return {
-      candidates,
+      candidates: candidatesWithCreator as any,
       pagination: {
         page,
         limit,
@@ -1077,6 +1092,18 @@ export class CandidatesService {
           },
         },
         facilityPreferences: true,
+        recruiterAssignments: {
+          include: {
+            assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { assignedAt: 'asc' },
+        },
       },
     });
 
@@ -1084,8 +1111,15 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
+    // Extract the creator from the first assignment
+    const firstAssignment = candidate.recruiterAssignments?.[0];
+    const createdBy = firstAssignment?.assignedByUser || null;
+
     // Pipeline data removed from response to reduce payload
-    return candidate;
+    return {
+      ...candidate,
+      createdBy,
+    } as any;
   }
 
   /**
@@ -2760,17 +2794,28 @@ export class CandidatesService {
     roles: string[],
   ): Promise<any> {
     const isManagerOrAdmin = roles.some((role) =>
-      ['CEO', 'Director', 'Manager', 'Team Head', 'Team Lead', 'System Admin'].includes(role),
+      ['CEO', 'Director', 'Manager', 'Team Head', 'Team Lead', 'System Admin', 'CRE'].includes(role),
     );
 
-    // If a specific recruiter ID is passed and requester is manager/admin, use it.
+    const isRecruiter = roles.includes('Recruiter');
+
+    // If a specific recruiter ID is passed and requester is manager/admin/cre, use it.
     // Otherwise, if recruiter, force filter by their ID.
-    const targetRecruiterId = isManagerOrAdmin ? query.recruiterId : userId;
+    // If it's none of above, could be something else, default to all for now.
+    let targetRecruiterId = query.recruiterId;
+
+    if (isRecruiter) {
+      targetRecruiterId = userId;
+    } else if (!isManagerOrAdmin) {
+      // If Not a recruiter AND not a manager/admin/cre, default to userId or all
+      // For now, let's keep it as is or default to all if not specified
+      targetRecruiterId = query.recruiterId;
+    }
 
     const where: any = {};
 
     // Base filter for list and counts: candidates assigned to the recruiter
-    if (targetRecruiterId) {
+    if (targetRecruiterId && targetRecruiterId !== 'all') {
       where.recruiterAssignments = {
         some: {
           recruiterId: targetRecruiterId,
@@ -3126,7 +3171,6 @@ export class CandidatesService {
           include: { country: true },
         },
         recruiterAssignments: {
-          where: { isActive: true },
           include: {
             recruiter: {
               select: {
@@ -3135,7 +3179,15 @@ export class CandidatesService {
                 email: true,
               },
             },
+            assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
+          orderBy: { createdAt: 'asc' },
         },
       },
       orderBy: { [sortBy as string]: sortOrder },
@@ -3145,9 +3197,11 @@ export class CandidatesService {
 
     const candidates = candidatesData.map((c) => {
       const activeAssignment = c.recruiterAssignments?.find((a) => a.isActive);
+      const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
       return {
         ...c,
         recruiter: activeAssignment?.recruiter || null,
+        createdBy: firstAssignment?.assignedByUser || null,
       };
     });
 

@@ -72,7 +72,6 @@ import { useAppSelector } from "@/app/hooks";
 import { useCan } from "@/hooks/useCan";
 import { motion } from "framer-motion";
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { StatusBadge } from "../components/StatusBadge";
 import { UserSelect } from "../components/UserSelect";
 import { DatePicker, ImageViewer, MultiCountrySelect, MultiSelect } from "@/components/molecules";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
@@ -83,7 +82,7 @@ export default function CandidateOverviewPage() {
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
   const isManagerOrAdmin = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role)
+    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin", "CRE"].includes(role)
   );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
@@ -108,7 +107,7 @@ export default function CandidateOverviewPage() {
     search: "",
     page: 1,
     limit: 10,
-    recruiterId: isManagerOrAdmin ? "all" : currentUser?.id,
+    recruiterId: (isManagerOrAdmin && !isRecruiter) ? "all" : currentUser?.id,
     dateFilter: "all",
     dateFrom: undefined as Date | undefined,
     dateTo: undefined as Date | undefined,
@@ -172,7 +171,7 @@ export default function CandidateOverviewPage() {
       search: "",
       page: 1,
       limit: 10,
-      recruiterId: isManagerOrAdmin ? "all" : currentUser?.id,
+      recruiterId: (isManagerOrAdmin && !isRecruiter) ? "all" : currentUser?.id,
       dateFilter: "all",
       dateFrom: undefined,
       dateTo: undefined,
@@ -536,24 +535,25 @@ export default function CandidateOverviewPage() {
                <Table>
                 <TableHeader className="sticky">
                   <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">Status</TableHead>
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">Last Updated</TableHead>
-                    <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">Contact</TableHead>
-                    <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">Actions</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Candidate</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Recruiter</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Created By</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Status</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Last Updated</TableHead>
+                    <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">Contact</TableHead>
+                    <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
-                        <TableCell colSpan={6} className="px-6 py-5"><div className="h-10 bg-slate-100 rounded" /></TableCell>
+                        <TableCell colSpan={7} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
                       </TableRow>
                     ))
                   ) : candidates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-64 text-center">
+                      <TableCell colSpan={7} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <UserCheck className="h-12 w-12 text-slate-200 mb-4" />
                           <p className="text-slate-500 font-medium">No candidates found for the selected filters.</p>
@@ -569,44 +569,45 @@ export default function CandidateOverviewPage() {
                       // Determine active recruiter assignment
                       const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
+                      const createdBy = (candidate as any).createdBy || null;
 
                       return (
                         <TableRow key={candidate.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
                           {/* Candidate */}
-                          <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-4">
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-3">
                               <ImageViewer
                                 title={`${candidate.firstName} ${candidate.lastName}`}
                                 src={candidate.profileImage || null}
                                 fallbackSrc={
                                   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                                 }
-                                className="h-11 w-11 rounded-full"
+                                className="h-10 w-10 rounded-full"
                                 ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
                                 enableHoverPreview={true}
                               />
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     navigate(`/candidates/${candidate.id}`);
                                   }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
+                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-xs"
                                 >
                                   {candidate.firstName} {candidate.lastName}
                                 </button>
-                                <div className="text-sm text-slate-500 mt-1 font-medium">
+                                <div className="text-[11px] text-slate-500 mt-0.5 font-medium truncate">
                                   {candidate.currentRole || ""}
                                 </div>
-                                <div className="text-sm text-slate-500 mt-2 space-y-1">
+                                <div className="text-[11px] text-slate-500 mt-1.5 space-y-0.5">
                                   {candidate.email && (
-                                    <div className="flex items-center gap-2">
-                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">{candidate.email}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <Mail className="h-3 w-3 text-gray-400" />
+                                      <span className="text-gray-700 truncate">{candidate.email}</span>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2">
-                                    <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                  <div className="flex items-center gap-1.5">
+                                    <Phone className="h-3 w-3 text-gray-400" />
                                     <span className="text-gray-700">{candidate.countryCode} {candidate.mobileNumber}</span>
                                   </div>
                                 </div>
@@ -615,15 +616,15 @@ export default function CandidateOverviewPage() {
                           </TableCell>
 
                           {/* Recruiter */}
-                          <TableCell className="px-6 py-5">
-                            <div className="text-sm">
+                          <TableCell className="px-4 py-3">
+                            <div className="text-xs">
                               {recruiter ? (
-                                <div className="space-y-1">
-                                  <div className="font-medium text-slate-900">{recruiter.name}</div>
+                                <div className="space-y-0.5">
+                                  <div className="font-medium text-slate-900 truncate max-w-[120px]">{recruiter.name}</div>
                                   {recruiter.email && (
-                                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span>{recruiter.email}</span>
+                                    <div className="flex items-center gap-1.5 text-slate-700">
+                                      <Mail className="h-3 w-3 text-gray-400" />
+                                      <span className="truncate max-w-[120px]">{recruiter.email}</span>
                                     </div>
                                   )}
                                 </div>
@@ -633,15 +634,34 @@ export default function CandidateOverviewPage() {
                             </div>
                           </TableCell>
 
+                          {/* Created By */}
+                          <TableCell className="px-4 py-3">
+                            <div className="text-xs">
+                              {createdBy ? (
+                                <div className="space-y-0.5">
+                                  <div className="font-medium text-slate-900 truncate max-w-[120px]">{createdBy.name}</div>
+                                  {createdBy.email && (
+                                    <div className="flex items-center gap-1.5 text-slate-700">
+                                      <Mail className="h-3 w-3 text-gray-400" />
+                                      <span className="truncate max-w-[120px]">{createdBy.email}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-500 text-[10px]">System / Admin</span>
+                              )}
+                            </div>
+                          </TableCell>
+
                           {/* Status */}
-                          <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`p-1.5 rounded-full ${statusInfo.bgColor}`}>
-                                <StatusIcon className={`h-4 w-4 ${statusInfo.textColor.replace("700", "600")}`} />
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className={`p-1 rounded-full ${statusInfo.bgColor}`}>
+                                <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.textColor.replace("700", "600")}`} />
                               </div>
                               <Badge
                                 variant="outline"
-                                className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-xs px-2.5 py-1`}
+                                className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
                               >
                                 {statusName || "Unknown"}
                               </Badge>
@@ -649,37 +669,37 @@ export default function CandidateOverviewPage() {
                           </TableCell>
 
                           {/* Last Updated */}
-                          <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Calendar className="h-4 w-4 text-gray-400" />
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
                               {formatDate(candidate.updatedAt)}
                             </div>
                           </TableCell>
 
                           {/* Contact */}
-                          <TableCell className="px-6 py-5 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                          <TableCell className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
                               {(() => {
                                 const phoneDigits = formatPhoneForLink(candidate);
                                 return (
                                   <>
                                     <Button
                                       variant="ghost"
-                                      className="h-8 w-8 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 hover:text-green-700 shadow-sm transition-all"
+                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
                                       onClick={() => phoneDigits && window.open(`https://wa.me/${phoneDigits}`, "_blank")}
                                       disabled={!phoneDigits}
                                       title="WhatsApp"
                                     >
-                                      <FaWhatsapp className="h-5 w-5" />
+                                      <FaWhatsapp className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="ghost"
-                                      className="h-8 w-8 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 shadow-sm transition-all"
+                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
                                       onClick={() => phoneDigits && (window.location.href = `tel:${phoneDigits}`)}
                                       disabled={!phoneDigits}
                                       title="Call"
                                     >
-                                      <Phone className="h-5 w-5" />
+                                      <Phone className="h-4 w-4" />
                                     </Button>
                                   </>
                                 );
@@ -688,7 +708,7 @@ export default function CandidateOverviewPage() {
                           </TableCell>
 
                           {/* Actions */}
-                          <TableCell className="px-6 py-5 text-right">
+                          <TableCell className="px-4 py-3 text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100">

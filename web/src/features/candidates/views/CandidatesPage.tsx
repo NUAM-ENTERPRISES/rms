@@ -1391,23 +1391,26 @@ export default function CandidatesPage() {
               <Table>
                 <TableHeader className="sticky">
                   <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Candidate
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Recruiter
                     </TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                      Created By
+                    </TableHead>
                     {/* Skills column removed */}
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Status
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Last Updated
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Contact
                     </TableHead>
-                    <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -1430,8 +1433,8 @@ export default function CandidatesPage() {
                           className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0"
                         >
                           {/* Candidate */}
-                          <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-4">
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-3">
                               {/* FULL VIBRANT COLOR AVATAR */}
                               <ImageViewer
                                 title={`${candidate.firstName} ${candidate.lastName}`}
@@ -1439,35 +1442,35 @@ export default function CandidatesPage() {
                                 fallbackSrc={
                                   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                                 }
-                                className="h-11 w-11 rounded-full"
+                                className="h-10 w-10 rounded-full"
                                 ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
                                 enableHoverPreview={true} /* show hover preview on desktop */
                               />
 
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     navigate(`/candidates/${candidate.id}`);
                                   }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
+                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-sm"
                                 >
                                   {candidate.firstName} {candidate.lastName}
                                 </button>
-                                <div className="text-sm text-slate-500 mt-1 font-medium">
+                                <div className="text-xs text-slate-500 mt-0.5 font-medium truncate">
                                   {candidate.currentRole || ""}
                                 </div>
 
                                 {/* Contact moved below profile */}
-                                <div className="text-sm text-slate-500 mt-2 space-y-1">
+                                <div className="text-xs text-slate-500 mt-1.5 space-y-0.5">
                                   {candidate.email && (
-                                    <div className="flex items-center gap-2">
-                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">{candidate.email}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <Mail className="h-3 w-3 text-gray-400" />
+                                      <span className="text-gray-700 truncate">{candidate.email}</span>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2">
-                                    <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                  <div className="flex items-center gap-1.5">
+                                    <Phone className="h-3 w-3 text-gray-400" />
                                     <span className="text-gray-700">{candidate.countryCode} {candidate.mobileNumber}</span>
                                   </div>
                                 </div>
@@ -1476,15 +1479,15 @@ export default function CandidatesPage() {
                           </TableCell>
 
                           {/* Recruiter */}
-                          <TableCell className="px-6 py-5">
-                            <div className="text-sm">
+                          <TableCell className="px-4 py-3">
+                            <div className="text-xs">
                               {recruiter ? (
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                   <div className="font-medium text-slate-900">{recruiter.name}</div>
                                   {recruiter.email && (
-                                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span>{recruiter.email}</span>
+                                    <div className="flex items-center gap-1.5 text-slate-700">
+                                      <Mail className="h-3 w-3 text-gray-400" />
+                                      <span className="truncate max-w-[120px]">{recruiter.email}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1494,18 +1497,34 @@ export default function CandidatesPage() {
                             </div>
                           </TableCell>
 
-                          {/* Skills cell removed */}
+                          {/* Created By */}
+                          <TableCell className="px-4 py-3">
+                            <div className="text-xs">
+                              {(candidate as any).createdBy ? (
+                                <div className="space-y-0.5">
+                                  <div className="font-medium text-slate-900">{(candidate as any).createdBy.name}</div>
+                                  {(candidate as any).createdBy.email && (
+                                    <div className="flex items-center gap-1.5 text-slate-700">
+                                      <Mail className="h-3 w-3 text-gray-400" />
+                                      <span className="truncate max-w-[120px]">{(candidate as any).createdBy.email}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-500 text-[10px]">System / Admin</span>
+                              )}
+                            </div>
+                          </TableCell>
 
                           {/* Status Column (single source of truth) */}
-                          {/* Status Column */}
-                          <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-2.5">
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-2">
                               {/* Colored icon in a tiny circle */}
                               <div
-                                className={`p-1.5 rounded-full ${statusInfo.bgColor}`}
+                                className={`p-1 rounded-full ${statusInfo.bgColor}`}
                               >
                                 <StatusIcon
-                                  className={`h-4 w-4 ${statusInfo.textColor.replace(
+                                  className={`h-3.5 w-3.5 ${statusInfo.textColor.replace(
                                     "700",
                                     "600"
                                   )} `}
@@ -1522,8 +1541,8 @@ export default function CandidatesPage() {
                         ${statusInfo.borderColor} 
                         border 
                         font-medium 
-                        text-xs 
-                        px-2.5 py-1
+                        text-[10px] 
+                        px-2 py-0.5
                       `}
                               >
                                 {candidate.currentStatus?.statusName || "Unknown"}
@@ -1532,45 +1551,43 @@ export default function CandidatesPage() {
                           </TableCell>
 
                           {/* Last Updated */}
-                          <TableCell className="px-6 py-5">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Calendar className="h-4 w-4 text-gray-400" />
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
                               {formatDate(candidate.updatedAt)}
                             </div>
                           </TableCell>
 
                           {/* Contact */}
-                          <TableCell className="px-6 py-5 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                          <TableCell className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
                               {(() => {
                                 const phoneDigits = formatPhoneForLink(candidate);
                                 return (
                                   <>
                                     <Button
                                       variant="ghost"
-                                      className="h-8 w-8 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 hover:text-green-700 shadow-sm hover:shadow-md border border-green-100/50 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-200"
+                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
                                       onClick={() =>
                                         phoneDigits &&
                                         window.open(`https://wa.me/${phoneDigits}`, "_blank")
                                       }
                                       disabled={!phoneDigits}
                                       title={`WhatsApp ${candidate.firstName || ""}`}
-                                      aria-label={`WhatsApp ${candidate.firstName || ""}`}
                                     >
-                                      <FaWhatsapp className="h-5 w-5" />
+                                      <FaWhatsapp className="h-4 w-4" />
                                     </Button>
 
                                     <Button
                                       variant="ghost"
-                                      className="h-8 w-8 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 shadow-sm hover:shadow-md border border-blue-100/50 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-200"
+                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
                                       onClick={() =>
                                         phoneDigits && (window.location.href = `tel:${phoneDigits}`)
                                       }
                                       disabled={!phoneDigits}
                                       title={`Call ${candidate.firstName || ""}`}
-                                      aria-label={`Call ${candidate.firstName || ""}`}
                                     >
-                                      <Phone className="h-5 w-5" />
+                                      <Phone className="h-4 w-4" />
                                     </Button>
                                   </>
                                 );
@@ -1579,7 +1596,7 @@ export default function CandidatesPage() {
                           </TableCell>
 
                           {/* Actions */}
-                          <TableCell className="px-6 py-5 text-right">
+                          <TableCell className="px-4 py-3 text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="h-8 w-8 p-0">
