@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye, RotateCcw } from "lucide-react";
+import { UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye } from "lucide-react";
 import { useGetMyAssignedCandidatesQuery } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 import {
@@ -13,55 +13,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useState } from "react";
-
-import { useCan } from "@/hooks/useCan";
 
 export default function CREDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
-  const canTransferBack = useCan("transfer_back:candidates");
   
-
-  const [transferBackState, setTransferBackState] = useState<{
-    isOpen: boolean;
-    candidateId: string;
-    candidateName: string;
-    targetRecruiterName: string;
-  }>({
-    isOpen: false,
-    candidateId: "",
-    candidateName: "",
-    targetRecruiterName: "",
-  });
-
-  const handleTransferBack = async () => {
-    if (!transferBackState.candidateId) return;
-    try {
-      await transferBackCandidate(transferBackState.candidateId).unwrap();
-      toast.success("Candidate transferred back successfully");
-      setTransferBackState(prev => ({ ...prev, isOpen: false }));
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to transfer candidate back");
-    }
-  };
-
-  const openTransferBackModal = (e: React.MouseEvent, candidate: any, targetName: string) => {
-    e.stopPropagation();
-    setTransferBackState({
-      isOpen: true,
-      candidateId: candidate.id,
-      candidateName: `${candidate.firstName} ${candidate.lastName}`,
-      targetRecruiterName: targetName,
-    });
-  };
-
   // Fetch only candidates assigned to this CRE with RNR status
   const { data: assignedCandidatesData, isLoading } = useGetMyAssignedCandidatesQuery({
     currentStatus: 8, // RNR status
     page: 1,
-    limit: 100,
+    limit: 10,
   });
 
   // Double-check: Filter to ensure only candidates assigned to this user are shown
