@@ -98,6 +98,10 @@ export interface Candidate {
   // Legacy fields for backward compatibility
   experience?: number;
   skills?: string[];
+  createdBy?: {
+    name: string;
+    email: string;
+  } | null;
   assignedTo?: string;
   matchScore?: number;
   createdAt: string;
