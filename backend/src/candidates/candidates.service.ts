@@ -2299,6 +2299,13 @@ export class CandidatesService {
       },
     });
 
+    // Notify about status update for real-time UI
+    await this.outboxService.publishEvent('DataSync', {
+      type: 'Candidate',
+      candidateId,
+      message: `Status updated to ${status.statusName} for ${updatedCandidate.firstName} ${updatedCandidate.lastName}`,
+    });
+
     // ===== RNR REMINDER LOGIC START =====
     // If status is changing TO RNR (statusId = 8), create a reminder
     if (updateStatusDto.currentStatusId === 8) {

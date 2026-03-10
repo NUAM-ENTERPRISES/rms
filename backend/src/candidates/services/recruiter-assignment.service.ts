@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
+import { OutboxService } from '../../notifications/outbox.service';
 
 export interface RecruiterInfo {
   id: string;
@@ -14,7 +15,10 @@ export interface RecruiterInfo {
 export class RecruiterAssignmentService {
   private readonly logger = new Logger(RecruiterAssignmentService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outboxService: OutboxService,
+  ) { }
 
   /**
    * Get the best recruiter to assign to a candidate based on user role and workload
@@ -206,6 +210,14 @@ export class RecruiterAssignmentService {
       },
     });
 
+    // Notify about assignment
+    await this.outboxService.publishCandidateRecruiterAssigned(
+      candidateId,
+      recruiter.id,
+      createdByUserId,
+      reason,
+    );
+
     this.logger.log(
       `Assigned recruiter ${recruiter.name} to candidate ${candidateId}`,
     );
@@ -249,6 +261,14 @@ export class RecruiterAssignmentService {
         reason: reason || 'Automatic CRE assignment for RNR status',
       },
     });
+
+    // Notify about assignment
+    await this.outboxService.publishCandidateRecruiterAssigned(
+      candidateId,
+      cre.id,
+      assignerUserId,
+      reason,
+    );
 
     this.logger.log(
       `Assigned CRE ${cre.name} to candidate ${candidateId} for RNR handling`,

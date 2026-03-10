@@ -196,6 +196,28 @@ export class OutboxService {
   }
 
   /**
+   * Publish candidate recruiter assigned event (CRE assignment)
+   */
+  async publishCandidateRecruiterAssigned(
+    candidateId: string,
+    recruiterId: string,
+    assignedBy: string,
+    reason?: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateRecruiterAssigned',
+      {
+        candidateId,
+        recruiterId,
+        assignedBy,
+        reason,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish member transfer requested event
    */
   async publishMemberTransferRequested(

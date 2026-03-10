@@ -1,8 +1,9 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 export interface NotificationJobData {
   type: string;
@@ -17,6 +18,8 @@ export class NotificationsProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private readonly notificationsGateway: NotificationsGateway,
   ) {
     super();
   }
@@ -67,6 +70,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleRecruiterNotification(job);
         case 'DocumentationNotification':
           return await this.handleDocumentationNotification(job);
+        case 'DataSync':
+          return await this.handleDataSyncJob(job);
         default:
           this.logger.warn(`Unknown notification type: ${type}`);
           return { success: false, message: `Unknown type: ${type}` };
@@ -1058,6 +1063,18 @@ export class NotificationsProcessor extends WorkerHost {
         idemKey,
       });
 
+      // Also publish a sync event for real-time UI updates
+      await this.prisma.outboxEvent.create({
+        data: {
+          type: 'DataSync',
+          payload: {
+            type: 'Candidate',
+            candidateId,
+            message: `New candidate assigned: ${candidate.firstName} ${candidate.lastName}`,
+          },
+        },
+      });
+
       this.logger.log(
         `Candidate transferred notification created for recruiter ${recruiterId}`,
       );
@@ -1728,6 +1745,42 @@ export class NotificationsProcessor extends WorkerHost {
         error.stack,
       );
       throw error;
+    }
+  }
+
+  /**
+   * Handle generic DataSync events for real-time UI updates
+   */
+  async handleDataSyncJob(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing DataSync event: ${eventId}`);
+
+    try {
+      const { userId, type, message, ...rest } = payload as any;
+
+      if (userId) {
+        // Targeted sync for a specific user
+        await this.notificationsGateway.emitToUser(userId, 'data:sync', {
+          type,
+          message,
+          ...rest,
+        });
+      } else {
+        // Global sync or logic-based sync (could be improved by adding rooms)
+        // For now, emit to all connected users if no specific userId
+        this.notificationsGateway.server.emit('data:sync', {
+          type,
+          message,
+          ...rest,
+        });
+      }
+
+      this.logger.debug(`DataSync event processed for type: ${type}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to process DataSync event: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }

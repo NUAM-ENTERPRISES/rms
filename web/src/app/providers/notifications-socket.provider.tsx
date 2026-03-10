@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocumentSync } from "./notification-handlers/document-handler";
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
 import { handleInterviewNotifications } from "./notification-handlers/interview-handler";
+import { handleCRENotifications, handleCRESync } from "./notification-handlers/cre-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -149,6 +150,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleScreeningNotifications(context);
       handleDocumentNotifications(context);
       handleInterviewNotifications(context);
+      handleCRENotifications(context);
     });
 
     socket.on("data:sync", (payload: any) => {
@@ -158,6 +160,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       
       if (handleScreeningSync(payload, context)) return;
       if (handleDocumentSync(payload, context)) return;
+      if (handleCRESync(payload, context)) return;
       
       if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));

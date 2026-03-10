@@ -380,6 +380,18 @@ export class RnrReminderProcessor extends WorkerHost {
         },
       });
 
+      // Also publish a sync event for real-time UI updates
+      await this.prisma.outboxEvent.create({
+        data: {
+          type: 'DataSync',
+          payload: {
+            type: 'Candidate',
+            candidateId,
+            message: `Candidate ${candidate.firstName} ${candidate.lastName} has been escalated to CRE ${assignedCRE.name}`,
+          },
+        },
+      });
+
       // Send notifications
       await this.sendCREAssignmentNotifications(
         candidateId,
