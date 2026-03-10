@@ -365,11 +365,8 @@ export class DocumentsController {
   ) {
     const docIds = documentIds ? documentIds.split(',') : undefined;
 
-    // Fetch candidate name for the filename
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id: candidateId },
-      select: { firstName: true, lastName: true },
-    });
+    // Fetch candidate name for the filename via service instead of direct prisma access
+    const candidate = await this.documentsService.getCandidateForNaming(candidateId);
 
     const formattedName = candidate 
       ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim().toLowerCase().replace(/\s+/g, '-')

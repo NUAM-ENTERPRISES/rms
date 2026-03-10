@@ -151,6 +151,16 @@ export class DocumentsService {
   }
 
   /**
+   * Get candidate data for naming files
+   */
+  async getCandidateForNaming(candidateId: string) {
+    return this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { firstName: true, lastName: true },
+    });
+  }
+
+  /**
    * Get all documents with pagination and filtering
    */
   async findAll(query: QueryDocumentsDto): Promise<PaginatedDocuments> {
