@@ -62,6 +62,9 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateTransferredToProcessing(job);
         case 'CandidateHired':
           return await this.handleCandidateHired(job);
+        case 'CandidateReadyForProcessing':
+        case 'interview_passed':
+          return await this.handleCandidateReadyForProcessing(job);
         case 'DocumentsForwardedToClient':
           return await this.handleDocumentsForwardedToClient(job);
         case 'CandidateFailedScreening':
@@ -1540,6 +1543,63 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(`Candidate hired notification created for recruiter ${recruiterId}`);
     } catch (err) {
       this.logger.error(`Failed to process CandidateHired event ${eventId}: ${err?.message || err}`, err?.stack);
+      throw err;
+    }
+  }
+
+  async handleCandidateReadyForProcessing(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing candidate ready for processing event: ${eventId}`);
+
+    try {
+      const { candidateProjectMapId, candidateName, projectName, projectId, changedBy } =
+        payload as {
+          candidateProjectMapId: string;
+          candidateName: string;
+          projectName: string;
+          projectId: string;
+          changedBy?: string | null;
+        };
+
+      // Get target roles (Admin, Manager, Team Lead, System Administrator)
+      const targetRoles = [
+        'Admin',
+        'Manager',
+        'Team Lead',
+        'System Administrator',
+      ];
+      const targetUsers = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: { in: targetRoles },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      this.logger.log(`Found ${targetUsers.length} users to notify for Ready for Processing`);
+
+      for (const user of targetUsers) {
+        const idemKey = `${eventId}:ready_processing:${candidateProjectMapId}:${user.id}`;
+        
+        await this.notificationsService.createNotification({
+          userId: user.id,
+          type: 'candidate_ready_for_processing',
+          title: 'Candidate Ready for Processing',
+          message: `${candidateName} is now ready for processing for project "${projectName}"${changedBy ? ` (marked by ${changedBy})` : ''}`,
+          link: '/ready-for-processing',
+          meta: { candidateProjectMapId, projectId },
+          idemKey,
+        });
+      }
+
+      this.logger.log(`Ready for processing notifications created for ${targetUsers.length} users`);
+    } catch (err) {
+      this.logger.error(`Failed to process CandidateReadyForProcessing event ${eventId}: ${err?.message || err}`, err?.stack);
       throw err;
     }
   }

@@ -403,6 +403,22 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingDetails", id: processingId },
       ],
     }),
+
+    // Update processing candidate details (e.g., fileNumber)
+    updateProcessingCandidate: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { id: string; fileNumber: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/processing/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "ProcessingDetails", id },
+        { type: "ProcessingSteps", id },
+      ],
+    }),
   }),
 });
 
@@ -429,4 +445,5 @@ export const {
   useVerifyProcessingDocumentMutation,
   useCancelStepMutation,
   useSubmitHrdDateMutation,
+  useUpdateProcessingCandidateMutation,
 } = processingApi;

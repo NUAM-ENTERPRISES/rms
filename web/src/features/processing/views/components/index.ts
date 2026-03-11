@@ -21,3 +21,5 @@ export { MedicalModal } from "./MedicalModal";
 export { DataFlowModal } from "./DataFlowModal";
 export { EligibilityModal } from "./EligibilityModal";
 export { PrometricModal } from "./PrometricModal";
+export { EditFileNumberModal } from "./EditFileNumberModal";
+export { DocumentReceivedModal } from "./DocumentReceivedModal";

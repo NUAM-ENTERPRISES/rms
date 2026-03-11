@@ -7,6 +7,7 @@ import { DOCUMENT_TYPE, DOCUMENT_STATUS, CANDIDATE_STATUS } from '../common/cons
 import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
 import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
+import { UpdateProcessingCandidateDto } from './dto/update-processing-candidate.dto';
 import { OutboxService } from '../notifications/outbox.service';
 import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
 import { DataFlowRemindersService } from '../data-flow-reminders/data-flow-reminders.service';
@@ -2881,6 +2882,27 @@ export class ProcessingService {
     });
 
     return { success: true };
+  }
+
+  /**
+   * Update basic processing candidate fields (e.g., fileNumber)
+   */
+  async updateProcessingCandidate(id: string, dto: UpdateProcessingCandidateDto, userId: string) {
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id },
+    });
+
+    if (!pc) {
+      throw new NotFoundException(`Processing candidate with ID ${id} not found`);
+    }
+
+    return this.prisma.processingCandidate.update({
+      where: { id },
+      data: {
+        ...dto,
+        updatedAt: new Date(),
+      },
+    });
   }
 
   /**

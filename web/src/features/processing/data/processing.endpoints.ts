@@ -353,6 +353,18 @@ export const processingApi = baseApi.injectEndpoints({
       providesTags: (_, __, id) => [{ type: "Processing", id }],
     }),
 
+    updateProcessingCandidate: builder.mutation<
+      ApiResponse<ProcessingCandidate>,
+      { id: string; fileNumber: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/processing/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "Processing", id }, "ProcessingSummary"],
+    }),
+
     // New: Paginated candidate documents (all project documents)
     getCandidateDocuments: builder.query<
       ApiResponse<Paginated<{

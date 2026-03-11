@@ -75,6 +75,7 @@ export interface ProcessingCandidate {
   projectId: string;
   roleNeededId: string;
   assignedProcessingTeamUserId: string;
+  fileNumber?: string;
   processingStatus: "assigned" | "in_progress" | "completed" | "cancelled";
   // Optional current step key returned by the list API (e.g., "verify_offer_letter")
   step?: string;

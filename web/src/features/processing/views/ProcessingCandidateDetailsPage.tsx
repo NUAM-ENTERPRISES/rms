@@ -30,6 +30,7 @@ import {
   MedicalModal,
   EmigrationModal,
   HireModal,
+  EditFileNumberModal,
 } from "./components";
 import DocumentReceivedModal from "./components/DocumentReceivedModal";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
@@ -51,6 +52,7 @@ export default function ProcessingCandidateDetailsPage() {
   const [showDataFlowModal, setShowDataFlowModal] = useState(false);
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [showDocumentReceivedModal, setShowDocumentReceivedModal] = useState(false);
+  const [showEditFileNumberModal, setShowEditFileNumberModal] = useState(false);
 
   const { data: apiResponse, isLoading, error, refetch: refetchCandidateDetails } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
@@ -255,6 +257,8 @@ export default function ProcessingCandidateDetailsPage() {
           role={data.role}
           processingStatus={data.processingStatus}
           processingId={data.id}
+          fileNumber={data.fileNumber}
+          onEditFileNumber={() => setShowEditFileNumberModal(true)}
           recruiter={data.candidateProjectMap?.recruiter}
         />
 
@@ -288,6 +292,8 @@ export default function ProcessingCandidateDetailsPage() {
               onOfferLetterClick={() => setShowOfferLetterModal(true)}
               onOpenHire={() => setShowHireModal(true)}
               isHired={data?.candidateProjectMap?.subStatus?.name === "hired"}
+              fileNumber={data.fileNumber}
+              onEditFileNumber={() => setShowEditFileNumberModal(true)}
               onStepClick={(stepKey) => {
                 const k = String(stepKey || "").replace(/[_-]/g, "").toLowerCase();
                 if (k === "hrd") {
@@ -618,6 +624,16 @@ export default function ProcessingCandidateDetailsPage() {
         processingId={data.id}
         candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleDataFlowComplete}
+      />
+
+      <EditFileNumberModal
+        isOpen={showEditFileNumberModal}
+        onClose={() => {
+          setShowEditFileNumberModal(false);
+          refetchCandidateDetails();
+        }}
+        processingId={data.id}
+        initialFileNumber={data.fileNumber}
       />
     </div>
   );

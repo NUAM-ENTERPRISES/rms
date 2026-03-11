@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Briefcase, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Briefcase, Phone, Mail, Hash, Edit3 } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProcessingCandidateHeaderProps {
   candidate: {
@@ -24,6 +25,8 @@ interface ProcessingCandidateHeaderProps {
   };
   processingStatus: string;
   processingId: string;
+  fileNumber?: string | null;
+  onEditFileNumber?: () => void;
   recruiter?: {
     name: string;
   };
@@ -35,6 +38,8 @@ export function ProcessingCandidateHeader({
   role,
   processingStatus,
   processingId,
+  fileNumber,
+  onEditFileNumber,
   recruiter,
 }: ProcessingCandidateHeaderProps) {
   const navigate = useNavigate();
@@ -87,6 +92,28 @@ export function ProcessingCandidateHeader({
             <Badge className={`px-2 py-0.5 text-[10px] font-bold border ${getStatusBadge(processingStatus)}`}>
               {displayStatus(processingStatus)}
             </Badge>
+
+            {/* Refined File Number Badge */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={onEditFileNumber}
+                    className="flex items-center gap-2 px-2.5 py-1 text-[11px] font-black tracking-tight border border-violet-200 bg-violet-100/50 text-violet-700 rounded-lg hover:bg-violet-200 hover:border-violet-300 transition-all active:scale-95 group shadow-sm"
+                  >
+                    <div className="flex items-center justify-center w-4 h-4 rounded bg-violet-700 text-white shadow-sm group-hover:bg-violet-800 transition-colors">
+                      <Hash className="h-2.5 w-2.5" />
+                    </div>
+                    <span className="uppercase opacity-70 text-[9px] font-bold">File #</span>
+                    <span className="min-w-[40px] text-center">{fileNumber || "NOT SET"}</span>
+                    <Edit3 className="ml-0.5 h-3 w-3 text-violet-400 group-hover:text-violet-700 opacity-60 group-hover:opacity-100" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-slate-800 text-white border-slate-700">
+                  <p className="font-bold">{fileNumber ? `File Reference: ${fileNumber}` : "Click to assign a master file record number"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">

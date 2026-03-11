@@ -1544,6 +1544,34 @@ export class InterviewsService {
           },
           tx,
         );
+
+        // If candidate passed or subStatus is 'interview_passed', notify admins, system admins, managers, and team leads
+        if (dto.interviewStatus === 'passed' || dto.subStatus === 'interview_passed') {
+          // Use 'interview_passed' as the primary event type if that's the subStatus
+          const eventType = dto.subStatus === 'interview_passed' ? 'interview_passed' : 'CandidateReadyForProcessing';
+          
+          await this.outboxService.publishEvent(
+            eventType,
+            {
+              candidateProjectMapId: updatedInterview.candidateProjectMapId,
+              candidateName,
+              projectName,
+              projectId: updatedInterview.candidateProjectMap.project.id,
+              changedBy: changerName,
+            },
+            tx,
+          );
+
+          // Also trigger a DataSync event for the processing list
+          await this.outboxService.publishEvent(
+            'DataSync',
+            {
+              type: 'ProcessingSummary',
+              message: `Candidate ${candidateName} is now ready for processing`,
+            },
+            tx,
+          );
+        }
       }
 
       return updatedInterview;

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Eye, AlertTriangle, Loader2 } from "lucide-react";
+import { Eye, AlertTriangle, Loader2, Hash } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -129,6 +129,10 @@ interface ProcessingStepsCardProps {
   onCompleteProcessing?: () => void | Promise<void>;
   /** Optional handler to update a step's submitted date */
   onUpdateSubmittedDate?: (stepId: string, submittedAt: string | null) => void | Promise<void>;
+  /** File number to display */
+  fileNumber?: string | null;
+  /** Edit file number handler */
+  onEditFileNumber?: () => void;
 }
 
 export function ProcessingStepsCard({
@@ -142,6 +146,8 @@ export function ProcessingStepsCard({
   isHired = false,
   onCompleteProcessing,
   onUpdateSubmittedDate,
+  fileNumber,
+  onEditFileNumber,
 }: ProcessingStepsCardProps) {
   const [openStepKey, setOpenStepKey] = useState<string | null>(null);
   const [localCompleting, setLocalCompleting] = useState(false);
@@ -388,6 +394,37 @@ export function ProcessingStepsCard({
             <ClipboardList className="h-5 w-5" />
             Processing Steps
           </CardTitle>
+
+          {/* Refined File Number Display */}
+          <div className="hidden sm:flex items-center">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={onEditFileNumber}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-all group hover:scale-105 active:scale-95"
+                  >
+                    <div className="flex items-center justify-center w-5 h-5 rounded bg-violet-500/30 group-hover:bg-violet-500/50 transition-colors">
+                      <Hash className="h-3.5 w-3.5 text-violet-200" />
+                    </div>
+                    <div className="flex flex-col items-start leading-tight">
+                      <span className="text-[10px] uppercase font-bold text-white/40 tracking-wider">File Number</span>
+                      <span className="text-xs font-black text-white group-hover:text-violet-200 transition-colors">
+                        {fileNumber || "NOT ASSIGNED"}
+                      </span>
+                    </div>
+                    <div className="ml-1 p-1 rounded-md opacity-0 group-hover:opacity-100 bg-white/10 transition-all">
+                      <Edit3 className="h-3 w-3 text-white" />
+                    </div>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-slate-800 text-white border-slate-700">
+                  <p>{fileNumber ? `Modify File Reference: ${fileNumber}` : "Click to assign a tracking file number"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-xs">
               <div className="h-2 w-2 rounded-full bg-emerald-400" />

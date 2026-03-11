@@ -9,6 +9,7 @@ import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocume
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
 import { handleInterviewNotifications } from "./notification-handlers/interview-handler";
 import { handleCRENotifications, handleCRESync } from "./notification-handlers/cre-handler";
+import { handleProcessingNotifications, handleProcessingSync } from "./notification-handlers/processing-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -151,6 +152,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleDocumentNotifications(context);
       handleInterviewNotifications(context);
       handleCRENotifications(context);
+      handleProcessingNotifications(context);
     });
 
     socket.on("data:sync", (payload: any) => {
@@ -161,6 +163,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (handleScreeningSync(payload, context)) return;
       if (handleDocumentSync(payload, context)) return;
       if (handleCRESync(payload, context)) return;
+      if (handleProcessingSync(payload, context)) return;
       
       if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));

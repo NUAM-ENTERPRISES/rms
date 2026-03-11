@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Query,
   Param,
@@ -23,6 +24,7 @@ import { CompleteProcessingStepDto } from './dto/complete-processing-step.dto';
 import { ProcessingService } from './processing.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
+import { UpdateProcessingCandidateDto } from './dto/update-processing-candidate.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
 import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
 import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
@@ -131,6 +133,30 @@ export class ProcessingController {
       success: true,
       data,
       message: 'Processing details retrieved successfully',
+    };
+  }
+
+  @Patch(':id')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Update processing candidate details',
+    description: 'Update basic processing candidate fields such as fileNumber.',
+  })
+  @ApiParam({ name: 'id', type: 'string', description: 'The ID of the processing candidate record' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Processing candidate updated successfully',
+  })
+  async updateProcessingCandidate(
+    @Param('id') id: string,
+    @Body() dto: UpdateProcessingCandidateDto,
+    @Req() req: any,
+  ) {
+    const data = await this.processingService.updateProcessingCandidate(id, dto, req.user?.id);
+    return {
+      success: true,
+      data,
+      message: 'Processing candidate updated successfully',
     };
   }
 
