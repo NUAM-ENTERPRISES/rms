@@ -147,6 +147,18 @@ export class DocumentsService {
       await this.processingService.attachDocumentToStep(createDocumentDto.processingStepId, document.id, userId);
     }
 
+    // Notify for real-time update
+    try {
+      await this.outboxService.publishDataSync({
+        userId,
+        type: 'RecruiterDocuments',
+        id: 'LIST',
+        message: 'Document uploaded successfully',
+      });
+    } catch (err) {
+      this.logger.error(`Failed to publish data sync event for document creation: ${err.message}`);
+    }
+
     return document as DocumentWithRelations;
   }
 
@@ -859,6 +871,18 @@ export class DocumentsService {
         userId,
         reuploadDto.candidateProjectMapId,
       );
+    }
+
+    // Notify for real-time update
+    try {
+      await this.outboxService.publishDataSync({
+        userId,
+        type: 'RecruiterDocuments',
+        id: 'LIST',
+        message: 'Document re-uploaded successfully',
+      });
+    } catch (err) {
+      this.logger.error(`Failed to publish data sync event for document re-upload: ${err.message}`);
     }
 
     return result;
@@ -2176,6 +2200,18 @@ export class DocumentsService {
         },
       });
 
+    // Notify for real-time update
+    try {
+      await this.outboxService.publishDataSync({
+        userId,
+        type: 'RecruiterDocuments',
+        id: 'LIST',
+        message: 'Document linked successfully',
+      });
+    } catch (err) {
+      this.logger.error(`Failed to publish data sync event for document reuse: ${err.message}`);
+    }
+
     return verification;
   }
 
@@ -2270,6 +2306,18 @@ export class DocumentsService {
       updated.recruiterId,
     );
 
+    // 9. Notify for real-time update
+    try {
+      await this.outboxService.publishDataSync({
+        userId: updated.recruiterId,
+        type: 'RecruiterDocuments',
+        id: 'LIST',
+        message: 'Document verification completed',
+      });
+    } catch (err) {
+      this.logger.error(`Failed to publish data sync event for verification completion: ${err.message}`);
+    }
+
     return updated;
   }
 
@@ -2340,6 +2388,18 @@ export class DocumentsService {
       candidateProjectMapId,
       updated.recruiterId,
     );
+
+    // 9. Notify for real-time update
+    try {
+      await this.outboxService.publishDataSync({
+        userId: updated.recruiterId,
+        type: 'RecruiterDocuments',
+        id: 'LIST',
+        message: 'Document verification rejected',
+      });
+    } catch (err) {
+      this.logger.error(`Failed to publish data sync event for verification rejection: ${err.message}`);
+    }
 
     return updated;
   }

@@ -574,7 +574,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: documentData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "VerificationCandidates"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "VerificationCandidates", "RecruiterDocuments"],
     }),
 
     updateDocument: builder.mutation<
@@ -611,7 +611,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: verifyData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "RecruiterDocuments"],
     }),
 
     requestResubmission: builder.mutation<
@@ -623,7 +623,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: requestData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "RecruiterDocuments"],
     }),
 
     reuploadDocument: builder.mutation<
@@ -635,7 +635,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: reuploadData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "RecruiterDocuments"],
     }),
 
     reuploadRecruiterDocument: builder.mutation<
@@ -647,7 +647,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: reuploadData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
     }),
 
     reuploadDocumentationDocument: builder.mutation<
@@ -659,7 +659,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: reuploadData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
     }),
 
     getDocumentStats: builder.query<
@@ -803,7 +803,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: { projectId, roleCatalogId },
       }),
-      invalidatesTags: ["DocumentVerification", "VerificationCandidates"],
+      invalidatesTags: ["DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
     }),
 
     completeVerification: builder.mutation<
@@ -815,7 +815,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: { candidateProjectMapId },
       }),
-      invalidatesTags: ["DocumentVerification", "VerificationCandidates"],
+      invalidatesTags: ["DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
     }),
 
     rejectVerification: builder.mutation<
@@ -827,7 +827,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: { candidateProjectMapId, reason },
       }),
-      invalidatesTags: ["DocumentVerification", "VerificationCandidates"],
+      invalidatesTags: ["DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
     }),
 
     getProfessionalAnalytics: builder.query<

@@ -223,6 +223,27 @@ export class CandidateProjectsService {
       return newAssignment;
     });
 
+    // Publish data sync event
+    try {
+      await this.outboxService.publishDataSync({
+        userId,
+        type: 'RecruiterDocuments',
+        id: 'LIST',
+        message: `Candidate assigned to project.`,
+      });
+
+      if (finalRecruiterId && finalRecruiterId !== userId) {
+        await this.outboxService.publishDataSync({
+          userId: finalRecruiterId,
+          type: 'RecruiterDocuments',
+          id: 'LIST',
+          message: `Candidate assigned to project.`,
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, err.stack);
+    }
+
     return assignment;
   }
 
@@ -423,6 +444,18 @@ export class CandidateProjectsService {
       candidateProject.id,
       '', // assignedToExecutive (none selected here)
     );
+
+    // Emit real-time synchronization event for Recruiter Documents
+    try {
+      await this.outboxService.publishDataSync({
+        userId,
+        type: 'RecruiterDocuments',
+        id: 'LIST',
+        message: 'Candidate sent for verification',
+      });
+    } catch (err) {
+      this.logger.error(`Failed to publish data sync event for verification: ${err.message}`);
+    }
 
     return candidateProject;
   }
@@ -2897,6 +2930,27 @@ export class CandidateProjectsService {
         });
 
         results.push(assignment);
+
+        // Publish data sync event for each assigned candidate
+        try {
+          await this.outboxService.publishDataSync({
+            userId,
+            type: 'RecruiterDocuments',
+            id: 'LIST',
+            message: `Candidate assigned to project.`,
+          });
+
+          if (finalRecruiterId && finalRecruiterId !== userId) {
+            await this.outboxService.publishDataSync({
+              userId: finalRecruiterId,
+              type: 'RecruiterDocuments',
+              id: 'LIST',
+              message: `Candidate assigned to project.`,
+            });
+          }
+        } catch (err) {
+          this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, err.stack);
+        }
       } catch (error: any) {
         this.logger.error(`Error in bulk assignment for candidate ${candidateId}: ${error.message}`);
         errors.push({ candidateId, error: error.message });

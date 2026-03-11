@@ -174,6 +174,22 @@ export class OutboxService {
   }
 
   /**
+   * Publish data sync event
+   */
+  async publishDataSync(
+    payload: {
+      userId?: string;
+      type: string;
+      id?: string;
+      message?: string;
+      [key: string]: any;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent('DataSync', payload, tx);
+  }
+
+  /**
    * Publish candidate transferred back event
    */
   async publishCandidateTransferredBack(
