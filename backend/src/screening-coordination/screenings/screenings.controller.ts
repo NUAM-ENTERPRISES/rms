@@ -106,7 +106,7 @@ export class ScreeningsController {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
     const isAdmin = roles.some((role: string) =>
-      ['CEO', 'Director', 'System Admin'].includes(role),
+      ['CEO', 'Director', 'Manager', 'System Admin'].includes(role),
     );
     const isCoordinator = roles.includes('Interview Coordinator');
 
@@ -165,7 +165,7 @@ export class ScreeningsController {
   ) {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
-    const isAdmin = roles.some((role: string) => ['CEO', 'Director', 'System Admin'].includes(role));
+    const isAdmin = roles.some((role: string) => ['CEO', 'Director', 'Manager', 'System Admin'].includes(role));
     const isCoordinator = roles.includes('Interview Coordinator');
 
     // If not admin/coordinator, they can only see their own assignments
@@ -188,7 +188,7 @@ export class ScreeningsController {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
     const isAdmin = roles.some((role: string) =>
-      ['CEO', 'Director', 'System Admin'].includes(role),
+      ['CEO', 'Director', 'Manager', 'System Admin'].includes(role),
     );
     const isCoordinator = roles.includes('Interview Coordinator');
 

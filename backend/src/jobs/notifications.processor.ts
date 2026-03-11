@@ -1631,7 +1631,7 @@ export class NotificationsProcessor extends WorkerHost {
           userRoles: {
             some: {
               role: {
-                name: { in: ['Interview Coordinator', 'Director', 'CEO', 'System Admin'] }
+                name: { in: ['Interview Coordinator', 'Director', 'CEO', 'Manager', 'System Admin'] }
               }
             }
           }

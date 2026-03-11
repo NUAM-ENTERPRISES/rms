@@ -28,19 +28,8 @@ const roles = [
   },
   {
     name: 'Manager',
-    description: 'Manager - Access to multiple teams',
-    permissions: [
-      'read:all',
-      'write:assigned_teams',
-      'manage:users',
-      'read:users',
-      'read:teams',
-      'read:settings',
-      'manage:projects',
-      'transfer:candidates',
-      'transfer_back:candidates',
-      'transfer:processing',
-    ],
+    description: 'Manager - Full system access',
+    permissions: ['*'],
   },
   {
     name: 'Team Head',

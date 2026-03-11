@@ -322,7 +322,7 @@ export default function CandidateDetailPage() {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleEdit}>
             <Edit className="h-4 w-4 mr-2" />
             Edit
@@ -333,7 +333,7 @@ export default function CandidateDetailPage() {
               Delete
             </Button>
           )}
-        </div>
+        </div> */}
       </div>
 
       {/* Stat Cards */}

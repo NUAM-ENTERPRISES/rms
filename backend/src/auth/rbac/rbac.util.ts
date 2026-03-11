@@ -94,6 +94,7 @@ export class RbacUtil {
     if (
       roles.includes('CEO') ||
       roles.includes('Director') ||
+      roles.includes('Manager') ||
       permissions.includes('*') ||
       permissions.includes('read:all')
     ) {
@@ -107,8 +108,12 @@ export class RbacUtil {
   async hasRole(userId: string, requiredRoles: string[]): Promise<boolean> {
     const { roles } = await this.getUserRolesAndPermissions(userId);
 
-    // Check for global admin roles (CEO, Director)
-    if (roles.includes('CEO') || roles.includes('Director')) {
+    // Check for global admin roles (CEO, Director, Manager)
+    if (
+      roles.includes('CEO') ||
+      roles.includes('Director') ||
+      roles.includes('Manager')
+    ) {
       return true;
     }
 
@@ -146,13 +151,9 @@ export class RbacUtil {
     if (
       roles.includes('CEO') ||
       roles.includes('Director') ||
+      roles.includes('Manager') ||
       permissions.includes('*')
     ) {
-      return true;
-    }
-
-    // Managers have access to multiple teams
-    if (roles.includes('Manager') && permissions.includes('read:all')) {
       return true;
     }
 
