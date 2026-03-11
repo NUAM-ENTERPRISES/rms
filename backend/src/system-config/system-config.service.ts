@@ -108,6 +108,25 @@ export class SystemConfigService {
   }
 
   /**
+   * Get Interview Reminder Settings
+   * Returns default values if not configured
+   */
+  async getInterviewReminderSettings() {
+    const config = await this.getConfig('INTERVIEW_REMINDER_SETTINGS');
+    return {
+      daysBefore: config?.daysBefore ?? 3,
+      timesPerDay: config?.timesPerDay ?? 1,
+      intervalHours: config?.intervalHours ?? 4,
+      startHour: config?.startHour ?? 9, // Start at 9 AM
+    };
+  }
+
+  async getInterviewReminderDays(): Promise<number> {
+    const settings = await this.getInterviewReminderSettings();
+    return settings.daysBefore;
+  }
+
+  /**
    * Update RNR Settings
    */
   async updateRNRSettings(settings: Partial<RNRSettings>): Promise<void> {

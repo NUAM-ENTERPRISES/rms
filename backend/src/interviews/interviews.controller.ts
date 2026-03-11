@@ -23,6 +23,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import { InterviewsService } from './interviews.service';
+import { InterviewReminderService } from './interview-reminder.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
@@ -33,12 +34,29 @@ import {
   BulkUpdateInterviewStatusDto,
 } from './dto/update-interview-status.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Interviews')
 @ApiBearerAuth()
 @Controller('interviews')
 export class InterviewsController {
-  constructor(private readonly interviewsService: InterviewsService) { }
+  constructor(
+    private readonly interviewsService: InterviewsService,
+    private readonly reminderService: InterviewReminderService,
+  ) { }
+
+  @Public()
+  @Post('test-reminders')
+  @ApiOperation({ summary: 'Manually trigger interview reminders (Test Only)' })
+  async triggerReminders(@Query('days') days?: string) {
+    const overrideDays = days ? parseInt(days, 10) : 1;
+    const results = await this.reminderService.handleInterviewReminders(overrideDays);
+    return { 
+      success: true, 
+      message: `Reminders trigger logic finished for ${overrideDays} days from now`,
+      data: results 
+    };
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
