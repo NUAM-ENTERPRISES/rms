@@ -114,10 +114,20 @@ export class SystemConfigService {
   async getInterviewReminderSettings() {
     const config = await this.getConfig('INTERVIEW_REMINDER_SETTINGS');
     return {
+      // How many days before an interview to send reminders (e.g. 1 means "tomorrow")
       daysBefore: config?.daysBefore ?? 3,
+      
+      // Total number of times to send the notification in a single day
+      // Example: 3 means send it at 9 AM, 1 PM, and 5 PM
       timesPerDay: config?.timesPerDay ?? 1,
+      
+      // Gap between each notification session (if timesPerDay > 1)
+      // Example: 4 means if first sent at 9 AM, the next will be at 1 PM (9 + 4)
       intervalHours: config?.intervalHours ?? 4,
-      startHour: config?.startHour ?? 9, // Start at 9 AM
+      
+      // What hour of the day to send the FIRTS reminder (24-hour format)
+      // Example: 9 means start at 9:00 AM
+      startHour: config?.startHour ?? 9,
     };
   }
 

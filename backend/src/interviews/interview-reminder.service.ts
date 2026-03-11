@@ -24,14 +24,17 @@ export class InterviewReminderService {
     const currentHour = new Date().getHours();
     
     // Check if current hour is one of the scheduled reminder times
+    // Logic: Start at 'startHour' (9 AM), then add 'intervalHours' (4h) for 'timesPerDay' (3)
+    // Result: [9, 13, 17] (9 AM, 1 PM, 5 PM)
     const triggerHours: number[] = [];
     for (let i = 0; i < settings.timesPerDay; i++) {
         const hour = (settings.startHour + (i * settings.intervalHours)) % 24;
         triggerHours.push(hour);
     }
 
+    // If current time doesn't match a trigger hour, stop unless manually forced via API
     if (!triggerHours.includes(currentHour) && overrideDays === undefined) {
-      this.logger.debug(`Skipping reminder check at hour ${currentHour}. Trigger hours: ${triggerHours.join(', ')}`);
+      this.logger.debug(`Skipping reminder check at hour ${currentHour}. Scheduled triggers: ${triggerHours.join(', ')}`);
       return { skipped: true, currentHour, triggerHours };
     }
 
