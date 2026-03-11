@@ -125,7 +125,12 @@ export class InterviewsService {
         // get previous main/sub status snapshot from the candidate project (use tx for consistency)
         const prevAssignment = await tx.candidateProjects.findUnique({
           where: { id: createInterviewDto.candidateProjectMapId },
-          include: { mainStatus: true, subStatus: true },
+          include: { 
+            mainStatus: true, 
+            subStatus: true,
+            candidate: { select: { firstName: true, lastName: true } },
+            project: { select: { title: true } },
+          },
         });
 
         // find the sub-status entity for 'interview_scheduled'
@@ -174,6 +179,27 @@ export class InterviewsService {
             reason: `Client interview scheduled${schedulerName ? ` by ${schedulerName}` : scheduledBy ? ` by ${scheduledBy}` : ''}`,
           },
         });
+
+        // Notify the recruiter that an interview has been scheduled for their candidate
+        if (prevAssignment?.recruiterId) {
+          const candidateName = `${prevAssignment.candidate?.firstName || ''} ${prevAssignment.candidate?.lastName || ''}`.trim() || 'Candidate';
+          const projectTitle = prevAssignment.project?.title || 'Project';
+          const scheduledDateStr = new Date(createInterviewDto.scheduledTime).toLocaleString();
+
+          await this.outboxService.publishRecruiterNotification(
+            prevAssignment.recruiterId,
+            `An interview has been scheduled for ${candidateName} for the project "${projectTitle}" on ${scheduledDateStr}.`,
+            'Interview Scheduled',
+            `/interviews/${created.id}`,
+            {
+              interviewId: created.id,
+              candidateId: prevAssignment.candidateId,
+              projectId: prevAssignment.projectId,
+              candidateProjectMapId: createInterviewDto.candidateProjectMapId,
+            },
+            tx,
+          );
+        }
       }
 
       return created;
