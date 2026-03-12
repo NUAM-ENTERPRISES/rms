@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
@@ -11,9 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui";
+import { Input } from "@/components/ui";
+import { Label } from "@/components/ui";
 import {
   Select,
   SelectContent,
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui";
+import { CountryCodeSelect } from "@/components/molecules";
 import { User, Mail, Phone, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
 import { useVerifyLeadQuery, useSubmitLeadMutation } from "@/services/metaApi";
 
@@ -40,10 +41,10 @@ type RegistrationFormData = z.infer<typeof registrationSchema>;
 const PublicLeadRegistrationPage: React.FC = () => {
   const { shortCode } = useParams<{ shortCode: string }>();
   const [success, setSuccess] = useState(false);
+  const [recruiter, setRecruiter] = useState<{ name: string; email: string; phone?: string } | null>(null);
 
   // Queries & Mutations
   const { 
-    data: leadData, 
     isLoading: isVerifying, 
     error: verifyError 
   } = useVerifyLeadQuery(shortCode || "", { 
@@ -55,6 +56,7 @@ const PublicLeadRegistrationPage: React.FC = () => {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
   } = useForm<RegistrationFormData>({
@@ -64,7 +66,10 @@ const PublicLeadRegistrationPage: React.FC = () => {
 
   const onSubmit = async (formData: RegistrationFormData) => {
     try {
-      await submitLead({ shortCode: shortCode!, data: formData }).unwrap();
+      const response = await submitLead({ shortCode: shortCode!, data: formData }).unwrap();
+      if (response.assignedRecruiter) {
+        setRecruiter(response.assignedRecruiter);
+      }
       setSuccess(true);
     } catch (err: any) {
       toast.error(err.data?.message || "Failed to submit registration");
@@ -120,15 +125,52 @@ const PublicLeadRegistrationPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="border-t pt-4 text-slate-500">
-              Our recruitment team will review your profile and contact you shortly.
+            <p className="border-t pt-4 text-slate-500 mb-6 font-medium">
+              Thank you! Your details have been successfully submitted to Affiniks.
             </p>
-            <div className="mt-8">
+
+            {recruiter && (
+              <div className="bg-blue-50/80 border border-blue-100 rounded-xl p-6 text-left mb-8 space-y-4 animate-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center gap-3 border-b border-blue-100 pb-3">
+                  <div className="bg-blue-600 p-2 rounded-lg">
+                    <User className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-blue-900 uppercase tracking-wider">Your Assigned Recruiter</h3>
+                    <p className="text-lg font-extrabold text-slate-900">{recruiter.name}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center gap-3 text-slate-700 hover:text-blue-600 transition-colors">
+                    <div className="bg-white p-1.5 rounded-md shadow-sm border border-slate-100">
+                      <Mail className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <span className="text-sm font-medium">{recruiter.email}</span>
+                  </div>
+
+                  {recruiter.phone && (
+                    <div className="flex items-center gap-3 text-slate-700 hover:text-green-600 transition-colors">
+                      <div className="bg-white p-1.5 rounded-md shadow-sm border border-slate-100">
+                        <Phone className="h-4 w-4 text-green-500" />
+                      </div>
+                      <span className="text-sm font-medium">{recruiter.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs text-blue-700/80 italic pt-2">
+                  * Our recruiter will call or text you shortly to discuss next steps.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-4">
               <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl font-bold shadow-lg" 
                 onClick={() => window.close()}
               >
-                Close Window
+                Close Portal
               </Button>
             </div>
           </CardContent>
@@ -185,13 +227,25 @@ const PublicLeadRegistrationPage: React.FC = () => {
                 {errors.email && <p className="text-xs text-red-500 font-medium">{errors.email.message}</p>}
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="countryCode" className="text-slate-700 font-medium">Code *</Label>
-                  <Input id="countryCode" placeholder="+91" {...register("countryCode")} />
+                  <Label htmlFor="countryCode" className="text-slate-700 font-medium">Country Code *</Label>
+                  <Controller
+                    name="countryCode"
+                    control={control}
+                    render={({ field }) => (
+                      <CountryCodeSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        name={field.name}
+                        placeholder="Code"
+                        error={errors.countryCode?.message}
+                      />
+                    )}
+                  />
                   {errors.countryCode && <p className="text-xs text-red-500">{errors.countryCode.message}</p>}
                 </div>
-                <div className="col-span-2 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="mobileNumber" className="text-slate-700 font-medium">Mobile Number *</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />

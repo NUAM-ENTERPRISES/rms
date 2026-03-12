@@ -1,6 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { nanoid } from 'nanoid';
+import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 
 interface BotState {
   step: 'name' | 'email' | 'phone' | 'completed';
@@ -18,7 +19,10 @@ export class MetaService {
   // Key: `${platform}:${senderId}`
   private botStates = new Map<string, BotState>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recruiterAssignmentService: RecruiterAssignmentService,
+  ) {}
 
   /**
    * Entry point for all Meta webhooks (FB Page, Instagram, WhatsApp)
@@ -183,11 +187,98 @@ export class MetaService {
     const host = process.env.WEB_URL || 'http://localhost:5173';
     const registrationUrl = `${host}/register/${shortCode}`;
 
-    const greeting = platform === 'whatsapp' 
-      ? `*Hello from Affiniks!* 👋\n\nThank you for reaching out. To get started with your registration, please fill out our secure form here:\n\n${registrationUrl}\n\n_Note: This link will expire in 24 hours._`
-      : `Hello from Affiniks! 👋 Thank you for reaching out. To get started, please fill out our secure registration form here: ${registrationUrl} (Link expires in 24 hours)`;
+    if (platform === 'whatsapp') {
+      await this.sendWhatsAppInteractiveButton(senderId, registrationUrl);
+    } else if (platform === 'facebook' || platform === 'instagram') {
+      await this.sendMessengerButton(platform, senderId, registrationUrl);
+    } else {
+      const greeting = `Hello from Affiniks! 👋 To get started, please fill out our secure registration form here: ${registrationUrl}`;
+      await this.sendReply(platform, senderId, greeting);
+    }
+  }
 
-    await this.sendReply(platform, senderId, greeting);
+  /**
+   * Send WhatsApp Interactive Button
+   */
+  private async sendWhatsAppInteractiveButton(recipientId: string, url: string) {
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+    const version = process.env.META_GRAPH_VERSION || 'v21.0';
+
+    if (!token || !phoneNumberId) throw new Error('WhatsApp config missing');
+
+    const graphUrl = `https://graph.facebook.com/${version}/${phoneNumberId}/messages`;
+
+    const body = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: recipientId,
+      type: 'interactive',
+      interactive: {
+        type: 'cta_url',
+        header: {
+          type: 'text',
+          text: 'Registration Required',
+        },
+        body: {
+          text: 'Welcome to Affiniks! 👋\n\nPlease tap the button below to complete your registration on our secure portal.',
+        },
+        footer: {
+          text: 'This link expires in 24 hours.',
+        },
+        action: {
+          name: 'cta_url',
+          parameters: {
+            display_text: 'Register Here',
+            url: url,
+          },
+        },
+      },
+    };
+
+    await this.fetchPost(graphUrl, body, token);
+  }
+
+  /**
+   * Send Facebook/Instagram Messenger Button
+   */
+  private async sendMessengerButton(platform: 'facebook' | 'instagram', recipientId: string, url: string) {
+    const token = process.env.META_PAGE_ACCESS_TOKEN;
+    const version = process.env.META_GRAPH_VERSION || 'v21.0';
+
+    if (!token) throw new Error('Meta Page token missing');
+
+    const graphUrl = `https://graph.facebook.com/${version}/me/messages?access_token=${token}`;
+
+    const body = {
+      recipient: { id: recipientId },
+      message: {
+        attachment: {
+          type: 'template',
+          payload: {
+            template_type: 'generic',
+            elements: [
+              {
+                title: 'Affiniks Registration',
+                subtitle: 'Connecting Talent with Opportunity',
+                image_url: 'https://affiniks.com/wp-content/uploads/2021/08/logo.png', // Placeholder logo
+                buttons: [
+                  {
+                    type: 'web_url',
+                    url: url,
+                    title: 'Register Now',
+                    webview_height_ratio: 'full',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      ...(platform === 'instagram' ? { messaging_product: 'instagram' } : {}),
+    };
+
+    await this.fetchPost(graphUrl, body);
   }
 
   /**
@@ -359,7 +450,7 @@ export class MetaService {
       throw new HttpException('Invalid or expired registration link', HttpStatus.BAD_REQUEST);
     }
 
-    return await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Create/Update Candidate
       const candidate = await tx.candidate.upsert({
         where: {
@@ -403,10 +494,50 @@ export class MetaService {
       });
 
       return {
-        message: 'Registration successful',
         candidateId: candidate.id,
       };
     });
+
+    // 3. Assign Recruiter (Round-Robin)
+    // Find a system user or admin to be the "assigner"
+    const systemAdmin = await this.prisma.user.findFirst({
+        where: {
+            userRoles: {
+                some: {
+                    role: {
+                        name: {
+                            contains: 'Admin',
+                            mode: 'insensitive'
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const recruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
+      result.candidateId,
+      systemAdmin?.id || 'system',
+      'Automatic assignment via Meta Lead registration'
+    );
+
+    // 4. Bot Reply (WhatsApp/Messenger)
+    const recruiterPhone = recruiter.mobileNumber ? `${recruiter.countryCode || ''} ${recruiter.mobileNumber}`.trim() : recruiter.email;
+    const confirmationMsg = `Registration successful! ✅\n\nYour assigned recruiter is *${recruiter.name}*. They will contact you shortly at this number or via email.\n\nRecruiter Contact: ${recruiterPhone}`;
+    
+    if (lead.platform && lead.senderId) {
+      await this.sendReply(lead.platform as string, lead.senderId as string, confirmationMsg);
+    }
+
+    return {
+      message: 'Registration successful',
+      candidateId: result.candidateId,
+      assignedRecruiter: {
+        name: recruiter.name,
+        email: recruiter.email,
+        phone: recruiterPhone,
+      }
+    };
   }
 
   /**
