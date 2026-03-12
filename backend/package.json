@@ -53,6 +53,7 @@
     "cookie-parser": "^1.4.7",
     "googleapis": "^171.4.0",
     "multer": "^2.0.2",
+    "nanoid": "^5.1.6",
     "nodemailer": "^7.0.13",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

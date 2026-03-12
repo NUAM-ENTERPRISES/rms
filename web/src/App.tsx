@@ -70,6 +70,9 @@ const DocumentAnalyticPage = lazy(
 const RecruiterDetailPage = lazy(
   () => import("@/features/analytics/views/RecruiterDetailPage")
 );
+const PublicLeadRegistrationPage = lazy(
+  () => import("@/features/candidates/views/PublicLeadRegistrationPage")
+);
 // const TrainingAnalyticsPage = lazy(
 //   () => import("@/features/analytics/views/TraningAnalyticsPage")
 // );
@@ -288,6 +291,15 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <LoginPage />
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/register/:shortCode"
+                    element={
+                      <RouteErrorBoundary>
+                        <PublicLeadRegistrationPage />
                       </RouteErrorBoundary>
                     }
                   />

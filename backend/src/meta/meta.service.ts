@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
+import { nanoid } from 'nanoid';
 
 interface BotState {
   step: 'name' | 'email' | 'phone' | 'completed';
@@ -118,7 +119,7 @@ export class MetaService {
     const text = event.message.text.trim();
     this.logger.log(`📩 [${platform}] Message from ${senderId}: ${text}`);
 
-    await this.runLeadCollectionFlow(platform, senderId, text);
+    await this.sendLeadRegistrationLink(platform, senderId);
   }
 
   /**
@@ -136,60 +137,57 @@ export class MetaService {
     const text = message.text.body.trim();
     this.logger.log(`📩 [whatsapp] Message from ${senderId}: ${text}`);
 
-    await this.runLeadCollectionFlow('whatsapp', senderId, text);
+    await this.sendLeadRegistrationLink('whatsapp', senderId);
   }
 
   /**
    * Conversational state machine for gathering user details
    */
   private async runLeadCollectionFlow(platform: string, senderId: string, text: string) {
-    const stateKey = `${platform}:${senderId}`;
-    let state = this.botStates.get(stateKey);
+    // Deprecated for the new link-based registration flow
+    return this.sendLeadRegistrationLink(platform, senderId);
+  }
 
-    // Initial message or reset if inactive too long (e.g. 24h)
-    if (!state || (Date.now() - state.lastUpdate > 86400000)) {
-      state = { step: 'name', lastUpdate: Date.now() };
-      this.botStates.set(stateKey, state);
-      this.logger.log(`[${platform}] Starting collection flow for ${senderId}`);
-      await this.sendReply(platform, senderId, "Hello! Let's get you registered. What is your full name?");
-      return;
+  /**
+   * Send a secure registration link to the lead
+   */
+  private async sendLeadRegistrationLink(platform: string, senderId: string) {
+    // Check for existing valid link in the last 24h
+    const existingLead = await this.prisma.metaLead.findFirst({
+      where: {
+        senderId,
+        platform,
+        shortCode: { not: null },
+        tokenExpiresAt: { gt: new Date() },
+        status: 'pending',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    let shortCode = existingLead?.shortCode;
+
+    if (!shortCode) {
+      shortCode = nanoid(10);
+      await this.prisma.metaLead.create({
+        data: {
+          senderId,
+          platform,
+          shortCode,
+          tokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          status: 'pending',
+          source: 'meta',
+        },
+      });
     }
 
-    state.lastUpdate = Date.now();
+    const host = process.env.WEB_URL || 'http://localhost:5173';
+    const registrationUrl = `${host}/register/${shortCode}`;
 
-    switch (state.step) {
-      case 'name':
-        state.fullName = text;
-        state.step = 'email';
-        this.logger.log(`[${platform}] ${senderId} name: ${text}`);
-        await this.sendReply(platform, senderId, `Nice to meet you, ${text}. What is your email address?`);
-        break;
+    const greeting = platform === 'whatsapp' 
+      ? `*Hello from Affiniks!* 👋\n\nThank you for reaching out. To get started with your registration, please fill out our secure form here:\n\n${registrationUrl}\n\n_Note: This link will expire in 24 hours._`
+      : `Hello from Affiniks! 👋 Thank you for reaching out. To get started, please fill out our secure registration form here: ${registrationUrl} (Link expires in 24 hours)`;
 
-      case 'email':
-        state.email = text;
-        state.step = 'phone';
-        this.logger.log(`[${platform}] ${senderId} email: ${text}`);
-        await this.sendReply(platform, senderId, "Got it. Finally, what is your phone number?");
-        break;
-
-      case 'phone':
-        state.phoneNumber = text;
-        state.step = 'completed';
-        
-        // Final completion logic
-        this.logger.log(`✅ Flow completed for ${stateKey}: ${state.fullName}, ${state.email}, ${state.phoneNumber}`);
-        
-        // TODO: Persist state to Database here
-        // We could create a MetaLead record similar to Leadgen or link to Candidate directly
-        
-        await this.sendReply(platform, senderId, "Thank you! Your details have been submitted ✅");
-        break;
-
-      case 'completed':
-        this.logger.debug(`[${platform}] ${senderId} messaged again after completion`);
-        await this.sendReply(platform, senderId, "You have already submitted your details recently.");
-        break;
-    }
+    await this.sendReply(platform, senderId, greeting);
   }
 
   /**
@@ -205,8 +203,11 @@ export class MetaService {
       } else if (platform === 'whatsapp') {
         await this.sendWhatsAppMessage(recipientId, text);
       }
-    } catch (err) {
-      this.logger.error(`❌ Failed to send ${platform} reply:`, err);
+    } catch (err: any) {
+      this.logger.error(`❌ Failed to send ${platform} reply to ${recipientId}: ${err.message}`);
+      if (err.response) {
+        this.logger.error(`Detailed Error: ${JSON.stringify(err.response)}`);
+      }
     }
   }
 
@@ -216,39 +217,48 @@ export class MetaService {
 
     if (!token) {
       this.logger.warn('META_PAGE_ACCESS_TOKEN not set');
-      return;
+      throw new Error('META_PAGE_ACCESS_TOKEN is missing');
     }
 
     const url = `https://graph.facebook.com/${version}/me/messages?access_token=${token}`;
 
-    await this.fetchPost(url, {
-      recipient: { id: recipientId },
-      message: { text },
-    });
+    try {
+      await this.fetchPost(url, {
+        recipient: { id: recipientId },
+        message: { text },
+      });
+      this.logger.log(`✅ [facebook] Message sent to ${recipientId}`);
+    } catch (err: any) {
+      this.logger.error(`[facebook] Send failed for ${recipientId}`);
+      throw err;
+    }
   }
 
   private async sendInstagramMessage(recipientId: string, text: string) {
-  const token =
-    process.env.INSTAGRAM_PAGE_ACCESS_TOKEN ||
-    process.env.META_PAGE_ACCESS_TOKEN;
+    const token = process.env.META_PAGE_ACCESS_TOKEN;
+    const version = process.env.META_GRAPH_VERSION || 'v21.0';
 
-  const version = process.env.META_GRAPH_VERSION || 'v21.0';
+    if (!token) {
+      this.logger.warn('META_PAGE_ACCESS_TOKEN not set');
+      throw new Error('META_PAGE_ACCESS_TOKEN is missing for Instagram');
+    }
 
-  if (!token) {
-    this.logger.warn('INSTAGRAM_PAGE_ACCESS_TOKEN or META_PAGE_ACCESS_TOKEN not set');
-    return;
+    this.logger.debug(`Sending IG message to ${recipientId} using Page token`);
+
+    const url = `https://graph.facebook.com/${version}/me/messages?access_token=${encodeURIComponent(token)}`;
+
+    try {
+      await this.fetchPost(url, {
+        recipient: { id: recipientId },
+        message: { text },
+        messaging_product: 'instagram',
+      });
+      this.logger.log(`✅ [instagram] Message sent to ${recipientId}`);
+    } catch (err: any) {
+      this.logger.error(`[instagram] Send failed for ${recipientId}`);
+      throw err;
+    }
   }
-
-  this.logger.debug(`Sending IG message to ${recipientId} using Page token`);
-
-  const url = `https://graph.facebook.com/${version}/me/messages?access_token=${encodeURIComponent(token)}`;
-
-  await this.fetchPost(url, {
-    recipient: { id: recipientId },
-    message: { text },
-    messaging_product: 'instagram',
-  });
-}
 
   private async sendWhatsAppMessage(recipientId: string, text: string) {
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -257,21 +267,27 @@ export class MetaService {
 
     if (!token || !phoneNumberId) {
       this.logger.warn('WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set');
-      return;
+      throw new Error('WhatsApp configuration missing (Token/PhoneID)');
     }
 
     const url = `https://graph.facebook.com/${version}/${phoneNumberId}/messages`;
 
-    await this.fetchPost(
-      url,
-      {
-        messaging_product: 'whatsapp',
-        to: recipientId,
-        type: 'text',
-        text: { body: text },
-      },
-      token,
-    );
+    try {
+      await this.fetchPost(
+        url,
+        {
+          messaging_product: 'whatsapp',
+          to: recipientId,
+          type: 'text',
+          text: { body: text },
+        },
+        token,
+      );
+      this.logger.log(`✅ [whatsapp] Message sent to ${recipientId}`);
+    } catch (err: any) {
+      this.logger.error(`[whatsapp] Send failed for ${recipientId}`);
+      throw err;
+    }
   }
 
   private async fetchPost(url: string, body: any, bearerToken?: string) {
@@ -286,8 +302,111 @@ export class MetaService {
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`Graph API POST failed (${res.status}): ${errorText}`);
+      let parsedError;
+      try {
+        parsedError = JSON.parse(errorText);
+      } catch {
+        parsedError = errorText;
+      }
+      
+      const error: any = new Error(`Graph API POST failed (${res.status}): ${typeof parsedError === 'string' ? parsedError : parsedError.error?.message || 'Unknown error'}`);
+      error.status = res.status;
+      error.response = parsedError;
+      throw error;
     }
+    return res.json();
+  }
+
+  /**
+   * --- PUBLIC LEAD FLOW HELPERS ---
+   */
+
+  /**
+   * Verify a lead short code
+   */
+  async verifyLeadCode(shortCode: string) {
+    const lead = await this.prisma.metaLead.findUnique({
+      where: { shortCode },
+    });
+
+    if (!lead) {
+      throw new HttpException('Invalid registration link', HttpStatus.NOT_FOUND);
+    }
+
+    if (lead.tokenExpiresAt && new Date() > lead.tokenExpiresAt) {
+      throw new HttpException('Registration link has expired', HttpStatus.GONE);
+    }
+
+    if (lead.status === 'linked' || lead.candidateId) {
+      throw new HttpException('Registration already completed', HttpStatus.CONFLICT);
+    }
+
+    return {
+      platform: lead.platform,
+      senderId: lead.senderId,
+    };
+  }
+
+  /**
+   * Submit lead details and create candidate
+   */
+  async submitLeadDetails(shortCode: string, details: any) {
+    const lead = await this.prisma.metaLead.findUnique({
+      where: { shortCode },
+    });
+
+    if (!lead || (lead.tokenExpiresAt && new Date() > lead.tokenExpiresAt) || lead.status === 'linked') {
+      throw new HttpException('Invalid or expired registration link', HttpStatus.BAD_REQUEST);
+    }
+
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. Create/Update Candidate
+      const candidate = await tx.candidate.upsert({
+        where: {
+          countryCode_mobileNumber: {
+            countryCode: details.countryCode,
+            mobileNumber: details.mobileNumber,
+          },
+        },
+        update: {
+          firstName: details.firstName,
+          lastName: details.lastName,
+          email: details.email,
+          gender: details.gender,
+          dateOfBirth: details.dateOfBirth ? new Date(details.dateOfBirth) : undefined,
+          source: 'meta',
+        },
+        create: {
+          firstName: details.firstName,
+          lastName: details.lastName,
+          email: details.email,
+          gender: details.gender,
+          dateOfBirth: details.dateOfBirth ? new Date(details.dateOfBirth) : undefined,
+          countryCode: details.countryCode,
+          mobileNumber: details.mobileNumber,
+          source: 'meta',
+        },
+      });
+
+      // 2. Update MetaLead
+      await tx.metaLead.update({
+        where: { id: lead.id },
+        data: {
+          candidateId: candidate.id,
+          status: 'linked',
+          processedAt: new Date(),
+          fullName: `${details.firstName} ${details.lastName}`,
+          email: details.email,
+          countryCode: details.countryCode,
+          phoneNumber: details.mobileNumber,
+        },
+      });
+
+      return {
+        message: 'Registration successful',
+        candidateId: candidate.id,
+      };
+    });
   }
 
   /**
