@@ -235,7 +235,7 @@ export default function ProjectCandidatesOverviewPage() {
     if (isLoadingProjects) {
       return (
         <div className="min-h-screen">
-          <div className="w-full max-w-7xl mx-auto space-y-4 mt-8 px-4 text-center">
+          <div className="w-full max-w-[98%] mx-auto space-y-4 mt-8 px-4 text-center">
             <div className="bg-white p-12 rounded-3xl shadow-xl border-0 border-slate-100">
               <div className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
               <p className="text-slate-500 text-lg font-medium animate-pulse">Loading projects...</p>
@@ -248,7 +248,7 @@ export default function ProjectCandidatesOverviewPage() {
     if (allProjects.length === 0) {
       return (
         <div className="min-h-screen">
-          <div className="w-full max-w-7xl mx-auto space-y-4 mt-8 px-4 text-center">
+          <div className="w-full max-w-[98%] mx-auto space-y-4 mt-8 px-4 text-center">
             <div className="bg-white p-12 rounded-3xl shadow-xl border-0 border-slate-100">
               <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Users className="h-6 w-6 text-slate-400" />
@@ -264,7 +264,7 @@ export default function ProjectCandidatesOverviewPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="w-full max-w-7xl mx-auto space-y-4 mt-2 px-4">
+      <div className="w-full max-w-[98%] mx-auto space-y-4 mt-2 px-4">
         {/* ── Page Header ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
           <div>
