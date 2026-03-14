@@ -735,7 +735,7 @@ export default function CandidateDocumentVerificationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="container mx-auto px-1 pb-4 space-y-4">
+      <div className="w-full max-w-[98%] mx-auto px-1 pt-6 pb-4 space-y-4">
         {/* Candidate Details Header */}
         {candidate && (
           <motion.div

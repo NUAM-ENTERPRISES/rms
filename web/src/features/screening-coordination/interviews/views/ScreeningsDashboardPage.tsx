@@ -199,7 +199,7 @@ export default function ScreeningsDashboardPage() {
 
 return (
   <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-    <div className="w-full max-w-7xl mx-auto space-y-6 px-4 py-6">
+    <div className="w-full max-w-[98%] mx-auto space-y-6 px-4 py-6">
       {/* Elegant Header */}
       <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30">
         <CardHeader className="pb-2">
