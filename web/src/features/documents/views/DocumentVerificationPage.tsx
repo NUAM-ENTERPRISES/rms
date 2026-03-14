@@ -304,7 +304,7 @@ export default function DocumentVerificationPage() {
   if (!canReadDocuments) {
     return (
       <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[98%] mx-auto">
           <Card>
             <CardContent className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -386,7 +386,7 @@ export default function DocumentVerificationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="max-w-7xl mx-auto space-y-4">
+      <div className="max-w-[98%] mx-auto space-y-4">
         {/* Compact Header */}
         <div className="flex items-center justify-between bg-white rounded-xl shadow-lg border border-gray-200 px-6 py-4">
           <div>
