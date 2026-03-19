@@ -8,6 +8,8 @@ export interface RecruiterInfo {
   id: string;
   name: string;
   email: string;
+  mobileNumber?: string;
+  countryCode?: string;
   candidateCount?: number;
 }
 
@@ -62,6 +64,8 @@ export class RecruiterAssignmentService {
         id: creator.id,
         name: creator.name,
         email: creator.email,
+        mobileNumber: creator.mobileNumber,
+        countryCode: creator.countryCode,
       };
     }
 
@@ -108,6 +112,8 @@ export class RecruiterAssignmentService {
       id: recruiter.id,
       name: recruiter.name,
       email: recruiter.email,
+      mobileNumber: recruiter.mobileNumber,
+      countryCode: recruiter.countryCode,
       candidateCount: recruiter.candidateRecruiterAssignments.length,
     }));
 

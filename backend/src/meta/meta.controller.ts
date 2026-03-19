@@ -7,6 +7,7 @@ import {
     HttpException,
     HttpStatus,
     Logger,
+    Param,
 } from '@nestjs/common';
 import { MetaService } from './meta.service';
 import { Public } from 'src/auth/decorators/public.decorator';
@@ -17,6 +18,27 @@ export class MetaController {
     private readonly VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'my_secret_token_123';
 
     constructor(private readonly metaService: MetaService) { }
+
+    /**
+     * Public Registration Link Verification
+     */
+    @Public()
+    @Get('verify/:shortCode')
+    async verifyCode(@Param('shortCode') shortCode: string) {
+        return this.metaService.verifyLeadCode(shortCode);
+    }
+
+    /**
+     * Public Registration Submission
+     */
+    @Public()
+    @Post('submit/:shortCode')
+    async submitLead(
+        @Param('shortCode') shortCode: string,
+        @Body() body: any
+    ) {
+        return this.metaService.submitLeadDetails(shortCode, body);
+    }
 
     @Public()
     @Get()

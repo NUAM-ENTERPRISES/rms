@@ -829,7 +829,7 @@ enum MetaLeadStatus {
 
 model MetaLead {
   id                 String         @id @default(cuid())
-  leadId             String         @unique
+  leadId             String?        @unique
   formId             String?
   campaignId         String?
   adsetId            String?
@@ -841,9 +841,13 @@ model MetaLead {
   countryCode        String?
   phoneNumber        String?
   formSubmissionTime DateTime?
-  rawPayload         Json
+  rawPayload         Json?
   status             MetaLeadStatus @default(pending)
   source             String?        @default("meta")
+  platform           String?        // "facebook", "instagram", "whatsapp"
+  senderId           String?        // PSID or Phone Number
+  shortCode          String?        @unique // nanoid generated
+  tokenExpiresAt     DateTime?
   consentGiven       Boolean?       @default(false)
   consentAt          DateTime?
   candidateId        String?
@@ -857,6 +861,7 @@ model MetaLead {
   @@index([email])
   @@index([countryCode, phoneNumber])
   @@index([status])
+  @@index([shortCode])
   @@map("meta_leads")
 }
 
