@@ -1,11 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +24,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Search,
   MoreHorizontal,
   Eye,
@@ -48,34 +38,25 @@ import {
   Mail,
   Calendar,
   Filter,
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Globe,
-  Building2,
-  Share2,
-  Stethoscope,
   FilterX,
-  User,
-  AlertCircle,
-  CalendarDays,
-  X,
   Edit,
   Trash2,
-  Filter as FilterIcon,
+  SlidersHorizontal,
+  Building2,
+  AlertCircle,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useGetCandidateOverviewQuery, useTransferCandidateMutation } from "@/features/candidates/api";
-import { countriesApi } from "@/shared/hooks/useCountriesLookup";
 import { usersApi } from "@/features/admin/api";
 import { useAppSelector } from "@/app/hooks";
 import { useCan } from "@/hooks/useCan";
 import { motion } from "framer-motion";
-import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { UserSelect } from "../components/UserSelect";
-import { DatePicker, ImageViewer, MultiCountrySelect, MultiSelect } from "@/components/molecules";
+import { format } from "date-fns";
+import { RecruiterPerformanceChartWrapper } from "../components/RecruiterPerformanceChartWrapper";
+import { ImageViewer } from "@/components/molecules";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
-import { SECTOR_TYPES } from "@/constants/candidate-constants";
+import { UserSelect } from "../components/UserSelect";
+import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -102,6 +83,9 @@ export default function CandidateOverviewPage() {
 
   const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
 
+  // Advanced filters sheet state
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+
   // Filters state
   const [filters, setFilters] = useState({
     search: "",
@@ -118,6 +102,15 @@ export default function CandidateOverviewPage() {
     sources: [] as string[],
     status: "all",
   });
+
+  // Count active filters (calculated after filters state)
+  const activeFilterCount = [
+    filters.countryPreferences.length > 0,
+    filters.sectorTypes.length > 0,
+    filters.sources.length > 0,
+    filters.dateFilter !== "all",
+    filters.recruiterId !== "all" && filters.recruiterId !== currentUser?.id,
+  ].filter(Boolean).length;
 
   // Fetch reference data
   const { data: usersData } = usersApi.useGetUsersQuery(
@@ -310,154 +303,17 @@ export default function CandidateOverviewPage() {
   return (
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
-        {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardContent className="pt-6">
-            <div className="space-y-6">
-              {/* Premium Search Bar */}
-              <div className="relative group">
-                <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${filters.search ? "text-blue-600" : "text-gray-400"}`}>
-                  <Search className={`h-5 w-5 transition-transform duration-300 ${filters.search ? "scale-110" : "scale-100"}`} />
-                </div>
-                <Input
-                  placeholder="Search candidates by name, email, or phone..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-2xl shadow-sm"
-                />
-              </div>
-
-              {/* Filters Row 1 */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-slate-400" />
-                  <div className="min-w-[180px]">
-                    <MultiCountrySelect
-                      placeholder="All Countries"
-                      value={filters.countryPreferences}
-                      onValueChange={(val) => setFilters(f => ({ ...f, countryPreferences: val, page: 1 }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-slate-400" />
-                  <div className="min-w-[180px]">
-                    <MultiSelect
-                      placeholder="All Sectors"
-                      options={Object.entries(SECTOR_TYPES).map(([key, value]) => ({
-                        label: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-                        value: value
-                      }))}
-                      value={filters.sectorTypes}
-                      onValueChange={(val) => setFilters(f => ({ ...f, sectorTypes: val, page: 1 }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Share2 className="h-4 w-4 text-slate-400" />
-                  <div className="min-w-[180px]">
-                    <MultiSelect
-                      placeholder="All Sources"
-                      options={[
-                        { label: "Manual", value: "manual" },
-                        { label: "WhatsApp", value: "whatsapp" },
-                        { label: "Referral", value: "referral" },
-                        { label: "LinkedIn", value: "linkedin" },
-                        { label: "Facebook", value: "facebook" },
-                        { label: "Indeed", value: "indeed" },
-                        { label: "Other", value: "other" },
-                      ]}
-                      value={filters.sources}
-                      onValueChange={(val) => setFilters(f => ({ ...f, sources: val, page: 1 }))}
-                    />
-                  </div>
-                </div>
-
-                <Button variant="outline" size="sm" onClick={handleResetFilters} className="h-10 rounded-xl gap-2 border-slate-200">
-                    <FilterX className="h-4 w-4" /> Reset
-                </Button>
-
-                <Button onClick={() => navigate("/candidates/create")} className="h-10 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg rounded-xl gap-2 ml-auto">
-                    <Plus className="h-4 w-4" /> Add Candidate
-                </Button>
-              </div>
-
-              {/* Date Filters Section */}
-              <div className="border-t border-gray-100 pt-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1.5 mr-1">
-                    <CalendarDays className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-semibold text-gray-700">Date Range</span>
-                  </div>
-                  {[
-                    { key: "all", label: "All Time" },
-                    { key: "today", label: "Today" },
-                    { key: "yesterday", label: "Yesterday" },
-                    { key: "this_week", label: "This week" },
-                    { key: "last_week", label: "Last week" },
-                    { key: "this_month", label: "This month" },
-                    { key: "this_year", label: "This year" },
-                  ].map((preset) => {
-                    const isActive = filters.dateFilter === preset.key;
-                    return (
-                      <button
-                        key={preset.key}
-                        onClick={() => {
-                          const today = new Date();
-                          let from: Date | undefined = undefined;
-                          let to: Date | undefined = undefined;
-                          switch (preset.key) {
-                            case "all": from = undefined; to = undefined; break;
-                            case "today": from = startOfDay(today); to = endOfDay(today); break;
-                            case "yesterday": { const y = subDays(today, 1); from = startOfDay(y); to = endOfDay(y); break; }
-                            case "this_week": from = startOfWeek(today); to = endOfWeek(today); break;
-                            case "last_week": { const lw = subDays(today, 7); from = startOfWeek(lw); to = endOfWeek(lw); break; }
-                            case "this_month": from = startOfMonth(today); to = endOfMonth(today); break;
-                            case "this_year": from = startOfMonth(new Date(today.getFullYear(), 0, 1)); to = endOfMonth(today); break;
-                          }
-                          setFilters(f => ({ ...f, dateFilter: preset.key, dateFrom: from, dateTo: to, page: 1 }));
-                        }}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${isActive ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 mt-3">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/50">
-                    <span className="text-xs font-medium text-gray-500">From</span>
-                    <div className="w-48">
-                      <DatePicker value={filters.dateFrom} showTime={false} onChange={(d) => setFilters(f => ({ ...f, dateFrom: d, dateFilter: "custom", page: 1 }))} placeholder="Start Date" compact />
-                    </div>
-                    <ArrowRight className="h-3.5 w-3.5 text-gray-400 mx-1" />
-                    <span className="text-xs font-medium text-gray-500">To</span>
-                    <div className="w-48">
-                      <DatePicker value={filters.dateTo} showTime={false} onChange={(d) => setFilters(f => ({ ...f, dateTo: d, dateFilter: "custom", page: 1 }))} placeholder="End Date" compact disabled={!filters.dateFrom} />
-                    </div>
-                  </div>
-
-                  {(isManagerOrAdmin || !isRecruiter) && (
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-blue-500" />
-                      <UserSelect
-                        value={filters.recruiterId === "all" ? "" : filters.recruiterId}
-                        onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
-                        placeholder="All Recruiters"
-                        role="Recruiter"
-                        allowClear={true}
-                        className="h-10 min-w-[220px] bg-white border-gray-200 rounded-xl shadow-sm"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Performance Chart Section - Only if a specific recruiter is selected or it's a recruiter's own dashboard */}
+        {(filters.recruiterId !== "all") && (
+          <RecruiterPerformanceChartWrapper 
+            recruiterId={filters.recruiterId}
+            recruiterName={
+              filters.recruiterId === currentUser?.id 
+                ? currentUser?.name 
+                : usersData?.data?.users?.find(u => u.id === filters.recruiterId)?.name
+            }
+          />
+        )}
 
         {/* Dashboard Tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 gap-2">
@@ -502,32 +358,95 @@ export default function CandidateOverviewPage() {
 
         {/* Candidates Table */}
         <Card className="border-0 shadow-lg bg-white/90">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">{getTableTitle()}</CardTitle>
-                <CardDescription>{pagination.total} candidates found</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 pb-0">
             {/* Premium Table Container */}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-              {/* Beautiful Header */}
+              {/* Table Header with Search and Actions */}
               <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-                <div className="flex items-center gap-4">
-                  {/* Colorful Gradient Icon Background */}
-                  <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
-                    <Users className="h-7 w-7 text-white" />
+                <div className="flex flex-col gap-4">
+                  {/* Top Row - Title and Actions */}
+                  <div className="flex items-center gap-4">
+                    {/* Colorful Gradient Icon Background */}
+                    <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
+
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold text-gray-900">
+                        {getTableTitle()}
+                      </h4>
+                      <p className="text-sm text-gray-600 font-medium">
+                        {pagination.total} candidate{pagination.total !== 1 ? "s" : ""} found
+                      </p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        onClick={() => navigate("/candidates/create")} 
+                        className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
+                      >
+                        <Plus className="h-4 w-4" /> Add Candidate
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      {getTableTitle()}
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1 font-medium">
-                      {pagination.total} candidate{pagination.total !== 1 ? "s" : ""} in total
-                    </p>
+                  {/* Bottom Row - Search and Filters */}
+                  <div className="flex items-center gap-3">
+                    {/* Search Bar */}
+                    <div className="relative flex-1 max-w-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <Input
+                        placeholder="Search candidates..."
+                        value={filters.search}
+                        onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
+                        className="pl-9 h-9 text-sm border-gray-200 bg-white focus:ring-2 focus:ring-blue-500/20 rounded-lg"
+                      />
+                    </div>
+
+                    {/* Recruiter Select - Only for managers/admin */}
+                    {(isManagerOrAdmin && !isRecruiter) && (
+                      <div className="w-56">
+                        <UserSelect
+                          value={filters.recruiterId === "all" ? "" : filters.recruiterId}
+                          onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
+                          placeholder="All Recruiters"
+                          role="Recruiter"
+                          allowClear={true}
+                          className="h-9 text-sm shadow-none bg-white border-gray-200 rounded-lg"
+                        />
+                      </div>
+                    )}
+
+                    {/* Filter Button */}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setIsFilterSheetOpen(true)}
+                      className="h-9 px-3 rounded-lg gap-2 border-gray-200 hover:bg-gray-100"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      <span className="hidden sm:inline">Filters</span>
+                      {activeFilterCount > 0 && (
+                        <span className="flex items-center justify-center h-5 w-5 text-[10px] font-bold text-white bg-blue-600 rounded-full">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+
+                    {activeFilterCount > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleResetFilters}
+                        className="h-9 px-3 rounded-lg gap-1 text-gray-500 hover:text-gray-700"
+                      >
+                        <FilterX className="h-4 w-4" />
+                        <span className="hidden sm:inline">Clear</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -790,6 +709,17 @@ export default function CandidateOverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Advanced Filters Sheet */}
+      <AdvancedFiltersSheet
+        isOpen={isFilterSheetOpen}
+        onOpenChange={setIsFilterSheetOpen}
+        filters={filters as any}
+        setFilters={setFilters as any}
+        isManagerOrAdmin={!!isManagerOrAdmin}
+        isRecruiter={!!isRecruiter}
+        handleResetFilters={handleResetFilters}
+      />
 
       {/* Transfer Candidate Dialog */}
       {transferDialog.isOpen && (

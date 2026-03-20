@@ -246,6 +246,15 @@ function RoleBasedRedirect() {
     );
   }
 
+  // Recruiters, Team Heads and Team Leads should land on Candidate Overview
+  if (user?.roles.some((role) => ["Recruiter", "Team Head", "Team Lead"].includes(role))) {
+    return (
+      <AppLayout>
+        <CandidateOverviewPage />
+      </AppLayout>
+    );
+  }
+
   // Only Manager, Director, and CEO can access dashboard
   if (
     user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))

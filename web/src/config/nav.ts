@@ -49,18 +49,51 @@ export const navigationConfig: NavItem[] = [
     roles: ["Processing Executive"],
     // Dedicated dashboard for Processing Executives
   },
-
-  // {
-  //   id: "dashboard",
-  //   label: "Dashboard",
-  //   path: "/dashboard",
-  //   icon: Home,
-  //   roles: ["CEO", "Director", "Manager"],
-  //   badge: {
-  //     text: "Analytics",
-  //     variant: "default",
-  //   },
-  // },
+  {
+    id: "recruiter-dashboard",
+    label: "Dashboard",
+    path: "/",
+    icon: Home,
+    roles: ["Recruiter", "Team Head", "Team Lead"],
+    // Recruiter Dashboard - points to Candidate Overview
+  },
+  {
+    id: "candidates",
+    label: "Candidates",
+    path: "/candidates",
+    icon: UserCheck,
+    roles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "Team Head",
+      "Team Lead",
+      "Recruiter",
+      "Documentation Executive",
+      "System Admin",
+      "CRE",
+      // "Screening Trainer",
+    ],
+    children: [
+      {
+        id: "candidate-overview",
+        label: "Overview",
+        path: "/candidates/overview",
+        hiddenForRoles: ["Recruiter", "Team Head", "Team Lead"],
+      },
+      {
+        id: "candidates-list",
+        label: "My Follow Up",
+        path: "/candidates",
+      },
+      {
+        id: "recruiter-docs",
+        label: "Documents Collection",
+        path: "/recruiter-docs",
+        roles: ["Recruiter", "System Admin"],
+      },
+    ],
+  },
   {
     id: "candidate-analytics",
     label: "Analytics",
@@ -129,43 +162,6 @@ export const navigationConfig: NavItem[] = [
         path: "/projects",
       },
     ],
-  },
-  {
-    id: "candidates",
-    label: "Candidates",
-    path: "/candidates",
-    icon: UserCheck,
-    roles: [
-      "CEO",
-      "Director",
-      "Manager",
-      "Team Head",
-      "Team Lead",
-      "Recruiter",
-      "Documentation Executive",
-      "System Admin",
-      "CRE",
-      // "Screening Trainer",
-    ],
-    children: [
-      {
-        id: "candidate-overview",
-        label: "Overview",
-        path: "/candidates/overview",
-      },
-      {
-        id: "candidates-list",
-        label: "Follow Up",
-        path: "/candidates",
-      },
-    ],
-  },
-  {
-    id: "recruiter-docs",
-    label: "Recruiter Docs",
-    path: "/recruiter-docs",
-    icon: FileText,
-    roles: ["Recruiter", "System Admin"],
   },
   {
     id: "clients",

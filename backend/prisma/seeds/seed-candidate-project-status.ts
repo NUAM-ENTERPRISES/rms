@@ -35,30 +35,31 @@ export async function seedCandidateProjectWorkflow() {
     { name: "documents_re_submission_requested", label: "Document Re-Submission Requested", order: 5, main: "documents" },
     { name: "rejected_documents", label: "Rejected Documents", order: 6, main: "documents" },
     { name: "submitted_to_client", label: "Submitted to Client", order: 7, main: "documents" },
-    { name: "shortlisted", label: "Shortlisted", order: 8, main: "documents" },
-    { name: "not_shortlisted", label: "Not Shortlisted", order: 9, main: "documents" },
 
     // INTERVIEW
-    {name: "interview_assigned", label: "Interview Assigned", order: 1, main: "interview" },
-    { name: "interview_scheduled", label: "Interview Scheduled", order: 2, main: "interview" },
-    { name: "interview_rescheduled", label: "Interview Rescheduled", order: 3, main: "interview" },
-    { name: "interview_completed", label: "Interview Completed", order: 4, main: "interview" },
-    { name: "interview_passed", label: "Interview Passed", order: 5, main: "interview" },
-    { name: "interview_failed", label: "Interview Failed", order: 6, main: "interview" },
+    { name: "shortlisted", label: "Shortlisted", order: 1, main: "interview" },
+    { name: "not_shortlisted", label: "Not Shortlisted", order: 2, main: "interview" },
+    {name: "interview_assigned", label: "Interview Assigned", order: 3, main: "interview" },
+    { name: "interview_scheduled", label: "Interview Scheduled", order: 4, main: "interview" },
+    { name: "interview_rescheduled", label: "Interview Rescheduled", order: 5, main: "interview" },
+    { name: "interview_completed", label: "Interview Completed", order: 6, main: "interview" },
+    { name: "interview_passed", label: "Interview Passed", order: 7, main: "interview" },
+    { name: "interview_failed", label: "Interview Failed", order: 8, main: "interview" },
+    { name: "interview_backout", label: "Interview Backout", order: 9, main: "interview" },
     // SCREENING (formerly Mock Interview)
-    { name: "screening_assigned", label: "Screening Assigned", order: 7, main: "interview" },
-    { name: "screening_scheduled", label: "Screening Scheduled", order: 8, main: "interview" },
-    { name: "screening_completed", label: "Screening Completed", order: 9, main: "interview" },
-    { name: "screening_passed", label: "Screening Passed", order: 10, main: "interview" },
-    { name: "screening_failed", label: "Screening Failed", order: 11, main: "interview" },
+    { name: "screening_assigned", label: "Screening Assigned", order: 10, main: "interview" },
+    { name: "screening_scheduled", label: "Screening Scheduled", order: 11, main: "interview" },
+    { name: "screening_completed", label: "Screening Completed", order: 12, main: "interview" },
+    { name: "screening_passed", label: "Screening Passed", order: 13, main: "interview" },
+    { name: "screening_failed", label: "Screening Failed", order: 14, main: "interview" },
 
 
     // TRAINING (interview categories)
-    { name: "training_assigned", label: "Training Assigned", order: 12, main: "interview" },
-    { name: "training_in_progress", label: "Training In Progress", order: 13, main: "interview" },
-    { name: "training_completed", label: "Training Completed", order: 14, main: "interview" },
-    { name: "ready_for_reassessment", label: "Ready For Reassessment", order: 14, main: "interview" },
-    { name: "interview_selected", label: "Interview Selected", order: 15, main: "interview" },
+    { name: "training_assigned", label: "Training Assigned", order: 14, main: "interview" },
+    { name: "training_in_progress", label: "Training In Progress", order: 15, main: "interview" },
+    { name: "training_completed", label: "Training Completed", order: 16, main: "interview" },
+    { name: "ready_for_reassessment", label: "Ready For Reassessment", order: 17, main: "interview" },
+    { name: "interview_selected", label: "Interview Selected", order: 18, main: "interview" },
     
 
 
