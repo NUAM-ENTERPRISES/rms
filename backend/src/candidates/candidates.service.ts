@@ -3470,6 +3470,7 @@ export class CandidatesService {
         firstName: true,
         lastName: true,
         email: true,
+        profileImage: true,
       },
     });
 
@@ -3528,11 +3529,24 @@ export class CandidatesService {
         subStatus: true,
         documentVerifications: {
           include: {
-            document: true,
+            document: {
+              include: {
+                candidate: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
             verificationHistory: {
               include: {
                 performer: {
-                  select: { name: true },
+                  select: { 
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
                 },
               },
               orderBy: { performedAt: 'desc' },
@@ -3546,9 +3560,45 @@ export class CandidatesService {
       take: limit,
     });
 
+    // Fetch user information for uploadedBy and verifiedBy
+    const userIds = new Set<string>();
+    projects.forEach(p => {
+      p.documentVerifications?.forEach(dv => {
+        if (dv.document.uploadedBy) userIds.add(dv.document.uploadedBy);
+        if (dv.document.verifiedBy) userIds.add(dv.document.verifiedBy);
+        if (dv.document.rejectedBy) userIds.add(dv.document.rejectedBy);
+      });
+    });
+
+    const users = userIds.size > 0 
+      ? await this.prisma.user.findMany({
+          where: { id: { in: Array.from(userIds) } },
+          select: { id: true, name: true, email: true }
+        })
+      : [];
+    
+    const userMap = users.reduce((acc, user) => {
+      acc[user.id] = user;
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Attach user details to documents
+    const projectsWithUserDetails = projects.map(p => ({
+      ...p,
+      documentVerifications: p.documentVerifications?.map(dv => ({
+        ...dv,
+        document: {
+          ...dv.document,
+          uploader: dv.document.uploadedBy ? userMap[dv.document.uploadedBy] : null,
+          verifier: dv.document.verifiedBy ? userMap[dv.document.verifiedBy] : null,
+          rejector: dv.document.rejectedBy ? userMap[dv.document.rejectedBy] : null,
+        }
+      }))
+    }));
+
     return {
       candidate: candidateInfo,
-      projects,
+      projects: projectsWithUserDetails,
       pagination: {
         total: totalProjects,
         page,

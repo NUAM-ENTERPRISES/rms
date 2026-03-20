@@ -654,7 +654,7 @@ export default function CandidateOverviewPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 px-3 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800 font-bold transition-all shadow-sm rounded-full"
+                                  className="h-7 px-3 bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 font-bold transition-all shadow-sm rounded-full gap-1.5"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (filters.status === "documentation") {
@@ -664,7 +664,10 @@ export default function CandidateOverviewPage() {
                                     }
                                   }}
                                 >
-                                  {candidate._count?.projects || 0} Project{(candidate._count?.projects !== 1) ? "s" : ""}
+                                  <Briefcase className="h-3.5 w-3.5" />
+                                  <span>
+                                    {candidate._count?.projects || 0} Project{(candidate._count?.projects !== 1) ? "s" : ""}
+                                  </span>
                                 </Button>
                               </div>
                             ) : (

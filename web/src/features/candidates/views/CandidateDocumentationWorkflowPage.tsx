@@ -25,13 +25,15 @@ import {
   ShieldAlert,
   FileWarning,
   Hash,
-  X
+  X,
+  Upload
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
+import { ImageViewer } from "@/components/molecules/ImageViewer";
 import { 
   Accordion, 
   AccordionContent, 
@@ -132,22 +134,38 @@ export default function CandidateDocumentationWorkflowPage() {
     <div className="container mx-auto py-6 px-4 md:px-6 space-y-6 min-h-screen">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-2xl shadow-lg text-white">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl hover:bg-white/10 text-white border border-white/20">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl hover:bg-white/10 text-white border border-white/20 shrink-0">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            
+            <div className="relative shrink-0">
+              <ImageViewer 
+                src={candidate.profileImage}
+                title={`${candidate.firstName} ${candidate.lastName}`}
+                className="h-16 w-16 rounded-2xl border-2 border-white/30 shadow-lg"
+                enableHoverPreview={true}
+              />
+              <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-emerald-500 border-2 border-white rounded-full shadow-sm z-10" title="Active" />
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-2xl font-bold tracking-tight truncate">
                 {candidate.firstName} {candidate.lastName}
               </h1>
               <Badge className="bg-white/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-xs w-fit">
                 <FileText className="h-3 w-3 mr-1" /> Documentation Stage
               </Badge>
             </div>
-            <div className="flex items-center gap-4 text-sm text-blue-100 mt-2">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-blue-100 mt-2">
               <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {format(new Date(), "dd MMM yyyy")}</span>
               <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> {pagination?.total || 0} Projects</span>
+              {candidate.email && (
+                <span className="flex items-center gap-1.5 opacity-80"><FileText className="h-3.5 w-3.5" /> {candidate.email}</span>
+              )}
             </div>
           </div>
         </div>
@@ -330,13 +348,15 @@ export default function CandidateDocumentationWorkflowPage() {
                                           <p className="text-[13px] font-semibold text-slate-800 truncate">
                                             {dv.document?.fileName || "Unnamed Document"}
                                           </p>
-                                          <div className="flex items-center gap-1.5 mt-0.5">
+                                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                             <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-semibold text-blue-600 bg-blue-50/80 border-blue-100">
                                               {dv.document?.docType || "N/A"}
                                             </Badge>
-                                            <span className="text-[10px] text-slate-400 truncate">
-                                              {dv.requirement?.name || dv.notes || "Standard"}
-                                            </span>
+                                            {dv.document?.uploader && (
+                                              <span className="text-[9px] text-slate-500 flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                                                <Upload className="h-2.5 w-2.5" /> {dv.document.uploader.name}
+                                              </span>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
@@ -345,7 +365,7 @@ export default function CandidateDocumentationWorkflowPage() {
                                       {getStatusBadge(dv.status)}
                                     </TableCell>
                                     <TableCell>
-                                       {dv.verificationHistory?.length > 0 ? (
+                                       {dv.status !== 'pending' ? (
                                            <div className="flex items-start gap-1.5">
                                               <div className="mt-0.5">
                                                 {dv.status === 'verified' ? <UserCheck className="h-3 w-3 text-emerald-500" /> : 
@@ -354,7 +374,7 @@ export default function CandidateDocumentationWorkflowPage() {
                                               </div>
                                               <div className="min-w-0">
                                                 <p className="text-[11px] font-semibold text-slate-700">
-                                                  {dv.verificationHistory[0]?.performedByName || dv.verificationHistory[0]?.performer?.name || "System"}
+                                                  {dv.document?.verifier?.name || dv.document?.rejector?.name || dv.verificationHistory?.[0]?.performer?.name || "System"}
                                                 </p>
                                                 <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">
                                                   {dv.notes || dv.rejectionReason || "No remarks provided."}
@@ -364,7 +384,7 @@ export default function CandidateDocumentationWorkflowPage() {
                                        ) : (
                                            <div className="flex items-center gap-1.5 text-slate-400">
                                               <History className="h-3 w-3" />
-                                              <span className="text-[10px]">No history</span>
+                                              <span className="text-[10px]">Pending verification</span>
                                            </div>
                                        )}
                                     </TableCell>
