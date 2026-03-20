@@ -3305,6 +3305,9 @@ export class CandidatesService {
         preferredCountries: {
           include: { country: true },
         },
+        _count: {
+          select: { projects: true },
+        },
         projects: {
           include: {
             subStatus: true,
