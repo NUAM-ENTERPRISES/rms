@@ -1,34 +1,24 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
-import { useGetCandidateProjectsWorkflowDetailsQuery, useGetStatusConfigQuery } from "../api";
+import { useGetCandidateProjectsWorkflowDetailsQuery } from "../api";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   FileText,
-  CheckCircle2,
-  Clock,
   AlertCircle,
   Building2,
   Calendar,
   ExternalLink,
-  History,
-  Search,
-  Filter,
   ChevronLeft,
   ChevronRight,
-  Eye,
-  Briefcase,
-  ShieldCheck,
-  ShieldX,
-  ShieldAlert,
+  Search,
+  Filter,
   FileWarning,
   Hash,
   X,
-  XCircle,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
@@ -39,13 +29,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -60,7 +43,6 @@ export default function CandidateProjectWorkflowPage() {
 
   const [filters, setFilters] = useState({
     search: "",
-    subStatus: "all",
     page: 1,
     limit: 5,
   });
@@ -71,12 +53,8 @@ export default function CandidateProjectWorkflowPage() {
     title: "",
   });
 
-  const { data: statusConfigResponse } = useGetStatusConfigQuery({ mainStage: "documents" });
-  const subStatuses = Array.isArray(statusConfigResponse?.data?.subStatuses) ? statusConfigResponse.data.subStatuses : [];
-
   const { data: response, isLoading, error } = useGetCandidateProjectsWorkflowDetailsQuery({
     candidateId: candidateId!,
-    subStatus: filters.subStatus === "all" ? undefined : filters.subStatus,
     search: filters.search || undefined,
     page: filters.page,
     limit: filters.limit,
@@ -104,7 +82,7 @@ export default function CandidateProjectWorkflowPage() {
   const totalPages = pagination.totalPages;
   const displayedProjects = projectList;
 
-  const hasActiveFilters = filters.search || filters.subStatus !== "all";
+  const hasActiveFilters = !!filters.search;
 
   return (
     <div className="container mx-auto py-6 px-4 md:px-6 space-y-6 min-h-screen">
@@ -174,19 +152,6 @@ export default function CandidateProjectWorkflowPage() {
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-slate-400 hidden md:block" />
-          <Select value={filters.subStatus} onValueChange={(val) => setFilters((prev) => ({ ...prev, subStatus: val, page: 1 }))}>
-            <SelectTrigger className="w-full md:w-[220px] h-10 border-slate-200 rounded-lg bg-slate-50">
-              <SelectValue placeholder="All Sub-Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sub-Statuses</SelectItem>
-              {subStatuses.map((ss: any) => (
-                <SelectItem key={ss.id} value={ss.id}>
-                  {ss.label || ss.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           {hasActiveFilters && (
             <TooltipProvider>
               <Tooltip>
@@ -195,7 +160,7 @@ export default function CandidateProjectWorkflowPage() {
                     variant="ghost"
                     size="icon"
                     className="h-10 w-10 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
-                    onClick={() => setFilters({ search: "", subStatus: "all", page: 1, limit: 5 })}
+                    onClick={() => setFilters({ search: "", page: 1, limit: 5 })}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -214,7 +179,7 @@ export default function CandidateProjectWorkflowPage() {
           </div>
           <p className="text-slate-600 font-semibold text-lg">No Projects Found</p>
           <p className="text-slate-400 text-sm mt-1 max-w-sm">No projects match the current filters in the project workflow view.</p>
-          <Button onClick={() => setFilters({ search: "", subStatus: "all", page: 1, limit: 5 })} variant="outline" className="mt-5 rounded-lg">
+          <Button onClick={() => setFilters({ search: "", page: 1, limit: 5 })} variant="outline" className="mt-5 rounded-lg">
             <X className="h-4 w-4 mr-2" /> Clear Filters
           </Button>
         </Card>
