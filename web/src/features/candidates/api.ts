@@ -1263,10 +1263,12 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: ["Candidate"],
     }),
 
-    getCandidateProjectsWorkflowDetails: builder.query<any, string>({
-      query: (candidateId) => `candidates/${candidateId}/projects-workflow-details`,
-      transformResponse: (response: any) => response.data,
-      providesTags: ["Candidate"],
+    getCandidateProjectsWorkflowDetails: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
+      query: ({ candidateId, ...params }) => ({
+        url: `candidates/${candidateId}/projects-workflow-details`,
+        params,
+      }),
+      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` }],
     }),
     getCandidateDocumentationWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({

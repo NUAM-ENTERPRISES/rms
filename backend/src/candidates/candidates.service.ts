@@ -3388,67 +3388,135 @@ export class CandidatesService {
    * Get consolidated project workflow details for a candidate
    * Includes documentation, interviews, and processing details for all projects
    */
-  async getCandidateProjectsWorkflowDetails(candidateId: string) {
-    const candidate = await this.prisma.candidate.findUnique({
+  async getCandidateProjectsWorkflowDetails(
+    candidateId: string,
+    options: { subStatus?: string; search?: string; page?: number; limit?: number } = {},
+  ) {
+    const { subStatus, search, page = 1, limit = 10 } = options;
+    const skip = (page - 1) * limit;
+
+    const candidateInfo = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
-      include: {
-        projects: {
-          include: {
-            project: {
-              include: {
-                client: true,
-                country: true,
-              },
-            },
-            mainStatus: true,
-            subStatus: true,
-            documentVerifications: {
-              include: {
-                document: true,
-              },
-            },
-            interviews: {
-              orderBy: { scheduledTime: 'desc' },
-            },
-            screenings: {
-              include: {
-                checklistItems: {
-                  include: {
-                    templateItem: true,
-                  },
-                },
-                template: true,
-              },
-              orderBy: { scheduledTime: 'desc' },
-            },
-            processing: {
-              include: {
-                processingSteps: {
-                  include: {
-                    template: true,
-                  },
-                },
-                history: {
-                  include: {
-                    changedBy: {
-                      select: { name: true },
-                    },
-                  },
-                  orderBy: { createdAt: 'desc' },
-                },
-              },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profileImage: true,
       },
     });
 
-    if (!candidate) {
+    if (!candidateInfo) {
       return null;
     }
 
-    return candidate;
+    const projectWhere: any = {
+      candidateId,
+    };
+
+    if (subStatus) {
+      projectWhere.subStatusId = subStatus;
+    }
+
+    if (search) {
+      projectWhere.OR = [
+        {
+          project: {
+            title: { contains: search, mode: 'insensitive' },
+          },
+        },
+        {
+          project: {
+            client: {
+              name: { contains: search, mode: 'insensitive' },
+            },
+          },
+        },
+        {
+          roleNeeded: {
+            designation: { contains: search, mode: 'insensitive' },
+          },
+        },
+        {
+          roleNeeded: {
+            roleCatalog: {
+              name: { contains: search, mode: 'insensitive' },
+            },
+          },
+        },
+      ];
+    }
+
+    const totalProjects = await this.prisma.candidateProjects.count({
+      where: projectWhere,
+    });
+
+    const projects = await this.prisma.candidateProjects.findMany({
+      where: projectWhere,
+      include: {
+        project: {
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                pointOfContact: true,
+                email: true,
+                phone: true,
+              },
+            },
+            country: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            designation: true,
+            roleCatalog: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        mainStatus: true,
+        subStatus: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    const roleMap: Record<string, any> = {};
+    const projectRoles = (projects as any[])
+      .map((p) => (p as any).roleNeeded)
+      .filter((role) => !!role)
+      .reduce((acc: any[], role: any) => {
+        if (!roleMap[role.id]) {
+          roleMap[role.id] = true;
+          acc.push(role);
+        }
+        return acc;
+      }, []);
+
+    return {
+      candidate: candidateInfo,
+      projects,
+      candidateProjects: projects,
+      projectRoles,
+      pagination: {
+        total: totalProjects,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(totalProjects / limit)),
+      },
+    };
   }
 
   /**

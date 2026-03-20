@@ -1479,11 +1479,22 @@ export class CandidatesController {
     description: 'Returns documentation, interviews, and processing details for all projects a candidate is nominated for.',
   })
   @ApiParam({ name: 'id', description: 'Candidate ID' })
-  async getProjectsWorkflowDetails(@Param('id') id: string) {
-    const data = await this.candidatesService.getCandidateProjectsWorkflowDetails(id);
+  async getProjectsWorkflowDetails(
+    @Param('id') id: string,
+    @Query('subStatus') subStatus?: string,
+    @Query('search') search?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const data = await this.candidatesService.getCandidateProjectsWorkflowDetails(id, {
+      subStatus,
+      search,
+      page: Number(page),
+      limit: Number(limit),
+    });
     return {
       success: true,
-      data,
+      ...data,
       message: 'Workflow details retrieved successfully',
     };
   }

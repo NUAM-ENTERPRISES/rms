@@ -128,7 +128,7 @@ export default function CandidateOverviewPage() {
   );
 
   // Fetch live statuses from API only when a workflow tile is active
-  const isWorkflowActive = ["documentation", "interview", "processing"].includes(filters.status);
+  const isWorkflowActive = ["registered", "documentation", "interview", "processing"].includes(filters.status);
   
   // Use the new simplified endpoint for sub-statuses for the main stage
   const activeMainStage = filters.status === 'documentation' ? 'documents' : filters.status;
