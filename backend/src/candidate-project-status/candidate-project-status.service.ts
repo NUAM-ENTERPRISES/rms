@@ -125,6 +125,62 @@ export class CandidateProjectStatusService {
   }
 
   /**
+   * Get sub-statuses by main status name with pagination and search
+   */
+  async findByMainStatusName(mainStatusName: string, search?: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({
+      where: { name: mainStatusName },
+    });
+
+    if (!mainStatus) {
+      throw new NotFoundException(`Main status '${mainStatusName}' not found`);
+    }
+
+    const where: any = { stageId: mainStatus.id };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { label: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [subStatuses, total] = await Promise.all([
+      this.prisma.candidateProjectSubStatus.findMany({
+        where,
+        orderBy: { order: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.candidateProjectSubStatus.count({
+        where,
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        mainStatus: {
+          id: mainStatus.id,
+          name: mainStatus.name,
+          label: mainStatus.label,
+          color: mainStatus.color,
+        },
+        subStatuses,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      },
+      message: `Sub-statuses for '${mainStatusName}' retrieved successfully`,
+    };
+  }
+
+  /**
    * Terminal statuses — prefer explicit DB field if present; otherwise use heuristic
    */
   async getTerminalStatuses() {

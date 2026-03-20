@@ -47,6 +47,31 @@ export class CandidateProjectStatusController {
     return this.candidateProjectStatusService.getStatusesByStage();
   }
 
+  @Get('sub-status/:mainStatusName')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get sub-statuses by main status name',
+    description: 'Retrieve all sub-statuses belonging to a specific main status stage.',
+  })
+  @ApiParam({ name: 'mainStatusName', description: 'Main status name (e.g., documents, interview, processing)', example: 'documents' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search sub-status name or label' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
+  @ApiResponse({ status: 200, description: 'Sub-statuses retrieved successfully' })
+  async getProjectSubStatus(
+    @Param('mainStatusName') mainStatusName: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.candidateProjectStatusService.findByMainStatusName(
+      mainStatusName,
+      search,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
+  }
+
   @Get('terminal')
   @Permissions('read:candidates')
   @ApiOperation({

@@ -16,12 +16,26 @@ import {
   Building2, 
   Share2, 
   CalendarDays, 
-  FilterX 
+  FilterX,
+  FileText,
+  LayoutGrid,
+  Zap
 } from "lucide-react";
 import { UserSelect } from "./UserSelect";
 import { MultiCountrySelect, MultiSelect, DatePicker } from "@/components/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  DropdownMenuSeparator 
+} from "@/components/ui/dropdown-menu";
 import { SECTOR_TYPES } from "@/constants/candidate-constants";
 import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { WORKFLOW_STATUS_MAPPING } from "../constants";
 
 interface CandidateFilters {
   search: string;
@@ -37,6 +51,9 @@ interface CandidateFilters {
   gender: string;
   sources: string[];
   status: string;
+  mainStatus?: string;
+  subStatus?: string;
+  processingStep?: string;
 }
 
 interface AdvancedFiltersSheetProps {
@@ -247,7 +264,7 @@ export function AdvancedFiltersSheet({
                 <DatePicker 
                   value={localFilters.dateTo} 
                   showTime={false} 
-                  onChange={(d) => setLocalFilters(f => ({ ...f, dateTo: d || undefined, dateFilter: "custom", page: 1 }))} 
+                  onChange={(d) => setLocalFilters(f => ({ ...f, dateTo: d || undefined, dateFilter: "custom", page: 1 }))}
                   placeholder="End" 
                   compact 
                   disabled={!localFilters.dateFrom} 

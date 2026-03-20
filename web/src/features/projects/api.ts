@@ -675,9 +675,42 @@ export const projectsApi = baseApi.injectEndpoints({
           totalPages: number;
         };
       }>,
-      void
+      { stage?: string; search?: string } | void
     >({
-      query: () => "/candidate-project-status",
+      query: (params) => ({
+        url: "/candidate-project-status",
+        params: params || undefined,
+      }),
+    }),
+
+    // Get sub-statuses by main status name
+    getProjectSubStatus: builder.query<
+      ApiResponse<{
+        mainStatus: {
+          id: string;
+          name: string;
+          label: string;
+          color: string;
+        };
+        subStatuses: Array<{
+          id: string;
+          name: string;
+          label: string;
+          order: number;
+        }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          pages: number;
+        };
+      }>,
+      { mainStatusName: string; search?: string; page?: number; limit?: number }
+    >({
+      query: ({ mainStatusName, search, page = 1, limit = 10 }) => ({
+        url: `/candidate-project-status/sub-status/${mainStatusName}`,
+        params: { search, page, limit },
+      }),
     }),
 
     // Get project role catalog
@@ -814,6 +847,7 @@ export const {
   useBulkSendForScreeningMutation,
   useGetNominatedCandidatesQuery,
   useGetCandidateProjectStatusesQuery,
+  useGetProjectSubStatusQuery,
   useGetProjectRoleCatalogQuery,
   useCheckBulkCandidateEligibilityQuery,
   useGetRoleDepartmentsQuery,

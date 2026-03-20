@@ -733,6 +733,9 @@ export const candidatesApi = baseApi.injectEndpoints({
         dateFrom?: string;
         dateTo?: string;
         gender?: string;
+        mainStatus?: string;
+        subStatus?: string;
+        processingStep?: string;
         countryPreferences?: string[];
         sectorTypes?: string[];
         facilityPreferences?: string[];
@@ -744,6 +747,9 @@ export const candidatesApi = baseApi.injectEndpoints({
         if (params.limit) queryParams.append("limit", params.limit.toString());
         if (params.search) queryParams.append("search", params.search);
         if (params.status) queryParams.append("status", params.status);
+        if (params.mainStatus) queryParams.append("mainStatus", params.mainStatus);
+        if (params.subStatus) queryParams.append("subStatus", params.subStatus);
+        if (params.processingStep) queryParams.append("processingStep", params.processingStep);
         if (params.currentStatus) queryParams.append("currentStatus", params.currentStatus);
         if (params.recruiterId) queryParams.append("recruiterId", params.recruiterId);
         if (params.dateFilter) queryParams.append("dateFilter", params.dateFilter);

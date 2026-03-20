@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -44,9 +45,17 @@ import {
   SlidersHorizontal,
   Building2,
   AlertCircle,
+  FileSearch,
+  Repeat,
+  Loader2,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useGetCandidateOverviewQuery, useTransferCandidateMutation } from "@/features/candidates/api";
+import { 
+  useGetCandidateProjectStatusesQuery
+} from "@/features/projects/api";
 import { usersApi } from "@/features/admin/api";
 import { useAppSelector } from "@/app/hooks";
 import { useCan } from "@/hooks/useCan";
@@ -57,6 +66,8 @@ import { ImageViewer } from "@/components/molecules";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
+import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
+import { WORKFLOW_STATUS_MAPPING, WorkflowStatusKey } from "../constants";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -101,6 +112,9 @@ export default function CandidateOverviewPage() {
     gender: "all",
     sources: [] as string[],
     status: "all",
+    mainStatus: undefined as string | undefined,
+    subStatus: undefined as string | undefined,
+    processingStep: undefined as string | undefined,
   });
 
   // Count active filters (calculated after filters state)
@@ -110,6 +124,9 @@ export default function CandidateOverviewPage() {
     filters.sources.length > 0,
     filters.dateFilter !== "all",
     filters.recruiterId !== "all" && filters.recruiterId !== currentUser?.id,
+    !!filters.mainStatus,
+    !!filters.subStatus,
+    !!filters.processingStep,
   ].filter(Boolean).length;
 
   // Fetch reference data
@@ -117,6 +134,12 @@ export default function CandidateOverviewPage() {
     { roles: ["Recruiter", "Team Lead"], limit: 100 },
     { skip: isRecruiter }
   );
+
+  // Fetch live statuses from API only when a workflow tile is active
+  const isWorkflowActive = ["documentation", "interview", "processing"].includes(filters.status);
+  
+  // Use the new simplified endpoint for sub-statuses for the main stage
+  const activeMainStage = filters.status === 'documentation' ? 'documents' : filters.status;
 
   // Main Query
   const { data, isLoading, refetch } = useGetCandidateOverviewQuery({
@@ -126,6 +149,9 @@ export default function CandidateOverviewPage() {
     dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
     dateTo: filters.dateTo ? format(filters.dateTo, 'yyyy-MM-dd') : undefined,
     currentStatus: filters.status !== "all" ? filters.status : undefined,
+    mainStatus: filters.mainStatus,
+    subStatus: filters.subStatus,
+    processingStep: filters.processingStep,
   });
 
   const candidates = data?.data || [];
@@ -133,29 +159,52 @@ export default function CandidateOverviewPage() {
     total: 0,
     positive: 0,
     negative: 0,
-    nominated: 0,
-    interviewAssigned: 0,
-    documentReceived: 0,
-    medical: 0,
-    visa: 0,
+    registered: 0,
+    documentation: 0,
+    interview: 0,
+    processing: 0,
     deployed: 0,
   };
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
 
   const statTiles = [
-    { label: "Total Candidates", value: statsData.total, icon: Users, color: "from-blue-500 to-cyan-500", subtitle: "Assigned candidates", statusFilter: "all" },
-    { label: "Positive Candidates", value: statsData.positive, icon: UserCheck, color: "from-emerald-500 to-teal-500", subtitle: "Interested & Nominated", statusFilter: "interested" },
-    { label: "Negative Candidates", value: statsData.negative, icon: XCircle, color: "from-orange-500 to-red-500", subtitle: "Untouched (Exc. Nominated)", statusFilter: "untouched" },
-    { label: "Nominated Candidates", value: statsData.nominated, icon: Filter, color: "from-indigo-500 to-violet-500", subtitle: "Assigned to projects", statusFilter: "nominated" },
-    { label: "Interview Assigned", value: statsData.interviewAssigned, icon: Phone, color: "from-lime-400 to-green-500", subtitle: "Assigned to interview", statusFilter: "interview_assigned" },
-    { label: "Doc Received", value: statsData.documentReceived, icon: Mail, color: "from-purple-500 to-pink-500", subtitle: "Processing: Documents", statusFilter: "document_received" },
-    { label: "Medical Completed", value: statsData.medical, icon: Briefcase, color: "from-fuchsia-500 to-pink-400", subtitle: "Processing: Medical", statusFilter: "medical" },
-    { label: "Visa Stamped", value: statsData.visa, icon: CheckCircle, color: "from-emerald-600 to-teal-400", subtitle: "Processing: Visa", statusFilter: "visa" },
-    { label: "Deployed", value: statsData.deployed, icon: Building2, color: "from-slate-500 to-stone-400", subtitle: "Placements", statusFilter: "deployed" },
+    { label: "Total Candidates", value: statsData.total, icon: Users, color: "from-blue-500 to-cyan-500", subtitle: "All candidates", statusFilter: "all" },
+    { label: "Positive Candidates", value: statsData.positive, icon: UserCheck, color: "from-emerald-500 to-teal-500", subtitle: "Interested/Future/On Hold", statusFilter: "positive" },
+    { label: "Negative Candidates", value: statsData.negative, icon: XCircle, color: "from-orange-500 to-red-500", subtitle: "Not Interested/RNR/Not Eligible", statusFilter: "negative" },
+    { label: "Registered Candidates", value: statsData.registered, icon: Filter, color: "from-indigo-500 to-violet-500", subtitle: "Nominated to projects", statusFilter: "registered" },
+    { label: "Documentation", value: statsData.documentation, icon: FileSearch, color: "from-purple-500 to-pink-500", subtitle: "Main status: Documents", statusFilter: "documentation" },
+    { label: "Interview", value: statsData.interview, icon: Phone, color: "from-lime-400 to-green-500", subtitle: "Main status: Interview", statusFilter: "interview" },
+    { label: "Processing", value: statsData.processing, icon: Repeat, color: "from-fuchsia-500 to-pink-400", subtitle: "Main status: Processing", statusFilter: "processing" },
+    { label: "Deployed", value: statsData.deployed, icon: Building2, color: "from-emerald-600 to-teal-400", subtitle: "Placements / Hired", statusFilter: "deployed" },
   ];
 
-  const handleTileClick = (status?: string) => {
-    setFilters((prev) => ({ ...prev, status: status ?? "all", page: 1 }));
+  const handleTileClick = (statusFilter?: string) => {
+    setFilters((prev) => {
+      const isWorkflowStatus = statusFilter && ["documentation", "interview", "processing"].includes(statusFilter);
+      let mainStatus = undefined;
+      
+      if (isWorkflowStatus) {
+        if (statusFilter === 'documentation') mainStatus = 'documents';
+        else mainStatus = statusFilter;
+      }
+      
+      return { 
+        ...prev, 
+        status: statusFilter ?? "all", 
+        mainStatus: mainStatus,
+        subStatus: undefined, // Reset sub-status when clicking a tile
+        page: 1 
+      };
+    });
+    setTimeout(() => refetch(), 50);
+  };
+
+  const handleSubStatusClick = (subStatus: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      subStatus: subStatus === "all_sub" ? undefined : (prev.subStatus === subStatus ? undefined : subStatus),
+      page: 1,
+    }));
     setTimeout(() => refetch(), 50);
   };
 
@@ -174,6 +223,9 @@ export default function CandidateOverviewPage() {
       gender: "all",
       sources: [],
       status: "all",
+      mainStatus: undefined,
+      subStatus: undefined,
+      processingStep: undefined,
     });
   };
 
@@ -380,8 +432,25 @@ export default function CandidateOverviewPage() {
                       </p>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
+                    {/* Action Buttons & Dynamic Sub-status Filters */}
+                    <div className="flex items-center gap-4">
+                      {["documentation", "interview", "processing"].includes(filters.status) && (
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-blue-500" />
+                            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                              {filters.status.charAt(0).toUpperCase() + filters.status.slice(1)} Stage:
+                            </span>
+                          </div>
+                          
+                          <WorkflowStatusDropdown
+                            mainStatusName={activeMainStage as string}
+                            selectedSubStatus={filters.subStatus}
+                            onSubStatusSelect={handleSubStatusClick}
+                          />
+                        </div>
+                      )}
+
                       <Button 
                         onClick={() => navigate("/candidates/create")} 
                         className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
@@ -480,13 +549,17 @@ export default function CandidateOverviewPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    candidates.map((candidate: any) => {
-                      const statusName = candidate.currentStatus?.statusName ?? "";
-                      const statusInfo = getStatusInfo(statusName);
-                      const StatusIcon = statusInfo.icon;
+                      candidates.map((candidate: any) => {
+                        const statusName = candidate.currentStatus?.statusName ?? "";
+                        const statusInfo = getStatusInfo(statusName);
+                        const StatusIcon = statusInfo.icon;
+                        
+                        // NEW: Determine display status based on project sub status if available
+                        const projectSubStatus = candidate.projectDetails?.subStatus;
+                        const displayStatus = projectSubStatus || statusName;
 
-                      // Determine active recruiter assignment
-                      const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
+                        // Determine active recruiter assignment
+                        const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
                       const createdBy = (candidate as any).createdBy || null;
 
@@ -582,7 +655,7 @@ export default function CandidateOverviewPage() {
                                 variant="outline"
                                 className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
                               >
-                                {statusName || "Unknown"}
+                                {displayStatus || "Unknown"}
                               </Badge>
                             </div>
                           </TableCell>

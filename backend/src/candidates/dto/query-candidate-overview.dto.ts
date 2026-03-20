@@ -74,4 +74,25 @@ export class QueryCandidateOverviewDto extends QueryCandidatesDto {
   @IsString({ each: true })
   @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
   sources?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by project main status name',
+  })
+  @IsOptional()
+  @IsString()
+  mainStatus?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by project sub-status name',
+  })
+  @IsOptional()
+  @IsString()
+  subStatus?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by specific processing step key',
+  })
+  @IsOptional()
+  @IsString()
+  processingStep?: string;
 }
