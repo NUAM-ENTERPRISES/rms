@@ -434,7 +434,7 @@ export default function CandidateOverviewPage() {
 
                     {/* Action Buttons & Dynamic Sub-status Filters */}
                     <div className="flex items-center gap-4">
-                      {["documentation", "interview", "processing"].includes(filters.status) && (
+                      {["interview", "processing"].includes(filters.status) && (
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2">
                             <Filter className="h-4 w-4 text-blue-500" />
@@ -526,7 +526,9 @@ export default function CandidateOverviewPage() {
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Candidate</TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Recruiter</TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Created By</TableHead>
-                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Status</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                      {isWorkflowActive ? "Projects" : "Status"}
+                    </TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Last Updated</TableHead>
                     <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">Contact</TableHead>
                     <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600">Actions</TableHead>
@@ -645,19 +647,39 @@ export default function CandidateOverviewPage() {
                             </div>
                           </TableCell>
 
-                          {/* Status */}
+                          {/* Status / Project Count */}
                           <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className={`p-1 rounded-full ${statusInfo.bgColor}`}>
-                                <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.textColor.replace("700", "600")}`} />
+                            {isWorkflowActive ? (
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-3 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800 font-bold transition-all shadow-sm rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (filters.status === "documentation") {
+                                      navigate(`/candidates/${candidate.id}/documentation-workflow`);
+                                    } else {
+                                      navigate(`/candidates/${candidate.id}/workflow-details?type=${filters.status}`);
+                                    }
+                                  }}
+                                >
+                                  {candidate._count?.projects || 0} Project{(candidate._count?.projects !== 1) ? "s" : ""}
+                                </Button>
                               </div>
-                              <Badge
-                                variant="outline"
-                                className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
-                              >
-                                {displayStatus || "Unknown"}
-                              </Badge>
-                            </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className={`p-1 rounded-full ${statusInfo.bgColor}`}>
+                                  <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.textColor.replace("700", "600")}`} />
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
+                                >
+                                  {displayStatus || "Unknown"}
+                                </Badge>
+                              </div>
+                            )}
                           </TableCell>
 
                           {/* Last Updated */}

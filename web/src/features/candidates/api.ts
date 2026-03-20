@@ -1203,10 +1203,15 @@ export const candidatesApi = baseApi.injectEndpoints({
 
     // Status configuration
     getStatusConfig: builder.query<
-      { success: boolean; data: Record<string, any>; message: string },
-      void
+      { success: boolean; data: any; message: string },
+      { mainStage?: string } | void
     >({
-      query: () => "/candidates/status-config",
+      query: (params) => {
+        if (params && params.mainStage) {
+          return `/candidate-project-status/sub-status/${params.mainStage}`;
+        }
+        return "/candidates/status-config";
+      },
       providesTags: ["StatusConfig"],
     }),
 
@@ -1253,6 +1258,19 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Candidate"],
     }),
+
+    getCandidateProjectsWorkflowDetails: builder.query<any, string>({
+      query: (candidateId) => `candidates/${candidateId}/projects-workflow-details`,
+      transformResponse: (response: any) => response.data,
+      providesTags: ["Candidate"],
+    }),
+    getCandidateDocumentationWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
+      query: ({ candidateId, ...params }) => ({
+        url: `candidates/${candidateId}/documentation-workflow`,
+        params,
+      }),
+      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
+    }),
   }),
 });
 
@@ -1289,4 +1307,6 @@ export const {
   useTransferBackCandidateMutation,
   useGetOriginalRecruiterQuery,
   useGetCandidateProjectsQuery,
+  useGetCandidateProjectsWorkflowDetailsQuery,
+  useGetCandidateDocumentationWorkflowQuery,
 } = candidatesApi;

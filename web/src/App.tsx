@@ -56,6 +56,12 @@ const ProjectCandidatesOverviewPage = lazy(
 const CandidateOverviewPage = lazy(
   () => import("@/features/candidates/views/CandidateOverviewPage")
 );
+const CandidateProjectWorkflowPage = lazy(
+  () => import("@/features/candidates/views/CandidateProjectWorkflowPage")
+);
+const CandidateDocumentationWorkflowPage = lazy(
+  () => import("@/features/candidates/views/CandidateDocumentationWorkflowPage")
+);
 const RecruiterOverviewPage = lazy(
   () => import("@/features/analytics/views/RecruiterOverviewPage")
 );
@@ -531,6 +537,32 @@ function App() {
                         <ProtectedRoute>
                           <AppLayout>
                             <CandidateDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/candidates/:id/documentation-workflow"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <CandidateDocumentationWorkflowPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/candidates/:candidateId/workflow-details"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <CandidateProjectWorkflowPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

@@ -1471,4 +1471,42 @@ export class CandidatesController {
       message: 'Mapping retrieved successfully',
     };
   }
+
+  @Get(':id/projects-workflow-details')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get consolidated project workflow details for a candidate',
+    description: 'Returns documentation, interviews, and processing details for all projects a candidate is nominated for.',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate ID' })
+  async getProjectsWorkflowDetails(@Param('id') id: string) {
+    const data = await this.candidatesService.getCandidateProjectsWorkflowDetails(id);
+    return {
+      success: true,
+      data,
+      message: 'Workflow details retrieved successfully',
+    };
+  }
+
+  @Get(':id/documentation-workflow')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get consolidated documentation workflow details for a candidate',
+    description: 'Returns ONLY documentation and verification details for all projects a candidate is nominated for.',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate ID' })
+  async getDocumentationWorkflow(
+    @Param('id') id: string,
+    @Query('subStatus') subStatus?: string,
+    @Query('search') search?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const data = await this.candidatesService.getCandidateDocumentationWorkflow(id, { subStatus, search, page: Number(page), limit: Number(limit) });
+    return {
+      success: true,
+      ...data,
+      message: 'Documentation workflow details retrieved successfully',
+    };
+  }
 }

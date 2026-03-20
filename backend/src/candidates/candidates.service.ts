@@ -3383,4 +3383,178 @@ export class CandidatesService {
       },
     };
   }
+
+  /**
+   * Get consolidated project workflow details for a candidate
+   * Includes documentation, interviews, and processing details for all projects
+   */
+  async getCandidateProjectsWorkflowDetails(candidateId: string) {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        projects: {
+          include: {
+            project: {
+              include: {
+                client: true,
+                country: true,
+              },
+            },
+            mainStatus: true,
+            subStatus: true,
+            documentVerifications: {
+              include: {
+                document: true,
+              },
+            },
+            interviews: {
+              orderBy: { scheduledTime: 'desc' },
+            },
+            screenings: {
+              include: {
+                checklistItems: {
+                  include: {
+                    templateItem: true,
+                  },
+                },
+                template: true,
+              },
+              orderBy: { scheduledTime: 'desc' },
+            },
+            processing: {
+              include: {
+                processingSteps: {
+                  include: {
+                    template: true,
+                  },
+                },
+                history: {
+                  include: {
+                    changedBy: {
+                      select: { name: true },
+                    },
+                  },
+                  orderBy: { createdAt: 'desc' },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!candidate) {
+      return null;
+    }
+
+    return candidate;
+  }
+
+  /**
+   * Get documentation-specific workflow details for a candidate
+   * Includes only project info and document verifications
+   */
+  async getCandidateDocumentationWorkflow(
+    candidateId: string,
+    options: { subStatus?: string; search?: string; page?: number; limit?: number } = {},
+  ) {
+    const { subStatus, search, page = 1, limit = 10 } = options;
+    const skip = (page - 1) * limit;
+
+    // First find the candidate details
+    const candidateInfo = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+    });
+
+    if (!candidateInfo) return null;
+
+    // Define where clause for filtering projects
+    const projectWhere: any = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'documents',
+          mode: 'insensitive',
+        },
+      },
+    };
+
+    if (subStatus) {
+      projectWhere.subStatusId = subStatus;
+    }
+
+    if (search) {
+      projectWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    // Get total count for pagination
+    const totalProjects = await this.prisma.candidateProjects.count({
+      where: projectWhere,
+    });
+
+    // Get paginated projects with details
+    const projects = await this.prisma.candidateProjects.findMany({
+      where: projectWhere,
+      include: {
+        project: {
+          include: {
+            client: true,
+            country: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            designation: true,
+            roleCatalog: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        mainStatus: true,
+        subStatus: true,
+        documentVerifications: {
+          include: {
+            document: true,
+            verificationHistory: {
+              include: {
+                performer: {
+                  select: { name: true },
+                },
+              },
+              orderBy: { performedAt: 'desc' },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      candidate: candidateInfo,
+      projects,
+      pagination: {
+        total: totalProjects,
+        page,
+        limit,
+        totalPages: Math.ceil(totalProjects / limit),
+      },
+    };
+  }
 }
