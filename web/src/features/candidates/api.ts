@@ -712,8 +712,12 @@ export const candidatesApi = baseApi.injectEndpoints({
           positive: number;
           negative: number;
           nominated: number;
-          interviewAssigned: number;
+          registered?: number;
           documentReceived: number;
+          documentation?: number;
+          interviewAssigned: number;
+          interview?: number;
+          processing?: number;
           medical: number;
           visa: number;
           deployed: number;

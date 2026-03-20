@@ -164,10 +164,10 @@ export default function CandidateOverviewPage() {
     { label: "Total Candidates", value: statsData.total, icon: Users, color: "from-blue-500 to-cyan-500", subtitle: "All candidates", statusFilter: "all" },
     { label: "Positive Candidates", value: statsData.positive, icon: UserCheck, color: "from-emerald-500 to-teal-500", subtitle: "Interested/Future/On Hold", statusFilter: "positive" },
     { label: "Negative Candidates", value: statsData.negative, icon: XCircle, color: "from-orange-500 to-red-500", subtitle: "Not Interested/RNR/Not Eligible", statusFilter: "negative" },
-    { label: "Registered Candidates", value: statsData.nominated, icon: Filter, color: "from-indigo-500 to-violet-500", subtitle: "Nominated to projects", statusFilter: "registered" },
-    { label: "Documentation", value: statsData.documentReceived, icon: FileSearch, color: "from-purple-500 to-pink-500", subtitle: "Main status: Documents", statusFilter: "documentation" },
-    { label: "Interview", value: statsData.interviewAssigned, icon: Phone, color: "from-lime-400 to-green-500", subtitle: "Main status: Interview", statusFilter: "interview" },
-    { label: "Processing", value: statsData.medical + statsData.visa, icon: Repeat, color: "from-fuchsia-500 to-pink-400", subtitle: "Main status: Processing", statusFilter: "processing" },
+    { label: "Registered Candidates", value: statsData.registered ?? statsData.nominated, icon: Filter, color: "from-indigo-500 to-violet-500", subtitle: "Nominated to projects", statusFilter: "registered" },
+    { label: "Documentation", value: statsData.documentation ?? statsData.documentReceived, icon: FileSearch, color: "from-purple-500 to-pink-500", subtitle: "Main status: Documents", statusFilter: "documentation" },
+    { label: "Interview", value: statsData.interview ?? statsData.interviewAssigned, icon: Phone, color: "from-lime-400 to-green-500", subtitle: "Main status: Interview", statusFilter: "interview" },
+    { label: "Processing", value: statsData.processing ?? (statsData.medical + statsData.visa), icon: Repeat, color: "from-fuchsia-500 to-pink-400", subtitle: "Main status: Processing", statusFilter: "processing" },
     { label: "Deployed", value: statsData.deployed, icon: Building2, color: "from-emerald-600 to-teal-400", subtitle: "Placements / Hired", statusFilter: "deployed" },
   ];
 
