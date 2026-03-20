@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -47,15 +46,9 @@ import {
   AlertCircle,
   FileSearch,
   Repeat,
-  Loader2,
-  ChevronDown,
-  Check,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useGetCandidateOverviewQuery, useTransferCandidateMutation } from "@/features/candidates/api";
-import { 
-  useGetCandidateProjectStatusesQuery
-} from "@/features/projects/api";
 import { usersApi } from "@/features/admin/api";
 import { useAppSelector } from "@/app/hooks";
 import { useCan } from "@/hooks/useCan";
@@ -67,7 +60,6 @@ import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
-import { WORKFLOW_STATUS_MAPPING, WorkflowStatusKey } from "../constants";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -159,10 +151,11 @@ export default function CandidateOverviewPage() {
     total: 0,
     positive: 0,
     negative: 0,
-    registered: 0,
-    documentation: 0,
-    interview: 0,
-    processing: 0,
+    nominated: 0,
+    interviewAssigned: 0,
+    documentReceived: 0,
+    medical: 0,
+    visa: 0,
     deployed: 0,
   };
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
@@ -171,10 +164,10 @@ export default function CandidateOverviewPage() {
     { label: "Total Candidates", value: statsData.total, icon: Users, color: "from-blue-500 to-cyan-500", subtitle: "All candidates", statusFilter: "all" },
     { label: "Positive Candidates", value: statsData.positive, icon: UserCheck, color: "from-emerald-500 to-teal-500", subtitle: "Interested/Future/On Hold", statusFilter: "positive" },
     { label: "Negative Candidates", value: statsData.negative, icon: XCircle, color: "from-orange-500 to-red-500", subtitle: "Not Interested/RNR/Not Eligible", statusFilter: "negative" },
-    { label: "Registered Candidates", value: statsData.registered, icon: Filter, color: "from-indigo-500 to-violet-500", subtitle: "Nominated to projects", statusFilter: "registered" },
-    { label: "Documentation", value: statsData.documentation, icon: FileSearch, color: "from-purple-500 to-pink-500", subtitle: "Main status: Documents", statusFilter: "documentation" },
-    { label: "Interview", value: statsData.interview, icon: Phone, color: "from-lime-400 to-green-500", subtitle: "Main status: Interview", statusFilter: "interview" },
-    { label: "Processing", value: statsData.processing, icon: Repeat, color: "from-fuchsia-500 to-pink-400", subtitle: "Main status: Processing", statusFilter: "processing" },
+    { label: "Registered Candidates", value: statsData.nominated, icon: Filter, color: "from-indigo-500 to-violet-500", subtitle: "Nominated to projects", statusFilter: "registered" },
+    { label: "Documentation", value: statsData.documentReceived, icon: FileSearch, color: "from-purple-500 to-pink-500", subtitle: "Main status: Documents", statusFilter: "documentation" },
+    { label: "Interview", value: statsData.interviewAssigned, icon: Phone, color: "from-lime-400 to-green-500", subtitle: "Main status: Interview", statusFilter: "interview" },
+    { label: "Processing", value: statsData.medical + statsData.visa, icon: Repeat, color: "from-fuchsia-500 to-pink-400", subtitle: "Main status: Processing", statusFilter: "processing" },
     { label: "Deployed", value: statsData.deployed, icon: Building2, color: "from-emerald-600 to-teal-400", subtitle: "Placements / Hired", statusFilter: "deployed" },
   ];
 
