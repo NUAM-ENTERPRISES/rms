@@ -1193,7 +1193,7 @@ export class NotificationsProcessor extends WorkerHost {
         select: { name: true },
       });
 
-      // Notify Coordinator/Trainer
+      // Notify Coordinator/Trainer only
       const coordinator = await this.prisma.user.findUnique({
         where: { id: coordinatorId },
       });
@@ -1206,21 +1206,6 @@ export class NotificationsProcessor extends WorkerHost {
           title: 'New Screening Assignment',
           message: `Candidate ${cp.candidate.firstName} ${cp.candidate.lastName} has been assigned to you for screening for project ${cp.project.title} (${cp.roleNeeded?.designation}).`,
           link: `/screenings/assigned`,
-          meta: { candidateProjectMapId },
-          idemKey,
-        });
-      }
-
-      // Notify Recruiter
-      if (recruiterId && recruiterId !== assignedBy) {
-        const idemKey = `${eventId}:${recruiterId}:assignment`;
-
-        await this.notificationsService.createNotification({
-          userId: recruiterId,
-          type: 'candidate_assigned_screening',
-          title: 'Candidate Sent to Screening',
-          message: `Candidate ${cp.candidate.firstName} ${cp.candidate.lastName} has been sent to the screening team by ${sender?.name || 'Recruiter'}.`,
-          link: `/candidates/${cp.candidate.id}?projectId=${cp.project.id}`,
           meta: { candidateProjectMapId },
           idemKey,
         });
@@ -1262,7 +1247,7 @@ export class NotificationsProcessor extends WorkerHost {
           return;
         }
 
-        // Notify coordinator
+        // Notify coordinator only
         const coordinator = await this.prisma.user.findUnique({ where: { id: coordinatorId } });
         if (coordinator) {
           const idemKey = `${eventId}:${coordinator.id}:candidate_sent_to_screening`;
@@ -1273,20 +1258,6 @@ export class NotificationsProcessor extends WorkerHost {
             title: 'Candidate assigned to screening',
             message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been assigned to you for screening for project ${candidateProjectMap.project.title}.`,
             link: `/screenings/assigned`,
-            meta: { candidateProjectMapId, screeningId },
-            idemKey,
-          });
-        }
-
-        // Notify recruiter
-        if (recruiterId) {
-          const idemKey = `${eventId}:${recruiterId}:candidate_sent_to_screening`;
-          await this.notificationsService.createNotification({
-            userId: recruiterId,
-            type: 'candidate_sent_to_screening',
-            title: 'Candidate assigned to screening',
-            message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been sent to screening.`,
-            link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
             meta: { candidateProjectMapId, screeningId },
             idemKey,
           });

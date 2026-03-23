@@ -142,6 +142,41 @@ describe('CandidateProjectsService - sendForInterview', () => {
     );
   });
 
+  it('sendForScreening emits data sync only to assigned coordinator', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', coordinatorId: 'coord1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [], requiredScreening: true });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1', userRoles: [{ role: { name: 'Interview Coordinator' } }] });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Screening Assigned' });
+
+    const existing = { id: 'map1', candidate: { firstName: 'A' }, project: { id: 'p1' } };
+
+    const tx = {
+      candidateProjects: {
+        update: jest.fn().mockResolvedValue(existing),
+        create: jest.fn().mockResolvedValue(existing),
+      },
+      candidateProjectStatusHistory: { create: jest.fn() },
+      interviewStatusHistory: { create: jest.fn() },
+      screening: { create: jest.fn().mockResolvedValue({ id: 's1' }) },
+    } as any;
+
+    prisma.candidateProjects.findFirst.mockResolvedValue(existing);
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    (service as any).outboxService = { publishCandidateSentToScreening: jest.fn() };
+
+    await service.sendForScreening(dto, 'u1');
+
+    expect((service as any).notificationsGateway.emitToUsers).toHaveBeenCalledWith(
+      ['coord1'],
+      'data:sync',
+      expect.objectContaining({ type: 'Screening', id: 'map1' }),
+    );
+  });
+
   it('assignCandidateToProject notifies interview coordinators when screening required', async () => {
     const dto = { candidateId: 'c1', projectId: 'p1', notes: 'note' } as any;
 

@@ -770,17 +770,21 @@ export class CandidateProjectsService {
       if (result.id) {
         // Find assigned coordinator if any
         const coordinatorId = createDto.coordinatorId || result.screening?.coordinatorId;
-        const recipients = [userId]; // Current user
-        if (coordinatorId) recipients.push(coordinatorId);
-        if (recruiterId && recruiterId !== userId) recipients.push(recruiterId);
+        const recipients: string[] = [];
+
+        if (coordinatorId) {
+          recipients.push(coordinatorId);
+        }
 
         const recipientsSet = [...new Set(recipients)];
 
-        await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
-          type: 'Screening',
-          id: result.id,
-          message: `Candidate has been sent for screening.`,
-        });
+        if (recipientsSet.length > 0) {
+          await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
+            type: 'Screening',
+            id: result.id,
+            message: `Candidate has been sent for screening.`,
+          });
+        }
 
         // Always sync Project to refresh eligible/nominated/consolidated lists
         await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
