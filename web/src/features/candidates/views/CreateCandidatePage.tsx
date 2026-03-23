@@ -53,7 +53,12 @@ const createCandidateSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "referral"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z
+    .string()
+    .optional()
+    .refine((val) => val === undefined || val === '' || !Number.isNaN(Date.parse(val)), {
+      message: 'Invalid date of birth',
+    }),
   expectedMinSalary: z.preprocess(
     (val) => {
       if (val === "" || val === null || val === undefined) return undefined;
@@ -275,7 +280,6 @@ export default function CreateCandidatePage() {
       "lastName",
       "countryCode",
       "mobileNumber",
-      "dateOfBirth",
       "source",
       "gender",
       "referralCompanyName",

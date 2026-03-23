@@ -143,6 +143,9 @@ export class CandidatesService {
     // Validate date of birth is in the past if provided (still optional)
     if (createCandidateDto.dateOfBirth) {
       const dateOfBirth = new Date(createCandidateDto.dateOfBirth);
+      if (Number.isNaN(dateOfBirth.getTime())) {
+        throw new BadRequestException('Date of birth must be a valid date');
+      }
       if (dateOfBirth >= new Date()) {
         throw new BadRequestException('Date of birth must be in the past');
       }

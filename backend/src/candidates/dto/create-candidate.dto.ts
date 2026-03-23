@@ -15,7 +15,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { CreateWorkExperienceDto } from './create-work-experience.dto';
 
 export enum Gender {
@@ -136,6 +136,7 @@ export class CreateCandidateDto {
     description: 'Date of birth',
     example: '1990-01-01T00:00:00.000Z',
   })
+  @Transform(({ value }) => (value === null || value === '' ? undefined : value))
   @IsOptional()
   @IsDateString()
   dateOfBirth?: string;
