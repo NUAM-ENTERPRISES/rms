@@ -43,6 +43,7 @@ interface RequirementCriteriaStepProps {
 const ROLE_TYPE_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
   nurse: { label: "Nursing Staff", icon: "🩺", color: "text-blue-600 bg-blue-50 border-blue-200" },
   doctor: { label: "Doctors / Physicians", icon: "👨‍⚕️", color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+  technician: { label: "Technicians", icon: "🛠️", color: "text-orange-600 bg-orange-50 border-orange-200" },
   other: { label: "Other Professionals", icon: "👤", color: "text-purple-600 bg-purple-50 border-purple-200" },
 };
 
@@ -348,6 +349,7 @@ export const RequirementCriteriaStep: React.FC<
                 <SelectContent className="rounded-lg">
                   <SelectItem value="nurse"><span className="flex items-center gap-1.5 text-xs">🩺 Nurses</span></SelectItem>
                   <SelectItem value="doctor"><span className="flex items-center gap-1.5 text-xs">👨‍⚕️ Doctors</span></SelectItem>
+                  <SelectItem value="technician"><span className="flex items-center gap-1.5 text-xs">🛠️ Technicians</span></SelectItem>
                   <SelectItem value="other"><span className="flex items-center gap-1.5 text-xs">👤 Other</span></SelectItem>
                 </SelectContent>
               </Select>
