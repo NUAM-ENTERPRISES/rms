@@ -1,32 +1,19 @@
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Calendar, Building2, Users, Briefcase, Settings, ShieldCheck, ClipboardCheck } from "lucide-react";
+import { FileText, Users, Briefcase, Settings, ShieldCheck, ClipboardCheck } from "lucide-react";
 
 type Project = any;
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProjectCountryCell } from "@/components/molecules/domain";
-
-const formatDateTime = (dateString?: string) => {
-  if (!dateString) return "N/A";
-  const d = new Date(dateString);
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
+import { formatSalaryRangeWithINRBracket, getCurrencySymbol } from "@/lib/utils";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -48,6 +35,10 @@ export default function ProjectDetailsModal({
   project?: Project | null;
 }) {
   if (!project) return null;
+
+  const { getCountryCurrency } = useCountryValidation();
+  const projectCurrency = project.country?.currency || getCountryCurrency(project.countryCode);
+  const currencySymbol = getCurrencySymbol(projectCurrency);
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()}>
@@ -170,9 +161,12 @@ export default function ProjectDetailsModal({
                         <div><strong>Employment:</strong> {role.employmentType || "Any"}</div>
                         <div><strong>Visa:</strong> {role.visaType || "Any"}</div>
                         <div>
-                          <strong>Salary:</strong> {(role.minSalaryRange || role.maxSalaryRange) 
-                            ? `${role.minSalaryRange || "N/A"}–${role.maxSalaryRange || "N/A"}`
-                            : "As per policy"}
+                          <strong>Salary:</strong>
+                          <span className="ml-1">
+                            {(role.minSalaryRange != null || role.maxSalaryRange != null)
+                              ? formatSalaryRangeWithINRBracket(role.minSalaryRange, role.maxSalaryRange, projectCurrency)
+                              : "As per policy"}
+                          </span>
                         </div>
                       </div>
 

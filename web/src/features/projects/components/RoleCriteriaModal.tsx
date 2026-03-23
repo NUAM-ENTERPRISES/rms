@@ -41,7 +41,8 @@ import {
   type EducationRequirement,
 } from "@/features/projects";
 import { ProjectFormData } from "../schemas/project-schemas";
-import { cn } from "@/lib/utils";
+import { cn, formatSalaryRangeWithINRBracket, getCurrencySymbol } from "@/lib/utils";
+import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface RoleCriteriaModalProps {
@@ -70,6 +71,10 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
   const watchedRoles = watch("rolesNeeded");
   const role = watchedRoles[roleIndex];
   
+  const { getCountryCurrency } = useCountryValidation();
+  const currentCurrency = getCountryCurrency(countryCode);
+  const currencySymbol = getCurrencySymbol(currentCurrency);
+
   const roleErrors = errors.rolesNeeded?.[roleIndex] as any;
   
   const [skillInput, setSkillInput] = useState("");
@@ -410,6 +415,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   (roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) ? "text-destructive" : "text-slate-600"
                 )}>
                   <Award className="h-3 w-3 text-emerald-600" /> Salary (Min-Max)
+                  <span className="text-[10px] text-slate-400">{` ${currencySymbol} ${currentCurrency}`}</span>
                   {(roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) && <AlertCircle className="h-3 w-3" />}
                 </Label>
                 <div className="flex gap-2">
@@ -434,6 +440,11 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                     )}
                   />
                 </div>
+                {(role.minSalaryRange != null || role.maxSalaryRange != null) && (
+                  <p className="text-[10px] text-slate-500">
+                    {formatSalaryRangeWithINRBracket(role.minSalaryRange ?? undefined, role.maxSalaryRange ?? undefined, currentCurrency)}
+                  </p>
+                )}
                 {(roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) && (
                   <p className="text-[10px] text-destructive font-medium">
                     {roleErrors?.minSalaryRange?.message || roleErrors?.maxSalaryRange?.message}

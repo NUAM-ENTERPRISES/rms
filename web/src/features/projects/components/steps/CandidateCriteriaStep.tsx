@@ -43,9 +43,10 @@ import {
   type EducationRequirement,
 } from "@/features/projects";
 import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
+import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatSalaryRangeWithINRBracket } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoleCriteriaModal } from "../RoleCriteriaModal";
@@ -103,6 +104,8 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
 
   const religions = systemConfig?.data?.constants?.religions || [];
   const indianStates = systemConfig?.data?.constants?.indianStates || [];
+  const { getCountryCurrency } = useCountryValidation();
+  const projectCurrency = getCountryCurrency(watch("countryCode"));
 
   // Apply bulk criteria to all roles
   const handleBulkApply = () => {
@@ -217,6 +220,9 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
                 <Award className="h-3 w-3" /> Salary (Min-Max)
+                <span className="text-[10px] text-slate-400">
+                  {`(${getCountryCurrency(watch("countryCode"))})`}
+                </span>
               </Label>
               <div className="flex gap-1.5">
                 <Input
@@ -234,6 +240,15 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                   className="bg-white border-slate-200 h-8 rounded-lg text-xs"
                 />
               </div>
+              {(bulkCriteria.minSalaryRange != null || bulkCriteria.maxSalaryRange != null) && (
+                <p className="text-[10px] text-slate-500">
+                  {formatSalaryRangeWithINRBracket(
+                    bulkCriteria.minSalaryRange,
+                    bulkCriteria.maxSalaryRange,
+                    getCountryCurrency(watch("countryCode")),
+                  )}
+                </p>
+              )}
             </div>
 
             {/* Multi-select Popovers (Location & Religion) */}
@@ -540,6 +555,16 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                             {role.genderRequirement === "all" ? "Any" : role.genderRequirement || "Any"}
                           </span>
                         </div>
+
+                        {/* Salary */}
+                        {(role.minSalaryRange != null || role.maxSalaryRange != null) && (
+                          <div className="flex items-center gap-1 bg-white/60 rounded px-1.5 py-1 col-span-2">
+                            <Award className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                            <span className="text-slate-600 truncate">
+                              {formatSalaryRangeWithINRBracket(role.minSalaryRange, role.maxSalaryRange, projectCurrency)}
+                            </span>
+                          </div>
+                        )}
 
                         {/* Education */}
                         <div className="flex items-center gap-1 bg-white/60 rounded px-1.5 py-1">
