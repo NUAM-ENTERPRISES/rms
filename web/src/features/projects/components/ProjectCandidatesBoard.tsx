@@ -536,7 +536,7 @@ const ProjectCandidatesBoard = ({
   };
 
   const selectableNominatedCandidates = useMemo(() => {
-    if (!isRecruiter) return [];
+    if (!isInterviewCoordinator) return [];
     return sanitizedNominated.filter((candidate) => {
       const subStatusName =
         candidate.projectSubStatus?.name ||
@@ -554,7 +554,7 @@ const ProjectCandidatesBoard = ({
         subStatusName.startsWith("nominated_initial")
       );
     });
-  }, [sanitizedNominated]);
+  }, [sanitizedNominated, isInterviewCoordinator]);
 
   const toggleSelectAllNominated = () => {
     if (selectedNominatedIds.size === selectableNominatedCandidates.length) {
@@ -961,7 +961,7 @@ const ProjectCandidatesBoard = ({
       ariaLabel: "Nominated candidates column",
       icon: Trophy,
       iconClasses: "bg-amber-100 text-amber-600",
-      headerExtra: selectableNominatedCandidates.length > 0 ? (
+      headerExtra: isInterviewCoordinator && selectableNominatedCandidates.length > 0 ? (
         <div className="flex items-center justify-between px-4 py-1.5 border-t border-amber-100/60 bg-amber-50/40">
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <Checkbox

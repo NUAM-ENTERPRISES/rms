@@ -1276,6 +1276,10 @@ const CandidateCard = memo(function CandidateCard({
                 </Button>
               )}
 
+              {/*
+                Send for Interview button is deprecated and no longer needed.
+                Keeping this block in comment for reference and future audit.
+              
               {showInterviewButton && onSendForInterview && (
                 <Button
                   variant="default"
@@ -1290,6 +1294,7 @@ const CandidateCard = memo(function CandidateCard({
                   Interview
                 </Button>
               )}
+              */}
             </div>
           </div>
         )}
