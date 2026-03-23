@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CandidateProjectsService } from '../candidate-projects.service';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { OutboxService } from '../../notifications/outbox.service';
 import { SendForInterviewDto } from '../dto/send-for-interview.dto';
 
 describe('CandidateProjectsService - sendForInterview', () => {
@@ -10,7 +13,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
   const mockPrisma = {
     candidate: { findUnique: jest.fn() },
     project: { findUnique: jest.fn() },
-    user: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn(), findMany: jest.fn() },
     role: { findUnique: jest.fn() },
     candidateProjectMainStatus: { findUnique: jest.fn() },
     candidateProjectSubStatus: { findUnique: jest.fn() },
@@ -18,6 +21,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     candidateProjectStatusHistory: { create: jest.fn() },
     interviewStatusHistory: { create: jest.fn() },
     trainingAssignment: { create: jest.fn() },
+    candidateRecruiterAssignment: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   } as any;
 
@@ -26,13 +30,16 @@ describe('CandidateProjectsService - sendForInterview', () => {
       providers: [
         CandidateProjectsService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: (require('../../notifications/notifications.service') as any).NotificationsService, useValue: { send: jest.fn() } },
-        { provide: (require('../../notifications/outbox.service') as any).OutboxService, useValue: { publish: jest.fn() } },
+        { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
+        { provide: OutboxService, useValue: { publishDataSync: jest.fn(), publishCandidateSentToScreening: jest.fn(), publishCandidateSentForVerification: jest.fn(), publishCandidateAssignedToScreening: jest.fn() } },
+        { provide: NotificationsGateway, useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() } },
       ],
     }).compile();
 
     service = module.get(CandidateProjectsService);
     prisma = module.get(PrismaService) as jest.Mocked<PrismaService>;
+
+    (prisma.candidateRecruiterAssignment.findFirst as any).mockResolvedValue(null);
   });
 
   afterEach(() => jest.resetAllMocks());
@@ -101,8 +108,8 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [] });
-    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [], requiredScreening: true });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1', userRoles: [{ role: { name: 'Interview Coordinator' } }] });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Screening Assigned' });
 
@@ -132,6 +139,36 @@ describe('CandidateProjectsService - sendForInterview', () => {
       '',
       '',
       'u1',
+    );
+  });
+
+  it('assignCandidateToProject notifies interview coordinators when screening required', async () => {
+    const dto = { candidateId: 'c1', projectId: 'p1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'John', lastName: 'Doe' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'Project P', rolesNeeded: [], requiredScreening: true });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Nominated' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Nominated Initial' });
+    (prisma.user.findMany as any).mockResolvedValue([{ id: 'coord1' }, { id: 'coord2' }]);
+
+    const tx = {
+      candidateProjects: { create: jest.fn().mockResolvedValue({ id: 'map1' }) },
+      candidateProjectStatusHistory: { create: jest.fn() },
+    } as any;
+
+    prisma.candidateProjects.findFirst.mockResolvedValue(null);
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    await service.assignCandidateToProject(dto, 'u1');
+
+    expect((service as any).notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect((service as any).notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'coord1',
+        type: 'candidate_assigned_project',
+        link: '/projects/p1',
+      }),
     );
   });
 

@@ -148,6 +148,7 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "Processing Executive",
       "System Admin",
+      "Interview Coordinator",
       // "Screening Trainer",
     ],
     children: [
@@ -215,7 +216,6 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
-    hiddenForRoles: ["Interview Coordinator"],
     children: [
       {
         id: "screenings-dashboard",

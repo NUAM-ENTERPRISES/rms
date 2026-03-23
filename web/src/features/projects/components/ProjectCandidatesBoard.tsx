@@ -319,6 +319,7 @@ const ProjectCandidatesBoard = ({
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
+  const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
   const [selectedNominatedIds, setSelectedNominatedIds] = useState<Set<string>>(new Set());
@@ -625,7 +626,7 @@ const ProjectCandidatesBoard = ({
           const showInterviewButton = subStatusName === "documents_verified";
           const hasProject = Boolean(candidate.project);
 
-          const actions = (requiredScreening && !isAlreadyInScreening)
+          const actions = (requiredScreening && !isAlreadyInScreening && isInterviewCoordinator)
             ? [
                 {
                   label: "Send for Direct Screening",
@@ -972,7 +973,7 @@ const ProjectCandidatesBoard = ({
                 : `Select all`}
             </span>
           </label>
-          {selectedNominatedIds.size > 0 && requiredScreening && (
+          {selectedNominatedIds.size > 0 && requiredScreening && isInterviewCoordinator && (
             <Button
               size="sm"
               className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-purple-600 text-white shadow-sm hover:bg-purple-700 transition-colors"

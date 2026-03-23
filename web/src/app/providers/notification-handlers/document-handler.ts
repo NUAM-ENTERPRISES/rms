@@ -25,10 +25,15 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     undefined;
 
   const tags: Array<any> = [
+    "Candidate", // Match top-level string tag
     { type: "VerificationCandidates" },
     { type: "DocumentStats" },
     { type: "RecruiterDocuments" }
   ];
+
+  if (notification.meta?.projectId) {
+    tags.push({ type: "Project", id: notification.meta.projectId });
+  }
 
   if (candidateId) {
     tags.push({ type: "DocumentVerification", id: candidateId });

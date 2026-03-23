@@ -4,6 +4,7 @@ export const handleScreeningNotifications = ({ notification, dispatch, invalidat
   const screeningNotificationTypes = [
     "candidate_sent_to_screening",
     "candidate_assigned_to_screening",
+    "candidate_assigned_project",
     "screening_updated",
     "screening_failed",
     "screening_passed"
@@ -13,10 +14,19 @@ export const handleScreeningNotifications = ({ notification, dispatch, invalidat
 
   console.log(`[Socket] Handling screening notification: ${notification.type}`);
 
-  dispatch(invalidateTags([
+  const tags: any[] = [
+    "Candidate", // Match top-level string tag
+    "ProjectCandidates",
     { type: "Screening", id: "LIST" },
-    { type: "Candidate", id: "LIST" }
-  ]));
+    { type: "Candidate", id: "LIST" },
+    { type: "ProjectCandidates", id: "LIST" },
+  ];
+
+  if (notification.meta?.projectId) {
+    tags.push({ type: "Project", id: notification.meta.projectId });
+  }
+
+  dispatch(invalidateTags(tags));
 
   return true;
 };

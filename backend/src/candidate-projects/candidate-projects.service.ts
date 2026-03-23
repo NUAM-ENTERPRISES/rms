@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -37,6 +38,48 @@ export class CandidateProjectsService {
     private readonly outboxService: OutboxService,
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
+
+  private async ensureInterviewCoordinator(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    const isCoordinator = user.userRoles.some(
+      (ur) => ur.role?.name === 'Interview Coordinator',
+    );
+
+    if (!isCoordinator) {
+      throw new ForbiddenException(
+        'Only Interview Coordinator can perform this action',
+      );
+    }
+  }
+
+  private async getInterviewCoordinators(): Promise<Array<{ id: string }>> {
+    return this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: 'Interview Coordinator',
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
 
   /**
    * Assign candidate to project with nominated status
@@ -225,6 +268,14 @@ export class CandidateProjectsService {
 
     // Publish data sync event
     try {
+      // Always sync Project to refresh eligible/nominated/consolidated lists
+      await this.outboxService.publishDataSync({
+        userId,
+        type: 'Project',
+        id: projectId,
+        message: `Candidate assigned to project ${projectId}.`,
+      });
+
       await this.outboxService.publishDataSync({
         userId,
         type: 'RecruiterDocuments',
@@ -233,6 +284,14 @@ export class CandidateProjectsService {
       });
 
       if (finalRecruiterId && finalRecruiterId !== userId) {
+        // Sync for the specific recruiter as well
+        await this.outboxService.publishDataSync({
+          userId: finalRecruiterId,
+          type: 'Project',
+          id: projectId,
+          message: `Candidate assigned to project ${projectId}.`,
+        });
+
         await this.outboxService.publishDataSync({
           userId: finalRecruiterId,
           type: 'RecruiterDocuments',
@@ -242,6 +301,35 @@ export class CandidateProjectsService {
       }
     } catch (err) {
       this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, err.stack);
+    }
+
+    if (project.requiredScreening) {
+      const coordinators = await this.getInterviewCoordinators();
+      const candidateName = `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() || 'Candidate';
+      const notificationTasks = coordinators.map((coordinator) => {
+        const idemKey = `candidate-assigned:${assignment.id}:${coordinator.id}`;
+        return this.notificationsService.createNotification({
+          userId: coordinator.id,
+          type: 'candidate_assigned_project',
+          title: 'Candidate Assigned to Project',
+          message: `${candidateName} has been assigned to project ${project.title}. Please assign them for training.`,
+          link: `/projects/${project.id}`,
+          meta: {
+            projectId: project.id,
+            candidateId: candidate.id,
+            candidateProjectMapId: assignment.id,
+          },
+          idemKey,
+        });
+      });
+
+      try {
+        await Promise.all(notificationTasks);
+      } catch (err) {
+        this.logger.error(
+          `Failed to send assignment notifications to interview coordinators for assignment ${assignment.id}: ${err.message}`,
+        );
+      }
     }
 
     return assignment;
@@ -447,6 +535,14 @@ export class CandidateProjectsService {
 
     // Emit real-time synchronization event for Recruiter Documents
     try {
+      // Always sync Project to refresh eligible/nominated/consolidated lists
+      await this.outboxService.publishDataSync({
+        userId,
+        type: 'Project',
+        id: projectId,
+        message: `Candidate sent for verification in project ${projectId}.`,
+      });
+
       await this.outboxService.publishDataSync({
         userId,
         type: 'RecruiterDocuments',
@@ -471,6 +567,8 @@ export class CandidateProjectsService {
    * Adds candidate project status history and interview status history entries
    */
   async sendForScreening(createDto: CreateCandidateProjectDto, userId: string) {
+    await this.ensureInterviewCoordinator(userId);
+
     let { candidateId, projectId, roleNeededId, recruiterId } = createDto;
 
     // -------------------------------
@@ -676,10 +774,19 @@ export class CandidateProjectsService {
         if (coordinatorId) recipients.push(coordinatorId);
         if (recruiterId && recruiterId !== userId) recipients.push(recruiterId);
 
-        await this.notificationsGateway.emitToUsers([...new Set(recipients)], 'data:sync', {
+        const recipientsSet = [...new Set(recipients)];
+
+        await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
           type: 'Screening',
           id: result.id,
           message: `Candidate has been sent for screening.`,
+        });
+
+        // Always sync Project to refresh eligible/nominated/consolidated lists
+        await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
+          type: 'Project',
+          id: projectId,
+          message: `Candidate sent for screening in project ${projectId}.`,
         });
       }
     } catch (err) {
@@ -695,6 +802,8 @@ export class CandidateProjectsService {
    * Uses round-robin if no coordinatorId is provided
    */
   async bulkSendForScreening(dto: BulkSendForScreeningDto, userId: string) {
+    await this.ensureInterviewCoordinator(userId);
+
     const { assignments, projectId, coordinatorId } = dto;
     const results: any[] = [];
     const errors: any[] = [];
@@ -2950,6 +3059,36 @@ export class CandidateProjectsService {
           }
         } catch (err) {
           this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, err.stack);
+        }
+
+        // Notify Interview Coordinators for screening-required projects
+        if (project.requiredScreening) {
+          const coordinators = await this.getInterviewCoordinators();
+          const candidateName = `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() || 'Candidate';
+          const coordinatorNotifications = coordinators.map((coord) => {
+            const idemKey = `candidate-assigned:${assignment.id}:${coord.id}`;
+            return this.notificationsService.createNotification({
+              userId: coord.id,
+              type: 'candidate_assigned_project',
+              title: 'Candidate Assigned to Project',
+              message: `${candidateName} has been assigned to project ${project.title}. Please assign them for training.`,
+              link: `/projects/${project.id}`,
+              meta: {
+                projectId: project.id,
+                candidateId: candidate.id,
+                candidateProjectMapId: assignment.id,
+              },
+              idemKey,
+            });
+          });
+
+          try {
+            await Promise.all(coordinatorNotifications);
+          } catch (err) {
+            this.logger.error(
+              `Failed to send coordinator notification for bulk assignment ${assignment.id}: ${err.message}`,
+            );
+          }
         }
       } catch (error: any) {
         this.logger.error(`Error in bulk assignment for candidate ${candidateId}: ${error.message}`);
