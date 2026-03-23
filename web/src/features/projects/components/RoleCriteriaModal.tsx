@@ -82,8 +82,10 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
     maxExperienceMissing: role.maxExperience == null,
     experienceRangeInvalid:
       role.minExperience != null && role.maxExperience != null && role.minExperience > role.maxExperience,
-    ageMissing: !role.ageRequirement || role.ageRequirement.trim() === "",
-    ageFormatInvalid: role.ageRequirement && !/^\s*\d+\s*to\s*\d+\s*$/.test(role.ageRequirement),
+    minAgeMissing: role.minAge == null,
+    maxAgeMissing: role.maxAge == null,
+    ageRangeInvalid:
+      role.minAge != null && role.maxAge != null && role.minAge > role.maxAge,
     educationMissing: !(role.educationRequirementsList && role.educationRequirementsList.length > 0),
   };
 
@@ -240,26 +242,44 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             <div className="space-y-1.5">
               <Label className={cn(
                 "text-[11px] font-semibold flex items-center gap-1",
-                roleErrors?.ageRequirement ? "text-destructive" : "text-slate-600"
+                (roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) ? "text-destructive" : "text-slate-600"
               )}>
-                Age Requirement
-                {roleErrors?.ageRequirement && <AlertCircle className="h-3 w-3" />}
+                Age Range
+                {(roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) && <AlertCircle className="h-3 w-3" />}
               </Label>
-              <Input
-                placeholder="e.g. 18 to 25"
-                value={role.ageRequirement || ""}
-                onChange={(e) => updateRole("ageRequirement", e.target.value)}
-                aria-invalid={!!(roleErrors?.ageRequirement || localErrors.ageMissing || localErrors.ageFormatInvalid)}
-                className={cn(
-                  "h-9 bg-white text-sm transition-colors",
-                  (roleErrors?.ageRequirement || localErrors.ageMissing || localErrors.ageFormatInvalid)
-                    ? "border-destructive focus-visible:ring-destructive"
-                    : "border-slate-200"
-                )}
-              />
-              {(roleErrors?.ageRequirement || localErrors.ageMissing || localErrors.ageFormatInvalid) && (
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Min"
+                  value={role.minAge ?? ""}
+                  onChange={(e) => updateRole("minAge", e.target.value === "" ? undefined : parseInt(e.target.value))}
+                  aria-invalid={!!(roleErrors?.minAge || localErrors.minAgeMissing || localErrors.ageRangeInvalid)}
+                  className={cn(
+                    "h-9 bg-white text-sm",
+                    (roleErrors?.minAge || localErrors.minAgeMissing || localErrors.ageRangeInvalid)
+                      ? "border-destructive focus-visible:ring-destructive"
+                      : "border-slate-200"
+                  )}
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Max"
+                  value={role.maxAge ?? ""}
+                  onChange={(e) => updateRole("maxAge", e.target.value === "" ? undefined : parseInt(e.target.value))}
+                  aria-invalid={!!(roleErrors?.maxAge || localErrors.maxAgeMissing || localErrors.ageRangeInvalid)}
+                  className={cn(
+                    "h-9 bg-white text-sm",
+                    (roleErrors?.maxAge || localErrors.maxAgeMissing || localErrors.ageRangeInvalid)
+                      ? "border-destructive focus-visible:ring-destructive"
+                      : "border-slate-200"
+                  )}
+                />
+              </div>
+              {(roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) && (
                 <p className="text-[10px] text-destructive font-medium leading-tight">
-                  {roleErrors?.ageRequirement?.message || (localErrors.ageFormatInvalid ? "Age must be in format '18 to 25'" : "Age requirement is required (e.g. '18 to 25')")}
+                  {roleErrors?.minAge?.message || roleErrors?.maxAge?.message || (localErrors.ageRangeInvalid ? "Maximum age must be greater than or equal to minimum age" : "Age range is required")}
                 </p>
               )}
             </div>

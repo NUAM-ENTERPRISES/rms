@@ -255,14 +255,22 @@ export class CreateRoleNeededDto {
   genderRequirement: string = 'all';
 
   @ApiProperty({
-    description: 'Age requirement for this role, formatted like "18 to 25"',
-    example: '18 to 25',
+    description: 'Minimum age requirement for this role',
+    example: 18,
+    minimum: 0,
   })
-  @IsString()
-  @Matches(/^\s*\d+\s*to\s*\d+\s*$/i, {
-    message: 'ageRequirement must be formatted like "18 to 25"',
+  @IsInt()
+  @Min(0)
+  minAge: number;
+
+  @ApiProperty({
+    description: 'Maximum age requirement for this role',
+    example: 35,
+    minimum: 0,
   })
-  ageRequirement: string;
+  @IsInt()
+  @Min(0)
+  maxAge: number;
 
   @ApiPropertyOptional({
     description: 'Accommodation details or requirements',

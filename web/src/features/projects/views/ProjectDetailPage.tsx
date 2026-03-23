@@ -1321,10 +1321,12 @@ export default function ProjectDetailPage() {
                           {role.minExperience || 0}-{role.maxExperience || "Any"} yrs
                         </span>
                       </div>
-                      {role.ageRequirement && (
+                      {(role.minAge != null || role.maxAge != null) && (
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-slate-400" />
-                          <span>Age: {role.ageRequirement}</span>
+                          <span>
+                            Age: {role.minAge != null && role.maxAge != null ? `${role.minAge} to ${role.maxAge}` : role.minAge != null ? `>= ${role.minAge}` : `<= ${role.maxAge}`}
+                          </span>
                         </div>
                       )}
                       <div className="flex items-center gap-1">

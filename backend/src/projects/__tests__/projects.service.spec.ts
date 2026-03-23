@@ -107,7 +107,8 @@ describe('ProjectsService', () => {
           skills: '["Nursing", "Patient Care"]',
           roleCatalogId: 'role123',
           genderRequirement: 'all',
-          ageRequirement: '',
+          minAge: 18,
+          maxAge: 35,
         },
       ],
     };

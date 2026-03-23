@@ -52,6 +52,8 @@ export interface RoleNeeded {
   shiftType?: string;
   onCallRequired: boolean;
   physicalDemands?: string;
+  minAge?: number;
+  maxAge?: number;
   minSalaryRange?: number;
   maxSalaryRange?: number;
   benefits?: string;
@@ -130,6 +132,8 @@ export interface CreateRoleNeededRequest {
   shiftType?: string;
   onCallRequired?: boolean;
   physicalDemands?: string;
+  minAge?: number;
+  maxAge?: number;
   minSalaryRange?: number;
   maxSalaryRange?: number;
   benefits?: string;

@@ -1004,10 +1004,18 @@ export default function CandidateDocumentVerificationPage() {
                       <span className="text-slate-500">{role.minExperience}-{role.maxExperience}yr</span>
                       <span className="text-slate-400">|</span>
                       <span className="text-slate-500 capitalize">{role.genderRequirement}</span>
-                      {role.ageRequirement && (
+                      {(role.minAge != null || role.maxAge != null) && (
                         <>
                           <span className="text-slate-400">|</span>
-                          <span className="text-slate-500">{role.ageRequirement}y</span>
+                          <span className="text-slate-500">
+                            {role.minAge != null && role.maxAge != null
+                              ? `${role.minAge}-${role.maxAge}y`
+                              : role.minAge != null
+                              ? `>=${role.minAge}y`
+                              : role.maxAge != null
+                              ? `<=${role.maxAge}y`
+                              : "Any"}
+                          </span>
                         </>
                       )}
                     </div>
