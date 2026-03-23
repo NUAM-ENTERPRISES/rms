@@ -298,9 +298,13 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="manual">Manual</SelectItem>
                       <SelectItem value="meta">Meta</SelectItem>
+                      <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
                       <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="paid_ads">Paid Ads</SelectItem>
+                      <SelectItem value="agents">Agents</SelectItem>
+                      <SelectItem value="hospital_visit">Hospital Visit</SelectItem>
+                      <SelectItem value="expo_event">Expo / Event</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

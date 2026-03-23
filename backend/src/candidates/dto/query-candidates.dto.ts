@@ -41,10 +41,10 @@ export class QueryCandidatesDto {
 
   @ApiPropertyOptional({
     description: 'Filter by source',
-    enum: ['manual', 'meta', 'referral'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
   })
   @IsOptional()
-  @IsEnum(['manual', 'meta', 'referral'])
+  @IsEnum(['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'])
   source?: string;
 
   @ApiPropertyOptional({

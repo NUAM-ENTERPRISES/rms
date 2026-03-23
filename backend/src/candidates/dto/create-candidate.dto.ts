@@ -82,11 +82,11 @@ export class CreateCandidateDto {
 
   @ApiPropertyOptional({
     description: 'Source of the candidate',
-    enum: ['manual', 'meta', 'referral'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
     default: 'manual',
   })
   @IsOptional()
-  @IsEnum(['manual', 'meta', 'referral'])
+  @IsEnum(['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'])
   source?: string = 'manual';
 
   @ApiPropertyOptional({

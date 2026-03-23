@@ -338,7 +338,7 @@ export class CandidatesController {
     name: 'source',
     required: false,
     description: 'Filter by source',
-    enum: ['manual', 'meta', 'referral'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
   })
   @ApiQuery({
     name: 'teamId',

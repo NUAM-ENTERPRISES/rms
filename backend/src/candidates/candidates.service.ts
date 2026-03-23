@@ -373,27 +373,34 @@ export class CandidatesService {
     //   console.error('Auto-allocation failed for candidate:', candidate.id, error);
     // }
 
-    // Assign recruiter to candidate
-    // If creator is a recruiter, they will be assigned directly
-    // Otherwise, round-robin assignment (least workload) will be used
-    try {
+    const shouldSkipRoundRobinSources = ['referral', 'hospital_visit'];
+    if (shouldSkipRoundRobinSources.includes(candidate.source)) {
       this.logger.log(
-        `Starting recruiter assignment for candidate ${candidate.id}, created by user ${userId}`,
+        `Skipping auto recruiter assignment for candidate ${candidate.id} due to source '${candidate.source}' (non-round robin source)`,
       );
-      const assignedRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
-        candidate.id,
-        userId,
-        'Automatic assignment on candidate creation',
-      );
-      this.logger.log(
-        `✅ Successfully assigned recruiter ${assignedRecruiter.name} (${assignedRecruiter.email}) to candidate ${candidate.id}`,
-      );
-    } catch (error) {
-      // Log error but don't fail candidate creation
-      this.logger.error(
-        `❌ Failed to assign recruiter to candidate ${candidate.id}:`,
-        error,
-      );
+    } else {
+      // Assign recruiter to candidate
+      // If creator is a recruiter, they will be assigned directly
+      // Otherwise, round-robin assignment (least workload) will be used
+      try {
+        this.logger.log(
+          `Starting recruiter assignment for candidate ${candidate.id}, created by user ${userId}`,
+        );
+        const assignedRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
+          candidate.id,
+          userId,
+          'Automatic assignment on candidate creation',
+        );
+        this.logger.log(
+          `✅ Successfully assigned recruiter ${assignedRecruiter.name} (${assignedRecruiter.email}) to candidate ${candidate.id}`,
+        );
+      } catch (error) {
+        // Log error but don't fail candidate creation
+        this.logger.error(
+          `❌ Failed to assign recruiter to candidate ${candidate.id}:`,
+          error,
+        );
+      }
     }
 
     // Notify about candidate creation for real-time UI
@@ -1875,7 +1882,12 @@ export class CandidatesService {
     const candidatesBySource = {
       manual: 0,
       meta: 0,
+      direct_enquiry: 0,
       referral: 0,
+      paid_ads: 0,
+      agents: 0,
+      hospital_visit: 0,
+      expo_event: 0,
     };
 
     candidatesBySourceData.forEach((item) => {
