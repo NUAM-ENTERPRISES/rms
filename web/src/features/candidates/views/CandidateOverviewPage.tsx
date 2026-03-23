@@ -427,7 +427,7 @@ export default function CandidateOverviewPage() {
 
                     {/* Action Buttons & Dynamic Sub-status Filters */}
                     <div className="flex items-center gap-4">
-                      {["interview", "processing"].includes(filters.status) && (
+                      {["processing"].includes(filters.status) && (
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2">
                             <Filter className="h-4 w-4 text-blue-500" />

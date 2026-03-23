@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
-import { useGetCandidateInterviewWorkflowQuery, useGetStatusConfigQuery } from "../api";
+import { useGetCandidateInterviewWorkflowQuery } from "../api";
+import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
@@ -42,7 +43,6 @@ import {
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { 
-  Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
@@ -65,11 +65,6 @@ export default function CandidateInterviewWorkflowPage() {
     page: 1,
     limit: 5
   });
-
-  const { data: statusConfigResponse } = useGetStatusConfigQuery({ mainStage: 'interview' });
-  const subStatuses = Array.isArray(statusConfigResponse?.data?.subStatuses) 
-    ? statusConfigResponse.data.subStatuses 
-    : [];
 
   const { data: response, isLoading, error } = useGetCandidateInterviewWorkflowQuery({
     candidateId: candidateId!,
@@ -168,21 +163,20 @@ export default function CandidateInterviewWorkflowPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400 hidden md:block" />
-          <Select 
-            value={filters.subStatus} 
-            onValueChange={(val) => setFilters(prev => ({ ...prev, subStatus: val, page: 1 }))}
-          >
-            <SelectTrigger className="w-full md:w-[220px] h-10 border-slate-200 rounded-lg bg-slate-50">
-              <SelectValue placeholder="All Sub-Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sub-Statuses</SelectItem>
-              {subStatuses.map((ss: any) => (
-                <SelectItem key={ss.id} value={ss.id}>{ss.label || ss.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 mr-2">
+            <Filter className="h-4 w-4 text-purple-500" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+              Stage:
+            </span>
+          </div>
+          
+          <WorkflowStatusDropdown
+            mainStatusName="interview"
+            selectedSubStatus={filters.subStatus === "all" ? undefined : filters.subStatus}
+            onSubStatusSelect={(val) => setFilters(prev => ({ ...prev, subStatus: val, page: 1 }))}
+            label="All Sub-Statuses"
+          />
+
           {hasActiveFilters && (
             <TooltipProvider>
               <Tooltip>
