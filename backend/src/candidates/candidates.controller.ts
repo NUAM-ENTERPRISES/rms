@@ -1542,4 +1542,33 @@ export class CandidatesController {
       message: 'Interview workflow details retrieved successfully',
     };
   }
+
+  @Get(':id/processing-workflow')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get consolidated processing workflow details for a candidate',
+    description: 'Returns ONLY processing details (Medical, Visa, etc.) for all projects a candidate is in processing for.',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate ID' })
+  async getProcessingWorkflow(
+    @Param('id') id: string,
+    @Query('subStatus') subStatus?: string,
+    @Query('search') search?: string,
+    @Query('step') step?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const data = await this.candidatesService.getCandidateProcessingWorkflow(id, { 
+      subStatus, 
+      search, 
+      step,
+      page: Number(page), 
+      limit: Number(limit) 
+    });
+    return {
+      success: true,
+      ...data,
+      message: 'Processing workflow details retrieved successfully',
+    };
+  }
 }

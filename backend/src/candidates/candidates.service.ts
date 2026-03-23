@@ -3898,4 +3898,129 @@ export class CandidatesService {
       },
     };
   }
+
+  /**
+   * Get processing-specific workflow details for a candidate
+   * Includes only project info, processing steps, and history
+   */
+  async getCandidateProcessingWorkflow(
+    candidateId: string,
+    options: { subStatus?: string; search?: string; step?: string; page?: number; limit?: number } = {},
+  ) {
+    const { subStatus, search, step, page = 1, limit = 10 } = options;
+    const skip = (page - 1) * limit;
+
+    // First find the candidate details
+    const candidateInfo = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profileImage: true,
+      },
+    });
+
+    if (!candidateInfo) return null;
+
+    // Define where clause for filtering projects
+    const projectWhere: any = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'processing',
+          mode: 'insensitive',
+        },
+      },
+    };
+
+    if (subStatus) {
+      projectWhere.subStatusId = subStatus;
+    }
+
+    if (step) {
+      projectWhere.processing = {
+        step: {
+          contains: step,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    if (search) {
+      projectWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    // Get total count for pagination
+    const totalProjects = await this.prisma.candidateProjects.count({
+      where: projectWhere,
+    });
+
+    // Get paginated projects with details
+    const projects = await this.prisma.candidateProjects.findMany({
+      where: projectWhere,
+      include: {
+        project: {
+          include: {
+            client: true,
+            country: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            designation: true,
+            roleCatalog: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        mainStatus: true,
+        subStatus: true,
+        processing: {
+          include: {
+            assignedTo: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            processingSteps: {
+              select: {
+                id: true,
+                status: true,
+                template: {
+                  select: {
+                    label: true,
+                    order: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      candidate: candidateInfo,
+      projects,
+      pagination: {
+        total: totalProjects,
+        page,
+        limit,
+        totalPages: Math.ceil(totalProjects / limit),
+      },
+    };
+  }
 }

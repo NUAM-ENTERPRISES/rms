@@ -65,6 +65,9 @@ const CandidateDocumentationWorkflowPage = lazy(
 const CandidateInterviewWorkflowPage = lazy(
   () => import("@/features/candidates/views/CandidateInterviewWorkflowPage")
 );
+const CandidateProcessingWorkflowPage = lazy(
+  () => import("@/features/candidates/views/CandidateProcessingWorkflowPage")
+);
 const RecruiterOverviewPage = lazy(
   () => import("@/features/analytics/views/RecruiterOverviewPage")
 );
@@ -566,6 +569,19 @@ function App() {
                         <ProtectedRoute>
                           <AppLayout>
                             <CandidateInterviewWorkflowPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/candidates/:id/processing-workflow"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute>
+                          <AppLayout>
+                            <CandidateProcessingWorkflowPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

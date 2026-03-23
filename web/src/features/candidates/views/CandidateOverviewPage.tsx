@@ -654,6 +654,8 @@ export default function CandidateOverviewPage() {
                                       navigate(`/candidates/${candidate.id}/documentation-workflow`);
                                     } else if (filters.status === "interview") {
                                       navigate(`/candidates/${candidate.id}/interview-workflow`);
+                                    } else if (filters.status === "processing") {
+                                      navigate(`/candidates/${candidate.id}/processing-workflow`);
                                     } else {
                                       navigate(`/candidates/${candidate.id}/workflow-details?type=${filters.status}`);
                                     }
