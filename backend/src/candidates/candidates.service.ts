@@ -1243,8 +1243,8 @@ export class CandidatesService {
       updateData.currentRole = updateCandidateDto.currentRole;
     if (updateCandidateDto.expectedMinSalary !== undefined)
       updateData.expectedMinSalary = updateCandidateDto.expectedMinSalary;
-    if (updateCandidateDto.expectedMaxSalary !== undefined)
-      updateData.expectedMaxSalary = updateCandidateDto.expectedMaxSalary;
+    // expectedMaxSalary is no longer used in matching logic; we keep it for schema
+    // compatibility but do not update it from UI by default.
     if (updateCandidateDto.sectorType !== undefined)
       updateData.sectorType = updateCandidateDto.sectorType;
     if (updateCandidateDto.visaType !== undefined)

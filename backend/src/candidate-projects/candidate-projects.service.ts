@@ -2425,20 +2425,17 @@ export class CandidateProjectsService {
       }
 
       // Salary Check (Soft)
+      // Use only expectedMinSalary for candidate salary expectations.
+      // expectedMaxSalary is deprecated for current matching logic and no longer
+      // exposed on the Job Preference form.
       const projMin = role.minSalaryRange;
       const projMax = role.maxSalaryRange;
       const candMin = candidate.expectedMinSalary;
-      const candMax = candidate.expectedMaxSalary;
-      
+
       if (projMax && candMin && candMin > projMax) {
         const rangeStr = projMin ? `${projMin} - ${projMax}` : `up to ${projMax}`;
         softReasons.push(
           `Salary mismatch: Candidate expects minimum ${candMin}, but project budget is ${rangeStr}.`,
-        );
-      } else if (projMin && candMax && candMax < projMin) {
-        const rangeStr = projMax ? `${projMin} - ${projMax}` : `at least ${projMin}`;
-        softReasons.push(
-          `Salary mismatch: Candidate maximum expectation ${candMax} is below project minimum ${rangeStr}.`,
         );
       }
 
@@ -2642,20 +2639,17 @@ export class CandidateProjectsService {
         }
 
         // 3. Salary Check (Soft)
+        // Use only expectedMinSalary for candidate salary expectations.
+        // expectedMaxSalary is deprecated for current matching logic and no longer
+        // exposed on the Job Preference form.
         const projMin = role.minSalaryRange;
         const projMax = role.maxSalaryRange;
         const candMin = candidate.expectedMinSalary;
-        const candMax = candidate.expectedMaxSalary;
-        
+
         if (projMax && candMin && candMin > projMax) {
           const rangeStr = projMin ? `${projMin} - ${projMax}` : `up to ${projMax}`;
           softReasons.push(
             `Salary mismatch: Candidate expects minimum ${candMin}, but project budget is ${rangeStr}.`,
-          );
-        } else if (projMin && candMax && candMax < projMin) {
-          const rangeStr = projMax ? `${projMin} - ${projMax}` : `at least ${projMin}`;
-          softReasons.push(
-            `Salary mismatch: Candidate maximum expectation ${candMax} is below project minimum ${rangeStr}.`,
           );
         }
 

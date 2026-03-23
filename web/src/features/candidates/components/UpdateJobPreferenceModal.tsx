@@ -28,8 +28,7 @@ import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { toast } from "sonner";
 
 const jobPreferenceSchema = z.object({
-  expectedMinSalary: z.number().min(0).optional(),
-  expectedMaxSalary: z.number().min(0).optional(),
+  expectedSalary: z.number().min(0).optional(),
   sectorType: z.string().optional(),
   visaType: z.string().optional(),
   preferredCountries: z.array(z.string()).optional(),
@@ -44,7 +43,6 @@ interface UpdateJobPreferenceModalProps {
   candidateId: string;
   initialData: {
     expectedMinSalary?: number | null;
-    expectedMaxSalary?: number | null;
     sectorType?: string | null;
     visaType?: string | null;
     preferredCountries?: string[] | null;
@@ -68,8 +66,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
   } = useForm<JobPreferenceFormData>({
     resolver: zodResolver(jobPreferenceSchema),
     defaultValues: {
-      expectedMinSalary: initialData.expectedMinSalary ?? undefined,
-      expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
+      expectedSalary: initialData.expectedMinSalary ?? undefined,
       sectorType: initialData.sectorType || SECTOR_TYPES.NO_PREFERENCE,
       visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: initialData.preferredCountries || [],
@@ -80,8 +77,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
   useEffect(() => {
     if (isOpen) {
       reset({
-        expectedMinSalary: initialData.expectedMinSalary ?? undefined,
-        expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
+        expectedSalary: initialData.expectedMinSalary ?? undefined,
         sectorType: initialData.sectorType || SECTOR_TYPES.NO_PREFERENCE,
         visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
         preferredCountries: initialData.preferredCountries || [],
@@ -94,8 +90,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
     try {
       await updateCandidate({
         id: candidateId,
-        expectedMinSalary: data.expectedMinSalary,
-        expectedMaxSalary: data.expectedMaxSalary,
+        expectedMinSalary: data.expectedSalary,
         sectorType: data.sectorType,
         visaType: data.visaType,
         preferredCountries: data.preferredCountries,
@@ -124,19 +119,21 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Salary Range */}
+            {/* Expected Salary */}
             <div className="space-y-2">
-              <Label htmlFor="expectedMinSalary" className="text-slate-700 font-medium">
-                Expected Min Salary
+              <Label htmlFor="expectedSalary" className="text-slate-700 font-medium">
+                Expected Salary
               </Label>
               <Controller
-                name="expectedMinSalary"
+                name="expectedSalary"
                 control={control}
                 render={({ field }) => (
                   <Input
                     {...field}
-                    id="expectedMinSalary"
+                    id="expectedSalary"
                     type="number"
+                    step="1"
+                    min={0}
                     value={field.value ?? ""}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="40000"
@@ -145,32 +142,8 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                   />
                 )}
               />
-              {errors.expectedMinSalary && (
-                <p className="text-sm text-red-600">{errors.expectedMinSalary.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="expectedMaxSalary" className="text-slate-700 font-medium">
-                Expected Max Salary
-              </Label>
-              <Controller
-                name="expectedMaxSalary"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    id="expectedMaxSalary"
-                    type="number"
-                    value={field.value ?? ""}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                    placeholder="60000"
-                    disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
-                  />
-                )}
-              />
-              {errors.expectedMaxSalary && (
-                <p className="text-sm text-red-600">{errors.expectedMaxSalary.message}</p>
+              {errors.expectedSalary && (
+                <p className="text-sm text-red-600">{errors.expectedSalary.message}</p>
               )}
             </div>
 

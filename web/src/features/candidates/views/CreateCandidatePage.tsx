@@ -54,22 +54,15 @@ const createCandidateSchema = z.object({
   source: z.enum(["manual", "meta", "referral"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().optional(),
-  expectedMinSalary: z.preprocess(
+  expectedSalary: z.preprocess(
     (val) => {
       if (val === "" || val === null || val === undefined) return undefined;
       const num = Number(val);
       return isNaN(num) ? undefined : num;
     },
-    z.number().min(0).optional().nullable()
-  ),
-  expectedMaxSalary: z.preprocess(
-    (val) => {
-      if (val === "" || val === null || val === undefined) return undefined;
-      const num = Number(val);
-      return isNaN(num) ? undefined : num;
-    },
-    z.number().min(0).optional().nullable()
-  ),
+    z.number().min(0).nullable()
+  ).optional(),
+
   preferredCountries: z.array(z.string()).optional(),
   facilityPreferences: z.array(z.string()).optional(),
   sectorType: z.string().optional(),
@@ -207,7 +200,7 @@ export default function CreateCandidatePage() {
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
   // Form
-  const form = useForm<CreateCandidateFormData>({
+  const form = useForm({
     resolver: zodResolver(createCandidateSchema),
     mode: "onChange",
     reValidateMode: "onChange",
@@ -297,8 +290,7 @@ export default function CreateCandidatePage() {
 
   const validateStep2 = async () => {
     const step2Fields = [
-      "expectedMinSalary",
-      "expectedMaxSalary",
+      "expectedSalary",
       "preferredCountries",
       "facilityPreferences",
       "sectorType",
@@ -385,8 +377,7 @@ export default function CreateCandidatePage() {
       }
 
       // Preference fields
-      if (data.expectedMinSalary !== undefined) payload.expectedMinSalary = data.expectedMinSalary;
-      if (data.expectedMaxSalary !== undefined) payload.expectedMaxSalary = data.expectedMaxSalary;
+      if (data.expectedSalary !== undefined) payload.expectedMinSalary = data.expectedSalary;
       if (data.sectorType) payload.sectorType = data.sectorType;
       if (data.visaType) payload.visaType = data.visaType;
       if (data.preferredCountries && data.preferredCountries.length > 0) {
@@ -410,11 +401,8 @@ export default function CreateCandidatePage() {
         payload.gpa = data.gpa;
       }
       // salary range & preferences
-      if (data.expectedMinSalary !== undefined) {
-        payload.expectedMinSalary = data.expectedMinSalary;
-      }
-      if (data.expectedMaxSalary !== undefined) {
-        payload.expectedMaxSalary = data.expectedMaxSalary;
+      if (data.expectedSalary !== undefined) {
+        payload.expectedMinSalary = data.expectedSalary;
       }
       if (data.preferredCountries && data.preferredCountries.length > 0) {
         payload.preferredCountries = data.preferredCountries;
@@ -694,7 +682,7 @@ export default function CreateCandidatePage() {
         email: form.getValues("email"),
         source: form.getValues("source"),
         gender: form.getValues("gender"),
-        dateOfBirth: form.getValues("dateOfBirth"),
+        dateOfBirth: form.getValues("dateOfBirth") || "",
         referralCompanyName: form.getValues("referralCompanyName"),
         referralEmail: form.getValues("referralEmail"),
         referralCountryCode: form.getValues("referralCountryCode"),
@@ -706,8 +694,7 @@ export default function CreateCandidatePage() {
         gpa: form.getValues("gpa"),
         qualifications,
         workExperiences,
-        expectedMinSalary: form.getValues("expectedMinSalary"),
-        expectedMaxSalary: form.getValues("expectedMaxSalary"),
+        expectedSalary: form.getValues("expectedSalary") ?? undefined,
         preferredCountries: form.getValues("preferredCountries"),
         facilityPreferences: form.getValues("facilityPreferences"),
         sectorType: form.getValues("sectorType"),
