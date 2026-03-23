@@ -3297,6 +3297,49 @@ export class CandidatesService {
     const sortOrder = query.sortOrder || 'desc';
 
     const skip = (page - 1) * limit;
+
+    // Define the projects filtering based on current status/mainStatus
+    let projectsFilter: any = undefined;
+    const statusValue = (query.currentStatus || query.status || '').toLowerCase();
+
+    if (query.mainStatus || query.subStatus) {
+      projectsFilter = {
+        where: {
+          ...(query.mainStatus ? { mainStatus: { name: query.mainStatus } } : {}),
+          ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
+        },
+      };
+    } else if (statusValue === 'interview') {
+      projectsFilter = { where: { mainStatus: { name: 'interview' } } };
+    } else if (statusValue === 'documentation') {
+      projectsFilter = { where: { mainStatus: { name: 'documents' } } };
+    } else if (statusValue === 'processing') {
+      projectsFilter = { where: { mainStatus: { name: 'processing' } } };
+    } else if (statusValue === 'registered' || statusValue === 'nominated') {
+      projectsFilter = { where: {} }; // Show any project
+    } else if (statusValue === 'interview_assigned') {
+      projectsFilter = {
+        where: {
+          projectStatusHistory: {
+            some: {
+              subStatus: {
+                name: {
+                  in: [
+                    'interview_assigned',
+                    'interview_scheduled',
+                    'interview_rescheduled',
+                    'interview_completed',
+                    'interview_passed',
+                    'shortlisted',
+                  ],
+                },
+              },
+            },
+          },
+        },
+      };
+    }
+
     const candidatesData = await this.prisma.candidate.findMany({
       where,
       include: {
@@ -3306,9 +3349,18 @@ export class CandidatesService {
           include: { country: true },
         },
         _count: {
-          select: { projects: true },
+          select: {
+            projects: projectsFilter ? projectsFilter : true,
+          },
         },
-        projects: {
+        projects: projectsFilter ? {
+          ...projectsFilter,
+          include: {
+            subStatus: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        } : {
           include: {
             subStatus: true,
           },
@@ -3343,9 +3395,13 @@ export class CandidatesService {
     const candidates = candidatesData.map((c) => {
       const activeAssignment = c.recruiterAssignments?.find((a) => a.isActive);
       const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
-      const latestProject = c.projects?.[0];
+      const latestProject = c.projects?.[0] as any;
+      
+      // Destructure to remove projects array from the final response object
+      const { projects, ...candidateRest } = c;
+
       return {
-        ...c,
+        ...candidateRest,
         recruiter: activeAssignment?.recruiter || null,
         createdBy: firstAssignment?.assignedByUser || null,
         projectDetails: latestProject
@@ -3667,6 +3723,173 @@ export class CandidatesService {
     return {
       candidate: candidateInfo,
       projects: projectsWithUserDetails,
+      pagination: {
+        total: totalProjects,
+        page,
+        limit,
+        totalPages: Math.ceil(totalProjects / limit),
+      },
+    };
+  }
+
+  /**
+   * Get interview-specific workflow details for a candidate
+   * Includes only project info, screenings, and interviews
+   */
+  async getCandidateInterviewWorkflow(
+    candidateId: string,
+    options: { subStatus?: string; search?: string; page?: number; limit?: number } = {},
+  ) {
+    const { subStatus, search, page = 1, limit = 10 } = options;
+    const skip = (page - 1) * limit;
+
+    // First find the candidate details
+    const candidateInfo = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profileImage: true,
+      },
+    });
+
+    if (!candidateInfo) return null;
+
+    // Define where clause for filtering projects
+    const projectWhere: any = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'interview',
+          mode: 'insensitive',
+        },
+      },
+    };
+
+    if (subStatus) {
+      projectWhere.subStatusId = subStatus;
+    }
+
+    if (search) {
+      projectWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    // Get total count for pagination
+    const totalProjects = await this.prisma.candidateProjects.count({
+      where: projectWhere,
+    });
+
+    // Get paginated projects with details
+    const projects = await this.prisma.candidateProjects.findMany({
+      where: projectWhere,
+      include: {
+        project: {
+          include: {
+            client: true,
+            country: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            designation: true,
+            roleCatalog: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        mainStatus: true,
+        subStatus: true,
+        screenings: {
+          include: {
+            checklistItems: true,
+            template: true,
+            candidateProjectMap: {
+              select: {
+                id: true,
+                project: { select: { title: true } },
+                candidate: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
+          orderBy: { scheduledTime: 'desc' },
+        },
+        interviews: {
+          include: {
+            candidateProjectMap: {
+              select: {
+                id: true,
+                project: { select: { title: true } },
+                candidate: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
+          orderBy: { scheduledTime: 'desc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    // For each screening and interview, fetch who scheduled it from InterviewStatusHistory
+    const projectsWithSchedulingInfo = await Promise.all(
+      projects.map(async (project) => {
+        const screeningsWithScheduler = await Promise.all(
+          project.screenings.map(async (screening) => {
+            const history = await this.prisma.interviewStatusHistory.findFirst({
+              where: {
+                interviewId: screening.id,
+                interviewType: 'screening',
+                status: 'scheduled',
+              },
+              orderBy: { statusAt: 'asc' },
+              include: { changedBy: { select: { id: true, name: true, profileImage: true } } },
+            });
+            return {
+              ...screening,
+              scheduledBy: history?.changedBy || (history?.changedByName ? { name: history.changedByName } : null),
+            };
+          }),
+        );
+
+        const interviewsWithScheduler = await Promise.all(
+          project.interviews.map(async (interview) => {
+            const history = await this.prisma.interviewStatusHistory.findFirst({
+              where: {
+                interviewId: interview.id,
+                interviewType: 'client',
+                status: 'scheduled',
+              },
+              orderBy: { statusAt: 'asc' },
+              include: { changedBy: { select: { id: true, name: true, profileImage: true } } },
+            });
+            return {
+              ...interview,
+              scheduledBy: history?.changedBy || (history?.changedByName ? { name: history.changedByName } : null),
+            };
+          }),
+        );
+
+        return {
+          ...project,
+          screenings: screeningsWithScheduler,
+          interviews: interviewsWithScheduler,
+        };
+      }),
+    );
+
+    return {
+      candidate: candidateInfo,
+      projects: projectsWithSchedulingInfo,
       pagination: {
         total: totalProjects,
         page,

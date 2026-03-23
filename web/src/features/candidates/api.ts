@@ -1277,6 +1277,13 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
     }),
+    getCandidateInterviewWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
+      query: ({ candidateId, ...params }) => ({
+        url: `candidates/${candidateId}/interview-workflow`,
+        params,
+      }),
+      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
+    }),
   }),
 });
 
@@ -1315,4 +1322,5 @@ export const {
   useGetCandidateProjectsQuery,
   useGetCandidateProjectsWorkflowDetailsQuery,
   useGetCandidateDocumentationWorkflowQuery,
+  useGetCandidateInterviewWorkflowQuery,
 } = candidatesApi;

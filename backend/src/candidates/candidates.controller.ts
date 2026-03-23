@@ -1520,4 +1520,26 @@ export class CandidatesController {
       message: 'Documentation workflow details retrieved successfully',
     };
   }
+
+  @Get(':id/interview-workflow')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get consolidated interview workflow details for a candidate',
+    description: 'Returns ONLY interview and screening details for all projects a candidate is nominated for.',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate ID' })
+  async getInterviewWorkflow(
+    @Param('id') id: string,
+    @Query('subStatus') subStatus?: string,
+    @Query('search') search?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const data = await this.candidatesService.getCandidateInterviewWorkflow(id, { subStatus, search, page: Number(page), limit: Number(limit) });
+    return {
+      success: true,
+      ...data,
+      message: 'Interview workflow details retrieved successfully',
+    };
+  }
 }
