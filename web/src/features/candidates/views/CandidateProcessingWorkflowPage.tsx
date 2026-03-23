@@ -243,6 +243,7 @@ export default function CandidateProcessingWorkflowPage() {
                             <h3 className="text-sm font-bold text-slate-900 truncate">{p.project?.title || "Unnamed Project"}</h3>
                             <span className="text-[10px] text-slate-400 font-medium">by {p.project?.client?.name || "Unknown Client"}</span>
                           </div>
+                          {/* Summary Row (Designation, Status, Progress) - Always Visible */}
                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                              <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-indigo-50 text-indigo-600 border-indigo-200 gap-1">
                                <Briefcase className="h-3 w-3" />
@@ -286,67 +287,6 @@ export default function CandidateProcessingWorkflowPage() {
                                </Badge>
                              )}
                           </div>
-
-                          {/* Legend and Step Tiles */}
-                          {p.processing?.processingSteps?.length > 0 && (
-                            <div className="space-y-3 mt-4">
-                              <div className="flex flex-wrap items-center gap-3 py-2 px-3 bg-slate-50/50 rounded-lg border border-slate-100">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mr-1">Status Guide:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="h-2 w-2 rounded-full bg-orange-500" />
-                                  <span className="text-[10px] font-medium text-slate-600">Pending</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                  <span className="text-[10px] font-medium text-slate-600">In Process</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                  <span className="text-[10px] font-medium text-slate-600">Completed</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="h-2 w-2 rounded-full bg-red-500" />
-                                  <span className="text-[10px] font-medium text-slate-600">Cancelled</span>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-wrap gap-2">
-                                {[...p.processing.processingSteps]
-                                  .sort((a: any, b: any) => (a.template?.order || 0) - (b.template?.order || 0))
-                                  .map((step: any) => {
-                                    let colorClass = "bg-slate-50 text-slate-400 border-slate-200"; 
-                                    const status = step.status?.toLowerCase();
-                                    
-                                    if (status === 'completed') colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-100";
-                                    else if (status === 'in_progress' || status === 'started') colorClass = "bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-100";
-                                    else if (status === 'pending') colorClass = "bg-orange-50 text-orange-700 border-orange-200 ring-1 ring-orange-100";
-                                    else if (status === 'rejected' || status === 'cancelled') colorClass = "bg-red-50 text-red-700 border-red-200 ring-1 ring-red-100";
-
-                                    return (
-                                      <TooltipProvider key={step.id}>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className={`px-2.5 py-1.5 rounded-md border text-[10px] font-bold transition-all flex items-center gap-2 min-w-[80px] justify-center shadow-sm ${colorClass}`}>
-                                              <div className={`h-1.5 w-1.5 rounded-full ${
-                                                status === 'completed' ? 'bg-emerald-500' : 
-                                                (status === 'in_progress' || status === 'started') ? 'bg-blue-500' : 
-                                                status === 'pending' ? 'bg-orange-500' : 
-                                                'bg-red-500'
-                                              }`} />
-                                              {step.template?.label || "Step"}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top">
-                                            <p className="text-[10px] font-bold">{step.template?.label || "Step"}</p>
-                                            <p className="text-[9px] uppercase tracking-wider opacity-80">{status?.replace(/_/g, ' ') || 'Unknown'}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                       <div className="hidden md:block shrink-0">
@@ -364,6 +304,68 @@ export default function CandidateProcessingWorkflowPage() {
                   </AccordionTrigger>
                   
                   <AccordionContent className="p-0">
+                    <div className="px-5 pb-5 border-t border-slate-100 bg-slate-50/30">
+                        {/* Legend and Step Tiles - Only Visible when Accordion is OPEN */}
+                        {p.processing?.processingSteps?.length > 0 && (
+                          <div className="space-y-3 mt-4">
+                            <div className="flex flex-wrap items-center gap-3 py-2 px-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mr-1">Status Guide:</span>
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-orange-500" />
+                                <span className="text-[10px] font-medium text-slate-600">Pending</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                <span className="text-[10px] font-medium text-slate-600">In Process</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                <span className="text-[10px] font-medium text-slate-600">Completed</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-red-500" />
+                                <span className="text-[10px] font-medium text-slate-600">Cancelled</span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {[...p.processing.processingSteps]
+                                .sort((a: any, b: any) => (a.template?.order || 0) - (b.template?.order || 0))
+                                .map((step: any) => {
+                                  let colorClass = "bg-slate-50 text-slate-400 border-slate-200"; 
+                                  const status = step.status?.toLowerCase();
+                                  
+                                  if (status === 'completed') colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-100";
+                                  else if (status === 'in_progress' || status === 'started') colorClass = "bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-100";
+                                  else if (status === 'pending') colorClass = "bg-orange-50 text-orange-700 border-orange-200 ring-1 ring-orange-100";
+                                  else if (status === 'rejected' || status === 'cancelled') colorClass = "bg-red-50 text-red-700 border-red-200 ring-1 ring-red-100";
+
+                                  return (
+                                    <TooltipProvider key={step.id}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className={`px-2.5 py-1.5 rounded-md border text-[10px] font-bold transition-all flex items-center gap-2 min-w-[80px] justify-center bg-white shadow-sm hover:shadow-md ${colorClass}`}>
+                                            <div className={`h-1.5 w-1.5 rounded-full ${
+                                              status === 'completed' ? 'bg-emerald-500' : 
+                                              (status === 'in_progress' || status === 'started') ? 'bg-blue-500' : 
+                                              status === 'pending' ? 'bg-orange-500' : 
+                                              'bg-red-500'
+                                            }`} />
+                                            {step.template?.label || "Step"}
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">
+                                          <p className="text-[10px] font-bold">{step.template?.label || "Step"}</p>
+                                          <p className="text-[9px] uppercase tracking-wider opacity-80">{status?.replace(/_/g, ' ') || 'Unknown'}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+                    </div>
                   </AccordionContent>
                 </Card>
               </AccordionItem>
