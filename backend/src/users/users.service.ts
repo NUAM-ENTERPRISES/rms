@@ -933,6 +933,10 @@ export class UsersService {
   async getRecruiterPerformance(
     recruiterId: string,
     year: number,
+    filterBy: 'year' | 'month' | 'today' | 'custom' = 'year',
+    month?: number,
+    fromDate?: string,
+    toDate?: string,
   ): Promise<
     Array<{
       month: string;
@@ -942,6 +946,12 @@ export class UsersService {
       interview: number;
       selected: number;
       joined: number;
+      deployed: number;
+      hired: number;
+      registered: number;
+      documentVerified: number;
+      shortlisted: number;
+      interviewPassed: number;
     }>
   > {
     // Find the earliest assignment date for this recruiter to get all historical data
@@ -956,10 +966,30 @@ export class UsersService {
       return [];
     }
 
-    // Calculate start year from earliest assignment or use provided year as minimum
-    const earliestYear = earliestAssignment.assignedAt.getFullYear();
-    const startYear = Math.min(earliestYear, year - 10); // Go back max 10 years or to earliest data
-    const endYear = year;
+    let startDate: Date;
+    let endDate: Date;
+
+    if (filterBy === 'today') {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    } else if (filterBy === 'month') {
+      const monthIndex = month && month >= 1 && month <= 12 ? month - 1 : 0;
+      startDate = new Date(year, monthIndex, 1, 0, 0, 0, 0);
+      endDate = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+    } else if (filterBy === 'custom' && fromDate && toDate) {
+      startDate = new Date(fromDate);
+      endDate = new Date(toDate);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      startDate = new Date(year, 0, 1, 0, 0, 0, 0);
+      endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+    }
+
+    // Ensure we don't go beyond actual data history
+    if (startDate < earliestAssignment.assignedAt) {
+      startDate = earliestAssignment.assignedAt;
+    }
 
     const months = [
       'Jan',
@@ -976,7 +1006,7 @@ export class UsersService {
       'Dec',
     ];
 
-    const monthlyData: Array<{
+    const allMonthBuckets: Array<{
       month: string;
       year: number;
       assigned: number;
@@ -984,13 +1014,26 @@ export class UsersService {
       interview: number;
       selected: number;
       joined: number;
+      deployed: number;
+      hired: number;
+      registered: number;
+      documentVerified: number;
+      shortlisted: number;
+      interviewPassed: number;
     }> = [];
 
-    // Get data for all years from startYear to endYear
-    for (let y = startYear; y <= endYear; y++) {
-      for (let index = 0; index < months.length; index++) {
-        const monthStart = new Date(y, index, 1);
-        const monthEnd = new Date(y, index + 1, 0, 23, 59, 59, 999);
+    const fromMonthIndex = startDate.getMonth();
+    const fromYear = startDate.getFullYear();
+    const toMonthIndex = endDate.getMonth();
+    const toYear = endDate.getFullYear();
+
+    for (let y = fromYear; y <= toYear; y++) {
+      const startI = y === fromYear ? fromMonthIndex : 0;
+      const endI = y === toYear ? toMonthIndex : 11;
+
+      for (let monthIndex = startI; monthIndex <= endI; monthIndex++) {
+        const monthStart = new Date(y, monthIndex, 1, 0, 0, 0, 0);
+        const monthEnd = new Date(y, monthIndex + 1, 0, 23, 59, 59, 999);
 
         const candidateProjects = await this.prisma.candidateProjects.findMany({
           where: {
@@ -1006,42 +1049,121 @@ export class UsersService {
                 statusName: true,
               },
             },
+            mainStatus: true,
+            subStatus: true,
+            projectStatusHistory: {
+              include: {
+                mainStatus: true,
+                subStatus: true,
+              },
+            },
           },
         });
 
-        const assigned = candidateProjects.length;
-        const screening = candidateProjects.filter(
-          (cp) =>
-            cp.currentProjectStatus?.statusName === 'screening_scheduled' ||
-            cp.currentProjectStatus?.statusName === 'screening_completed' ||
-            cp.currentProjectStatus?.statusName === 'screening_passed' ||
-            cp.currentProjectStatus?.statusName === 'screening_failed',
-        ).length;
-        const interview = candidateProjects.filter(
-          (cp) =>
-            cp.currentProjectStatus?.statusName === 'interview_scheduled' ||
-            cp.currentProjectStatus?.statusName === 'interview_completed' ||
-            cp.currentProjectStatus?.statusName === 'interview_passed',
-        ).length;
-        const selected = candidateProjects.filter(
-          (cp) => cp.currentProjectStatus?.statusName === 'selected',
-        ).length;
-        const joined = candidateProjects.filter(
-          (cp) => cp.currentProjectStatus?.statusName === 'hired',
-        ).length;
+        let assigned = 0;
+        let screening = 0;
+        let interview = 0;
+        let selected = 0;
+        let joined = 0;
+        let deployed = 0;
+        let hired = 0;
+        let registered = 0;
+        let documentVerified = 0;
+        let shortlisted = 0;
+        let interviewPassed = 0;
 
-        monthlyData.push({
-          month: months[index],
+        for (const cp of candidateProjects) {
+          assigned += 1;
+
+          // map all status markers from current and history
+          const subStatusSet = new Set<string>();
+          const mainStatusSet = new Set<string>();
+
+          if (cp.subStatus?.name) {
+            subStatusSet.add(cp.subStatus.name);
+          }
+          if (cp.mainStatus?.name) {
+            mainStatusSet.add(cp.mainStatus.name);
+          }
+          if (cp.currentProjectStatus?.statusName) {
+            subStatusSet.add(cp.currentProjectStatus.statusName);
+          }
+
+          if (cp.projectStatusHistory?.length) {
+            for (const history of cp.projectStatusHistory) {
+              if (history.subStatus?.name) {
+                subStatusSet.add(history.subStatus.name);
+              }
+              if (history.mainStatus?.name) {
+                mainStatusSet.add(history.mainStatus.name);
+              }
+            }
+          }
+
+          const hasScreening =
+            subStatusSet.has('screening_assigned') ||
+            subStatusSet.has('screening_scheduled') ||
+            subStatusSet.has('screening_completed') ||
+            subStatusSet.has('screening_passed') ||
+            subStatusSet.has('screening_failed');
+
+          const hasInterview =
+            subStatusSet.has('interview_assigned') ||
+            subStatusSet.has('interview_scheduled') ||
+            subStatusSet.has('interview_rescheduled') ||
+            subStatusSet.has('interview_completed') ||
+            subStatusSet.has('interview_passed') ||
+            subStatusSet.has('interview_failed') ||
+            subStatusSet.has('interview_backout');
+
+          const hasSelected =
+            subStatusSet.has('interview_selected') ||
+            subStatusSet.has('selected');
+
+          const hasRegistered =
+            mainStatusSet.has('nominated') ||
+            subStatusSet.has('nominated_initial');
+
+          const hasDocumentVerified = subStatusSet.has('documents_verified');
+          const hasShortlisted = subStatusSet.has('shortlisted');
+          const hasInterviewPassed = subStatusSet.has('interview_passed');
+          const hasHired =
+            subStatusSet.has('hired') ||
+            mainStatusSet.has('final') ||
+            subStatusSet.has('ready_for_final');
+
+          if (hasScreening) screening += 1;
+          if (hasInterview) interview += 1;
+          if (hasSelected) selected += 1;
+          if (hasHired) {
+            joined += 1;
+            deployed += 1;
+            hired += 1;
+          }
+          if (hasRegistered) registered += 1;
+          if (hasDocumentVerified) documentVerified += 1;
+          if (hasShortlisted) shortlisted += 1;
+          if (hasInterviewPassed) interviewPassed += 1;
+        }
+
+        allMonthBuckets.push({
+          month: months[monthIndex],
           year: y,
           assigned,
           screening,
           interview,
           selected,
           joined,
+          deployed,
+          hired,
+          registered,
+          documentVerified,
+          shortlisted,
+          interviewPassed,
         });
       }
     }
 
-    return monthlyData;
+    return allMonthBuckets;
   }
 }

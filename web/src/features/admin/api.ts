@@ -241,15 +241,32 @@ export const usersApi = baseApi.injectEndpoints({
           interview: number;
           selected: number;
           joined: number;
+          deployed: number;
+          hired: number;
+          registered: number;
+          documentVerified: number;
+          shortlisted: number;
+          interviewPassed: number;
         }>
       >,
-      { recruiterId: string; year?: number }
+      {
+        recruiterId: string;
+        year?: number;
+        filterBy?: 'year' | 'month' | 'today' | 'custom';
+        month?: number;
+        fromDate?: string;
+        toDate?: string;
+      }
     >({
       query: (params) => ({
         url: "/recruiters/performance",
         params: {
           recruiterId: params.recruiterId,
           ...(params.year && { year: params.year }),
+          ...(params.filterBy && { filterBy: params.filterBy }),
+          ...(params.month && { month: params.month }),
+          ...(params.fromDate && { fromDate: params.fromDate }),
+          ...(params.toDate && { toDate: params.toDate }),
         },
       }),
       providesTags: ["User"],

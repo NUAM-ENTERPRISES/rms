@@ -130,6 +130,10 @@ export class RecruitersController {
     @Request() req,
     @Query('recruiterId') recruiterId: string,
     @Query('year') year?: string,
+    @Query('filterBy') filterBy?: 'year' | 'month' | 'today' | 'custom',
+    @Query('month') month?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
   ): Promise<{
     success: boolean;
     data: Array<{
@@ -140,6 +144,12 @@ export class RecruitersController {
       interview: number;
       selected: number;
       joined: number;
+      deployed: number;
+      hired: number;
+      registered: number;
+      documentVerified: number;
+      shortlisted: number;
+      interviewPassed: number;
     }>;
     message: string;
   }> {
@@ -156,9 +166,16 @@ export class RecruitersController {
     }
 
     const yearNum = year ? parseInt(year, 10) : new Date().getFullYear();
+    const filter = filterBy || 'year';
+    const monthNum = month ? parseInt(month, 10) : undefined;
+
     const data = await this.usersService.getRecruiterPerformance(
       recruiterId,
       yearNum,
+      filter,
+      monthNum,
+      fromDate,
+      toDate,
     );
     return {
       success: true,

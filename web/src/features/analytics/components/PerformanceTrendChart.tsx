@@ -32,6 +32,12 @@ type MonthlyPerformance = {
   interview: number;
   selected: number;
   joined: number;
+  deployed: number;
+  hired: number;
+  registered: number;
+  documentVerified: number;
+  shortlisted: number;
+  interviewPassed: number;
 };
 
 type PerformanceTrendChartProps = {
@@ -128,43 +134,51 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({
             <Legend />
             <Line
               type="monotone"
-              dataKey="assigned"
+              dataKey="registered"
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
-              name="Assigned"
+              name="Registered"
             />
             <Line
               type="monotone"
-              dataKey="screening"
+              dataKey="documentVerified"
               stroke="#10b981"
               strokeWidth={2}
               dot={false}
-              name="In Screening"
+              name="Document verified"
             />
             <Line
               type="monotone"
-              dataKey="interview"
+              dataKey="shortlisted"
               stroke="#f59e0b"
               strokeWidth={2}
               dot={false}
-              name="In Interview"
+              name="Shortlisted"
             />
             <Line
               type="monotone"
-              dataKey="selected"
+              dataKey="interviewPassed"
               stroke="#8b5cf6"
               strokeWidth={2}
               dot={false}
-              name="Selected"
+              name="Interview passed"
             />
             <Line
               type="monotone"
-              dataKey="joined"
-              stroke="#06b6d4"
+              dataKey="deployed"
+              stroke="#ec4899"
               strokeWidth={3}
               dot={{ r: 4 }}
-              name="Joined"
+              name="Deployed"
+            />
+            <Line
+              type="monotone"
+              dataKey="hired"
+              stroke="#0ea5e9"
+              strokeWidth={2}
+              dot={false}
+              name="Hired"
             />
           </LineChart>
         </ResponsiveContainer>
