@@ -1214,7 +1214,7 @@ const CandidateCard = memo(function CandidateCard({
             </div>
 
             <div className="flex items-center gap-2">
-              {showAssignButton && onAssignToProject && (
+              {isRecruiter && showAssignButton && onAssignToProject && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className={cn(isNotEligible && "cursor-not-allowed")}>

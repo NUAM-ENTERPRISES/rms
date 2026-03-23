@@ -319,6 +319,7 @@ const ProjectCandidatesBoard = ({
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
+  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
   const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
@@ -339,7 +340,7 @@ const ProjectCandidatesBoard = ({
     const candidateId = e.dataTransfer.getData("candidateId");
     
     // Only handle drop to "nominated" column
-    if (columnId === "nominated" && candidateId) {
+    if (columnId === "nominated" && candidateId && isRecruiter) {
       // Find candidate in eligible or all candidates
       const candidate = [...eligibleCandidates, ...allCandidates].find(
         (c) => (c.candidateId || c.id) === candidateId
@@ -351,7 +352,6 @@ const ProjectCandidatesBoard = ({
     }
   };
 
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
   const isManager =
     user?.roles?.some((role) =>
       ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
@@ -488,6 +488,7 @@ const ProjectCandidatesBoard = ({
   // Compute bulk-selectable eligible candidates (those not already assigned and eligible)
   // Used for the select-all toolbar in the column header
   const selectableEligibleCandidates = useMemo(() => {
+    if (!isRecruiter) return [];
     return filteredEligible
       .map((candidate) => {
         const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
@@ -535,6 +536,7 @@ const ProjectCandidatesBoard = ({
   };
 
   const selectableNominatedCandidates = useMemo(() => {
+    if (!isRecruiter) return [];
     return sanitizedNominated.filter((candidate) => {
       const subStatusName =
         candidate.projectSubStatus?.name ||
