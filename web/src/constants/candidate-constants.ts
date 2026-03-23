@@ -12,13 +12,14 @@ export const FACILITY_TYPES = [
   "rehabilitation_center",
   "long_term_care_facility",
   "dialysis_center",
-  "mental_health_facility"
+  "mental_health_facility",
+  "any_type"
 ] as const;
 
 export const SECTOR_TYPES = {
+  ANY_PREFERENCE: "any_preference",
   PRIVATE: "private",
   GOVERNMENT: "government",
-  NO_PREFERENCE: "no_preference",
 } as const;
 
 export const VISA_TYPES = {

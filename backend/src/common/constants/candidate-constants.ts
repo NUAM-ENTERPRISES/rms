@@ -16,8 +16,10 @@ export const FACILITY_TYPES = [
 ] as const;
 
 export const SECTOR_TYPES = {
+  ANY_PREFERENCE: "any_preference",
   PRIVATE: "private",
-  GOVERNMENT: "government",  NO_PREFERENCE: 'no_preference',} as const;
+  GOVERNMENT: "government",
+} as const;
 
 export const VISA_TYPES = {
   EMPLOYMENT: "employment",

@@ -135,7 +135,7 @@ export default function EditCandidatePage() {
       expectedMaxSalary: undefined,
       preferredCountries: [],
       facilityPreferences: [],
-      sectorType: SECTOR_TYPES.NO_PREFERENCE,
+      sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       teamId: "none",
       referralCompanyName: "",
@@ -194,7 +194,7 @@ export default function EditCandidatePage() {
         expectedMaxSalary: candidate.expectedMaxSalary ?? undefined,
         preferredCountries: candidate.preferredCountries?.map((pc) => pc.country.code) || [],
         facilityPreferences: candidate.facilityPreferences?.map((fp) => fp.facilityType) || [],
-        sectorType: candidate.sectorType || SECTOR_TYPES.NO_PREFERENCE,
+        sectorType: candidate.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
         visaType: candidate.visaType || VISA_TYPES.NOT_APPLICABLE,
         height: candidate.height ?? undefined,
         weight: candidate.weight ?? undefined,
@@ -570,18 +570,24 @@ export default function EditCandidatePage() {
                   </div>
                   <div className="space-y-2">
                     <FormLabel className="text-slate-700 font-medium">
-                      Facility Preferences
+                      Organization Preferences
                     </FormLabel>
                     <Controller
                       name="facilityPreferences"
                       control={form.control}
                       render={({ field }) => (
                         <MultiSelect
-                          placeholder="Select facility types..."
-                          options={FACILITY_TYPES.map(type => ({
-                            value: type,
-                            label: type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())
-                          }))}
+                          placeholder="Select organization types..."
+                          options={[
+                            ...FACILITY_TYPES.filter((type) => type === "any_type").map((type) => ({
+                              value: type,
+                              label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                            })),
+                            ...FACILITY_TYPES.filter((type) => type !== "any_type").map((type) => ({
+                              value: type,
+                              label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                            })),
+                          ]}
                           value={field.value}
                           onValueChange={field.onChange}
                         />

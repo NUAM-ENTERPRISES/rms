@@ -181,19 +181,25 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
             />
           </div>
 
-          {/* Facility Preferences */}
+          {/* Organization Preferences */}
           <div className="space-y-2">
             <Controller
               name="facilityPreferences"
               control={control}
               render={({ field }) => (
                 <MultiSelect
-                  label="Facility Preferences"
-                  placeholder="Select facility types..."
-                  options={FACILITY_TYPES.map(type => ({
-                    value: type,
-                    label: type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())
-                  }))}
+                  label="Organization Preferences"
+                  placeholder="Select organization types..."
+                  options={[
+                    ...FACILITY_TYPES.filter((type) => type === "any_type").map((type) => ({
+                      value: type,
+                      label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                    })),
+                    ...FACILITY_TYPES.filter((type) => type !== "any_type").map((type) => ({
+                      value: type,
+                      label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                    })),
+                  ]}
                   value={field.value}
                   onValueChange={field.onChange}
                   disabled={isLoading}
