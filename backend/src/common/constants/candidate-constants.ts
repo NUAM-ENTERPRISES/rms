@@ -47,3 +47,16 @@ export const LICENSING_EXAMS = {
   USMLE: "usmle",
   NCLEX_RN: "nclex_rn",
 } as const;
+
+export const COMMON_SKILLS = [
+  "Communication",
+  "Teamwork",
+  "Problem Solving",
+  "Customer Service",
+  "Leadership",
+  "Time Management",
+  "Adaptability",
+  "Attention to Detail",
+  "Critical Thinking",
+  "Conflict Resolution",
+] as const;

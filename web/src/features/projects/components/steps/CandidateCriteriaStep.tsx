@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoleCriteriaModal } from "../RoleCriteriaModal";
+import { COMMON_SKILLS} from "@/constants/candidate-constants";
 
 // Card background colors - rotating light colors (matching RequirementCriteriaStep)
 const CARD_BG_COLORS = [
@@ -61,6 +62,7 @@ const CARD_BG_COLORS = [
   "bg-cyan-50/40",
   "bg-rose-50/40",
 ];
+
 
 interface CandidateCriteriaStepProps {
   control: Control<ProjectFormData>;
@@ -96,8 +98,8 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
     maxSalaryRange: undefined as number | undefined,
   });
 
-  const [bulkSkillInput, setBulkSkillInput] = useState("");
-  
+  const [bulkSelectedSkills, setBulkSelectedSkills] = useState<CommonSkill[]>([]);
+
   // State for modal
   const [selectedRoleIndex, setSelectedRoleIndex] = useState<number | null>(null);
 
@@ -327,40 +329,91 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                 <Award className="h-3 w-3" /> Common Skills
               </Label>
               <div className="flex gap-1">
-                <Input
-                  placeholder="Add skill..."
-                  value={bulkSkillInput}
-                  onChange={(e) => setBulkSkillInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (bulkSkillInput.trim()) {
-                        setBulkCriteria(p => ({...p, requiredSkills: [...p.requiredSkills, bulkSkillInput.trim()]}));
-                        setBulkSkillInput("");
-                      }
-                    }
-                  }}
-                  className="bg-white border-slate-200 h-8 rounded-lg text-xs"
-                />
-                <Button 
-                  size="sm" 
-                  className="h-8 w-8 p-0" 
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-8 text-[10px] flex-1 justify-between bg-white border-slate-200">
+                      <span className="truncate">
+                        {bulkSelectedSkills.length === 0
+                          ? "Select skills"
+                          : `${bulkSelectedSkills.length} selected`}
+                      </span>
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2">
+                    <div className="space-y-1">
+                      <div
+                        className="flex items-center gap-2 p-1.5 hover:bg-slate-50 rounded-md cursor-pointer"
+                        onClick={() =>
+                          setBulkSelectedSkills((current) =>
+                            current.length === COMMON_SKILLS.length ? [] : [...COMMON_SKILLS]
+                          )
+                        }
+                      >
+                        <Checkbox checked={bulkSelectedSkills.length === COMMON_SKILLS.length} />
+                        <span className="text-xs font-medium">Select all</span>
+                      </div>
+                      {COMMON_SKILLS.map((skill) => {
+                        const checked = bulkSelectedSkills.includes(skill);
+                        return (
+                          <div
+                            key={skill}
+                            className="flex items-center gap-2 p-1.5 hover:bg-slate-50 rounded-md cursor-pointer"
+                            onClick={() =>
+                              setBulkSelectedSkills((current) =>
+                                current.includes(skill)
+                                  ? current.filter((s) => s !== skill)
+                                  : [...current, skill]
+                              )
+                            }
+                          >
+                            <Checkbox checked={checked} />
+                            <span className="text-xs">{skill}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Button
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  disabled={bulkSelectedSkills.length === 0}
                   onClick={() => {
-                    if (bulkSkillInput.trim()) {
-                      setBulkCriteria(p => ({...p, requiredSkills: [...p.requiredSkills, bulkSkillInput.trim()]}));
-                      setBulkSkillInput("");
-                    }
+                    if (!bulkSelectedSkills.length) return;
+                    setBulkCriteria((p) => ({
+                      ...p,
+                      requiredSkills: Array.from(
+                        new Set([...p.requiredSkills, ...bulkSelectedSkills])
+                      ),
+                    }));
+                    setBulkSelectedSkills([]);
                   }}
                 >
                   <Plus className="h-3 w-3" />
                 </Button>
               </div>
               {bulkCriteria.requiredSkills.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-2 mt-1">
                   {bulkCriteria.requiredSkills.map((s, i) => (
-                    <Badge key={i} variant="secondary" className="px-1 py-0 text-[9px] bg-white border-slate-100">
+                    <Badge
+                      key={i}
+                      variant="secondary"
+                      className="px-2 py-1 text-xs bg-white border-slate-100"
+                    >
                       {s}
-                      <X className="h-2 w-2 ml-1 cursor-pointer" onClick={() => setBulkCriteria(p => ({...p, requiredSkills: p.requiredSkills.filter((_, idx) => idx !== i)}))} />
+                      <span
+                        className="ml-1 flex items-center justify-center rounded-full bg-white/20 p-0.5 cursor-pointer pointer-events-auto"
+                        onClick={() =>
+                          setBulkCriteria((p) => ({
+                            ...p,
+                            requiredSkills: p.requiredSkills.filter((_, idx) => idx !== i),
+                          }))
+                        }
+                      >
+                        <X className="h-3 w-3" />
+                      </span>
                     </Badge>
                   ))}
                 </div>

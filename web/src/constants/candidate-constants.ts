@@ -66,3 +66,16 @@ export const SMARTNESS_LEVELS = [
   "Average",
   "Below Average",
 ] as const;
+
+export const COMMON_SKILLS = [
+  "Communication",
+  "Teamwork",
+  "Problem Solving",
+  "Customer Service",
+  "Leadership",
+  "Time Management",
+  "Adaptability",
+  "Attention to Detail",
+  "Critical Thinking",
+  "Conflict Resolution",
+] as const;
