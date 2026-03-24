@@ -756,7 +756,7 @@ const CandidateCard = memo(function CandidateCard({
                         </span>
                       </TooltipTrigger>
                       {isNotEligible && (
-                        <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs shadow-xl">
+                        <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs max-h-72 overflow-y-auto shadow-xl">
                           <div className="space-y-2">
                             <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
                               Eligibility Mismatch:
@@ -1056,7 +1056,7 @@ const CandidateCard = memo(function CandidateCard({
                   <AlertCircle className="h-3.5 w-3.5" aria-hidden />
                 </div>
               </TooltipTrigger>
-              <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs p-3 rounded-xl">
+              <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs max-h-72 overflow-y-auto p-3 rounded-xl">
                 <div className="space-y-2">
                   <div className={cn(
                     "flex items-center gap-2 font-bold text-xs",

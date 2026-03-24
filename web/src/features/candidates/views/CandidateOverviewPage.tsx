@@ -70,8 +70,9 @@ export default function CandidateOverviewPage() {
   );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
+  const isCRE = currentUser?.roles?.includes("CRE");
 
-  const canWriteCandidates = useCan("write:candidates");
+  const canWriteCandidates = useCan("write:candidates") && !isCRE;
   const canTransferCandidates = currentUser?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role)
   );

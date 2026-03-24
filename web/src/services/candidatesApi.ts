@@ -162,6 +162,14 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Candidate"],
     }),
+    getCREAssignedSummary: builder.query<
+      { total: number; roleCounters: { assigned: number; rnr: number; onHold: number; untouched: number; other: number } },
+      void
+    >({
+      query: () => "/candidates/my-assigned/summary",
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ["Candidate"],
+    }),
     getCandidateById: builder.query<Candidate, string>({
       query: (id) => `/candidates/${id}`,
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
@@ -329,6 +337,7 @@ export const candidatesApi = baseApi.injectEndpoints({
 export const {
   useGetCandidatesQuery,
   useGetMyAssignedCandidatesQuery,
+  useGetCREAssignedSummaryQuery,
   useGetCandidateByIdQuery,
   useCreateCandidateMutation,
   useUpdateCandidateMutation,

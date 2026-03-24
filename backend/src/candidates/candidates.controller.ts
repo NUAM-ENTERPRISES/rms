@@ -606,6 +606,32 @@ export class CandidatesController {
     };
   }
 
+  @Get('my-assigned/summary')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get CRE assigned candidate status summary',
+    description:
+      'Get counts for assigned candidates by status (assigned/rnr/onHold/untouched) for CRE dashboard tiles.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'CRE assigned summary retrieved successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async getMyCREAssignedSummary(@Request() req) {
+    const userId = req.user.id;
+    const summary = await this.candidatesService.getCREAssignedSummary(userId);
+
+    return {
+      success: true,
+      data: summary,
+      message: 'CRE assigned candidate summary retrieved successfully',
+    };
+  }
+
   @Get('status-config')
   @Public()
   @ApiOperation({
