@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
 
 export interface NotificationJobData {
   type: string;
@@ -20,6 +21,7 @@ export class NotificationsProcessor extends WorkerHost {
     private readonly notificationsService: NotificationsService,
     @Inject(forwardRef(() => NotificationsGateway))
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly whatsappNotificationService: WhatsAppNotificationService,
   ) {
     super();
   }
@@ -1193,7 +1195,7 @@ export class NotificationsProcessor extends WorkerHost {
         select: { name: true },
       });
 
-      // Notify Coordinator/Trainer only
+      // Notify Coordinator/Trainer
       const coordinator = await this.prisma.user.findUnique({
         where: { id: coordinatorId },
       });
@@ -1208,6 +1210,21 @@ export class NotificationsProcessor extends WorkerHost {
           link: `/screenings/assigned`,
           meta: { candidateProjectMapId },
           idemKey,
+        });
+      }
+
+      // Notify Recruiter
+      if (recruiterId) {
+        const idemKeyRecruiter = `${eventId}:${recruiterId}:assignment_to_screening`;
+
+        await this.notificationsService.createNotification({
+          userId: recruiterId,
+          type: 'candidate_assigned_screening',
+          title: 'Candidate Assigned to Screening Coordinator',
+          message: `Your candidate ${cp.candidate.firstName} ${cp.candidate.lastName} has been assigned to coordinator ${coordinator?.name || 'a coordinator'} for screening for project ${cp.project.title}.`,
+          link: `/recruiter-candidates`, // Assuming recruiter has a list
+          meta: { candidateProjectMapId },
+          idemKey: idemKeyRecruiter,
         });
       }
 
@@ -1226,19 +1243,21 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(`Processing candidate sent to screening event: ${eventId}`);
 
       try {
-        const { candidateProjectMapId, screeningId, coordinatorId, recruiterId } = payload as {
+        const { candidateProjectMapId, screeningId, coordinatorId, recruiterId, scheduledBy } = payload as {
           candidateProjectMapId: string;
           screeningId: string;
           coordinatorId: string;
           recruiterId: string | null;
+          scheduledBy?: string;
         };
 
         // Load candidate project mapping with candidate and project details
         const candidateProjectMap = await this.prisma.candidateProjects.findUnique({
           where: { id: candidateProjectMapId },
           include: {
-            candidate: { select: { firstName: true, lastName: true, id: true } },
+            candidate: { select: { firstName: true, lastName: true, id: true, countryCode: true, mobileNumber: true } },
             project: { select: { id: true, title: true } },
+            roleNeeded: { select: { designation: true } },
           },
         });
 
@@ -1247,20 +1266,109 @@ export class NotificationsProcessor extends WorkerHost {
           return;
         }
 
-        // Notify coordinator only
+        const screening = await this.prisma.screening.findUnique({
+          where: { id: screeningId },
+          select: { scheduledTime: true },
+        });
+
+        // Notify assigned Trainer/Coordinator (if different from the person who scheduled)
         const coordinator = await this.prisma.user.findUnique({ where: { id: coordinatorId } });
-        if (coordinator) {
+        if (coordinator && coordinator.id !== scheduledBy) {
           const idemKey = `${eventId}:${coordinator.id}:candidate_sent_to_screening`;
+
+          const isInitialAssignment = !screening?.scheduledTime;
+          const title = isInitialAssignment ? 'Trainer Assigned' : 'New Screening Scheduled';
+          const message = isInitialAssignment 
+            ? `You have been assigned as a trainer for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
+            : `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been scheduled for a screening for project ${candidateProjectMap.project.title}.`;
 
           await this.notificationsService.createNotification({
             userId: coordinator.id,
             type: 'candidate_sent_to_screening',
-            title: 'Candidate assigned to screening',
-            message: `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been assigned to you for screening for project ${candidateProjectMap.project.title}.`,
-            link: `/screenings/assigned`,
+            title,
+            message,
+            link: isInitialAssignment ? `/screenings` : `/screenings/assigned`,
             meta: { candidateProjectMapId, screeningId },
             idemKey,
           });
+        }
+
+        // Notify all Interview Coordinators (if different from the person who scheduled)
+        const allInterviewCoordinators = await this.prisma.user.findMany({
+          where: {
+            userRoles: {
+              some: {
+                role: {
+                  name: 'Interview Coordinator',
+                },
+              },
+            },
+          },
+        });
+
+        for (const ic of allInterviewCoordinators) {
+          if (ic.id !== scheduledBy && ic.id !== coordinatorId) {
+            const isInitialAssignment = !screening?.scheduledTime;
+            const icIdemKey = `${eventId}:${ic.id}:ic_sent_to_screening`;
+            const icTitle = isInitialAssignment ? 'Trainer Assigned' : 'New Screening Scheduled';
+            const icMessage = isInitialAssignment 
+              ? `A trainer has been assigned for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
+              : `A screening has been scheduled for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`;
+
+            await this.notificationsService.createNotification({
+              userId: ic.id,
+              type: 'candidate_sent_to_screening',
+              title: icTitle,
+              message: icMessage,
+              link: isInitialAssignment ? `/screenings` : `/screenings/assigned`,
+              meta: { candidateProjectMapId, screeningId },
+              idemKey: icIdemKey,
+            });
+          }
+        }
+
+        // Notify recruiter
+        if (recruiterId && recruiterId !== scheduledBy) {
+          const idemKeyRecruiter = `${eventId}:${recruiterId}:candidate_sent_to_screening`;
+          const isInitialAssignment = !screening?.scheduledTime;
+          const title = isInitialAssignment ? 'Trainer Assigned for Candidate' : 'Screening Scheduled for Candidate';
+          const message = isInitialAssignment
+            ? `A trainer has been assigned for your candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
+            : `Your candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has a screening scheduled for project ${candidateProjectMap.project.title}.`;
+
+          await this.notificationsService.createNotification({
+            userId: recruiterId,
+            type: 'candidate_sent_to_screening',
+            title,
+            message,
+            link: `/recruiter-candidates`, 
+            meta: { candidateProjectMapId, screeningId },
+            idemKey: idemKeyRecruiter,
+          });
+        }
+
+        // Notify Candidate via WhatsApp (Only if scheduledTime is set)
+        if (candidateProjectMap.candidate.mobileNumber && screening?.scheduledTime) {
+          const fullPhone = `${candidateProjectMap.candidate.countryCode}${candidateProjectMap.candidate.mobileNumber}`.replace('+', '');
+          const candidateFullName = `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName}`;
+          
+          const date = new Date(screening.scheduledTime);
+          const formattedTime = date.toLocaleString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+
+          await this.whatsappNotificationService.sendScreeningScheduled(
+            candidateFullName,
+            fullPhone,
+            candidateProjectMap.project.title,
+            candidateProjectMap.roleNeeded?.designation || 'Specialist',
+            formattedTime,
+          );
         }
 
         this.logger.log(`Notifications created for candidate sent to screening event: ${eventId}`);

@@ -14,6 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button as UiButton } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useCreateScreeningMutation } from "../data";
 
 const scheduleSchema = z.object({
@@ -130,6 +136,9 @@ export default function ScheduleScreeningModal({
     })
     .join(", ");
 
+  const scheduledTime = form.watch("scheduledTime");
+  const isDateSelected = !!scheduledTime;
+
   return (
     <Dialog
       open={open}
@@ -200,16 +209,29 @@ export default function ScheduleScreeningModal({
               >
                 Cancel
               </UiButton>
-              <UiButton 
-                type="submit" 
-                className="flex-1" 
-                disabled={createState.isLoading || !form.formState.isValid}
-              >
-                {createState.isLoading 
-                  ? `${isBatch ? "Bulk Scheduling" : "Scheduling"}...` 
-                  : isBatch ? `Bulk Schedule (${assignments.length})` : "Schedule"
-                }
-              </UiButton>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <div className="flex-1">
+                      <UiButton 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={createState.isLoading || !form.formState.isValid || !isDateSelected}
+                      >
+                        {createState.isLoading 
+                          ? `${isBatch ? "Bulk Scheduling" : "Scheduling"}...` 
+                          : isBatch ? `Bulk Schedule (${assignments.length})` : "Schedule"
+                        }
+                      </UiButton>
+                    </div>
+                  </TooltipTrigger>
+                  {!isDateSelected && (
+                    <TooltipContent side="top" className="bg-slate-900 text-white border-slate-800">
+                      <p className="text-xs font-medium">Please select a date and time first</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </DialogFooter>
         </form>

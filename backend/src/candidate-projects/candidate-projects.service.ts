@@ -763,6 +763,7 @@ export class CandidateProjectsService {
       result.screeningId || '', // screeningId
       createDto.coordinatorId || '', // Use the provided coordinator or empty string
       recruiterId || userId || '',
+      userId, // scheduledBy
     );
 
     // Emit real-time synchronization event
@@ -1981,17 +1982,17 @@ export class CandidateProjectsService {
           scheduledTime: scheduledTime ? new Date(scheduledTime) : null,
           meetingLink,
           mode: 'video',
-          status: 'scheduled',
+          status: scheduledTime ? 'scheduled' : 'assigned',
         },
       });
 
-      // Update candidate-project status
+      // Update candidate-project status to assigned
       await tx.candidateProjects.update({
         where: { id: candidateProjectMapId },
         data: {
           subStatus: {
             connect: {
-              name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
+              name: CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED,
             },
           },
         },
@@ -2001,9 +2002,9 @@ export class CandidateProjectsService {
       await tx.candidateProjectStatusHistory.create({
         data: {
           candidateProjectMapId,
-          subStatusSnapshot: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
+          subStatusSnapshot: CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED,
           changedById: userId,
-          reason: `Sent to screening with coordinator ${coordinator.name}`,
+          reason: `Assigned to screening with coordinator ${coordinator.name}`,
         },
       });
 
@@ -2014,12 +2015,12 @@ export class CandidateProjectsService {
           interviewId: screening.id,
           candidateProjectMapId: candidateProjectMapId,
           previousStatus: null,
-          status: 'scheduled',
-          statusSnapshot: 'Screening Scheduled',
+          status: 'assigned',
+          statusSnapshot: 'Screening Assigned',
           statusAt: new Date(),
           changedById: userId,
           changedByName: coordinator.name,
-          reason: `Sent to screening with coordinator ${coordinator.name}`,
+          reason: `Assigned to screening with coordinator ${coordinator.name}`,
         },
       });
 

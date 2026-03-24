@@ -32,4 +32,32 @@ export class WhatsAppNotificationService {
       ],
     });
   }
+
+  /**
+   * Send screening scheduled notification to candidate
+   */
+  async sendScreeningScheduled(
+    candidateName: string,
+    phoneNumber: string,
+    projectName: string,
+    roleTitle: string,
+    scheduledTimeFormatted: string,
+  ): Promise<any> {
+    this.logger.log(`Sending screening notification to ${phoneNumber}: ${candidateName} for ${projectName}`);
+
+    // Template: screening_scheduled_v1
+    // Body: Hi {{1}}, your screening for {{2}} ({{3}}) has been scheduled for {{4}}. Please be prepared.
+    
+    return this.whatsappService.sendTemplateMessage({
+      to: phoneNumber,
+      templateName: WHATSAPP_TEMPLATE_TYPES.SCREENING_SCHEDULED,
+      languageCode: 'en_US',
+      bodyParameters: [
+        candidateName.split(' ')[0] || candidateName, // {{1}}
+        projectName,                                 // {{2}}
+        roleTitle,                                   // {{3}}
+        scheduledTimeFormatted,                      // {{4}}
+      ],
+    });
+  }
 }

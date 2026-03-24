@@ -275,6 +275,7 @@ export class ScreeningsService {
       created.id,
       dto.coordinatorId,
       recruiterToNotify,
+      scheduledBy || undefined,
     );
 
     // Return the enriched, canonical object via existing read method
@@ -1134,6 +1135,12 @@ export class ScreeningsService {
             name: CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW,
           },
         };
+      } else if (dto.decision === SCREENING_DECISION.ON_HOLD) {
+        statusUpdate.subStatus = {
+          connect: {
+            name: CANDIDATE_PROJECT_STATUS.ON_HOLD,
+          },
+        };
       }
 
       // Apply the sub-status update and capture the updated map so we can create
@@ -1258,7 +1265,7 @@ export class ScreeningsService {
   * Get screening statistics for a coordinator
    */
   async getCoordinatorStats(coordinatorId: string) {
-    const [total, completed, pending, approved, needsTraining, rejected] =
+    const [total, completed, pending, approved, needsTraining, rejected, onHold] =
       await Promise.all([
         this.prisma.screening.count({ where: { coordinatorId } }),
         this.prisma.screening.count({ where: { coordinatorId, conductedAt: { not: null } } }),
@@ -1266,6 +1273,7 @@ export class ScreeningsService {
         this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.APPROVED } }),
         this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.NEEDS_TRAINING } }),
         this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.REJECTED } }),
+        this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.ON_HOLD } }),
       ]);
 
     return {
@@ -1276,8 +1284,11 @@ export class ScreeningsService {
         approved,
         needsTraining,
         rejected,
+        onHold,
       },
       approvalRate:
+        completed > 0 ? ((approved / completed) * 100).toFixed(2) : '0',
+      passRate:
         completed > 0 ? ((approved / completed) * 100).toFixed(2) : '0',
     };
   }
@@ -1328,7 +1339,7 @@ export class ScreeningsService {
     const { page = 1, limit = 10, projectId, candidateId, recruiterId, roleCatalogId, search, coordinatorId } = query;
 
     const where: any = {
-      subStatus: { is: { name: 'screening_assigned' } },
+      subStatus: { is: { name: CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED } },
     };
 
     if (projectId) where.projectId = projectId;
@@ -1449,11 +1460,14 @@ export class ScreeningsService {
   async getUpcoming(query: any) {
     const { page = 1, limit = 20, coordinatorId, candidateProjectMapId, projectId, roleCatalogId, search } = query;
 
-    // Return all scheduled screenings (don't exclude past times).
-    // The UI needs to display expired (past) scheduled interviews too, so we'll
-    // compute isExpired per-item below instead of filtering them out here.
+    // Return screenings where the candidate-project specifically has 'screening_scheduled' status
     const where: any = {
       status: SCREENING_STATUS.SCHEDULED,
+      candidateProjectMap: {
+        subStatus: {
+          name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED
+        }
+      }
     };
 
     if (coordinatorId) where.coordinatorId = coordinatorId;

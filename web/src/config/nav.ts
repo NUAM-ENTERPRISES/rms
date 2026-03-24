@@ -211,11 +211,45 @@ export const navigationConfig: NavItem[] = [
     ],
     // Hidden from CRE - they focus on RNR candidates
   },
+  // Screening Trainer role: flatten screenings children to top-level items
+  {
+    id: "screenings-dashboard-top",
+    label: "Dashboard",
+    path: "/screenings",
+    icon: ClipboardCheck,
+    roles: ["Screening Trainer"],
+    permissions: ["read:screenings"],
+  },
+  {
+    id: "screenings-list-top",
+    label: "My Screenings",
+    path: "/screenings/list",
+    icon: ClipboardCheck,
+    roles: ["Screening Trainer"],
+    permissions: ["read:screenings"],
+  },
+  {
+    id: "screenings-training-top",
+    label: "Screening Training",
+    path: "/screenings/training",
+    icon: ClipboardCheck,
+    roles: ["Screening Trainer"],
+    permissions: ["read:training"],
+  },
+  {
+    id: "screenings-templates-top",
+    label: "Templates",
+    path: "/screenings/templates",
+    icon: ClipboardCheck,
+    roles: ["Screening Trainer"],
+    permissions: ["read:interview_templates"],
+  },
   {
     id: "screenings",
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
+    hiddenForRoles: ["Screening Trainer"],
     children: [
       {
         id: "screenings-dashboard",

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardCheck,
@@ -7,10 +7,16 @@ import {
   Users,
   Loader2,
   AlertCircle,
-  Sparkles,
-  ArrowRight,
   CheckCircle2,
   Clock,
+  Shield,
+  Search,
+  UserCheck,
+  Eye,
+  Mail,
+  Phone,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Card,
@@ -22,158 +28,292 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAppSelector } from "@/app/hooks";
 import {
   useGetScreeningsQuery,
   useGetAssignedScreeningsQuery,
+  useGetUpcomingScreeningsQuery,
+  useGetCoordinatorStatsQuery,
 } from "../data";
-import ImageViewer from "@/components/molecules/ImageViewer";
+import { useGetProjectQuery } from "@/features/projects/api";
 import { SCREENING_DECISION } from "../../types";
-import { startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-// note: using native <select> for simplicity in modal
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
+import { motion } from "framer-motion";
+import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
+import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
+
+type TileKey =
+  | "assigned"
+  | "scheduled"
+  | "retraining"
+  | "passed"
+  | "rejected"
+  | "on_hold"
+  | "pass_rate";
+
+interface TileConfig {
+  key: TileKey;
+  label: string;
+  icon: React.ElementType;
+  value: number | string;
+  hint: string;
+  gradient: string;
+  bgGradient: string;
+  iconBg: string;
+  textColor: string;
+}
+
+const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): TileConfig[] => [
+  {
+    key: "assigned",
+    label: "Assigned",
+    icon: ClipboardCheck,
+    value: assigned,
+    hint: "Screenings assigned to you",
+    gradient: "from-blue-500 to-cyan-500",
+    bgGradient: "from-blue-50 to-blue-100/50",
+    iconBg: "bg-blue-200/40",
+    textColor: "text-blue-600",
+  },
+  {
+    key: "scheduled",
+    label: "Scheduled",
+    icon: Calendar,
+    value: scheduled,
+    hint: "Upcoming scheduled screenings",
+    gradient: "from-indigo-500 to-blue-500",
+    bgGradient: "from-indigo-50 to-blue-100/50",
+    iconBg: "bg-indigo-200/40",
+    textColor: "text-indigo-600",
+  },
+  {
+    key: "retraining",
+    label: "Re-Training",
+    icon: Users,
+    value: stats?.byDecision?.needsTraining ?? 0,
+    hint: "Candidates requiring retraining",
+    gradient: "from-yellow-400 to-amber-500",
+    bgGradient: "from-yellow-50 to-amber-100/50",
+    iconBg: "bg-yellow-200/40",
+    textColor: "text-amber-600",
+  },
+  {
+    key: "passed",
+    label: "Passed",
+    icon: CheckCircle2,
+    value: stats?.byDecision?.approved ?? 0,
+    hint: "Candidates with passed decision",
+    gradient: "from-emerald-500 to-green-500",
+    bgGradient: "from-emerald-50 to-green-100/50",
+    iconBg: "bg-emerald-200/40",
+    textColor: "text-emerald-600",
+  },
+  {
+    key: "rejected",
+    label: "Rejected",
+    icon: Shield,
+    value: stats?.byDecision?.rejected ?? 0,
+    hint: "Candidates rejected",
+    gradient: "from-orange-500 to-red-500",
+    bgGradient: "from-orange-50 to-red-100/50",
+    iconBg: "bg-orange-200/40",
+    textColor: "text-orange-600",
+  },
+  {
+    key: "on_hold",
+    label: "OnHold",
+    icon: Clock,
+    value: stats?.byDecision?.onHold ?? 0,
+    hint: "Candidates on hold",
+    gradient: "from-slate-500 to-slate-700",
+    bgGradient: "from-slate-50 to-slate-100/50",
+    iconBg: "bg-slate-200/40",
+    textColor: "text-slate-600",
+  },
+  {
+    key: "pass_rate",
+    label: "Pass Rate",
+    icon: TrendingUp,
+    value: `${stats?.passRate ?? stats?.approvalRate ?? 0}%`,
+    hint: "Percentage of passed interviews",
+    gradient: "from-purple-500 to-violet-500",
+    bgGradient: "from-purple-50 to-violet-100/50",
+    iconBg: "bg-purple-200/40",
+    textColor: "text-purple-600",
+  },
+];
 
 export default function ScreeningsDashboardPage() {
   const navigate = useNavigate();
-  const { data, isLoading, error } = useGetScreeningsQuery({
-    limit: 5,
-    page: 1,
-    sortBy: "createdAt",
-    sortOrder: "desc",
+  const { user } = useAppSelector((state) => state.auth);
+  const coordinatorId = (user?.id as string) || "";
+
+  const [activeTile, setActiveTile] = useState<TileKey>("assigned");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<ProjectRoleFilterValue>({
+    projectId: "all",
+    roleCatalogId: "all",
   });
-  const interviews = useMemo(() => {
-    if (Array.isArray(data?.data?.items)) return data.data.items;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data)) return data;
-    return [];
-  }, [data]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkScheduleOpen, setIsBulkScheduleOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
 
-  // Assigned candidate-projects for mock interviews (these are different
-  // from scheduled MockInterview resources). We'll fetch these and merge
-  // into the upcoming list so coordinators can see assignments that haven't
-  // been scheduled into an interview yet.
-  const { data: assignedData, refetch: refetchAssigned } =
-    useGetAssignedScreeningsQuery({
-      page: 1,
-      limit: 15,
-    });
+  // Reset page when tile or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTile, filter, search]);
 
-  const assignedItems = assignedData?.data?.items || [];
+  const { data: projectDetailData, isLoading: projectDetailLoading } = useGetProjectQuery(
+    selectedProjectId as string,
+    { skip: !selectedProjectId }
+  );
 
+  const queryParams = useMemo(() => ({
+    page: currentPage,
+    limit: pageSize,
+    projectId: filter.projectId !== "all" ? filter.projectId : undefined,
+    roleCatalogId: filter.roleCatalogId !== "all" ? filter.roleCatalogId : undefined,
+    search: search || undefined,
+  }), [currentPage, filter, search]);
+
+  const { data: assignedData, isLoading: assignedLoading, refetch: refetchAssigned } = useGetAssignedScreeningsQuery(
+    queryParams,
+    { skip: !coordinatorId }
+  );
+
+  const { data: upcomingData, isLoading: upcomingLoading, refetch: refetchUpcoming } = useGetUpcomingScreeningsQuery(
+    queryParams,
+    { skip: !coordinatorId }
+  );
+
+  const { data: coordinatorStats, isLoading: statsLoading, refetch: refetchStats } = useGetCoordinatorStatsQuery(
+    coordinatorId,
+    { skip: !coordinatorId }
+  );
+
+  const activeDecisionParam = useMemo(() => {
+    switch (activeTile) {
+      case "retraining":
+        return SCREENING_DECISION.NEEDS_TRAINING;
+      case "passed":
+        return SCREENING_DECISION.APPROVED;
+      case "rejected":
+        return SCREENING_DECISION.REJECTED;
+      case "on_hold":
+        return SCREENING_DECISION.ON_HOLD;
+      default:
+        return undefined;
+    }
+  }, [activeTile]);
+
+  const { data: decisionData, isLoading: decisionLoading, error: decisionError } = useGetScreeningsQuery(
+    {
+      ...queryParams,
+      decision: activeDecisionParam,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    },
+    { skip: !coordinatorId }
+  );
+
+  const assignedItems = assignedData?.data?.items ?? [];
   const assignedNormalized = useMemo(() => {
     return assignedItems
-      .filter((it) => it.assignedAt)
-      .map((it) => ({
-        id: `assignment-${it.id}`,
+      .filter((it: any) => it.assignedAt)
+      .map((it: any) => ({
+        id: it.id,
+        candidate: it.candidate,
+        project: it.project,
+        roleNeeded: it.roleNeeded,
+        recruiter: it.recruiter,
+        status: it.subStatus?.label || it.subStatus?.name || "Assigned",
+        subStatus: it.subStatus?.label || it.subStatus?.name,
         scheduledTime: it.assignedAt,
-        candidateProjectMap: {
-          id: it.id,
-          candidate: it.candidate,
-          project: it.project,
-          roleNeeded: it.roleNeeded,
-          recruiter: it.recruiter,
-        },
-        mode: it.subStatus?.label || it.subStatus?.name || "Assigned",
-        subStatusName: it.subStatus?.name,
-        isExpired: Boolean((it as any).isExpired),
-      }))
-      .slice(0, 10);
+        createdAt: it.assignedAt,
+      }));
   }, [assignedItems]);
 
-  // UI state for scheduling modal
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<any | null>(
-    null
+  const upcomingItems = useMemo(() => {
+    const items = upcomingData?.data?.items || [];
+    return items.map((item: any) => ({
+      id: item.id,
+      candidate: item.candidateProjectMap?.candidate,
+      project: item.candidateProjectMap?.project,
+      roleNeeded: item.candidateProjectMap?.roleNeeded,
+      recruiter: item.candidateProjectMap?.recruiter,
+      status: item.status,
+      subStatus: item.decision || item.status,
+      scheduledTime: item.scheduledTime,
+      createdAt: item.createdAt,
+      decision: item.decision,
+    }));
+  }, [upcomingData]);
+
+  const decisionItems = useMemo(() => {
+    const items = decisionData?.data?.items || [];
+    return items.map((item: any) => ({
+      id: item.id,
+      candidate: item.candidateProjectMap?.candidate,
+      project: item.candidateProjectMap?.project,
+      roleNeeded: item.candidateProjectMap?.roleNeeded,
+      recruiter: item.candidateProjectMap?.recruiter,
+      status: item.status,
+      subStatus: item.decision,
+      scheduledTime: item.scheduledTime,
+      createdAt: item.createdAt,
+      decision: item.decision,
+    }));
+  }, [decisionData]);
+
+  const tableItems = useMemo(() => {
+    if (activeTile === "assigned") return assignedNormalized;
+    if (activeTile === "scheduled") return upcomingItems;
+    return decisionItems;
+  }, [activeTile, assignedNormalized, upcomingItems, decisionItems]);
+
+  const totalCount = useMemo(() => {
+    if (activeTile === "assigned") return assignedData?.data?.pagination?.total || 0;
+    if (activeTile === "scheduled") return upcomingData?.data?.pagination?.total || 0;
+    return decisionData?.data?.pagination?.total || 0;
+  }, [activeTile, assignedData, upcomingData, decisionData]);
+
+  const allStats = useMemo(
+    () => TILE_DEFINITIONS(
+      coordinatorStats?.data || coordinatorStats, 
+      assignedData?.data?.pagination?.total || 0, 
+      upcomingData?.data?.pagination?.total || (coordinatorStats?.data?.pending ?? coordinatorStats?.pending ?? 0)
+    ),
+    [coordinatorStats, assignedData, upcomingData]
   );
-  // scheduling logic moved to ScheduleMockInterviewModal
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const now = new Date();
-    const weekStart = startOfWeek(now);
-    const weekEnd = endOfWeek(now);
+  const isLoading = (activeTile === "assigned" && assignedLoading) || 
+                  (activeTile === "scheduled" && upcomingLoading) || 
+                  (activeTile !== "assigned" && activeTile !== "scheduled" && decisionLoading) || 
+                  statsLoading;
+  const hasError = !!decisionError;
 
-    const scheduledThisWeek = interviews.filter((i) => {
-      if (!i.scheduledTime || i.conductedAt) return false;
-      const scheduleDate = new Date(i.scheduledTime);
-      return isWithinInterval(scheduleDate, { start: weekStart, end: weekEnd });
-    }).length;
-
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    const completedThisMonth = interviews.filter((i) => {
-      if (!i.conductedAt) return false;
-      const conductDate = new Date(i.conductedAt);
-      return (
-        conductDate.getMonth() === thisMonth &&
-        conductDate.getFullYear() === thisYear
-      );
-    }).length;
-
-    const completedInterviews = interviews.filter((i) => i.conductedAt);
-    const approvedCount = completedInterviews.filter(
-      (i) => i.decision === SCREENING_DECISION.APPROVED
-    ).length;
-    const passRate =
-      completedInterviews.length > 0
-        ? Math.round((approvedCount / completedInterviews.length) * 100)
-        : 0;
-
-    const inTraining = interviews.filter(
-      (i) => i.decision === SCREENING_DECISION.NEEDS_TRAINING && i.trainingAssignment
-    ).length;
-
-    return {
-      scheduledThisWeek,
-      completedThisMonth,
-      passRate,
-      inTraining,
-      totalScheduled: (interviews || []).filter((i: any) => !i.conductedAt).length,
-      totalCompleted: completedInterviews.length,
-    };
-  }, [interviews, assignedItems]);
-
-  const scheduledInterviewsFromMainApi = useMemo(() => {
-    return (interviews || [])
-      .filter((i: any) => i.status === "scheduled" || !i.conductedAt)
-  }, [interviews]);
-
-  // Open schedule modal for an assigned candidate-project
-  const openScheduleModal = (assignment: any) => {
-    setSelectedAssignment(assignment);
-    setIsScheduleOpen(true);
-  };
-
-  // Schedule modal is now extracted to its own component
-
-  // Get recent completed
-  // Fetch recent completed from local list (kept for other stats) -- not used by Upcoming card
-  // NOTE: recent completed list is no longer used for the 'Upcoming Interviews' card
-
-  const getDecisionBadge = (decision: string | null | undefined) => {
-    if (!decision) return null;
-    switch (decision) {
-      case SCREENING_DECISION.APPROVED:
-        return (
-          <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
-            Approved
-          </Badge>
-        );
-      case SCREENING_DECISION.NEEDS_TRAINING:
-        return (
-          <Badge className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/50 dark:text-orange-300">
-            Training
-          </Badge>
-        );
-      case SCREENING_DECISION.REJECTED:
-        return (
-          <Badge variant="destructive" className="text-xs">
-            Rejected
-          </Badge>
-        );
-      default:
-        return null;
-    }
+  const getRowCandidateFullName = (item: any) => {
+    const candidate = item.candidate;
+    if (!candidate) return "-";
+    return `${candidate.firstName ?? ""} ${candidate.lastName ?? ""}`.trim();
   };
 
   if (isLoading) {
@@ -184,453 +324,438 @@ export default function ScreeningsDashboardPage() {
     );
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <div className="p-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Failed to load screenings. Please try again.
+            Failed to load screenings dashboard data. Please try again.
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-return (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-    <div className="w-full max-w-[98%] mx-auto space-y-6 px-4 py-6">
-      {/* Elegant Header */}
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl blur-lg opacity-30 animate-pulse-slow"></div>
-                <div className="relative p-3 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-lg">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-              </div>
+  return (
+    <div className="min-h-screen">
+      <div className="w-full max-w-full mx-auto space-y-3 mt-1 px-3">
+        {/* ── Page Header ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <ClipboardCheck className="h-6 w-6 text-indigo-600" />
+              <span>Screenings Dashboard</span>
+            </h1>
+            <p className="text-slate-500 text-sm">
+              Overview of training screening assignments, scheduling, decisions, and performance.
+            </p>
+          </div>
+        </div>
+
+        {/* ── Status Tiles ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          {allStats.map((tile, i) => {
+            const Icon = tile.icon;
+            const isActive = activeTile === tile.key;
+
+            return (
+              <motion.div
+                key={tile.key}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.05 }}
+                className={cn(
+                  tile.key === "pass_rate" ? "md:col-start-1" : ""
+                )}
+              >
+                <Card
+                  onClick={() => setActiveTile(tile.key)}
+                  role="button"
+                  tabIndex={0}
+                  className={cn(
+                    "h-full border-0 shadow-sm bg-gradient-to-br backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5",
+                    tile.bgGradient,
+                    isActive ? "ring-2 ring-indigo-500/30 shadow-md scale-[1.02]" : ""
+                  )}
+                >
+                  <CardContent className="py-2 px-2.5 h-full flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold text-slate-600 mb-0.5 truncate uppercase tracking-wider">
+                          {tile.label}
+                        </p>
+                        <h3 className={cn("text-xl font-extrabold tracking-tight", tile.textColor)}>
+                          {tile.value}
+                        </h3>
+                      </div>
+                      <div className={cn("p-1.5 rounded-lg shrink-0 shadow-sm", tile.iconBg)}>
+                        <Icon className={cn("h-4 w-4", tile.textColor)} />
+                      </div>
+                    </div>
+                    <p className="mt-1 text-[9px] text-slate-500 font-medium line-clamp-1 italic">
+                      {tile.hint}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <Card className="border-0 shadow-lg bg-white/90">
+          <CardHeader className="py-3 px-4">
+            <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
-                  Screenings Dashboard
+                <CardTitle className="text-base font-semibold text-slate-800">
+                  {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
                 </CardTitle>
-                <CardDescription className="text-sm mt-1">
-                  {interviews.length} total screening{interviews.length !== 1 ? "s" : ""} •{" "}
-                  {stats.totalScheduled} scheduled • {stats.totalCompleted} completed
+                <CardDescription className="text-xs">
+                  {tableItems.length} record{tableItems.length === 1 ? "" : "s"} found
                 </CardDescription>
               </div>
+              <div className="flex items-center gap-4">
+                <ProjectRoleFilter
+                  value={filter}
+                  onChange={(newFilter) => setFilter(newFilter)}
+                  className="w-auto min-w-[300px]"
+                />
+                <div className="relative group w-64">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                    <Search className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <Input
+                    placeholder="Search in list..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-9 text-xs border-slate-200 bg-slate-50 focus:bg-white transition-all rounded-xl"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setActiveTile("assigned");
+                    setFilter({ projectId: "all", roleCatalogId: "all" });
+                    setSearch("");
+                  }}
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-      </Card>
+          </CardHeader>
 
-      {/* Premium Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            title: "This Week",
-            value: stats.scheduledThisWeek,
-            label: "Scheduled",
-            icon: Calendar,
-            color: "blue",
-          },
-          {
-            title: "This Month",
-            value: stats.completedThisMonth,
-            label: "Completed",
-            icon: ClipboardCheck,
-            color: "purple",
-          },
-          {
-            title: "Pass Rate",
-            value: `${stats.passRate}%`,
-            label: "Approved",
-            icon: TrendingUp,
-            color: "green",
-          },
-          {
-            title: "In Training",
-            value: stats.inTraining,
-            label: "Active",
-            icon: Users,
-            color: "orange",
-          },
-        ].map((stat, i) => (
-          <Card
-            key={i}
-            className={cn(
-              "group relative overflow-hidden border-0 shadow-lg bg-white/75 backdrop-blur-lg rounded-2xl ring-1 ring-slate-200/30",
-              "hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
-            )}
-          >
-            <div
-              className={cn(
-                "absolute top-0 left-0 w-1.5 h-full",
-                stat.color === "blue" && "bg-gradient-to-b from-blue-500 to-indigo-600",
-                stat.color === "purple" && "bg-gradient-to-b from-purple-500 to-pink-600",
-                stat.color === "green" && "bg-gradient-to-b from-green-500 to-emerald-600",
-                stat.color === "orange" && "bg-gradient-to-b from-orange-500 to-amber-600"
-              )}
-            />
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-500">{stat.title}</p>
-                  <p
-                    className={cn(
-                      "text-3xl font-bold tracking-tight bg-gradient-to-br bg-clip-text text-transparent transition-transform duration-300 group-hover:scale-105",
-                      stat.color === "blue" && "from-blue-600 to-indigo-700",
-                      stat.color === "purple" && "from-purple-600 to-pink-700",
-                      stat.color === "green" && "from-green-600 to-emerald-700",
-                      stat.color === "orange" && "from-orange-600 to-amber-700"
+          <CardContent className="p-0">
+            <div className="border border-gray-200 bg-white">
+              <div className="border-b border-gray-200 bg-gray-50/70 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-2 shadow-lg shadow-purple-500/20">
+                    <ClipboardCheck className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-base font-semibold text-gray-900">
+                      {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
+                    </h4>
+                    <p className="text-xs text-gray-600 mt-0.5 font-medium">
+                      {tableItems.length} candidate{tableItems.length !== 1 ? "s" : ""} in total
+                    </p>
+                  </div>
+                  {activeTile === "assigned" && selectedIds.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <Button
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md animate-in fade-in slide-in-from-right-2"
+                        onClick={() => setIsBulkScheduleOpen(true)}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Bulk Schedule ({selectedIds.length})
+                      </Button>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                    {activeTile === "assigned" && filter.projectId !== "all" && (
+                      <TableHead className="w-[40px] px-4">
+                        <Checkbox
+                          checked={tableItems.length > 0 && selectedIds.length === tableItems.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedIds(tableItems.map((it: any) => it.id));
+                            } else {
+                              setSelectedIds([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
                     )}
-                  >
-                    {stat.value}
-                  </p>
-                  <p className="text-xs text-slate-500">{stat.label}</p>
-                </div>
-                <div
-                  className={cn(
-                    "p-3 rounded-2xl transition-transform duration-300 group-hover:scale-110",
-                    stat.color === "blue" && "bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20",
-                    stat.color === "purple" && "bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20",
-                    stat.color === "green" && "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20",
-                    stat.color === "orange" && "bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20"
-                  )}
-                >
-                  <stat.icon className={cn("h-6 w-6", `text-${stat.color}-600`)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project & Role</TableHead>
+                    {activeTile !== "assigned" && (
+                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Decision</TableHead>
+                    )}
+                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Status</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">
+                      {activeTile === "assigned" ? "Assigned At" : "Scheduled"}
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
+                    <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableItems.length > 0 ? (
+                    tableItems.map((item: any) => {
+                      const candidate = item.candidate;
+                      const candidateName = getRowCandidateFullName(item);
+                      const projectName = item.project?.title || "-";
+                      const roleName = item.roleNeeded?.designation || item.roleNeeded?.roleCatalog?.label || "-";
+                      const decision = String(item.decision || item.subStatus || "-")
+                        .replace("needs_training", "Needs Training")
+                        .replace("on_hold", "On Hold")
+                        .replace("approved", "Passed");
 
-      {/* Two-Column Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Assigned Interviews */}
-        <Card className="border-0 shadow-xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 hover:shadow-2xl transition-all duration-300">
-          <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-                  <Clock className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-semibold">Assigned For Screening</CardTitle>
-                  <CardDescription className="text-sm mt-1">
-                    {assignedNormalized.length} assigned interview{assignedNormalized.length !== 1 ? "s" : ""}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-4 rounded-xl border-indigo-200 hover:bg-indigo-50"
-                onClick={() => navigate("/screenings/assigned")}
-              >
-                View All
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {assignedNormalized.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
-                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-base font-medium">No Assigned screenings</p>
-                <p className="text-sm mt-1">Scheduled screenings will appear here</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {assignedNormalized.map((interview) => {
-                  const candidate = interview.candidateProjectMap?.candidate;
-                  const role = interview.candidateProjectMap?.roleNeeded;
-                  const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
-
-                  return (
-                    <div
-                      key={interview.id}
-                      onClick={() => {
-                        navigate("/screenings/assigned");
-                      }}
-                      className="relative p-4 rounded-xl border bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <ImageViewer
-                            src={candidate?.profileImage}
-                            fallbackSrc={""}
-                            title={candidateName}
-                            className="h-9 w-9 rounded-full"
-                            enableHoverPreview={false}
-                          />
-
-                          <div className="min-w-0">
-                            <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
-                              {candidateName}
-                            </p>
-                            <p className="text-sm text-slate-500 truncate mt-0.5">
-                              {role?.designation || "Unknown Role"}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs px-3 py-1">
-                          {interview.mode}
-                        </Badge>
-                      </div> 
-
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-3">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>
-                          {interview.scheduledTime
-                            ? format(new Date(interview.scheduledTime), "MMM d, yyyy 'at' h:mm a")
-                            : "Not scheduled"}
-                        </span>
-                      </div>
-
-                      {/* Actions */}
-                      {interview.subStatusName === "screening_assigned" && (
-                        <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                          {interview.isExpired && (
-                            <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">
-                              Expired
-                            </div>
+                      return (
+                        <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
+                          {activeTile === "assigned" && filter.projectId !== "all" && (
+                            <TableCell className="px-4 py-2">
+                              <Checkbox
+                                checked={selectedIds.includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedIds((prev) => [...prev, item.id]);
+                                  } else {
+                                    setSelectedIds((prev) => prev.filter((i) => i !== item.id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
                           )}
-                          <Button
-                            size="sm"
-                            className="h-8 px-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openScheduleModal(interview);
-                            }}
-                          >
-                            Schedule
-                          </Button>
-                        </div>
-                      )}
+                          <TableCell className="px-4 py-2">
+                            <div className="flex items-center gap-3">
+                              <ImageViewer
+                                src={candidate?.profileImage}
+                                title={candidateName}
+                                className="h-10 w-10 shadow-sm"
+                              />
+                              <div className="flex-1">
+                                <button
+                                  onClick={() => {
+                                    if (activeTile === "assigned") {
+                                      setSelectedAssignment(item);
+                                      setIsScheduleOpen(true);
+                                    } else {
+                                      navigate(`/screenings/${item.id}`);
+                                    }
+                                  }}
+                                  className="font-semibold text-gray-900 hover:text-indigo-600 hover:underline transition-all duration-200 text-left text-sm"
+                                >
+                                  {candidateName}
+                                </button>
+                                <div className="text-[11px] text-slate-500 space-y-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <Mail className="h-3 w-3 text-gray-400" />
+                                    <span className="text-gray-700">{candidate?.email || "-"}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-2">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-slate-800 line-clamp-1 flex items-center gap-1.5">
+                                {projectName}
+                                {item.project && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedProjectId(item.project.id);
+                                      setIsProjectModalOpen(true);
+                                    }}
+                                    className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-all duration-200"
+                                    title="View Project Details"
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-medium">{roleName}</span>
+                            </div>
+                          </TableCell>
+                          {activeTile !== "assigned" && (
+                            <TableCell className="px-4 py-2">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "border font-medium text-[10px] px-2 py-0.5 capitalize",
+                                  decision.toLowerCase().includes("pass") ? "bg-emerald-100 text-emerald-700 border-emerald-300" :
+                                  decision.toLowerCase().includes("rejected") ? "bg-red-100 text-red-700 border-red-300" :
+                                  decision.toLowerCase().includes("training") ? "bg-amber-100 text-amber-700 border-amber-300" :
+                                  "bg-slate-100 text-slate-700 border-slate-300"
+                                )}
+                              >
+                                {decision}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          <TableCell className="px-4 py-2">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                              {item.status || "-"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-2 text-[11px] text-gray-600">
+                            {activeTile === "assigned"
+                              ? item.createdAt ? format(new Date(item.createdAt), "dd MMM, HH:mm") : "-"
+                              : item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"}
+                          </TableCell>
+                          <TableCell className="px-4 py-2">
+                            <div className="flex items-center gap-1.5">
+                              <UserCheck className="h-3.5 w-3.5 text-gray-400" />
+                              <span className="text-[11px] font-medium text-slate-800">{item.recruiter?.name ?? "-"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-2 text-right">
+                            {activeTile === "assigned" ? (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm text-[10px] h-7 px-2"
+                                onClick={() => {
+                                  setSelectedAssignment(item);
+                                  setIsScheduleOpen(true);
+                                }}
+                              >
+                                Schedule
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => navigate(`/screenings/${item.id}`)}>
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={activeTile === "assigned" ? 7 : 7} className="px-6 py-12 text-center">
+                        <UserCheck className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                        <h3 className="text-base font-semibold text-slate-600 mb-1">No items found</h3>
+                        <p className="text-xs text-slate-500">Try selecting a different filter or search term.</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination UI */}
+              {totalCount > pageSize && (
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+                  <div className="flex-1 flex justify-between sm:hidden">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                      disabled={currentPage * pageSize >= totalCount}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}
+                        <span className="font-medium">
+                          {Math.min(currentPage * pageSize, totalCount)}
+                        </span>{" "}
+                        of <span className="font-medium">{totalCount}</span> results
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <div>
+                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-l-md"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-none border-x-0"
+                          disabled
+                        >
+                          Page {currentPage} of {Math.ceil(totalCount / pageSize)}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-r-md"
+                          onClick={() => setCurrentPage((p) => p + 1)}
+                          disabled={currentPage * pageSize >= totalCount}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Scheduled Interviews */}
-        <Card className="border-0 shadow-xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 hover:shadow-2xl transition-all duration-300">
-          <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-                  <CheckCircle2 className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-semibold">Scheduled Interviews</CardTitle>
-                  <CardDescription className="text-sm mt-1">
-                    {scheduledInterviewsFromMainApi.length} scheduled interview{scheduledInterviewsFromMainApi.length !== 1 ? "s" : ""}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-4 rounded-xl border-indigo-200 hover:bg-indigo-50"
-                onClick={() => navigate("/screenings/list")}
-              >
-                View My Interviews
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {scheduledInterviewsFromMainApi.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
-                <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-base font-medium">No scheduled interviews</p>
-                <p className="text-sm mt-1">Scheduled interviews will appear here</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {scheduledInterviewsFromMainApi.map((interview: any) => {
-                  const candidate = interview.candidateProjectMap?.candidate;
-                  const role = interview.candidateProjectMap?.roleNeeded;
-                  const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
-
-                  return (
-                    <div
-                      key={interview.id}
-                      onClick={() => navigate("/screenings/list", { state: { selectedId: interview.id } })}
-                      className="relative p-4 rounded-xl border bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 group cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <ImageViewer
-                            src={candidate?.profileImage}
-                            fallbackSrc={""}
-                            title={candidateName}
-                            className="h-9 w-9 rounded-full"
-                            enableHoverPreview={false}
-                          />
-
-                          <div className="min-w-0">
-                            <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
-                              {candidateName}
-                            </p>
-                            <p className="text-sm text-slate-500 truncate mt-0.5">
-                              {role?.designation || "Unknown Role"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          {getDecisionBadge(interview.decision)}
-                          {interview.candidateProjectMap?.subStatus?.label && (
-                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-indigo-100 text-indigo-700 border border-indigo-200">
-                              {interview.candidateProjectMap.subStatus.label}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span>
-                            {interview.scheduledTime
-                              ? format(new Date(interview.scheduledTime), "MMM d, yyyy 'at' h:mm a")
-                              : "Not scheduled"}
-                          </span>
-                        </div>
-                        {interview.isExpired && (
-                          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">
-                            Expired
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card className="border-0 shadow-xl bg-white/75 backdrop-blur-2xl rounded-2xl ring-1 ring-indigo-200/30 hover:shadow-2xl transition-all duration-300">
-        <CardHeader className="pb-3 border-b bg-gradient-to-r from-white to-indigo-50/30">
-          <CardTitle className="text-xl font-semibold">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { label: "View All Interviews", icon: ClipboardCheck, color: "blue", path: "/screenings/list" },
-              { label: "Manage Templates", icon: ClipboardCheck, color: "purple", path: "/screenings/templates" },
-              { label: "Training Programs", icon: Users, color: "orange", path: "/screenings/training" },
-            ].map((action, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                className={cn(
-                  "h-auto py-4 justify-start gap-3 rounded-xl border border-slate-200 hover:shadow-md hover:scale-[1.02] transition-all duration-300 bg-white/50",
-                  "hover:bg-gradient-to-r",
-                  action.color === "blue" && "hover:from-blue-50 hover:to-indigo-50",
-                  action.color === "purple" && "hover:from-purple-50 hover:to-pink-50",
-                  action.color === "orange" && "hover:from-orange-50 hover:to-amber-50"
-                )}
-                onClick={() => navigate(action.path)}
-              >
-                <div
-                  className={cn(
-                    "p-3 rounded-xl transition-transform duration-300 group-hover:scale-105",
-                    action.color === "blue" && "bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20",
-                    action.color === "purple" && "bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20",
-                    action.color === "orange" && "bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20"
-                  )}
-                >
-                  <action.icon className={cn("h-5 w-5", `text-${action.color}-600`)} />
-                </div>
-                <div className="text-left">
-                  <p className="text-base font-medium">{action.label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Manage your {action.label.toLowerCase()}</p>
-                </div>
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-        {/* Schedule modal (extracted to separate component) */}
         <ScheduleScreeningModal
-          open={isScheduleOpen}
+          open={isScheduleOpen || isBulkScheduleOpen}
           onOpenChange={(open) => {
-            setIsScheduleOpen(open);
-            if (!open) setSelectedAssignment(null);
+            if (!open) {
+              setIsScheduleOpen(false);
+              setIsBulkScheduleOpen(false);
+              setSelectedAssignment(null);
+            }
           }}
           selectedAssignment={selectedAssignment}
-          refetchAssigned={refetchAssigned}
+          selectedAssignments={
+            isBulkScheduleOpen
+              ? tableItems.filter((it: any) =>
+                  selectedIds.includes(it.id)
+                )
+              : []
+          }
+          refetchAssigned={() => {
+            refetchAssigned();
+            refetchUpcoming();
+            refetchStats();
+            setSelectedIds([]);
+            setIsBulkScheduleOpen(false);
+          }}
         />
 
-        {/* Quick Actions */}
-        {/* <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Button
-                variant="outline"
-                className="h-auto py-3 justify-start gap-3 hover:shadow-sm transition-all duration-200 hover:scale-[1.02] border-0 bg-white/50 hover:bg-white/80"
-                onClick={() => navigate("/screenings/list")}
-              >
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
-                  <ClipboardCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">View All Interviews</p>
-                  <p className="text-xs text-muted-foreground">
-                    See complete list
-                  </p>
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-auto py-3 justify-start gap-3 hover:shadow-sm transition-all duration-200 hover:scale-[1.02] border-0 bg-white/50 hover:bg-white/80"
-                onClick={() => navigate("/screenings/templates")}
-              >
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20">
-                  <ClipboardCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Manage Templates</p>
-                  <p className="text-xs text-muted-foreground">
-                    Evaluation criteria
-                  </p>
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-auto py-3 justify-start gap-3 hover:shadow-sm transition-all duration-200 hover:scale-[1.02] border-0 bg-white/50 hover:bg-white/80"
-                onClick={() => navigate("/screenings/training")}
-              >
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20">
-                  <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Training Programs</p>
-                  <p className="text-xs text-muted-foreground">
-                    Manage training
-                  </p>
-                </div>
-              </Button>
-            </div>
-          </CardContent>
-        </Card> */}
+        <ProjectDetailsModal
+          isOpen={isProjectModalOpen}
+          onClose={() => {
+            setIsProjectModalOpen(false);
+            setSelectedProjectId(null);
+          }}
+          project={projectDetailData?.data}
+        />
       </div>
     </div>
   );

@@ -132,6 +132,18 @@ export const screeningsApi = baseApi.injectEndpoints({
           : [{ type: "Screening", id: "LIST" }],
     }),
 
+    // Get coordinator-focused stats (assigned/approved/rejected/on-hold counts + pass rate)
+    getCoordinatorStats: builder.query<any, { coordinatorId: string } | string>({
+      query: (arg) => {
+        const coordinatorId = typeof arg === 'string' ? arg : arg.coordinatorId;
+        return {
+          url: `/screenings/coordinator/${coordinatorId}/stats`,
+        };
+      },
+      providesTags: (result) =>
+        result ? [{ type: 'Screening', id: `stats-${result.coordinatorId ?? 'global'}` }] : [{ type: 'Screening', id: 'LIST' }],
+    }),
+
     // Assign candidate to a MAIN interview (creates/links main interview and optionally marks the screening as assigned)
     assignToMainScreening: builder.mutation<ApiResponse<any>, { projectId: string; candidateId: string; screeningId?: string; recruiterId?: string; notes?: string }>({
       query: (body) => ({ url: "/screenings/assign-to-main-interview", method: "POST", body }),
@@ -174,6 +186,7 @@ export const {
   useAssignToMainScreeningMutation,
   useGetAssignedScreeningsQuery,
   useGetUpcomingScreeningsQuery,
+  useGetCoordinatorStatsQuery,
   useGetCandidateProjectHistoryQuery,
   useGetApprovedScreeningDocumentsQuery,
   useGetScreeningDetailsQuery,

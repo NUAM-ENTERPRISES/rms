@@ -29,6 +29,7 @@ export const CANDIDATE_PROJECT_STATUS = {
   NOT_SHORTLISTED: 'not_shortlisted',
 
   // === Screening Stage (formerly Mock Interview) ===
+  SCREENING_ASSIGNED: 'screening_assigned',
   SCREENING_SCHEDULED: 'screening_scheduled',
   SCREENING_COMPLETED: 'screening_completed',
   SCREENING_PASSED: 'screening_passed',
@@ -97,12 +98,16 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
     CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS, // Resubmission needed
   ],
   [CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED]: [
-    CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED, // Optional: Send to screening
+    CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED, // Initial step: Assign to screening
     CANDIDATE_PROJECT_STATUS.APPROVED, // Direct path: Skip screening
     CANDIDATE_PROJECT_STATUS.SUBMITTED_TO_CLIENT, // Direct to client
     CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
   ],
   // === Screening Workflow (formerly Mock Interview) ===
+  [CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED]: [
+    CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
   [CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED]: [
     CANDIDATE_PROJECT_STATUS.SCREENING_COMPLETED,
     CANDIDATE_PROJECT_STATUS.WITHDRAWN,
@@ -312,6 +317,7 @@ export const SCREENING_DECISION = {
   APPROVED: 'approved',
   NEEDS_TRAINING: 'needs_training',
   REJECTED: 'rejected',
+  ON_HOLD: 'on_hold',
 } as const;
 
 export type ScreeningDecision =

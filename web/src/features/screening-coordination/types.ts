@@ -512,6 +512,7 @@ export const SCREENING_DECISION = {
   APPROVED: "approved",
   NEEDS_TRAINING: "needs_training",
   REJECTED: "rejected",
+  ON_HOLD: "on_hold",
 } as const;
 
 export const SCREENING_MODE = {
