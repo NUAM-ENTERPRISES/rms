@@ -6,6 +6,8 @@ import type {
   UpdateTrainingAssignmentRequest,
   CompleteTrainingRequest,
   CreateTrainingSessionRequest,
+  BulkCreateSessionsRequest,
+  BulkCompleteSessionsRequest,
   SendForInterviewRequest,
   QueryTrainingAssignmentsRequest,
   ApiResponse,
@@ -160,6 +162,35 @@ export const trainingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Bulk create training sessions
+    bulkCreateSessions: builder.mutation<
+      ApiResponse<TrainingSession[]>,
+      BulkCreateSessionsRequest
+    >({
+      query: (body) => ({
+        url: "/training/sessions/bulk",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        { type: "Training", id: "LIST" },
+        { type: "Candidate", id: "LIST" },
+      ],
+    }),
+
+    // Bulk complete training sessions
+    bulkCompleteSessions: builder.mutation<
+      ApiResponse<TrainingSession[]>,
+      BulkCompleteSessionsRequest
+    >({
+      query: (body) => ({
+        url: "/training/sessions/bulk-complete",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Training", "Candidate"],
+    }),
+
     // Update a training session
     updateTrainingSession: builder.mutation<
       ApiResponse<TrainingSession>,
@@ -255,6 +286,8 @@ export const {
   useCompleteTrainingMutation,
   useDeleteTrainingAssignmentMutation,
   useCreateTrainingSessionMutation,
+  useBulkCreateSessionsMutation,
+  useBulkCompleteSessionsMutation,
   useUpdateTrainingSessionMutation,
   useCompleteTrainingSessionMutation,
   useDeleteTrainingSessionMutation,

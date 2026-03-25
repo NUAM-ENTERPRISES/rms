@@ -186,6 +186,12 @@ const TrainingDetailPage = lazy(
       "@/features/screening-coordination/training/views/TrainingDetailPage"
     )
 );
+const ConductTrainingPage = lazy(
+  () =>
+    import(
+      "@/features/screening-coordination/training/views/ConductTrainingPage"
+    )
+);
 const BasicTrainingPage = lazy(
   () =>
     import(
@@ -935,6 +941,19 @@ function App() {
                         <ProtectedRoute permissions={["read:training"]}>
                           <AppLayout>
                             <TrainingDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/screening-coordination/training/conduct"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["write:training"]}>
+                          <AppLayout>
+                            <ConductTrainingPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

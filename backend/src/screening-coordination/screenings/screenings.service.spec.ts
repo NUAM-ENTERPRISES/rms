@@ -10,7 +10,9 @@ describe('ScreeningsService.getScreeningHistory', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ScreeningsService(mockPrisma as any);
+    const mockCandidateProjectsService = {} as any;
+    const mockOutboxService = {} as any;
+    service = new ScreeningsService(mockPrisma as any, mockCandidateProjectsService, mockOutboxService);
   });
 
   it('throws NotFoundException when candidate-project does not exist', async () => {
@@ -33,6 +35,11 @@ describe('ScreeningsService.getScreeningHistory', () => {
     expect(res.success).toBe(true);
     expect(res.data.pagination.total).toBe(2);
     expect(res.data.items).toHaveLength(2);
-    expect(mockPrisma.interviewStatusHistory.findMany).toHaveBeenCalled();
+    expect(mockPrisma.interviewStatusHistory.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        candidateProjectMapId: 'cp1',
+        interviewType: { in: ['screening', 'training'] },
+      }),
+    }));
   });
 });

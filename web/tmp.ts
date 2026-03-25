@@ -1,0 +1,1 @@
+const X={a:1} as const; type X=(typeof X)[keyof typeof X]; console.log(1)

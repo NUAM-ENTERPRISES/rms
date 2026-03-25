@@ -16,7 +16,6 @@ import {
   Users,
   ChevronRight,
   X,
-  UserPlus,
   Clipboard,
   CalendarCheck,
   CheckCircle2,
@@ -290,18 +289,33 @@ export default function ScreeningsListPage() {
   };
 
   const getAssignedTrainerName = (interview: any) => {
-    // Try several possible places where trainer info might be present
-    // depending on API shape: sessions[0].trainer, trainingAssignment.trainer,
-    // trainingAssignment.assignedToUser?.name, fallback to assignedByUser if needed
-    const ta = interview.trainingAssignment;
-    const sessionTrainer = ta?.sessions && ta.sessions.length ? ta.sessions[0].trainer : undefined;
+    // Try several possible places where trainer info might be present.
+    // Handle both single object and array shapes from different API responses.
+    const ta =
+      interview.trainingAssignment ||
+      (interview.trainingAssignments && interview.trainingAssignments[0]) ||
+      (interview.candidateProjectMap?.trainingAssignments && interview.candidateProjectMap.trainingAssignments[0]);
+
+    const sessionTrainer =
+      ta?.trainingSessions?.length
+        ? ta.trainingSessions[0].trainer
+        : ta?.sessions?.length
+        ? ta.sessions[0].trainer
+        : undefined;
+
     const trainerFromAssignment = ta?.trainer || sessionTrainer;
     const assignedToUserName = (ta as any)?.assignedToUser?.name;
     const assignedByName = (ta as any)?.assignedByUser?.name;
 
-    return (
-      trainerFromAssignment || assignedToUserName || assignedByName || undefined
-    );
+    return trainerFromAssignment || assignedToUserName || assignedByName || undefined;
+  };
+
+  const getAssignedTrainerLabel = (interview: any) => {
+    const trainerName = getAssignedTrainerName(interview);
+    if (!trainerName) return "Trainer assigned";
+
+    const isId = /^[a-z0-9]{16,}$/.test(trainerName);
+    return isId ? "Trainer assigned" : `Trainer: ${trainerName}`;
   };
 
   const getDecisionBadge = (decision: string | null | undefined) => {
@@ -423,10 +437,6 @@ export default function ScreeningsListPage() {
 
   // Status filter options (UI for status filter not currently rendered)
 
-  const handleAssignToTrainer = (interview: any) => {
-    setSelectedInterviewForTraining(interview);
-    setAssignToTrainerOpen(true);
-  };
   const handleSubmitTraining = async (formData: any) => {
     if (!selectedInterviewForTraining) return;
 
@@ -683,7 +693,6 @@ export default function ScreeningsListPage() {
             const isCompleted = !!interview.conductedAt;
             const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate";
             const isSelected = interview.id === (selectedInterview?.id || displayedInterviews[0]?.id);
-            const trainerName = getAssignedTrainerName(interview);
 
             return (
               <button
@@ -745,39 +754,25 @@ export default function ScreeningsListPage() {
                   </span>
                   {interview.decision && getDecisionBadge(interview.decision)}
                   {(() => {
-                    const isTrainingAssigned = interview.candidateProjectMap?.subStatus?.name === "training_assigned";
+                    const trainingState = interview.candidateProjectMap?.subStatus?.name;
+                    const isTrainingAssigned = trainingState === "training_assigned";
+                    const isTrainingCompleted = trainingState === "training_completed";
                     const isMainAssigned = interview.status === "assigned" || !!interview.candidateProjectMap?.mainInterviewId;
 
-                    if (isTrainingAssigned) {
+                    if (isTrainingAssigned || isTrainingCompleted) {
                       return (
                         <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300 truncate">
-                          {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
+                          {getAssignedTrainerLabel(interview)}
+                          {isTrainingCompleted ? " (Awaiting decision)" : ""}
                         </Badge>
                       );
                     }
 
                     if (isMainAssigned) {
                       return (
-                        <>
-                          <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
-                            Main Interview
-                          </Badge>
-                          {(interview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                            interview.decision === SCREENING_DECISION.REJECTED) && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 rounded-lg hover:bg-indigo-50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAssignToTrainer(interview);
-                              }}
-                              title="Assign to Trainer"
-                            >
-                              <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
-                            </Button>
-                          )}
-                        </>
+                        <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300">
+                          Main Interview
+                        </Badge>
                       );
                     }
 
@@ -788,23 +783,6 @@ export default function ScreeningsListPage() {
                             <Badge className="text-xs bg-green-100 text-green-700">Verified</Badge>
                           )}
                         </>
-                      );
-                    }
-
-                    if (interview.decision === SCREENING_DECISION.NEEDS_TRAINING || interview.decision === SCREENING_DECISION.REJECTED) {
-                      return (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 rounded-lg hover:bg-indigo-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAssignToTrainer(interview);
-                          }}
-                          title="Assign to Trainer"
-                        >
-                          <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
-                        </Button>
                       );
                     }
 
@@ -861,41 +839,38 @@ export default function ScreeningsListPage() {
             )}
 
             {(() => {
-              const isTrainingAssigned =
-                selectedInterview.candidateProjectMap?.subStatus?.name ===
-                "training_assigned";
-              const trainerName = getAssignedTrainerName(selectedInterview);
+              const trainingState = selectedInterview.candidateProjectMap?.subStatus?.name;
+              const isTrainingAssigned = trainingState === "training_assigned";
+              const isTrainingCompleted = trainingState === "training_completed";
               const isMainAssigned =
                 selectedInterview.status === "assigned" ||
                 !!selectedInterview.candidateProjectMap?.mainInterviewId;
 
-              if (isTrainingAssigned) {
+              const completedTrainingAssignments = (selectedInterview.trainingAssignments || []).filter(
+                (t: any) => t.status === "completed"
+              ).length;
+
+              if (isTrainingAssigned || isTrainingCompleted) {
                 return (
-                  <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
-                    {trainerName ? `Trainer: ${trainerName}` : "Training Assigned"}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
+                      {getAssignedTrainerLabel(selectedInterview)}
+                      {isTrainingCompleted && " (Awaiting decision)"}
+                    </Badge>
+                    {completedTrainingAssignments > 0 && (
+                      <Badge className="text-xs bg-blue-100 text-blue-700 px-2 py-1">
+                        Training Assignment{completedTrainingAssignments > 1 ? "s" : ""} Completed
+                      </Badge>
+                    )}
+                  </div>
                 );
               }
 
               if (isMainAssigned) {
                 return (
-                  <div className="flex items-center gap-2">
-                    <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
-                      Main Interview
-                    </Badge>
-                    {(selectedInterview.decision === SCREENING_DECISION.NEEDS_TRAINING ||
-                      selectedInterview.decision === SCREENING_DECISION.REJECTED) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs rounded-lg"
-                        onClick={() => handleAssignToTrainer(selectedInterview)}
-                      >
-                        <UserPlus className="h-3.5 w-3.5 mr-1" />
-                        Assign Trainer
-                      </Button>
-                    )}
-                  </div>
+                  <Badge className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1">
+                    Main Interview
+                  </Badge>
                 );
               }
 
@@ -951,25 +926,6 @@ export default function ScreeningsListPage() {
                       </>
                     )}
                   </div>
-                );
-              }
-
-              if (
-                selectedInterview.decision ===
-                  SCREENING_DECISION.NEEDS_TRAINING ||
-                selectedInterview.decision ===
-                  SCREENING_DECISION.REJECTED
-              ) {
-                return (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs rounded-lg bg-red-500 hover:bg-red-600 text-white hover:text-white"
-                    onClick={() => handleAssignToTrainer(selectedInterview)}
-                  >
-                    <UserPlus className="h-3.5 w-3.5 mr-1" />
-                    Assign Trainer
-                  </Button>
                 );
               }
 
@@ -1264,6 +1220,80 @@ export default function ScreeningsListPage() {
                 </p>
               </div>
             )}
+
+            {/* Training Assignment Details */}
+            {Array.isArray(selectedInterview.trainingAssignments) &&
+              selectedInterview.trainingAssignments.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
+                    Training Assignments ({selectedInterview.trainingAssignments.length})
+                  </h4>
+
+                  <div className="space-y-3">
+                    {selectedInterview.trainingAssignments.map((training: any) => (
+                      <div
+                        key={training.id}
+                        className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                      >
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="text-xs font-semibold text-slate-600">{(training.trainingType || "Training").replace(/_/g, " ")}</span>
+                          <Badge
+                            className={cn(
+                              "text-[10px] px-2 py-0.5",
+                              training.status === "completed"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : training.status === "in_progress"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-slate-100 text-slate-600"
+                            )}
+                          >
+                            {training.status?.replace(/_/g, " ") || "Unknown"}
+                          </Badge>
+                          {training.priority && (
+                            <Badge className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700">{training.priority}</Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500 mb-2">
+                          Assigned At: {training.assignedAt ? format(new Date(training.assignedAt), "MMM d, yyyy h:mm a") : "N/A"}
+                          {training.completedAt && ", Completed At: " + format(new Date(training.completedAt), "MMM d, yyyy h:mm a")}
+                        </div>
+
+                        <p className="text-xs text-slate-500 mb-1">
+                          {training.notes ? `Notes: ${training.notes}` : "No notes provided"}
+                        </p>
+
+                        {Array.isArray(training.trainingSessions) && training.trainingSessions.length > 0 && (
+                          <div>
+                            <div className="text-xs text-slate-500 font-medium mb-1">Sessions</div>
+                            <div className="space-y-1">
+                              {training.trainingSessions.map((session: any) => (
+                                <div key={session.id} className="rounded-md border border-slate-200 p-2 bg-white">
+                                  <div className="flex items-center justify-between text-[11px] text-slate-600">
+                                    <span>{session.sessionType ? session.sessionType.replace(/_/g, " ") : "Session"}</span>
+                                    <span>{session.duration ? `${session.duration} mins` : "-"}</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-500">
+                                    {session.sessionDate ? format(new Date(session.sessionDate), "MMM d, yyyy h:mm a") : "Date pending"}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500">
+                                    Trainer: {session.trainer || getAssignedTrainerName(selectedInterview) || "Unassigned"}
+                                  </div>
+                                  {session.completedAt && (
+                                    <div className="text-[11px] text-slate-500">Completed: {format(new Date(session.completedAt), "MMM d, yyyy h:mm a")}</div>
+                                  )}
+                                  {session.performanceRating && (
+                                    <div className="text-[11px] text-slate-500">Rating: {session.performanceRating}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             {/* Checklist Items */}
             {Array.isArray(selectedInterview.checklistItems) &&

@@ -48,17 +48,21 @@ import { useCreateTrainingAssignmentMutation } from "@/features/screening-coordi
 import { useGetProjectQuery } from "@/features/projects/api";
 import { SCREENING_DECISION } from "../../types";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 import { motion } from "framer-motion";
 import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
+import ScheduleTrainingModal from "@/features/screening-coordination/training/components/ScheduleTrainingModal";
 
 type TileKey =
   | "assigned"
   | "scheduled"
   | "retraining"
+  | "training_scheduled"
+  | "training_completed"
   | "passed"
   | "rejected"
   | "on_hold"
@@ -101,7 +105,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
   },
   {
     key: "retraining",
-    label: "Training",
+    label: "Training Assigned",
     icon: Users,
     value: stats?.byDecision?.needsTraining ?? 0,
     hint: "Candidate assigned to training",
@@ -109,6 +113,28 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     bgGradient: "from-yellow-50 to-amber-100/50",
     iconBg: "bg-yellow-200/40",
     textColor: "text-amber-600",
+  },
+  {
+    key: "training_scheduled",
+    label: "Training Scheduled",
+    icon: Clock,
+    value: stats?.byDecision?.trainingScheduled ?? 0,
+    hint: "Candidates with scheduled training",
+    gradient: "from-blue-400 to-indigo-500",
+    bgGradient: "from-blue-50 to-indigo-100/50",
+    iconBg: "bg-blue-200/40",
+    textColor: "text-indigo-600",
+  },
+  {
+    key: "training_completed",
+    label: "Training Done",
+    icon: CheckCircle2,
+    value: stats?.byDecision?.trainingCompleted ?? 0,
+    hint: "Candidates who completed training",
+    gradient: "from-emerald-400 to-teal-500",
+    bgGradient: "from-emerald-50 to-teal-100/50",
+    iconBg: "bg-emerald-200/40",
+    textColor: "text-teal-600",
   },
   {
     key: "passed",
@@ -169,6 +195,8 @@ export default function ScreeningsDashboardPage() {
   const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
   const [assignToTrainerOpen, setAssignToTrainerOpen] = useState(false);
   const [selectedInterviewForTraining, setSelectedInterviewForTraining] = useState<any | null>(null);
+  const [isScheduleTrainingOpen, setIsScheduleTrainingOpen] = useState(false);
+  const [selectedAssignmentsForTraining, setSelectedAssignmentsForTraining] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",
@@ -218,6 +246,10 @@ export default function ScreeningsDashboardPage() {
     switch (activeTile) {
       case "retraining":
         return SCREENING_DECISION.NEEDS_TRAINING;
+      case "training_scheduled":
+        return SCREENING_DECISION.NEEDS_TRAINING; // Both use NEEDS_TRAINING decision, filtered by status below
+      case "training_completed":
+        return SCREENING_DECISION.NEEDS_TRAINING;
       case "passed":
         return SCREENING_DECISION.APPROVED;
       case "rejected":
@@ -229,10 +261,17 @@ export default function ScreeningsDashboardPage() {
     }
   }, [activeTile]);
 
-  const { data: decisionData, isLoading: decisionLoading, error: decisionError } = useGetScreeningsQuery(
+  const { data: decisionData, isLoading: decisionLoading, error: decisionError, refetch: refetchDecision } = useGetScreeningsQuery(
     {
       ...queryParams,
       decision: activeDecisionParam,
+      status: activeTile === "training_completed"
+        ? "training_completed"
+        : activeTile === "training_scheduled"
+        ? "training_scheduled"
+        : activeTile === "retraining"
+        ? "training_assigned"
+        : undefined,
       sortBy: "createdAt",
       sortOrder: "desc",
     },
@@ -289,6 +328,7 @@ export default function ScreeningsDashboardPage() {
       decision: item.decision,
       conductedAt: item.conductedAt,
       overallRating: item.overallRating,
+      trainingAssignment: item.trainingAssignments?.[0],
     }));
   }, [decisionData]);
 
@@ -363,7 +403,7 @@ export default function ScreeningsDashboardPage() {
         </div>
 
         {/* ── Status Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-4">
           {allStats.map((tile, i) => {
             const Icon = tile.icon;
             const isActive = activeTile === tile.key;
@@ -485,13 +525,64 @@ export default function ScreeningsDashboardPage() {
                       </Button>
                     </motion.div>
                   )}
+                  {activeTile === "retraining" && selectedIds.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <Button
+                        size="sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white shadow-md animate-in fade-in slide-in-from-right-2 mr-2"
+                        onClick={() => {
+                          const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
+                          // Map screening items to training assignments if possible
+                          // Normally, retraining tile shows screenings with needs_training decision
+                          // These already have training assignments created via the completeScreening API
+                          setSelectedAssignmentsForTraining(selected.map((s: any) => s.trainingAssignment).filter(Boolean));
+                          setIsScheduleTrainingOpen(true);
+                        }}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Schedule Bulk Training ({selectedIds.length})
+                      </Button>
+                    </motion.div>
+                  )}
+                  {activeTile === "training_scheduled" && selectedIds.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <Button
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md animate-in fade-in slide-in-from-right-2"
+                        onClick={() => {
+                          const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
+                          navigate("/screening-coordination/training/conduct", { 
+                            state: { 
+                              assignments: selected.map((s: any) => ({
+                                ...s.trainingAssignment,
+                                candidateProjectMap: s.candidateProjectMap || {
+                                  candidate: s.candidate,
+                                  project: s.project,
+                                  roleNeeded: s.roleNeeded
+                                }
+                              })).filter(Boolean) 
+                            } 
+                          });
+                        }}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Conduct Bulk Training ({selectedIds.length})
+                      </Button>
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                    {activeTile === "assigned" && filter.projectId !== "all" && (
+                    {((activeTile === "assigned") || (activeTile === "retraining") || (activeTile === "training_scheduled")) && (
                       <TableHead className="w-[40px] px-4">
                         <Checkbox
                           checked={tableItems.length > 0 && selectedIds.length === tableItems.length}
@@ -528,7 +619,9 @@ export default function ScreeningsDashboardPage() {
                         ? "Training Assigned At"
                         : "Scheduled"}
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
+                    {(activeTile !== "retraining" && activeTile !== "training_scheduled") && (
+                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
+                    )}
                     <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -547,6 +640,8 @@ export default function ScreeningsDashboardPage() {
                       const targetScreeningsUrl = activeTile === "scheduled"
                         ? `/screenings/${item.id}/conduct`
                         : activeTile === "retraining"
+                        ? "/screening-coordination/training"
+                        : activeTile === "training_scheduled"
                         ? "/screenings/training"
                         : ["passed", "on_hold"].includes(activeTile)
                         ? "/screenings/list"
@@ -554,7 +649,7 @@ export default function ScreeningsDashboardPage() {
 
                       return (
                         <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
-                          {activeTile === "assigned" && filter.projectId !== "all" && (
+                          {((activeTile === "assigned") || (activeTile === "retraining") || (activeTile === "training_scheduled")) && (
                             <TableCell className="px-4 py-2">
                               <Checkbox
                                 checked={selectedIds.includes(item.id)}
@@ -680,13 +775,61 @@ export default function ScreeningsDashboardPage() {
                               item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
                             )}
                           </TableCell>
-                          <TableCell className="px-4 py-2">
-                            <div className="flex items-center gap-1.5">
-                              <UserCheck className="h-3.5 w-3.5 text-gray-400" />
-                              <span className="text-[11px] font-medium text-slate-800">{item.recruiter?.name ?? "-"}</span>
-                            </div>
-                          </TableCell>
+                          {(activeTile !== "retraining" && activeTile !== "training_scheduled") && (
+                            <TableCell className="px-4 py-2">
+                              <div className="flex items-center gap-1.5">
+                                <UserCheck className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="text-[11px] font-medium text-slate-800">{item.recruiter?.name ?? "-"}</span>
+                              </div>
+                            </TableCell>
+                          )}
                           <TableCell className="px-4 py-2 text-right flex items-center justify-end gap-2">
+                            {activeTile === "retraining" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-2 text-xs border-amber-200 text-amber-700 hover:bg-amber-50"
+                                onClick={() => {
+                                  if (item.trainingAssignment) {
+                                    setSelectedAssignmentsForTraining([item.trainingAssignment]);
+                                    setIsScheduleTrainingOpen(true);
+                                  } else {
+                                    toast.error("No training assignment found for this candidate");
+                                  }
+                                }}
+                              >
+                                <Calendar className="h-3.5 w-3.5 mr-1" />
+                                Schedule Training
+                              </Button>
+                            )}
+                            {activeTile === "training_scheduled" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-2 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                onClick={() => {
+                                  if (item.trainingAssignment) {
+                                    navigate("/screening-coordination/training/conduct", { 
+                                      state: { 
+                                        assignments: [{
+                                          ...item.trainingAssignment,
+                                          candidateProjectMap: item.candidateProjectMap || {
+                                            candidate: item.candidate,
+                                            project: item.project,
+                                            roleNeeded: item.roleNeeded
+                                          }
+                                        }] 
+                                      } 
+                                    });
+                                  } else {
+                                    toast.error("No training assignment found for this candidate");
+                                  }
+                                }}
+                              >
+                                <Users className="h-3.5 w-3.5 mr-1" />
+                                Conduct Training
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
@@ -804,6 +947,18 @@ export default function ScreeningsDashboardPage() {
             refetchStats();
             setSelectedIds([]);
             setIsBulkScheduleOpen(false);
+          }}
+        />
+
+        <ScheduleTrainingModal
+          open={isScheduleTrainingOpen}
+          onOpenChange={setIsScheduleTrainingOpen}
+          selectedAssignments={selectedAssignmentsForTraining}
+          onSuccess={() => {
+            refetchStats();
+            refetchDecision();
+            setSelectedIds([]);
+            setSelectedAssignmentsForTraining([]);
           }}
         />
 

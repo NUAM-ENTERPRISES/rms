@@ -770,6 +770,7 @@ model TrainingSession {
   topicsCovered     Json?    @db.Json // Array of topics
   plannedActivities String?  @db.Text
   trainer           String? // Who conducted the session
+  meetingLink       String? // Session meeting URL (zoom, google meet, etc.)
 
   // Completion & Assessment
   completedAt       DateTime?

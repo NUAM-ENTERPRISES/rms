@@ -68,4 +68,12 @@ export class CreateTrainingSessionDto {
   @IsOptional()
   @IsString()
   trainer?: string;
+
+  @ApiPropertyOptional({
+    description: 'Meeting link for the session',
+    example: 'https://zoom.us/j/1234567890',
+  })
+  @IsOptional()
+  @IsString()
+  meetingLink?: string;
 }

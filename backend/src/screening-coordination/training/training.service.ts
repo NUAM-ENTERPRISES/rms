@@ -10,6 +10,8 @@ import { UpdateTrainingAssignmentDto } from './dto/update-training.dto';
 import { CompleteTrainingDto } from './dto/complete-training.dto';
 import { CreateTrainingSessionDto } from './dto/create-session.dto';
 import { CompleteTrainingSessionDto } from './dto/complete-session.dto';
+import { BulkCreateSessionsDto } from './dto/bulk-create-sessions.dto';
+import { BulkCompleteSessionsDto } from './dto/bulk-complete-sessions.dto';
 import { QueryTrainingAssignmentsDto } from './dto/query-training.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
@@ -433,7 +435,7 @@ export class TrainingService {
   async startTraining(id: string, userId: string) {
     const assignment = await this.findOneAssignment(id);
 
-    if (assignment!.status !== TRAINING_STATUS.ASSIGNED) {
+    if (assignment!.status !== TRAINING_STATUS.ASSIGNED && assignment!.status !== TRAINING_STATUS.SCHEDULED) {
       throw new BadRequestException(
         `Training cannot be started. Current status: ${assignment!.status}`,
       );
@@ -477,6 +479,22 @@ export class TrainingService {
           candidateProjectMapId: assignment!.candidateProjectMapId,
           subStatusSnapshot: CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
           changedById: userId,
+          reason: 'Training started',
+        },
+      });
+
+      // Create interview-level status history record for training start
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'screening',
+          interviewId: assignment!.screeningId ?? null,
+          candidateProjectMapId: assignment!.candidateProjectMapId,
+          previousStatus: 'training_assigned',
+          status: CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+          statusSnapshot: 'Training In Progress',
+          statusAt: new Date(),
+          changedById: userId,
+          changedByName: user?.name ?? null,
           reason: 'Training started',
         },
       });
@@ -540,6 +558,22 @@ export class TrainingService {
         },
       });
 
+      // Create interview-level status history record for training completion
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'screening',
+          interviewId: assignment!.screeningId ?? null,
+          candidateProjectMapId: assignment!.candidateProjectMapId,
+          previousStatus: 'training_assigned',
+          status: CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+          statusSnapshot: 'Training Completed',
+          statusAt: new Date(),
+          changedById: userId,
+          changedByName: user?.name ?? null,
+          reason: 'Training completed',
+        },
+      });
+
       return updated;
     });
   }
@@ -590,6 +624,22 @@ export class TrainingService {
         },
       });
 
+      // Create interview-level status history record for ready-for-reassessment
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'screening',
+          interviewId: assignment!.screeningId ?? null,
+          candidateProjectMapId: assignment!.candidateProjectMapId,
+          previousStatus: CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+          status: CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT,
+          statusSnapshot: 'Ready for Reassessment',
+          statusAt: new Date(),
+          changedById: userId,
+          changedByName: user?.name ?? null,
+          reason: 'Candidate ready for screening reassessment',
+        },
+      });
+
       return {
         success: true,
         message: 'Candidate marked ready for reassessment',
@@ -618,21 +668,285 @@ export class TrainingService {
   /**
    * Create a training session
    */
-  async createSession(dto: CreateTrainingSessionDto) {
+  async createSession(dto: CreateTrainingSessionDto, userId?: string) {
     // Verify training assignment exists
     const assignment = await this.findOneAssignment(dto.trainingAssignmentId);
 
-    return this.prisma.trainingSession.create({
-      data: {
-        trainingAssignmentId: dto.trainingAssignmentId,
-        sessionDate: new Date(dto.sessionDate),
-        sessionType: dto.sessionType || 'video',
-        duration: dto.duration || 60,
-        topicsCovered: dto.topicsCovered || [],
-        plannedActivities: dto.plannedActivities,
-        trainer: dto.trainer,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const session = await tx.trainingSession.create({
+        data: {
+          trainingAssignmentId: dto.trainingAssignmentId,
+          sessionDate: new Date(dto.sessionDate),
+          sessionType: dto.sessionType || 'video',
+          duration: dto.duration || 60,
+          topicsCovered: dto.topicsCovered || [],
+          plannedActivities: dto.plannedActivities,
+          trainer: dto.trainer,
+          meetingLink: dto.meetingLink,
+        },
+      });
+
+      // Automatically update candidate project status to training_scheduled
+      if (assignment.candidateProjectMapId && userId) {
+        // Use connect pattern for subStatus to ensure all relations are correctly handled
+        await tx.candidateProjects.update({
+          where: { id: assignment.candidateProjectMapId },
+          data: {
+            subStatus: {
+              connect: { name: CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED },
+            },
+          },
+        });
+
+        const subStatus = await tx.candidateProjectSubStatus.findUnique({
+          where: { name: CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED },
+          include: { stage: true },
+        });
+
+        if (subStatus) {
+          const user = await tx.user.findUnique({
+            where: { id: userId },
+            select: { name: true },
+          });
+
+          // Create generic project status history
+          await tx.candidateProjectStatusHistory.create({
+            data: {
+              candidateProjectMapId: assignment.candidateProjectMapId,
+              mainStatusId: subStatus.stageId,
+              subStatusId: subStatus.id,
+              mainStatusSnapshot: subStatus.stage.label,
+              subStatusSnapshot: subStatus.label,
+              changedById: userId,
+              changedByName: user?.name || 'System',
+              reason: 'Training session scheduled',
+              notes: `Training session scheduled for ${new Date(
+                dto.sessionDate,
+              ).toLocaleString()}`,
+            },
+          });
+
+          await tx.interviewStatusHistory.create({
+            data: {
+              interviewType: 'training',
+              interviewId: assignment.id, // Link to the training assignment
+              candidateProjectMapId: assignment.candidateProjectMapId,
+              status: CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+              statusSnapshot: 'Training Scheduled',
+              statusAt: new Date(),
+              changedById: userId,
+              changedByName: user?.name || 'System',
+              reason: `Training session scheduled for ${new Date(
+                dto.sessionDate,
+              ).toLocaleString()}`,
+            },
+          });
+        }
+      }
+
+      return session;
     });
+  }
+
+  /**
+   * Bulk create training sessions
+   */
+  async bulkCreateSessions(dto: BulkCreateSessionsDto, userId: string) {
+    const results: any[] = [];
+
+    for (const assignmentId of dto.trainingAssignmentIds) {
+      try {
+        const session = await this.createSession(
+          {
+            trainingAssignmentId: assignmentId,
+            sessionDate: dto.sessionDate,
+            duration: dto.duration,
+            sessionType: (dto.mode as any) || "video",
+            trainer: userId, // Default trainer to current user
+            topicsCovered: dto.topic ? [dto.topic] : [],
+            meetingLink: dto.meetingLink,
+          },
+          userId,
+        );
+        results.push(session);
+
+        // Update training assignment status to scheduled and candidate-project substatus to training_scheduled
+        const assignment = await this.prisma.trainingAssignment.findUnique({
+          where: { id: assignmentId },
+          select: { status: true, candidateProjectMapId: true },
+        });
+
+        if (assignment && assignment.status === TRAINING_STATUS.ASSIGNED) {
+          await this.prisma.trainingAssignment.update({
+            where: { id: assignmentId },
+            data: { status: TRAINING_STATUS.SCHEDULED },
+          });
+
+          // Also update candidate project substatus
+          await this.prisma.candidateProjects.update({
+            where: { id: assignment.candidateProjectMapId },
+            data: {
+              subStatus: {
+                connect: {
+                  name: CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+                },
+              },
+            },
+          });
+
+          // Record status history
+          await this.prisma.candidateProjectStatusHistory.create({
+            data: {
+              candidateProjectMapId: assignment.candidateProjectMapId,
+              subStatusSnapshot: CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+              changedById: userId,
+              reason: 'Training scheduled',
+              notes: `Session scheduled for ${new Date(dto.sessionDate).toLocaleDateString()}`,
+            },
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to create session for assignment ${assignmentId}:`, error);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Bulk complete training sessions
+   */
+  async bulkCompleteSessions(dto: BulkCompleteSessionsDto, userId: string) {
+    const results: any[] = [];
+
+    // Process each session completion in a separate transaction to ensure atomicity for each candidate
+    for (const item of dto.sessions) {
+      try {
+        const assignmentId = item.sessionId.startsWith('new-')
+          ? item.sessionId.replace('new-', '')
+          : (
+              await this.prisma.trainingSession.findUnique({
+                where: { id: item.sessionId },
+                select: { trainingAssignmentId: true },
+              })
+            )?.trainingAssignmentId;
+
+        if (!assignmentId) continue;
+
+        const session = await this.prisma.$transaction(async (tx) => {
+          // Find if a session already exists for this assignment
+          const existingSession = await tx.trainingSession.findFirst({
+            where: { trainingAssignmentId: assignmentId },
+          });
+
+          let updatedSession;
+          if (existingSession) {
+            updatedSession = await tx.trainingSession.update({
+              where: { id: existingSession.id },
+              data: {
+                completedAt: new Date(),
+                performanceRating:
+                  item.performanceRating !== undefined
+                    ? String(item.performanceRating)
+                    : undefined,
+                notes: item.notes || item.sessionNotes,
+                trainer: userId,
+              },
+            });
+          } else {
+            updatedSession = await tx.trainingSession.create({
+              data: {
+                trainingAssignmentId: assignmentId,
+                sessionDate: new Date(),
+                sessionType: 'video',
+                duration: 60,
+                trainer: userId,
+                completedAt: new Date(),
+                performanceRating: item.performanceRating
+                  ? String(item.performanceRating)
+                  : undefined,
+                notes: item.notes || item.sessionNotes,
+              },
+            });
+          }
+
+          // Complete training assignment and update project status to TRAINING_COMPLETED
+          const assignment = await tx.trainingAssignment.findUnique({
+            where: { id: assignmentId },
+            select: { candidateProjectMapId: true, status: true, id: true },
+          });
+
+          if (assignment?.candidateProjectMapId && userId) {
+            // Mark training assignment complete
+            await tx.trainingAssignment.update({
+              where: { id: assignmentId },
+              data: {
+                status: TRAINING_STATUS.COMPLETED,
+                completedAt: new Date(),
+              },
+            });
+
+            // Update candidate-project substatus to training_completed
+            await tx.candidateProjects.update({
+              where: { id: assignment.candidateProjectMapId },
+              data: {
+                subStatus: {
+                  connect: { name: CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED },
+                },
+              },
+            });
+
+            const subStatus = await tx.candidateProjectSubStatus.findUnique({
+              where: { name: CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED },
+              include: { stage: true },
+            });
+
+            if (subStatus) {
+              const user = await tx.user.findUnique({
+                where: { id: userId },
+                select: { name: true },
+              });
+
+              await tx.candidateProjectStatusHistory.create({
+                data: {
+                  candidateProjectMapId: assignment.candidateProjectMapId,
+                  mainStatusId: subStatus.stageId,
+                  subStatusId: subStatus.id,
+                  mainStatusSnapshot: subStatus.stage.label,
+                  subStatusSnapshot: subStatus.label,
+                  changedById: userId,
+                  changedByName: user?.name || 'System',
+                  reason: 'Training session completed (Bulk)',
+                  notes: `Training conducted and completed on ${new Date().toLocaleString()}`,
+                },
+              });
+
+              await tx.interviewStatusHistory.create({
+                data: {
+                  interviewType: 'training',
+                  interviewId: assignment.id,
+                  candidateProjectMapId: assignment.candidateProjectMapId,
+                  status: CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+                  statusSnapshot: 'Training Completed',
+                  statusAt: new Date(),
+                  changedById: userId,
+                  changedByName: user?.name || 'System',
+                  reason: `Training conducted and completed on ${new Date().toLocaleString()}`,
+                },
+              });
+            }
+          }
+
+          return updatedSession;
+        });
+
+        results.push(session);
+      } catch (error) {
+        console.error(`Failed to complete session ${item.sessionId}:`, error);
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -722,14 +1036,57 @@ export class TrainingService {
       throw new BadRequestException('Session is already completed');
     }
 
-    return this.prisma.trainingSession.update({
-      where: { id },
-      data: {
-        completedAt: new Date(),
-        performanceRating: dto.performanceRating,
-        notes: dto.notes,
-        feedback: dto.feedback,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const updatedSession = await tx.trainingSession.update({
+        where: { id },
+        data: {
+          completedAt: new Date(),
+          performanceRating: dto.performanceRating ? String(dto.performanceRating) : undefined,
+          notes: dto.notes || dto.sessionNotes,
+          feedback: dto.feedback,
+          topicsCovered: dto.topicsCovered || undefined,
+          ...(dto.internalComments ? { notes: `${dto.notes || dto.sessionNotes || ''}\nInternal: ${dto.internalComments}`.trim() } : {}),
+        },
+      });
+
+      // Update assignment status to 'in_progress' and candidate-project substatus to 'training_in_progress'
+      const assignment = await tx.trainingAssignment.findUnique({
+        where: { id: session.trainingAssignmentId },
+        select: { status: true, candidateProjectMapId: true },
+      });
+
+      if (assignment && (assignment.status === TRAINING_STATUS.ASSIGNED || assignment.status === TRAINING_STATUS.SCHEDULED)) {
+        await tx.trainingAssignment.update({
+          where: { id: session.trainingAssignmentId },
+          data: {
+            status: TRAINING_STATUS.IN_PROGRESS,
+            startedAt: new Date(),
+          },
+        });
+
+        // Update candidate project substatus
+        await tx.candidateProjects.update({
+          where: { id: assignment.candidateProjectMapId },
+          data: {
+            subStatus: {
+              connect: {
+                name: CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+              },
+            },
+          },
+        });
+
+        // Record status history
+        await tx.candidateProjectStatusHistory.create({
+          data: {
+            candidateProjectMapId: assignment.candidateProjectMapId,
+            subStatusSnapshot: CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+            reason: 'Training started (session completed)',
+          },
+        });
+      }
+
+      return updatedSession;
     });
   }
 

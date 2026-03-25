@@ -8,6 +8,7 @@ import { CreateScreeningDto } from '../dto/create-screening.dto';
 describe('ScreeningsService', () => {
   let service: ScreeningsService;
   let prisma: any; // keep as any for jest mocks of Prisma client methods
+  let outbox: any;
 
   const mockPrisma = {
     candidate: { findUnique: jest.fn() },
@@ -33,6 +34,7 @@ describe('ScreeningsService', () => {
     roleCatalog: { findFirst: jest.fn().mockResolvedValue(null) },
     screeningTemplate: { findUnique: jest.fn() },
     candidateProjectStatusHistory: { create: jest.fn(), findMany: jest.fn() },
+    candidateProjectDocumentVerification: { count: jest.fn().mockResolvedValue(0) },
     interviewStatusHistory: { create: jest.fn() },
     $transaction: jest.fn(),
   } as any;
@@ -43,12 +45,20 @@ describe('ScreeningsService', () => {
         ScreeningsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: CandidateProjectsService, useValue: {} },
-        { provide: OutboxService, useValue: { publishCandidateSentToScreening: jest.fn() } },
+        {
+          provide: OutboxService,
+          useValue: {
+            publishCandidateSentToScreening: jest.fn(),
+            publishCandidateApprovedForClientInterview: jest.fn(),
+            publishCandidateFailedScreening: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get(ScreeningsService);
     prisma = module.get(PrismaService) as jest.Mocked<PrismaService>;
+    outbox = module.get(OutboxService);
   });
 
   afterEach(() => {
@@ -209,6 +219,73 @@ describe('ScreeningsService', () => {
     }));
   });
 
+  it('updates screening decision and writes project status/history', async () => {
+    // initial existing screening
+    (prisma.screening.findUnique as any).mockResolvedValueOnce({
+      id: 'mi-decision',
+      status: 'completed',
+      decision: 'needs_training',
+      candidateProjectMapId: 'map1',
+      candidateProjectMap: {
+        id: 'map1',
+        candidateId: 'c1',
+        projectId: 'p1',
+      },
+    });
+
+    // transaction path
+    const tx = {
+      screening: { update: jest.fn().mockResolvedValue({ id: 'mi-decision', decision: 'rejected' }) },
+      candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map1', subStatus: { id: 's-rejected', name: 'rejected_interview' } }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist2' }) },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'h-int2' }) },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    // final findOne after updateDecision should return values (minimal but enough)
+    (prisma.screening.findUnique as any).mockResolvedValue({
+      id: 'mi-decision',
+      status: 'completed',
+      decision: 'rejected',
+      candidateProjectMapId: 'map1',
+      candidateProjectMap: {
+        id: 'map1',
+        candidateId: 'c1',
+        projectId: 'p1',
+        recruiterId: 'r1',
+        recruiter: { id: 'r1', name: 'Recruiter' },
+      },
+      coordinator: { id: 'coord1', name: 'Coordinator' },
+    });
+
+    const result = await service.updateDecision('mi-decision', { decision: 'rejected', remarks: 'Not ready yet' } as any, 'coord1');
+
+    expect(tx.screening.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'mi-decision' },
+      data: expect.objectContaining({ decision: 'rejected', remarks: 'Not ready yet' }),
+    }));
+
+    expect(tx.candidateProjects.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'map1' },
+      data: expect.objectContaining({ subStatus: { connect: { name: 'rejected_interview' } } }),
+    }));
+
+    expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ candidateProjectMapId: 'map1', notes: 'Not ready yet' }),
+    }));
+
+    expect(outbox.publishCandidateFailedScreening).toHaveBeenCalledWith(
+      'map1',
+      'mi-decision',
+      'coord1',
+      'r1',
+      'rejected',
+    );
+
+    expect(result.decision).toBe('rejected');
+  });
+
   it('complete handles missing userId without calling user.findUnique', async () => {
     (prisma.screening.findUnique as any).mockResolvedValueOnce({
       id: 'mi-nouser',
@@ -280,10 +357,14 @@ describe('ScreeningsService', () => {
 
     expect(res.success).toBe(true);
     expect(res.data.items).toHaveLength(1);
-    expect(prisma.screening.count).toHaveBeenCalledWith({ where: { decision: 'needs_training' } });
+    expect(prisma.screening.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ decision: 'needs_training' }),
+      }),
+    );
     expect(prisma.screening.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { decision: 'needs_training' },
+        where: expect.objectContaining({ decision: 'needs_training' }),
       }),
     );
   });

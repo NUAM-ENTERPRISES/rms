@@ -331,6 +331,33 @@ export class OutboxService {
   }
 
   /**
+   * Publish candidate failed screening event
+   * Notifies recruiter, team head and the coordinator
+   */
+  async publishCandidateFailedScreening(
+    candidateProjectMapId: string,
+    screeningId: string,
+    coordinatorId: string,
+    recruiterId: string | null,
+    decision: string,
+    teamHeadId?: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateFailedScreening',
+      {
+        candidateProjectMapId,
+        screeningId,
+        coordinatorId,
+        recruiterId,
+        decision,
+        teamHeadId,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate transferred to processing event
    */
   async publishCandidateTransferredToProcessing(
@@ -455,30 +482,5 @@ export class OutboxService {
     );
   }
 
-  /**
-   * Publish candidate failed screening event
-   * Notifies recruiter and team head when candidate fails screening
-   */
-  async publishCandidateFailedScreening(
-    candidateProjectMapId: string,
-    screeningId: string,
-    coordinatorId: string,
-    recruiterId: string | null,
-    decision: string,
-    teamHeadId?: string,
-    tx?: any,
-  ): Promise<void> {
-    await this.publishEvent(
-      'CandidateFailedScreening',
-      {
-        candidateProjectMapId,
-        screeningId,
-        coordinatorId,
-        recruiterId,
-        decision,
-        teamHeadId,
-      },
-      tx,
-    );
-  }
 }
+

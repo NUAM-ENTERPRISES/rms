@@ -240,6 +240,7 @@ export interface QueryScreeningsRequest {
   candidateProjectMapId?: string;
   coordinatorId?: string;
   decision?: string;
+  status?: string;
   mode?: string;
   scheduledDate?: string;
   conductedDate?: string;
@@ -424,6 +425,25 @@ export interface TrainingSession {
   updatedAt: string;
 }
 
+export interface BulkCreateSessionsRequest {
+  trainingAssignmentIds: string[];
+  sessionDate: string;
+  duration?: number;
+  topic?: string;
+  meetingLink?: string;
+  mode?: "video" | "phone" | "in_person";
+}
+
+export interface BulkCompleteSessionsRequest {
+  sessions: {
+    sessionId: string;
+    performanceRating: string;
+    sessionNotes?: string;
+    topicsCovered?: string[];
+    internalComments?: string;
+  }[];
+}
+
 export interface CreateTrainingAssignmentRequest {
   candidateProjectMapId: string;
   screeningId?: string;
@@ -520,6 +540,8 @@ export const SCREENING_DECISION = {
   ON_HOLD: "on_hold",
 } as const;
 
+export type SCREENING_DECISION = (typeof SCREENING_DECISION)[keyof typeof SCREENING_DECISION];
+
 export const SCREENING_MODE = {
   VIDEO: "video",
   PHONE: "phone",
@@ -528,6 +550,7 @@ export const SCREENING_MODE = {
 
 export const TRAINING_STATUS = {
   ASSIGNED: "assigned",
+  SCHEDULED: "scheduled",
   IN_PROGRESS: "in_progress",
   COMPLETED: "completed",
   CANCELLED: "cancelled",

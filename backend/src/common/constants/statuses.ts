@@ -37,6 +37,7 @@ export const CANDIDATE_PROJECT_STATUS = {
 
   // === Training/Screening Stage ===
   TRAINING_ASSIGNED: 'training_assigned',
+  TRAINING_SCHEDULED: 'training_scheduled',
   TRAINING_IN_PROGRESS: 'training_in_progress',
   TRAINING_COMPLETED: 'training_completed',
   READY_FOR_REASSESSMENT: 'ready_for_reassessment',
@@ -128,6 +129,11 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
   ],
   // === Training Workflow ===
   [CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED]: [
+    CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+    CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
+  [CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED]: [
     CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
     CANDIDATE_PROJECT_STATUS.WITHDRAWN,
   ],
@@ -355,6 +361,7 @@ export type ScreeningCategory =
  */
 export const TRAINING_STATUS = {
   ASSIGNED: 'assigned',
+  SCHEDULED: 'scheduled',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',

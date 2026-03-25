@@ -28,6 +28,7 @@ import { QueryUpcomingScreeningsDto } from './dto/query-upcoming-screenings.dto'
 import { UpdateScreeningTemplateDto } from './dto/update-screening-template.dto';
 import { QueryScreeningDetailsDto } from './dto/query-screening-details.dto';
 import { QueryScreeningHistoryDto } from './dto/query-screening-history.dto';
+import { UpdateScreeningDecisionDto } from './dto/update-screening-decision.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 import { AssignToMainInterviewDto } from './dto/assign-to-main-interview.dto';
 
@@ -314,6 +315,40 @@ export class ScreeningsController {
     return this.screeningsService.complete(
       id,
       completeDto,
+      req.user?.sub ?? req.user?.userId,
+    );
+  }
+
+  @Patch(':id/decision')
+  @Permissions('write:screenings')
+  @ApiOperation({
+    summary: 'Update screening decision',
+    description: 'Update decision for a completed screening (approved, needs_training, rejected, on_hold).',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Screening ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Screening decision updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot update decision for an incomplete screening',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Screening not found',
+  })
+  updateDecision(
+    @Param('id') id: string,
+    @Body() body: UpdateScreeningDecisionDto,
+    @Request() req: any,
+  ) {
+    return this.screeningsService.updateDecision(
+      id,
+      body,
       req.user?.sub ?? req.user?.userId,
     );
   }

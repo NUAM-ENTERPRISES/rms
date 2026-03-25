@@ -142,6 +142,79 @@ describe('TrainingService', () => {
     expect(res.candidateProjectMap.candidate!.phone).toBe('+91 9876543210');
   });
 
+  it('completeTraining updates project status and creates interviewStatusHistory', async () => {
+    const assignment = {
+      id: 'ta1',
+      candidateProjectMapId: 'map1',
+      status: 'assigned',
+      screeningId: 'screen1',
+    } as any;
+
+    jest.spyOn(service as any, 'findOneAssignment').mockResolvedValue(assignment);
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'Trainer' });
+
+    const tx = {
+      trainingAssignment: { update: jest.fn().mockResolvedValue({ ...assignment, status: 'completed' }) },
+      candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map1' }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist1' }) },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'ih1' }) },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const result = await service.completeTraining('ta1', { notes: 'done', improvementNotes: 'good' } as any, 'u1');
+
+    expect(tx.trainingAssignment.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' } }));
+    expect(tx.candidateProjects.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'map1' } }));
+    expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
+    expect(tx.interviewStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ interviewType: 'screening', status: 'training_completed' }) }));
+    expect(result.status).toBe('completed');
+  });
+
+  it('bulkCompleteSessions marks assignment completed and creates history records', async () => {
+    const dto = { sessions: [{ sessionId: 's1', performanceRating: 5, notes: 'Completed' }] } as any;
+
+    const assignment = { id: 'ta1', candidateProjectMapId: 'map1', status: 'scheduled' } as any;
+
+    const tx = {
+      trainingSession: {
+        findFirst: jest.fn().mockResolvedValue({ id: 's1', trainingAssignmentId: 'ta1' }),
+        update: jest.fn().mockResolvedValue({ id: 's1', trainingAssignmentId: 'ta1', completedAt: new Date() }),
+        create: jest.fn(),
+      },
+      trainingAssignment: {
+        findUnique: jest.fn().mockResolvedValue(assignment),
+        update: jest.fn().mockResolvedValue({ ...assignment, status: 'completed' }),
+      },
+      candidateProjects: {
+        update: jest.fn().mockResolvedValue({ id: 'map1' }),
+      },
+      candidateProjectSubStatus: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'sub1', stageId: 'main1', label: 'Training Completed', stage: { label: 'Interview' } }),
+      },
+      candidateProjectStatusHistory: {
+        create: jest.fn().mockResolvedValue({ id: 'hist' }),
+      },
+      interviewStatusHistory: {
+        create: jest.fn().mockResolvedValue({ id: 'ih' }),
+      },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ name: 'Trainer' }),
+      },
+    } as any;
+
+    (prisma.trainingSession.findUnique as any).mockResolvedValue({ trainingAssignmentId: 'ta1' });
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const result = await service.bulkCompleteSessions(dto, 'u1');
+
+    expect(tx.trainingAssignment.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' }, data: expect.objectContaining({ status: 'completed' }) }));
+    expect(tx.candidateProjects.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'map1' }, data: expect.objectContaining({ subStatus: expect.any(Object) }) }));
+    expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
+    expect(tx.interviewStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ interviewType: 'training', status: 'training_completed' }) }));
+    expect(result).toHaveLength(1);
+  });
+
   it('getTrainingHistory returns paginated training history', async () => {
     const cpId = 'cp1';
     (prisma.candidateProjects.findUnique as any).mockResolvedValue({ id: cpId });

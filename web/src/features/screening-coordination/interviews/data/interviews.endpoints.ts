@@ -97,6 +97,25 @@ export const screeningsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Update screening decision for completed screening
+    updateScreeningDecision: builder.mutation<
+      ApiResponse<Screening>,
+      { id: string; data: { decision: string; remarks?: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/screenings/${id}/decision`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Screening", id },
+        { type: "Screening", id: "LIST" },
+        { type: "Screening", id: "STATS" },
+        { type: "Candidate", id: "LIST" },
+        { type: "Training", id: "LIST" },
+      ],
+    }),
+
     // Delete a screening
     deleteScreening: builder.mutation<ApiResponse<{ message: string }>, string>({
       query: (id) => ({ url: `/screenings/${id}`, method: "DELETE" }),
@@ -188,6 +207,7 @@ export const {
   useUpdateScreeningMutation,
   useAssignTemplateToScreeningMutation,
   useCompleteScreeningMutation,
+  useUpdateScreeningDecisionMutation,
   useDeleteScreeningMutation,
   useAssignToMainScreeningMutation,
   useGetAssignedScreeningsQuery,

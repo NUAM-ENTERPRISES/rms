@@ -1,17 +1,14 @@
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TRAINING_PERFORMANCE } from '../../../common/constants/statuses';
 
 export class CompleteTrainingSessionDto {
-  @ApiProperty({
-    description: 'Performance rating for the session',
-    enum: Object.values(TRAINING_PERFORMANCE),
-    example: TRAINING_PERFORMANCE.GOOD,
+  @ApiPropertyOptional({
+    description: 'Performance rating for the session (numeric score 0-100)',
+    example: 85,
   })
-  @IsEnum(TRAINING_PERFORMANCE, {
-    message: 'Performance rating must be a valid value',
-  })
-  performanceRating: string;
+  @IsOptional()
+  performanceRating?: string | number;
 
   @ApiPropertyOptional({
     description: 'Session notes and observations',
@@ -33,4 +30,29 @@ export class CompleteTrainingSessionDto {
   @IsString()
   @MaxLength(2000, { message: 'Feedback cannot exceed 2000 characters' })
   feedback?: string;
+
+  @ApiPropertyOptional({
+    description: 'Session notes for recruiter reference',
+    example: 'Participant was very active and responsive.',
+  })
+  @IsOptional()
+  @IsString()
+  sessionNotes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Internal comments for recruiters',
+    example: 'Candidate needs more focus on technical aspects.',
+  })
+  @IsOptional()
+  @IsString()
+  internalComments?: string;
+
+  @ApiPropertyOptional({
+    description: 'Topics covered in this session',
+    type: [String],
+    example: ['Technical Skills', 'Soft Skills'],
+  })
+  @IsOptional()
+  @IsArray()
+  topicsCovered?: string[];
 }

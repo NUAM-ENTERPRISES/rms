@@ -11,6 +11,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CandidateProjectsService } from '../../candidate-projects/candidate-projects.service';
 import { CreateScreeningDto } from './dto/create-screening.dto';
 import { UpdateScreeningDto } from './dto/update-screening.dto';
+import { UpdateScreeningDecisionDto } from './dto/update-screening-decision.dto';
 import { CompleteScreeningDto } from './dto/complete-screening.dto';
 import { QueryScreeningsDto } from './dto/query-screenings.dto';
 import {
@@ -326,21 +327,55 @@ export class ScreeningsService {
       where.decision = decision;
     }
 
+    // If filtering specifically for 'training_assigned' status,
+    // exclude those that already have training assignments with sessions.
+    if (query.status === 'training_assigned') {
+      where.trainingAssignments = {
+        none: {
+          trainingSessions: {
+            some: {},
+          },
+        },
+      };
+    }
+
     // Support filtering by related candidate-project fields (projectId and roleCatalogId)
     const cpWhere: any = {};
     const cpAND: any[] = [];
 
-    // Always exclude candidate-projects whose current sub-status is "screening_assigned".
-    // The UI callers prefer not to see candidates that have merely been assigned; they
-    // should appear only after an actual screening is scheduled. This mirrors the
-    // behavioural expectation expressed by the user when querying /screenings.
-    cpAND.push({
-      subStatus: {
-        name: {
-          not: 'screening_assigned',
+    // Filter by project sub-status name if provided; otherwise, apply default exclusion.
+    if (query.status === 'training_scheduled') {
+      where.OR = [
+        { candidateProjectMap: { subStatus: { name: 'training_scheduled' } } },
+        {
+          trainingAssignments: {
+            some: {
+              trainingSessions: {
+                some: {},
+              },
+            },
+          },
         },
-      },
-    });
+      ];
+    } else if (query.status) {
+      cpAND.push({
+        subStatus: {
+          name: query.status,
+        },
+      });
+    } else {
+      // Always exclude candidate-projects whose current sub-status is "screening_assigned".
+      // The UI callers prefer not to see candidates that have merely been assigned; they
+      // should appear only after an actual screening is scheduled. This mirrors the
+      // behavioural expectation expressed by the user when querying /screenings.
+      cpAND.push({
+        subStatus: {
+          name: {
+            not: 'screening_assigned',
+          },
+        },
+      });
+    }
 
     if (projectId) {
       cpAND.push({ projectId });
@@ -1042,6 +1077,141 @@ export class ScreeningsService {
   }
 
   /**
+   * Update only the decision of a completed screening
+   */
+  async updateDecision(id: string, dto: UpdateScreeningDecisionDto, userId: string) {
+    const existing = await this.findOne(id);
+
+    if (!existing || !existing.id) {
+      throw new NotFoundException(`Screening with ID "${id}" not found`);
+    }
+
+    if (existing.status !== SCREENING_STATUS.COMPLETED) {
+      throw new BadRequestException(
+        'Decision can only be updated for completed screenings',
+      );
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Update screening decision and optional remarks
+      const screeningUpdate = await tx.screening.update({
+        where: { id },
+        data: {
+          decision: dto.decision,
+          remarks: dto.remarks ?? existing.remarks,
+        },
+      });
+
+      // Map decision to candidate project status transition
+      const statusUpdate: any = {};
+      if (dto.decision === SCREENING_DECISION.APPROVED) {
+        statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.SCREENING_PASSED } };
+      } else if (dto.decision === SCREENING_DECISION.NEEDS_TRAINING) {
+        statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.SCREENING_FAILED } };
+      } else if (dto.decision === SCREENING_DECISION.REJECTED) {
+        statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW } };
+      } else if (dto.decision === SCREENING_DECISION.ON_HOLD) {
+        statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.ON_HOLD } };
+      }
+
+      const updatedMap = await tx.candidateProjects.update({
+        where: { id: existing.candidateProjectMap?.id ?? existing.candidateProjectMapId },
+        data: statusUpdate,
+        include: { subStatus: true, mainStatus: true },
+      });
+
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId: existing.candidateProjectMap?.id ?? existing.candidateProjectMapId,
+          subStatusId: updatedMap.subStatus?.id ?? null,
+          subStatusSnapshot: updatedMap.subStatus?.name ?? null,
+          changedById: userId,
+          reason: `Screening decision updated to ${dto.decision}`,
+          notes: dto.remarks,
+        },
+      });
+
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewType: 'screening',
+          interviewId: id,
+          candidateProjectMapId: existing.candidateProjectMap?.id ?? existing.candidateProjectMapId,
+          previousStatus: existing.status,
+          status: existing.status,
+          statusSnapshot: `Decision updated: ${dto.decision}`,
+          statusAt: new Date(),
+          changedById: userId,
+        },
+      });
+
+      return screeningUpdate;
+    });
+
+    // If the new decision is approved, trigger verification workflow as complete() does
+    const finalResult = await this.findOne(id);
+    const cpm = finalResult.candidateProjectMap;
+    const coordinatorId = finalResult.coordinator?.id || existing.coordinatorId;
+    const recruiterId = cpm?.recruiterId || null;
+
+    if (dto.decision === SCREENING_DECISION.APPROVED) {
+      if (cpm) {
+        try {
+          await this.outboxService.publishCandidateApprovedForClientInterview(
+            cpm.id,
+            id,
+            coordinatorId || userId,
+            recruiterId,
+          );
+          this.logger.log(`Published CandidateApprovedForClientInterview event for candidate ${cpm.candidateId}`);
+        } catch (error: any) {
+          this.logger.error(`Failed to publish approved event: ${error.message}`);
+        }
+      }
+    } else if (dto.decision === SCREENING_DECISION.REJECTED) {
+      if (cpm) {
+        try {
+          await this.outboxService.publishCandidateFailedScreening(
+            cpm.id,
+            id,
+            coordinatorId || userId,
+            recruiterId,
+            dto.decision,
+          );
+          this.logger.log(`Published CandidateFailedScreening event for candidate ${cpm.candidateId}`);
+        } catch (error: any) {
+          this.logger.error(`Failed to publish failed-screening event: ${error.message}`);
+        }
+      }
+    }
+
+      const hasExistingDocs = cpm
+        ? await this.prisma.candidateProjectDocumentVerification.count({
+            where: { candidateProjectMapId: cpm.id, isDeleted: false },
+          }) > 0
+        : false;
+
+      if (!hasExistingDocs && cpm && userId) {
+        try {
+          await this.candidateProjectsService.sendForVerification(
+            {
+              candidateId: cpm.candidateId,
+              projectId: cpm.projectId,
+              roleNeededId: cpm.roleNeededId as string,
+              recruiterId: cpm.recruiterId || undefined,
+              notes: 'Automatically sent for document verification after screening decision update.',
+            } as any,
+            userId,
+          );
+          this.logger.log(`Automatically sent candidate ${cpm.candidateId} for verification after screening decision update.`);
+        } catch (error: any) {
+          this.logger.error(`Failed to automatically send for verification: ${error.message}`);
+        }
+      }
+
+    return this.findOne(id);
+  }
+
+  /**
    * Update only the template associated with a screening
    */
   async updateTemplate(id: string, templateId: string) {
@@ -1289,31 +1459,90 @@ export class ScreeningsService {
   * Get screening statistics for a coordinator
    */
   async getCoordinatorStats(coordinatorId: string) {
-    const [total, completed, pending, approved, needsTraining, rejected, onHold] =
-      await Promise.all([
-        this.prisma.screening.count({ where: { coordinatorId } }),
-        this.prisma.screening.count({ where: { coordinatorId, conductedAt: { not: null } } }),
-        this.prisma.screening.count({ where: { coordinatorId, conductedAt: null } }),
-        this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.APPROVED } }),
-        this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.NEEDS_TRAINING } }),
-        this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.REJECTED } }),
-        this.prisma.screening.count({ where: { coordinatorId, decision: SCREENING_DECISION.ON_HOLD } }),
-      ]);
+    const [
+      total,
+      scheduled,
+      completed,
+      approved,
+      needsTraining,
+      trainingScheduled,
+      trainingCompleted,
+      rejected,
+      onHold,
+    ] = await Promise.all([
+      // Total assigned (unique candidates)
+      this.prisma.candidateProjects.count({
+        where: {
+          screenings: { some: { coordinatorId } },
+        },
+      }),
+      // Scheduled screenings (not completed yet)
+      this.prisma.screening.count({
+        where: {
+          coordinatorId,
+          status: SCREENING_STATUS.SCHEDULED,
+          decision: null,
+          candidateProjectMap: {
+            subStatus: { name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED },
+          },
+        },
+      }),
+      // Completed screenings
+      this.prisma.screening.count({
+        where: {
+          coordinatorId,
+          status: SCREENING_STATUS.COMPLETED,
+        },
+      }),
+      // Decisions
+      this.prisma.screening.count({
+        where: { coordinatorId, decision: SCREENING_DECISION.APPROVED },
+      }),
+      this.prisma.screening.count({
+        where: {
+          coordinatorId,
+          decision: SCREENING_DECISION.NEEDS_TRAINING,
+          candidateProjectMap: { subStatus: { name: CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED } },
+        },
+      }),
+      this.prisma.screening.count({
+        where: {
+          coordinatorId,
+          decision: SCREENING_DECISION.NEEDS_TRAINING,
+          candidateProjectMap: { subStatus: { name: CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED } },
+        },
+      }),
+      this.prisma.screening.count({
+        where: {
+          coordinatorId,
+          decision: SCREENING_DECISION.NEEDS_TRAINING,
+          candidateProjectMap: { subStatus: { name: CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED } },
+        },
+      }),
+      this.prisma.screening.count({
+        where: { coordinatorId, decision: SCREENING_DECISION.REJECTED },
+      }),
+      this.prisma.screening.count({
+        where: { coordinatorId, decision: SCREENING_DECISION.ON_HOLD },
+      }),
+    ]);
 
     return {
       total,
       completed,
-      pending,
+      pending: scheduled,
       byDecision: {
         approved,
         needsTraining,
+        trainingScheduled,
+        trainingCompleted,
         rejected,
         onHold,
       },
       approvalRate:
-        completed > 0 ? ((approved / completed) * 100).toFixed(2) : '0',
+        completed > 0 ? ((approved / completed) * 100).toFixed(0) : '0',
       passRate:
-        completed > 0 ? ((approved / completed) * 100).toFixed(2) : '0',
+        completed > 0 ? ((approved / completed) * 100).toFixed(0) : '0',
     };
   }
 
@@ -1330,7 +1559,11 @@ export class ScreeningsService {
       throw new NotFoundException(`Candidate-Project with ID "${candidateProjectMapId}" not found`);
     }
 
-    const where = { candidateProjectMapId, interviewType: 'screening' };
+    // Include both screening and training history so candidate-project history reflects full flow
+    const where = {
+      candidateProjectMapId,
+      interviewType: { in: ['screening', 'training'] },
+    };
 
     const total = await this.prisma.interviewStatusHistory.count({ where });
 

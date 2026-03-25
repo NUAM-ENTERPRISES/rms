@@ -24,7 +24,9 @@ import { UpdateTrainingAssignmentDto } from './dto/update-training.dto';
 import { CompleteTrainingDto } from './dto/complete-training.dto';
 import { CreateTrainingSessionDto } from './dto/create-session.dto';
 import { CompleteTrainingSessionDto } from './dto/complete-session.dto';
-import { QueryTrainingAssignmentsDto } from './dto/query-training.dto';
+import { BulkCreateSessionsDto } from './dto/bulk-create-sessions.dto';
+import { BulkCompleteSessionsDto } from './dto/bulk-complete-sessions.dto';
+import { QueryTrainingAssignmentsDto } from './dto/query-training.dto';  
 import { QueryBasicTrainingDto } from './dto/query-basic-training.dto';
 import { SendForInterviewDto } from '../../candidate-projects/dto/send-for-interview.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
@@ -152,7 +154,8 @@ export class TrainingController {
   @ApiResponse({ status: 200, description: 'Training started successfully' })
   @ApiResponse({ status: 400, description: 'Invalid status transition' })
   async startTraining(@Param('id') id: string, @Request() req: any) {
-    const data = await this.trainingService.startTraining(id, req.user.userId);
+    const userId = req.user?.id || req.user?.sub || req.user?.userId;
+    const data = await this.trainingService.startTraining(id, userId);
     return {
       success: true,
       data,
@@ -174,10 +177,11 @@ export class TrainingController {
     @Body() completeDto: CompleteTrainingDto,
     @Request() req: any,
   ) {
+    const userId = req.user?.id || req.user?.sub || req.user?.userId;
     const data = await this.trainingService.completeTraining(
       id,
       completeDto,
-      req.user.userId,
+      userId,
     );
     return {
       success: true,
@@ -200,9 +204,10 @@ export class TrainingController {
   })
   @ApiResponse({ status: 400, description: 'Training not completed yet' })
   async markReadyForReassessment(@Param('id') id: string, @Request() req: any) {
+    const userId = req.user?.id || req.user?.sub || req.user?.userId;
     const data = await this.trainingService.markReadyForReassessment(
       id,
-      req.user.userId,
+      userId,
     );
     return {
       success: true,
@@ -263,12 +268,47 @@ export class TrainingController {
   })
   @ApiResponse({ status: 201, description: 'Training session created' })
   @ApiResponse({ status: 404, description: 'Training assignment not found' })
-  async createSession(@Body() createDto: CreateTrainingSessionDto) {
-    const data = await this.trainingService.createSession(createDto);
+  async createSession(@Body() createDto: CreateTrainingSessionDto, @Request() req: any) {
+    const userId = req.user?.id || req.user?.sub || req.user?.userId;
+    const data = await this.trainingService.createSession(createDto, userId);
     return {
       success: true,
       data,
       message: 'Training session created successfully',
+    };
+  }
+
+  @Post('sessions/bulk')
+  @Permissions('write:training')
+  @ApiOperation({
+    summary: 'Bulk create training sessions',
+    description: 'Record multiple training sessions at once',
+  })
+  @ApiResponse({ status: 201, description: 'Training sessions created' })
+  async bulkCreateSessions(@Body() bulkDto: BulkCreateSessionsDto, @Request() req: any) {
+    const userId = req.user?.id || req.user?.sub || req.user?.userId;
+    const data = await this.trainingService.bulkCreateSessions(bulkDto, userId);
+    return {
+      success: true,
+      data,
+      message: `${data.length} training sessions created successfully`,
+    };
+  }
+
+  @Post('sessions/bulk-complete')
+  @Permissions('write:training')
+  @ApiOperation({
+    summary: 'Bulk complete training sessions',
+    description: 'Mark multiple training sessions as completed at once',
+  })
+  @ApiResponse({ status: 200, description: 'Training sessions completed' })
+  async bulkCompleteSessions(@Body() bulkDto: BulkCompleteSessionsDto, @Request() req: any) {
+    const userId = req.user?.id || req.user?.sub || req.user?.userId;
+    const data = await this.trainingService.bulkCompleteSessions(bulkDto, userId);
+    return {
+      success: true,
+      data,
+      message: `${data.length} training sessions updated successfully`,
     };
   }
 

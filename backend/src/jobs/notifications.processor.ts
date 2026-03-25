@@ -1441,7 +1441,8 @@ export class NotificationsProcessor extends WorkerHost {
       const roleDesignation =
         candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
 
-      // Notify recruiter
+      // Candidate approved notifications should go to Interview Coordinators.
+      // Also notify recruiter so they can track converted profile state.
       if (recruiterId) {
         const idemKeyRecruiter = `${eventId}:${recruiterId}:screening_passed`;
 
@@ -1456,12 +1457,47 @@ export class NotificationsProcessor extends WorkerHost {
             screeningId,
             candidateId: candidateProjectMap.candidate.id,
             projectId: candidateProjectMap.project.id,
-            coordinatorId,
           },
           idemKey: idemKeyRecruiter,
         });
 
         this.logger.log(`Screening passed notification created for recruiter ${recruiterId}`);
+      }
+
+      // Notify all Interview Coordinator role members (case-insensitive match)
+      const coordinatorUsers = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  contains: 'Interview Coordinator',
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      for (const coord of coordinatorUsers) {
+        const idemKeyCoord = `${eventId}:${coord.id}:screening_passed`;
+
+        await this.notificationsService.createNotification({
+          userId: coord.id,
+          type: 'screening_passed',
+          title: 'Candidate Passed Screening',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}).`,
+          link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
+          meta: {
+            candidateProjectMapId,
+            screeningId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+          },
+          idemKey: idemKeyCoord,
+        });
       }
 
       // Notify team head if present
@@ -1486,6 +1522,9 @@ export class NotificationsProcessor extends WorkerHost {
 
         this.logger.log(`Screening passed notification created for team head ${teamHeadId}`);
       }
+
+      // NOTE: We intentionally avoid notifying the raw coordinatorId (trainer) here.
+      // All Interview Coordinator role members are already being notified above.
     } catch (error) {
       this.logger.error(
         `Failed to process candidate approved for client interview: ${error.message}`,
@@ -1791,8 +1830,8 @@ export class NotificationsProcessor extends WorkerHost {
         await this.notificationsService.createNotification({
           userId: recruiterId,
           type: 'candidate_failed_screening',
-          title: 'Screening Result - Action Required',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the screening for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}. Please review and take appropriate action.`,
+          title: 'Screening Failed',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} did not pass the screening for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}.`,
           link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
           meta: {
             candidateProjectMapId,
@@ -1831,6 +1870,46 @@ export class NotificationsProcessor extends WorkerHost {
 
         this.logger.log(`Screening failed notification created for team head ${teamHeadId}`);
       }
+
+      // Notify all Interview Coordinator role members (case-insensitive match)
+      const coordinatorUsers = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  contains: 'Interview Coordinator',
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      for (const coord of coordinatorUsers) {
+        const idemKeyCoord = `${eventId}:${coord.id}:candidate_failed_screening`;
+
+        await this.notificationsService.createNotification({
+          userId: coord.id,
+          type: 'candidate_failed_screening',
+          title: 'Screening Result - Interview Failed',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} failed the screening for ${candidateProjectMap.project.title} (${roleDesignation}). Decision: ${decisionText}.`,
+          link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
+          meta: {
+            candidateProjectMapId,
+            screeningId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+            decision,
+          },
+          idemKey: idemKeyCoord,
+        });
+      }
+
+      // NOTE: We intentionally avoid notifying the raw coordinatorId (trainer) here.
+      // All Interview Coordinator role members are already being notified above.
     } catch (error) {
       this.logger.error(`Failed to process candidate failed screening: ${error.message}`, error.stack);
       throw error;

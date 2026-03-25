@@ -78,4 +78,9 @@ export class QueryScreeningsDto {
   @IsOptional()
   @IsBoolean()
   isAssignedTrainer?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter by project status (subStatus name)' })
+  @IsOptional()
+  @IsString()
+  status?: string;
 }

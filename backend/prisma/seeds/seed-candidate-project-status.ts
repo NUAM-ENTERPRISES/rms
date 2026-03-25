@@ -56,6 +56,7 @@ export async function seedCandidateProjectWorkflow() {
 
     // TRAINING (interview categories)
     { name: "training_assigned", label: "Training Assigned", order: 14, main: "interview" },
+    { name: "training_scheduled", label: "Training Scheduled", order: 14.5, main: "interview" },
     { name: "training_in_progress", label: "Training In Progress", order: 15, main: "interview" },
     { name: "training_completed", label: "Training Completed", order: 16, main: "interview" },
     { name: "ready_for_reassessment", label: "Ready For Reassessment", order: 17, main: "interview" },
