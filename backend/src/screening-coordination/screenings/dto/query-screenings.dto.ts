@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsInt, Min, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SCREENING_DECISION } from '../../../common/constants/statuses';
 
@@ -73,4 +73,9 @@ export class QueryScreeningsDto {
   @IsOptional()
   @IsEnum(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @ApiPropertyOptional({ description: 'Filter by trainer assignment flag (true/false). Omit to include all.' })
+  @IsOptional()
+  @IsBoolean()
+  isAssignedTrainer?: boolean;
 }

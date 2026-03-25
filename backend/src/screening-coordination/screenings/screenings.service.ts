@@ -163,8 +163,11 @@ export class ScreeningsService {
             duration: dto.duration ?? 60,
             meetingLink: dto.meetingLink,
             mode: dto.mode ?? 'video',
+            goodLooking: dto.goodLooking,
+            fairness: dto.fairness,
+            languageProficiency: dto.languageProficiency,
             status: SCREENING_STATUS.SCHEDULED,
-          },
+          } as any,
           include: {
             candidateProjectMap: {
               include: {
@@ -188,8 +191,11 @@ export class ScreeningsService {
               duration: dto.duration ?? 60,
               meetingLink: dto.meetingLink,
               mode: dto.mode ?? 'video',
+              goodLooking: dto.goodLooking,
+              fairness: dto.fairness,
+              languageProficiency: dto.languageProficiency,
               status: SCREENING_STATUS.SCHEDULED,
-            },
+            } as any,
             include: {
               candidateProjectMap: {
                 include: {
@@ -303,8 +309,10 @@ export class ScreeningsService {
 
     const where: any = {};
 
-    // Only return screenings that have been assigned a trainer
-    where.isAssignedTrainer = false;
+    // Optional filter by assignment status; keep full behavior when not provided.
+    if (typeof query.isAssignedTrainer !== 'undefined') {
+      where.isAssignedTrainer = query.isAssignedTrainer;
+    }
 
     if (candidateProjectMapId) {
       where.candidateProjectMapId = candidateProjectMapId;
@@ -419,6 +427,11 @@ export class ScreeningsService {
           },
           checklistItems: {
             orderBy: { category: 'asc' },
+          },
+          trainingAssignments: {
+            include: {
+              trainingSessions: true,
+            },
           },
         },
         orderBy: { [sortBy as string]: sortOrder },
@@ -809,6 +822,11 @@ export class ScreeningsService {
         checklistItems: {
           orderBy: { category: 'asc' },
         },
+        trainingAssignments: {
+          include: {
+            trainingSessions: true,
+          },
+        },
       },
     });
 
@@ -963,7 +981,10 @@ export class ScreeningsService {
           duration: dto.duration,
           meetingLink: dto.meetingLink,
           mode: dto.mode,
-        },
+          goodLooking: dto.goodLooking,
+          fairness: dto.fairness,
+          languageProficiency: dto.languageProficiency,
+        } as any,
         include: {
           candidateProjectMap: {
             include: {
@@ -1096,7 +1117,10 @@ export class ScreeningsService {
           strengths: dto.strengths,
           status: SCREENING_STATUS.COMPLETED,
           areasOfImprovement: dto.areasOfImprovement,
-        },
+          goodLooking: dto.goodLooking,
+          fairness: dto.fairness,
+          languageProficiency: dto.languageProficiency,
+        } as any,
       });
 
       // Create checklist items
@@ -1535,7 +1559,6 @@ export class ScreeningsService {
                     skills: true,
                   },
                 },
-                documents: { where: { isDeleted: false } },
               },
             },
             project: {
@@ -1550,18 +1573,13 @@ export class ScreeningsService {
                 client: { select: { id: true, name: true, email: true, phone: true } },
                 country: { select: { code: true, name: true } },
                 creator: { select: { id: true, name: true } },
-                documentRequirements: true,
               },
             },
 
             roleNeeded: { select: { id: true, designation: true, roleCatalogId: true } },
+            recruiter: { select: { id: true, name: true, email: true, mobileNumber: true } },
             mainStatus: true,
             subStatus: true,
-            documentVerifications: {
-              include: {
-                document: true,
-              },
-            },
           },
         },
       },

@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useAppSelector } from "@/app/hooks";
 import { useGetScreeningQuery, useAssignTemplateToScreeningMutation, useCompleteScreeningMutation } from "../data/interviews.endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
+import { useCreateTrainingAssignmentMutation } from "@/features/screening-coordination/training/data";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { getAge } from "@/utils";
 import { toast } from "sonner";
@@ -24,7 +26,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CompleteScreeningDialog } from "../components/CompleteScreeningDialog";
+import { CompleteScreeningDialog, CompleteInterviewFormValues } from "../components/CompleteScreeningDialog";
 import EditScreeningDialog from "../components/EditScreeningDialog";
 import { useDebounce } from "@/hooks";
 import { format } from "date-fns";
@@ -98,6 +100,11 @@ export default function ConductScreeningPage() {
   const [completeInterviewOpen, setCompleteInterviewOpen] = useState(false);
   const [editInterviewOpen, setEditInterviewOpen] = useState(false);
 
+  // New assessment fields
+  const [goodLooking, setGoodLooking] = useState<number>(3);
+  const [fairness, setFairness] = useState<number>(3);
+  const [languageProficiency, setLanguageProficiency] = useState<string>("Basic Interface");
+
   // Keep selected template object in sync when templates change (also declared early)
   const selectedTemplate: ScreeningTemplate | undefined =
     templates.find((t) => t.id === selectedTemplateId);
@@ -109,10 +116,13 @@ export default function ConductScreeningPage() {
 
   const [assignTemplateToScreening, { isLoading: assignMutationLoading }] = useAssignTemplateToScreeningMutation();
   const [completeScreening, { isLoading: completeMutationLoading }] = useCompleteScreeningMutation();
+  const [createTrainingAssignment, { isLoading: isCreatingTraining }] = useCreateTrainingAssignmentMutation();
+  const { user } = useAppSelector((state) => state.auth);
 
-  // Validation: all selected items must have a score
+  // Validation: if template items are selected, they must have a score. 
+  // If no template items are selected, validation passes (trainer will enter score in dialog)
   const selectedItems = Object.values(checklistItems);
-  const hasValidationErrors = selectedItems.length === 0 || selectedItems.some(
+  const hasValidationErrors = selectedItems.length > 0 && selectedItems.some(
     (item) => item.score === undefined || isNaN(item.score as number)
   );
 
@@ -190,26 +200,18 @@ export default function ConductScreeningPage() {
   };
 
   const handleCompleteInterview = () => {
-    if (!interview?.templateId || !interview?.template?.items?.length) {
-      toast.error("Please assign a template first");
-      return;
-    }
+    // No longer requiring template; trainer can enter score manually
     setCompleteInterviewOpen(true);
   };
 
-  const handleSubmitCompleteInterview = async (formData: {
-    decision: string;
-    remarks?: string;
-    strengths?: string;
-    areasOfImprovement?: string;
-  }) => {
+  const handleSubmitCompleteInterview = async (formData: CompleteInterviewFormValues) => {
     if (!routeId || !interview) {
       toast.error("Interview data not found");
       return;
     }
 
     try {
-      // Build checklistItems array from state
+      // Build checklistItems array from state if any exist
       const checklistItemsArray = Object.entries(checklistItems).map(([itemId, data]) => {
         const templateItem = interview.template?.items?.find(item => item.id === itemId);
         return {
@@ -222,32 +224,36 @@ export default function ConductScreeningPage() {
         };
       });
 
-      // Validate mandatory score for each selected item
-      const hasInvalidScore = checklistItemsArray.some(ci => ci.score === undefined || isNaN(ci.score as number));
-      if (hasInvalidScore) {
-        toast.error("Please enter a score for each selected question.");
-        return;
-      }
-
-      // Compute overall rating (integer 0-100) from selected item scores
-      const overallRating = (() => {
-        const count = checklistItemsArray.length;
-        if (count === 0) return 0;
-        const total = checklistItemsArray.reduce((acc, ci) => acc + (ci.score ?? 0), 0);
-        // Ensure integer per backend DTO (IsInt)
-        const avg = total / count;
-        // Clamp between 0 and 100, then round to nearest integer
-        const clamped = Math.max(0, Math.min(100, avg));
-        return Math.round(clamped);
-      })();
-
+      // Payload uses the overallRating from the form (which can be manual or auto-prefllled)
       const payload = {
         ...formData,
-        overallRating,
-        checklistItems: checklistItemsArray,
+        decision: formData.decision as string, // Cast since backend expects string and form validates it
+        checklistItems: checklistItemsArray.length > 0 ? checklistItemsArray : [],
+        goodLooking,
+        fairness,
+        languageProficiency,
       };
 
       await completeScreening({ id: routeId, data: payload }).unwrap();
+
+      if (formData.decision === "needs_training" && interview?.candidateProjectMap?.id && user?.id) {
+        try {
+          await createTrainingAssignment({
+            candidateProjectMapId: interview.candidateProjectMap.id,
+            screeningId: routeId,
+            assignedBy: user.id,
+            trainingType: formData.trainingType || TRAINING_TYPE.INTERVIEW_SKILLS,
+            focusAreas: formData.focusAreas || [],
+            priority: formData.priority || TRAINING_PRIORITY.MEDIUM,
+            targetCompletionDate: formData.targetCompletionDate || undefined,
+            notes: formData.trainingNotes || formData.remarks || "",
+          }).unwrap();
+          toast.success("Training assignment created");
+        } catch (trainingError: any) {
+          toast.error(trainingError?.data?.message || "Failed to create training assignment");
+        }
+      }
+
       toast.success("Interview completed successfully!");
       setCompleteInterviewOpen(false);
       setChecklistItems({});
@@ -754,6 +760,82 @@ export default function ConductScreeningPage() {
       {/* Interview Status moved into Interview Details header above */}
 
       {/* Feedback Section */}
+      {/* Assessment Ratings Section (Capture Look, Fairness, Language during interview) */}
+      <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
+        <CardHeader className="pb-3 border-b border-indigo-200/50">
+          <CardTitle className="text-xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Evaluation Ratings
+          </CardTitle>
+          <p className="text-xs text-slate-500 font-medium">Capture early assessment signals during the interview.</p>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                Appearance (1-5)
+                <Badge variant="outline" className="text-indigo-600 bg-indigo-50">{goodLooking}/5</Badge>
+              </Label>
+              <Input 
+                type="range" 
+                min="1" 
+                max="5" 
+                step="1" 
+                value={goodLooking} 
+                onChange={(e) => setGoodLooking(parseInt(e.target.value))}
+                className="accent-indigo-600"
+              />
+              <div className="flex justify-between px-1 text-[10px] text-slate-400 font-medium">
+                <span>Poor</span>
+                <span>Fair</span>
+                <span>Good</span>
+                <span>Great</span>
+                <span>Excellent</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                Fairness (1-5)
+                <Badge variant="outline" className="text-indigo-600 bg-indigo-50">{fairness}/5</Badge>
+              </Label>
+              <Input 
+                type="range" 
+                min="1" 
+                max="5" 
+                step="1" 
+                value={fairness} 
+                onChange={(e) => setFairness(parseInt(e.target.value))}
+                className="accent-indigo-600"
+              />
+              <div className="flex justify-between px-1 text-[10px] text-slate-400 font-medium">
+                <span>Low</span>
+                <span>Unfair</span>
+                <span>Neutral</span>
+                <span>Fair</span>
+                <span>Very Fair</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-slate-700 mb-2">Language Proficiency</Label>
+              <select 
+                value={languageProficiency}
+                onChange={(e) => setLanguageProficiency(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="Poor">Poor</option>
+                <option value="Basic Interface">Basic Interface</option>
+                <option value="Basic">Basic</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Fluent">Fluent</option>
+                <option value="Excellent">Excellent</option>
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Feedback Section */}
       {interview.conductedAt && (
        <Card className="border-0 shadow-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/90 rounded-2xl overflow-hidden ring-1 ring-teal-200/30 hover:shadow-3xl transition-all duration-300">
   <CardHeader className="pb-3 border-b border-teal-200/50">
@@ -888,7 +970,7 @@ export default function ConductScreeningPage() {
             {templates.map((t) => (
               <div
                 key={t.id}
-                onClick={() => setSelectedTemplateId(t.id)}
+                onClick={() => setSelectedTemplateId(prev => (prev === t.id ? null : t.id))}
                 className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                   selectedTemplateId === t.id
                     ? 'border-indigo-400 bg-indigo-50/80 ring-2 ring-indigo-400/30 shadow-md'
@@ -987,7 +1069,22 @@ export default function ConductScreeningPage() {
 
       {/* Right: Items Preview */}
       <div className="lg:col-span-3">
-        <div className="text-sm font-semibold text-indigo-700 mb-3">Template Preview</div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-semibold text-indigo-700">Template Preview</div>
+          
+          {/* Quick Complete Button - When no template is selected */}
+          {!selectedTemplate && (
+            <Button
+              onClick={handleCompleteInterview}
+              variant="outline"
+              size="sm"
+              className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-2 h-8"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Complete Without Template
+            </Button>
+          )}
+        </div>
 
         {!selectedTemplate && (
           <div className="rounded-xl border border-indigo-200/50 bg-white/50 p-8 text-center shadow-inner">
@@ -1265,13 +1362,20 @@ export default function ConductScreeningPage() {
         open={completeInterviewOpen}
         onOpenChange={setCompleteInterviewOpen}
         onSubmit={handleSubmitCompleteInterview}
-        isLoading={completeMutationLoading}
+        isLoading={completeMutationLoading || isCreatingTraining}
         overallScorePct={(Object.values(checklistItems).length
           ? Object.values(checklistItems).reduce((acc, item) => acc + (item.score ?? 0), 0) / Object.values(checklistItems).length
           : undefined) as number | undefined}
         derivedRating={(Object.values(checklistItems).length
           ? Math.max(1, Math.round((((Object.values(checklistItems).reduce((acc, item) => acc + (item.score ?? 0), 0) / Object.values(checklistItems).length) / 100) * 5)))
           : undefined) as number | undefined}
+        checklistItems={checklistItems}
+        checklistMetadata={interview?.template?.items || []}
+        assessmentRatings={{
+          goodLooking,
+          fairness,
+          languageProficiency
+        }}
       />
 
        <EditScreeningDialog

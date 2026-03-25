@@ -57,11 +57,86 @@ export class CompleteScreeningDto {
   areasOfImprovement?: string;
 
   @ApiProperty({
+    description: 'Candidate appearance score (1-5)',
+    example: 4,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  goodLooking?: number;
+
+  @ApiProperty({
+    description: 'Impression of fairness score (1-5)',
+    example: 4,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  fairness?: number;
+
+  @ApiProperty({
+    description: 'Language proficiency description',
+    example: 'fluent',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  languageProficiency?: string;
+
+  @ApiProperty({
     description: 'Checklist items evaluation',
     type: [ChecklistItemDto],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ChecklistItemDto)
-  checklistItems: ChecklistItemDto[];
+  checklistItems?: ChecklistItemDto[];
+
+  @ApiProperty({
+    description: 'Training type (optional for needs_training)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  trainingType?: string;
+
+  @ApiProperty({
+    description: 'Focus areas for training',
+    type: [String],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  focusAreas?: string[];
+
+  @ApiProperty({
+    description: 'Training priority',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  priority?: string;
+
+  @ApiProperty({
+    description: 'Target completion date for training',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  targetCompletionDate?: string;
+
+  @ApiProperty({
+    description: 'Training notes',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  trainingNotes?: string;
 }

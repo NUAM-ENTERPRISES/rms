@@ -134,4 +134,35 @@ export class CreateScreeningDto {
   @IsOptional()
   @IsBoolean()
   isAssignedTrainer?: boolean;
+
+  @ApiProperty({
+    description: 'Candidate appearance score (1-5)',
+    example: 4,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  goodLooking?: number;
+
+  @ApiProperty({
+    description: 'Impression of fairness score (1-5)',
+    example: 4,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  fairness?: number;
+
+  @ApiProperty({
+    description: 'Language proficiency description',
+    example: 'fluent',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  languageProficiency?: string;
 }

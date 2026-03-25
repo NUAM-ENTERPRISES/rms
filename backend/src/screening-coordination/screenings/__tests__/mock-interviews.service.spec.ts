@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ScreeningsService } from '../screenings.service';
+import { CandidateProjectsService } from '../../../candidate-projects/candidate-projects.service';
+import { OutboxService } from '../../../notifications/outbox.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { CreateScreeningDto } from '../dto/create-screening.dto';
 
@@ -40,6 +42,8 @@ describe('ScreeningsService', () => {
       providers: [
         ScreeningsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: CandidateProjectsService, useValue: {} },
+        { provide: OutboxService, useValue: { publishCandidateSentToScreening: jest.fn() } },
       ],
     }).compile();
 
@@ -243,6 +247,82 @@ describe('ScreeningsService', () => {
 
     expect(tx.user.findUnique).not.toHaveBeenCalled();
     expect(tx.interviewStatusHistory.create).toHaveBeenCalled();
+  });
+
+  it('findAll should not require isAssignedTrainer false and should return needs_training', async () => {
+    const mockItem = {
+      id: 'snt1',
+      decision: 'needs_training',
+      candidateProjectMapId: 'cp1',
+      candidateProjectMap: {
+        candidate: {
+          id: 'c1',
+          firstName: 'John',
+          lastName: 'Doe',
+          countryCode: '+1',
+          mobileNumber: '5550001',
+        },
+      },
+      scheduledTime: null,
+    } as any;
+
+    prisma.screening.count.mockResolvedValue(1);
+    prisma.screening.findMany.mockResolvedValue([mockItem]);
+    jest.spyOn(service as any, 'addDocumentVerificationFlag').mockResolvedValue([
+      {
+        ...mockItem,
+        isDocumentVerificationRequired: false,
+        isDocumentVerified: false,
+      },
+    ]);
+
+    const res = await service.findAll({ page: 1, limit: 10, decision: 'needs_training' } as any);
+
+    expect(res.success).toBe(true);
+    expect(res.data.items).toHaveLength(1);
+    expect(prisma.screening.count).toHaveBeenCalledWith({ where: { decision: 'needs_training' } });
+    expect(prisma.screening.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { decision: 'needs_training' },
+      }),
+    );
+  });
+
+  it('findAll returns linked trainingAssignments in each screening item', async () => {
+    const mockTraining = [{
+      id: 't1',
+      trainingType: 'technical',
+      status: 'assigned',
+      assignedAt: new Date(),
+      candidateProjectMapId: 'cp1',
+      screeningId: 'snt1',
+      focusAreas: ['JavaScript'],
+      priority: 'high',
+    } as any];
+
+    const mockItem = {
+      id: 'snt1',
+      decision: 'needs_training',
+      candidateProjectMapId: 'cp1',
+      candidateProjectMap: { id: 'cp1' },
+      trainingAssignments: mockTraining,
+    } as any;
+
+    prisma.screening.count.mockResolvedValue(1);
+    prisma.screening.findMany.mockResolvedValue([mockItem]);
+    jest.spyOn(service as any, 'addDocumentVerificationFlag').mockResolvedValue([
+      {
+        ...mockItem,
+        isDocumentVerificationRequired: false,
+        isDocumentVerified: false,
+      },
+    ]);
+
+    const res = await service.findAll({ page: 1, limit: 10, decision: 'needs_training' } as any);
+
+    expect(res.success).toBe(true);
+    expect(res.data.items[0].trainingAssignments).toBeDefined();
+    expect(res.data.items[0].trainingAssignments[0].id).toBe('t1');
   });
 
   it('findAll includes current map statuses (mainStatus/subStatus)', async () => {

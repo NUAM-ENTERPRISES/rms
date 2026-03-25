@@ -194,6 +194,16 @@ export class TrainingService {
     const items = await this.prisma.trainingAssignment.findMany({
       where,
       include: {
+        screening: {
+          select: {
+            id: true,
+            conductedAt: true,
+            decision: true,
+            overallRating: true,
+            remarks: true,
+            areasOfImprovement: true,
+          },
+        },
         candidateProjectMap: {
           include: {
             candidate: {
@@ -206,10 +216,9 @@ export class TrainingService {
                   country: true,
                   creator: { select: { id: true, name: true, email: true } },
                   team: true,
-                  rolesNeeded: true,
                 },
               },
-            roleNeeded: { select: { designation: true } },
+            roleNeeded: true,
           },
         },
         trainingSessions: {
@@ -221,11 +230,14 @@ export class TrainingService {
 
     // Add combined phone to candidate contact and batch fetch assigner users and attach their info to assignments
     const itemsWithCandidateContact = items.map((it) => ({
-      ...(it as any),
+      ...it,
       candidateProjectMap: {
         ...it.candidateProjectMap,
         candidate: it.candidateProjectMap?.candidate
-          ? { ...it.candidateProjectMap.candidate, phone: `${it.candidateProjectMap.candidate.countryCode ?? ''} ${it.candidateProjectMap.candidate.mobileNumber ?? ''}`.trim() }
+          ? { 
+              ...it.candidateProjectMap.candidate, 
+              phone: `${(it.candidateProjectMap.candidate as any).countryCode ?? ''} ${(it.candidateProjectMap.candidate as any).mobileNumber ?? ''}`.trim() 
+            }
           : null,
       },
     }));

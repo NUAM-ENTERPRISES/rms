@@ -91,6 +91,7 @@ export const screeningsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Screening", id },
         { type: "Screening", id: "LIST" },
+        { type: "Screening", id: "STATS" }, // Forces stats to refresh
         { type: "Candidate", id: "LIST" },
         { type: "Training", id: "LIST" },
       ],
@@ -140,8 +141,13 @@ export const screeningsApi = baseApi.injectEndpoints({
           url: `/screenings/coordinator/${coordinatorId}/stats`,
         };
       },
-      providesTags: (result) =>
-        result ? [{ type: 'Screening', id: `stats-${result.coordinatorId ?? 'global'}` }] : [{ type: 'Screening', id: 'LIST' }],
+      providesTags: (_result, _error, arg) => {
+        const coordinatorId = typeof arg === 'string' ? arg : arg.coordinatorId;
+        return [
+          { type: 'Screening', id: `stats-${coordinatorId}` },
+          { type: 'Screening', id: 'STATS' }
+        ];
+      },
     }),
 
     // Assign candidate to a MAIN interview (creates/links main interview and optionally marks the screening as assigned)

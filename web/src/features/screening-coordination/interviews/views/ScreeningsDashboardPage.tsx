@@ -14,7 +14,6 @@ import {
   UserCheck,
   Eye,
   Mail,
-  Phone,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -45,6 +44,7 @@ import {
   useGetUpcomingScreeningsQuery,
   useGetCoordinatorStatsQuery,
 } from "../data";
+import { useCreateTrainingAssignmentMutation } from "@/features/screening-coordination/training/data";
 import { useGetProjectQuery } from "@/features/projects/api";
 import { SCREENING_DECISION } from "../../types";
 import { format } from "date-fns";
@@ -53,6 +53,7 @@ import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 import { motion } from "framer-motion";
 import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
+import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
 
 type TileKey =
   | "assigned"
@@ -100,10 +101,10 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
   },
   {
     key: "retraining",
-    label: "Re-Training",
+    label: "Training",
     icon: Users,
     value: stats?.byDecision?.needsTraining ?? 0,
-    hint: "Candidates requiring retraining",
+    hint: "Candidate assigned to training",
     gradient: "from-yellow-400 to-amber-500",
     bgGradient: "from-yellow-50 to-amber-100/50",
     iconBg: "bg-yellow-200/40",
@@ -166,6 +167,8 @@ export default function ScreeningsDashboardPage() {
 
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
+  const [assignToTrainerOpen, setAssignToTrainerOpen] = useState(false);
+  const [selectedInterviewForTraining, setSelectedInterviewForTraining] = useState<any | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",
@@ -181,10 +184,12 @@ export default function ScreeningsDashboardPage() {
     setCurrentPage(1);
   }, [activeTile, filter, search]);
 
-  const { data: projectDetailData, isLoading: projectDetailLoading } = useGetProjectQuery(
+  const { data: projectDetailData } = useGetProjectQuery(
     selectedProjectId as string,
     { skip: !selectedProjectId }
   );
+
+  const [createTrainingAssignment, { isLoading: isCreatingTraining }] = useCreateTrainingAssignmentMutation();
 
   const queryParams = useMemo(() => ({
     page: currentPage,
@@ -264,6 +269,7 @@ export default function ScreeningsDashboardPage() {
       scheduledTime: item.scheduledTime,
       createdAt: item.createdAt,
       decision: item.decision,
+      mode: item.mode,
     }));
   }, [upcomingData]);
 
@@ -278,8 +284,11 @@ export default function ScreeningsDashboardPage() {
       status: item.status,
       subStatus: item.decision,
       scheduledTime: item.scheduledTime,
+      trainingAssignedAt: item.candidateProjectMap?.assignedAt ?? item.createdAt,
       createdAt: item.createdAt,
       decision: item.decision,
+      conductedAt: item.conductedAt,
+      overallRating: item.overallRating,
     }));
   }, [decisionData]);
 
@@ -498,12 +507,26 @@ export default function ScreeningsDashboardPage() {
                     )}
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project & Role</TableHead>
-                    {activeTile !== "assigned" && (
+                    {activeTile === "scheduled" ? (
+                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Mode</TableHead>
+                    ) : activeTile !== "assigned" && (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Decision</TableHead>
+                    )}
+                    {((activeTile === "retraining") || (activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
+                      <>
+                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Conducted At</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Overall Rating</TableHead>
+                      </>
                     )}
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Status</TableHead>
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">
-                      {activeTile === "assigned" ? "Assigned At" : "Scheduled"}
+                      {activeTile === "assigned"
+                        ? "Assigned At"
+                        : activeTile === "scheduled"
+                        ? "Scheduled"
+                        : activeTile === "retraining"
+                        ? "Training Assigned At"
+                        : "Scheduled"}
                     </TableHead>
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
                     <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600">Actions</TableHead>
@@ -520,6 +543,14 @@ export default function ScreeningsDashboardPage() {
                         .replace("needs_training", "Needs Training")
                         .replace("on_hold", "On Hold")
                         .replace("approved", "Passed");
+
+                      const targetScreeningsUrl = activeTile === "scheduled"
+                        ? `/screenings/${item.id}/conduct`
+                        : activeTile === "retraining"
+                        ? "/screenings/training"
+                        : ["passed", "on_hold"].includes(activeTile)
+                        ? "/screenings/list"
+                        : "/screenings";
 
                       return (
                         <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
@@ -547,12 +578,7 @@ export default function ScreeningsDashboardPage() {
                               <div className="flex-1">
                                 <button
                                   onClick={() => {
-                                    if (activeTile === "assigned") {
-                                      setSelectedAssignment(item);
-                                      setIsScheduleOpen(true);
-                                    } else {
-                                      navigate(`/screenings/${item.id}`);
-                                    }
+                                    navigate(targetScreeningsUrl);
                                   }}
                                   className="font-semibold text-gray-900 hover:text-indigo-600 hover:underline transition-all duration-200 text-left text-sm"
                                 >
@@ -588,7 +614,16 @@ export default function ScreeningsDashboardPage() {
                               <span className="text-[10px] text-slate-500 font-medium">{roleName}</span>
                             </div>
                           </TableCell>
-                          {activeTile !== "assigned" && (
+                          {activeTile === "scheduled" ? (
+                            <TableCell className="px-4 py-2">
+                              <Badge
+                                variant="outline"
+                                className="border font-medium text-[10px] px-2 py-0.5 capitalize bg-blue-50 text-blue-700 border-blue-200"
+                              >
+                                {item.mode || "Online"}
+                              </Badge>
+                            </TableCell>
+                          ) : activeTile !== "assigned" && (
                             <TableCell className="px-4 py-2">
                               <Badge
                                 variant="outline"
@@ -604,15 +639,46 @@ export default function ScreeningsDashboardPage() {
                               </Badge>
                             </TableCell>
                           )}
+                          {((activeTile === "retraining") || (activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
+                            <>
+                              <TableCell className="px-4 py-2 text-[11px] text-gray-600">
+                                {item.conductedAt ? format(new Date(item.conductedAt), "dd MMM, HH:mm") : "-"}
+                              </TableCell>
+                              <TableCell className="px-4 py-2">
+                                {item.overallRating != null ? (
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold",
+                                      item.overallRating >= 80
+                                        ? "bg-emerald-100 text-emerald-700"
+                                        : item.overallRating >= 60
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-red-100 text-red-700"
+                                    )}
+                                  >
+                                    {item.overallRating}%
+                                  </span>
+                                ) : (
+                                  "-"
+                                )}
+                              </TableCell>
+                            </>
+                          )}
                           <TableCell className="px-4 py-2">
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
                               {item.status || "-"}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-4 py-2 text-[11px] text-gray-600">
-                            {activeTile === "assigned"
-                              ? item.createdAt ? format(new Date(item.createdAt), "dd MMM, HH:mm") : "-"
-                              : item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"}
+                            {activeTile === "assigned" ? (
+                              item.createdAt ? format(new Date(item.createdAt), "dd MMM, HH:mm") : "-"
+                            ) : activeTile === "scheduled" ? (
+                              item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
+                            ) : activeTile === "retraining" ? (
+                              item.trainingAssignedAt ? format(new Date(item.trainingAssignedAt), "dd MMM, HH:mm") : "-"
+                            ) : (
+                              item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
+                            )}
                           </TableCell>
                           <TableCell className="px-4 py-2">
                             <div className="flex items-center gap-1.5">
@@ -620,24 +686,17 @@ export default function ScreeningsDashboardPage() {
                               <span className="text-[11px] font-medium text-slate-800">{item.recruiter?.name ?? "-"}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-2 text-right">
-                            {activeTile === "assigned" ? (
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm text-[10px] h-7 px-2"
-                                onClick={() => {
-                                  setSelectedAssignment(item);
-                                  setIsScheduleOpen(true);
-                                }}
-                              >
-                                Schedule
-                              </Button>
-                            ) : (
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => navigate(`/screenings/${item.id}`)}>
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
+                          <TableCell className="px-4 py-2 text-right flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0"
+                              onClick={() => {
+                                navigate(targetScreeningsUrl);
+                              }}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -755,6 +814,44 @@ export default function ScreeningsDashboardPage() {
             setSelectedProjectId(null);
           }}
           project={projectDetailData?.data}
+        />
+
+        <AssignToTrainerDialog
+          open={assignToTrainerOpen}
+          onOpenChange={setAssignToTrainerOpen}
+          candidateName={
+            selectedInterviewForTraining?.candidateProjectMap?.candidate
+              ? `${selectedInterviewForTraining.candidateProjectMap.candidate.firstName} ${selectedInterviewForTraining.candidateProjectMap.candidate.lastName}`
+              : undefined
+          }
+          onSubmit={async (formData: any) => {
+            if (!selectedInterviewForTraining) return;
+            if (!user?.id) {
+              return;
+            }
+            try {
+              await createTrainingAssignment({
+                candidateProjectMapId: selectedInterviewForTraining?.candidateProjectMap?.id,
+                screeningId: selectedInterviewForTraining.id,
+                assignedBy: user.id,
+                trainingType: formData.trainingType,
+                focusAreas: formData.focusAreas,
+                priority: formData.priority,
+                targetCompletionDate: formData.targetCompletionDate || undefined,
+                notes: formData.notes,
+              }).unwrap();
+
+              setAssignToTrainerOpen(false);
+              setSelectedInterviewForTraining(null);
+              refetchAssigned();
+              refetchUpcoming();
+              refetchStats();
+            } catch (err: any) {
+              // preserve current behavior with toast
+            }
+          }}
+          isLoading={isCreatingTraining}
+          screeningId={selectedInterviewForTraining?.id}
         />
       </div>
     </div>

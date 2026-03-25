@@ -1277,9 +1277,9 @@ export class NotificationsProcessor extends WorkerHost {
           const idemKey = `${eventId}:${coordinator.id}:candidate_sent_to_screening`;
 
           const isInitialAssignment = !screening?.scheduledTime;
-          const title = isInitialAssignment ? 'Trainer Assigned' : 'New Screening Scheduled';
+          const title = isInitialAssignment ? 'Screening Assigned' : 'New Screening Scheduled';
           const message = isInitialAssignment 
-            ? `You have been assigned as a trainer for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
+            ? `You have been assigned to conduct a screening for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
             : `Candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has been scheduled for a screening for project ${candidateProjectMap.project.title}.`;
 
           await this.notificationsService.createNotification({
@@ -1310,9 +1310,9 @@ export class NotificationsProcessor extends WorkerHost {
           if (ic.id !== scheduledBy && ic.id !== coordinatorId) {
             const isInitialAssignment = !screening?.scheduledTime;
             const icIdemKey = `${eventId}:${ic.id}:ic_sent_to_screening`;
-            const icTitle = isInitialAssignment ? 'Trainer Assigned' : 'New Screening Scheduled';
+            const icTitle = isInitialAssignment ? 'Screening Assigned' : 'New Screening Scheduled';
             const icMessage = isInitialAssignment 
-              ? `A trainer has been assigned for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
+              ? `A screening has been assigned for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
               : `A screening has been scheduled for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`;
 
             await this.notificationsService.createNotification({
@@ -1331,9 +1331,9 @@ export class NotificationsProcessor extends WorkerHost {
         if (recruiterId && recruiterId !== scheduledBy) {
           const idemKeyRecruiter = `${eventId}:${recruiterId}:candidate_sent_to_screening`;
           const isInitialAssignment = !screening?.scheduledTime;
-          const title = isInitialAssignment ? 'Trainer Assigned for Candidate' : 'Screening Scheduled for Candidate';
+          const title = isInitialAssignment ? 'Screening Assigned for Candidate' : 'Screening Scheduled for Candidate';
           const message = isInitialAssignment
-            ? `A trainer has been assigned for your candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
+            ? `A screening has been assigned for your candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} in project ${candidateProjectMap.project.title}.`
             : `Your candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has a screening scheduled for project ${candidateProjectMap.project.title}.`;
 
           await this.notificationsService.createNotification({
@@ -1448,8 +1448,8 @@ export class NotificationsProcessor extends WorkerHost {
         await this.notificationsService.createNotification({
           userId: recruiterId,
           type: 'screening_passed',
-          title: 'Candidate Approved for Client Interview',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}). You can now schedule the client interview.`,
+          title: 'Candidate Passed Screening',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}).`,
           link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
           meta: {
             candidateProjectMapId,
@@ -1471,8 +1471,8 @@ export class NotificationsProcessor extends WorkerHost {
         await this.notificationsService.createNotification({
           userId: teamHeadId,
           type: 'screening_passed',
-          title: 'Candidate Ready for Client Interview',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}) and is ready for client interview.`,
+          title: 'Candidate Passed Screening',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}).`,
           link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
           meta: {
             candidateProjectMapId,

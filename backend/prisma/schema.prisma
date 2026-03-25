@@ -585,6 +585,11 @@ model Screening {
   strengths          String?   @db.Text
   areasOfImprovement String?   @db.Text
 
+  // Additional assessment metrics
+  goodLooking        Int?      // 1-5 scale
+  fairness           Int?      // 1-5 scale
+  languageProficiency String? 
+
   // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

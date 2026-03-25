@@ -229,6 +229,11 @@ export interface CompleteScreeningRequest {
   strengths?: string;
   areasOfImprovement?: string;
   checklistItems: ChecklistItemInput[];
+  trainingType?: string;
+  focusAreas?: string[];
+  priority?: string;
+  targetCompletionDate?: string;
+  trainingNotes?: string;
 }
 
 export interface QueryScreeningsRequest {
