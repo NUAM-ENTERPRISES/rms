@@ -310,6 +310,30 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const allCandidateDocuments = requirementsDataTyped?.allCandidateDocuments || [];
   const candidateQuals = (candidate?.qualifications || candidate?.candidateQualifications || []) as MergedQualification[];
 
+  const statusBlocklist = new Set<string>([
+    "screening_assigned",
+    "screening_scheduled",
+    "screening_completed",
+    "screening_passed",
+    "screening_failed",
+    "training_assigned",
+    "training_scheduled",
+    "training_in_progress",
+    "training_completed",
+    "ready_for_reassessment",
+  ]);
+
+  const isInScreeningOrTraining = candidateProject?.subStatus?.name
+    ? statusBlocklist.has(candidateProject.subStatus.name)
+    : false;
+
+  const isVerificationSent = requirementsDataTyped?.isSendedForDocumentVerification ||
+    candidateProject?.isSendedForDocumentVerification ||
+    candidateProject?.subStatus?.name === "verification_in_progress_document" ||
+    candidateProject?.status === "verification_in_progress_document";
+
+  const shouldDisableItemVerification = isVerificationSent || isInScreeningOrTraining;
+
   const handleUploadDocument = async (file: File) => {
     if (!uploadDocType || !candidateId || !projectId) return;
 
@@ -479,11 +503,6 @@ const RecruiterDocsDetailPage: React.FC = () => {
     setIsVerifyConfirmOpen(true);
   };
 
-  const isVerificationSent = requirementsDataTyped?.isSendedForDocumentVerification ||
-                             candidateProject?.isSendedForDocumentVerification || 
-                             candidateProject?.subStatus?.name === "verification_in_progress_document" || 
-                             candidateProject?.status === "verification_in_progress_document";
-
   if (isProjectLoading || isRequirementsLoading) return <LoadingScreen />;
   if (projectError || !project) {
     return (
@@ -567,15 +586,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </Badge>
                 )}
               </>
-            ) : candidateProject?.subStatus?.name === "screening_assigned" ? (
+            ) : shouldDisableItemVerification ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div>
-                      <Button 
+                      <Button
                         variant="default"
                         className="bg-slate-400 hover:bg-slate-400 text-white cursor-not-allowed opacity-60"
-                        disabled={true}
+                        disabled
                       >
                         <Send className="mr-2 h-4 w-4" />
                         Send for Verification
@@ -583,13 +602,13 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="start" className="max-w-xs bg-red-50 border border-red-200 text-red-700 transform -translate-x-6">
-                    <p className="font-semibold text-sm">Screening in Progress</p>
-                    <p className="text-xs mt-1">This candidate has been assigned for screening. You can send for document verification once the screening process is complete.</p>
+                    <p className="font-semibold text-sm">Verification disabled</p>
+                    <p className="text-xs mt-1">The candidate is currently in screening/training status and cannot be sent for document verification yet.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <Button 
+              <Button
                 variant="default"
                 className="bg-purple-600 hover:bg-purple-700 text-white"
                 onClick={openVerifyModal}

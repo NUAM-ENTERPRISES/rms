@@ -1331,10 +1331,8 @@ export class NotificationsProcessor extends WorkerHost {
         if (recruiterId && recruiterId !== scheduledBy) {
           const idemKeyRecruiter = `${eventId}:${recruiterId}:candidate_sent_to_screening`;
           const isInitialAssignment = !screening?.scheduledTime;
-          const title = isInitialAssignment ? 'Action Required: Upload Candidate Documents' : 'Screening Scheduled for Candidate';
-          const message = isInitialAssignment
-            ? `Candidate assigned for screening; please upload the candidate documents.`
-            : `Your candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has a screening scheduled in project ${candidateProjectMap.project.title}. Please upload required documents.`;
+          const title = 'Screening Scheduled for Candidate';
+          const message = `Screening scheduled for candidate ${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName}; please also complete candidate document upload.`;
 
           await this.notificationsService.createNotification({
             userId: recruiterId,

@@ -26,6 +26,11 @@ export const handleScreeningNotifications = ({ notification, dispatch, invalidat
     tags.push({ type: "Project", id: notification.meta.projectId });
   }
 
+  if (notification.meta?.candidateId) {
+    tags.push({ type: "DocumentVerification", id: notification.meta.candidateId });
+    tags.push({ type: "RecruiterDocuments", id: notification.meta.candidateId });
+  }
+
   dispatch(invalidateTags(tags));
 
   return true;

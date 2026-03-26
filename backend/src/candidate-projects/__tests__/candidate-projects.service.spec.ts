@@ -18,7 +18,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     candidateProjectMainStatus: { findUnique: jest.fn() },
     candidateProjectSubStatus: { findUnique: jest.fn() },
     candidateProjects: { findFirst: jest.fn(), update: jest.fn(), create: jest.fn() },
-    candidateProjectStatusHistory: { create: jest.fn() },
+    candidateProjectStatusHistory: { findFirst: jest.fn(), create: jest.fn() },
     interviewStatusHistory: { create: jest.fn() },
     trainingAssignment: { create: jest.fn() },
     candidateRecruiterAssignment: { findFirst: jest.fn() },
@@ -38,7 +38,6 @@ describe('CandidateProjectsService - sendForInterview', () => {
 
     service = module.get(CandidateProjectsService);
     prisma = module.get(PrismaService) as jest.Mocked<PrismaService>;
-
     (prisma.candidateRecruiterAssignment.findFirst as any).mockResolvedValue(null);
   });
 
@@ -208,6 +207,21 @@ describe('CandidateProjectsService - sendForInterview', () => {
         link: '/projects/p1',
       }),
     );
+  });
+
+  it('sendForVerification blocks if candidate is already in screening/training status', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [] });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Documents' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Verification In Progress' });
+
+    const existing = { id: 'map1', candidateId: 'c1', candidate: { firstName: 'A' }, project: { id: 'p1' }, subStatus: { name: 'screening_assigned' } };
+    prisma.candidateProjects.findFirst.mockResolvedValue(existing);
+
+    await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow('Candidate currently in screening/ng.training stage. Cannot send for verification.');
   });
 
   it('sendForVerification publishes outbox event for document verification', async () => {

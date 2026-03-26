@@ -442,7 +442,51 @@ export class CandidateProjectsService {
         projectId,
         roleNeededId: roleNeededId || null,
       },
+      include: {
+        subStatus: true,
+      },
     });
+
+    const screeningTrainingStatuses = [
+      'screening_assigned',
+      'screening_scheduled',
+      'screening_completed',
+      'screening_passed',
+      'screening_failed',
+      'training_assigned',
+      'training_scheduled',
+      'training_in_progress',
+      'training_completed',
+      'ready_for_reassessment',
+    ];
+
+    if (existingAssignment && existingAssignment.subStatus && screeningTrainingStatuses.includes(existingAssignment.subStatus.name)) {
+      throw new BadRequestException(
+        'Candidate currently in screening/ng.training stage. Cannot send for verification.',
+      );
+    }
+
+    if (existingAssignment) {
+      const existingBlockedHistory = await this.prisma.candidateProjectStatusHistory.findFirst({
+        where: {
+          candidateProjectMapId: existingAssignment.id,
+          subStatus: {
+            name: {
+              in: screeningTrainingStatuses,
+            },
+          },
+        },
+        orderBy: {
+          statusChangedAt: 'desc',
+        },
+      });
+
+      if (existingBlockedHistory) {
+        throw new BadRequestException(
+          'Candidate already has screening/training and cannot be sent for document verification at this stage.',
+        );
+      }
+    }
 
     // -------------------------------
     // CREATE OR UPDATE ASSIGNMENT
