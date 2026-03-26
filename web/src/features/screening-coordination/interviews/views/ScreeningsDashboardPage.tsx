@@ -501,7 +501,7 @@ export default function ScreeningsDashboardPage() {
         </div>
 
         {/* ── Status Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {allStats.map((tile, i) => {
             const Icon = tile.icon;
             const isActive = activeTile === tile.key;
@@ -512,9 +512,6 @@ export default function ScreeningsDashboardPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                className={cn(
-                  tile.key === "pass_rate" ? "md:col-start-1" : ""
-                )}
               >
                 <Card
                   onClick={() => setActiveTile(tile.key)}
@@ -929,7 +926,6 @@ export default function ScreeningsDashboardPage() {
                                 }}
                               >
                                 <Calendar className="h-3.5 w-3.5 mr-1" />
-                                Schedule Training
                               </Button>
                             )}
                             {activeTile === "training_scheduled" && (
