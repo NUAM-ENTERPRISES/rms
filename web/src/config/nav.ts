@@ -58,6 +58,13 @@ export const navigationConfig: NavItem[] = [
     // Recruiter Dashboard - points to Candidate Overview
   },
   {
+    id: "documentation-dashboard",
+    label: "Dashboard",
+    path: "/documents/verification",
+    icon: FileText,
+    roles: ["Documentation Executive"],
+  },
+  {
     id: "candidates",
     label: "Candidates",
     path: "/candidates",
@@ -194,6 +201,7 @@ export const navigationConfig: NavItem[] = [
     path: "/interviews",
     icon: Calendar,
     permissions: ["read:interviews"],
+    hiddenForRoles: ["Documentation Executive"],
     children: [
       {
         id: "interviews-dashboard",
@@ -249,7 +257,7 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
-    hiddenForRoles: ["Screening Trainer"],
+    hiddenForRoles: ["Screening Trainer", "Documentation Executive"],
     children: [
       {
         id: "screenings-dashboard",
@@ -284,7 +292,7 @@ export const navigationConfig: NavItem[] = [
     path: "/documents",
     icon: FileText,
     permissions: ["read:documents"],
-    hiddenForRoles: ["Interview Coordinator", "Recruiter", "CRE"],
+    hiddenForRoles: ["Interview Coordinator", "Recruiter", "CRE", "Documentation Executive"],
     children: [
       {
         id: "documents-verification",

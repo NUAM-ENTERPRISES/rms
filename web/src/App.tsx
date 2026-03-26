@@ -241,6 +241,9 @@ const ProcessingCandidateDetailsPage = lazy(
 const ProcessingAdminDashboardPage = lazy(
   () => import("@/features/processing/views/ProcessingAdminDashboardPage")
 );
+const DocumentVerificationDashboard = lazy(
+  () => import("@/pages/DocumentVerificationDashboard")
+);
 
 // Role-based redirect component
 function RoleBasedRedirect() {
@@ -289,6 +292,15 @@ function RoleBasedRedirect() {
     return (
       <AppLayout>
         <InterviewsPage />
+      </AppLayout>
+    );
+  }
+
+  // Documentation Executives should land on the document verification workspace
+  if (user?.roles.includes("Documentation Executive")) {
+    return (
+      <AppLayout>
+        <DocumentVerificationDashboard />
       </AppLayout>
     );
   }
