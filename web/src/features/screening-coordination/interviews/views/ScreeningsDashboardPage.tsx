@@ -714,13 +714,13 @@ export default function ScreeningsDashboardPage() {
                         : activeTile === "scheduled"
                         ? "Scheduled"
                         : activeTile === "retraining"
-                        ? "Training Assigned At"
+                        ? "Assigned At"
                         : "Scheduled"}
                     </TableHead>
                     {(activeTile !== "retraining" && activeTile !== "training_scheduled") && (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600">Actions</TableHead>
+                    <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600 w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -910,7 +910,7 @@ export default function ScreeningsDashboardPage() {
                               </div>
                             </TableCell>
                           )}
-                          <TableCell className="px-4 py-2 text-right flex items-center justify-end gap-2">
+                          <TableCell className="px-4 py-2 text-right flex items-center justify-end gap-2 w-24">
                             {activeTile === "retraining" && (
                               <Button
                                 size="sm"
@@ -967,16 +967,32 @@ export default function ScreeningsDashboardPage() {
                                 <Pencil className="h-3.5 w-3.5 text-amber-600" />
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              onClick={() => {
-                                navigate(targetScreeningsUrl);
-                              }}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
+                            {activeTile === "assigned" ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => {
+                                  setSelectedAssignment(item);
+                                  setIsScheduleOpen(true);
+                                }}
+                                title="Schedule screening"
+                              >
+                                <Calendar className="h-3.5 w-3.5 text-indigo-600" />
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => {
+                                  navigate(targetScreeningsUrl);
+                                }}
+                                title="View details"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
