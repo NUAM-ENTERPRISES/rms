@@ -311,8 +311,8 @@ export class CandidateProjectsService {
         return this.notificationsService.createNotification({
           userId: coordinator.id,
           type: 'candidate_assigned_project',
-          title: 'Candidate Assigned to Project',
-          message: `${candidateName} has been assigned to project ${project.title}. Please assign them for training.`,
+          title: 'Project Screening Required',
+          message: `Project screening required: ${candidateName} has been assigned to this project ${project.title}. Please assign for screening.`,
           link: `/projects/${project.id}`,
           meta: {
             projectId: project.id,
@@ -757,12 +757,12 @@ export class CandidateProjectsService {
       return { ...assignment, screeningId };
     });
 
-    // Publish an outbox event so downstream services notify coordinators
+    // Publish an outbox event so downstream services notify coordinator and recruiter
     await this.outboxService.publishCandidateSentToScreening(
       result.id,
       result.screeningId || '', // screeningId
-      createDto.coordinatorId || '', // Use the provided coordinator or empty string
-      recruiterId || userId || '',
+      createDto.coordinatorId || '', // coordinatorId for this screening
+      finalRecruiterId || null, // notify the actual recruiter assigned to this candidate
       userId, // scheduledBy
     );
 
@@ -3075,8 +3075,8 @@ export class CandidateProjectsService {
             return this.notificationsService.createNotification({
               userId: coord.id,
               type: 'candidate_assigned_project',
-              title: 'Candidate Assigned to Project',
-              message: `${candidateName} has been assigned to project ${project.title}. Please assign them for training.`,
+              title: 'Project Screening Required',
+              message: `Project screening required: ${candidateName} has been assigned to this project ${project.title}. Please assign for screening.`,
               link: `/projects/${project.id}`,
               meta: {
                 projectId: project.id,

@@ -139,6 +139,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
       '',
       '',
       'u1',
+      'u1',
     );
   });
 
@@ -202,6 +203,8 @@ describe('CandidateProjectsService - sendForInterview', () => {
       expect.objectContaining({
         userId: 'coord1',
         type: 'candidate_assigned_project',
+        title: 'Project Screening Required',
+        message: 'Project screening required: John Doe has been assigned to this project Project P. Please assign for screening.',
         link: '/projects/p1',
       }),
     );
