@@ -80,6 +80,7 @@ export class TrainingService {
           candidateProjectMapId: dto.candidateProjectMapId,
           screeningId: (dto as any).screeningId ?? (dto as any).screeningId,
           assignedBy: dto.assignedBy,
+          trainerId: (dto as any).trainerId ?? dto.assignedBy,
           trainingType: dto.trainingType,
           focusAreas: dto.focusAreas,
           priority: dto.priority ?? 'medium',
@@ -160,13 +161,14 @@ export class TrainingService {
         assigner = await tx.user.findUnique({ where: { id: dto.assignedBy }, select: { id: true, name: true, email: true } });
       }
 
+      const assignmentAny = assignment as any;
       return {
-        ...assignment,
+        ...assignmentAny,
         candidateProjectMap: {
-          ...assignment.candidateProjectMap,
+          ...assignmentAny.candidateProjectMap,
           candidate,
         },
-        assignedBy: assigner ?? assignment.assignedBy,
+        assignedBy: assigner ?? assignmentAny.assignedBy,
       };
     });
   }
@@ -243,14 +245,38 @@ export class TrainingService {
           : null,
       },
     }));
-    // Batch fetch assigner users and attach their info to assignments
-    const assignerIds = Array.from(new Set(items.map((it) => it.assignedBy).filter(Boolean)));
+    // Batch fetch assigner and trainer users and attach their info to assignments
+    const userIds = Array.from(new Set([
+      ...items.map((it) => it.assignedBy).filter(Boolean),
+      ...items.map((it) => (it as any).trainerId).filter(Boolean),
+    ]));
     let usersById: Record<string, any> = {};
-    if (assignerIds.length > 0) {
-      const users = await this.prisma.user.findMany({ where: { id: { in: assignerIds } }, select: { id: true, name: true, email: true } });
+    if (userIds.length > 0) {
+      const users = await this.prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, email: true } });
       usersById = users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {} as Record<string, any>);
     }
-    return itemsWithCandidateContact.map((it) => ({ ...(it as any), assignedBy: usersById[it.assignedBy] ?? it.assignedBy }));
+
+    // Build training number per candidateProjectMapId (1-based order by assignedAt)
+    const grouping: Record<string, any[]> = {};
+    itemsWithCandidateContact.forEach((it: any) => {
+      const cpm = it.candidateProjectMap?.id;
+      if (!cpm) return;
+      if (!grouping[cpm]) grouping[cpm] = [];
+      grouping[cpm].push(it);
+    });
+    Object.values(grouping).forEach((list) => {
+      list.sort((a, b) => new Date(a.assignedAt).getTime() - new Date(b.assignedAt).getTime());
+      list.forEach((item: any, index: number) => {
+        item.trainingAttempt = index + 1;
+        item.trainingAttemptTotal = list.length;
+      });
+    });
+
+    return itemsWithCandidateContact.map((it: any) => ({
+      ...it,
+      assignedBy: usersById[it.assignedBy] ?? it.assignedBy,
+      trainer: it.trainerId ? usersById[it.trainerId] ?? { id: it.trainerId } : null,
+    }));
   }
 
   /**
@@ -688,6 +714,17 @@ export class TrainingService {
 
       // Automatically update candidate project status to training_scheduled
       if (assignment.candidateProjectMapId && userId) {
+        // Also ensure trainingAssignment status is set to scheduled for any non-final state
+        if (
+          assignment.status !== TRAINING_STATUS.COMPLETED &&
+          assignment.status !== TRAINING_STATUS.CANCELLED
+        ) {
+          await tx.trainingAssignment.update({
+            where: { id: assignment.id },
+            data: { status: TRAINING_STATUS.SCHEDULED },
+          });
+        }
+
         // Use connect pattern for subStatus to ensure all relations are correctly handled
         await tx.candidateProjects.update({
           where: { id: assignment.candidateProjectMapId },
@@ -776,7 +813,11 @@ export class TrainingService {
           select: { status: true, candidateProjectMapId: true },
         });
 
-        if (assignment && assignment.status === TRAINING_STATUS.ASSIGNED) {
+        if (
+          assignment &&
+          assignment.status !== TRAINING_STATUS.COMPLETED &&
+          assignment.status !== TRAINING_STATUS.CANCELLED
+        ) {
           await this.prisma.trainingAssignment.update({
             where: { id: assignmentId },
             data: { status: TRAINING_STATUS.SCHEDULED },

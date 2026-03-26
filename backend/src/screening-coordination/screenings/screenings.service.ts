@@ -18,8 +18,12 @@ import {
   CANDIDATE_PROJECT_STATUS,
   SCREENING_DECISION,
   SCREENING_STATUS,
+  TRAINING_TYPE,
+  TRAINING_PRIORITY,
+  TRAINING_STATUS,
 } from '../../common/constants/statuses';
 import { OutboxService } from '../../notifications/outbox.service';
+import { TrainingService } from '../training/training.service';
 
 @Injectable()
 export class ScreeningsService {
@@ -30,6 +34,8 @@ export class ScreeningsService {
     @Inject(forwardRef(() => CandidateProjectsService))
     private readonly candidateProjectsService: CandidateProjectsService,
     private readonly outboxService: OutboxService,
+    @Inject(forwardRef(() => TrainingService))
+    private readonly trainingService: TrainingService,
   ) {}
 
   /**
@@ -327,32 +333,22 @@ export class ScreeningsService {
       where.decision = decision;
     }
 
-    // If filtering specifically for 'training_assigned' status,
-    // exclude those that already have training assignments with sessions.
-    if (query.status === 'training_assigned') {
-      where.trainingAssignments = {
-        none: {
-          trainingSessions: {
-            some: {},
-          },
-        },
-      };
-    }
-
     // Support filtering by related candidate-project fields (projectId and roleCatalogId)
+    // Status 'training_assigned' should be driven by candidate-project sub-status,
+    // and should include records that may already have training session details.
     const cpWhere: any = {};
     const cpAND: any[] = [];
 
     // Filter by project sub-status name if provided; otherwise, apply default exclusion.
     if (query.status === 'training_scheduled') {
+      // Training scheduled should include candidate-projects explicitly in training_scheduled status
+      // or active training assignments that are still scheduled/in-progress (not completed).
       where.OR = [
-        { candidateProjectMap: { subStatus: { name: 'training_scheduled' } } },
+        { candidateProjectMap: { subStatus: { name: CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED } } },
         {
           trainingAssignments: {
             some: {
-              trainingSessions: {
-                some: {},
-              },
+              status: { in: [TRAINING_STATUS.SCHEDULED, TRAINING_STATUS.IN_PROGRESS] },
             },
           },
         },
@@ -488,6 +484,27 @@ export class ScreeningsService {
         };
       }
       return it;
+    });
+
+    // Compute training attempt numbers per candidate-project map in screenings response.
+    const trainingAssignmentGroups: Record<string, any[]> = {};
+    enrichedItems.forEach((screening) => {
+      const cpmId = screening.candidateProjectMap?.id;
+      if (!cpmId || !Array.isArray(screening.trainingAssignments)) return;
+
+      screening.trainingAssignments.forEach((ta: any) => {
+        if (!trainingAssignmentGroups[cpmId]) trainingAssignmentGroups[cpmId] = [];
+        trainingAssignmentGroups[cpmId].push(ta);
+      });
+    });
+
+    Object.values(trainingAssignmentGroups).forEach((group) => {
+      group.sort((a, b) => new Date(a.assignedAt).getTime() - new Date(b.assignedAt).getTime());
+      const total = group.length;
+      group.forEach((ta: any, idx: number) => {
+        ta.trainingAttempt = idx + 1;
+        ta.trainingAttemptTotal = total;
+      });
     });
 
     return {
@@ -916,6 +933,15 @@ export class ScreeningsService {
     // Attach document flags (re-use helper) and add roleCatalog, coordinator object, and candidate contact
     const [augmented] = await this.addDocumentVerificationFlag([interview]);
 
+    // Compute training attempt numbers for the training assignments included on this screening
+    if (augmented?.trainingAssignments && Array.isArray(augmented.trainingAssignments)) {
+      const ordered = [...augmented.trainingAssignments].sort((a, b) => new Date(a.assignedAt).getTime() - new Date(b.assignedAt).getTime());
+      ordered.forEach((ta: any, idx: number) => {
+        ta.trainingAttempt = idx + 1;
+        ta.trainingAttemptTotal = ordered.length;
+      });
+    }
+
     return {
       ...interview,
       coordinator,
@@ -926,6 +952,7 @@ export class ScreeningsService {
         candidate: candidateWithContact,
         roleCatalog,
       } : null,
+      trainingAssignments: augmented?.trainingAssignments ?? interview.trainingAssignments,
     };
   }
 
@@ -1165,6 +1192,51 @@ export class ScreeningsService {
           this.logger.log(`Published CandidateApprovedForClientInterview event for candidate ${cpm.candidateId}`);
         } catch (error: any) {
           this.logger.error(`Failed to publish approved event: ${error.message}`);
+        }
+      }
+    } else if (dto.decision === SCREENING_DECISION.NEEDS_TRAINING) {
+      if (!dto.trainingType) {
+        throw new BadRequestException('trainingType is required for needs_training decision');
+      }
+      if (!dto.focusAreas || dto.focusAreas.length === 0) {
+        throw new BadRequestException('At least one focus area is required for needs_training decision');
+      }
+
+      if (cpm && userId) {
+        try {
+          const existingTraining = await this.prisma.trainingAssignment.findFirst({
+            where: {
+              candidateProjectMapId: cpm.id,
+              screeningId: id,
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          const hasActiveTraining = existingTraining &&
+            existingTraining.status !== TRAINING_STATUS.COMPLETED &&
+            existingTraining.status !== TRAINING_STATUS.CANCELLED;
+
+          if (hasActiveTraining) {
+            this.logger.log(`Active training already exists for candidate ${cpm.candidateId} and screening ${id}. Skipping creation.`);
+          } else {
+            await this.trainingService.createAssignment({
+              candidateProjectMapId: cpm.id,
+              screeningId: id,
+              assignedBy: userId,
+              trainerId: userId,
+              trainingType: dto.trainingType,
+              focusAreas: dto.focusAreas,
+              priority: dto.priority || TRAINING_PRIORITY.MEDIUM,
+              targetCompletionDate: dto.targetCompletionDate,
+              notes:
+                dto.trainingNotes ||
+                dto.remarks ||
+                'Auto-created training assignment after needs_training decision',
+            } as any);
+            this.logger.log(`Auto-created training assignment for candidate ${cpm.candidateId} after needs_training decision`);
+          }
+        } catch (error: any) {
+          this.logger.error(`Failed to create training assignment on needs_training decision: ${error.message}`);
         }
       }
     } else if (dto.decision === SCREENING_DECISION.REJECTED) {

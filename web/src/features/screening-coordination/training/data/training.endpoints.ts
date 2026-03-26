@@ -109,6 +109,8 @@ export const trainingApi = baseApi.injectEndpoints({
         { type: "Training", id },
         { type: "Training", id: "LIST" },
         { type: "Candidate", id: "LIST" },
+        { type: "Screening", id: "LIST" },
+        { type: "Screening", id: "STATS" },
       ],
     }),
 
@@ -126,6 +128,8 @@ export const trainingApi = baseApi.injectEndpoints({
         { type: "Training", id },
         { type: "Training", id: "LIST" },
         { type: "Candidate", id: "LIST" },
+        { type: "Screening", id: "LIST" },
+        { type: "Screening", id: "STATS" },
       ],
     }),
 
@@ -159,6 +163,8 @@ export const trainingApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { trainingAssignmentId }) => [
         { type: "Training", id: trainingAssignmentId },
         { type: "Training", id: "LIST" },
+        { type: "Screening", id: "LIST" },
+        { type: "Screening", id: "STATS" },
       ],
     }),
 
@@ -188,7 +194,12 @@ export const trainingApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Training", "Candidate"],
+      invalidatesTags: [
+        "Training",
+        "Candidate",
+        { type: "Screening", id: "LIST" },
+        { type: "Screening", id: "STATS" },
+      ],
     }),
 
     // Update a training session

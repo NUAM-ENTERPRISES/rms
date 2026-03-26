@@ -3,6 +3,7 @@ import { ScreeningsService } from '../screenings.service';
 import { CandidateProjectsService } from '../../../candidate-projects/candidate-projects.service';
 import { OutboxService } from '../../../notifications/outbox.service';
 import { PrismaService } from '../../../database/prisma.service';
+import { TrainingService } from '../../training/training.service';
 import { CreateScreeningDto } from '../dto/create-screening.dto';
 
 describe('ScreeningsService', () => {
@@ -53,6 +54,7 @@ describe('ScreeningsService', () => {
             publishCandidateFailedScreening: jest.fn(),
           },
         },
+        { provide: TrainingService, useValue: {} },
       ],
     }).compile();
 
@@ -404,6 +406,46 @@ describe('ScreeningsService', () => {
     expect(res.success).toBe(true);
     expect(res.data.items[0].trainingAssignments).toBeDefined();
     expect(res.data.items[0].trainingAssignments[0].id).toBe('t1');
+  });
+
+  it('findAll includes training_assigned screenings even when training sessions exist', async () => {
+    const mockItem = {
+      id: 'snt2',
+      decision: 'needs_training',
+      candidateProjectMapId: 'cp2',
+      candidateProjectMap: {
+        subStatus: { name: 'training_assigned' },
+        candidate: { id: 'c2', firstName: 'Jane', lastName: 'Smith' },
+      },
+      trainingAssignments: [{
+        id: 't2',
+        trainingSessions: [{ id: 'ts1', completedAt: new Date() }],
+      }],
+    } as any;
+
+    prisma.screening.count.mockResolvedValue(1);
+    prisma.screening.findMany.mockResolvedValue([mockItem]);
+    jest.spyOn(service as any, 'addDocumentVerificationFlag').mockResolvedValue([
+      {
+        ...mockItem,
+        isDocumentVerificationRequired: false,
+        isDocumentVerified: false,
+      },
+    ]);
+
+    const res = await service.findAll({ page: 1, limit: 10, decision: 'needs_training', status: 'training_assigned' } as any);
+
+    expect(res.success).toBe(true);
+    expect(res.data.items).toHaveLength(1);
+    expect(prisma.screening.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          decision: 'needs_training',
+          candidateProjectMap: expect.anything(),
+        }),
+      }),
+    );
+    expect(res.data.items[0].trainingAssignments?.[0]?.id).toBe('t2');
   });
 
   it('findAll includes current map statuses (mainStatus/subStatus)', async () => {

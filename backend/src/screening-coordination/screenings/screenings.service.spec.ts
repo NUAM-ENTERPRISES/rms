@@ -12,7 +12,8 @@ describe('ScreeningsService.getScreeningHistory', () => {
     jest.clearAllMocks();
     const mockCandidateProjectsService = {} as any;
     const mockOutboxService = {} as any;
-    service = new ScreeningsService(mockPrisma as any, mockCandidateProjectsService, mockOutboxService);
+    const mockTrainingService = {} as any;
+    service = new ScreeningsService(mockPrisma as any, mockCandidateProjectsService, mockOutboxService, mockTrainingService);
   });
 
   it('throws NotFoundException when candidate-project does not exist', async () => {
@@ -41,5 +42,42 @@ describe('ScreeningsService.getScreeningHistory', () => {
         interviewType: { in: ['screening', 'training'] },
       }),
     }));
+  });
+});
+
+describe('ScreeningsService.findAll', () => {
+  let service: ScreeningsService;
+  const mockPrisma: any = {
+    screening: { count: jest.fn(), findMany: jest.fn() },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const mockCandidateProjectsService = {} as any;
+    const mockOutboxService = {} as any;
+    const mockTrainingService = {} as any;
+    service = new ScreeningsService(mockPrisma as any, mockCandidateProjectsService, mockOutboxService, mockTrainingService);
+  });
+
+  it('applies strict training_scheduled filtering and does not include completed training sessions alone', async () => {
+    mockPrisma.screening.count.mockResolvedValue(0);
+    mockPrisma.screening.findMany.mockResolvedValue([]);
+
+    await service.findAll({ status: 'training_scheduled', decision: 'needs_training', page: 1, limit: 10 } as any);
+
+    expect(mockPrisma.screening.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        decision: 'needs_training',
+        OR: expect.arrayContaining([
+          { candidateProjectMap: { subStatus: { name: 'training_scheduled' } } },
+          { trainingAssignments: { some: { status: { in: ['scheduled', 'in_progress'] } } } },
+        ]),
+      }),
+    }));
+
+    const orClause = mockPrisma.screening.count.mock.calls[0][0].where.OR;
+    expect(orClause).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ trainingAssignments: { some: { trainingSessions: { some: {} } } } }),
+    ]));
   });
 });

@@ -100,7 +100,18 @@ export const screeningsApi = baseApi.injectEndpoints({
     // Update screening decision for completed screening
     updateScreeningDecision: builder.mutation<
       ApiResponse<Screening>,
-      { id: string; data: { decision: string; remarks?: string } }
+      {
+        id: string;
+        data: {
+          decision: string;
+          remarks?: string;
+          trainingType?: string;
+          focusAreas?: string[];
+          priority?: string;
+          targetCompletionDate?: string;
+          trainingNotes?: string;
+        };
+      }
     >({
       query: ({ id, data }) => ({
         url: `/screenings/${id}/decision`,

@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertCircle } from "lucide-react";
-import { TRAINING_TYPE, TRAINING_PRIORITY } from "@/features/screening-coordination/types";
+import { TRAINING_TYPE, TRAINING_PRIORITY, SCREENING_DECISION } from "@/features/screening-coordination/types";
 import {
   Tooltip,
   TooltipContent,
@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const completeInterviewSchema = z.object({
-  decision: z.enum(["approved", "needs_training", "rejected"]).optional().refine(val => !!val, { message: "Please select a decision" }),
+  decision: z.enum(Object.values(SCREENING_DECISION) as [string, ...string[]]).optional().refine(val => !!val, { message: "Please select a decision" }),
   overallRating: z.coerce.number().min(1, "Score must be at least 1%").max(100, "Score cannot exceed 100%"),
   remarks: z.string().optional(),
   strengths: z.string().optional(),
@@ -161,7 +161,7 @@ export function CompleteScreeningDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[1100px] max-h-[75vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogHeader>
           <DialogTitle>Complete Screening</DialogTitle>
           <DialogDescription>
             Provide overall assessment and decision for this screening.
@@ -259,9 +259,10 @@ export function CompleteScreeningDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="needs_training">Needs Training</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value={SCREENING_DECISION.APPROVED}>Approved</SelectItem>
+                        <SelectItem value={SCREENING_DECISION.NEEDS_TRAINING}>Needs Training</SelectItem>
+                        <SelectItem value={SCREENING_DECISION.ON_HOLD}>On Hold</SelectItem>
+                        <SelectItem value={SCREENING_DECISION.REJECTED}>Rejected</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -296,7 +297,7 @@ export function CompleteScreeningDialog({
               />
             </div>
 
-            {currentDecision === "needs_training" && (
+            {currentDecision === SCREENING_DECISION.NEEDS_TRAINING && (
               <div className="space-y-4 p-4 border border-rose-100 rounded-lg bg-rose-50">
                 <p className="text-sm font-semibold text-rose-700">Training Assignment Details</p>
 
@@ -503,22 +504,22 @@ export function CompleteScreeningDialog({
                   <TooltipTrigger asChild>
                     <span className="inline-block">
                       <Button type="submit" disabled={isLoading || !isFormValid}>
-                        {isLoading && <LoadingSpinner className="mr-2 h-4 w-4" />}
-                        Complete Screening
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!isFormValid && (
-                    <TooltipContent>
-                      <p>Please select a decision and enter an overall rating.</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
+                {isLoading && <LoadingSpinner className="mr-2 h-4 w-4" />}
+                Complete Screening
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {!isFormValid && (
+            <TooltipContent>
+              <p>Please select a decision and enter an overall rating.</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
+    </DialogFooter>
+  </form>
+</Form>
+</DialogContent>
+</Dialog>
+);
 }

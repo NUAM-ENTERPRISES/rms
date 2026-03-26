@@ -15,6 +15,7 @@ import {
   Send,
   ClipboardCheck,
   Users,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,12 +28,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { useGetTrainingAssignmentsQuery } from "../data";
+import { useGetTrainingAssignmentsQuery, useCreateTrainingAssignmentMutation } from "../data";
 import { useCan } from "@/hooks/useCan";
 import { useCompleteTrainingMutation } from "../data";
 import { useUpdateScreeningDecisionMutation } from "@/features/screening-coordination/interviews/data";
@@ -40,7 +47,7 @@ import { ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppSelector } from "@/app/hooks";
 import { useSendForInterviewMutation } from "../data";
-import { TRAINING_STATUS, TRAINING_PRIORITY, TrainingAssignment, SCREENING_DECISION } from "../../types";
+import { TRAINING_STATUS, TRAINING_PRIORITY, TRAINING_TYPE, TrainingAssignment, SCREENING_DECISION } from "../../types";
 import { cn } from "@/lib/utils";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetCandidateProjectHistoryQuery } from "../../interviews/data";
@@ -65,6 +72,14 @@ export default function TrainingListPage() {
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
   const [decisionValue, setDecisionValue] = useState<SCREENING_DECISION | null>(null);
   const [decisionRemarks, setDecisionRemarks] = useState("");
+
+  const [needsTrainingType, setNeedsTrainingType] = useState<string>(TRAINING_TYPE.TECHNICAL);
+  const [needsTrainingFocusAreas, setNeedsTrainingFocusAreas] = useState<string[]>([]);
+  const [needsTrainingFocusAreaInput, setNeedsTrainingFocusAreaInput] = useState("");
+  const [needsTrainingPriority, setNeedsTrainingPriority] = useState<string>(TRAINING_PRIORITY.MEDIUM);
+  const [needsTrainingTargetCompletionDate, setNeedsTrainingTargetCompletionDate] = useState<string>("");
+  const [needsTrainingNotes, setNeedsTrainingNotes] = useState<string>("");
+
   // Removed session dialog/state: sessions are not editable from this view
 
   const { data, isLoading, error, refetch } = useGetTrainingAssignmentsQuery();
@@ -72,6 +87,8 @@ export default function TrainingListPage() {
     useCompleteTrainingMutation();
   const [updateScreeningDecision, { isLoading: isUpdatingDecision }] =
     useUpdateScreeningDecisionMutation();
+  const [createTrainingAssignment, { isLoading: isCreatingTraining }] =
+    useCreateTrainingAssignmentMutation();
 
   const trainings = data?.data || [];
 
@@ -196,11 +213,30 @@ export default function TrainingListPage() {
     }
 
     try {
+      if (decisionValue === SCREENING_DECISION.NEEDS_TRAINING) {
+        if (!needsTrainingType) {
+          toast.error('Please select a training type for Needs Training');
+          return;
+        }
+        if (!needsTrainingFocusAreas.length) {
+          toast.error('Please add at least one focus area for Needs Training');
+          return;
+        }
+      }
+
       await updateScreeningDecision({
         id: screeningId,
         data: {
           decision: decisionValue,
           remarks: decisionRemarks || undefined,
+          trainingType: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingType : undefined,
+          focusAreas: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingFocusAreas : undefined,
+          priority: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingPriority : undefined,
+          targetCompletionDate:
+            decisionValue === SCREENING_DECISION.NEEDS_TRAINING
+              ? needsTrainingTargetCompletionDate || undefined
+              : undefined,
+          trainingNotes: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingNotes : undefined,
         },
       }).unwrap();
 
@@ -208,10 +244,42 @@ export default function TrainingListPage() {
       setIsDecisionModalOpen(false);
       setDecisionValue(null);
       setDecisionRemarks("");
+      setNeedsTrainingType("");
+      setNeedsTrainingFocusAreas([]);
+      setNeedsTrainingFocusAreaInput("");
+      setNeedsTrainingPriority(TRAINING_PRIORITY.MEDIUM);
+      setNeedsTrainingTargetCompletionDate("");
+      setNeedsTrainingNotes("");
       refetch?.();
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to update screening decision");
     }
+  };
+
+  const openDecisionModal = (value: SCREENING_DECISION) => {
+    setDecisionValue(value);
+    setDecisionRemarks("");
+    if (value !== SCREENING_DECISION.NEEDS_TRAINING) {
+      setNeedsTrainingType(TRAINING_TYPE.TECHNICAL);
+      setNeedsTrainingFocusAreas([]);
+      setNeedsTrainingFocusAreaInput("");
+      setNeedsTrainingPriority(TRAINING_PRIORITY.MEDIUM);
+      setNeedsTrainingTargetCompletionDate("");
+      setNeedsTrainingNotes("");
+    }
+    setIsDecisionModalOpen(true);
+  };
+
+  const handleAddNeedsTrainingFocusArea = () => {
+    const trimmed = needsTrainingFocusAreaInput.trim();
+    if (trimmed && !needsTrainingFocusAreas.includes(trimmed)) {
+      setNeedsTrainingFocusAreas((prev) => [...prev, trimmed]);
+      setNeedsTrainingFocusAreaInput("");
+    }
+  };
+
+  const handleRemoveNeedsTrainingFocusArea = (area: string) => {
+    setNeedsTrainingFocusAreas((prev) => prev.filter((a) => a !== area));
   };
 
   const trainingCompletedCount = (t: any) =>
@@ -543,6 +611,9 @@ export default function TrainingListPage() {
             const completedSessions = sessions.filter((s:any) => s.completedAt).length;
             const progress = sessions.length > 0 ? (completedSessions / sessions.length) * 100 : 0;
             const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown";
+            const trainingAttempt = (training as any).trainingAttempt;
+            const trainingAttemptTotal = (training as any).trainingAttemptTotal;
+            const trainerName = (training as any).trainer?.name || training.assignedBy?.name || training.assignedBy;
 
             return (
               <div key={training.id} className="relative group">
@@ -590,6 +661,23 @@ export default function TrainingListPage() {
                     <p className="text-[11px] text-slate-500 truncate font-medium">
                       {training.trainingType}
                     </p>
+                    {(trainingAttempt || trainingAttemptTotal) && (
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] text-indigo-500 font-semibold">
+                          Training #{trainingAttempt}
+                        </p>
+                        {trainingAttemptTotal > 1 && (
+                          <Badge className="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-amber-200 text-amber-800 border border-amber-300">
+                            Attempt {trainingAttempt}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    {trainerName && (
+                      <p className="text-[10px] text-slate-400 truncate">
+                        Trainer: {trainerName}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -631,9 +719,16 @@ export default function TrainingListPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-4 border-b">
             <div className="space-y-1 flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-slate-900 truncate">
-                {selectedTraining.trainingType}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-900 truncate">
+                  {selectedTraining.trainingType}
+                </h2>
+                {selectedTraining.trainingAttemptTotal > 1 && (
+                  <Badge className="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-amber-100 text-amber-700 border border-amber-200">
+                    Attempt {selectedTraining.trainingAttempt}/{selectedTraining.trainingAttemptTotal}
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-slate-500 font-medium">
                 Assigned on {format(new Date(selectedTraining.assignedAt), "MMM d, yyyy")}
               </p>
@@ -681,20 +776,157 @@ export default function TrainingListPage() {
                 </Badge>
               )}
               {selectedTraining.status === TRAINING_STATUS.COMPLETED && selectedTraining.screening && canWrite && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100"
-                  onClick={() => {
-                    setIsDecisionModalOpen(true);
-                    setDecisionValue(
-                      (selectedTraining.screening?.decision as SCREENING_DECISION) || null
+                (() => {
+                  const hasFinalDecision = [
+                    SCREENING_DECISION.APPROVED,
+                    SCREENING_DECISION.REJECTED,
+                    SCREENING_DECISION.ON_HOLD,
+                  ].includes(selectedTraining.screening?.decision as SCREENING_DECISION)
+
+                  if (hasFinalDecision) {
+                    return (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 gap-2 px-3 shadow-none"
+                          >
+                            Update Decision
+                            <ChevronDown className="h-3 w-3 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-lg border-slate-200">
+                          <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Outcome</p>
+                          </div>
+                          {[
+                            { 
+                              value: SCREENING_DECISION.APPROVED, 
+                              label: "Approve Candidate", 
+                              icon: CheckCircle2,
+                              color: "text-emerald-600",
+                              hoverBg: "hover:bg-emerald-50",
+                              description: "Mark as qualified"
+                            },
+                            { 
+                              value: SCREENING_DECISION.NEEDS_TRAINING, 
+                              label: "Needs Training", 
+                              icon: AlertCircle,
+                              color: "text-amber-600",
+                              hoverBg: "hover:bg-amber-50",
+                              description: "Assign new training"
+                            },
+                            { 
+                              value: SCREENING_DECISION.REJECTED, 
+                              label: "Reject Candidate", 
+                              icon: X,
+                              color: "text-red-600",
+                              hoverBg: "hover:bg-red-50",
+                              description: "Not suitable now"
+                            },
+                            { 
+                              value: SCREENING_DECISION.ON_HOLD, 
+                              label: "Keep On Hold", 
+                              icon: Calendar,
+                              color: "text-amber-600",
+                              hoverBg: "hover:bg-amber-50",
+                              description: "Review later"
+                            },
+                          ].map((option) => (
+                            <DropdownMenuItem
+                              key={option.value}
+                              onClick={() => openDecisionModal(option.value as SCREENING_DECISION)}
+                              className={cn(
+                                "flex flex-col items-start gap-1 py-2.5 px-3 cursor-pointer rounded-lg transition-colors",
+                                option.hoverBg
+                              )}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <option.icon className={cn("h-4 w-4", option.color)} />
+                                <span className={cn("text-xs font-semibold", option.color)}>{option.label}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 pl-6 leading-none">
+                                {option.description}
+                              </span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     );
-                    setDecisionRemarks("");
-                  }}
-                >
-                  Update Screening Decision
-                </Button>
+                  }
+
+                  return (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 gap-2 px-3 shadow-none"
+                        >
+                          Process Outcome
+                          <ChevronDown className="h-3 w-3 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-lg border-slate-200">
+                        <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Final Outcome</p>
+                        </div>
+                        {[
+                          { 
+                            value: SCREENING_DECISION.APPROVED, 
+                            label: "Approve Candidate", 
+                            icon: CheckCircle2,
+                            color: "text-emerald-600",
+                            hoverBg: "hover:bg-emerald-50",
+                            description: "Proceed to hiring pipeline"
+                          },
+                          { 
+                            value: SCREENING_DECISION.NEEDS_TRAINING, 
+                            label: "Needs Training", 
+                            icon: AlertCircle,
+                            color: "text-amber-600",
+                            hoverBg: "hover:bg-amber-50",
+                            description: "Reassign to training"
+                          },
+                          { 
+                            value: SCREENING_DECISION.REJECTED, 
+                            label: "Reject Candidate", 
+                            icon: X,
+                            color: "text-red-600",
+                            hoverBg: "hover:bg-red-50",
+                            description: "Not suitable right now"
+                          },
+                          { 
+                            value: SCREENING_DECISION.ON_HOLD, 
+                            label: "Keep On Hold", 
+                            icon: Calendar,
+                            color: "text-amber-600",
+                            hoverBg: "hover:bg-amber-50",
+                            description: "Consider later"
+                          },
+                        ].map((option) => (
+                          <DropdownMenuItem
+                            key={option.value}
+                            onClick={() => openDecisionModal(option.value as SCREENING_DECISION)}
+                            className={cn(
+                              "flex flex-col items-start gap-1 py-2.5 px-3 cursor-pointer rounded-lg transition-colors",
+                              option.hoverBg
+                            )}
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <option.icon className={cn("h-4 w-4", option.color)} />
+                              <span className={cn("text-xs font-semibold", option.color)}>{option.label}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 pl-6 leading-none">
+                              {option.description}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  );
+                })()
               )}
               {selectedTraining.status === TRAINING_STATUS.SCREENING_ASSIGNED || selectedTraining.status === TRAINING_STATUS.INTERVIEW_ASSIGNED ? (
                 <Badge className="text-[10px] uppercase tracking-wider px-3 py-1 bg-green-50 text-green-700 border-green-200">
@@ -723,29 +955,6 @@ export default function TrainingListPage() {
                   </Button>
                 )}
 
-              {selectedTraining.status === TRAINING_STATUS.COMPLETED &&
-                selectedTraining.screening &&
-                canWrite &&
-                ![
-                  SCREENING_DECISION.APPROVED,
-                  SCREENING_DECISION.REJECTED,
-                  SCREENING_DECISION.ON_HOLD,
-                ].includes(selectedTraining.screening?.decision as any) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      setIsDecisionModalOpen(true);
-                      setDecisionValue(
-                        (selectedTraining.screening?.decision as SCREENING_DECISION) || null
-                      );
-                      setDecisionRemarks(selectedTraining.screening?.remarks || "");
-                    }}
-                  >
-                    Update Screening Decision
-                  </Button>
-                )}
             </div>
           </div>
 
@@ -925,6 +1134,7 @@ export default function TrainingListPage() {
 
     {/* Decision update dialog */}
     <ConfirmationDialog
+      className="sm:max-w-2xl"
       isOpen={isDecisionModalOpen}
       onClose={() => {
         setIsDecisionModalOpen(false);
@@ -932,48 +1142,185 @@ export default function TrainingListPage() {
         setDecisionRemarks("");
       }}
       onConfirm={handleUpdateDecision}
-      title="Update Screening Decision"
+      confirmButtonClassName={
+        decisionValue === SCREENING_DECISION.NEEDS_TRAINING
+          ? "bg-black text-white hover:bg-slate-800"
+          : ""
+      }
+      title={
+        decisionValue === SCREENING_DECISION.NEEDS_TRAINING
+          ? "Confirm Training Assignment"
+          : "Confirm Screening Decision"
+      }
       description={
-        <div className="space-y-3">
-          <p className="text-xs text-slate-500">
-            Current decision: <strong>{selectedTraining?.screening?.decision || 'None'}</strong>
-          </p>
-          <div className="space-y-2">
-            {[
-              { value: SCREENING_DECISION.APPROVED, label: "Approved" },
-              { value: SCREENING_DECISION.REJECTED, label: "Rejected" },
-              { value: SCREENING_DECISION.ON_HOLD, label: "On Hold" },
-            ].map((option) => (
-              <label key={option.value} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="decision"
-                  value={option.value}
-                  checked={decisionValue === option.value}
-                  onChange={() => setDecisionValue(option.value as SCREENING_DECISION)}
-                  className="accent-indigo-600"
-                />
-                <span className="text-sm">{option.label}</span>
-              </label>
-            ))}
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
+             <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Selected Decision</span>
+                <Badge className={cn("text-[10px] uppercase font-bold", 
+                  decisionValue === SCREENING_DECISION.APPROVED ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" :
+                  decisionValue === SCREENING_DECISION.REJECTED ? "bg-red-100 text-red-700 hover:bg-red-100" :
+                  "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                )}>
+                  {decisionValue}
+                </Badge>
+             </div>
+             <div>
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                  Are you sure you want to {decisionValue?.toLowerCase()} this candidate? This action will update the screening status and notify relevant stakeholders.
+                </p>
+             </div>
           </div>
-          <Textarea
-            placeholder="Remarks (optional)"
-            value={decisionRemarks}
-            onChange={(e) => setDecisionRemarks(e.target.value)}
-            rows={3}
-            className="rounded-lg"
-          />
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Remarks & Feedback</label>
+            <Textarea
+              placeholder="Provide detailed reasons for this decision..."
+              value={decisionRemarks}
+              onChange={(e) => setDecisionRemarks(e.target.value)}
+              rows={4}
+              className="rounded-xl border-slate-200 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm p-3"
+            />
+          </div>
+
+          {decisionValue === SCREENING_DECISION.NEEDS_TRAINING && (
+            <div className="space-y-4 pt-2 border-t border-slate-100">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Training Details</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600">Training Type *</label>
+                  <Select
+                    value={needsTrainingType}
+                    onValueChange={(value) => setNeedsTrainingType(value)}
+                    disabled={isUpdatingDecision}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select training type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TRAINING_TYPE.INTERVIEW_SKILLS}>Interview Skills</SelectItem>
+                      <SelectItem value={TRAINING_TYPE.TECHNICAL}>Technical</SelectItem>
+                      <SelectItem value={TRAINING_TYPE.COMMUNICATION}>Communication</SelectItem>
+                      <SelectItem value={TRAINING_TYPE.ROLE_SPECIFIC}>Role Specific</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600">Priority</label>
+                  <Select
+                    value={needsTrainingPriority}
+                    onValueChange={(value) => setNeedsTrainingPriority(value)}
+                    disabled={isUpdatingDecision}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TRAINING_PRIORITY.LOW}>Low</SelectItem>
+                      <SelectItem value={TRAINING_PRIORITY.MEDIUM}>Medium</SelectItem>
+                      <SelectItem value={TRAINING_PRIORITY.HIGH}>High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600">Focus Areas *</label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    placeholder="Add focus area"
+                    value={needsTrainingFocusAreaInput}
+                    onChange={(e) => setNeedsTrainingFocusAreaInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddNeedsTrainingFocusArea();
+                      }
+                    }}
+                    disabled={isUpdatingDecision}
+                  />
+                  <Button
+                    size="sm"
+                    type="button"
+                    onClick={handleAddNeedsTrainingFocusArea}
+                    disabled={!needsTrainingFocusAreaInput.trim() || isUpdatingDecision}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {needsTrainingFocusAreas.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {needsTrainingFocusAreas.map((foa) => (
+                      <span
+                        key={foa}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs"
+                      >
+                        {foa}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNeedsTrainingFocusArea(foa)}
+                          className="text-indigo-500 hover:text-indigo-700"
+                          disabled={isUpdatingDecision}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600">Target completion date</label>
+                  <Input
+                    type="date"
+                    value={needsTrainingTargetCompletionDate}
+                    onChange={(e) => setNeedsTrainingTargetCompletionDate(e.target.value)}
+                    disabled={isUpdatingDecision}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600">Training Notes</label>
+                  <Textarea
+                    value={needsTrainingNotes}
+                    onChange={(e) => setNeedsTrainingNotes(e.target.value)}
+                    rows={2}
+                    disabled={isUpdatingDecision}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       }
       confirmDisabled={!decisionValue}
-      confirmText="Update Decision"
-      cancelText="Cancel"
+      confirmText={`Confirm ${
+        decisionValue === SCREENING_DECISION.APPROVED ? 'Approval' :
+        decisionValue === SCREENING_DECISION.REJECTED ? 'Rejection' :
+        decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? 'Needs Training' :
+        decisionValue === SCREENING_DECISION.ON_HOLD ? 'Hold' :
+        'Update'
+      }`}
+      cancelText="Go Back"
       isLoading={isUpdatingDecision}
-      variant="default"
+      variant={
+        decisionValue === SCREENING_DECISION.REJECTED ? "destructive" :
+        decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? "secondary" :
+        "default"
+      }
       icon={
-        <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-          <CheckCircle2 className="h-6 w-6 text-white" />
+        <div className={cn(
+          "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center shadow-lg",
+          decisionValue === SCREENING_DECISION.APPROVED ? "bg-gradient-to-br from-emerald-500 to-teal-600" :
+          decisionValue === SCREENING_DECISION.REJECTED ? "bg-gradient-to-br from-red-500 to-rose-600" :
+          "bg-gradient-to-br from-amber-500 to-orange-600"
+        )}>
+          {decisionValue === SCREENING_DECISION.APPROVED ? <CheckCircle2 className="h-6 w-6 text-white" /> :
+           decisionValue === SCREENING_DECISION.REJECTED ? <X className="h-6 w-6 text-white" /> :
+           <Calendar className="h-6 w-6 text-white" />}
         </div>
       }
     />

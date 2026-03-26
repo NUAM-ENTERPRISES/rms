@@ -78,4 +78,13 @@ export class CreateTrainingAssignmentDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({
+    description: 'Trainer user ID (who will conduct this training)',
+    example: 'ckx7r9012mnop',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  trainerId?: string;
 }

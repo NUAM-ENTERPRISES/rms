@@ -318,6 +318,7 @@ export default function BasicTrainingPage() {
           selectedInterviewForTraining.candidateProjectMapId,
         screeningId: selectedInterviewForTraining.id,
         assignedBy: currentUser.id,
+        trainerId: currentUser.id,
         trainingType: formData.trainingType,
         focusAreas: formData.focusAreas,
         priority: formData.priority,

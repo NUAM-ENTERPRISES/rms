@@ -1441,6 +1441,32 @@ export class NotificationsProcessor extends WorkerHost {
       const roleDesignation =
         candidateProjectMap.roleNeeded?.designation || 'Unknown Role';
 
+      const approvedTitle = 'Candidate Screening Approved';
+      const approvedMessage = `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}).`;
+      const approvedLink = `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`;
+
+      // Notify coordinator/trainer who completed the screening (if present)
+      if (coordinatorId) {
+        const idemKeyCoordinator = `${eventId}:${coordinatorId}:screening_passed`;
+
+        await this.notificationsService.createNotification({
+          userId: coordinatorId,
+          type: 'screening_passed',
+          title: approvedTitle,
+          message: approvedMessage,
+          link: approvedLink,
+          meta: {
+            candidateProjectMapId,
+            screeningId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+          },
+          idemKey: idemKeyCoordinator,
+        });
+
+        this.logger.log(`Screening passed notification created for coordinator ${coordinatorId}`);
+      }
+
       // Candidate approved notifications should go to Interview Coordinators.
       // Also notify recruiter so they can track converted profile state.
       if (recruiterId) {
@@ -1449,9 +1475,9 @@ export class NotificationsProcessor extends WorkerHost {
         await this.notificationsService.createNotification({
           userId: recruiterId,
           type: 'screening_passed',
-          title: 'Candidate Passed Screening',
-          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has successfully passed the screening for ${candidateProjectMap.project.title} (${roleDesignation}).`,
-          link: `/candidate-projects/${candidateProjectMapId}/screening/${screeningId}`,
+          title: approvedTitle,
+          message: approvedMessage,
+          link: approvedLink,
           meta: {
             candidateProjectMapId,
             screeningId,

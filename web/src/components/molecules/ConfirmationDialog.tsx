@@ -64,6 +64,7 @@ export function ConfirmationDialog({
   icon,
   variant = "default",
   confirmDisabled = false,
+  confirmButtonClassName = "",
 }: ConfirmationDialogProps) {
   const handleConfirm = () => {
     onConfirm();
@@ -114,7 +115,7 @@ export function ConfirmationDialog({
             variant={variant}
             onClick={handleConfirm}
             disabled={isLoading || !!(confirmDisabled)}
-            className="flex-1 sm:flex-none"
+            className={cn("flex-1 sm:flex-none", confirmButtonClassName)}
             // NOTE: `confirmDisabled` is used by callers for form validation
             // but we still keep `isLoading` to indicate async state.
             // Use `aria-disabled` for better a11y when disabled by validation.

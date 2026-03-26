@@ -15,6 +15,7 @@ import {
   Phone,
   Users,
   ChevronRight,
+  ChevronDown,
   X,
   Clipboard,
   CalendarCheck,
@@ -26,6 +27,12 @@ import {
   MessageCircle
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import {
   Card,
   CardContent,
@@ -46,9 +53,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ImageViewer from "@/components/molecules/ImageViewer";
-import { useGetScreeningsQuery } from "../data";
+import { useGetScreeningsQuery, useUpdateScreeningDecisionMutation } from "../data";
 import { useCreateTrainingAssignmentMutation } from "../../training/data";
-import { SCREENING_MODE, SCREENING_DECISION } from "../../types";
+import { SCREENING_MODE, SCREENING_DECISION, TRAINING_TYPE, TRAINING_PRIORITY } from "../../types";
 import { cn } from "@/lib/utils";
 import { AssignToTrainerDialog } from "../../training/components/AssignToTrainerDialog";
 import { NotifyDocumentationModal } from "../components/NotifyDocumentationModal";
@@ -82,6 +89,18 @@ export default function ScreeningsListPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedInterviewForTraining, setSelectedInterviewForTraining] =
     useState<any>(null);
+
+  const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
+  const [decisionValue, setDecisionValue] = useState<SCREENING_DECISION | null>(null);
+  const [decisionRemarks, setDecisionRemarks] = useState("");
+
+  const [needsTrainingType, setNeedsTrainingType] = useState<string>(TRAINING_TYPE.TECHNICAL);
+  const [needsTrainingFocusAreas, setNeedsTrainingFocusAreas] = useState<string[]>([]);
+  const [needsTrainingFocusAreaInput, setNeedsTrainingFocusAreaInput] = useState("");
+  const [needsTrainingPriority, setNeedsTrainingPriority] = useState<string>(TRAINING_PRIORITY.MEDIUM);
+  const [needsTrainingTargetCompletionDate, setNeedsTrainingTargetCompletionDate] = useState<string>("");
+  const [needsTrainingNotes, setNeedsTrainingNotes] = useState<string>("");
+
   const [sendForInterviewConfirm, setSendForInterviewConfirm] = useState<{
     isOpen: boolean;
     candidateId?: string;
@@ -109,6 +128,7 @@ export default function ScreeningsListPage() {
 
   const [assignToMainScreening, { isLoading: isAssigningMain }] = useAssignToMainScreeningMutation();
   const [sendForVerification, { isLoading: isSendingVerification }] = useSendForVerificationMutation();
+  const [updateScreeningDecision, { isLoading: isUpdatingDecision }] = useUpdateScreeningDecisionMutation();
 
   // Build query params from URL and filters
   const apiParams = useMemo(() => {
@@ -334,6 +354,12 @@ export default function ScreeningsListPage() {
             Needs Training
           </Badge>
         );
+      case SCREENING_DECISION.ON_HOLD:
+        return (
+          <Badge className="text-xs bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/50 dark:text-amber-300">
+            On Hold
+          </Badge>
+        );
       case SCREENING_DECISION.REJECTED:
         return (
           <Badge variant="destructive" className="text-xs">
@@ -342,6 +368,81 @@ export default function ScreeningsListPage() {
         );
       default:
         return null;
+    }
+  };
+
+  const openDecisionModal = (value: SCREENING_DECISION) => {
+    setDecisionValue(value);
+    setDecisionRemarks("");
+    if (value !== SCREENING_DECISION.NEEDS_TRAINING) {
+      setNeedsTrainingType(TRAINING_TYPE.TECHNICAL);
+      setNeedsTrainingFocusAreas([]);
+      setNeedsTrainingFocusAreaInput("");
+      setNeedsTrainingPriority(TRAINING_PRIORITY.MEDIUM);
+      setNeedsTrainingTargetCompletionDate("");
+      setNeedsTrainingNotes("");
+    }
+    setIsDecisionModalOpen(true);
+  };
+
+  const handleAddNeedsTrainingFocusArea = () => {
+    const trimmed = needsTrainingFocusAreaInput.trim();
+    if (trimmed && !needsTrainingFocusAreas.includes(trimmed)) {
+      setNeedsTrainingFocusAreas((prev) => [...prev, trimmed]);
+      setNeedsTrainingFocusAreaInput("");
+    }
+  };
+
+  const handleRemoveNeedsTrainingFocusArea = (area: string) => {
+    setNeedsTrainingFocusAreas((prev) => prev.filter((a) => a !== area));
+  };
+
+  const handleUpdateDecision = async () => {
+    if (!selectedInterview || !selectedInterview.id) {
+      toast.error("No interview selected for decision update");
+      return;
+    }
+
+    if (!decisionValue) {
+      toast.error("Please select a decision");
+      return;
+    }
+
+    if (decisionValue === SCREENING_DECISION.NEEDS_TRAINING && !needsTrainingFocusAreas.length) {
+      toast.error("Please add at least one focus area for Needs Training");
+      return;
+    }
+
+    try {
+      await updateScreeningDecision({
+        id: selectedInterview.id,
+        data: {
+          decision: decisionValue,
+          remarks: decisionRemarks || undefined,
+          trainingType: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingType : undefined,
+          focusAreas: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingFocusAreas : undefined,
+          priority: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingPriority : undefined,
+          targetCompletionDate:
+            decisionValue === SCREENING_DECISION.NEEDS_TRAINING
+              ? needsTrainingTargetCompletionDate || undefined
+              : undefined,
+          trainingNotes: decisionValue === SCREENING_DECISION.NEEDS_TRAINING ? needsTrainingNotes : undefined,
+        },
+      }).unwrap();
+
+      toast.success("Screening decision updated successfully");
+      setIsDecisionModalOpen(false);
+      setDecisionValue(null);
+      setDecisionRemarks("");
+      setNeedsTrainingType(TRAINING_TYPE.TECHNICAL);
+      setNeedsTrainingFocusAreas([]);
+      setNeedsTrainingFocusAreaInput("");
+      setNeedsTrainingPriority(TRAINING_PRIORITY.MEDIUM);
+      setNeedsTrainingTargetCompletionDate("");
+      setNeedsTrainingNotes("");
+      refetch?.();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to update screening decision");
     }
   };
 
@@ -836,6 +937,42 @@ export default function ScreeningsListPage() {
                 <CalendarCheck className="h-4 w-4 mr-1.5" />
                 Conduct
               </Button>
+            )}
+
+            {([SCREENING_DECISION.ON_HOLD, SCREENING_DECISION.NEEDS_TRAINING] as string[]).includes(
+              selectedInterview.decision || ""
+            ) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 gap-2 px-3 shadow-none"
+                  >
+                    Update Decision
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-lg border-slate-200">
+                  <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Outcome</p>
+                  </div>
+                  {[
+                    { value: SCREENING_DECISION.APPROVED, label: "Approve Candidate" },
+                    { value: SCREENING_DECISION.NEEDS_TRAINING, label: "Needs Training" },
+                    { value: SCREENING_DECISION.REJECTED, label: "Reject Candidate" },
+                    { value: SCREENING_DECISION.ON_HOLD, label: "Keep On Hold" },
+                  ].map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => openDecisionModal(option.value as SCREENING_DECISION)}
+                      className="text-xs cursor-pointer py-2 px-2 rounded hover:bg-slate-100"
+                    >
+                      {option.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
 
             {(() => {
@@ -1495,6 +1632,152 @@ export default function ScreeningsListPage() {
             toast.error(error?.data?.message || "Failed to send candidate for verification");
           }
         }}
+      />
+
+      {/* Update Screening Decision Confirmation */}
+      <ConfirmationDialog
+        isOpen={isDecisionModalOpen}
+        onClose={() => {
+          setIsDecisionModalOpen(false);
+          setDecisionValue(null);
+          setDecisionRemarks("");
+        }}
+        title={
+          decisionValue === SCREENING_DECISION.NEEDS_TRAINING
+            ? "Confirm Training Assignment Decision"
+            : "Confirm Screening Decision"
+        }
+        description={
+          <div className="space-y-4">
+            <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
+              <p className="text-xs font-bold text-slate-500">Selected Decision</p>
+              <p className="text-sm font-semibold mt-1">{decisionValue?.replace("_", " ")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Remarks</label>
+              <Textarea
+                value={decisionRemarks}
+                onChange={(e) => setDecisionRemarks(e.target.value)}
+                placeholder="Optional remarks for this decision"
+                rows={3}
+                className="w-full"
+              />
+            </div>
+
+            {decisionValue === SCREENING_DECISION.NEEDS_TRAINING && (
+              <div className="space-y-3 pt-3 border-t border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600">Training Type *</label>
+                    <Select
+                      value={needsTrainingType}
+                      onValueChange={(value) => setNeedsTrainingType(value)}
+                      disabled={isUpdatingDecision}
+                    >
+                      <SelectTrigger className="w-full h-9">
+                        <SelectValue placeholder="Training type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={TRAINING_TYPE.INTERVIEW_SKILLS}>Interview Skills</SelectItem>
+                        <SelectItem value={TRAINING_TYPE.TECHNICAL}>Technical</SelectItem>
+                        <SelectItem value={TRAINING_TYPE.COMMUNICATION}>Communication</SelectItem>
+                        <SelectItem value={TRAINING_TYPE.ROLE_SPECIFIC}>Role Specific</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600">Priority</label>
+                    <Select
+                      value={needsTrainingPriority}
+                      onValueChange={(value) => setNeedsTrainingPriority(value)}
+                      disabled={isUpdatingDecision}
+                    >
+                      <SelectTrigger className="w-full h-9">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={TRAINING_PRIORITY.LOW}>Low</SelectItem>
+                        <SelectItem value={TRAINING_PRIORITY.MEDIUM}>Medium</SelectItem>
+                        <SelectItem value={TRAINING_PRIORITY.HIGH}>High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600">Focus Areas *</label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      placeholder="Add focus area"
+                      value={needsTrainingFocusAreaInput}
+                      onChange={(e) => setNeedsTrainingFocusAreaInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddNeedsTrainingFocusArea();
+                        }
+                      }}
+                      disabled={isUpdatingDecision}
+                    />
+                    <Button
+                      size="sm"
+                      type="button"
+                      onClick={handleAddNeedsTrainingFocusArea}
+                      disabled={!needsTrainingFocusAreaInput.trim() || isUpdatingDecision}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  {needsTrainingFocusAreas.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {needsTrainingFocusAreas.map((area) => (
+                        <span key={area} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs">
+                          {area}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveNeedsTrainingFocusArea(area)}
+                            className="font-bold"
+                            disabled={isUpdatingDecision}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600">Target completion date</label>
+                    <Input
+                      type="date"
+                      value={needsTrainingTargetCompletionDate}
+                      onChange={(e) => setNeedsTrainingTargetCompletionDate(e.target.value)}
+                      disabled={isUpdatingDecision}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600">Training notes</label>
+                    <Textarea
+                      value={needsTrainingNotes}
+                      onChange={(e) => setNeedsTrainingNotes(e.target.value)}
+                      rows={2}
+                      disabled={isUpdatingDecision}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        }
+        confirmText={isUpdatingDecision ? "Updating..." : "Update Decision"}
+        cancelText="Cancel"
+        isLoading={isUpdatingDecision}
+        confirmDisabled={!decisionValue}
+        onConfirm={handleUpdateDecision}
       />
 
       {/* Confirmation for notifying recruiter to upload documents */}

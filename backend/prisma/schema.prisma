@@ -726,6 +726,7 @@ model TrainingAssignment {
   candidateProjectMapId String
   screeningId           String? // Which screening triggered this
   assignedBy            String // Coordinator who assigned training
+  trainerId             String? // Trainer user ID conducting this training
 
   // Training details
   trainingType String // interview_skills, technical, communication, role_specific

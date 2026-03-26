@@ -16,6 +16,7 @@ import {
   Mail,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import {
   Card,
@@ -37,12 +38,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ConfirmationDialog } from "@/components/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useAppSelector } from "@/app/hooks";
 import {
   useGetScreeningsQuery,
   useGetAssignedScreeningsQuery,
   useGetUpcomingScreeningsQuery,
   useGetCoordinatorStatsQuery,
+  useUpdateScreeningDecisionMutation,
 } from "../data";
 import { useCreateTrainingAssignmentMutation } from "@/features/screening-coordination/training/data";
 import { useGetProjectQuery } from "@/features/projects/api";
@@ -202,6 +213,19 @@ export default function ScreeningsDashboardPage() {
     projectId: "all",
     roleCatalogId: "all",
   });
+
+  const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
+  const [decisionScreeningItem, setDecisionScreeningItem] = useState<any | null>(null);
+  const [decisionValue, setDecisionValue] = useState<SCREENING_DECISION | null>(null);
+  const [decisionRemarks, setDecisionRemarks] = useState("");
+
+  const [needsTrainingType, setNeedsTrainingType] = useState<string>("technical");
+  const [needsTrainingFocusAreas, setNeedsTrainingFocusAreas] = useState<string[]>([]);
+  const [needsTrainingFocusAreaInput, setNeedsTrainingFocusAreaInput] = useState("");
+  const [needsTrainingPriority, setNeedsTrainingPriority] = useState<string>("medium");
+  const [needsTrainingTargetCompletionDate, setNeedsTrainingTargetCompletionDate] = useState<string>("");
+  const [needsTrainingNotes, setNeedsTrainingNotes] = useState<string>("");
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkScheduleOpen, setIsBulkScheduleOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -212,12 +236,75 @@ export default function ScreeningsDashboardPage() {
     setCurrentPage(1);
   }, [activeTile, filter, search]);
 
+  const handleAddNeedsTrainingFocusArea = () => {
+    const normalized = needsTrainingFocusAreaInput.trim();
+    if (!normalized) return;
+    if (!needsTrainingFocusAreas.includes(normalized)) {
+      setNeedsTrainingFocusAreas((prev) => [...prev, normalized]);
+    }
+    setNeedsTrainingFocusAreaInput("");
+  };
+
+  const handleRemoveNeedsTrainingFocusArea = (area: string) => {
+    setNeedsTrainingFocusAreas((prev) => prev.filter((item) => item !== area));
+  };
+
+  const openDecisionModal = (item: any) => {
+    setDecisionScreeningItem(item);
+    setDecisionValue(item.decision || SCREENING_DECISION.APPROVED);
+    setDecisionRemarks("");
+    setNeedsTrainingType("technical");
+    setNeedsTrainingFocusAreas([]);
+    setNeedsTrainingFocusAreaInput("");
+    setNeedsTrainingPriority("medium");
+    setNeedsTrainingTargetCompletionDate("");
+    setNeedsTrainingNotes("");
+    setIsDecisionModalOpen(true);
+  };
+
+  const handleUpdateDecision = async () => {
+    if (!decisionScreeningItem || !decisionValue) {
+      return;
+    }
+
+    try {
+      const payload: any = {
+        decision: decisionValue,
+        remarks: decisionRemarks || undefined,
+      };
+
+      if (decisionValue === SCREENING_DECISION.NEEDS_TRAINING) {
+        payload.trainingType = needsTrainingType;
+        payload.focusAreas = needsTrainingFocusAreas;
+        payload.priority = needsTrainingPriority;
+        payload.targetCompletionDate = needsTrainingTargetCompletionDate || undefined;
+        payload.trainingNotes = needsTrainingNotes || undefined;
+      }
+
+      await updateScreeningDecision({
+        id: decisionScreeningItem.id,
+        data: payload,
+      }).unwrap();
+
+      toast.success("Decision updated successfully");
+      setIsDecisionModalOpen(false);
+      setDecisionScreeningItem(null);
+      setDecisionValue(null);
+      setDecisionRemarks("");
+      refetchDecision();
+      refetchStats();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to update decision");
+    }
+  };
+
   const { data: projectDetailData } = useGetProjectQuery(
     selectedProjectId as string,
     { skip: !selectedProjectId }
   );
 
   const [createTrainingAssignment, { isLoading: isCreatingTraining }] = useCreateTrainingAssignmentMutation();
+  const [updateScreeningDecision, { isLoading: isUpdatingDecision }] = useUpdateScreeningDecisionMutation();
 
   const queryParams = useMemo(() => ({
     page: currentPage,
@@ -314,22 +401,33 @@ export default function ScreeningsDashboardPage() {
 
   const decisionItems = useMemo(() => {
     const items = decisionData?.data?.items || [];
-    return items.map((item: any) => ({
-      id: item.id,
-      candidate: item.candidateProjectMap?.candidate,
-      project: item.candidateProjectMap?.project,
-      roleNeeded: item.candidateProjectMap?.roleNeeded,
-      recruiter: item.candidateProjectMap?.recruiter,
-      status: item.status,
-      subStatus: item.decision,
-      scheduledTime: item.scheduledTime,
-      trainingAssignedAt: item.candidateProjectMap?.assignedAt ?? item.createdAt,
-      createdAt: item.createdAt,
-      decision: item.decision,
-      conductedAt: item.conductedAt,
-      overallRating: item.overallRating,
-      trainingAssignment: item.trainingAssignments?.[0],
-    }));
+    return items.map((item: any) => {
+      const allAssignments = item.trainingAssignments || [];
+      const trainingAssignment = allAssignments.reduce((latest: any, current: any) => {
+        if (!latest) return current;
+        const latestDate = new Date(latest.assignedAt || latest.createdAt || 0).getTime();
+        const currentDate = new Date(current.assignedAt || current.createdAt || 0).getTime();
+        return currentDate > latestDate ? current : latest;
+      }, null);
+      const assignmentStatus = trainingAssignment?.status || item.status;
+
+      return {
+        id: item.id,
+        candidate: item.candidateProjectMap?.candidate,
+        project: item.candidateProjectMap?.project,
+        roleNeeded: item.candidateProjectMap?.roleNeeded,
+        recruiter: item.candidateProjectMap?.recruiter,
+        status: assignmentStatus,
+        subStatus: item.decision,
+        scheduledTime: item.scheduledTime,
+        trainingAssignedAt: trainingAssignment?.assignedAt ?? item.candidateProjectMap?.assignedAt ?? item.createdAt,
+        createdAt: item.createdAt,
+        decision: item.decision,
+        conductedAt: item.conductedAt,
+        overallRating: item.overallRating,
+        trainingAssignment,
+      };
+    });
   }, [decisionData]);
 
   const tableItems = useMemo(() => {
@@ -598,6 +696,9 @@ export default function ScreeningsDashboardPage() {
                     )}
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project & Role</TableHead>
+                    {(activeTile === "retraining" || activeTile === "training_scheduled") && (
+                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Attempt</TableHead>
+                    )}
                     {activeTile === "scheduled" ? (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Mode</TableHead>
                     ) : activeTile !== "assigned" && (
@@ -637,11 +738,16 @@ export default function ScreeningsDashboardPage() {
                         .replace("on_hold", "On Hold")
                         .replace("approved", "Passed");
 
+                      const trainingAssignment = item.trainingAssignment || item.trainingAssignments?.[0];
+                      const attemptText = trainingAssignment?.trainingAttemptTotal
+                        ? `${trainingAssignment.trainingAttemptTotal}${trainingAssignment.trainingAttemptCurrent ? ` (Current: ${trainingAssignment.trainingAttemptCurrent})` : ""}`
+                        : null;
+
                       const targetScreeningsUrl = activeTile === "scheduled"
                         ? `/screenings/${item.id}/conduct`
                         : activeTile === "retraining"
-                        ? "/screening-coordination/training"
-                        : activeTile === "training_scheduled"
+                        ? "/screenings/training" // navigate to the training listing page
+                        : ["training_scheduled", "training_completed"].includes(activeTile)
                         ? "/screenings/training"
                         : ["passed", "on_hold"].includes(activeTile)
                         ? "/screenings/list"
@@ -709,6 +815,17 @@ export default function ScreeningsDashboardPage() {
                               <span className="text-[10px] text-slate-500 font-medium">{roleName}</span>
                             </div>
                           </TableCell>
+                          {(activeTile === "retraining" || activeTile === "training_scheduled") && (
+                            <TableCell className="px-4 py-2">
+                              {attemptText ? (
+                                <Badge className="text-[10px] font-semibold uppercase px-2 py-1 bg-amber-100 text-amber-700 border-amber-200">
+                                  {attemptText}
+                                </Badge>
+                              ) : (
+                                <span className="text-[10px] text-slate-400">N/A</span>
+                              )}
+                            </TableCell>
+                          )}
                           {activeTile === "scheduled" ? (
                             <TableCell className="px-4 py-2">
                               <Badge
@@ -720,18 +837,31 @@ export default function ScreeningsDashboardPage() {
                             </TableCell>
                           ) : activeTile !== "assigned" && (
                             <TableCell className="px-4 py-2">
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "border font-medium text-[10px] px-2 py-0.5 capitalize",
-                                  decision.toLowerCase().includes("pass") ? "bg-emerald-100 text-emerald-700 border-emerald-300" :
-                                  decision.toLowerCase().includes("rejected") ? "bg-red-100 text-red-700 border-red-300" :
-                                  decision.toLowerCase().includes("training") ? "bg-amber-100 text-amber-700 border-amber-300" :
-                                  "bg-slate-100 text-slate-700 border-slate-300"
+                              <div className="inline-flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "border font-medium text-[10px] px-2 py-0.5 capitalize",
+                                    decision.toLowerCase().includes("pass") ? "bg-emerald-100 text-emerald-700 border-emerald-300" :
+                                    decision.toLowerCase().includes("rejected") ? "bg-red-100 text-red-700 border-red-300" :
+                                    decision.toLowerCase().includes("training") ? "bg-amber-100 text-amber-700 border-amber-300" :
+                                    "bg-slate-100 text-slate-700 border-slate-300"
+                                  )}
+                                >
+                                  {decision}
+                                </Badge>
+                                {activeTile === "training_completed" && item.decision === "needs_training" && (
+                                  <div className="relative group flex items-center">
+                                    <div className="w-5 h-5 flex items-center justify-center rounded-full bg-white border border-red-400 text-red-600 font-extrabold animate-pulse cursor-help">
+                                      !
+                                    </div>
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-[100] w-[200px] whitespace-normal break-words text-[11px] font-medium leading-tight text-red-700 bg-white border border-red-200 px-3 py-2 rounded-lg shadow-xl ring-1 ring-black/5">
+                                      Training completed, but screening decision is still needs_training. Please update to approved or rejected.
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white drop-shadow-sm" />
+                                    </div>
+                                  </div>
                                 )}
-                              >
-                                {decision}
-                              </Badge>
+                              </div>
                             </TableCell>
                           )}
                           {((activeTile === "retraining") || (activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
@@ -828,6 +958,17 @@ export default function ScreeningsDashboardPage() {
                               >
                                 <Users className="h-3.5 w-3.5 mr-1" />
                                 Conduct Training
+                              </Button>
+                            )}
+                            {activeTile === "training_completed" && item.decision === SCREENING_DECISION.NEEDS_TRAINING && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => openDecisionModal(item)}
+                                title="Edit decision"
+                              >
+                                <Pencil className="h-3.5 w-3.5 text-amber-600" />
                               </Button>
                             )}
                             <Button
@@ -969,6 +1110,139 @@ export default function ScreeningsDashboardPage() {
             setSelectedProjectId(null);
           }}
           project={projectDetailData?.data}
+        />
+
+        <ConfirmationDialog
+          isOpen={isDecisionModalOpen}
+          onClose={() => {
+            setIsDecisionModalOpen(false);
+            setDecisionScreeningItem(null);
+            setDecisionValue(null);
+            setDecisionRemarks("");
+          }}
+          title="Update Screening Decision"
+          description={
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-slate-500">Current decision</p>
+                <p className="text-sm font-bold text-slate-700">{decisionScreeningItem?.decision ? decisionScreeningItem.decision.replace("_", " ") : "—"}</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">New decision</label>
+                <Select value={decisionValue || ""} onValueChange={(value) => setDecisionValue(value as SCREENING_DECISION)}>
+                  <SelectTrigger className="w-full h-9">
+                    <SelectValue placeholder="Select decision" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SCREENING_DECISION.APPROVED}>Passed</SelectItem>
+                    <SelectItem value={SCREENING_DECISION.REJECTED}>Rejected</SelectItem>
+                    <SelectItem value={SCREENING_DECISION.ON_HOLD}>On Hold</SelectItem>
+                    <SelectItem value={SCREENING_DECISION.NEEDS_TRAINING}>Needs Training</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Remarks</label>
+                <Textarea
+                  value={decisionRemarks}
+                  onChange={(e) => setDecisionRemarks(e.target.value)}
+                  rows={3}
+                  placeholder="Optional remarks"
+                />
+              </div>
+
+              {decisionValue === SCREENING_DECISION.NEEDS_TRAINING && (
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600">Training Type</label>
+                    <Select value={needsTrainingType} onValueChange={setNeedsTrainingType}>
+                      <SelectTrigger className="w-full h-9">
+                        <SelectValue placeholder="Select training type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="interview_skills">Interview Skills</SelectItem>
+                        <SelectItem value="technical">Technical</SelectItem>
+                        <SelectItem value="communication">Communication</SelectItem>
+                        <SelectItem value="role_specific">Role Specific</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600">Priority</label>
+                    <Select value={needsTrainingPriority} onValueChange={setNeedsTrainingPriority}>
+                      <SelectTrigger className="w-full h-9">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600">Focus Areas</label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        placeholder="Add focus area"
+                        value={needsTrainingFocusAreaInput}
+                        onChange={(e) => setNeedsTrainingFocusAreaInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddNeedsTrainingFocusArea();
+                          }
+                        }}
+                      />
+                      <Button size="sm" onClick={handleAddNeedsTrainingFocusArea} disabled={!needsTrainingFocusAreaInput.trim()}>
+                        Add
+                      </Button>
+                    </div>
+                    {needsTrainingFocusAreas.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {needsTrainingFocusAreas.map((area) => (
+                          <span key={area} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs">
+                            {area}
+                            <button type="button" className="font-bold" onClick={() => handleRemoveNeedsTrainingFocusArea(area)}>
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-600">Target completion date</label>
+                      <Input
+                        type="date"
+                        value={needsTrainingTargetCompletionDate}
+                        onChange={(e) => setNeedsTrainingTargetCompletionDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-600">Training notes</label>
+                      <Textarea
+                        value={needsTrainingNotes}
+                        onChange={(e) => setNeedsTrainingNotes(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          }
+          confirmText={isUpdatingDecision ? "Updating..." : "Update Decision"}
+          cancelText="Cancel"
+          isLoading={isUpdatingDecision}
+          confirmDisabled={!decisionValue}
+          onConfirm={handleUpdateDecision}
         />
 
         <AssignToTrainerDialog

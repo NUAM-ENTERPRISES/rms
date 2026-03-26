@@ -34,7 +34,7 @@ describe('NotificationsProcessor', () => {
     );
   });
 
-  it('notifies recruiter and interview coordinators for approved screening and skips trainer coordinatorId', async () => {
+  it('notifies coordinator, recruiter, and interview coordinators for approved screening', async () => {
     const job: any = {
       data: {
         eventId: 'event-1',
@@ -57,7 +57,10 @@ describe('NotificationsProcessor', () => {
 
     await processor.handleCandidateApprovedForClientInterview(job);
 
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(4);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(5);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'trainer-1', type: 'screening_passed' }),
+    );
     expect(notificationsService.createNotification).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'recruiter-1', type: 'screening_passed' }),
     );
@@ -69,9 +72,6 @@ describe('NotificationsProcessor', () => {
     );
     expect(notificationsService.createNotification).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'teamHead-1', type: 'screening_passed' }),
-    );
-    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'trainer-1' }),
     );
   });
 
