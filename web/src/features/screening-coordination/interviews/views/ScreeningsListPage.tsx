@@ -833,6 +833,17 @@ export default function ScreeningsListPage() {
                 </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-slate-400 hover:text-indigo-600 rounded-md"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/screenings/${interview.id}`);
+                      }}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
                     {interview.decision === SCREENING_DECISION.APPROVED && renderDocStatusIcon(interview)}
                     <ChevronRight
                       className={cn(

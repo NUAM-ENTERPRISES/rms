@@ -167,6 +167,14 @@ const AssignedScreeningsListPage = lazy(
       "@/features/screening-coordination/interviews/views/AssignedScreeningsListPage"
     )
 );
+
+const ScreeningDetailsPage = lazy(
+  () =>
+    import(
+      "@/features/screening-coordination/interviews/views/ScreeningDetailsPage"
+    )
+);
+
 const TemplatesPage = lazy(() => import("@/features/screening-coordination/templates/views/TemplatesPage"));
 const TemplateDetailPage = lazy(
   () =>
@@ -885,6 +893,19 @@ function App() {
                         <ProtectedRoute permissions={["read:screenings"]}>
                           <AppLayout>
                             <UpcomingScreeningsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/screenings/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:screenings"]}>
+                          <AppLayout>
+                            <ScreeningDetailsPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

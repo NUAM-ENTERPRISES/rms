@@ -4,10 +4,14 @@ export const handleScreeningNotifications = ({ notification, dispatch, invalidat
   const screeningNotificationTypes = [
     "candidate_sent_to_screening",
     "candidate_assigned_to_screening",
+    "candidate_assigned_screening",
     "candidate_assigned_project",
     "screening_updated",
     "screening_failed",
-    "screening_passed"
+    "screening_passed",
+    "candidate_failed_screening",
+    "candidate_approved_for_client_interview",
+    "candidate_sent_for_verification"
   ];
 
   if (!screeningNotificationTypes.includes(notification.type)) return false;
@@ -17,6 +21,8 @@ export const handleScreeningNotifications = ({ notification, dispatch, invalidat
   const tags: any[] = [
     "Candidate", // Match top-level string tag
     "ProjectCandidates",
+    "Interview",
+    { type: "Interview", id: "LIST" },
     { type: "Screening", id: "LIST" },
     { type: "Candidate", id: "LIST" },
     { type: "ProjectCandidates", id: "LIST" },
@@ -41,6 +47,7 @@ export const handleScreeningSync = (payload: any, { dispatch, invalidateTags }: 
     console.log("[Socket] Screening data sync");
     dispatch(invalidateTags([
       { type: "Screening", id: "LIST" },
+      { type: "Interview", id: "LIST" },
       { type: "Candidate", id: "LIST" }
     ]));
     return true;

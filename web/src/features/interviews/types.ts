@@ -1,2 +1,16 @@
-// Feature-specific types for interviews
-// Placeholder for future implementation
+export interface SummaryStats {
+  shortlistPending: number;
+  shortlisted: number;
+  shortlistRejected: number;
+  interviewScheduled: number;
+  interviewPassed: number;
+  interviewRejected: number;
+  screeningAssigned: number;
+  screeningScheduled: number;
+  screeningPassed: number;
+  screeningRejected: number;
+  onHold: number;
+  screeningTraining: number;
+  passRate: number;
+}
+

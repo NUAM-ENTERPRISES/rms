@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import { SummaryStats } from "./types";
 
 // Interview interfaces
 export interface Interview {
@@ -419,6 +420,55 @@ export const interviewsApi = baseApi.injectEndpoints({
       query: () => ({ url: "/interviews/dashboard" }),
       providesTags: ["Interview"],
     }),
+
+    /**
+     * Comprehensive summary stats for interview overview
+     * GET /interviews/summary-stats
+     */
+    getSummaryStats: builder.query<{ success: true; data: SummaryStats, message: string }, void>({
+      query: () => ({ url: "/interviews/summary-stats" }),
+      providesTags: [{ type: "Interview", id: "LIST" }],
+    }),
+
+    /**
+     * Get assigned screenings (re-using from screenings module)
+     */
+    getAssignedScreenings: builder.query<
+      { success: boolean; data: { items: any[]; pagination: any }; message?: string },
+      any
+    >({
+      query: (params) => ({
+        url: "/screenings/assigned-screenings",
+        params,
+      }),
+      providesTags: (result) =>
+        result?.data?.items && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map((item) => ({ type: "Interview" as const, id: item.id })),
+              { type: "Interview", id: "LIST" },
+            ]
+          : [{ type: "Interview", id: "LIST" }],
+    }),
+
+    /**
+     * Get upcoming screenings (re-using from screenings module)
+     */
+    getUpcomingScreenings: builder.query<
+      { success: boolean; data: { items: any[]; pagination: any }; message?: string },
+      any
+    >({
+      query: (params) => ({
+        url: "/screenings/upcoming",
+        params,
+      }),
+      providesTags: (result) =>
+        result?.data?.items && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map((item: any) => ({ type: "Interview" as const, id: item.id })),
+              { type: "Interview", id: "LIST" },
+            ]
+          : [{ type: "Interview", id: "LIST" }],
+    }),
   }),
 });
 
@@ -441,4 +491,7 @@ export const {
   useUpdateClientDecisionMutation,
   useUpdateBulkClientDecisionMutation,
   useGetInterviewsDashboardQuery,
+  useGetSummaryStatsQuery,
+  useGetAssignedScreeningsQuery,
+  useGetUpcomingScreeningsQuery,
 } = interviewsApi;
