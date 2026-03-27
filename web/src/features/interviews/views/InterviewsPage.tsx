@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
-  TrendingUp,
   ClipboardCheck,
   Mail,
   X,
@@ -278,7 +277,6 @@ export default function InterviewsPage() {
   } = useGetScreeningsQuery({
     page,
     limit,
-    search: search || undefined,
     decision: "needs_training",
   }, { skip: activeFilter !== "screeningTraining" });
 
@@ -291,7 +289,6 @@ export default function InterviewsPage() {
   } = useGetScreeningsQuery({
     page,
     limit,
-    search: search || undefined,
     decision: "approved",
   }, { skip: activeFilter !== "screeningPassed" });
 
@@ -304,7 +301,6 @@ export default function InterviewsPage() {
   } = useGetScreeningsQuery({
     page,
     limit,
-    search: search || undefined,
     decision: "rejected",
   }, { skip: activeFilter !== "screeningRejected" });
 
@@ -317,7 +313,6 @@ export default function InterviewsPage() {
   } = useGetScreeningsQuery({
     page,
     limit,
-    search: search || undefined,
     decision: "on_hold",
   }, { skip: activeFilter !== "onHold" });
 
@@ -335,7 +330,7 @@ export default function InterviewsPage() {
     refetchScreeningOnHold();
   };
 
-  const candidates = useMemo(() => {
+  const candidates = useMemo<any[]>(() => {
     if (activeFilter === "screeningAssigned") {
       return (assignedScreeningsData as any)?.data?.items ?? [];
     }
