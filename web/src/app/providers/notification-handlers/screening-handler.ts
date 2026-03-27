@@ -26,6 +26,8 @@ export const handleScreeningNotifications = ({ notification, dispatch, invalidat
     { type: "Screening", id: "LIST" },
     { type: "Candidate", id: "LIST" },
     { type: "ProjectCandidates", id: "LIST" },
+    { type: "VerificationCandidates", id: "LIST" },
+    "VerificationCandidates",
   ];
 
   if (notification.meta?.projectId) {

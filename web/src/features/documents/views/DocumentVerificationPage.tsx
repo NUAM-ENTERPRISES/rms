@@ -412,25 +412,6 @@ export default function DocumentVerificationPage() {
         {/* Dashboard Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-          {/* Screening Approved Card */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}>
-            <Suspense fallback={<div className="h-28" />}> 
-
-         
-              
-              <ScreeningApprovedTile
-                count={statusCounts.screening_approved}
-                active={statusFilter === "screening_approved"}
-                onClick={() => {
-                  setStatusFilter("screening_approved");
-                  setCurrentPage(1);
-                  setSelectedCandidateIds(new Set());
-                  setSelectAll(false);
-                }}
-              />
-            </Suspense>
-          </motion.div>
-
           {/* Total Candidates Card */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
             <Suspense fallback={<div className="h-28" />}>

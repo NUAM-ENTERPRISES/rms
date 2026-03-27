@@ -1553,6 +1553,78 @@ export class NotificationsProcessor extends WorkerHost {
         this.logger.log(`Screening passed notification created for team head ${teamHeadId}`);
       }
 
+      // Notify all Documentation role members
+      const documentationUsers = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  equals: 'Documentation',
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      for (const docUser of documentationUsers) {
+        const idemKeyDoc = `${eventId}:${docUser.id}:screening_passed_doc`;
+
+        await this.notificationsService.createNotification({
+          userId: docUser.id,
+          type: 'screening_passed',
+          title: 'Candidate Screening Passed - Verify Documents',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has passed the screening for ${candidateProjectMap.project.title}. Please verify the documents.`,
+          link: `/candidates/${candidateProjectMap.candidate.id}/documents/${candidateProjectMap.project.id}`,
+          meta: {
+            candidateProjectMapId,
+            screeningId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+          },
+          idemKey: idemKeyDoc,
+        });
+      }
+
+      // Notify all Documentation Executive role members
+      const documentationExecutives = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  equals: 'Documentation Executive',
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      for (const docExec of documentationExecutives) {
+        const idemKeyExec = `${eventId}:${docExec.id}:screening_passed_exec`;
+
+        await this.notificationsService.createNotification({
+          userId: docExec.id,
+          type: 'screening_passed',
+          title: 'Candidate Screening Passed - Verify Documents',
+          message: `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName} has passed the screening for ${candidateProjectMap.project.title}. Please verify the documents.`,
+          link: `/candidates/${candidateProjectMap.candidate.id}/documents/${candidateProjectMap.project.id}`,
+          meta: {
+            candidateProjectMapId,
+            screeningId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId: candidateProjectMap.project.id,
+          },
+          idemKey: idemKeyExec,
+        });
+      }
+
       // NOTE: We intentionally avoid notifying the raw coordinatorId (trainer) here.
       // All Interview Coordinator role members are already being notified above.
     } catch (error) {
