@@ -1356,6 +1356,26 @@ export default function ProjectDetailPage() {
                         </div>
                       )}
 
+                    {/* Required/Common Skills */}
+                    {role.requiredSkills && role.requiredSkills.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-[11px] font-semibold text-slate-700">
+                          Required Skills
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {role.requiredSkills.map((skill: string, idx: number) => (
+                            <Badge
+                              key={`${skill}-${idx}`}
+                              variant="secondary"
+                              className="text-[10px] px-2 py-1"
+                            >
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Benefits & Type */}
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/60">
                       {(role.accommodation || role.food || role.transport) && (

@@ -217,6 +217,23 @@ export default function ProjectDetailsModal({
                         )}
                       </div>
 
+                      {role.requiredSkills && role.requiredSkills.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-[10px] text-slate-500 font-semibold mb-1">Required Skills</div>
+                          <div className="flex flex-wrap gap-1">
+                            {role.requiredSkills.map((skill: string, idx: number) => (
+                              <Badge
+                                key={`${role.id}-skill-${idx}`}
+                                variant="secondary"
+                                className="text-[10px] px-2 py-0.5"
+                              >
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {role.notes && (
                         <p className="mt-2 text-xs text-slate-600 italic">
                           Note: {role.notes}

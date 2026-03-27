@@ -68,6 +68,7 @@ export interface RoleNeeded {
   institutionRequirements?: string;
   skills?: string;
   technicalSkills?: string;
+  requiredSkills?: string[];
   employmentType: "contract" | "permanent";
   contractDurationYears?: number;
   visaType?: "contract" | "permanent";
