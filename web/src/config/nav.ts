@@ -191,7 +191,7 @@ export const navigationConfig: NavItem[] = [
     path: "/interviews",
     icon: Calendar,
     permissions: ["read:interviews"],
-    hiddenForRoles: ["Documentation Executive"],
+    hiddenForRoles: ["Documentation Executive", "Interview Coordinator"],
     children: [
       {
         id: "interviews-dashboard",
