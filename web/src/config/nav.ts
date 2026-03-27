@@ -42,6 +42,15 @@ export const navigationConfig: NavItem[] = [
     // Only visible to CRE users
   },
   {
+    id: "documentation-dashboard",
+    label: "Dashboard",
+    path: "/documents/verification",
+    icon: FileText,
+    roles: ["Documentation Executive"],
+    permissions: ["read:documents"],
+    // Documentation Executives should see this as their first dashboard item
+  },
+  {
     id: "processing-dashboard",
     label: "Processing",
     path: "/",
@@ -56,13 +65,6 @@ export const navigationConfig: NavItem[] = [
     icon: Home,
     roles: ["Recruiter", "Team Head", "Team Lead"],
     // Recruiter Dashboard - points to Candidate Overview
-  },
-  {
-    id: "documentation-dashboard",
-    label: "Dashboard",
-    path: "/documents/verification",
-    icon: FileText,
-    roles: ["Documentation Executive"],
   },
   {
     id: "candidates",
@@ -293,14 +295,6 @@ export const navigationConfig: NavItem[] = [
     icon: FileText,
     permissions: ["read:documents"],
     hiddenForRoles: ["Interview Coordinator", "Recruiter", "CRE", "Documentation Executive"],
-    children: [
-      {
-        id: "documents-verification",
-        label: "Document Verification",
-        path: "/documents/verification",
-        permissions: ["read:documents"],
-      },
-    ],
   },
   {
     id: "processing",
