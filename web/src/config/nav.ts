@@ -67,6 +67,22 @@ export const navigationConfig: NavItem[] = [
     // Recruiter Dashboard - points to Candidate Overview
   },
   {
+    id: "interviews-dashboard-top",
+    label: "Dashboard",
+    path: "/interviews",
+    icon: Home,
+    roles: ["Interview Coordinator"],
+    permissions: ["read:interviews"],
+  },
+  {
+    id: "interviews-list-top",
+    label: "My Interviews",
+    path: "/interviews/list",
+    icon: Calendar,
+    roles: ["Interview Coordinator"],
+    permissions: ["read:interviews"],
+  },
+  {
     id: "candidates",
     label: "Candidates",
     path: "/candidates",
@@ -146,34 +162,6 @@ export const navigationConfig: NavItem[] = [
     ],
   },
   {
-    id: "projects",
-    label: "Projects",
-    icon: Building2,
-    roles: [
-      "CEO",
-      "Director",
-      "Manager",
-      "Recruiter",
-      "Documentation Executive",
-      "Processing Executive",
-      "System Admin",
-      "Interview Coordinator",
-      // "Screening Trainer",
-    ],
-    children: [
-      {
-        id: "projects-overview",
-        label: "Overview",
-        path: "/projects/overview",
-      },
-      {
-        id: "projects-management",
-        label: "Management",
-        path: "/projects",
-      },
-    ],
-  },
-  {
     id: "clients",
     label: "Clients",
     path: "/clients",
@@ -189,14 +177,14 @@ export const navigationConfig: NavItem[] = [
     permissions: ["read:teams"],
     // Hidden from CRE - they work independently
   },
-  {
-    id: "basic-training",
-    label: "Basic Training",
-    path: "/basic-training",
-    icon: BookOpen,
-    permissions: ["read:training"],
-    hiddenForRoles: ["Screening Trainer"],
-  },
+  // {
+  //   id: "basic-training",
+  //   label: "Basic Training",
+  //   path: "/basic-training",
+  //   icon: BookOpen,
+  //   permissions: ["read:training"],
+  //   hiddenForRoles: ["Screening Trainer", "Interview Coordinator"],
+  // },
   {
     id: "interviews",
     label: "Interviews",
@@ -217,7 +205,6 @@ export const navigationConfig: NavItem[] = [
         path: "/interviews/list",
         permissions: ["read:interviews"],
       },
-      // Assigned and Upcoming are intentionally omitted from the sidebar
     ],
     // Hidden from CRE - they focus on RNR candidates
   },
@@ -319,29 +306,6 @@ export const navigationConfig: NavItem[] = [
 
     ]
   },
-
-  // {
-  //   id: "notifications",
-  //   label: "Notifications",
-  //   path: "/notifications",
-  //   icon: Bell,
-  //   badge: {
-  //     text: "Updates",
-  //     variant: "outline",
-  //   },
-  //   // Accessible to all roles - important for staying updated
-  // },
-  // {
-  //   id: "analytics",
-  //   label: "Analytics",
-  //   path: "/analytics",
-  //   icon: BarChart3,
-  //   permissions: ["read:analytics"],
-  //   badge: {
-  //     text: "Insights",
-  //     variant: "default",
-  //   },
-  // },
   {
     id: "admin",
     label: "Administration",
@@ -365,19 +329,34 @@ export const navigationConfig: NavItem[] = [
       },
     ],
   },
-
-  // {
-  //   id: "settings",
-  //   label: "Settings",
-  //   path: "/settings",
-  //   icon: Settings,
-  //   permissions: ["read:settings"],
-  //   roles: ["CEO", "Director", "Manager"],
-  //   badge: {
-  //     text: "Config",
-  //     variant: "outline",
-  //   },
-  // },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: Building2,
+    roles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "Recruiter",
+      "Documentation Executive",
+      "Processing Executive",
+      "System Admin",
+      "Interview Coordinator",
+      // "Screening Trainer",
+    ],
+    children: [
+      {
+        id: "projects-overview",
+        label: "Overview",
+        path: "/projects/overview",
+      },
+      {
+        id: "projects-management",
+        label: "Management",
+        path: "/projects",
+      },
+    ],
+  },
   {
     id: "profile",
     label: "Profile",

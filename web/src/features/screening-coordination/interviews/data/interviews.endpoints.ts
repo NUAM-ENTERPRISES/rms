@@ -144,8 +144,12 @@ export const screeningsApi = baseApi.injectEndpoints({
           ? [
               ...result.data.items.map(({ id }) => ({ type: "Screening" as const, id })),
               { type: "Screening", id: "LIST" },
+              { type: "Interview", id: "LIST" },
             ]
-          : [{ type: "Screening", id: "LIST" }],
+          : [
+              { type: "Screening", id: "LIST" },
+              { type: "Interview", id: "LIST" },
+            ],
     }),
 
     // Get upcoming screenings (paginated) - new endpoint
@@ -159,8 +163,12 @@ export const screeningsApi = baseApi.injectEndpoints({
           ? [
               ...result.data.items.map(({ id }) => ({ type: "Screening" as const, id })),
               { type: "Screening", id: "LIST" },
+              { type: "Interview", id: "LIST" },
             ]
-          : [{ type: "Screening", id: "LIST" }],
+          : [
+              { type: "Screening", id: "LIST" },
+              { type: "Interview", id: "LIST" },
+            ],
     }),
 
     // Get coordinator-focused stats (assigned/approved/rejected/on-hold counts + pass rate)

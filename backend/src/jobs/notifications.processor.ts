@@ -1369,6 +1369,12 @@ export class NotificationsProcessor extends WorkerHost {
           );
         }
 
+        // Emit realtime sync for all clients so dashboards and screens update instantly
+        this.notificationsGateway.server.emit('data:sync', {
+          type: 'Screening',
+          message: 'Screening scheduled, refresh upcoming screenings and summary stats.',
+        });
+
         this.logger.log(`Notifications created for candidate sent to screening event: ${eventId}`);
       } catch (error) {
         this.logger.error(`Failed to process candidate sent to screening: ${error.message}`, error.stack);

@@ -813,15 +813,35 @@ export class CandidateProjectsService {
     // Emit real-time synchronization event
     try {
       if (result.id) {
-        // Find assigned coordinator if any
+        // Build recipients list for real-time updates
         const coordinatorId = createDto.coordinatorId || result.screening?.coordinatorId;
-        const recipients: string[] = [];
+        const recipients = new Set<string>();
 
-        if (coordinatorId) {
-          recipients.push(coordinatorId);
+        if (coordinatorId) recipients.add(coordinatorId);
+        if (finalRecruiterId) recipients.add(finalRecruiterId);
+        if (userId) recipients.add(userId);
+
+        // Include all active interview coordinators/screening trainers for assigned-screenings updates
+        const coordinators = (await this.prisma.user.findMany({
+          where: {
+            userRoles: {
+              some: {
+                role: {
+                  name: {
+                    in: ['Interview Coordinator', 'Screening Trainer'],
+                  },
+                },
+              },
+            },
+          },
+          select: { id: true },
+        })) || [];
+
+        for (const coord of coordinators) {
+          if (coord?.id) recipients.add(coord.id);
         }
 
-        const recipientsSet = [...new Set(recipients)];
+        const recipientsSet = [...recipients];
 
         if (recipientsSet.length > 0) {
           await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
@@ -829,14 +849,14 @@ export class CandidateProjectsService {
             id: result.id,
             message: `Candidate has been sent for screening.`,
           });
-        }
 
-        // Always sync Project to refresh eligible/nominated/consolidated lists
-        await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
-          type: 'Project',
-          id: projectId,
-          message: `Candidate sent for screening in project ${projectId}.`,
-        });
+          // Always sync Project to refresh eligible/nominated/consolidated lists
+          await this.notificationsGateway.emitToUsers(recipientsSet, 'data:sync', {
+            type: 'Project',
+            id: projectId,
+            message: `Candidate sent for screening in project ${projectId}.`,
+          });
+        }
       }
     } catch (err) {
       this.logger.error(`Failed to emit real-time update for screening ${result.id}`, err.stack);

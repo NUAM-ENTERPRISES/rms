@@ -65,6 +65,7 @@ model User {
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
   documentForwards            DocumentForwardHistory[]
+  screenings                  Screening[]                   @relation("ScreeningCoordinator")
 
   @@unique([countryCode, mobileNumber])
   @@index([email])
@@ -595,6 +596,7 @@ model Screening {
   updatedAt DateTime @updatedAt
 
   // Relations
+  coordinator           User                     @relation("ScreeningCoordinator", fields: [coordinatorId], references: [id])
   candidateProjectMap   CandidateProjects        @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   template              ScreeningTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
   checklistItems        ScreeningChecklistItem[]

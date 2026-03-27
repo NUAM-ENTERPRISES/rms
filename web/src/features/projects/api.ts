@@ -558,7 +558,8 @@ export const projectsApi = baseApi.injectEndpoints({
       invalidatesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
         "ProjectCandidates",
-        "Screening",
+        { type: "Screening", id: "LIST" },
+        { type: "Interview", id: "LIST" },
         "Candidate",
         "CandidateProject",
       ],
@@ -584,7 +585,7 @@ export const projectsApi = baseApi.injectEndpoints({
       invalidatesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
         "ProjectCandidates",
-        "Screening",
+        { type: "Screening", id: "LIST" },
         "Candidate",
         "CandidateProject",
       ],

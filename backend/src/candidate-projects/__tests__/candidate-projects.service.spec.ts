@@ -171,7 +171,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     await service.sendForScreening(dto, 'u1');
 
     expect((service as any).notificationsGateway.emitToUsers).toHaveBeenCalledWith(
-      ['coord1'],
+      expect.arrayContaining(['coord1']),
       'data:sync',
       expect.objectContaining({ type: 'Screening', id: 'map1' }),
     );

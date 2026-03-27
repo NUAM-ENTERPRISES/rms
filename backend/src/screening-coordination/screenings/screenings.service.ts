@@ -459,6 +459,14 @@ export class ScreeningsService {
           checklistItems: {
             orderBy: { category: 'asc' },
           },
+          coordinator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              mobileNumber: true,
+            },
+          },
           trainingAssignments: {
             include: {
               trainingSessions: true,
@@ -1448,20 +1456,20 @@ export class ScreeningsService {
 
     // Fetch complete result with relations
     const finalResult = await this.findOne(id);
+    const cpm = finalResult.candidateProjectMap;
+    const coordinatorId = finalResult.coordinator?.id || userId;
 
     // Auto-trigger "send for verification" if approved and no documents assigned yet
     if (dto.decision === SCREENING_DECISION.APPROVED) {
-      const cpm = finalResult.candidateProjectMap;
-
       // Notify recruiter and handle approvals
-      if (cpm && userId) {
+      if (cpm && coordinatorId) {
         try {
           // Publish event to notify recruiter and potentially others
           await this.outboxService.publishCandidateApprovedForClientInterview(
             cpm.id,
             id,
-            userId, // coordinator (the trainer who passed them)
-            cpm.recruiterId || '', // recruiter
+            coordinatorId,
+            cpm.recruiterId || null,
           );
           this.logger.log(
             `Published CandidateApprovedForClientInterview event for candidate ${cpm.candidateId}`,
@@ -1472,6 +1480,24 @@ export class ScreeningsService {
           );
         }
       }
+    } else if (dto.decision === SCREENING_DECISION.REJECTED) {
+      if (cpm && coordinatorId) {
+        try {
+          await this.outboxService.publishCandidateFailedScreening(
+            cpm.id,
+            id,
+            coordinatorId,
+            cpm.recruiterId || null,
+            dto.decision,
+          );
+          this.logger.log(
+            `Published CandidateFailedScreening event for candidate ${cpm.candidateId}`,
+          );
+        } catch (error) {
+          this.logger.error(`Failed to publish failed-screening event: ${error.message}`);
+        }
+      }
+    }
 
       // Only auto-send if there are no existing document verifications for this candidate/project nomination
       // Check directly in DB since finalResult has stripped documentVerifications
@@ -1500,7 +1526,6 @@ export class ScreeningsService {
           // We don't throw here to avoid failing the whole screening completion if verification auto-trigger fails
         }
       }
-    }
 
     return finalResult;
   }
@@ -1677,7 +1702,24 @@ export class ScreeningsService {
     
     // Filter by coordinatorId via the Screenings relation
     if (coordinatorId) {
-      where.screenings = { some: { coordinatorId: coordinatorId } };
+      // Check if the user is a Screening Trainer
+      const trainer = await this.prisma.user.findFirst({
+        where: {
+          id: coordinatorId,
+          userRoles: {
+            some: {
+              role: {
+                name: 'Screening Trainer',
+              },
+            },
+          },
+        },
+      });
+
+      // If it's a trainer, filter by their assignments. Otherwise, it's optional.
+      if (trainer) {
+        where.screenings = { some: { coordinatorId: coordinatorId } };
+      }
     }
 
     // Filter by roleCatalogId via the RoleNeeded relation
@@ -1744,17 +1786,20 @@ export class ScreeningsService {
             client: { select: { id: true, name: true } },
             country: { select: { code: true, name: true } },
             creator: { select: { id: true, name: true } },
-            documentRequirements: true,
           },
         },
         roleNeeded: { select: { id: true, designation: true } },
         recruiter: { select: { id: true, name: true, email: true } },
         mainStatus: true,
         subStatus: true,
-        documentVerifications: {
-          include: {
-            document: true,
+        screenings: {
+          select: {
+            id: true,
+            coordinatorId: true,
+            createdAt: true,
           },
+          take: 1,
+          orderBy: { createdAt: 'desc' },
         },
       },
       orderBy: { assignedAt: 'desc' },
@@ -1763,20 +1808,42 @@ export class ScreeningsService {
     });
 
     // Attach a combined phone field to the candidate for easier consumption by the frontend
-    const itemsWithCandidatePhone = items.map((it) => {
+    const itemsEnriched = await Promise.all(items.map(async (it: any) => {
       const candidate = it.candidate
         ? {
             ...it.candidate,
             phone: `${it.candidate.countryCode ?? ''} ${it.candidate.mobileNumber ?? ''}`.trim(),
           }
         : null;
-      return { ...it, candidate };
-    });
+      
+      const screening = it['screenings']?.[0];
+      let trainer: any = null;
+      
+      if (screening?.coordinatorId) {
+        const coordUser = await this.prisma.user.findUnique({
+          where: { id: screening.coordinatorId },
+          select: { id: true, name: true, email: true, mobileNumber: true },
+        });
+        
+        if (coordUser) {
+          trainer = {
+            id: coordUser.id,
+            name: coordUser.name,
+            email: coordUser.email,
+            phone: coordUser.mobileNumber,
+          };
+        }
+      }
+
+      // Clean up internal relation and return enriched item
+      const { screenings, ...rest } = it;
+      return { ...rest, candidate, trainer };
+    }));
 
     return {
       success: true,
       data: {
-        items: itemsWithCandidatePhone.map((it) => ({ ...it, assignedAt: it.assignedAt })),
+        items: itemsEnriched.map((it) => ({ ...it, assignedAt: it.assignedAt })),
         pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
       },
       message: 'Assigned candidate-projects for screenings (latest first)',
@@ -1791,16 +1858,12 @@ export class ScreeningsService {
 
     // Return screenings where the candidate-project specifically has 'screening_scheduled' status
     const where: any = {
-      status: SCREENING_STATUS.SCHEDULED,
       candidateProjectMap: {
         subStatus: {
           name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED
         }
       }
     };
-
-    if (coordinatorId) where.coordinatorId = coordinatorId;
-    if (candidateProjectMapId) where.candidateProjectMapId = candidateProjectMapId;
 
     // Support filtering by project and roleCatalog via candidateProjectMap relation
     const cpAND: any[] = [];
@@ -1827,6 +1890,14 @@ export class ScreeningsService {
     const items = await this.prisma.screening.findMany({
       where,
       include: {
+        coordinator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            mobileNumber: true,
+          },
+        },
         candidateProjectMap: {
           include: {
             candidate: {
@@ -1911,7 +1982,22 @@ export class ScreeningsService {
       const cand = cp.candidate
         ? { ...cp.candidate, phone: `${cp.candidate.countryCode ?? ''} ${cp.candidate.mobileNumber ?? ''}`.trim() }
         : null;
-      return { ...it, candidateProjectMap: { ...cp, candidate: cand } };
+      
+      // Alias coordinator as trainer for better clarity in the frontend
+      const trainer = it.coordinator
+        ? {
+            id: it.coordinator.id,
+            name: it.coordinator.name,
+            email: it.coordinator.email,
+            phone: it.coordinator.mobileNumber,
+          }
+        : null;
+
+      return { 
+        ...it, 
+        trainer,
+        candidateProjectMap: { ...cp, candidate: cand } 
+      };
     });
 
     return {

@@ -731,6 +731,19 @@ export class InterviewsController {
     };
   }
 
+  @Get('summary-stats')
+  @Permissions('read:interviews')
+  @ApiOperation({ summary: 'Get summary statistics for interviews' })
+  @ApiResponse({ status: 200, description: 'Summary statistics retrieved successfully' })
+  async getSummaryStats(): Promise<any> {
+    const stats = await this.interviewsService.getSummaryStats();
+    return {
+      success: true,
+      data: stats,
+      message: 'Summary statistics retrieved successfully',
+    };
+  }
+
   @Patch('status')
   @Permissions('write:interviews')
   @ApiOperation({

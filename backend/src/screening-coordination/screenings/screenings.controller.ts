@@ -107,12 +107,13 @@ export class ScreeningsController {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
     const isAdmin = roles.some((role: string) =>
-      ['CEO', 'Director', 'Manager', 'System Admin'].includes(role),
+      ['CEO', 'Director', 'Manager', 'System Admin', 'Interview Coordinator'].includes(role),
     );
-    const isCoordinator = roles.includes('Interview Coordinator');
+    const isCoordinator = roles.some((role: string) =>
+      ['Screening Trainer'].includes(role),
+    );
 
-    // If not admin/coordinator (e.g., Screening Trainer), they can only see their own screenings
-    if (!isAdmin && !isCoordinator) {
+    if (isCoordinator) {
       query.coordinatorId = user.sub ?? user.userId ?? user.id;
     }
 
@@ -167,9 +168,9 @@ export class ScreeningsController {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
     const isAdmin = roles.some((role: string) => ['CEO', 'Director', 'Manager', 'System Admin'].includes(role));
-    const isCoordinator = roles.includes('Interview Coordinator');
+    const isCoordinator = roles.some((role: string) => ['Interview Coordinator', 'Screening Trainer'].includes(role));
 
-    // If not admin/coordinator, they can only see their own assignments
+    // If not admin/coordinator/screening trainer, they can only see their own assignments
     if (!isAdmin && !isCoordinator) {
       query.coordinatorId = user.id;
     }
@@ -186,18 +187,6 @@ export class ScreeningsController {
   })
   @ApiResponse({ status: 200, description: 'Upcoming screenings retrieved' })
   getUpcoming(@Query() query: QueryUpcomingScreeningsDto, @Request() req: any) {
-    const user = req.user;
-    const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
-    const isAdmin = roles.some((role: string) =>
-      ['CEO', 'Director', 'Manager', 'System Admin'].includes(role),
-    );
-    const isCoordinator = roles.includes('Interview Coordinator');
-
-    // If not admin/coordinator (e.g., Screening Trainer), they can only see their own upcoming screenings
-    if (!isAdmin && !isCoordinator) {
-      query.coordinatorId = user.sub ?? user.userId ?? user.id;
-    }
-
     return this.screeningsService.getUpcoming(query);
   }
 

@@ -1388,6 +1388,70 @@ export class InterviewsService {
   }
 
   /**
+   * Comprehensive summary stats for the interviews dashboard:
+   * 1. Shortlist pending
+   * 2. Shortlisted
+   * 3. Shortlist Rejected
+   * 4. Interview Scheduled
+   * 5. Interview Passed
+   * 6. Interview Rejected
+   * 7. Screening Assigned
+   * 8. Screening Scheduled
+   * 9. Screening Passed
+   * 10. Screening Rejected
+   * 11. Screening On Hold
+   * 12. Pass Rate
+   */
+  async getSummaryStats() {
+    const [
+      shortlistPending,
+      shortlisted,
+      shortlistRejected,
+      interviewScheduled,
+      interviewPassed,
+      interviewRejected,
+      screeningAssigned,
+      screeningScheduled,
+      screeningPassed,
+      screeningRejected,
+      onHold,
+      screeningTraining,
+    ] = await Promise.all([
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'submitted_to_client' } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'shortlisted' } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'not_shortlisted' } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_scheduled' } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_passed' } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'rejected_interview' } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_assigned' } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_scheduled' } } }),
+      this.prisma.screening.count({ where: { decision: 'approved' } }),
+      this.prisma.screening.count({ where: { decision: 'rejected' } }),
+      this.prisma.screening.count({ where: { decision: 'on_hold' } }),
+      this.prisma.screening.count({ where: { decision: 'needs_training' } }),
+    ]);
+
+    const completedInterviews = interviewPassed + interviewRejected;
+    const passRate = completedInterviews > 0 ? Number(((interviewPassed / completedInterviews) * 100).toFixed(2)) : 0;
+
+    return {
+      shortlistPending,
+      shortlisted,
+      shortlistRejected,
+      interviewScheduled,
+      interviewPassed,
+      interviewRejected,
+      screeningAssigned,
+      screeningScheduled,
+      screeningPassed,
+      screeningRejected,
+      onHold,
+      screeningTraining,
+      passRate,
+    };
+  }
+
+  /**
    * Get history entries for a given interview (client interviews)
    * - Supports optional pagination: pass { page, limit } to return paginated result
    * - Backwards-compatible: when `query` is omitted the full array is returned

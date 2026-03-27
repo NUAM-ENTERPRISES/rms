@@ -288,6 +288,56 @@ describe('ScreeningsService', () => {
     expect(result.decision).toBe('rejected');
   });
 
+  it('complete publishes failed screening event on rejected decision', async () => {
+    (prisma.screening.findUnique as any).mockResolvedValueOnce({
+      id: 'mi-reject',
+      conductedAt: null,
+      candidateProjectMapId: 'map1',
+    });
+
+    const dto = {
+      overallRating: 25,
+      decision: 'rejected',
+      checklistItems: [],
+      remarks: 'Not fit',
+      strengths: 'N/A',
+      areasOfImprovement: 'Needs experience',
+    } as any;
+
+    const tx = {
+      screening: { update: jest.fn().mockResolvedValue({ id: 'mi-reject' }) },
+      screeningChecklistItem: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map1', subStatus: { id: 's-rejected', name: 'rejected_interview' } }) },
+      candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist' }) },
+      interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist2' }) },
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'coord1', name: 'Coordinator' }) },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    (prisma.screening.findUnique as any).mockResolvedValueOnce({
+      id: 'mi-reject',
+      conductedAt: new Date(),
+      candidateProjectMap: {
+        id: 'map1',
+        candidateId: 'c1',
+        recruiterId: 'r1',
+        candidate: { id: 'c1', firstName: 'John', lastName: 'Doe' },
+      },
+      coordinator: { id: 'coord1', name: 'Coordinator' },
+    });
+
+    await service.complete('mi-reject', dto, 'coord1');
+
+    expect(outbox.publishCandidateFailedScreening).toHaveBeenCalledWith(
+      'map1',
+      'mi-reject',
+      'coord1',
+      'r1',
+      'rejected',
+    );
+  });
+
   it('complete handles missing userId without calling user.findUnique', async () => {
     (prisma.screening.findUnique as any).mockResolvedValueOnce({
       id: 'mi-nouser',
