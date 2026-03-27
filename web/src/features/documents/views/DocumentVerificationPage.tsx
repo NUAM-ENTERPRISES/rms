@@ -31,7 +31,6 @@ import {
   RefreshCw,
   User,
   Building2,
-  FileText,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -39,13 +38,12 @@ import {
 import { motion } from "framer-motion";
 
 // lazy-load dashboard tiles for code-splitting
-const ScreeningApprovedTile = lazy(() => import('@/features/documents/components/ScreeningApprovedTile'));
 const PendingCandidatesTile = lazy(() => import('@/features/documents/components/PendingCandidatesTile'));
 const VerifiedDocumentsTile = lazy(() => import('@/features/documents/components/VerifiedDocumentsTile'));
 const RejectedDocumentsTile = lazy(() => import('@/features/documents/components/RejectedDocumentsTile'));
 
 import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
-import { useGetApprovedScreeningDocumentsQuery } from "@/features/screening-coordination";
+import { useGetPendingScreeningDocumentVerificationQuery } from "@/features/screening-coordination";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/lib/utils";
@@ -76,7 +74,6 @@ export default function DocumentVerificationPage() {
   const [verificationNotes, setVerificationNotes] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [screeningFilter, setScreeningFilter] = useState(false);
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",
     roleCatalogId: "all",
@@ -135,7 +132,6 @@ export default function DocumentVerificationPage() {
       page: currentPage,
       limit: 10,
       recruiterId: isStrictRecruiter ? user?.id : undefined,
-      screening: screeningFilter || undefined,
     },
     { 
       skip: statusFilter !== "verification_in_progress_document",
@@ -157,38 +153,36 @@ export default function DocumentVerificationPage() {
     page: currentPage,
     limit: 10,
     recruiterId: isStrictRecruiter ? user?.id : undefined,
-    screening: screeningFilter || undefined,
   }, {
     skip: statusFilter === "screening_approved"
   });
 
-  // Screening approved candidates query
-  const approvedScreeningQuery = useGetApprovedScreeningDocumentsQuery(
+  // Pending verification candidates from screening approved set
+  const pendingScreeningVerificationQuery = useGetPendingScreeningDocumentVerificationQuery(
     {
       projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
       roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
       search: searchTerm || undefined,
-      // fetch full page when viewing the screening_approved tab, otherwise fetch a small page to obtain counts only
-      page: statusFilter === "screening_approved" ? currentPage : 1,
-      limit: statusFilter === "screening_approved" ? 10 : 1,
+      page: statusFilter === "verification_in_progress_document" ? currentPage : 1,
+      limit: statusFilter === "verification_in_progress_document" ? 10 : 1,
       recruiterId: isStrictRecruiter ? user?.id : undefined,
-    }
+    },
+    {
+      skip: statusFilter !== "verification_in_progress_document",
+    },
   );
 
   // Normalize data for table rendering
   const verificationData = verificationCandidatesQuery.data;
   const verifiedRejectedData = verifiedRejectedQuery.data;
-  const approvedScreeningData = approvedScreeningQuery.data;
 
   const isLoading = 
     verificationCandidatesQuery.isLoading || 
-    verifiedRejectedQuery.isLoading || 
-    approvedScreeningQuery.isLoading;
+    verifiedRejectedQuery.isLoading;
     
   const error = 
     verificationCandidatesQuery.error || 
-    verifiedRejectedQuery.error || 
-    approvedScreeningQuery.error;
+    verifiedRejectedQuery.error;
 
   // Refresh both endpoints to keep counts and lists in sync
   const refetch = () => {
@@ -198,9 +192,6 @@ export default function DocumentVerificationPage() {
     if (verifiedRejectedQuery.status !== 'uninitialized') {
       verifiedRejectedQuery.refetch?.();
     }
-    if (approvedScreeningQuery.status !== 'uninitialized') {
-      approvedScreeningQuery.refetch?.();
-    }
   };
 
   let candidateProjects: any[] = [];
@@ -208,24 +199,41 @@ export default function DocumentVerificationPage() {
   let totalPages = 1;
 
   if (statusFilter === "verification_in_progress_document") {
-    candidateProjects = verificationData?.data?.items || verificationData?.data?.candidateProjects || [];
-    totalCandidates = verificationData?.data?.pagination?.total || candidateProjects.length;
-    totalPages = verificationData?.data?.pagination?.totalPages || 1;
-  } else if (statusFilter === "screening_approved") {
-    // Map screening items to extract candidateProjectMap and include screening info
-    const items = approvedScreeningData?.data?.items || [];
+    const items = pendingScreeningVerificationQuery.data?.data?.items || [];
     candidateProjects = items.map((item: any) => ({
       ...(item.candidateProjectMap || {}),
+      screening: {
+        id: item.id,
+        status: item.status,
+        decision: item.decision,
+        scheduledTime: item.scheduledTime,
+        duration: item.duration,
+        mode: item.mode,
+        coordinatorId: item.coordinatorId,
+        coordinator: item.coordinator,
+        conductedAt: item.conductedAt,
+        overallRating: item.overallRating,
+        overallScore: item.overallScore,
+        remarks: item.remarks,
+      },
       screeningDecision: item.decision,
       screeningConductedAt: item.conductedAt,
       screeningRemarks: item.remarks,
       screeningId: item.id,
       sendToClient: item.sendToClient,
       isInInterview: item.isInInterview,
-      documentRequirements: item.candidateProjectMap?.documentRequirements || item.candidateProjectMap?.project?.documentRequirements || []
+      documentRequirements:
+        item.candidateProjectMap?.documentRequirements ||
+        item.candidateProjectMap?.project?.documentRequirements ||
+        [],
     }));
-    totalCandidates = approvedScreeningData?.data?.pagination?.total || candidateProjects.length;
-    totalPages = approvedScreeningData?.data?.pagination?.totalPages || 1;
+    totalCandidates = pendingScreeningVerificationQuery.data?.data?.pagination?.total || candidateProjects.length;
+    totalPages = pendingScreeningVerificationQuery.data?.data?.pagination?.totalPages || 1;
+  } else if (statusFilter === "screening_approved") {
+    // Screening Approved mode is removed, but keep fallback in case statusFilter is forced externally
+    candidateProjects = [];
+    totalCandidates = 0;
+    totalPages = 1;
   } else {
     // Map verified/rejected items into candidateProject-like rows grouped by candidateProjectMap.id
     // Support both shapes: 1) flat verification records with `candidateProjectMap` wrapper
@@ -353,10 +361,13 @@ export default function DocumentVerificationPage() {
     // the verification (pending) endpoint and the verified/rejected endpoint.
     const verificationCounts = (verificationData?.data)?.counts || {};
     const verifiedCounts = (verifiedRejectedData?.data)?.counts || {};
-    const screeningApprovedTotal = (approvedScreeningData?.data as any)?.pagination?.total || 0;
 
     const pending = Number(
-      verificationCounts.pending ?? verificationCounts.verification_in_progress ?? verificationCounts.verification_in_progress_document ?? 0
+      pendingScreeningVerificationQuery.data?.data?.pagination?.total ??
+      verificationCounts.pending ??
+      verificationCounts.verification_in_progress ??
+      verificationCounts.verification_in_progress_document ??
+      0
     );
 
     const verified = Number(verifiedCounts.verified ?? verificationCounts.verified ?? 0);
@@ -368,7 +379,6 @@ export default function DocumentVerificationPage() {
       verification_in_progress: pending,
       documents_verified: verified,
       rejected_documents: rejected,
-      screening_approved: screeningApprovedTotal,
     };
   };
 
@@ -410,26 +420,9 @@ export default function DocumentVerificationPage() {
         </div>
 
         {/* Dashboard Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          {/* Screening Approved Card */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}>
-            <Suspense fallback={<div className="h-28" />}> 
 
-         
-              
-              <ScreeningApprovedTile
-                count={statusCounts.screening_approved}
-                active={statusFilter === "screening_approved"}
-                onClick={() => {
-                  setStatusFilter("screening_approved");
-                  setCurrentPage(1);
-                  setSelectedCandidateIds(new Set());
-                  setSelectAll(false);
-                }}
-              />
-            </Suspense>
-          </motion.div>
 
           {/* Total Candidates Card */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
@@ -500,26 +493,7 @@ export default function DocumentVerificationPage() {
                 className="flex-1"
               />
               
-              <div className={cn(
-                "flex items-center space-x-2 px-3 py-2 bg-slate-50 rounded-md border border-slate-200 transition-opacity",
-                statusFilter === "screening_approved" ? "opacity-50 pointer-events-none" : "opacity-100"
-              )}>
-                <Checkbox
-                  id="screening-filter"
-                  checked={statusFilter === "screening_approved" ? true : screeningFilter}
-                  onCheckedChange={(checked) => {
-                    setScreeningFilter(checked as boolean);
-                    setCurrentPage(1);
-                  }}
-                  disabled={statusFilter === "screening_approved"}
-                />
-                <label
-                  htmlFor="screening-filter"
-                  className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap"
-                >
-                  Screening Approved
-                </label>
-              </div>
+
             </div>
           </div>
         </div>
@@ -844,44 +818,49 @@ export default function DocumentVerificationPage() {
 
               {/* Documents / Screening Details */}
               <TableCell className="px-6 py-5 text-sm text-gray-600">
-                {statusFilter === "screening_approved" ? (
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "capitalize",
-                        candidateProject.docsStatus === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                        candidateProject.docsStatus === "pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                        candidateProject.docsStatus === "queued" ? "bg-indigo-50 text-indigo-700 border-indigo-200 animate-pulse" :
-                        "bg-slate-50 text-slate-700 border-slate-200"
-                      )}
-                    >
-                      {candidateProject.docsStatus || "—"}
-                    </Badge>
-                  </div>
-                ) : (
-                  <div>
-                    {candidateProject.screening ? (
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize bg-blue-50 text-blue-700 border-blue-200 font-semibold ring-0">
-                            {candidateProject.screening.status}
+                <div>
+                  {candidateProject.screening ? (
+                    statusFilter === "verification_in_progress_document" ? (
+                      <div className="space-y-1">
+                        <div className="text-[11px] text-gray-500">Conducted At: {candidateProject.screening.conductedAt ? new Date(candidateProject.screening.conductedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-gray-500">Overall Score:</span>
+                          <Badge className={cn(
+                            'rounded text-[10px] font-semibold px-2 py-0.5',
+                            candidateProject.screening.overallRating >= 80 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            candidateProject.screening.overallRating >= 60 ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                            'bg-rose-100 text-rose-800 border border-rose-200'
+                          )}>
+                            {candidateProject.screening.overallRating != null ? `${candidateProject.screening.overallRating}%` : '—'}
                           </Badge>
-                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold ring-0">
-                            {candidateProject.screening.decision}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-purple-600">
-                          <div className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-                          Rating: {candidateProject.screening.overallRating}%
                         </div>
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400">No screening info</span>
-                    )}
-                  </div>
-                )}
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-500">Screening • Coordinator: {candidateProject.screening.coordinator?.name || candidateProject.screening.coordinatorId || '—'}</div>
+                        <div className="text-[11px] text-gray-600">{candidateProject.screening.status || "Unknown"} • {candidateProject.screening.decision || "Unknown"}</div>
+                        <div className="text-[11px] text-gray-500">{candidateProject.screening.scheduledTime ? new Date(candidateProject.screening.scheduledTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'No schedule'}</div>
+                        <div className="text-[11px] text-gray-500">Duration: {candidateProject.screening.duration ?? 0} min</div>
+                        <div className="text-[11px] text-gray-500">Mode: {candidateProject.screening.mode || '—'}</div>
+                        <div className="text-[11px] text-gray-500">Conducted At: {candidateProject.screening.conductedAt ? new Date(candidateProject.screening.conductedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-gray-500">Overall Score:</span>
+                          <Badge className={cn(
+                            'rounded text-[10px] font-semibold px-2 py-0.5',
+                            candidateProject.screening.overallRating >= 80 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            candidateProject.screening.overallRating >= 60 ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                            'bg-rose-100 text-rose-800 border border-rose-200'
+                          )}>
+                            {candidateProject.screening.overallRating != null ? `${candidateProject.screening.overallRating}%` : '—'}
+                          </Badge>
+                        </div>
+                        <div className="text-[11px] text-gray-500">Docs Verified: {candidateProject.docsStatus ?? 'unknown'}</div>
+                      </div>
+                    )
+                  ) : (
+                    <span className="text-xs text-gray-400">No screening info</span>
+                  )}
+                </div>
               </TableCell>
 
               {/* Sent to Client Column (Screening Approved & Verified only) */}

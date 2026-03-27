@@ -83,4 +83,9 @@ export class QueryScreeningsDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by recruiter ID' })
+  @IsOptional()
+  @IsString()
+  recruiterId?: string;
 }

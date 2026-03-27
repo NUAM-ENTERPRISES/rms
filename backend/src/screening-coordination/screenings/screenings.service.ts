@@ -746,6 +746,233 @@ export class ScreeningsService {
   }
 
   /**
+   * Get pending candidates for screening document verification
+   */
+  async getPendingDocumentVerification(query: QueryScreeningsDto) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      projectId,
+      roleCatalogId,
+      coordinatorId,
+      recruiterId,
+    } = query;
+
+    const skip = (page - 1) * limit;
+    const where: any = {
+      decision: SCREENING_DECISION.APPROVED,
+    };
+
+    if (coordinatorId) {
+      where.coordinatorId = coordinatorId;
+    }
+
+    const cpAND: any[] = [];
+
+    if (projectId) {
+      cpAND.push({ projectId });
+    }
+
+    if (roleCatalogId) {
+      cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
+    }
+
+    if (recruiterId) {
+      cpAND.push({ recruiterId });
+    }
+
+    if (search) {
+      cpAND.push({
+        OR: [
+          { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
+          { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+          { candidate: { email: { contains: search, mode: 'insensitive' } } },
+          { candidate: { mobileNumber: { contains: search, mode: 'insensitive' } } },
+          { project: { title: { contains: search, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    cpAND.push({
+      OR: [
+        { documentVerifications: { none: {} } },
+        {
+          documentVerifications: {
+            some: {
+              status: {
+                in: ['pending', 'resubmission_required', 'resubmitted', 'expired'],
+              },
+              isDeleted: false,
+            },
+          },
+        },
+      ],
+    });
+
+    if (cpAND.length > 0) {
+      where.candidateProjectMap = { is: { AND: cpAND } };
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.screening.count({ where }),
+      this.prisma.screening.findMany({
+        where,
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: {
+                  id: true,
+                  profileImage: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  mobileNumber: true,
+                },
+              },
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                  client: {
+                    select: {
+                      id: true,
+                      name: true,
+                      type: true,
+                      email: true,
+                      phone: true,
+                    },
+                  },
+                },
+              },
+              documentVerifications: {
+                where: { isDeleted: false },
+                select: { status: true },
+              },
+              roleNeeded: {
+                select: {
+                  id: true,
+                  designation: true,
+                  roleCatalog: {
+                    select: {
+                      id: true,
+                      name: true,
+                      label: true,
+                      shortName: true,
+                    },
+                  },
+                },
+              },
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              mainStatus: true,
+              subStatus: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const itemsWithDocsStatus = items.map((it) => {
+      const cpm = it.candidateProjectMap ?? null;
+      let docsStatus = 'pending';
+
+      if (cpm && Array.isArray(cpm.documentVerifications)) {
+        const statuses = cpm.documentVerifications.map((v: any) => v.status);
+        if (statuses.includes('rejected')) docsStatus = 'rejected';
+        else if (statuses.length === 0) docsStatus = 'pending';
+        else if (statuses.every((s: string) => s === 'verified')) docsStatus = 'verified';
+        else if (statuses.includes('pending')) docsStatus = 'pending';
+        else if (statuses.includes('verified')) docsStatus = 'verified';
+      }
+
+      if (!cpm) return it;
+
+      const { documentVerifications, ...rest } = cpm as any;
+      return {
+        ...it,
+        candidateProjectMap: {
+          ...rest,
+          docsStatus,
+        },
+      };
+    });
+
+    const cpIds = itemsWithDocsStatus
+      .map((it) => it.candidateProjectMap?.id)
+      .filter(Boolean);
+
+    const interviewSubStatuses = [
+      'interview_assigned',
+      'interview_scheduled',
+      'interview_rescheduled',
+      'interview_completed',
+      'interview_passed',
+      'interview_failed',
+    ];
+
+    const interviewHistories = cpIds.length
+      ? await this.prisma.candidateProjectStatusHistory.findMany({
+          where: {
+            candidateProjectMapId: { in: cpIds },
+            subStatus: { name: { in: interviewSubStatuses } },
+          },
+          select: { candidateProjectMapId: true },
+        })
+      : [];
+
+    const inInterviewSet = new Set(interviewHistories.map((h) => h.candidateProjectMapId));
+
+    const itemsWithSendToClient = await Promise.all(
+      itemsWithDocsStatus.map(async (it) => {
+        const cpm = it.candidateProjectMap;
+        if (!cpm) return { ...it, sendToClient: null, isInInterview: false };
+
+        const candidateId = cpm.candidate?.id;
+        const projectId = cpm.project?.id;
+        const roleCatalogId = cpm.roleNeeded?.roleCatalog?.id || null;
+
+        const latestForward = await this.prisma.documentForwardHistory.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleCatalogId: roleCatalogId || null,
+          },
+          orderBy: { sentAt: 'desc' },
+        });
+
+        return {
+          ...it,
+          sendToClient: latestForward ?? null,
+          isInInterview: Boolean(inInterviewSet.has(cpm.id)),
+        };
+      }),
+    );
+
+    return {
+      success: true,
+      data: {
+        items: itemsWithSendToClient,
+        pagination: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      message: 'Pending document verification screenings retrieved successfully',
+    };
+  }
+
+  /**
    * Helper: attach `isDocumentVerificationRequired` and `isDocumentVerified` to screening items
    * - isDocumentVerificationRequired: true when candidate-project has NOT been sent for document verification
    * - isDocumentVerified: true when candidate-project has a history entry with sub-status 'documents_verified'

@@ -45,6 +45,21 @@ export const screeningsApi = baseApi.injectEndpoints({
           : [{ type: "Screening", id: "LIST" }],
     }),
 
+    // Get screening approved candidates pending document verification
+    getPendingScreeningDocumentVerification: builder.query<PaginatedResponse<ApprovedScreeningItem>, QueryApprovedScreeningsRequest | undefined>({
+      query: (params: QueryApprovedScreeningsRequest | undefined) => ({
+        url: "/screenings/pending-document-verification",
+        params: params as Record<string, any> | undefined,
+      }),
+      providesTags: (result) =>
+        result?.data?.items && Array.isArray(result.data.items)
+          ? [
+              ...result.data.items.map(({ id }) => ({ type: "Screening" as const, id })),
+              { type: "Screening", id: "LIST" },
+            ]
+          : [{ type: "Screening", id: "LIST" }],
+    }),
+
     // Get a single screening by ID
     getScreening: builder.query<ApiResponse<Screening>, string>({
       query: (id) => `/screenings/${id}`,
@@ -226,6 +241,7 @@ export const {
   useGetCoordinatorStatsQuery,
   useGetCandidateProjectHistoryQuery,
   useGetApprovedScreeningDocumentsQuery,
+  useGetPendingScreeningDocumentVerificationQuery,
   useGetScreeningDetailsQuery,
 } = screeningsApi;
 

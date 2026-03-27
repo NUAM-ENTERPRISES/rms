@@ -134,6 +134,21 @@ export class ScreeningsController {
     return this.screeningsService.getApprovedList(query);
   }
 
+  @Get('pending-document-verification')
+  @Permissions('read:screenings')
+  @ApiOperation({
+    summary: 'Get screening approved candidates pending document verification',
+    description:
+      'Retrieve approved screening candidates where document status is pending (new / resubmission / expired). Supports filtering by project, role catalog, search, coordinator, and recruiter.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending document verification screenings retrieved successfully',
+  })
+  getPendingDocumentVerification(@Query() query: QueryScreeningsDto) {
+    return this.screeningsService.getPendingDocumentVerification(query);
+  }
+
   @Get('coordinator/:coordinatorId/stats')
   @Permissions('read:screenings')
   @ApiOperation({
