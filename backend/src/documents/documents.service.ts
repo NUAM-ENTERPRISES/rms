@@ -1487,27 +1487,58 @@ export class DocumentsService {
    * Returns candidates who are in document verification stages
    */
   async getVerificationCandidates(query: any) {
-    // Note: `status` query is intentionally not supported — this endpoint
-    // always returns candidate-projects in the document verification
-    // sub-status `verification_in_progress_document`.
-    const { page = 1, limit = 20, search, recruiterId, projectId, roleCatalogId, screening } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      recruiterId,
+      projectId,
+      roleCatalogId,
+      screening,
+      status,
+    } = query;
     const skip = (page - 1) * limit;
+
     // ------------------------------------------------------
-    // 🔥 1. Default = pending (verification_in_progress_document)
+    // 🔥 1. Allowed statuses for this endpoint
     // ------------------------------------------------------
-    const defaultPending = await this.prisma.candidateProjectSubStatus.findFirst({
-      where: { name: 'verification_in_progress_document' },
+    const allowedStatuses = [
+      'verification_in_progress_document',
+      'screening_passed',
+    ];
+
+    // Base inclusion: document verification progress plus screening passed
+    const defaultStatuses = ['verification_in_progress_document', 'screening_passed'];
+    const requestedStatusNames = status
+      ? String(status)
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => allowedStatuses.includes(s))
+      : [];
+
+    // Always include default statuses and optionally preserve explicit selections
+    const selectedStatusNames = Array.from(
+      new Set([...defaultStatuses, ...requestedStatusNames]),
+    );
+
+    const subStatuses = await this.prisma.candidateProjectSubStatus.findMany({
+      where: { name: { in: selectedStatusNames } },
     });
 
-    if (!defaultPending) {
-      throw new Error('Missing sub-status: verification_in_progress_document');
+    if (!subStatuses || subStatuses.length === 0) {
+      throw new Error(
+        `Missing candidate project sub-status for: ${selectedStatusNames.join(', ')}`,
+      );
     }
 
+    const subStatusIds = subStatuses.map((statusRecord) => statusRecord.id);
+
     const where: any = {
-      subStatusId: defaultPending.id,
+      subStatusId: { in: subStatusIds },
       // Optional filter to restrict results to a specific recruiter
       ...(recruiterId ? { recruiterId } : {}),
     };
+
 
     // Optional project and role (project role catalog) filters
     if (projectId) {
@@ -1626,13 +1657,13 @@ export class DocumentsService {
       countBase.screenings = { some: { decision: 'approved' } };
     }
 
+    const pendingCountWhere = {
+      ...countBase,
+      subStatus: { name: { in: selectedStatusNames } },
+    };
+
     const [pendingCount, verifiedCount, rejectedCount] = await Promise.all([
-      this.prisma.candidateProjects.count({
-        where: {
-          ...countBase,
-          subStatus: { name: 'verification_in_progress_document' },
-        },
-      }),
+      this.prisma.candidateProjects.count({ where: pendingCountWhere }),
 
       this.prisma.candidateProjects.count({
         where: {

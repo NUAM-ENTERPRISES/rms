@@ -260,3 +260,54 @@ describe('DocumentsService - forwardToClient / bulkForwardToClient', () => {
     expect(res).toEqual(expect.objectContaining({ success: true }));
   });
 });
+
+describe('DocumentsService - getVerificationCandidates', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('returns candidates with verification_in_progress_document and screening_passed, including latest screening details', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-1', name: 'verification_in_progress_document' },
+      { id: 'ss-2', name: 'screening_passed' },
+    ]);
+
+    const candidateProject = {
+      id: 'cpm-1',
+      candidate: { id: 'cand-1', firstName: 'Alice', lastName: 'Test', email: 'a@test.com', mobileNumber: '1234', countryCode: '91', profileImage: null },
+      project: { id: 'proj-1', title: 'Project A', client: { name: 'Client A' } },
+      roleNeeded: { id: 'role-1', designation: 'Dev', roleCatalog: { id: 'rc-1', name: 'Dev', label: 'Developer' } },
+      recruiter: { id: 'rec-1', name: 'Rec', email: 'rec@example.com' },
+      mainStatus: { label: 'Documents' },
+      subStatus: { name: 'screening_passed', label: 'Screening Passed' },
+      screenings: [{ id: 's-1', status: 'completed', decision: 'approved', overallRating: 4, scheduledTime: new Date(), conductedAt: new Date() }],
+      documentVerifications: [],
+    };
+
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([candidateProject]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+    jest.spyOn(prisma.documentForwardHistory, 'findFirst' as any).mockResolvedValue(null);
+
+    const result = await service.getVerificationCandidates({ status: 'verification_in_progress_document', page: 1, limit: 10 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].subStatus.name).toBe('screening_passed');
+    expect(result.items[0].screening).toEqual(candidateProject.screenings[0]);
+    expect(result.counts.pending).toBe(1);
+    expect(result.pagination.total).toBe(1);
+  });
+});
