@@ -1388,7 +1388,7 @@ export default function InterviewsPage() {
                             {["shortlistPending", "shortlisted", "shortlistRejected"].includes(activeFilter) && (
                               <TableCell className="px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                  {activeFilter !== "shortlistRejected" && (
+                                  {activeFilter === "shortlisted" && (
                                     <Button
                                       size="icon"
                                       variant="outline"

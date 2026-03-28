@@ -95,6 +95,7 @@ export class InterviewsService {
       const created = await tx.interview.create({
         data: {
           ...createInterviewDto,
+          outcome: 'scheduled',
           interviewer: scheduledBy,
           meetingLink: meetingLinkToUse,
         },
