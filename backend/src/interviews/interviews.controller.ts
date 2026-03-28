@@ -163,8 +163,8 @@ export class InterviewsController {
   @ApiQuery({
     name: 'status',
     required: false,
-    description: "Filter by interview status — matches the interview's `outcome` column only. Examples: 'pending' (no outcome yet), 'scheduled', 'completed', 'passed', 'failed'",
-    enum: ['pending', 'scheduled', 'completed', 'complete', 'cancelled', 'rescheduled', 'passed', 'failed', 'no-show'],
+    description: "Filter by interview status — matches the interview's `outcome` column only. Examples: 'pending' (no outcome yet), 'scheduled', 'completed', 'passed', 'failed', 'interview_backout'",
+    enum: ['pending', 'scheduled', 'completed', 'complete', 'cancelled', 'rescheduled', 'passed', 'failed', 'interview_failed', 'no-show', 'interview_completed', 'interview_backout'],
   })
   @ApiQuery({
     name: 'projectId',
@@ -249,6 +249,14 @@ export class InterviewsController {
                         properties: {
                           id: { type: 'string' },
                           designation: { type: 'string' },
+                        },
+                      },
+                      recruiter: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          name: { type: 'string' },
+                          email: { type: 'string' },
                         },
                       },
                     },

@@ -54,7 +54,10 @@ export function ClientDecisionModal({
         <DialogHeader>
           <DialogTitle>Update Client Decision</DialogTitle>
           <DialogDescription>
-            Select the client's decision for <span className="font-medium text-foreground">{candidateName}</span>
+            
+            ?
+            
+             <span className="font-medium text-foreground">{candidateName}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -112,7 +115,7 @@ export function ClientDecisionModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-3 sm:gap-3">
           <Button
             variant="outline"
             onClick={() => handleClose(false)}
@@ -124,6 +127,7 @@ export function ClientDecisionModal({
             onClick={handleSubmit}
             disabled={!selectedDecision || isSubmitting || (selectedDecision === "not_shortlisted" && !reason.trim())}
             className={cn(
+              "flex-1 sm:flex-none",
               selectedDecision === "shortlisted" && "bg-green-600 hover:bg-green-700",
               selectedDecision === "not_shortlisted" && "bg-red-600 hover:bg-red-700"
             )}

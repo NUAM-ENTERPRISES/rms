@@ -130,6 +130,21 @@ export class NotificationsGateway
   }
 
   /**
+   * Broadcast an event to all connected users
+   */
+  async broadcastEvent(event: string, data: any): Promise<void> {
+    try {
+      this.server.emit(event, data);
+      this.logger.debug(`Broadcasting ${event} to all users`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to broadcast event ${event}: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /**
    * Get connected users count
    */
   getConnectedUsersCount(): number {

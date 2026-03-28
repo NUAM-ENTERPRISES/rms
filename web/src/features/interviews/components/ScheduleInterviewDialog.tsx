@@ -32,19 +32,26 @@ import { useGetProjectsQuery } from "@/features/projects/api";
 import { useCreateInterviewMutation, useCreateBulkInterviewsMutation } from "../api";
 import { toast } from "sonner";
 
-const scheduleInterviewSchema = z.object({
-  candidateProjectMapId: z.string().optional(),
-  candidateProjectMapIds: z.array(z.string()).optional(),
-  scheduledTime: z.date({
-    message: "Please select a date and time",
-  }),
-  duration: z.coerce.number().int().min(1).optional(),
-  type: z.enum(["technical", "hr", "managerial", "final"]).optional(),
-  mode: z.enum(["video", "phone", "in-person"]),
-  // meetingLink is optional; if provided, validate as URL, but allow empty string
-  meetingLink: z.preprocess((v) => (v === "" || v === undefined ? undefined : v), z.string().url().optional()),
-  notes: z.string().optional(),
-});
+const scheduleInterviewSchema = z
+  .object({
+    candidateProjectMapId: z.string().optional(),
+    candidateProjectMapIds: z.array(z.string()).optional(),
+    scheduledTime: z.date({
+      message: "Please select a date and time",
+    }),
+    mode: z.enum(["video", "phone", "in-person"]),
+    location: z.string().optional(),
+    // meetingLink is optional; if provided, validate as URL, but allow empty string
+    meetingLink: z.preprocess((v) => (v === "" || v === undefined ? undefined : v), z.string().url().optional()),
+    notes: z.string().optional(),
+  })
+  .refine(
+    (values) => values.mode !== "in-person" || !!values.location?.trim(),
+    {
+      path: ["location"],
+      message: "Location is required for in-person interviews",
+    }
+  );
 
 type ScheduleInterviewForm = z.infer<typeof scheduleInterviewSchema>;
 
@@ -90,9 +97,8 @@ export default function ScheduleInterviewDialog({
       candidateProjectMapId: initialCandidateProjectMapId ?? undefined,
       candidateProjectMapIds: initialCandidateProjectMapIds ?? undefined,
       scheduledTime: undefined,
-      duration: 60,
-      type: "technical",
       mode: "video",
+      location: "",
       meetingLink: undefined,
       notes: "",
     },
@@ -114,9 +120,8 @@ export default function ScheduleInterviewDialog({
         candidateProjectMapId: initialCandidateProjectMapId ?? undefined,
         candidateProjectMapIds: initialCandidateProjectMapIds ?? undefined,
         scheduledTime: undefined,
-        duration: 60,
-        type: "technical",
         mode: "video",
+        location: "",
         meetingLink: undefined,
         notes: "",
       });
@@ -134,9 +139,8 @@ export default function ScheduleInterviewDialog({
         const bulkData = initialCandidateProjectMapIds.map((id) => ({
           candidateProjectMapId: id,
           scheduledTime: data.scheduledTime.toISOString(),
-          duration: data.duration,
-          type: data.type,
           mode: data.mode,
+          location: data.location,
           meetingLink: data.meetingLink,
           notes: data.notes,
         }));
@@ -146,9 +150,8 @@ export default function ScheduleInterviewDialog({
         const interviewData = {
           candidateProjectMapId: data.candidateProjectMapId,
           scheduledTime: data.scheduledTime.toISOString(),
-          duration: data.duration,
-          type: data.type,
           mode: data.mode,
+          location: data.location,
           meetingLink: data.meetingLink,
           notes: data.notes,
         };
@@ -299,6 +302,26 @@ export default function ScheduleInterviewDialog({
               )}
             />
 
+            {modeValue === "in-person" && (
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location *</FormLabel>
+                    <FormControl>
+                      <input
+                        {...field}
+                        placeholder="Enter interview location"
+                        className="w-full rounded-md border border-input px-3 py-2 text-sm"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             {/* Meeting link (only for video mode) */}
             {modeValue === "video" && (
               <FormField
@@ -320,50 +343,7 @@ export default function ScheduleInterviewDialog({
               />
             )}
 
-            {/* Duration */}
-            <FormField
-              control={form.control}
-              name="duration"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Duration (minutes)</FormLabel>
-                  <FormControl>
-                    <input
-                      {...field}
-                      type="number"
-                      min={1}
-                      className="w-full rounded-md border border-input px-3 py-2 text-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            {/* Type */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Interview Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select interview type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="technical">Technical</SelectItem>
-                      <SelectItem value="hr">HR</SelectItem>
-                      <SelectItem value="managerial">Managerial</SelectItem>
-                      <SelectItem value="final">Final</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Notes */}
             <FormField

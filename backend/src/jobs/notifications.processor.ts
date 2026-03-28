@@ -1876,6 +1876,13 @@ export class NotificationsProcessor extends WorkerHost {
         });
       }
 
+      // 5. Broadcast refresh event for Summary Stats
+      await this.notificationsGateway.broadcastEvent('INTERVIEW_STATS_UPDATE', {
+        type: 'documents_forwarded',
+        candidateId: payload.candidateId,
+        projectId: payload.projectId,
+      });
+
       return { success: true, count: recipients.length };
     } catch (error) {
       this.logger.error(

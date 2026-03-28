@@ -540,6 +540,7 @@ model Interview {
   outcome               String?
   notes                 String?
   interviewer           String?
+  location              String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   candidateProjectMapId String?
@@ -547,6 +548,7 @@ model Interview {
   interviewerEmail      String?
   meetingLink           String?
   mode                  String?            @default("video")
+  completedAt           DateTime?
   candidateProjectMap   CandidateProjects? @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   project               Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)

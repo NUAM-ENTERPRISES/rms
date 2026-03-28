@@ -12,11 +12,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ClipboardCheck, User, Briefcase, Check, X as XIcon, ChevronRight, AlertCircle, Info } from "lucide-react";
+import { ClipboardCheck, User, Briefcase, Check, X as XIcon, ChevronRight, AlertCircle, Info, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ImageViewer } from "./ImageViewer";
 
-type Outcome = "completed" | "passed" | "failed";
+type Outcome = "backout" | "passed" | "failed";
 
 export interface ReviewInterviewModalProps {
   isOpen: boolean;
@@ -42,12 +42,12 @@ const statusMeta: Record<Outcome, { label: string; note: string; badgeClass: str
     activeClass: "bg-red-600 text-white shadow-red-200",
     icon: <XIcon className="h-3 w-3" />,
   },
-  completed: {
-    label: "Completed",
-    note: "Interview finished",
-    badgeClass: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-    activeClass: "bg-blue-600 text-white shadow-blue-200",
-    icon: <ClipboardCheck className="h-3 w-3" />,
+  backout: {
+    label: "Backout",
+    note: "Candidate backed out",
+    badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    activeClass: "bg-amber-600 text-white shadow-amber-200",
+    icon: <UserMinus className="h-3 w-3" />,
   },
 };
 
@@ -70,11 +70,11 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
       const initial: Record<string, Outcome> = {};
       items.forEach((it) => {
         const outcome = it.outcome?.toLowerCase();
-        if (outcome === "passed" || outcome === "failed" || outcome === "completed") {
+        if (outcome === "passed" || outcome === "failed" || outcome === "backout") {
           initial[it.id] = outcome as Outcome;
         } else {
-          // Default to completed if none set
-          initial[it.id] = "completed";
+          // Default to passed if none set (or whatever makes sense as a default)
+          initial[it.id] = "passed";
         }
       });
       setIdToStatus(initial);
@@ -92,11 +92,11 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
 
   const handleConfirm = async () => {
     const updates = items.map((it) => {
-      const status = idToStatus[it.id] || "completed";
+      const status = idToStatus[it.id] || "passed";
       const mappedSubStatus = 
         status === "passed" ? "interview_passed" : 
         status === "failed" ? "interview_failed" : 
-        "interview_completed";
+        "interview_backout";
       
       return {
         id: it.id,
@@ -161,7 +161,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
                 )}
               </div>
               <div className="grid grid-cols-3 gap-3">
-                {(["passed", "failed", "completed"] as Outcome[]).map((s) => (
+                {(["passed", "failed", "backout"] as Outcome[]).map((s) => (
                   <Button
                     key={s}
                     variant="outline"
@@ -210,7 +210,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
                       </div>
 
                       <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 p-1 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                        {(["passed", "failed", "completed"] as Outcome[]).map((s) => (
+                        {(["passed", "failed", "backout"] as Outcome[]).map((s) => (
                           <button
                             key={s}
                             onClick={() => setIdToStatus((prev) => ({ ...prev, [it.id]: s }))}

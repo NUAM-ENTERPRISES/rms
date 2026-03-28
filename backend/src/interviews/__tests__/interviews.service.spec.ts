@@ -10,6 +10,20 @@ describe('InterviewsService - client decision flows', () => {
     user: { findUnique: jest.fn() },
     interviewStatusHistory: { create: jest.fn() },
     auditLog: { create: jest.fn() },
+    candidateProjects: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    candidateProjectSubStatus: {
+      findUnique: jest.fn(),
+    },
+    candidateRecruiterAssignment: {
+      findFirst: jest.fn(),
+    },
+    candidateProjectStatusHistory: {
+      create: jest.fn(),
+    },
+    $transaction: jest.fn().mockImplementation(async (callback: any) => callback(mockPrisma)),
   } as any;
 
   const mockCandidateProjectsService = {
@@ -37,21 +51,37 @@ describe('InterviewsService - client decision flows', () => {
   });
 
   it('updateClientDecision creates interviewStatusHistory and notifies recruiter when present', async () => {
-    const updatedMap = {
+    const cpFound = {
       id: 'cpm-1',
-      recruiter: { id: 'rec-1' },
+      recruiterId: 'rec-1',
+      candidateId: 'cand-1',
       candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
       project: { id: 'proj-1', title: 'Project X' },
+      mainStatus: { id: 'main-1' },
+      subStatus: { id: 'sub-0', name: 'submitted_to_client' },
     };
 
-    mockCandidateProjectsService.updateStatus.mockResolvedValue(updatedMap);
+    const targetSub = { id: 'sub-1', name: 'shortlisted', stageId: 'main-2', stage: { label: 'Shortlist' }, label: 'Shortlisted' };
+
     mockPrisma.user.findUnique.mockResolvedValue({ name: 'Changer' });
+    mockPrisma.candidateProjects.findUnique.mockResolvedValue(cpFound);
+    mockPrisma.candidateProjectSubStatus.findUnique.mockResolvedValue(targetSub);
+    mockPrisma.candidateRecruiterAssignment.findFirst.mockResolvedValue({ recruiterId: 'rec-1' });
+    mockPrisma.candidateProjects.update.mockResolvedValue({ ...cpFound, subStatus: targetSub, mainStatus: targetSub.stage, recruiter: { id: 'rec-1' } });
     mockPrisma.interviewStatusHistory.create.mockResolvedValue({ id: 'hist-1' });
+    mockPrisma.candidateProjectStatusHistory.create.mockResolvedValue({ id: 'hist-2' });
     mockOutboxService.publishRecruiterNotification.mockResolvedValue(undefined);
 
     const res = await service.updateClientDecision('cpm-1', 'shortlisted', 'Good fit', 'user-1');
 
-    expect(mockCandidateProjectsService.updateStatus).toHaveBeenCalledWith('cpm-1', expect.objectContaining({ subStatusName: 'shortlisted' }), 'user-1');
+    expect(mockPrisma.candidateProjects.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'cpm-1' },
+      data: expect.objectContaining({
+        subStatusId: targetSub.id,
+        mainStatusId: targetSub.stageId,
+        recruiterId: 'rec-1',
+      }),
+    }));
 
     expect(mockPrisma.interviewStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
@@ -66,10 +96,54 @@ describe('InterviewsService - client decision flows', () => {
       expect.stringContaining('Jane Doe'),
       expect.stringContaining('Client decision'),
       expect.stringContaining('/shortlisting/'),
-      expect.objectContaining({ candidateProjectMapId: 'cpm-1', decision: 'shortlisted' }),
+      expect.objectContaining({ candidateProjectMapId: 'cpm-1', candidateId: 'cand-1', projectId: 'proj-1', decision: 'shortlisted' }),
     );
 
-    expect(res).toEqual(updatedMap);
+    expect(res).toEqual(expect.objectContaining({ id: 'cpm-1' }));
+  });
+
+  it('getSummaryStats counts both rejected_interview and interview_failed into interviewRejected', async () => {
+    mockPrisma.candidateProjects = {
+      count: jest.fn().mockImplementation(({ where }: any) => {
+        const statusFilter = where?.subStatus?.name;
+        if (statusFilter?.in?.includes('rejected_interview') && statusFilter?.in?.includes('interview_failed')) {
+          return Promise.resolve(13);
+        }
+        return Promise.resolve(0);
+      }),
+    };
+    mockPrisma.screening = {
+      count: jest.fn().mockResolvedValue(0),
+    };
+
+    const stats = await service.getSummaryStats();
+    expect(stats.interviewRejected).toBe(13);
+  });
+
+  it('findAll with status=failed filters by candidateProjectMap subStatus interview_failed/rejected_interview', async () => {
+    mockPrisma.interview = {
+      findMany: jest.fn().mockResolvedValue([{ id: 'i-1' }]),
+      count: jest.fn().mockResolvedValue(1),
+    };
+    mockPrisma.candidateProjects = { count: jest.fn() };
+    mockPrisma.screening = { count: jest.fn() };
+
+    const result = await service.findAll({ status: 'failed', page: 1, limit: 10 } as any);
+
+    expect(mockPrisma.interview.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          candidateProjectMap: expect.objectContaining({
+            subStatus: { name: { in: ['rejected_interview', 'interview_failed'] } },
+          }),
+        }),
+      }),
+    );
+
+    expect(result).toEqual({
+      interviews: [{ id: 'i-1' }],
+      pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+    });
   });
 
   it('updateBulkClientDecision calls updateClientDecision per item and returns per-item results', async () => {

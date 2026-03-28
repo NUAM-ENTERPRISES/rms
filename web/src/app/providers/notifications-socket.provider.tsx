@@ -174,6 +174,11 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     // Handle domain-specific direct socket events
     registerDocumentSocketEvents(socket, { dispatch, invalidateTags });
 
+    socket.on("INTERVIEW_STATS_UPDATE", (payload: any) => {
+      console.log("[Socket] Interview stats update received:", payload);
+      dispatch(baseApi.util.invalidateTags([{ type: "Interview", id: "LIST" }]));
+    });
+
     return () => {
       console.log("[Socket] Cleaning up...");
       socket.disconnect();

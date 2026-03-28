@@ -74,6 +74,15 @@ export class CreateInterviewDto {
   @IsString()
   meetingLink?: string;
 
+  @ApiPropertyOptional({
+    description: 'In-person interview location',
+    required: false,
+    example: 'Office, 5th Floor, Mumbai',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string;
+
   @ApiProperty({
     description: 'Additional notes',
     example: 'Technical interview focusing on React and Node.js',

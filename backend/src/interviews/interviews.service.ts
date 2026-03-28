@@ -267,12 +267,22 @@ export class InterviewsService {
     }
 
     if (status) {
-      // The status filter should match the interview.outcome column only.
-      // Accept 'complete' as alias for 'completed'. For 'pending' match
-      // outcome = null or outcome = 'pending'.
+      // The status filter should match interview.outcome.
       const normalizedStatus = status === 'complete' ? 'completed' : status;
 
-      if (normalizedStatus === 'pending') {
+      if (normalizedStatus === 'interview_completed') {
+        where.outcome = 'completed';
+      } else if (normalizedStatus === 'interview_backout' || normalizedStatus === 'backout') {
+        where.outcome = 'backout';
+      } else if (normalizedStatus === 'failed' || normalizedStatus === 'interview_failed' || normalizedStatus === 'rejected_interview') {
+        where.outcome = 'failed';
+      } else if (normalizedStatus === 'passed' || normalizedStatus === 'interview_passed') {
+        where.outcome = 'passed';
+      } else if (normalizedStatus === 'scheduled' || normalizedStatus === 'interview_scheduled') {
+        where.outcome = 'scheduled';
+      } else if (normalizedStatus === 'rescheduled') {
+        where.outcome = 'rescheduled';
+      } else if (normalizedStatus === 'pending') {
         // match interviews that have not yet set an outcome or explicitly 'pending'
         where.OR = [{ outcome: null }, { outcome: 'pending' }];
       } else {
@@ -283,7 +293,9 @@ export class InterviewsService {
     // Build candidateProjectMap filters. If roleCatalogId is provided prefer that
     // and filter via the roleNeeded relation; otherwise allow roleNeededId.
     if (projectId || candidateId || roleNeededId || roleCatalogId) {
-      where.candidateProjectMap = {};
+      where.candidateProjectMap = {
+        ...where.candidateProjectMap,
+      };
       if (projectId) where.candidateProjectMap.projectId = projectId;
       if (candidateId) where.candidateProjectMap.candidateId = candidateId;
 
@@ -387,6 +399,13 @@ export class InterviewsService {
                       shortName: true,
                     },
                   },
+                },
+              },
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
                 },
               },
             },
@@ -981,6 +1000,15 @@ export class InterviewsService {
         recruiter: { select: { id: true, name: true, email: true } },
         mainStatus: true,
         subStatus: true,
+        projectStatusHistory: {
+          orderBy: { statusChangedAt: 'desc' },
+          take: 1,
+          select: {
+            reason: true,
+            notes: true,
+            statusChangedAt: true,
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
       skip: (page - 1) * limit,
@@ -1400,7 +1428,8 @@ export class InterviewsService {
    * 9. Screening Passed
    * 10. Screening Rejected
    * 11. Screening On Hold
-   * 12. Pass Rate
+   * 12. Interview Completed
+   * 13. Pass Rate
    */
   async getSummaryStats() {
     const [
@@ -1410,25 +1439,30 @@ export class InterviewsService {
       interviewScheduled,
       interviewPassed,
       interviewRejected,
+      interviewBackout,
       screeningAssigned,
       screeningScheduled,
       screeningPassed,
       screeningRejected,
       onHold,
       screeningTraining,
+      interviewCompleted,
     ] = await Promise.all([
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'submitted_to_client' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'shortlisted' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'not_shortlisted' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_scheduled' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_passed' } } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'rejected_interview' } } }),
+      // interviewFailed can be tracked via two possible candidate-project sub-status values.
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: { in: ['rejected_interview', 'interview_failed'] } } } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_backout' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_assigned' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_scheduled' } } }),
       this.prisma.screening.count({ where: { decision: 'approved' } }),
       this.prisma.screening.count({ where: { decision: 'rejected' } }),
       this.prisma.screening.count({ where: { decision: 'on_hold' } }),
       this.prisma.screening.count({ where: { decision: 'needs_training' } }),
+      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_completed' } } }),
     ]);
 
     const completedInterviews = interviewPassed + interviewRejected;
@@ -1441,12 +1475,14 @@ export class InterviewsService {
       interviewScheduled,
       interviewPassed,
       interviewRejected,
+      interviewBackout,
       screeningAssigned,
       screeningScheduled,
       screeningPassed,
       screeningRejected,
       onHold,
       screeningTraining,
+      interviewCompleted,
       passRate,
     };
   }
@@ -1526,7 +1562,12 @@ export class InterviewsService {
     const updated = await this.prisma.$transaction(async (tx) => {
       // update interview outcome if provided
       const interviewUpdateData: any = {};
-      if (dto.interviewStatus) interviewUpdateData.outcome = dto.interviewStatus;
+      if (dto.interviewStatus) {
+        interviewUpdateData.outcome = dto.interviewStatus;
+        if (dto.interviewStatus === 'completed' || dto.interviewStatus === 'passed' || dto.interviewStatus === 'failed' || dto.interviewStatus === 'backout') {
+          interviewUpdateData.completedAt = new Date();
+        }
+      }
       // if a reason is provided, save it to the interview's notes (append to existing notes)
       if (dto.reason) {
         const existingNotes = interview.notes ? `${interview.notes}` : '';
@@ -1619,6 +1660,8 @@ export class InterviewsService {
           title = 'Candidate Failed Interview';
         else if (dto.interviewStatus === 'completed')
           title = 'Interview Completed';
+        else if (dto.interviewStatus === 'backout')
+          title = 'Candidate Backed Out';
 
         const message = `Interview for candidate ${candidateName} on project ${projectName} has been marked as ${outcome}.${dto.reason ? ` Note: ${dto.reason}` : ''}`;
 

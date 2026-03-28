@@ -11,6 +11,8 @@ export interface SummaryStats {
   screeningRejected: number;
   onHold: number;
   screeningTraining: number;
+  interviewCompleted: number;
+  interviewBackout: number;
   passRate: number;
 }
 

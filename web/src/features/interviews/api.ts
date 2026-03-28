@@ -102,6 +102,7 @@ export interface CreateInterviewRequest {
   duration?: number;
   type?: string;
   mode?: string;
+  location?: string;
   meetingLink?: string;
   interviewerEmail?: string;
   notes?: string;

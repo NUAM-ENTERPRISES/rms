@@ -79,10 +79,18 @@ export default function ShortlistingListPage() {
 
     try {
       const res = await updateBulkClientDecision({ updates: decisions }).unwrap();
-      const shortlisted = res.data.filter((r: any) => r.success && r.data?.subStatus?.name === 'shortlisted').length;
-      const notShortlisted = res.data.filter((r: any) => r.success && r.data?.subStatus?.name === 'not_shortlisted').length;
+      const results = Array.isArray(res?.data) ? res.data : [];
 
-      toast.success(`Bulk update applied — ${shortlisted} shortlisted, ${notShortlisted} not shortlisted`);
+      const shortlisted = results.filter((r: any) => r.success && r.data?.subStatus?.name === 'shortlisted').length;
+      const notShortlisted = results.filter((r: any) => r.success && r.data?.subStatus?.name === 'not_shortlisted').length;
+      const failed = results.filter((r: any) => !r.success).length;
+
+      if (failed > 0) {
+        toast.error(`Bulk update partial failure: ${shortlisted} shortlisted, ${notShortlisted} not shortlisted, ${failed} failed`);
+      } else {
+        toast.success(`Bulk update applied — ${shortlisted} shortlisted, ${notShortlisted} not shortlisted`);
+      }
+
       setBulkDecisionModalOpen(false);
       setSelectedBulkIds([]);
       refetch();

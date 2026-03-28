@@ -40,7 +40,11 @@ export class QueryInterviewsDto {
       'rescheduled',
       'passed',
       'failed',
+      'interview_failed',
       'no-show',
+      'interview_completed',
+      'interview_backout',
+      'backout',
     ],
     required: false,
   })
@@ -53,7 +57,11 @@ export class QueryInterviewsDto {
     'rescheduled',
     'passed',
     'failed',
+    'interview_failed',
     'no-show',
+    'interview_completed',
+    'interview_backout',
+    'backout',
   ])
   @IsOptional()
   status?: string;

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsDateString,
@@ -51,6 +51,15 @@ export class UpdateInterviewDto {
   @IsOptional()
   @IsString()
   meetingLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'In-person interview location',
+    required: false,
+    example: 'Office, 5th Floor',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string;
 
   @ApiProperty({
     description: 'Interview outcome',

@@ -42,10 +42,9 @@ interface SelectedCandidate {
 export interface InterviewSchedule {
   candidateProjectMapId: string;
   scheduledTime: Date;
-  duration: number;
-  type: string;
   mode: "video" | "phone" | "in-person";
   meetingLink?: string;
+  location?: string;
   notes?: string;
 }
 
@@ -69,10 +68,9 @@ export function BulkScheduleInterviewModal({
   // Single schedule state for "Same for all"
   const [commonSchedule, setCommonSchedule] = useState<Partial<InterviewSchedule>>({
     scheduledTime: undefined,
-    duration: 60,
-    type: "technical",
     mode: "video",
     meetingLink: "",
+    location: "",
     notes: "",
   });
 
@@ -85,10 +83,9 @@ export function BulkScheduleInterviewModal({
       selectedCandidates.forEach((c) => {
         initial[c.id] = {
           scheduledTime: undefined,
-          duration: 60,
-          type: "technical",
           mode: "video",
           meetingLink: "",
+          location: "",
           notes: "",
         };
       });
@@ -122,6 +119,8 @@ export function BulkScheduleInterviewModal({
 
     if (scheduleMode === "same") {
       if (!commonSchedule.scheduledTime) return;
+      if (commonSchedule.mode === "in-person" && !commonSchedule.location?.trim()) return;
+
       finalSchedules = selectedCandidates.map(c => ({
         ...commonSchedule,
         candidateProjectMapId: c.id,
@@ -129,7 +128,13 @@ export function BulkScheduleInterviewModal({
     } else {
       const missingDates = selectedCandidates.some(c => !individualSchedules[c.id]?.scheduledTime);
       if (missingDates) return;
-      
+
+      const missingLocations = selectedCandidates.some(c => {
+        const schedule = individualSchedules[c.id];
+        return schedule?.mode === "in-person" && !schedule.location?.trim();
+      });
+      if (missingLocations) return;
+
       finalSchedules = selectedCandidates.map(c => ({
         ...individualSchedules[c.id],
         candidateProjectMapId: c.id,
@@ -141,10 +146,18 @@ export function BulkScheduleInterviewModal({
 
   const isFormValid = useMemo(() => {
     if (scheduleMode === "same") {
-      return !!commonSchedule.scheduledTime;
+      const hasTime = !!commonSchedule.scheduledTime;
+      const hasLocation = commonSchedule.mode === "in-person" ? !!commonSchedule.location?.trim() : true;
+      return hasTime && hasLocation;
     }
-    return selectedCandidates.every(c => !!individualSchedules[c.id]?.scheduledTime);
-  }, [scheduleMode, commonSchedule.scheduledTime, individualSchedules, selectedCandidates]);
+
+    return selectedCandidates.every(c => {
+      const schedule = individualSchedules[c.id];
+      if (!schedule?.scheduledTime) return false;
+      if (schedule.mode === "in-person" && !schedule.location?.trim()) return false;
+      return true;
+    });
+  }, [scheduleMode, commonSchedule.scheduledTime, commonSchedule.mode, commonSchedule.location, individualSchedules, selectedCandidates]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,23 +208,6 @@ export function BulkScheduleInterviewModal({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Interview Type</Label>
-                    <Select 
-                      value={commonSchedule.type || "technical"} 
-                      onValueChange={(val) => updateCommonSchedule("type", val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="technical">Technical</SelectItem>
-                        <SelectItem value="hr">HR</SelectItem>
-                        <SelectItem value="managerial">Managerial</SelectItem>
-                        <SelectItem value="final">Final</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
                     <Label>Mode</Label>
                     <Select 
                       value={commonSchedule.mode || "video"} 
@@ -227,14 +223,6 @@ export function BulkScheduleInterviewModal({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Duration (mins)</Label>
-                    <Input 
-                      type="number"
-                      value={commonSchedule.duration}
-                      onChange={(e) => updateCommonSchedule("duration", parseInt(e.target.value))}
-                    />
-                  </div>
                 </div>
 
                 {commonSchedule.mode === "video" && (
@@ -244,6 +232,17 @@ export function BulkScheduleInterviewModal({
                       placeholder="https://zoom.us/j/..."
                       value={commonSchedule.meetingLink}
                       onChange={(e) => updateCommonSchedule("meetingLink", e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {commonSchedule.mode === "in-person" && (
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <Input
+                      placeholder="Enter interview location"
+                      value={commonSchedule.location}
+                      onChange={(e) => updateCommonSchedule("location", e.target.value)}
                     />
                   </div>
                 )}
@@ -289,7 +288,7 @@ export function BulkScheduleInterviewModal({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <Label className="text-[10px] uppercase text-muted-foreground">Date & Time</Label>
                           <DatePicker
@@ -297,23 +296,6 @@ export function BulkScheduleInterviewModal({
                             onChange={(date) => updateIndividualSchedule(c.id, "scheduledTime", date)}
                             className="h-9"
                           />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase text-muted-foreground">Type</Label>
-                          <Select 
-                            value={schedule.type || "technical"} 
-                            onValueChange={(val) => updateIndividualSchedule(c.id, "type", val)}
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="technical">Technical</SelectItem>
-                              <SelectItem value="hr">HR</SelectItem>
-                              <SelectItem value="managerial">Managerial</SelectItem>
-                              <SelectItem value="final">Final</SelectItem>
-                            </SelectContent>
-                          </Select>
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-[10px] uppercase text-muted-foreground">Mode</Label>
@@ -341,6 +323,18 @@ export function BulkScheduleInterviewModal({
                             placeholder="Link for this candidate..."
                             value={schedule.meetingLink}
                             onChange={(e) => updateIndividualSchedule(c.id, "meetingLink", e.target.value)}
+                          />
+                        </div>
+                      )}
+
+                      {schedule.mode === "in-person" && (
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase text-muted-foreground">Location</Label>
+                          <Input
+                            className="h-8 text-xs"
+                            placeholder="In-person location for this candidate"
+                            value={schedule.location}
+                            onChange={(e) => updateIndividualSchedule(c.id, "location", e.target.value)}
                           />
                         </div>
                       )}
