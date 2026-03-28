@@ -152,22 +152,33 @@ describe('InterviewsService - client decision flows', () => {
     expect(result).toEqual(createdInterview);
   });
 
-  it('getSummaryStats counts both rejected_interview and interview_failed into interviewRejected', async () => {
+  it('getSummaryStats counts interview outcome metrics from interview table', async () => {
     mockPrisma.candidateProjects = {
+      count: jest.fn().mockResolvedValue(5),
+    };
+    mockPrisma.interview = {
       count: jest.fn().mockImplementation(({ where }: any) => {
-        const statusFilter = where?.subStatus?.name;
-        if (statusFilter?.in?.includes('rejected_interview') && statusFilter?.in?.includes('interview_failed')) {
-          return Promise.resolve(13);
-        }
+        if (where.outcome === 'scheduled') return Promise.resolve(11);
+        if (where.outcome === 'passed') return Promise.resolve(7);
+        if (where.outcome === 'failed') return Promise.resolve(4);
+        if (where.outcome === 'backout') return Promise.resolve(3);
+        if (where.outcome === 'completed') return Promise.resolve(9);
         return Promise.resolve(0);
       }),
-    };
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    } as any;
     mockPrisma.screening = {
       count: jest.fn().mockResolvedValue(0),
     };
 
     const stats = await service.getSummaryStats();
-    expect(stats.interviewRejected).toBe(13);
+    expect(stats.interviewScheduled).toBe(11);
+    expect(stats.interviewPassed).toBe(7);
+    expect(stats.interviewRejected).toBe(4);
+    expect(stats.interviewBackout).toBe(3);
+    expect(stats.interviewCompleted).toBe(9);
+    expect(stats.passRate).toBeCloseTo((7 / (7 + 4)) * 100, 2);
   });
 
   it('findAll with status=failed filters by interview.outcome failed', async () => {

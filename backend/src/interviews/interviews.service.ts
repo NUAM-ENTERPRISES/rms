@@ -1452,18 +1452,18 @@ export class InterviewsService {
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'submitted_to_client' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'shortlisted' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'not_shortlisted' } } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_scheduled' } } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_passed' } } }),
-      // interviewFailed can be tracked via two possible candidate-project sub-status values.
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: { in: ['rejected_interview', 'interview_failed'] } } } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_backout' } } }),
+      // interview summary metrics must rely on the interview outcome column as requested
+      this.prisma.interview.count({ where: { outcome: 'scheduled' } }),
+      this.prisma.interview.count({ where: { outcome: 'passed' } }),
+      this.prisma.interview.count({ where: { outcome: 'failed' } }),
+      this.prisma.interview.count({ where: { outcome: 'backout' } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_assigned' } } }),
       this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_scheduled' } } }),
       this.prisma.screening.count({ where: { decision: 'approved' } }),
       this.prisma.screening.count({ where: { decision: 'rejected' } }),
       this.prisma.screening.count({ where: { decision: 'on_hold' } }),
       this.prisma.screening.count({ where: { decision: 'needs_training' } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'interview_completed' } } }),
+      this.prisma.interview.count({ where: { outcome: 'completed' } }),
     ]);
 
     const completedInterviews = interviewPassed + interviewRejected;
