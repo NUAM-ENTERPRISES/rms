@@ -971,6 +971,7 @@ model CandidateProjectDocumentVerification {
   // "pending" | "verified" | "rejected" | "resubmission_requested"
 
   offerLetterReceivedAt DateTime?
+  receivedAt DateTime?
 
   notes                 String?
   rejectionReason       String?

@@ -161,6 +161,21 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    setProcessingDocumentReceivedDate: builder.mutation<
+      any,
+      { verificationId: string; receivedAt: string; processingId: string }
+    >({
+      query: ({ verificationId, receivedAt }) => ({
+        url: `/processing/documents/${verificationId}/received-date`,
+        method: "POST",
+        body: { receivedAt },
+      }),
+      invalidatesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Get Council Registration requirements and uploads for a processing candidate (same shape as HRD)
     getCouncilRegistrationRequirements: builder.query<
       any,
@@ -429,6 +444,7 @@ export const {
   useCompleteStepMutation,
   useGetHrdRequirementsQuery,
   useGetDocumentReceivedRequirementsQuery,
+  useSetProcessingDocumentReceivedDateMutation,
   useGetCouncilRegistrationRequirementsQuery,
   useGetDocumentAttestationRequirementsQuery,
   useGetMedicalRequirementsQuery,

@@ -2,12 +2,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit3 } from "lucide-react";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo } from "react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { EditReceivedDateModal } from "@/components/EditReceivedDateModal";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
@@ -18,7 +19,7 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
-import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useSubmitHrdDateMutation, useReuploadProcessingDocumentMutation } from "@/services/processingApi";
+import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useSubmitHrdDateMutation, useReuploadProcessingDocumentMutation, useSetProcessingDocumentReceivedDateMutation } from "@/services/processingApi";
 
 interface DocumentReceivedModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
 
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
+  const [setProcessingDocumentReceivedDate, { isLoading: isSettingReceivedDate }] = useSetProcessingDocumentReceivedDateMutation();
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
@@ -60,6 +62,13 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+
+  // Document receivedAt date input state per verification/document
+  const [receivedDateInputs, setReceivedDateInputs] = useState<Record<string, Date | undefined>>({});
+  const [isEditReceivedDateModalOpen, setIsEditReceivedDateModalOpen] = useState(false);
+  const [editReceivedDateVerificationId, setEditReceivedDateVerificationId] = useState<string | null>(null);
+  const [editReceivedDateDocumentLabel, setEditReceivedDateDocumentLabel] = useState<string>('');
+  const [editReceivedDateValue, setEditReceivedDateValue] = useState<Date | undefined>(undefined);
 
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
@@ -109,7 +118,8 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
       const createdAt = d.document?.createdAt || doc?.createdAt || d.createdAt;
       
       if (!docType) return;
-      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id, createdAt };
+      const receivedAt = d.receivedAt || d.verification?.receivedAt || d.document?.receivedAt || d.createdAt;
+      const normalized = { ...d, docType, status, fileName, fileUrl, mimeType, id, createdAt, receivedAt };
       map[docType] = map[docType] || [];
       map[docType].push(normalized);
     });
@@ -153,6 +163,36 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     setReplaceOldDocumentId(oldDocumentId ?? null);
     setReplaceCandidateProjectMapId(candidateProjectMapId ?? null);
     setUploadModalOpen(true);
+  };
+
+  const handleOpenEditReceivedDate = (verificationId: string, label: string, currentDate?: string | null) => {
+    setEditReceivedDateVerificationId(verificationId);
+    setEditReceivedDateDocumentLabel(label);
+    setEditReceivedDateValue(currentDate ? new Date(currentDate) : undefined);
+    setIsEditReceivedDateModalOpen(true);
+  };
+
+  const handleSaveReceivedDate = async (date: Date) => {
+    if (!editReceivedDateVerificationId) {
+      toast.error('Missing document verification ID');
+      return false;
+    }
+
+    try {
+      await setProcessingDocumentReceivedDate({
+        verificationId: editReceivedDateVerificationId,
+        receivedAt: date.toISOString(),
+        processingId,
+      }).unwrap();
+      toast.success('Received date updated');
+      setIsEditReceivedDateModalOpen(false);
+      await refetchRequirements();
+      return true;
+    } catch (err: any) {
+      console.error('Set received date failed', err);
+      toast.error(err?.data?.message || 'Failed to set received date');
+      return false;
+    }
   };
 
   const handleUploadFile = async (file: File) => {
@@ -214,10 +254,11 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
         toast.warning(reuseErr?.data?.message || 'Uploaded but reuse failed');
       }
       setUploadModalOpen(false);
-      // refetch data
+
       if (isOpen) {
         // simple refetch: call endpoint again
-        try { await refetchRequirements(); } catch (err) { /* ignore */ }
+        const refetchResult = await refetchRequirements();
+
       }
     } catch (err: any) {
       console.error('Upload error', err);
@@ -476,19 +517,41 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                     const hasProcessing = !!processingDoc;
                     const hasCandidate = !!candidateDoc;
 
+                    const existingReceivedAt =
+                      processingDoc?.receivedAt ||
+                      processingDoc?.verification?.receivedAt ||
+                      candidateDoc?.receivedAt ||
+                      candidateDoc?.verifications?.[0]?.receivedAt;
+
+                    const verificationId =
+                      processingDoc?.verification?.id ||
+                      candidateDoc?.verifications?.[0]?.id ||
+                      null;
+
+                    const dateKey = verificationId || req.docType;
+                    const selectedReceivedDate =
+                      receivedDateInputs[dateKey] ||
+                      (existingReceivedAt ? new Date(existingReceivedAt) : undefined);
+
                     return (
-                      <div key={req.docType} className={`flex items-center gap-4 px-4 py-3 ${processingVerified ? 'bg-emerald-50/50' : hasRejected ? 'bg-red-50/30' : ''}`}>
+                      <div key={req.docType} className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${processingVerified ? 'border-emerald-200 bg-emerald-50/40 shadow-sm' : hasRejected ? 'border-rose-200 bg-rose-50/40 shadow-sm' : 'border-slate-200 bg-white'}`}>
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${processingVerified || (candidateDoc?.status === 'verified') ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'}`}>
                           {processingVerified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : hasPending ? <Clock className="h-4 w-4 text-blue-600" /> : hasRejected ? <XCircle className="h-4 w-4 text-red-500" /> : <Upload className="h-4 w-4 text-slate-400" />}
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2"><span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>{req.mandatory ? <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge> : <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>}</div>
-
-                          {(candidateDoc || processingDoc) && (
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              {processingDoc && (<span className={`text-[10px] px-2 py-0.5 rounded-full ${processingDoc.status === 'verified' ? 'bg-emerald-100 text-emerald-700' : processingDoc.status === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-600'}`}>Processing: {processingDoc.status} {processingDoc.fileName ? `• ${processingDoc.fileName.slice(0, 20)}...` : ''}</span>)}
-                              {candidateDoc && (<span className={`text-[10px] px-2 py-0.5 rounded-full ${candidateDoc.status === 'verified' ? 'bg-emerald-100 text-emerald-700' : candidateDoc.status === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-600'}`}>Candidate: {candidateDoc.status} {candidateDoc.fileName ? `• ${candidateDoc.fileName.slice(0, 20)}...` : ''}</span>)}
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>
+                            {req.mandatory ? <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge> : <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>}
+                          </div>
+                          {(hasCandidate || hasProcessing) && (
+                            <div className="flex items-center gap-1 text-xs text-slate-500">
+                              <span>Received: {existingReceivedAt ? format(new Date(existingReceivedAt), 'PPP') : 'Not set'}</span>
+                              {verificationId && (
+                                <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleOpenEditReceivedDate(verificationId, req.label, existingReceivedAt)} title="Edit received date">
+                                  <Edit3 className="h-2 w-2" />
+                                </Button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -498,9 +561,9 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleViewDocument(req.docType)} title="View document"><Eye className="h-4 w-4" /></Button>
                           )}
 
+
                           {!hasProcessing ? (
                             <>
-                              {/* Re-upload when candidate doc exists (even if verified) */}
                               {candidateDoc && (candidateDoc.status === 'pending' || candidateDoc.status === 'verified') && (
                                 <Button
                                   size="sm"
@@ -515,33 +578,36 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                                     candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
                                   )}
                                 >
-                                  <Upload className="h-3.5 w-3.5 mr-1.5" />
-                                  Re-upload
+                                  <Upload className="h-3.5 w-3.5 mr-1.5" />Upload
                                 </Button>
                               )}
-                              {!candidateDoc && (<Button size="sm" variant="default" className="h-8 text-xs" onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}><Upload className="h-3 w-3 mr-1" />Upload</Button>)}
-                              {candidateDoc && (<Button size="sm" variant="default" onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>Verify</Button>)}
+
+                              {!candidateDoc && (
+                                <Button size="sm" variant="default" className="h-8 text-xs" onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>
+                                  <Upload className="h-3 w-3 mr-1" />Upload
+                                </Button>
+                              )}
+
+                              {candidateDoc && (
+                                <Button size="sm" variant="default" onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>Verify</Button>
+                              )}
                             </>
                           ) : processingVerified ? (
-                            <div className="flex items-center gap-2">
-                              <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
-                                onClick={() => handleUploadClick(
-                                  req.docType,
-                                  req.label,
-                                  candidate?.role?.roleCatalog?.id,
-                                  candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                  processingDoc?.id,
-                                  candidateProjectMapId || processingDoc?.candidateProjectMapId
-                                )}
-                              >
-                                <Upload className="h-3 w-3 mr-1" />
-                                Re-upload
-                              </Button>
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs font-semibold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                              onClick={() => handleUploadClick(
+                                req.docType,
+                                req.label,
+                                candidate?.role?.roleCatalog?.id,
+                                candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                processingDoc?.id,
+                                candidateProjectMapId || processingDoc?.candidateProjectMapId
+                              )}
+                            >
+                              <Upload className="h-3 w-3 mr-1" />Re-upload
+                            </Button>
                           ) : (
                             <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
                           )}
@@ -603,6 +669,15 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
           isUploading={isUploading || isReusing}
         />
       </React.Suspense>
+
+      <EditReceivedDateModal
+        isOpen={isEditReceivedDateModalOpen}
+        onClose={() => setIsEditReceivedDateModalOpen(false)}
+        documentLabel={editReceivedDateDocumentLabel}
+        currentDate={editReceivedDateValue ? editReceivedDateValue.toISOString() : undefined}
+        onConfirm={handleSaveReceivedDate}
+        isSaving={isSettingReceivedDate}
+      />
 
       <React.Suspense fallback={null}>
         <VerifyProcessingDocumentModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} documentId={verifyDocId} documentLabel={verifyDocLabel} processingStepId={activeStep?.id || ''} onConfirm={handleConfirmVerify} isVerifying={isVerifying} />

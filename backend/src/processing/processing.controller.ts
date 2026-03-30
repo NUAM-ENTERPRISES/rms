@@ -356,6 +356,27 @@ export class ProcessingController {
     return { success: true, data: result, message: 'Document verified successfully' };
   }
 
+  @Post('documents/:verificationId/received-date')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Set receivedAt date for a processing document verification',
+    description: 'Updates the receivedAt timestamp on a processing document verification',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Received date updated successfully' })
+  async setProcessingDocumentReceivedDate(
+    @Param('verificationId') verificationId: string,
+    @Body('receivedAt') receivedAt: string,
+    @Req() req: any,
+  ) {
+    const result = await this.processingService.setProcessingDocumentReceivedDate(
+      verificationId,
+      receivedAt,
+      req.user.id,
+    );
+    return { success: true, data: result, message: 'Processing document received date updated successfully' };
+  }
+
   @Get('steps/:processingId')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({ summary: 'Get processing steps for a candidate', description: 'List steps for a processing candidate' })

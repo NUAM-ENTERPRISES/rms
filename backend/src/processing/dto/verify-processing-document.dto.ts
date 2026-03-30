@@ -25,4 +25,12 @@ export class VerifyProcessingDocumentDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Timestamp when this document was received by processing',
+    example: '2026-03-30T12:34:56.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  receivedAt?: string;
 }

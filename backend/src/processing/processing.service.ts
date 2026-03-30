@@ -991,6 +991,7 @@ export class ProcessingService {
           id: d.id,
           processingStepId: d.processingStepId,
           uploadedAt: d.createdAt,
+          receivedAt: ver?.receivedAt || ver?.offerLetterReceivedAt || d.createdAt,
           documentId: ver?.documentId || null,
           verification: ver || null,
           document: ver?.document || null,
@@ -3598,7 +3599,7 @@ export class ProcessingService {
    * Updates document status, ensures project verification, and links to processing step
    */
   async verifyProcessingDocument(dto: VerifyProcessingDocumentDto, userId: string) {
-    const { documentId, processingStepId, notes } = dto;
+    const { documentId, processingStepId, notes, receivedAt } = dto;
 
     // 1. Get the processing step to find the candidate and project
     const step = await this.prisma.processingStep.findUnique({
@@ -3664,6 +3665,7 @@ export class ProcessingService {
             documentId: documentId,
             status: DOCUMENT_STATUS.VERIFIED,
             notes: notes || 'Verified by processing team',
+            receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
           } as any,
         });
       } else {
@@ -3674,6 +3676,7 @@ export class ProcessingService {
             notes: notes || verification.notes || 'Verified by processing team',
             isDeleted: false,
             deletedAt: null,
+            receivedAt: receivedAt ? new Date(receivedAt) : (verification.receivedAt || new Date()),
           } as any,
         });
       }
@@ -3751,6 +3754,40 @@ export class ProcessingService {
     }
 
     return txResult;
+  }
+
+  async setProcessingDocumentReceivedDate(
+    verificationId: string,
+    receivedAt: string,
+    userId: string,
+  ) {
+    const existingVerification = await this.prisma.candidateProjectDocumentVerification.findUnique({
+      where: { id: verificationId },
+    });
+
+    if (!existingVerification) {
+      throw new Error(`Processing document verification ${verificationId} not found`);
+    }
+
+    const updatedVerification = await this.prisma.candidateProjectDocumentVerification.update({
+      where: { id: verificationId },
+      data: {
+        receivedAt: new Date(receivedAt),
+        updatedAt: new Date(),
+      },
+    });
+
+    await this.prisma.documentVerificationHistory.create({
+      data: {
+        verificationId,
+        action: 'received_date_updated',
+        performedBy: userId,
+        performedByName: (await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name || 'System',
+        notes: `Document received date set to ${receivedAt}`,
+      },
+    });
+
+    return updatedVerification;
   }
 
   /**
