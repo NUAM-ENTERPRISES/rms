@@ -84,4 +84,22 @@ export class UploadOfferLetterDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Offer letter received date (manual input) in ISO format',
+    example: '2026-03-30T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  offerLetterReceivedAt?: string;
 }
+
+export class UpdateOfferLetterReceivedDto {
+  @ApiProperty({
+    description: 'Offer letter received date in ISO format',
+    example: '2026-03-18T00:00:00.000Z',
+  })
+  @IsString()
+  offerLetterReceivedAt: string;
+}
+

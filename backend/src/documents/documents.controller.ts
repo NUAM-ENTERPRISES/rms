@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -30,7 +31,7 @@ import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
-import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
+import { UploadOfferLetterDto, UpdateOfferLetterReceivedDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto } from './dto/forward-to-client.dto';
 import { BulkForwardToClientDto } from './dto/bulk-forward-to-client.dto';
@@ -93,6 +94,33 @@ export class DocumentsController {
       success: true,
       data: result,
       message: 'Offer letter uploaded successfully',
+    };
+  }
+
+  @Put('offer-letter/received-date/:verificationId')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Update offer letter received date',
+    description: 'Update the received date for an existing offer letter verification',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Offer letter received date updated successfully',
+  })
+  async updateOfferLetterReceivedDate(
+    @Param('verificationId') verificationId: string,
+    @Body() body: UpdateOfferLetterReceivedDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.updateOfferLetterReceivedDate(
+      verificationId,
+      body.offerLetterReceivedAt,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Offer letter received date updated successfully',
     };
   }
 

@@ -515,6 +515,11 @@ export default function PassedCandidatesPage() {
                             <p className="text-xs text-muted-foreground truncate">
                               {it.candidateProjectMap?.project?.title || it.project?.title || "Unknown Project"}
                             </p>
+                            {it.offerLetterData?.offerLetterReceivedAt && (
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                Received {format(new Date(it.offerLetterData.offerLetterReceivedAt), "MMM d, yyyy")}
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center shrink-0">
                             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">

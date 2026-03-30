@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { useUploadOfferLetterMutation } from "@/services/uploadApi";
+import { useUploadOfferLetterMutation, useUpdateOfferLetterReceivedDateMutation } from "@/services/uploadApi";
 
 export interface OfferLetterDocument {
   id: string;
@@ -48,6 +48,7 @@ export interface OfferLetterDocument {
   rejectedBy: string | null;
   rejectionReason: string | null;
   verifiedAt: string | null;
+  offerLetterReceivedAt?: string | null;
 }
 
 export interface DocumentVerification {
@@ -59,6 +60,7 @@ export interface DocumentVerification {
   notes: string | null;
   rejectionReason: string | null;
   resubmissionRequested: boolean;
+  offerLetterReceivedAt?: string | null;
   document: OfferLetterDocument;
 }
 
@@ -95,8 +97,10 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
   const [isReuploadMode, setIsReuploadMode] = useState(false);
   const [newFile, setNewFile] = useState<File | null>(null);
   const [uploadedDocument, setUploadedDocument] = useState<DocumentVerification | null>(null);
+  const [offerLetterReceivedAt, setOfferLetterReceivedAt] = useState<string>("");
 
   const [uploadOfferLetter, { isLoading: isUploading }] = useUploadOfferLetterMutation();
+  const [updateOfferLetterReceivedDate, { isLoading: isUpdatingReceivedDate }] = useUpdateOfferLetterReceivedDateMutation();
 
   // Use uploaded document if available, otherwise use the prop
   const activeDocumentVerification = uploadedDocument || documentVerification;
@@ -134,12 +138,17 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
 
   const handleReupload = async () => {
     if (!newFile) return;
+    if (!offerLetterReceivedAt) {
+      toast.error("Please select received date before re-uploading.");
+      return;
+    }
     try {
       const response = await uploadOfferLetter({
         candidateId,
         file: newFile,
         projectId,
         roleCatalogId,
+        offerLetterReceivedAt: new Date(offerLetterReceivedAt).toISOString(),
       }).unwrap();
 
       if (response.success && response.data) {
@@ -169,6 +178,25 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
     }
   };
 
+  const handleSaveReceivedDate = async () => {
+    if (!activeDocumentVerification?.id) return;
+    if (!offerLetterReceivedAt) {
+      toast.error("Please select a received date before saving.");
+      return;
+    }
+
+    try {
+      await updateOfferLetterReceivedDate({
+        verificationId: activeDocumentVerification.id,
+        offerLetterReceivedAt: new Date(offerLetterReceivedAt).toISOString(),
+      }).unwrap();
+      toast.success("Offer letter received date updated successfully");
+    } catch (error: any) {
+      console.error("Update received date error:", error);
+      toast.error(error?.data?.message || "Failed to update received date");
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -193,8 +221,25 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
       setIsReuploadMode(false);
       setNewFile(null);
       setUploadedDocument(null);
+      setOfferLetterReceivedAt("");
+      return;
     }
-  }, [isOpen]);
+
+    const existingDate =
+      activeDocumentVerification?.offerLetterReceivedAt ||
+      activeDocumentVerification?.document?.offerLetterReceivedAt ||
+      activeDocumentVerification?.document?.createdAt;
+
+    if (existingDate) {
+      try {
+        setOfferLetterReceivedAt(new Date(existingDate).toISOString().slice(0, 10));
+      } catch {
+        setOfferLetterReceivedAt("");
+      }
+    } else {
+      setOfferLetterReceivedAt("");
+    }
+  }, [isOpen, activeDocumentVerification]);
 
   const getStatusBadge = () => {
     if (isVerified) {
@@ -291,6 +336,34 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                         <p className="text-xs text-muted-foreground">
                           {formatFileSize(offerLetterDoc.fileSize)} • Uploaded {formatDate(offerLetterDoc.createdAt)}
                         </p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 mt-1">
+                          <label htmlFor="offer-letter-received-date" className="font-semibold">Received Date:</label>
+                          <input
+                            id="offer-letter-received-date"
+                            type="date"
+                            className="border border-slate-300 rounded px-2 py-1 text-xs"
+                            value={offerLetterReceivedAt}
+                            onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
+                            disabled={!isReuploadMode}
+                            readOnly={!isReuploadMode}
+                          />
+                          {!hasOfferLetter || isReuploadMode ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={handleSaveReceivedDate}
+                              disabled={!offerLetterReceivedAt || isUpdatingReceivedDate}
+                            >
+                              {isUpdatingReceivedDate ? "Saving..." : "Save Date"}
+                            </Button>
+                          ) : null}
+                        </div>
+                        {!isReuploadMode && hasOfferLetter && (
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            Received date is taken from the uploaded offer letter details and cannot be edited here.
+                          </p>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button

@@ -386,6 +386,7 @@ export class ProcessingService {
                   candidateProjectMapId: v.candidateProjectMapId || (v.candidateProjectMap && v.candidateProjectMap.id) || null,
                   roleCatalogId: v.roleCatalogId || (v.roleCatalog && v.roleCatalog.id) || null,
                   createdAt: v.createdAt,
+                  offerLetterReceivedAt: v.offerLetterReceivedAt || v.document?.createdAt || null,
                   notes: v.notes || null,
                   rejectionReason: v.rejectionReason || null,
                 }))
@@ -3966,7 +3967,18 @@ export class ProcessingService {
                     isDeleted: false,
                   },
                 },
-                include: {
+                select: {
+                  id: true,
+                  candidateProjectMapId: true,
+                  documentId: true,
+                  roleCatalogId: true,
+                  status: true,
+                  notes: true,
+                  rejectionReason: true,
+                  resubmissionRequested: true,
+                  offerLetterReceivedAt: true,
+                  createdAt: true,
+                  updatedAt: true,
                   document: {
                     select: {
                       id: true,

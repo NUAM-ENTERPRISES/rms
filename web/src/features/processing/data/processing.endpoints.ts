@@ -379,6 +379,7 @@ export const processingApi = baseApi.injectEndpoints({
         documentId: string;
         roleCatalogId?: string | null;
         status: string;
+        offerLetterReceivedAt?: string | null;
         notes?: string | null;
         createdAt: string;
         updatedAt: string;

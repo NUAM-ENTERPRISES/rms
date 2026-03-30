@@ -170,9 +170,10 @@ export class UploadController {
         file: { type: 'string', format: 'binary', description: 'Offer letter file (PDF or Image)' },
         projectId: { type: 'string', description: 'Project ID' },
         roleCatalogId: { type: 'string', description: 'Role Catalog ID' },
+        offerLetterReceivedAt: { type: 'string', format: 'date-time', description: 'Offer letter received date (ISO)' },
         notes: { type: 'string', description: 'Optional notes' },
       },
-      required: ['file', 'projectId', 'roleCatalogId'],
+      required: ['file', 'projectId', 'roleCatalogId', 'offerLetterReceivedAt'],
     },
   })
   async uploadOfferLetter(
@@ -180,6 +181,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
     @Body('projectId') projectId: string,
     @Body('roleCatalogId') roleCatalogId: string,
+    @Body('offerLetterReceivedAt') offerLetterReceivedAt: string,
     @Body('notes') notes?: string,
     @Request() req?: any,
   ) {
@@ -199,6 +201,10 @@ export class UploadController {
     );
 
     // 2. Use the DocumentsService to create the database records
+    if (!offerLetterReceivedAt) {
+      throw new BadRequestException('offerLetterReceivedAt is required');
+    }
+
     const result = await this.documentsService.uploadOfferLetter(
       {
         candidateId,
@@ -209,6 +215,7 @@ export class UploadController {
         fileSize: file.size,
         mimeType: file.mimetype,
         notes: notes,
+        offerLetterReceivedAt: offerLetterReceivedAt,
       },
       req.user.sub,
     );

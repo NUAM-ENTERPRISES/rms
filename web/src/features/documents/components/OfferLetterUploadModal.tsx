@@ -45,6 +45,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
   existingFileUrl,
 }) => {
   const [file, setFile] = useState<File | null>(null);
+  const [offerLetterReceivedAt, setOfferLetterReceivedAt] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isReuploading, setIsReuploading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -70,6 +71,10 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
 
   const handleUpload = async () => {
     if (!file) return;
+    if (!offerLetterReceivedAt) {
+      toast.error("Please select offer letter received date before uploading.");
+      return;
+    }
 
     setIsUploading(true);
     try {
@@ -78,6 +83,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
         file,
         projectId,
         roleCatalogId,
+        offerLetterReceivedAt: new Date(offerLetterReceivedAt).toISOString(),
       }).unwrap();
 
       if (response.success) {
@@ -98,6 +104,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setFile(null);
+      setOfferLetterReceivedAt("");
       setIsReuploading(false);
       setShowConfirm(false);
       setShowPDFViewer(false);
@@ -148,6 +155,16 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
               <Label htmlFor="offer-letter-file">
                 {isAlreadyUploaded && !isReuploading ? "Current Offer Letter" : "Choose File (PDF only)"}
               </Label>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Offer letter received date (required):</span>
+                <input
+                  type="date"
+                  value={offerLetterReceivedAt}
+                  onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
+                  className="border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm"
+                />
+              </div>
 
               {isAlreadyUploaded && !isReuploading ? (
                 <div className="border-2 border-dashed rounded-xl p-8 text-center bg-emerald-50/20 border-emerald-200">
@@ -256,7 +273,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
               {(!isAlreadyUploaded || isReuploading) && (
                 <Button 
                   onClick={handleUpload} 
-                  disabled={!file || isUploading}
+                  disabled={!file || !offerLetterReceivedAt || isUploading}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px] text-xs"
                 >
                   {isUploading ? (

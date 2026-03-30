@@ -146,6 +146,7 @@ export default function ProcessingCandidateDetailsPage() {
               notes: verification.notes || null,
               rejectionReason: verification.rejectionReason || null,
               resubmissionRequested: verification.resubmissionRequested || false,
+              offerLetterReceivedAt: verification.offerLetterReceivedAt || null,
               document: {
                 id: candidateDoc.id,
                 candidateId: data?.candidate?.id || "",
@@ -177,6 +178,7 @@ export default function ProcessingCandidateDetailsPage() {
             verificationId: verification?.id,
             fileUrl: candidateDoc.fileUrl,
             fileName: candidateDoc.fileName,
+            receivedAt: verification?.offerLetterReceivedAt || candidateDoc.uploadedAt || null,
           } as OfferLetterStatus,
           offerLetterVerification: constructedVerification,
         };
@@ -199,8 +201,12 @@ export default function ProcessingCandidateDetailsPage() {
         verificationId: offerLetterDoc.id,
         fileUrl: offerLetterDoc.document?.fileUrl,
         fileName: offerLetterDoc.document?.fileName,
+        receivedAt: offerLetterDoc.offerLetterReceivedAt || offerLetterDoc.document?.offerLetterReceivedAt || offerLetterDoc.document?.createdAt || null,
       } as OfferLetterStatus,
-      offerLetterVerification: offerLetterDoc,
+      offerLetterVerification: {
+        ...offerLetterDoc,
+        offerLetterReceivedAt: offerLetterDoc.offerLetterReceivedAt || offerLetterDoc.document?.offerLetterReceivedAt || offerLetterDoc.document?.createdAt || null,
+      } as any,
     };
   }, [docsResponse?.data?.items, processingSteps]);
 

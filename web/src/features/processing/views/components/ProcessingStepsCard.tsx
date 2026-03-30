@@ -110,6 +110,7 @@ export interface OfferLetterStatus {
   verificationId?: string;
   fileUrl?: string;
   fileName?: string;
+  receivedAt?: string | null;
 }
 
 interface ProcessingStepsCardProps {
@@ -848,9 +849,13 @@ function StepItem({
   };
 
   const getOfferLetterDescription = () => {
-    if (offerLetterVerified) return "Offer letter verified ✓";
-    if (offerLetterPending) return "Uploaded - Please verify";
-    if (offerLetterRejected) return "Rejected - Awaiting resubmission";
+    const receivedLabel = offerLetterStatus?.receivedAt
+      ? `Received on ${new Date(offerLetterStatus.receivedAt).toLocaleDateString()}`
+      : "";
+
+    if (offerLetterVerified) return `Offer letter verified ✓${receivedLabel ? ` · ${receivedLabel}` : ""}`;
+    if (offerLetterPending) return `Uploaded - Please verify${receivedLabel ? ` · ${receivedLabel}` : ""}`;
+    if (offerLetterRejected) return `Rejected - Awaiting resubmission${receivedLabel ? ` · ${receivedLabel}` : ""}`;
     if (offerLetterNotUploaded) return "Not uploaded yet";
     return step.description;
   };
@@ -1006,7 +1011,17 @@ function StepItem({
         {/* Footer */}
         <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs">
-            {!isOfferLetterStep ? (
+            {isOfferLetterStep ? (
+              <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
+                <span className="text-[10px] text-slate-400">Offer letter received</span>
+                <div className="inline-flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-xs font-semibold" title={offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleString() : undefined}>
+                    {offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "No date"}
+                  </span>
+                </div>
+              </span>
+            ) : (
               <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
                 <span className="text-[10px] text-slate-400">Submitted at</span>
                 <div className="inline-flex items-center gap-2">
@@ -1016,16 +1031,13 @@ function StepItem({
                   </span>
                 </div>
               </span>
-            ) : (
-              <div className="text-xs text-slate-500">&nbsp;</div>
             )}
           </div>
 
-          {/* Offer letter shows only completed date; other steps show completed or edit */}
           {isOfferLetterStep ? (
-            <div className="text-xs text-right">
+            <div className="text-xs text-right space-y-1">
               <div className="text-[10px] text-slate-400">Completed at</div>
-              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
+              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
             </div>
           ) : stepCompleted ? (
             <div className="text-xs text-right">
@@ -1081,9 +1093,9 @@ function StepItem({
         )}
         onClick={() => {
           if (!stepEnabled) return;
-          if (isOfferLetterStep && onOfferLetterClick) {
-            onOfferLetterClick();
-          } else if (onStepClick) {
+          // Only allow an explicit action button for offer letter editing
+          if (isOfferLetterStep) return;
+          if (onStepClick) {
             onStepClick(step.key);
           }
         }}
@@ -1236,7 +1248,17 @@ function StepItem({
       {/* Footer */}
       <div className="mt-2 px-3 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs">
-          {!isOfferLetterStep ? (
+          {isOfferLetterStep ? (
+            <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
+              <span className="text-[10px] text-slate-400">Offer letter received</span>
+              <div className="inline-flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span className="text-xs font-semibold" title={offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleString() : undefined}>
+                  {offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "No date"}
+                </span>
+              </div>
+            </span>
+          ) : (
             <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
               <span className="text-[10px] text-slate-400">Submitted at</span>
               <div className="inline-flex items-center gap-2">
@@ -1246,16 +1268,16 @@ function StepItem({
                 </span>
               </div>
             </span>
-          ) : (
-            <div className="text-xs text-slate-500">&nbsp;</div>
           )}
         </div>
 
         {isOfferLetterStep ? (
-          <div className="text-xs text-right">
-            <div className="text-[10px] text-slate-400">Completed at</div>
-            <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
-          </div>
+          offerLetterStatus?.status === 'verified' ? (
+            <div className="text-xs text-right space-y-1">
+              <div className="text-[10px] text-slate-400">Completed at</div>
+              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
+            </div>
+          ) : null
         ) : stepCompleted ? (
           <div className="text-xs text-right">
             <div className="text-[10px] text-slate-400">Completed at</div>

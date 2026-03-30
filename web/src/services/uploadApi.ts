@@ -31,6 +31,7 @@ export interface OfferLetterDocument extends UploadResult {
   rejectedBy: string | null;
   rejectionReason: string | null;
   verifiedAt: string | null;
+  offerLetterReceivedAt?: string | null;
 }
 
 export interface OfferLetterVerification {
@@ -137,15 +138,19 @@ export const uploadApi = baseApi.injectEndpoints({
         projectId: string;
         roleCatalogId: string;
         notes?: string;
+        offerLetterReceivedAt?: string;
       }
     >({
-      query: ({ candidateId, file, projectId, roleCatalogId, notes }) => {
+      query: ({ candidateId, file, projectId, roleCatalogId, notes, offerLetterReceivedAt }) => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("projectId", projectId);
         formData.append("roleCatalogId", roleCatalogId);
         if (notes) {
           formData.append("notes", notes);
+        }
+        if (offerLetterReceivedAt) {
+          formData.append("offerLetterReceivedAt", offerLetterReceivedAt);
         }
         return {
           url: `/upload/offer-letter/${candidateId}`,
@@ -155,6 +160,18 @@ export const uploadApi = baseApi.injectEndpoints({
         };
       },
       invalidatesTags: ["Candidate", "Document", "Interview", "ProcessingSummary"],
+    }),
+
+    updateOfferLetterReceivedDate: builder.mutation<
+      { success: boolean; data: OfferLetterVerification; message: string },
+      { verificationId: string; offerLetterReceivedAt: string }
+    >({
+      query: ({ verificationId, offerLetterReceivedAt }) => ({
+        url: `/documents/offer-letter/received-date/${verificationId}`,
+        method: "PUT",
+        body: { offerLetterReceivedAt },
+      }),
+      invalidatesTags: ["Candidate", "Document", "ProcessingSummary"],
     }),
 
     deleteFile: builder.mutation<{ success: boolean; message: string }, string>(
@@ -176,5 +193,6 @@ export const {
   useUploadDocumentMutation,
   useUploadResumeMutation,
   useUploadOfferLetterMutation,
+  useUpdateOfferLetterReceivedDateMutation,
   useDeleteFileMutation,
 } = uploadApi;

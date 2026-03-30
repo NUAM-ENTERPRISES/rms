@@ -1236,6 +1236,7 @@ export class DocumentsService {
           roleCatalogId: normalizedRoleCatalogId,
           status: DOCUMENT_STATUS.PENDING,
           notes: uploadDto.notes,
+          offerLetterReceivedAt: uploadDto.offerLetterReceivedAt ? new Date(uploadDto.offerLetterReceivedAt) : null,
         },
       });
 
@@ -1257,6 +1258,46 @@ export class DocumentsService {
     await this.updateCandidateProjectStatus(candidateProjectMap.id);
 
     return result;
+  }
+
+  /**
+   * Update offer letter received date on an existing verification
+   */
+  async updateOfferLetterReceivedDate(
+    verificationId: string,
+    offerLetterReceivedAt: string,
+    userId: string,
+  ): Promise<any> {
+    const existingVerification = await this.prisma.candidateProjectDocumentVerification.findUnique({
+      where: { id: verificationId },
+      include: { document: true, candidateProjectMap: true },
+    });
+
+    if (!existingVerification) {
+      throw new NotFoundException(`Offer letter verification with ID ${verificationId} not found`);
+    }
+
+    const updatedVerification = await this.prisma.candidateProjectDocumentVerification.update({
+      where: { id: verificationId },
+      data: {
+        offerLetterReceivedAt: new Date(offerLetterReceivedAt),
+        updatedAt: new Date(),
+      },
+      include: { document: true },
+    });
+
+    // Add history entry for this update
+    await this.prisma.documentVerificationHistory.create({
+      data: {
+        verificationId,
+        action: 'offer_letter_received_date_updated',
+        performedBy: userId,
+        performedByName: (await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name || 'System',
+        notes: `Offer letter received date updated to ${offerLetterReceivedAt}`,
+      },
+    });
+
+    return updatedVerification;
   }
 
   /**
