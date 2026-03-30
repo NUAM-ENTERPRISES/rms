@@ -323,6 +323,7 @@ export const processingApi = baseApi.injectEndpoints({
           email?: string;
           mobileNumber?: string;
         };
+        fileNumber?: string;
         candidateProjectMap: {
           id: string;
           candidateId: string;

@@ -556,7 +556,6 @@ export default function ProcessingCandidateDetailsPage() {
           refetchCandidateDetails();
         }}
         processingId={data.id}
-        candidateProjectMapId={data.candidateProjectMap?.id}
         onComplete={handleStepComplete}
       />
 
