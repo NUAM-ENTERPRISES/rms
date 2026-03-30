@@ -51,8 +51,7 @@ export default function ProtectedRoute({
 
   // Redirect to login if not authenticated
   if (status !== "authenticated") {
-    const next = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?next=${next}`} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // Check role requirements

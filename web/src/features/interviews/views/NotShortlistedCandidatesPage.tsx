@@ -434,6 +434,13 @@ const { data, isLoading, isError, refetch } = useGetNotShortlistedQuery({
                         <p className="mb-0">Forwarded to client by {selected.latestForward.sender.name} on {selected.latestForward.sentAt ? format(new Date(selected.latestForward.sentAt), 'MMM d, yyyy') : '-'}</p>
                       </div>
                     )}
+
+                    {(selected.notShortlistedReason || selected.projectStatusHistory?.[0]?.reason || selected.projectStatusHistory?.[0]?.notes) && (
+                      <div className="mt-3 bg-white/70 rounded-md border border-emerald-100 p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Rejection reason</p>
+                        <p className="text-sm font-medium text-emerald-800">{selected.notShortlistedReason || selected.projectStatusHistory?.[0]?.reason || selected.projectStatusHistory?.[0]?.notes}</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

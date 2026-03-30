@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsEnum,
   IsEmail,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateInterviewDto {
@@ -82,6 +83,43 @@ export class CreateInterviewDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @ApiPropertyOptional({
+    description: 'Air ticket up leg required',
+    required: false,
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  airTicketUp?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Air ticket down leg required',
+    required: false,
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  airTicketDown?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Air ticket requirement',
+    required: false,
+    enum: ['up-and-down', 'up-only', 'down-only'],
+    example: 'up-and-down',
+  })
+  @IsOptional()
+  @IsEnum(['up-and-down', 'up-only', 'down-only'])
+  airTicket?: string;
+
+  @ApiPropertyOptional({
+    description: 'Accommodation required',
+    required: false,
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  accommodation?: boolean;
 
   @ApiProperty({
     description: 'Additional notes',

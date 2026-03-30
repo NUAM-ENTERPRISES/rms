@@ -541,6 +541,8 @@ model Interview {
   notes                 String?
   interviewer           String?
   location              String?
+  airTicket             String?
+  accommodation         Boolean            @default(false)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   candidateProjectMapId String?
