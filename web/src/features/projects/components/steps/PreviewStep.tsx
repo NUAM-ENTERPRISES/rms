@@ -3,7 +3,6 @@ import { UseFormWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -12,16 +11,15 @@ import {
   CheckCircle,
   Building2,
   Target,
-  User,
   FileText,
   MapPin,
   Heart,
   Ruler,
-  Weight,
 } from "lucide-react";
 import { FlagWithName } from "@/shared";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
+import { formatSalaryRangeWithINRBracket } from "@/lib/utils";
 import { useGetClientQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
@@ -40,7 +38,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
   );
   const { data: systemConfig } = useGetSystemConfigQuery("religions,states");
   const { data: qualificationsData } = useGetQualificationsQuery();
-  const { getCountryName } = useCountryValidation();
+  const { getCountryName, getCountryCurrency } = useCountryValidation();
 
   // Helper function to get country name - prefer initialCountryData if it matches
   const getDisplayCountryName = (code?: string) => {
@@ -59,7 +57,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
     return qualification?.name || `Qualification ${qualificationId}`;
   };
 
-  const getClientName = (clientId: string) => {
+  const getClientName = () => {
     return selectedClientData?.data?.name || "N/A";
   };
 
@@ -102,7 +100,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
             <div>
               <p className="text-sm text-slate-600">Client</p>
               <p className="font-medium text-slate-800">
-                {formData.clientId ? getClientName(formData.clientId) : "N/A"}
+                {formData.clientId ? getClientName() : "N/A"}
               </p>
             </div>
             <div>
@@ -288,11 +286,15 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
                 )}
 
                 {/* Salary */}
-                {(role.minSalaryRange || role.maxSalaryRange) && (
+                {(role.minSalaryRange != null || role.maxSalaryRange != null) && (
                   <div>
                     <span className="text-slate-600">Salary: </span>
                     <span className="font-medium">
-                      {role.minSalaryRange ? role.minSalaryRange.toLocaleString() : "N/A"} - {role.maxSalaryRange ? role.maxSalaryRange.toLocaleString() : "N/A"}
+                      {formatSalaryRangeWithINRBracket(
+                        role.minSalaryRange ?? undefined,
+                        role.maxSalaryRange ?? undefined,
+                        getCountryCurrency(formData.countryCode),
+                      )}
                     </span>
                   </div>
                 )}

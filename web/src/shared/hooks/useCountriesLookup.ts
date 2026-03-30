@@ -168,5 +168,10 @@ export function useCountryValidation() {
       const country = countries.find((c) => c.code === code.toUpperCase());
       return country?.name || null;
     },
+    getCountryCurrency: (code?: string) => {
+      if (!code) return "INR";
+      const country = countries.find((c) => c.code === code.toUpperCase());
+      return country?.currency || "INR";
+    },
   };
 }
