@@ -52,6 +52,19 @@ export function RNRReminderModal({
     }
   };
 
+  // Format date and time (for candidate creation timestamp)
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const handleCallNow = () => {
     // Open phone dialer
     window.location.href = `tel:${reminder.candidate.countryCode}${reminder.candidate.mobileNumber}`;
@@ -102,6 +115,9 @@ export function RNRReminderModal({
                 </label>
                 <p className="text-xl font-bold text-slate-900 mt-1">
                   {candidateName}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Created: {formatDateTime((reminder.candidate as any).createdAt)}
                 </p>
               </div>
               

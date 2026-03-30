@@ -303,6 +303,19 @@ export default function CandidatesPage() {
     });
   };
 
+  // Format date and time
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   // Helper to create sanitized digits-only phone string for tel/WhatsApp links
   const formatPhoneForLink = (c: any) => {
     const raw = String(c?.countryCode ?? "") + String(c?.mobileNumber ?? c?.mobile ?? c?.contact ?? "");
@@ -1404,6 +1417,9 @@ export default function CandidatesPage() {
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Created By
                     </TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                      Created At
+                    </TableHead>
                     {/* Skills column removed */}
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Status
@@ -1517,6 +1533,14 @@ export default function CandidatesPage() {
                               ) : (
                                 <span className="text-slate-500 text-[10px]">System / Admin</span>
                               )}
+                            </div>
+                          </TableCell>
+
+                          {/* Created At */}
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                              {formatDateTime(candidate.createdAt)}
                             </div>
                           </TableCell>
 
