@@ -307,10 +307,18 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
                   </div>
                 )}
 
-                {role.ageRequirement && (
+                {(role.minAge != null || role.maxAge != null) && (
                   <div>
                     <span className="text-slate-600">Age: </span>
-                    <span className="font-medium">{role.ageRequirement}</span>
+                    <span className="font-medium">
+                      {role.minAge != null && role.maxAge != null
+                        ? `${role.minAge} to ${role.maxAge}`
+                        : role.minAge != null
+                        ? `>= ${role.minAge}`
+                        : role.maxAge != null
+                        ? `<= ${role.maxAge}`
+                        : "Any"}
+                    </span>
                   </div>
                 )}
 

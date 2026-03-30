@@ -85,7 +85,8 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
     maxExperience: undefined as number | undefined,
     shiftType: undefined as "day" | "night" | "rotating" | "flexible" | undefined,
     genderRequirement: "all" as "all" | "female" | "male" | "other",
-    ageRequirement: "",
+    minAge: undefined as number | undefined,
+    maxAge: undefined as number | undefined,
     accommodation: false,
     food: false,
     transport: false,
@@ -116,7 +117,8 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
       maxExperience: bulkCriteria.maxExperience,
       shiftType: bulkCriteria.shiftType,
       genderRequirement: bulkCriteria.genderRequirement,
-      ageRequirement: bulkCriteria.ageRequirement,
+      minAge: bulkCriteria.minAge,
+      maxAge: bulkCriteria.maxAge,
       accommodation: bulkCriteria.accommodation,
       food: bulkCriteria.food,
       transport: bulkCriteria.transport,
@@ -438,13 +440,26 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
               </div>
 
               <div className="flex-1 flex items-center gap-3">
-                <div className="flex-1 max-w-[200px] flex items-center gap-2">
-                  <Label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Age Req.</Label>
+                <div className="flex-1 max-w-[200px] flex items-center gap-1">
+                  <Label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Min Age</Label>
                   <Input
-                    placeholder="e.g. 21-35"
-                    value={bulkCriteria.ageRequirement}
-                    onChange={(e) => setBulkCriteria(p => ({...p, ageRequirement: e.target.value}))}
-                    className="bg-white border-slate-200 h-8 rounded-lg text-xs"
+                    type="number"
+                    min={0}
+                    placeholder="18"
+                    value={bulkCriteria.minAge ?? ""}
+                    onChange={(e) => setBulkCriteria(p => ({...p, minAge: e.target.value === "" ? undefined : parseInt(e.target.value)}))}
+                    className="bg-white border-slate-200 h-8 rounded-lg text-xs w-20"
+                  />
+                </div>
+                <div className="flex-1 max-w-[200px] flex items-center gap-1">
+                  <Label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Max Age</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="35"
+                    value={bulkCriteria.maxAge ?? ""}
+                    onChange={(e) => setBulkCriteria(p => ({...p, maxAge: e.target.value === "" ? undefined : parseInt(e.target.value)}))}
+                    className="bg-white border-slate-200 h-8 rounded-lg text-xs w-20"
                   />
                 </div>
 
@@ -512,8 +527,10 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
               } else if ((role.minExperience as number) > (role.maxExperience as number)) {
                 localValidationMessages.push("Minimum experience must be less than or equal to maximum experience");
               }
-              if (!role.ageRequirement || !/^\s*\d+\s*to\s*\d+\s*$/.test(role.ageRequirement)) {
-                localValidationMessages.push("Age is required in format '18 to 25'");
+              if (role.minAge == null || role.maxAge == null) {
+                localValidationMessages.push("Provide both minimum and maximum age");
+              } else if (role.minAge > role.maxAge) {
+                localValidationMessages.push("Minimum age must be less than or equal to maximum age");
               }
               if (!role.educationRequirementsList || role.educationRequirementsList.length === 0) {
                 localValidationMessages.push("Add at least one education requirement");
@@ -608,7 +625,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                         <div className="flex items-center gap-1 bg-white/60 rounded px-1.5 py-1">
                           <Calendar className="h-3 w-3 text-orange-500 flex-shrink-0" />
                           <span className="text-slate-600 truncate">
-                            {role.ageRequirement || 'Any age'}
+                            {role.minAge != null && role.maxAge != null ? `${role.minAge}-${role.maxAge} yrs` : 'Any age'}
                           </span>
                         </div>
                       </div>

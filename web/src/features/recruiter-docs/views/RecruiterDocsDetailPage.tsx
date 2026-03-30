@@ -1158,7 +1158,13 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             <Calendar className="h-3 w-3" /> Age Limit
                           </span>
                           <p className="text-sm font-semibold text-slate-700">
-                            {role.ageRequirement || `${role.minAge}-${role.maxAge}`}
+                            {role.minAge != null && role.maxAge != null
+                              ? `${role.minAge}-${role.maxAge}`
+                              : role.minAge != null
+                              ? `>= ${role.minAge}`
+                              : role.maxAge != null
+                              ? `<= ${role.maxAge}`
+                              : "Any"}
                           </p>
                         </div>
                         <div className="space-y-1">

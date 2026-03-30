@@ -218,9 +218,14 @@ export default function MultiStepEditProjectPage() {
             specificExperience: Array.isArray(role.specificExperience)
               ? role.specificExperience.join(", ")
               : role.specificExperience,
-            ageRequirement: role.ageRequirement 
-              ? role.ageRequirement.replace("-", " to ") 
-              : undefined,
+            minAge:
+              role.minAge !== null && role.minAge !== undefined
+                ? role.minAge
+                : undefined,
+            maxAge:
+              role.maxAge !== null && role.maxAge !== undefined
+                ? role.maxAge
+                : undefined,
             accommodation:
               (role as any).accommodation !== null &&
               (role as any).accommodation !== undefined
@@ -407,7 +412,8 @@ export default function MultiStepEditProjectPage() {
         clearErrors([
           `rolesNeeded.${idx}.minExperience`,
           `rolesNeeded.${idx}.maxExperience`,
-          `rolesNeeded.${idx}.ageRequirement`,
+          `rolesNeeded.${idx}.minAge`,
+          `rolesNeeded.${idx}.maxAge`,
           `rolesNeeded.${idx}.educationRequirementsList`,
         ]);
 
@@ -417,8 +423,12 @@ export default function MultiStepEditProjectPage() {
           setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Minimum experience must be less than or equal to maximum experience" });
           roleHasError = true;
         }
-        if (r.ageRequirement && !/^\s*\d+\s*to\s*\d+\s*$/.test(r.ageRequirement)) {
-          setError(`rolesNeeded.${idx}.ageRequirement`, { type: "manual", message: "Age must be in format '18 to 25'" });
+        if (r.minAge == null || r.maxAge == null) {
+          setError(`rolesNeeded.${idx}.minAge`, { type: "manual", message: "Minimum age is required" });
+          setError(`rolesNeeded.${idx}.maxAge`, { type: "manual", message: "Maximum age is required" });
+          roleHasError = true;
+        } else if (r.minAge > r.maxAge) {
+          setError(`rolesNeeded.${idx}.maxAge`, { type: "manual", message: "Maximum age must be greater than or equal to minimum age" });
           roleHasError = true;
         }
         // Basic requirement: at least one qualification if the array exists
@@ -519,7 +529,8 @@ export default function MultiStepEditProjectPage() {
           return {
             ...roleWithoutDepartmentId,
             // Candidate criteria fields
-            ageRequirement: role.ageRequirement || undefined,
+            minAge: role.minAge,
+            maxAge: role.maxAge,
             accommodation: !!role.accommodation,
             food: !!role.food,
             transport: !!role.transport,

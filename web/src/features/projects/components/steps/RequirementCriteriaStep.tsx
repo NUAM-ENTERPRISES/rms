@@ -202,7 +202,8 @@ export const RequirementCriteriaStep: React.FC<
             drugScreeningRequired: true,
             onCallRequired: false,
             relocationAssistance: false,
-            ageRequirement: "",
+            minAge: 18,
+            maxAge: 35,
             educationRequirementsList: [],
             priority: "medium",
           });

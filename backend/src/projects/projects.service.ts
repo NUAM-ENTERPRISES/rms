@@ -198,19 +198,26 @@ export class ProjectsService {
         createProjectDto.rolesNeeded.length > 0
       ) {
         for (const role of createProjectDto.rolesNeeded) {
-          // validate ageRequirement format (expected like "18 to 25") and parse into minAge/maxAge
-          const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
-          const ageMatch = role.ageRequirement?.match(AGE_RE);
-          if (!ageMatch) {
-            throw new BadRequestException(
-              `Invalid or missing ageRequirement for role: ${role.designation}. Expected format like "18 to 25".`,
-            );
+          // Prefer explicit minAge/maxAge; parse ageRequirement string (from old clients) if provided.
+          let minAge = role.minAge;
+          let maxAge = role.maxAge;
+
+          if (minAge == null || maxAge == null) {
+            const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
+            const ageRequirement = (role as any).ageRequirement as string | undefined;
+            const ageMatch = ageRequirement?.match(AGE_RE);
+            if (!ageMatch) {
+              throw new BadRequestException(
+                `Invalid or missing age criteria for role: ${role.designation}. Provide minAge and maxAge or legacy ageRequirement string.`,
+              );
+            }
+            minAge = parseInt(ageMatch[1], 10);
+            maxAge = parseInt(ageMatch[2], 10);
           }
-          const minAge = parseInt(ageMatch[1], 10);
-          const maxAge = parseInt(ageMatch[2], 10);
-          if (isNaN(minAge) || isNaN(maxAge) || minAge > maxAge) {
+
+          if (minAge == null || maxAge == null || isNaN(minAge) || isNaN(maxAge) || minAge > maxAge) {
             throw new BadRequestException(
-              `Invalid age range for role: ${role.designation}. Ensure age is like "18 to 25" with min <= max.`,
+              `Invalid age range for role: ${role.designation}. Ensure minAge and maxAge are valid and minAge <= maxAge.`,
             );
           }
           const createdRole = await tx.roleNeeded.create({
@@ -767,19 +774,32 @@ export class ProjectsService {
 
       // Upsert incoming roles (update if id provided, create otherwise)
       for (const role of incomingRoles) {
-        // validate ageRequirement format (expected like "18 to 25") and parse into minAge/maxAge
-        const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
-        const ageMatch = role.ageRequirement?.match(AGE_RE);
-        if (!ageMatch) {
-          throw new BadRequestException(
-            `Invalid or missing ageRequirement for role: ${role.designation}. Expected format like "18 to 25".`,
-          );
+        // prefer explicit minAge/maxAge from API; keep legacy ageRequirement parsing for backward compatibility
+        let minAge = role.minAge;
+        let maxAge = role.maxAge;
+
+        if (minAge == null || maxAge == null) {
+          const AGE_RE = /^\s*(\d+)\s*to\s*(\d+)\s*$/i;
+          const ageRequirement = (role as any).ageRequirement as string | undefined;
+          const ageMatch = ageRequirement?.match(AGE_RE);
+          if (!ageMatch) {
+            throw new BadRequestException(
+              `Invalid or missing age criteria for role: ${role.designation}. specify minAge and maxAge`,
+            );
+          }
+          minAge = parseInt(ageMatch[1], 10);
+          maxAge = parseInt(ageMatch[2], 10);
         }
-        const minAge = parseInt(ageMatch[1], 10);
-        const maxAge = parseInt(ageMatch[2], 10);
-        if (isNaN(minAge) || isNaN(maxAge) || minAge > maxAge) {
+
+        if (
+          minAge == null ||
+          maxAge == null ||
+          isNaN(minAge) ||
+          isNaN(maxAge) ||
+          minAge > maxAge
+        ) {
           throw new BadRequestException(
-            `Invalid age range for role: ${role.designation}. Ensure age is like "18 to 25" with min <= max.`,
+            `Invalid age range for role: ${role.designation}. Ensure minAge and maxAge are numbers and minAge <= maxAge.`,
           );
         }
 

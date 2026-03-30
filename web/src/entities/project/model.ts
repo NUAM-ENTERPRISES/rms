@@ -48,6 +48,8 @@ export interface RoleNeeded {
   technicalSkills?: string;
   languageRequirements?: string;
   licenseRequirements?: string;
+  minAge?: number;
+  maxAge?: number;
   backgroundCheckRequired: boolean;
   drugScreeningRequired: boolean;
   shiftType?: string;

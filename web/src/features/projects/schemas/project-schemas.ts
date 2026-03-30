@@ -65,23 +65,8 @@ export const projectFormSchema = z.object({
           .union([z.number().min(1).max(10), z.undefined()])
           .optional(),
         genderRequirement: z.enum(["female", "male", "all", "other"]),
-        // Age requirement must be like "18 to 25". Validate format and logical bounds.
-        ageRequirement: z
-          .string()
-          .optional()
-          .refine((val) => {
-            if (!val || val.trim() === "") return true;
-            // allow formats like "18 to 25" with optional spaces
-            return /^\s*\d+\s*to\s*\d+\s*$/.test(val);
-          }, { message: "Age must be in format '18 to 25'" })
-          .refine((val) => {
-            if (!val || val.trim() === "") return true;
-            const parts = val.split(/to/i).map((p) => p.trim());
-            if (parts.length !== 2) return false;
-            const min = parseInt(parts[0], 10);
-            const max = parseInt(parts[1], 10);
-            return !isNaN(min) && !isNaN(max) && min <= max;
-          }, { message: "Minimum age must be less than or equal to maximum age" }),
+        minAge: z.number().min(0),
+        maxAge: z.number().min(0),
         accommodation: z.boolean().optional(),
         food: z.boolean().optional(),
         transport: z.boolean().optional(),
@@ -97,6 +82,17 @@ export const projectFormSchema = z.object({
         maxWeight: z.union([z.number().min(0), z.undefined()]).optional(),
       })
     )
+    .superRefine((roles, ctx) => {
+      roles.forEach((role, idx) => {
+        if (role.minAge != null && role.maxAge != null && role.minAge > role.maxAge) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [idx, 'maxAge'],
+            message: 'Maximum age must be greater than or equal to minimum age',
+          });
+        }
+      });
+    })
     .min(1, "At least one role is required"),
   documentRequirements: z
     .array(
@@ -140,7 +136,8 @@ export const defaultProjectValues = {
       relocationAssistance: false,
       visaType: "contract" as const,
       genderRequirement: "all" as const,
-      ageRequirement: undefined,
+      minAge: 18,
+      maxAge: 35,
       accommodation: false,
       food: false,
       transport: false,
