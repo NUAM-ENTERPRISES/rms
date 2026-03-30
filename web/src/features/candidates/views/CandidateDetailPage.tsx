@@ -483,7 +483,6 @@ export default function CandidateDetailPage() {
         candidateId={id!}
         initialData={{
           expectedMinSalary: candidate.expectedMinSalary,
-          expectedMaxSalary: candidate.expectedMaxSalary,
           sectorType: candidate.sectorType,
           visaType: candidate.visaType,
           preferredCountries: candidate.preferredCountries?.map(pc => pc.country.code),

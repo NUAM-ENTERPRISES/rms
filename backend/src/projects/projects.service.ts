@@ -2675,18 +2675,16 @@ export class ProjectsService {
       }
 
       // Salary Match Penalty (-10 points)
+      // Only expectedMinSalary is used for matching now. expectedMaxSalary is deprecated.
       const projMin = role.minSalaryRange;
       const projMax = role.maxSalaryRange;
       const candMin = candidate.expectedMinSalary;
-      const candMax = candidate.expectedMaxSalary;
 
       let salaryMismatch = false;
       if (projMax && candMin && candMin > projMax) {
         salaryMismatch = true;
-      } else if (projMin && candMax && candMax < projMin) {
-        salaryMismatch = true;
       }
-      
+
       if (salaryMismatch) {
         roleScore -= 10;
       }

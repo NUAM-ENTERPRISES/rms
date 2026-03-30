@@ -175,7 +175,8 @@ export class CreateCandidateDto {
     minimum: 0,
   })
   @IsOptional()
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   @Min(0)
   currentSalary?: number;
 
@@ -209,7 +210,8 @@ export class CreateCandidateDto {
     minimum: 0,
   })
   @IsOptional()
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   @Min(0)
   expectedMinSalary?: number;
 
@@ -219,7 +221,8 @@ export class CreateCandidateDto {
     minimum: 0,
   })
   @IsOptional()
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   @Min(0)
   expectedMaxSalary?: number;
 
@@ -244,6 +247,7 @@ export class CreateCandidateDto {
     example: 175.5,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   height?: number;
 
@@ -252,6 +256,7 @@ export class CreateCandidateDto {
     example: 70.2,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   weight?: number;
 

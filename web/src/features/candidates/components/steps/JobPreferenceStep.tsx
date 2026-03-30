@@ -20,15 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Briefcase, Globe, Building } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { MultiCountrySelect, MultiSelect } from "@/components/molecules";
 import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 
 type CreateCandidateFormData = {
-  expectedMinSalary?: number;
-  expectedMaxSalary?: number;
+  expectedSalary?: number;
   sectorType?: string;
   visaType?: string;
   preferredCountries?: string[];
@@ -58,49 +56,28 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Salary Range */}
           <div className="space-y-2">
-            <Label htmlFor="expectedMinSalary" className="text-slate-700 font-medium">
-              Expected Min Salary
+            <Label htmlFor="expectedSalary" className="text-slate-700 font-medium">
+              Expected Salary
             </Label>
             <Controller
-              name="expectedMinSalary"
+              name="expectedSalary"
               control={control}
               render={({ field }) => (
                 <Input
                   {...field}
-                  id="expectedMinSalary"
+                  id="expectedSalary"
                   type="number"
+                  step="1"
+                  min={0}
                   placeholder="40000"
                   disabled={isLoading}
                   className="h-11 bg-white border-slate-200"
                 />
               )}
             />
-            {errors.expectedMinSalary && (
-              <p className="text-sm text-red-600">{errors.expectedMinSalary.message as string}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="expectedMaxSalary" className="text-slate-700 font-medium">
-              Expected Max Salary
-            </Label>
-            <Controller
-              name="expectedMaxSalary"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  id="expectedMaxSalary"
-                  type="number"
-                  placeholder="60000"
-                  disabled={isLoading}
-                  className="h-11 bg-white border-slate-200"
-                />
-              )}
-            />
-            {errors.expectedMaxSalary && (
-              <p className="text-sm text-red-600">{errors.expectedMaxSalary.message as string}</p>
+            {errors.expectedSalary && (
+              <p className="text-sm text-red-600">{errors.expectedSalary.message as string}</p>
             )}
           </div>
 

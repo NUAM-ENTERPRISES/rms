@@ -42,8 +42,7 @@ interface CandidatePreviewProps {
     gpa?: number;
     qualifications?: any[];
     workExperiences?: any[];
-    expectedMinSalary?: number;
-    expectedMaxSalary?: number;
+    expectedSalary?: number;
     preferredCountries?: string[];
     facilityPreferences?: string[];
     sectorType?: string;
@@ -295,10 +294,7 @@ export default function CandidatePreview({
                   Expected Salary Range
                 </label>
                 <p className="mt-1 text-sm font-medium text-slate-900">
-                  {candidateData.expectedMinSalary !== undefined ? `$${candidateData.expectedMinSalary.toLocaleString()}` : "N/A"}
-                  {candidateData.expectedMaxSalary
-                    ? ` - $${candidateData.expectedMaxSalary.toLocaleString()}`
-                    : ""}
+                  {candidateData.expectedSalary !== undefined ? `$${candidateData.expectedSalary.toLocaleString()}` : "N/A"}
                 </p>
               </div>
               <div>

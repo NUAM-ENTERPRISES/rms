@@ -352,11 +352,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     <div className="text-sm flex items-center gap-2 mt-1 font-medium text-blue-700">
                       <IndianRupee className="h-3.5 w-3.5" />
                       {candidate.expectedMinSalary !== undefined
-                        ? `${formatCurrency(candidate.expectedMinSalary)}${
-                            candidate.expectedMaxSalary
-                              ? ` - ${formatCurrency(candidate.expectedMaxSalary)}`
-                              : ""
-                          }`
+                        ? formatCurrency(candidate.expectedMinSalary)
                         : candidate.expectedSalary
                         ? formatCurrency(candidate.expectedSalary)
                         : "N/A"}
