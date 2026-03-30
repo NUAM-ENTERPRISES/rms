@@ -143,6 +143,9 @@ export class CandidatesService {
     // Validate date of birth is in the past if provided (still optional)
     if (createCandidateDto.dateOfBirth) {
       const dateOfBirth = new Date(createCandidateDto.dateOfBirth);
+      if (Number.isNaN(dateOfBirth.getTime())) {
+        throw new BadRequestException('Date of birth must be a valid date');
+      }
       if (dateOfBirth >= new Date()) {
         throw new BadRequestException('Date of birth must be in the past');
       }
@@ -215,8 +218,8 @@ export class CandidatesService {
         referralEmail: createCandidateDto.referralEmail,
         referralPhone: createCandidateDto.referralPhone,
         referralDescription: createCandidateDto.referralDescription,
-        // set dateOfBirth only if provided (optional field)
-        ...(createCandidateDto.dateOfBirth && { dateOfBirth: new Date(createCandidateDto.dateOfBirth) }),
+        // set dateOfBirth value to either parsed date or null (optional field)
+        dateOfBirth: createCandidateDto.dateOfBirth ? new Date(createCandidateDto.dateOfBirth) : null,
         gender: createCandidateDto.gender,
         currentStatusId: defaultStatusId,
         totalExperience: totalExperience,

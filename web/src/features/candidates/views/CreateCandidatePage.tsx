@@ -268,7 +268,6 @@ export default function CreateCandidatePage() {
       "lastName",
       "countryCode",
       "mobileNumber",
-      "dateOfBirth",
       "source",
       "gender",
       "referralCompanyName",
