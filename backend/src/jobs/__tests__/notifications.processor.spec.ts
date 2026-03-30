@@ -57,7 +57,7 @@ describe('NotificationsProcessor', () => {
 
     await processor.handleCandidateApprovedForClientInterview(job);
 
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(5);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(9);
     expect(notificationsService.createNotification).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'trainer-1', type: 'screening_passed' }),
     );

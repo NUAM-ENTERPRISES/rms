@@ -1697,6 +1697,12 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Candidate transfer notification created for user ${assignedProcessingTeamUserId}`,
       );
+
+      // Broadcast processing summary refresh to all connected clients in real-time
+      await this.notificationsGateway.broadcastEvent("data:sync", {
+        type: "ProcessingSummary",
+        message: `Candidate ${candidate.firstName} ${candidate.lastName} assigned to processing`,
+      });
     } catch (error) {
       this.logger.error(
         `Failed to process candidate transfer to processing: ${error.message}`,
@@ -1781,12 +1787,15 @@ export class NotificationsProcessor extends WorkerHost {
           changedBy?: string | null;
         };
 
-      // Get target roles (Admin, Manager, Team Lead, System Administrator)
+      // Get target roles (Manager, System Admin, Director, CEO, Admin, Team Lead)
       const targetRoles = [
-        'Admin',
         'Manager',
-        'Team Lead',
+        'System Admin',
         'System Administrator',
+        'Director',
+        'CEO',
+        'Admin',
+        'Team Lead',
       ];
       const targetUsers = await this.prisma.user.findMany({
         where: {

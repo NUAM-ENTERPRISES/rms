@@ -74,7 +74,10 @@ export const processingApi = baseApi.injectEndpoints({
         url: "/processing/all-candidates",
         params: params ?? undefined,
       }),
-      providesTags: ["ProcessingSummary"],
+      providesTags: (result) =>
+        result
+          ? [{ type: "ProcessingSummary", id: "LIST" }]
+          : [{ type: "ProcessingSummary", id: "LIST" }],
     }),
 
     // Admin endpoint: GET /processing/admin/all-candidates
@@ -120,7 +123,10 @@ export const processingApi = baseApi.injectEndpoints({
         url: "/processing/candidates-to-transfer",
         params: params ?? undefined,
       }),
-      providesTags: ["ProcessingSummary"],
+      providesTags: (result) =>
+        result
+          ? [{ type: "ProcessingSummary", id: "LIST" }]
+          : [{ type: "ProcessingSummary", id: "LIST" }],
     }),
     getProcessingDetail: builder.query<
       ApiResponse<{

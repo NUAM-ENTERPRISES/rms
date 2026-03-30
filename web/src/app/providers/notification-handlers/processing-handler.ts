@@ -5,6 +5,7 @@ export const handleProcessingNotifications = ({ notification, dispatch, invalida
     "interview_passed",
     "candidate_ready_for_processing",
     "candidate_transferred_to_processing",
+    "processing_assignment",  // <--- EVENT from transfer-to-processing outbox
     "candidate_hired",
     "processing_step_updated"
   ];

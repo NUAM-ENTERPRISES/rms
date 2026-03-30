@@ -22,13 +22,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useTransferToProcessingMutation, processingApi } from "@/features/processing/data/processing.endpoints";
-import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { useGetUsersQuery } from "@/features/admin";
 import { toast } from "sonner";
 import { useAppDispatch } from "@/app/hooks";
 import { CandidateDetailTooltip } from "@/features/projects/components/CandidateDetailTooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
-import { useGetProjectsQuery } from "@/services/projectsApi";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 
@@ -53,7 +52,9 @@ interface MultiTransferToProcessingModalProps {
     offerLetterData?: any;
   }>;
   projectId: string;
+  projectTitle: string;
   roleCatalogId: string;
+  roleDesignation: string;
   onSuccess: () => void;
   onRemoveCandidate?: (candidateId: string) => void;
 }
@@ -63,7 +64,9 @@ export function MultiTransferToProcessingModal({
   onClose,
   candidates,
   projectId,
+  projectTitle,
   roleCatalogId,
+  roleDesignation,
   onSuccess,
   onRemoveCandidate,
 }: MultiTransferToProcessingModalProps) {
@@ -114,18 +117,21 @@ export function MultiTransferToProcessingModal({
   }, [candidates, pdfViewerState.isOpen, pdfViewerState.candidateId, pdfViewerState.fileUrl, offerLetterOverrides]);
 
   const dispatch = useAppDispatch();
-  const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
-  const selectedProject = useMemo(() => 
-    projectsData?.data?.projects?.find((p: any) => p.id === projectId),
-    [projectsData, projectId]
+
+  const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsersQuery(
+    { limit: 10, roles: ["Processing Executive"] },
+    { skip: !isOpen }
   );
 
-  const selectedRole = useMemo(() => {
-    if (!selectedProject?.rolesNeeded || !roleCatalogId) return null;
-    return selectedProject.rolesNeeded.find((r: any) => (r.roleCatalogId || r.roleCatalog?.id) === roleCatalogId);
-  }, [selectedProject, roleCatalogId]);
-
-  const roleDesignation = selectedRole?.designation || "Unknown Role";
+  const processingUsers = useMemo(() => {
+    const fetchedUsers = usersResponse?.data?.users || [];
+    return fetchedUsers.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.userRoles?.[0]?.role?.name || "Unknown",
+    }));
+  }, [usersResponse]);
 
   // Initialize transfer data for each candidate
   const [candidatesData, setCandidatesData] = useState<Record<string, CandidateTransferData>>(() => {
@@ -143,13 +149,6 @@ export function MultiTransferToProcessingModal({
   });
 
   const [transferToProcessing, { isLoading }] = useTransferToProcessingMutation();
-  const { users, isLoading: isLoadingUsers } = useUsersLookup();
-
-  const processingUsers = useMemo(() => {
-    return users.filter((u: any) => 
-      u.role?.toLowerCase().includes("processing")
-    );
-  }, [users]);
 
   // Pagination calculations
   const totalPages = Math.ceil(candidates.length / itemsPerPage);
@@ -579,7 +578,7 @@ export function MultiTransferToProcessingModal({
           candidateId={offerLetterCandidate.candidateId}
           candidateName={offerLetterCandidate.candidateName}
           projectId={projectId}
-          projectTitle={selectedProject?.title || "Project"}
+          projectTitle={projectTitle}
           roleCatalogId={roleCatalogId}
           roleDesignation={roleDesignation}
           isAlreadyUploaded={offerLetterCandidate.isOfferLetterUploaded}

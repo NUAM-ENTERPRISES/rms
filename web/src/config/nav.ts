@@ -191,7 +191,7 @@ export const navigationConfig: NavItem[] = [
     path: "/interviews",
     icon: Calendar,
     permissions: ["read:interviews"],
-    hiddenForRoles: ["Documentation Executive", "Interview Coordinator"],
+    hiddenForRoles: ["Documentation Executive", "Interview Coordinator", "Processing Executive"],
     children: [
       {
         id: "interviews-dashboard",
@@ -280,7 +280,7 @@ export const navigationConfig: NavItem[] = [
     label: "Documents",
     icon: FileText,
     permissions: ["read:documents"],
-    hiddenForRoles: ["Interview Coordinator", "Recruiter", "CRE", "Documentation Executive"],
+    hiddenForRoles: ["Interview Coordinator", "Recruiter", "CRE", "Documentation Executive", "Processing Executive"],
     children: [
       {
         id: "document-verification",

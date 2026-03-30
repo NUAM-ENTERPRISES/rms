@@ -134,7 +134,7 @@ export default function PassedCandidatesPage() {
   });
 
   const { data: projectsData } = useGetProjectsQuery({ 
-    limit: 20,
+    limit: 10,
     search: debouncedProjectSearch || undefined
   });
   const projects = projectsData?.data?.projects || [];
@@ -201,6 +201,15 @@ export default function PassedCandidatesPage() {
 
   // Convenience reference to the selected candidate object
   const selectedCandidate = selected ? (selected.candidateProjectMap?.candidate || selected.candidate) : null;
+
+  const selectedProjectTitle = selected?.candidateProjectMap?.project?.title || selected?.project?.title || "";
+  const selectedRoleDesignation = (selected?.candidateProjectMap?.roleNeeded || selected?.roleNeeded)?.designation ||
+    (selected?.candidateProjectMap?.roleNeeded || selected?.roleNeeded)?.roleCatalog?.designation || "Unknown Role";
+
+  const bulkSelection = filteredList.find(it => selectedBulkIds.includes(it.id));
+  const bulkProjectTitle = bulkSelection?.candidateProjectMap?.project?.title || bulkSelection?.project?.title || "";
+  const bulkRoleDesignation = (bulkSelection?.candidateProjectMap?.roleNeeded || bulkSelection?.roleNeeded)?.designation ||
+    (bulkSelection?.candidateProjectMap?.roleNeeded || bulkSelection?.roleNeeded)?.roleCatalog?.designation || "Unknown Role";
 
   const handleTransfer = async () => {
     setTransferModalOpen(true);
@@ -970,7 +979,9 @@ export default function PassedCandidatesPage() {
           candidateName={`${(selected.candidateProjectMap?.candidate || selected.candidate)?.firstName} ${(selected.candidateProjectMap?.candidate || selected.candidate)?.lastName}`}
           recruiterName={selected.candidateProjectMap?.recruiter?.name}
           projectId={selected.candidateProjectMap?.project?.id || selected.project?.id}
+          projectTitle={selectedProjectTitle}
           roleCatalogId={(selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalogId || (selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalog?.id || ""}
+          roleDesignation={selectedRoleDesignation}
           isOfferVerified={selectedIsOfferVerified}
           isAlreadyUploaded={selected.isOfferLetterUploaded || !!offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]}
           existingFileUrl={offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id] || selected.offerLetterData?.document?.fileUrl}
@@ -989,12 +1000,14 @@ export default function PassedCandidatesPage() {
           onClose={() => setBulkTransferModalOpen(false)}
           candidates={bulkTransferCandidates}
           projectId={filters.projectId}
+          projectTitle={bulkProjectTitle}
           roleCatalogId={
             filters.roleCatalogId !== "all" 
               ? filters.roleCatalogId 
               : (filteredList.find(it => selectedBulkIds.includes(it.id))?.candidateProjectMap?.roleNeeded?.roleCatalogId || 
                  filteredList.find(it => selectedBulkIds.includes(it.id))?.roleNeeded?.roleCatalogId || "")
           }
+          roleDesignation={bulkRoleDesignation}
           onSuccess={() => {
             setSelectedBulkIds([]);
             if (selectedId && selectedBulkIds.includes(selectedId)) {

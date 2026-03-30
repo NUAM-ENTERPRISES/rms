@@ -17,12 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { useGetUsersQuery } from "@/features/admin";
 import { useTransferToProcessingMutation } from "@/features/processing/data/processing.endpoints";
 import { toast } from "sonner";
 import { Loader2, Upload, Eye, FileText, CheckCircle2 } from "lucide-react";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
-import { useGetProjectsQuery } from "@/services/projectsApi";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
@@ -35,7 +34,9 @@ interface SingleTransferToProcessingModalProps {
   candidateName: string;
   recruiterName?: string;
   projectId: string;
+  projectTitle: string;
   roleCatalogId: string;
+  roleDesignation: string;
   isOfferVerified?: boolean;
   isAlreadyUploaded?: boolean;
   existingFileUrl?: string;
@@ -49,7 +50,9 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
   candidateName,
   recruiterName,
   projectId,
+  projectTitle,
   roleCatalogId,
+  roleDesignation,
   isOfferVerified = false,
   isAlreadyUploaded = false,
   existingFileUrl = "",
@@ -75,25 +78,23 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
     return `${pdfViewerState.fileUrl}${pdfViewerState.fileUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
   }, [pdfViewerState.isOpen, pdfViewerState.fileUrl]);
 
-  const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
-  const selectedProject = useMemo(() => 
-    projectsData?.data?.projects?.find((p: any) => p.id === projectId),
-    [projectsData, projectId]
+  const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsersQuery(
+    { limit: 10, roles: ["Processing Executive"] },
+    { skip: !isOpen }
   );
-
-  const selectedRole = useMemo(() => {
-    if (!selectedProject?.rolesNeeded || !roleCatalogId) return null;
-    return selectedProject.rolesNeeded.find((r: any) => (r.roleCatalogId || r.roleCatalog?.id) === roleCatalogId);
-  }, [selectedProject, roleCatalogId]);
-
-  const roleDesignation = selectedRole?.designation || "Unknown Role";
-
-  const { users, isLoading: isLoadingUsers } = useUsersLookup();
   const [transfer, { isLoading: isTransferring }] = useTransferToProcessingMutation();
 
-  const processingUsers = users.filter((user) =>
-    user.role.toLowerCase().includes("processing")
-  );
+  const processingUsers = useMemo(() => {
+    const fetchedUsers = usersResponse?.data?.users || [];
+    return fetchedUsers
+      .map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.userRoles?.[0]?.role?.name || "Unknown",
+      }))
+      .filter((user) => user.role.toLowerCase().includes("processing"));
+  }, [usersResponse]);
 
   const handleTransfer = async () => {
     if (!assignedProcessingTeamUserId) {
@@ -242,7 +243,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
         candidateId={candidateId}
         candidateName={candidateName}
         projectId={projectId}
-        projectTitle={selectedProject?.title || "Project"}
+        projectTitle={projectTitle}
         roleCatalogId={roleCatalogId}
         roleDesignation={roleDesignation}
         isAlreadyUploaded={isAlreadyUploaded || !!localOfferLetter}
