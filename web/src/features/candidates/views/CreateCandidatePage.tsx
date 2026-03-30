@@ -51,7 +51,7 @@ const createCandidateSchema = z.object({
     .min(10, "Mobile number must be at least 10 characters")
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(["manual", "meta", "referral"]),
+  source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().optional(),
   expectedSalary: z.preprocess(

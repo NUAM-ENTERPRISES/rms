@@ -916,9 +916,13 @@ export default function CandidatesPage() {
                         </div>
                       </SelectItem>
                       {[
-                        { value: "manual", label: "Manual", color: "blue" },
                         { value: "meta", label: "Meta", color: "green" },
+                        { value: "direct_enquiry", label: "Direct Enquiry", color: "teal" },
                         { value: "referral", label: "Referral", color: "purple" },
+                        { value: "paid_ads", label: "Paid Ads", color: "orange" },
+                        { value: "agents", label: "Agents", color: "indigo" },
+                        { value: "hospital_visit", label: "Hospital Visit", color: "red" },
+                        { value: "expo_event", label: "Expo / Event", color: "yellow" },
                       ].map((option) => (
                         <SelectItem
                           key={option.value}

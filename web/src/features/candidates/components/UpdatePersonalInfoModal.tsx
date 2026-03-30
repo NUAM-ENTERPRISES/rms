@@ -37,7 +37,7 @@ const personalInfoSchema = z.object({
     .min(10, "Mobile number must be at least 10 characters")
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(["manual", "meta", "referral"]),
+  source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   referralCompanyName: z.string().optional(),
@@ -104,7 +104,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       countryCode: initialData.countryCode || "+91",
       mobileNumber: initialData.mobileNumber || "",
       email: initialData.email || "",
-      source: (initialData.source as "manual" | "meta" | "referral") || "manual",
+      source: (initialData.source as "manual" | "meta" | "direct_enquiry" | "referral" | "paid_ads" | "agents" | "hospital_visit" | "expo_event") || "manual",
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
       dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
       referralCompanyName: initialData.referralCompanyName || "",
@@ -126,7 +126,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         countryCode: initialData.countryCode || "+91",
         mobileNumber: initialData.mobileNumber || "",
         email: initialData.email || "",
-        source: (initialData.source as "manual" | "meta" | "referral") || "manual",
+        source: (initialData.source as "manual" | "meta" | "direct_enquiry" | "referral" | "paid_ads" | "agents" | "hospital_visit" | "expo_event") || "manual",
         gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
         dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
         referralCompanyName: initialData.referralCompanyName || "",
@@ -416,9 +416,13 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="manual">Manual</SelectItem>
                       <SelectItem value="meta">Meta</SelectItem>
+                      <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
                       <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="paid_ads">Paid Ads</SelectItem>
+                      <SelectItem value="agents">Agents</SelectItem>
+                      <SelectItem value="hospital_visit">Hospital Visit</SelectItem>
+                      <SelectItem value="expo_event">Expo / Event</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

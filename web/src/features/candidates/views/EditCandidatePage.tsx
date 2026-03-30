@@ -44,7 +44,7 @@ const updateCandidateSchema = z.object({
     .min(10, "Mobile number must be at least 10 characters")
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(["manual", "meta", "referral"]),
+  source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
   gender: z.any(),
   dateOfBirth: z.string().optional(),
   expectedMinSalary: z.preprocess(
@@ -684,9 +684,13 @@ export default function EditCandidatePage() {
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="manual">Manual</SelectItem>
                         <SelectItem value="meta">Meta</SelectItem>
+                        <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
                         <SelectItem value="referral">Referral</SelectItem>
+                        <SelectItem value="paid_ads">Paid Ads</SelectItem>
+                        <SelectItem value="agents">Agents</SelectItem>
+                        <SelectItem value="hospital_visit">Hospital Visit</SelectItem>
+                        <SelectItem value="expo_event">Expo / Event</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
