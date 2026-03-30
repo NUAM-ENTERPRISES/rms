@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { useGetMyAssignedCandidatesQuery } from "@/services/candidatesApi";
+import { Users, UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useGetMyAssignedCandidatesQuery, useGetCREAssignedSummaryQuery } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 import {
   DropdownMenu,
@@ -24,11 +24,12 @@ export default function CREDashboardPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<number | undefined>(8);
   const limitCount = 10;
   
-  // Fetch only candidates assigned to this CRE with RNR status
+  // Fetch only candidates assigned to this CRE with optional status filter
   const { data: assignedCandidatesData, isLoading } = useGetMyAssignedCandidatesQuery({
-    currentStatus: 8, // RNR status
+    currentStatus: statusFilter,
     page: page,
     limit: limitCount,
     search: debouncedSearch,
@@ -42,7 +43,30 @@ export default function CREDashboardPage() {
   const candidates = assignedCandidatesData?.data || [];
   const totalCount = assignedCandidatesData?.total || 0;
   const totalPages = assignedCandidatesData?.totalPages || 0;
-  
+
+  const { data: summaryData } = useGetCREAssignedSummaryQuery();
+
+  const assignedCount = summaryData?.total ?? totalCount;
+  const rnrCount = summaryData?.roleCounters?.rnr ?? 0;
+  const onHoldCount = summaryData?.roleCounters?.onHold ?? 0;
+  const untouchedCount = summaryData?.roleCounters?.untouched ?? 0;
+
+  const statusLabel =
+    statusFilter === undefined
+      ? 'Assigned'
+      : statusFilter === 8
+      ? 'RNR'
+      : statusFilter === 7
+      ? 'On Hold'
+      : statusFilter === 1
+      ? 'Untouched'
+      : 'Selected';
+
+  const noCandidatesTitle = `No ${statusLabel} candidates found`;
+  const noCandidatesSubtitle = search
+    ? 'Try adjusting your search query.'
+    : `You'll see ${statusLabel.toLowerCase()} candidates here once they're escalated to you.`;
+
   // Calculate stats based on current view/total
   const totalAssigned = totalCount;
   const todayAssigned = candidates.filter((candidate: any) => {
@@ -60,71 +84,104 @@ export default function CREDashboardPage() {
             Welcome back, {user?.name || "CRE"}! 👋
           </h1>
           <p className="text-lg text-slate-600">
-            Here's an overview of your assigned RNR candidates
+            {statusFilter === undefined
+              ? "Showing all assigned candidates"
+              : statusFilter === 8
+              ? "Showing Ring No Response (RNR) candidates"
+              : statusFilter === 7
+              ? "Showing On Hold candidates"
+              : statusFilter === 1
+              ? "Showing Untouched candidates"
+              : "Showing selected filter candidates"}
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-50">Total Assigned</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <UserCheck className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{totalAssigned}</div>
-              <p className="text-xs text-blue-100 mt-1">
-                RNR candidates under your care
-              </p>
-            </CardContent>
-          </Card>
+        {/* Replaced stat cards with an updated CandidatePage-style card row */}
+        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+          {[
+            {
+              label: 'Assigned',
+              value: assignedCount,
+              subtitle: 'All assigned',
+              icon: Users,
+              color: 'from-blue-500 to-blue-600',
+              statusId: undefined,
+            },
+            {
+              label: 'RNR',
+              value: rnrCount,
+              subtitle: 'Ring no response',
+              icon: AlertCircle,
+              color: 'from-orange-500 to-orange-600',
+              statusId: 8,
+            },
+            {
+              label: 'On Hold',
+              value: onHoldCount,
+              subtitle: 'Require follow-up',
+              icon: Clock,
+              color: 'from-purple-500 to-purple-600',
+              statusId: 7,
+            },
+            {
+              label: 'Untouched',
+              value: untouchedCount,
+              subtitle: 'New leads',
+              icon: UserCheck,
+              color: 'from-emerald-500 to-emerald-600',
+              statusId: 1,
+            },
+          ].map((stat) => {
+            const Icon = stat.icon;
+            const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> = {
+              'from-blue-500 to-blue-600': {
+                bg: 'from-blue-50 to-blue-100/50',
+                iconBg: 'bg-blue-200/40',
+                text: 'text-blue-600',
+              },
+              'from-emerald-500 to-emerald-600': {
+                bg: 'from-emerald-50 to-emerald-100/50',
+                iconBg: 'bg-emerald-200/40',
+                text: 'text-emerald-600',
+              },
+              'from-orange-500 to-orange-600': {
+                bg: 'from-orange-50 to-orange-100/50',
+                iconBg: 'bg-orange-200/40',
+                text: 'text-orange-600',
+              },
+              'from-purple-500 to-purple-600': {
+                bg: 'from-purple-50 to-purple-100/50',
+                iconBg: 'bg-purple-200/40',
+                text: 'text-purple-600',
+              },
+            };
+            const colors = gradientMap[stat.color];
+            const isActive = statusFilter === stat.statusId;
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-50">New Today</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{todayAssigned}</div>
-              <p className="text-xs text-emerald-100 mt-1">
-                Assigned in the last 24 hours
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-50">Pending Action</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{totalAssigned}</div>
-              <p className="text-xs text-orange-100 mt-1">
-                Require follow-up
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-50">Avg. Response Time</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <Clock className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">2.4h</div>
-              <p className="text-xs text-purple-100 mt-1">
-                Your average handling time
-              </p>
-            </CardContent>
-          </Card>
+            return (
+              <Card
+                key={stat.label}
+                onClick={() => {
+                  setStatusFilter(stat.statusId);
+                  setPage(1);
+                }}
+                className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-blue-400/60' : 'hover:-translate-y-[1px] hover:shadow-md'}`}
+              >
+                <CardContent className="pt-1 pb-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-0.5">{stat.label}</p>
+                      <h3 className={`text-xl font-semibold ${colors.text}`}>{stat.value}</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">{stat.subtitle}</p>
+                    </div>
+                    <div className={`p-1 ${colors.iconBg} rounded-full`}>
+                      <Icon className={`h-4 w-4 ${colors.text}`} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Recent Assigned Candidates */}
@@ -132,9 +189,19 @@ export default function CREDashboardPage() {
           <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-blue-50">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl font-bold text-slate-800">Assigned Candidates</CardTitle>
+                <CardTitle className="text-2xl font-bold text-slate-800">
+                  {statusFilter === undefined ? 'Assigned Candidates' : `${statusLabel} Candidates`}
+                </CardTitle>
                 <CardDescription className="text-slate-600 mt-1">
-                  RNR candidates escalated to you
+                  {statusFilter === undefined
+                    ? 'All candidates assigned to you'
+                    : statusFilter === 8
+                    ? 'RNR candidates escalated to you'
+                    : statusFilter === 7
+                    ? 'On Hold candidates escalated to you'
+                    : statusFilter === 1
+                    ? 'Untouched candidates escalated to you'
+                    : 'Candidates matching current filter'}
                 </CardDescription>
               </div>
               <div className="relative w-full md:w-80">
@@ -159,10 +226,8 @@ export default function CREDashboardPage() {
                 <div className="h-20 w-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="h-10 w-10 text-slate-400" />
                 </div>
-                <p className="font-semibold text-lg text-slate-700">No RNR candidates found</p>
-                <p className="text-sm mt-2">
-                  {search ? "Try adjusting your search query" : "You'll see candidates here once they're escalated to you"}
-                </p>
+                <p className="font-semibold text-lg text-slate-700">{noCandidatesTitle}</p>
+                <p className="text-sm mt-2">{noCandidatesSubtitle}</p>
               </div>
             ) : (
               <>

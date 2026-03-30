@@ -45,7 +45,9 @@ import {
   Award,
   UserX,
   Target,
-  Edit
+  Edit,
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +66,6 @@ interface StatusUpdateModalProps {
   candidateName: string;
 }
 
-// Reuse colors from CandidatePipeline
 const statusConfigMap: Record<string, any> = {
   untouched: {
     color: "from-orange-400 to-orange-600",
@@ -243,20 +244,26 @@ export function StatusUpdateModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden p-0">
-        <DialogHeader className="p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white text-left relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-16 translate-x-16" />
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="p-3 bg-white/10 rounded-xl backdrop-blur-md shadow-inner">
-              <Target className="h-6 w-6 text-blue-400" />
-            </div>
-            <div>
-              <DialogTitle className="text-xl font-bold tracking-tight">
+      <DialogContent className="sm:max-w-[480px] border-none shadow-2xl bg-white rounded-3xl overflow-hidden p-0 gap-0">
+        {/* Modern Header with Dynamic Background */}
+        <DialogHeader className="p-8 pb-10 bg-gradient-to-br from-indigo-900 via-slate-900 to-black text-white text-left relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          
+          <div className="flex items-start justify-between relative z-10">
+            <div className="space-y-1">
+              <Badge variant="secondary" className="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border-none px-2 py-0 mb-2 uppercase tracking-tighter text-[10px] font-bold">
+                Pipeline Management
+              </Badge>
+              <DialogTitle className="text-2xl font-extrabold tracking-tight">
                 Update Status
               </DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Move <span className="text-white font-medium">{candidateName}</span> through the pipeline
+              <DialogDescription className="text-slate-400 text-sm font-medium">
+                Changing status for <span className="text-indigo-300 font-semibold">{candidateName}</span>
               </DialogDescription>
+            </div>
+            <div className="p-3 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md shadow-2xl">
+              <Target className="h-6 w-6 text-indigo-400" />
             </div>
           </div>
         </DialogHeader>
@@ -264,122 +271,131 @@ export function StatusUpdateModal({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="p-6 space-y-6"
+            className="px-8 py-6 space-y-8 bg-slate-50/50"
           >
-            {/* Current Status Showcase */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 shadow-inner flex items-center justify-between">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
-                  Current Status
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className={cn("p-1.5 rounded-lg bg-gradient-to-br shadow-sm", currentConfig.color)}>
-                     <CurrentIcon className="h-3.5 w-3.5 text-white" />
-                  </div>
-                  <span className="font-bold text-slate-900 capitalize leading-none">
-                    {currentStatus || "Untouched"}
-                  </span>
+            {/* Visual Transition Indicator */}
+            <div className="flex items-center justify-between gap-4 px-4 py-5 bg-white border border-slate-200/60 rounded-2xl shadow-sm relative group transition-all hover:shadow-md">
+                <div className="flex-1 flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">From</span>
+                    <div className={cn("p-2.5 rounded-xl bg-gradient-to-br shadow-md ring-4 ring-white transition-transform group-hover:scale-105", currentConfig.color)}>
+                        <CurrentIcon className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="mt-2 font-bold text-slate-700 text-xs capitalize">{currentStatus || "Untouched"}</span>
                 </div>
-              </div>
-              <div className="h-10 w-[1px] bg-slate-200" />
-              <div className="text-right">
-              
-              </div>
+
+                <div className="flex flex-col items-center justify-center">
+                    <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                        <ArrowRight className="h-4 w-4 text-slate-400 animate-pulse" />
+                    </div>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">To</span>
+                    <div className="p-2.5 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 text-slate-400 shadow-inner ring-4 ring-white">
+                        <Sparkles className="h-5 w-5" />
+                    </div>
+                    <span className="mt-2 font-bold text-slate-400 text-xs">Selection</span>
+                </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="currentStatusId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <Edit className="h-3.5 w-3.5 text-slate-400" />
-                    Update Status
-                  </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isLoadingStatuses}
-                  >
+            <div className="space-y-5">
+                <FormField
+                control={form.control}
+                name="currentStatusId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        Select New Stage
+                    </FormLabel>
+                    <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isLoadingStatuses}
+                    >
+                        <FormControl>
+                        <SelectTrigger className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium">
+                            <SelectValue placeholder="Where are they now?" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[350px] rounded-2xl border-slate-200 shadow-2xl p-2">
+                        {isLoadingStatuses ? (
+                            <div className="flex items-center justify-center p-8">
+                            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+                            </div>
+                        ) : (
+                            statuses.map((status) => {
+                            const config = getStatusConfig(status.statusName);
+                            const Icon = config.icon;
+                            return (
+                                <SelectItem 
+                                key={status.id} 
+                                value={status.id.toString()}
+                                className="rounded-xl focus:bg-indigo-50 cursor-pointer p-3 my-1 transition-colors"
+                                >
+                                <div className="flex items-center gap-3">
+                                    <div className={cn("p-2 rounded-lg bg-gradient-to-br shadow-sm", config.color)}>
+                                    <Icon className="h-4 w-4 text-white" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                    <p className="font-bold text-slate-900 text-sm capitalize">
+                                        {status.statusName}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 font-medium">
+                                        Pipeline Stage {status.id}
+                                    </p>
+                                    </div>
+                                </div>
+                                </SelectItem>
+                            );
+                            })
+                        )}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+
+                <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Notes & Rationale</FormLabel>
                     <FormControl>
-                      <SelectTrigger className="h-12 border-slate-200 shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 rounded-xl">
-                        <SelectValue placeholder="Select target status" />
-                      </SelectTrigger>
+                        <Textarea
+                        placeholder="Why is this candidate moving? (Optional)"
+                        className="min-h-[110px] resize-none bg-white border-slate-200/80 shadow-sm focus:ring-4 focus:ring-indigo-500/10 rounded-2xl p-4 text-sm leading-relaxed"
+                        {...field}
+                        />
                     </FormControl>
-                    <SelectContent className="max-h-[300px] rounded-xl border-slate-200 shadow-xl">
-                      {isLoadingStatuses ? (
-                        <div className="flex items-center justify-center p-8">
-                          <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                        </div>
-                      ) : (
-                        statuses.map((status) => {
-                          const config = getStatusConfig(status.statusName);
-                          const Icon = config.icon;
-                          return (
-                            <SelectItem 
-                              key={status.id} 
-                              value={status.id.toString()}
-                              className="focus:bg-slate-50 cursor-pointer p-3"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={cn("p-2 rounded-lg bg-gradient-to-br shadow-sm", config.color)}>
-                                  <Icon className="h-4 w-4 text-white" />
-                                </div>
-                                <div>
-                                  <p className="font-bold text-slate-900 text-sm capitalize">
-                                    {status.statusName}
-                                  </p>
-                                  <p className="text-[10px] text-slate-500 font-medium">
-                                    {config.description || "Move to " + status.statusName}
-                                  </p>
-                                </div>
-                              </div>
-                            </SelectItem>
-                          );
-                        })
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-bold text-slate-700">Internal Note</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add any specific comments about this transition..."
-                      className="min-h-[100px] resize-none border-slate-200 shadow-sm focus:ring-2 focus:ring-blue-500/20 rounded-xl p-3"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter className="gap-3 sm:gap-0 pt-2 pb-2">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200/60">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={handleClose}
                 disabled={isLoading}
-                className="hover:bg-slate-100 rounded-xl font-bold text-slate-600"
+                className="flex-1 h-12 hover:bg-slate-200/50 rounded-2xl font-bold text-slate-500 transition-colors"
               >
-                Dismiss
+                Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={isLoading}
-                className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold px-8 shadow-lg shadow-slate-900/20 transition-all hover:-translate-y-0.5"
+                className="flex-[2] h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5 active:scale-95"
               >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Confirm Change
+                {isLoading ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                    <CheckCircle2 className="mr-2 h-5 w-5" />
+                )}
+                Update Pipeline
               </Button>
             </DialogFooter>
           </form>
@@ -388,4 +404,3 @@ export function StatusUpdateModal({
     </Dialog>
   );
 }
-

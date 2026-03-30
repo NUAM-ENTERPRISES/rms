@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { RoundRobinService } from '../round-robin/round-robin.service';
@@ -1082,6 +1083,47 @@ export class CandidatesService {
     };
   }
 
+  async getCREAssignedSummary(creUserId: string): Promise<{ total: number; roleCounters: any }> {
+    const candidates = await this.prisma.candidate.findMany({
+      where: {
+        recruiterAssignments: {
+          some: {
+            recruiterId: creUserId,
+            isActive: true,
+          },
+        },
+      },
+      select: {
+        currentStatus: {
+          select: {
+            statusName: true,
+          },
+        },
+      },
+    });
+
+    const roleCounters = {
+      assigned: candidates.length,
+      rnr: 0,
+      onHold: 0,
+      untouched: 0,
+      other: 0,
+    };
+
+    candidates.forEach((candidate) => {
+      const status = (candidate.currentStatus?.statusName || '').toLowerCase();
+      if (status === 'rnr') roleCounters.rnr += 1;
+      else if (status === 'on hold' || status === 'on_hold') roleCounters.onHold += 1;
+      else if (status === 'untouched') roleCounters.untouched += 1;
+      else roleCounters.other += 1;
+    });
+
+    return {
+      total: candidates.length,
+      roleCounters,
+    };
+  }
+
   async findOne(id: string): Promise<CandidateWithRelations> {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id },
@@ -1163,6 +1205,22 @@ export class CandidatesService {
     });
     if (!existingCandidate) {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
+    }
+
+    // CRE users should only be able to view candidate details, not edit
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (user?.userRoles?.some((ur) => ur.role?.name === 'CRE')) {
+      throw new ForbiddenException('CRE users cannot update candidate details.');
     }
 
     // Check if countryCode and mobileNumber combination is being updated and if it already exists
@@ -2292,13 +2350,21 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate status ${updateStatusDto.currentStatusId} not found`);
     }
 
-    //Get the user (who’s changing the status)
+    // Get the user (who’s changing the status) and enforce CRE read-only behavior
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
     });
 
-
+    if (user?.userRoles?.some((ur) => ur.role?.name === 'CRE')) {
+      throw new ForbiddenException('CRE users cannot update candidate status.');
+    }
 
     // Update candidate status
     const updatedCandidate = await this.prisma.candidate.update({

@@ -280,11 +280,33 @@ export default function CandidateDetailPage() {
               ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
             /> 
 
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-                {candidate.firstName} {candidate.lastName}
-              </h1>
-            </div>
+           <div className="flex items-center justify-between">
+  
+  {/* Candidate Name (LEFT) */}
+  <div>
+    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+      {candidate.firstName} {candidate.lastName}
+    </h1>
+  </div>
+
+  {/* Status (RIGHT - Clickable) */}
+  <div
+    onClick={() => setIsStatusModalOpen(true)}
+    className="cursor-pointer flex items-center gap-2 group"
+    title="Click to update status"
+  >
+    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none ml-[15px]">
+       Status
+    </span>
+
+    <div className="group-hover:scale-105 transition-transform duration-200">
+      <StatusBadge
+        status={candidate.currentStatus?.statusName ?? "unknown"}
+      />
+    </div>
+  </div>
+
+</div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm text-slate-500">
@@ -303,14 +325,14 @@ export default function CandidateDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
-          <div className="flex items-center gap-2">
+          {/* <div   onClick={() => setIsStatusModalOpen(true)} className=" cursor-pointer flex items-center gap-2">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Candidate Status</span>
             <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-          </div>
+          </div> */}
           
           <div className="h-4 w-[1px] bg-slate-200 mx-1" />
 
-          {canWriteCandidates && (
+          {/* {canWriteCandidates && (
             <button
               onClick={() => setIsStatusModalOpen(true)}
               className="group relative flex items-center gap-2.5 px-3 py-1.5 bg-white/50 backdrop-blur-sm border border-slate-200/60 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300"
@@ -320,7 +342,7 @@ export default function CandidateDetailPage() {
                 Update Status
               </span>
             </button>
-          )}
+          )} */}
         </div>
         {/* <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleEdit}>
