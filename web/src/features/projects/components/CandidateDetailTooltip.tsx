@@ -399,9 +399,9 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 {c.sectorType && (
                   <div className="flex items-center gap-2">
                     <span className="text-slate-500">Sector:</span>
-                    <span className={c.sectorType === "no_preference" ? "text-slate-400 italic" : "text-slate-700 font-medium"}>
-                      {c.sectorType === "no_preference"
-                        ? "No preference"
+                    <span className={c.sectorType === "any_preference" || c.sectorType === "no_preference" ? "text-slate-400 italic" : "text-slate-700 font-medium"}>
+                      {c.sectorType === "any_preference" || c.sectorType === "no_preference"
+                        ? "Any preference"
                         : c.sectorType}
                     </span>
                   </div>

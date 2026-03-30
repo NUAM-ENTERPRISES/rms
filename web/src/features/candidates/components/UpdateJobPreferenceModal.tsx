@@ -66,8 +66,9 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
   } = useForm<JobPreferenceFormData>({
     resolver: zodResolver(jobPreferenceSchema),
     defaultValues: {
-      expectedSalary: initialData.expectedMinSalary ?? undefined,
-      sectorType: initialData.sectorType || SECTOR_TYPES.NO_PREFERENCE,
+      expectedMinSalary: initialData.expectedMinSalary ?? undefined,
+      expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
+      sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
       visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: initialData.preferredCountries || [],
       facilityPreferences: initialData.facilityPreferences || [],
@@ -77,8 +78,9 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
   useEffect(() => {
     if (isOpen) {
       reset({
-        expectedSalary: initialData.expectedMinSalary ?? undefined,
-        sectorType: initialData.sectorType || SECTOR_TYPES.NO_PREFERENCE,
+        expectedMinSalary: initialData.expectedMinSalary ?? undefined,
+        expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
+        sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
         visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
         preferredCountries: initialData.preferredCountries || [],
         facilityPreferences: initialData.facilityPreferences || [],
@@ -224,19 +226,25 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
               />
             </div>
 
-            {/* Facility Preferences */}
+            {/* Organization Preferences */}
             <div className="md:col-span-2 space-y-2">
               <Controller
                 name="facilityPreferences"
                 control={control}
                 render={({ field }) => (
                   <MultiSelect
-                    label="Facility Preferences"
-                    placeholder="Select facility types..."
-                    options={FACILITY_TYPES.map(type => ({
-                      value: type,
-                      label: type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())
-                    }))}
+                    label="Organization Preferences"
+                    placeholder="Select organization types..."
+                    options={[
+                      ...FACILITY_TYPES.filter((type) => type === "any_type").map((type) => ({
+                        value: type,
+                        label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                      })),
+                      ...FACILITY_TYPES.filter((type) => type !== "any_type").map((type) => ({
+                        value: type,
+                        label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                      })),
+                    ]}
                     value={field.value}
                     onValueChange={field.onChange}
                     disabled={isLoading}

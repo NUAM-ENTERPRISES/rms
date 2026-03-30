@@ -232,7 +232,7 @@ export default function CreateCandidatePage() {
       graduationYear: undefined,
       gpa: undefined,
       qualifications: [],
-      sectorType: SECTOR_TYPES.NO_PREFERENCE,
+      sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: [],
       facilityPreferences: [],

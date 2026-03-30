@@ -343,7 +343,7 @@ export default function CandidatePreview({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
-                  Facility Preferences
+                  Organization Preferences
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {candidateData.facilityPreferences &&

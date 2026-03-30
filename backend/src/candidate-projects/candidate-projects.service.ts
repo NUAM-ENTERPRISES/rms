@@ -2804,6 +2804,7 @@ export class CandidateProjectsService {
         if (
           candidate.sectorType &&
           project.projectType &&
+          candidate.sectorType.toLowerCase() !== 'any_preference' &&
           candidate.sectorType.toLowerCase() !== 'no_preference'
         ) {
           if (

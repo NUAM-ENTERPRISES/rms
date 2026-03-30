@@ -408,7 +408,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                   <div className="lg:col-span-1">
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
-                      Facility Preferences
+                      Organization Preferences
                     </label>
                     <div className="flex flex-wrap gap-1">
                       {candidate.facilityPreferences &&
