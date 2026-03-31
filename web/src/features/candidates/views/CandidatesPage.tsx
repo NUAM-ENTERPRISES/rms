@@ -1468,15 +1468,24 @@ export default function CandidatesPage() {
                               />
 
                               <div className="flex-1 min-w-0">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-sm"
-                                >
-                                  {candidate.firstName} {candidate.lastName}
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/candidates/${candidate.id}`);
+                                    }}
+                                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-sm"
+                                  >
+                                    {candidate.firstName} {candidate.lastName}
+                                  </button>
+
+                                  {((candidate as any).recruiterAssignments || []).some((a: any) => a.assignmentType === 'cre_assigned') && (
+                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-200">
+                                      CRE Assigned
+                                    </Badge>
+                                  )}
+                                </div>
+
                                 <div className="text-xs text-slate-500 mt-0.5 font-medium truncate">
                                   {candidate.currentRole || ""}
                                 </div>
@@ -1505,11 +1514,6 @@ export default function CandidatesPage() {
                                 <div className="space-y-0.5">
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium text-slate-900">{recruiter.name}</span>
-                                    {((candidate as any).recruiterAssignments || []).some((a: any) => a.assignmentType === 'cre_assigned') && (
-                                      <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200">
-                                        CRE Assigned
-                                      </Badge>
-                                    )}
                                   </div>
                                   {recruiter.email && (
                                     <div className="flex items-center gap-1.5 text-slate-700">
