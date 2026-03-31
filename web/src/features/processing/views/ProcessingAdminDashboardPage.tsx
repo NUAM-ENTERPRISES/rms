@@ -51,6 +51,7 @@ export default function ProcessingAdminDashboardPage() {
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
     const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed" | "cancelled" | "visa_stamped">("all");
+    const [stepFilter, setStepFilter] = useState<string | null>(null);
     const [projectFilter, setProjectFilter] = useState<string>("all");
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [page, setPage] = useState<number>(1);
@@ -69,13 +70,11 @@ export default function ProcessingAdminDashboardPage() {
         limit: pageSize,
     };
 
-    // Send only one of `status` or `filterType` to match backend validation rules:
-    // - `filterType=total_processing` when viewing the full admin total
-    // - use `status` for specific status filters like `visa_stamped` to avoid duplicate params
-    if (statusFilter === "all") {
+    if (stepFilter) {
+        adminQueryParams.step = stepFilter;
         adminQueryParams.filterType = "total_processing";
-    } else if (statusFilter === "visa_stamped") {
-        adminQueryParams.status = "visa_stamped";
+    } else if (statusFilter === "all") {
+        adminQueryParams.filterType = "total_processing";
     } else {
         adminQueryParams.status = statusFilter;
     }
@@ -90,18 +89,18 @@ export default function ProcessingAdminDashboardPage() {
     // Pagination (driven by API when available)
     const totalItems = pagination?.total ?? candidates.length;
     const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
-    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, projectFilter, roleFilter, pageSize]);
+    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter, pageSize]);
     const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
     const endItem = Math.min(page * pageSize, totalItems);
 
-    const counts: { all?: number; assigned?: number; in_progress?: number; completed?: number; cancelled?: number; visa_stamped?: number } = apiResponse?.data?.counts ?? {};
+    const counts: { all?: number; assigned?: number; in_progress?: number; completed?: number; cancelled?: number; visa_stamped?: number; steps?: Record<string, number> } = apiResponse?.data?.counts ?? {};
     const totalProcessing = counts?.all ?? ((counts.assigned || 0) + (counts.in_progress || 0) + (counts.completed || 0) + (counts.cancelled || 0));
 
     const stats = [
         { label: "Total Processing", value: totalProcessing, status: "all", icon: ClipboardList, color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
-        { label: "Visa Stamped", value: counts?.visa_stamped ?? counts.in_progress ?? 0, status: "visa_stamped", icon: Activity, color: "text-amber-600", bgColor: "bg-amber-50", borderColor: "border-amber-200" },
-        { label: "Cancelled", value: counts.cancelled ?? 0, status: "cancelled", icon: XCircle, color: "text-rose-600", bgColor: "bg-rose-50", borderColor: "border-rose-200" },
-        { label: "Completed", value: counts.completed ?? 0, status: "completed", icon: CheckCircle2, color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" }
+        { label: "Ready for Processing", value: counts.assigned ?? 0, status: "assigned", icon: UserCheck, color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+        { label: "Completed", value: counts.completed ?? 0, status: "completed", icon: CheckCircle2, color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" },
+        { label: "Cancelled", value: counts.cancelled ?? 0, status: "cancelled", icon: XCircle, color: "text-rose-600", bgColor: "bg-rose-50", borderColor: "border-rose-200" }
     ];
 
     const getStatusBadge = (status: string) => {
@@ -125,7 +124,30 @@ export default function ProcessingAdminDashboardPage() {
         return labels[status] || status;
     };
 
- 
+    const stepTiles = [
+        { key: "verify_offer_letter", label: "Verify Offer Letter", gradient: "from-indigo-500 to-violet-500" },
+        { key: "offer_letter", label: "Offer Letter", gradient: "from-blue-500 to-cyan-500" },
+        { key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
+        { key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
+        { key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
+        { key: "eligibility", label: "Eligibility", gradient: "from-emerald-500 to-green-500" },
+        { key: "prometric", label: "Licensing Exam", gradient: "from-amber-400 to-orange-500" },
+        { key: "council_registration", label: "Council Registration", gradient: "from-teal-500 to-cyan-500" },
+        { key: "document_attestation", label: "Document Attestation", gradient: "from-indigo-500 to-blue-500" },
+        { key: "medical", label: "Medical", gradient: "from-emerald-500 to-lime-500" },
+        { key: "biometrics", label: "Biometrics", gradient: "from-cyan-500 to-sky-500" },
+        { key: "visa", label: "Visa", gradient: "from-cyan-600 to-blue-600" },
+        { key: "emigration", label: "Emigration", gradient: "from-rose-500 to-pink-500" },
+        { key: "ticket", label: "Ticket", gradient: "from-lime-500 to-emerald-500" },
+    ];
+
+    const formatStep = (step?: string) => {
+        if (!step) return "—";
+        if (step === "verify_offer_letter") return "Verify Offer Letter";
+        return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    };
+
+    
     const rowBgClass = (status: string) => {
         switch (status) {
             case "in_progress": return "bg-blue-50/40";
@@ -151,17 +173,20 @@ export default function ProcessingAdminDashboardPage() {
                             </div>
                         </div>
 
-                        {statusFilter && statusFilter !== 'all' && (
+                        {(stepFilter || (statusFilter && statusFilter !== 'all')) && (
                             <Badge variant="outline" className="h-8 gap-2 bg-violet-50 text-violet-700 border-violet-200 self-start md:self-center">
-                                Filtered by: {displayStatus(statusFilter)}
-                                <X className="h-3 w-3 cursor-pointer hover:text-rose-500" onClick={() => setStatusFilter('all')} />
+                                Filtered by: {stepFilter ? formatStep(stepFilter) : displayStatus(statusFilter)}
+                                <X className="h-3 w-3 cursor-pointer hover:text-rose-500" onClick={() => { setStepFilter(null); setStatusFilter('all'); }} />
                             </Badge>
                         )}
                     </header>
 
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         {stats.map((stat) => (
-                            <Card key={stat.label} className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${statusFilter === stat.status ? 'border-violet-500 ring-2 ring-violet-500/20' : stat.borderColor}`} onClick={() => setStatusFilter(stat.status === 'all' ? 'all' : (statusFilter === stat.status ? 'all' : (stat.status as "all" | "visa_stamped" | "in_progress" | "completed" | "cancelled" | "assigned")))}>
+                            <Card key={stat.label} className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${statusFilter === stat.status && !stepFilter ? 'border-violet-500 ring-2 ring-violet-500/20' : stat.borderColor}`} onClick={() => {
+                                setStepFilter(null);
+                                setStatusFilter(statusFilter === stat.status ? 'all' : (stat.status as "all" | "assigned" | "in_progress" | "completed" | "cancelled"));
+                            }}>
                                 <div className={`absolute inset-0 ${stat.bgColor} opacity-40 transition-opacity group-hover:opacity-60`} />
                                 <CardHeader className="relative pb-3">
                                     <div className="flex items-center justify-between">
@@ -178,6 +203,40 @@ export default function ProcessingAdminDashboardPage() {
                                 </CardContent>
                             </Card>
                         ))}
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 mt-4">
+                        {stepTiles.map((tile) => {
+                            const value = counts?.steps?.[tile.key] || 0;
+                            const isActive = stepFilter === tile.key;
+                            return (
+                                <Card
+                                    key={tile.key}
+                                    className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${isActive ? 'ring-2 ring-violet-500/20 border-violet-500' : 'border-slate-200'}`}
+                                    onClick={() => {
+                                        setStatusFilter('all');
+                                        setStepFilter(stepFilter === tile.key ? null : tile.key);
+                                    }}
+                                >
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${tile.gradient} opacity-20`} />
+                                    <CardHeader className="relative pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                                                {tile.label}
+                                            </CardTitle>
+                                            <div className="rounded-xl p-2.5 shadow-md bg-white/80">
+                                                <ClipboardList className="h-4 w-4 text-slate-700" />
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="relative space-y-1 pb-1">
+                                        <div className="flex items-end gap-2">
+                                            <span className="text-2xl font-black text-slate-800">{value}</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
                     </div>
 
                     <Card className="border-0 shadow-xl overflow-hidden bg-white">
@@ -234,17 +293,18 @@ export default function ProcessingAdminDashboardPage() {
                                             </Select>
                                         )}
 
-                                        {(search || projectFilter !== "all" || (statusFilter && statusFilter !== 'all')) && (
-                                            <Button variant="ghost" size="sm" className="h-10 px-4 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl font-semibold gap-2 transition-all" onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); }}>
+                                        {(search || projectFilter !== "all" || stepFilter || (statusFilter && statusFilter !== 'all')) && (
+                                            <Button variant="ghost" size="sm" className="h-10 px-4 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl font-semibold gap-2 transition-all" onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); setStepFilter(null); }}>
                                                 <X className="h-4 w-4" /> Clear All
                                             </Button>
                                         )}
                                     </div>
                                 </div>
 
-                                {((statusFilter && statusFilter !== 'all') || projectFilter !== "all" || roleFilter !== "all") && (
+                                {(stepFilter || (statusFilter && statusFilter !== 'all') || projectFilter !== "all" || roleFilter !== "all") && (
                                     <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-200/60">
                                         <span className="text-xs font-semibold text-slate-500">Active:</span>
+                                        {stepFilter && (<Badge className="bg-violet-100 text-violet-700 border-0 gap-1.5 pr-1.5 font-semibold">Step: {formatStep(stepFilter)}<button className="ml-1 hover:bg-violet-200 rounded-full p-0.5 transition-colors" onClick={() => setStepFilter(null)}><X className="h-3 w-3" /></button></Badge>)}
                                         {statusFilter && statusFilter !== 'all' && (<Badge className="bg-violet-100 text-violet-700 border-0 gap-1.5 pr-1.5 font-semibold">Status: {displayStatus(statusFilter)}<button className="ml-1 hover:bg-violet-200 rounded-full p-0.5 transition-colors" onClick={() => setStatusFilter('all')}><X className="h-3 w-3" /></button></Badge>)}
                                         {projectFilter !== "all" && (<Badge className="bg-blue-100 text-blue-700 border-0 gap-1.5 pr-1.5 font-semibold">Project: {projects.find(p => p.id === projectFilter)?.title || projectFilter}<button className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors" onClick={() => { setProjectFilter("all"); setRoleFilter("all"); }}><X className="h-3 w-3" /></button></Badge>)}
                                         {roleFilter !== "all" && (<Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1.5 pr-1.5 font-semibold">Role: {projects.find(p => p.id === projectFilter)?.rolesNeeded?.find((r: any) => r.roleCatalogId === roleFilter)?.designation || roleFilter}<button className="ml-1 hover:bg-emerald-200 rounded-full p-0.5 transition-colors" onClick={() => setRoleFilter("all")}><X className="h-3 w-3" /></button></Badge>)}

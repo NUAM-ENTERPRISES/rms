@@ -292,7 +292,7 @@ export const navigationConfig: NavItem[] = [
   },
   {
     id: "processing",
-    label: "Dashboard",
+    label: "Processing",
     icon: ClipboardCheck,
     roles: ["CEO", "Director", "Manager", "System Admin"],
     children: [
