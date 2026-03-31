@@ -3,18 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetBiometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useGetBiometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
@@ -42,6 +43,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [updateStepStatus, { isLoading: isUpdatingBiometric }] = useUpdateStepStatusMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
@@ -49,6 +51,12 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
 
   // Biometric submission date state
   const [biometricSubmissionDate, setBiometricSubmissionDate] = useState<Date | undefined>(undefined);
+
+  // Biometric metadata state
+  const [biometricDate, setBiometricDate] = useState<Date | undefined>(undefined);
+  const [biometricLocation, setBiometricLocation] = useState<string>("");
+  const [initialBiometricDate, setInitialBiometricDate] = useState<Date | undefined>(undefined);
+  const [initialBiometricLocation, setInitialBiometricLocation] = useState<string>("");
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -82,6 +90,18 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
 
   // Completion flag from API
   const isBiometricCompleted = data?.isBiometricCompleted ?? false;
+
+  useEffect(() => {
+    if (!activeStep) return;
+
+    const stepBiometricDate = activeStep.biometricDate ? new Date(activeStep.biometricDate) : undefined;
+    const stepBiometricLocation = activeStep.biometricLocation || "";
+
+    setBiometricDate(stepBiometricDate);
+    setInitialBiometricDate(stepBiometricDate);
+    setBiometricLocation(stepBiometricLocation);
+    setInitialBiometricLocation(stepBiometricLocation);
+  }, [activeStep]);
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
@@ -464,6 +484,31 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
     }
   };
 
+  const handleSaveBiometricMetadata = async () => {
+    if (!activeStep?.id) {
+      toast.error("No active biometric step found");
+      return;
+    }
+
+    const payload: any = {};
+    if (biometricDate) payload.biometricDate = biometricDate.toISOString();
+    if (biometricLocation) payload.biometricLocation = biometricLocation;
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("No biometric information to save. Please set date or location.");
+      return;
+    }
+
+    try {
+      await updateStepStatus({ stepId: activeStep.id, data: payload }).unwrap();
+      toast.success("Biometric details saved successfully");
+      await refetch();
+    } catch (err: any) {
+      console.error("Saving biometric details failed", err);
+      const message = err?.data?.message || err?.error || "Failed to save biometric details";
+      toast.error(message);
+    }
+  };
 
   // Prefer counts from the API payload when available (keeps UI consistent with backend)
   const apiCounts = data?.counts;
@@ -483,6 +528,11 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
   // treat verifiedCount >= totalMandatory as satisfied (API may include optional docs in verifiedCount)
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
+
+  const biometricChanged =
+    (biometricDate?.toISOString() || "") !== (initialBiometricDate?.toISOString() || "") ||
+    biometricLocation.trim() !== initialBiometricLocation.trim();
+  const showSaveBiometricButton = biometricChanged && !isBiometricCompleted && !isStepCancelled;
 
 
 
@@ -636,6 +686,52 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                   </div>
                   {isBiometricCompleted && (
                     <p className="text-xs text-slate-500 mt-2">Biometric is completed. Submission date cannot be modified.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Biometric Session Details (new) */}
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-cyan-50 mt-3">
+                <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-teal-700 flex items-center gap-2">
+                    <File className="h-3.5 w-3.5" /> Biometric Session Details
+                  </h4>
+                </div>
+                <div className="p-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Biometric date</Label>
+                      <DatePicker
+                        value={biometricDate}
+                        onChange={setBiometricDate}
+                        placeholder="Pick biometric date"
+                        disabled={isBiometricCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Biometric location</Label>
+                      <Input
+                        value={biometricLocation}
+                        onChange={(e) => setBiometricLocation(e.target.value)}
+                        placeholder="Enter location"
+                        disabled={isBiometricCompleted || isStepCancelled}
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+
+                  {showSaveBiometricButton && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveBiometricMetadata}
+                        disabled={isUpdatingBiometric || isBiometricCompleted || isStepCancelled}
+                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        {isUpdatingBiometric ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Biometric Details'}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

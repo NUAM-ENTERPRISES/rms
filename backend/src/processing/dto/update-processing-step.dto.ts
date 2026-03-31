@@ -27,6 +27,41 @@ export class UpdateProcessingStepDto {
   @IsString()
   eligibilityDuration?: string;
 
+  @ApiPropertyOptional({ description: 'Council issued date', example: '2026-04-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  councilIssuedAt?: string;
+
+  @ApiPropertyOptional({ description: 'Council valid until date', example: '2027-04-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  councilValidAt?: string;
+
+  @ApiPropertyOptional({ description: 'Biometric date', example: '2026-04-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  biometricDate?: string;
+
+  @ApiPropertyOptional({ description: 'Biometric location', example: 'Mumbai Center' })
+  @IsOptional()
+  @IsString()
+  biometricLocation?: string;
+
+  @ApiPropertyOptional({ description: 'Visa issued date', example: '2026-04-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  visaIssuedAt?: string;
+
+  @ApiPropertyOptional({ description: 'Visa expiry date', example: '2027-04-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  visaValidAt?: string;
+
+  @ApiPropertyOptional({ description: 'Ticket date', example: '2026-04-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  ticketDate?: string;
+
   @ApiPropertyOptional({ description: 'Rejection reason', example: 'Incorrect document' })
   @IsOptional()
   @IsString()

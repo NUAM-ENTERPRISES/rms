@@ -1687,9 +1687,16 @@ model ProcessingStep {
   startedAt             DateTime?
   completedAt           DateTime?
   submittedAt           DateTime?
+  biometricDate         DateTime?
+  biometricLocation     String?
+  ticketDate            DateTime?
+  visaIssuedAt          DateTime?
+  visaValidAt           DateTime?
   eligibilityIssuedAt   DateTime?
   eligibilityValidAt    DateTime?
   eligibilityDuration   String?
+  councilIssuedAt       DateTime?
+  councilValidAt        DateTime?
   rejectionReason       String?
   meta                  Json?
   mofaNumber            String?

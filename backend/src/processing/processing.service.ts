@@ -2843,8 +2843,8 @@ export class ProcessingService {
   }
 
   async updateProcessingStep(stepId: string, data: any, userId: string) {
-    // Allowed updates: status, assignedTo, rejectionReason, dueDate, eligibility fields
-    const { status, assignedTo, rejectionReason, dueDate, eligibilityIssuedAt, eligibilityValidAt, eligibilityDuration } = data;
+    // Allowed updates: status, assignedTo, rejectionReason, dueDate, biometric/visa/eligibility/council fields
+    const { status, assignedTo, rejectionReason, dueDate, biometricDate, biometricLocation, ticketDate, visaIssuedAt, visaValidAt, eligibilityIssuedAt, eligibilityValidAt, eligibilityDuration, councilIssuedAt, councilValidAt } = data;
 
     const step = await this.prisma.processingStep.findUnique({
       where: { id: stepId },
@@ -2864,9 +2864,16 @@ export class ProcessingService {
     }
     if (assignedTo) updates.assignedTo = assignedTo;
     if (dueDate) updates.dueDate = new Date(dueDate);
+    if (biometricDate) updates.biometricDate = new Date(biometricDate);
+    if (biometricLocation) updates.biometricLocation = biometricLocation;
+    if (ticketDate) updates.ticketDate = new Date(ticketDate);
+    if (visaIssuedAt) updates.visaIssuedAt = new Date(visaIssuedAt);
+    if (visaValidAt) updates.visaValidAt = new Date(visaValidAt);
     if (eligibilityIssuedAt) updates.eligibilityIssuedAt = new Date(eligibilityIssuedAt);
     if (eligibilityValidAt) updates.eligibilityValidAt = new Date(eligibilityValidAt);
     if (eligibilityDuration) updates.eligibilityDuration = eligibilityDuration;
+    if (councilIssuedAt) updates.councilIssuedAt = new Date(councilIssuedAt);
+    if (councilValidAt) updates.councilValidAt = new Date(councilValidAt);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.processingStep.update({ where: { id: stepId }, data: updates });

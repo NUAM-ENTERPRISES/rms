@@ -3,18 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetTicketRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useGetTicketRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
@@ -46,8 +47,14 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
 
+  const [updateStepStatus, { isLoading: isUpdatingTicket }] = useUpdateStepStatusMutation();
+
   // Ticket submission date state
   const [ticketSubmissionDate, setTicketSubmissionDate] = useState<Date | undefined>(undefined);
+
+  // Ticket metadata state
+  const [ticketDate, setTicketDate] = useState<Date | undefined>(undefined);
+  const [initialTicketDate, setInitialTicketDate] = useState<Date | undefined>(undefined);
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -81,6 +88,14 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
 
   // Completion flag from API
   const isTicketCompleted = data?.isTicketCompleted ?? false;
+
+  useEffect(() => {
+    if (!activeStep) return;
+
+    const stepTicketDate = activeStep.ticketDate ? new Date(activeStep.ticketDate) : undefined;
+    setTicketDate(stepTicketDate);
+    setInitialTicketDate(stepTicketDate);
+  }, [activeStep]);
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
@@ -436,6 +451,32 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
     }
   };
 
+  const handleSaveTicketMetadata = async () => {
+    if (!activeStep?.id) {
+      toast.error("No active ticket step found");
+      return;
+    }
+
+    if (!ticketDate) {
+      toast.error("Please select a ticket date");
+      return;
+    }
+
+    try {
+      await updateStepStatus({ stepId: activeStep.id, data: { ticketDate: ticketDate.toISOString() } }).unwrap();
+      toast.success("Ticket details saved successfully");
+      await refetch();
+    } catch (err: any) {
+      console.error("Saving ticket details failed", err);
+      const message = err?.data?.message || err?.error || "Failed to save ticket details";
+      toast.error(message);
+    }
+  };
+
+  const ticketChanged =
+    (ticketDate?.toISOString() || "") !== (initialTicketDate?.toISOString() || "");
+  const showSaveTicketButton = ticketChanged && !isTicketCompleted && !isStepCancelled;
+
   const apiCounts = data?.counts;
   const computedStats = getDocStats();
   const missingDocs = getMissingMandatory();
@@ -594,6 +635,40 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                   </div>
                   {isTicketCompleted && (
                     <p className="text-xs text-slate-500 mt-2">Ticket is completed. Submission date cannot be modified.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Ticket Details (new) */}
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-cyan-50 mt-3">
+                <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-teal-700 flex items-center gap-2">
+                    <File className="h-3.5 w-3.5" /> Ticket Details
+                  </h4>
+                </div>
+                <div className="p-3 space-y-3">
+                  <div>
+                    <Label className="text-xs text-slate-600 mb-1 block">Ticket date</Label>
+                    <DatePicker
+                      value={ticketDate}
+                      onChange={setTicketDate}
+                      placeholder="Pick ticket date"
+                      disabled={isTicketCompleted || isStepCancelled}
+                      compact
+                    />
+                  </div>
+
+                  {showSaveTicketButton && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveTicketMetadata}
+                        disabled={isUpdatingTicket || isTicketCompleted || isStepCancelled}
+                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        {isUpdatingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Ticket Date'}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

@@ -3,18 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetVisaRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useGetVisaRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
@@ -41,6 +42,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [updateStepStatus, { isLoading: isUpdatingVisa }] = useUpdateStepStatusMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
@@ -69,6 +71,12 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
 
+  // Visa metadata state
+  const [visaIssuedDate, setVisaIssuedDate] = useState<Date | undefined>(undefined);
+  const [visaExpiryDate, setVisaExpiryDate] = useState<Date | undefined>(undefined);
+  const [initialVisaIssuedDate, setInitialVisaIssuedDate] = useState<Date | undefined>(undefined);
+  const [initialVisaExpiryDate, setInitialVisaExpiryDate] = useState<Date | undefined>(undefined);
+
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
   const [replaceCandidateProjectMapId, setReplaceCandidateProjectMapId] = useState<string | null>(null);
@@ -81,6 +89,18 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
 
   // Completion flag from API
   const isVisaCompleted = data?.isVisaCompleted ?? false;
+
+  useEffect(() => {
+    if (!activeStep) return;
+
+    const issueDate = activeStep.visaIssuedAt ? new Date(activeStep.visaIssuedAt) : undefined;
+    const expiryDate = activeStep.visaValidAt ? new Date(activeStep.visaValidAt) : undefined;
+
+    setVisaIssuedDate(issueDate);
+    setInitialVisaIssuedDate(issueDate);
+    setVisaExpiryDate(expiryDate);
+    setInitialVisaExpiryDate(expiryDate);
+  }, [activeStep]);
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
@@ -463,6 +483,32 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
     }
   };
 
+  const handleSaveVisaMetadata = async () => {
+    if (!activeStep?.id) {
+      toast.error("No active visa step found");
+      return;
+    }
+
+    const payload: any = {};
+    if (visaIssuedDate) payload.visaIssuedAt = visaIssuedDate.toISOString();
+    if (visaExpiryDate) payload.visaValidAt = visaExpiryDate.toISOString();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("No visa information to save. Please set issue or expiry date.");
+      return;
+    }
+
+    try {
+      await updateStepStatus({ stepId: activeStep.id, data: payload }).unwrap();
+      toast.success("Visa details saved successfully");
+      await refetch();
+    } catch (err: any) {
+      console.error("Saving visa details failed", err);
+      const message = err?.data?.message || err?.error || "Failed to save visa details";
+      toast.error(message);
+    }
+  };
+
   // Prefer counts from the API payload when available (keeps UI consistent with backend)
   const apiCounts = data?.counts;
   const computedStats = getDocStats();
@@ -481,6 +527,11 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   // treat verifiedCount >= totalMandatory as satisfied (API may include optional docs in verifiedCount)
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
+
+  const visaChanged =
+    (visaIssuedDate?.toISOString() || "") !== (initialVisaIssuedDate?.toISOString() || "") ||
+    (visaExpiryDate?.toISOString() || "") !== (initialVisaExpiryDate?.toISOString() || "");
+  const showSaveVisaButton = visaChanged && !isVisaCompleted && !isStepCancelled;
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -632,6 +683,52 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                   </div>
                   {isVisaCompleted && (
                     <p className="text-xs text-slate-500 mt-2">Visa is completed. Submission date cannot be modified.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Visa Details (new) */}
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-cyan-50 mt-3">
+                <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-teal-700 flex items-center gap-2">
+                    <File className="h-3.5 w-3.5" /> Visa Details
+                  </h4>
+                </div>
+                <div className="p-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Visa issue date</Label>
+                      <DatePicker
+                        value={visaIssuedDate}
+                        onChange={setVisaIssuedDate}
+                        placeholder="Pick issue date"
+                        disabled={isVisaCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Visa expiry date</Label>
+                      <DatePicker
+                        value={visaExpiryDate}
+                        onChange={setVisaExpiryDate}
+                        placeholder="Pick expiry date"
+                        disabled={isVisaCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                  </div>
+
+                  {showSaveVisaButton && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveVisaMetadata}
+                        disabled={isUpdatingVisa || isVisaCompleted || isStepCancelled}
+                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        {isUpdatingVisa ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Visa Details'}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

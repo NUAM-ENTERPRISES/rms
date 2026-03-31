@@ -7,14 +7,15 @@ import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, 
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetCouncilRegistrationRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+const ConfirmCouncilMetadataModal = React.lazy(() => import("../../components/ConfirmCouncilMetadataModal"));
+import { useGetCouncilRegistrationRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
@@ -42,6 +43,7 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [updateStepStatus, { isLoading: isUpdatingCouncil }] = useUpdateStepStatusMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
@@ -49,6 +51,13 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
 
   // Submission date state
   const [hrdSubmissionDate, setHrdSubmissionDate] = useState<Date | undefined>(undefined);
+
+  // Council Certificate metadata state (new)
+  const [councilIssuedDate, setCouncilIssuedDate] = useState<Date | undefined>(undefined);
+  const [councilValidDate, setCouncilValidDate] = useState<Date | undefined>(undefined);
+  const [initialCouncilIssuedDate, setInitialCouncilIssuedDate] = useState<Date | undefined>(undefined);
+  const [initialCouncilValidDate, setInitialCouncilValidDate] = useState<Date | undefined>(undefined);
+  const [saveCouncilConfirmOpen, setSaveCouncilConfirmOpen] = useState(false);
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -460,6 +469,59 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
     }
   };
 
+  useEffect(() => {
+    if (!activeStep) return;
+
+    const issued = activeStep.councilIssuedAt ? new Date(activeStep.councilIssuedAt) : undefined;
+    const valid = activeStep.councilValidAt ? new Date(activeStep.councilValidAt) : undefined;
+
+    setCouncilIssuedDate(issued);
+    setCouncilValidDate(valid);
+    setInitialCouncilIssuedDate(issued);
+    setInitialCouncilValidDate(valid);
+  }, [activeStep]);
+
+  const saveCouncilMetadata = async () => {
+    if (!activeStep?.id) {
+      toast.error("No active council registration step found");
+      return;
+    }
+
+    const payload: any = {};
+    if (councilIssuedDate) payload.councilIssuedAt = councilIssuedDate.toISOString();
+    if (councilValidDate) payload.councilValidAt = councilValidDate.toISOString();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("No council fields set to save. Please set at least one value");
+      setSaveCouncilConfirmOpen(false);
+      return;
+    }
+
+    try {
+      await updateStepStatus({ stepId: activeStep.id, data: payload }).unwrap();
+      toast.success("Council metadata saved successfully");
+      await refetch();
+    } catch (err: any) {
+      console.error("Saving council metadata failed", err);
+      const message = err?.data?.message || err?.error || "Failed to save council metadata";
+      toast.error(message);
+    } finally {
+      setSaveCouncilConfirmOpen(false);
+    }
+  };
+
+  const handleSaveCouncilMetadata = () => {
+    if (!activeStep?.id) {
+      toast.error("No active council registration step found");
+      return;
+    }
+    setSaveCouncilConfirmOpen(true);
+  };
+
+  const handleConfirmSaveCouncil = async () => {
+    await saveCouncilMetadata();
+  };
+
 
   // Prefer counts from the API payload when available (keeps UI consistent with backend)
   const apiCounts = data?.counts;
@@ -480,7 +542,12 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
 
-
+  const initialHasCouncilCertificate = Boolean(initialCouncilIssuedDate || initialCouncilValidDate);
+  const currentHasCouncilCertificate = Boolean(councilIssuedDate || councilValidDate);
+  const councilChanged =
+    (councilIssuedDate?.toISOString() || "") !== (initialCouncilIssuedDate?.toISOString() || "") ||
+    (councilValidDate?.toISOString() || "") !== (initialCouncilValidDate?.toISOString() || "");
+  const showCouncilButton = currentHasCouncilCertificate && councilChanged;
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -632,6 +699,52 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
                   </div>
                   {isCouncilCompleted && (
                     <p className="text-xs text-slate-500 mt-2">Council registration is completed. Submission date cannot be modified.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Council Certificate Metadata (new) */}
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-cyan-50 mt-3">
+                <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-teal-700 flex items-center gap-2">
+                    <File className="h-3.5 w-3.5" /> Council Certificate Details
+                  </h4>
+                </div>
+                <div className="p-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Issued Date</Label>
+                      <DatePicker
+                        value={councilIssuedDate}
+                        onChange={setCouncilIssuedDate}
+                        placeholder="Issued date"
+                        disabled={isCouncilCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Valid Till</Label>
+                      <DatePicker
+                        value={councilValidDate}
+                        onChange={setCouncilValidDate}
+                        placeholder="Valid date"
+                        disabled={isCouncilCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                  </div>
+
+                  {showCouncilButton && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveCouncilMetadata}
+                        disabled={isUpdatingCouncil || isCouncilCompleted || isStepCancelled}
+                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        {isUpdatingCouncil ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Council Info'}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -945,6 +1058,18 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
           onClose={() => setCancelOpen(false)}
           onConfirm={handleConfirmCancel}
           isCancelling={isCancelling}
+        />
+      </React.Suspense>
+
+      {/* Confirm Council Metadata Modal */}
+      <React.Suspense fallback={null}>
+        <ConfirmCouncilMetadataModal
+          isOpen={saveCouncilConfirmOpen}
+          onClose={() => setSaveCouncilConfirmOpen(false)}
+          onConfirm={handleConfirmSaveCouncil}
+          councilIssuedDate={councilIssuedDate}
+          councilValidDate={councilValidDate}
+          isSubmitting={isUpdatingCouncil}
         />
       </React.Suspense>
 
