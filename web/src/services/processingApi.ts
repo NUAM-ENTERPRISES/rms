@@ -419,6 +419,22 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Update processing step fields (including eligibility metadata)
+    updateProcessingStep: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { stepId: string; status?: string; assignedTo?: string; rejectionReason?: string; dueDate?: string; eligibilityIssuedAt?: string; eligibilityValidAt?: string; eligibilityDuration?: string }
+    >({
+      query: ({ stepId, ...body }) => ({
+        url: `/processing/steps/${stepId}/status`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: () => [
+        { type: 'ProcessingSteps', id: 'LIST' },
+        { type: 'ProcessingDetails', id: 'LIST' },
+      ],
+    }),
+
     // Update processing candidate details (e.g., fileNumber)
     updateProcessingCandidate: builder.mutation<
       { success: boolean; data: any; message: string },
@@ -461,5 +477,6 @@ export const {
   useVerifyProcessingDocumentMutation,
   useCancelStepMutation,
   useSubmitHrdDateMutation,
+  useUpdateProcessingStepMutation,
   useUpdateProcessingCandidateMutation,
 } = processingApi;

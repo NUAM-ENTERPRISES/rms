@@ -1687,6 +1687,9 @@ model ProcessingStep {
   startedAt             DateTime?
   completedAt           DateTime?
   submittedAt           DateTime?
+  eligibilityIssuedAt   DateTime?
+  eligibilityValidAt    DateTime?
+  eligibilityDuration   String?
   rejectionReason       String?
   meta                  Json?
   mofaNumber            String?

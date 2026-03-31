@@ -339,7 +339,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
       setUploadModalOpen(false);
       await refetch();
     } catch (err: any) {
-      console.error("Prometric upload error", err);
+      console.error("Licensing Exam upload error", err);
       toast.error(err?.data?.message || "Failed to upload and attach document");
     }
   };
@@ -395,7 +395,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
     try {
       await completeStep({ stepId: activeStep.id }).unwrap();
-      toast.success("Prometric step marked complete");
+      toast.success("Licensing Exam step marked complete");
       setCompleteModalOpen(false);
       await refetch();
       
@@ -406,8 +406,8 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
       
       onClose();
     } catch (err: any) {
-      console.error("Save Prometric failed", err);
-      const msg = err?.data?.message || err?.error || "Failed to save Prometric";
+      console.error("Save Licensing Exam failed", err);
+      const msg = err?.data?.message || err?.error || "Failed to save Licensing Exam";
       toast.error(msg);
     }
   };
@@ -453,12 +453,12 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
         stepId: activeStep.id,
         submittedAt: payloadDate.toISOString(),
       }).unwrap();
-      toast.success("Prometric submission date saved successfully");
+      toast.success("Licensing Exam submission date saved successfully");
       await refetch();
       return true;
     } catch (err: any) {
-      console.error("Submit Prometric date failed", err);
-      toast.error(err?.data?.message || "Failed to save Prometric submission date");
+      console.error("Submit Licensing Exam date failed", err);
+      toast.error(err?.data?.message || "Failed to save Licensing Exam submission date");
       return false;
     }
   };
@@ -496,8 +496,8 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white">Prometric Exam</DialogTitle>
-                <DialogDescription className="text-sm text-white/70">Upload and verify Prometric documents</DialogDescription>
+                <DialogTitle className="text-lg font-bold text-white">Licensing Exam</DialogTitle>
+                <DialogDescription className="text-sm text-white/70">Upload and verify licensing exam documents</DialogDescription>
               </div>
             </div>
             {candidate?.candidate && (
@@ -519,7 +519,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load Prometric requirements.</div>
+              <div className="text-sm text-slate-600">Could not load Licensing Exam requirements.</div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -559,7 +559,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    Prometric Submission Date & Time
+                    Licensing Exam Submission Date & Time
                   </h4>
                 </div>
                 <div className="p-3">
@@ -607,7 +607,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                               {prometricSubmissionDate ? (
                                 <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
                               ) : (
-                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Prometric</p>
+                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Licensing Exam</p>
                               )}
                             </div>
                           )}
@@ -634,7 +634,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                     </div>
                   </div>
                   {isPrometricCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">Prometric is completed. Submission date cannot be modified.</p>
+                    <p className="text-xs text-slate-500 mt-2">Licensing Exam is completed. Submission date cannot be modified.</p>
                   )}
                 </div>
               </div>
@@ -719,7 +719,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                           )}
 
                           {isPrometricCompleted ? (
-                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Prometric Completed</Badge>
+                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Licensing Exam Completed</Badge>
                           ) : isStepCancelled ? (
                             <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
                           ) : (
@@ -843,12 +843,12 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                       <TooltipTrigger asChild>
                         <div>
                           <Button size="sm" disabled className="opacity-80" aria-disabled>
-                            {'Save Prometric'}
+                            {'Save Licensing Exam'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>All mandatory documents must be verified before saving Prometric. Verified {statVerified}/{statTotal}</p>
+                        <p>All mandatory documents must be verified before saving Licensing Exam. Verified {statVerified}/{statTotal}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -864,12 +864,12 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                             className="opacity-80"
                             aria-disabled={true}
                           >
-                            {'Save Prometric'}
+                            {'Save Licensing Exam'}
                           </Button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Submission date required to complete Prometric. Please select and submit a date.</p>
+                        <p>Submission date required to complete Licensing Exam. Please select and submit a date.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -881,7 +881,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
                     aria-disabled={isCompletingStep || !canMarkComplete}
                   >
-                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Prometric'}
+                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Licensing Exam'}
                   </Button>
                 )
               )}

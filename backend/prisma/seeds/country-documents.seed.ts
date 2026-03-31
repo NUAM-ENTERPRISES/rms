@@ -7,7 +7,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
     { docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE, label: 'Registration Certificate', mandatory: true },
     { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE, label: 'Experience Certificate', mandatory: true },
-    { docType: DOCUMENT_TYPE.SAUDI_PROMETRIC, label: 'Saudi Council / Prometric Result', mandatory: true },
+    { docType: DOCUMENT_TYPE.SAUDI_PROMETRIC, label: 'Saudi Council / Licensing Exam Result', mandatory: true },
     { docType: DOCUMENT_TYPE.DATAFLOW_REPORT, label: 'Dataflow Report', mandatory: true },
     { docType: DOCUMENT_TYPE.PCC, label: 'Police Clearance Certificate (PCC)', mandatory: true },
     { docType: DOCUMENT_TYPE.MEDICAL_FITNESS, label: 'Medical Fitness Certificate', mandatory: true },
@@ -17,7 +17,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
   const omanDocs = [
     { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
     { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
-    { docType: DOCUMENT_TYPE.MOH_PROMETRIC, label: 'MOH License / Prometric', mandatory: true },
+    { docType: DOCUMENT_TYPE.MOH_PROMETRIC, label: 'MOH License / Licensing Exam Result', mandatory: true },
     { docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS, label: 'Experience Letters', mandatory: true },
     { docType: DOCUMENT_TYPE.PCC, label: 'PCC', mandatory: true },
   ];
@@ -25,7 +25,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
   const qatarDocs = [
     { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
     { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
-    { docType: DOCUMENT_TYPE.QCHP_PROMETRIC, label: 'QCHP Evaluation / Prometric', mandatory: true },
+    { docType: DOCUMENT_TYPE.QCHP_PROMETRIC, label: 'QCHP Evaluation / Licensing Exam Result', mandatory: true },
     { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATES, label: 'Experience Certificates', mandatory: true },
     { docType: DOCUMENT_TYPE.PCC, label: 'PCC', mandatory: true },
   ];
@@ -36,7 +36,57 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     { countryCode: 'QA', docs: qatarDocs },
   ];
 
+  // Optional: a friendly label name for licensing exam for each country
+  // (not strictly needed for document seed but helps readability)
+  const licensingExamLabel = 'Licensing Exam Result';
+
   console.log('Seeding country document requirements...');
+
+  async function seedGlobalRequirements(templateKey: string, docs: Array<{ docType: string; label: string; mandatory: boolean }>) {
+    const template = await prisma.processingStepTemplate.findUnique({ where: { key: templateKey } });
+    if (!template) {
+      console.warn(`ProcessingStepTemplate with key='${templateKey}' not found — skipping ${templateKey.toUpperCase()} global seed`);
+      return;
+    }
+
+    await prisma.country.upsert({
+      where: { code: 'ALL' },
+      update: { name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+      create: { code: 'ALL', name: 'Global', region: 'GLOBAL', callingCode: '', currency: '', timezone: '', isActive: true },
+    });
+
+    // cleanup stale global requirements for this step to keep reseeds idempotent
+    await prisma.countryDocumentRequirement.deleteMany({
+      where: {
+        countryCode: 'ALL',
+        processingStepTemplateId: template.id,
+      },
+    });
+
+    for (const doc of docs) {
+      await prisma.countryDocumentRequirement.upsert({
+        where: {
+          countryCode_docType_processingStepTemplateId: {
+            countryCode: 'ALL',
+            docType: doc.docType,
+            processingStepTemplateId: template.id,
+          },
+        },
+        update: {
+          mandatory: doc.mandatory,
+          label: doc.label ?? doc.docType,
+          processingStepTemplateId: template.id,
+        },
+        create: {
+          countryCode: 'ALL',
+          docType: doc.docType,
+          label: doc.label ?? doc.docType,
+          mandatory: doc.mandatory,
+          processingStepTemplateId: template.id,
+        },
+      });
+    }
+  }
 
   for (const item of data) {
     for (const doc of item.docs) {
@@ -75,29 +125,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.NAME_CHANGE_AFFIDAVIT, label: 'Name Change Affidavit', mandatory: false },
     ];
 
-    for (const doc of hrdDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: hrdTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: hrdTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: hrdTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('hrd', hrdDocs);
   }
 
   // --- Global Data Flow Documents ---
@@ -114,29 +142,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
     ];
 
-    for (const doc of dataFlowDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: dataFlowTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: dataFlowTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: dataFlowTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('data_flow', dataFlowDocs);
   }
 
   // --- Global Prometric Documents ---
@@ -146,32 +152,10 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     console.warn("ProcessingStepTemplate with key='prometric' not found — skipping Prometric global seed");
   } else {
     const prometricDocs = [
-      { docType: DOCUMENT_TYPE.PROMETRIC_RESULT, label: 'Prometric Result', mandatory: false },
+      { docType: DOCUMENT_TYPE.PROMETRIC_RESULT, label: 'Licensing Exam Result', mandatory: false },
     ];
 
-    for (const doc of prometricDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: prometricTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: prometricTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: prometricTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('prometric', prometricDocs);
   }
 
   // --- Global Eligibility Documents ---
@@ -188,36 +172,10 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
     });
 
     const eligibilityDocs = [
-      { docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, label: 'Degree Certificate', mandatory: true },
-      { docType: DOCUMENT_TYPE.TRANSCRIPT, label: 'Academic Transcript / Mark Sheet', mandatory: true },
-      { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE, label: 'Experience Certificate(s)', mandatory: true },
-      { docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE, label: 'Professional Registration (Nursing / Council / Trade)', mandatory: true },
-      { docType: DOCUMENT_TYPE.PASSPORT_COPY, label: 'Passport Copy', mandatory: true },
+      { docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER, label: 'Eligibility Letter', mandatory: true },
     ];
 
-    for (const doc of eligibilityDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: eligibilityTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: eligibilityTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: eligibilityTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('eligibility', eligibilityDocs);
   }
 
   // --- Global Council Registration Documents ---
@@ -246,29 +204,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.NAME_CHANGE_AFFIDAVIT, label: 'Name Change Affidavit', mandatory: false },
     ];
 
-    for (const doc of councilDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: councilTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: councilTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: councilTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('council_registration', councilDocs);
   }
 
   // --- Global Document Attestation Documents ---
@@ -298,29 +234,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.NAME_CHANGE_AFFIDAVIT, label: 'Name Change Affidavit', mandatory: false },
     ];
 
-    for (const doc of attestationDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: attestationTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: attestationTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: attestationTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('document_attestation', attestationDocs);
   }
 
   // --- Global Medical Documents ---
@@ -340,29 +254,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.MEDICAL_FITNESS, label: 'Medical Fitness Certificate', mandatory: true },
     ];
 
-    for (const doc of medicalDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: medicalTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: medicalTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: medicalTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('medical', medicalDocs);
   }
 
   // --- Global Biometric Documents ---
@@ -384,29 +276,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.BIOMETRIC_ACKNOWLEDGEMENT, label: 'Biometric Acknowledgement', mandatory: false },
     ];
 
-    for (const doc of biometricDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: biometricTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: biometricTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: biometricTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('biometrics', biometricDocs);
   }
 
   // --- Global Visa Documents ---
@@ -428,29 +298,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.VISA_STAMP, label: 'Visa Stamp (if applicable)', mandatory: false },
     ];
 
-    for (const doc of visaDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: visaTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: visaTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: visaTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('visa', visaDocs);
   }
 
   // --- Global Ticket Documents ---
@@ -470,29 +318,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.FLIGHT_TICKET, label: 'Flight Ticket / e-ticket', mandatory: true },
     ];
 
-    for (const doc of ticketDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: ticketTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: ticketTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: ticketTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('ticket', ticketDocs);
   }
 
   // --- Global Documents Received Documents ---
@@ -521,29 +347,7 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.PCC_ORIGINAL, label: 'Police Clearance Certificate (Original)', mandatory: false },
     ];
 
-    for (const doc of documentReceivedDocs) {
-      await prisma.countryDocumentRequirement.upsert({
-        where: {
-          countryCode_docType_processingStepTemplateId: {
-            countryCode: 'ALL',
-            docType: doc.docType,
-            processingStepTemplateId: documentReceivedTemplate.id,
-          },
-        },
-        update: {
-          mandatory: doc.mandatory,
-          label: doc.label ?? doc.docType,
-          processingStepTemplateId: documentReceivedTemplate.id,
-        },
-        create: {
-          countryCode: 'ALL',
-          docType: doc.docType,
-          label: doc.label ?? doc.docType,
-          mandatory: doc.mandatory,
-          processingStepTemplateId: documentReceivedTemplate.id,
-        },
-      });
-    }
+    await seedGlobalRequirements('document_received', documentReceivedDocs);
   }
 
   console.log('Country document requirements seeded successfully.');

@@ -11,7 +11,7 @@ export async function seedProcessingStepTemplates() {
     { key: 'hrd', label: 'HRD', order: 3, hasDocuments: true },
     { key: 'data_flow', label: 'Data Flow', order: 4, hasDocuments: true },
     { key: 'eligibility', label: 'Eligibility', order: 5, hasDocuments: false },
-    { key: 'prometric', label: 'Prometric', order: 6, hasDocuments: false },
+    { key: 'prometric', label: 'Licensing Exam', order: 6, hasDocuments: false },
     { key: 'council_registration', label: 'Council Registration', order: 7, hasDocuments: false },
     { key: 'document_attestation', label: 'Document Attestation', order: 8, hasDocuments: true },
     { key: 'medical', label: 'Medical', order: 9, hasDocuments: true },

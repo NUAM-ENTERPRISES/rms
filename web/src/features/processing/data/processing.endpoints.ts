@@ -153,18 +153,34 @@ export const processingApi = baseApi.injectEndpoints({
     updateProcessingStep: builder.mutation<
       ApiResponse<ProcessingStep>,
       {
-        candidateProjectMapId: string;
-        stepKey: ProcessingStepKey;
-        status: ProcessingStepStatus;
+        candidateProjectMapId?: string;
+        stepKey?: ProcessingStepKey;
+        stepId?: string;
+        status?: ProcessingStepStatus;
         notes?: string;
         notApplicableReason?: string;
       }
     >({
-      query: ({ candidateProjectMapId, stepKey, ...body }) => ({
-        url: `/processing/${candidateProjectMapId}/steps/${stepKey.toLowerCase()}`,
-        method: "PATCH",
-        body,
-      }),
+      query: ({ candidateProjectMapId, stepKey, stepId, ...body }) => {
+        if (candidateProjectMapId && stepKey && typeof stepKey === 'string') {
+          const normalizedStepKey = stepKey.toLowerCase();
+          return {
+            url: `/processing/${candidateProjectMapId}/steps/${normalizedStepKey}`,
+            method: "PATCH",
+            body,
+          };
+        }
+
+        if (stepId) {
+          return {
+            url: `/processing/steps/${stepId}/status`,
+            method: "POST",
+            body,
+          };
+        }
+
+        throw new Error('Missing candidateProjectMapId+stepKey or stepId for updateProcessingStep');
+      },
       invalidatesTags: (_, __, { candidateProjectMapId }) => [
         { type: "Processing", id: candidateProjectMapId },
         { type: "ProcessingHistory", id: candidateProjectMapId },

@@ -83,7 +83,7 @@ export const PROCESSING_STEP_META: ProcessingStepMeta[] = [
   },
   {
     key: "PROMETRIC",
-    title: "Prometric Exam",
+    title: "Licensing Exam",
     description: "Schedule & clear the licensing exam.",
     icon: BadgeCheck,
     accent: "from-amber-500/20 to-amber-500/10",

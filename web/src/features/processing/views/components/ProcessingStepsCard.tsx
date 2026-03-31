@@ -256,7 +256,7 @@ export function ProcessingStepsCard({
 
       return {
         key: step.template.key,
-        label: step.template.label,
+        label: step.template.key === 'prometric' ? 'Licensing Exam' : step.template.label,
         description: step.template.description || `Processing step ${step.template.order}`,
         icon: getStepIcon(step.template.key),
         status: finalStatus,

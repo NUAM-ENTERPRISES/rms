@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import {
   useVerifyProcessingDocumentMutation,
   useSubmitHrdDateMutation,
   useCancelStepMutation,
+  useUpdateStepStatusMutation,
 } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
@@ -29,6 +30,7 @@ const CompleteProcessingStepModal = React.lazy(() => import("../../components/Co
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
+const ConfirmEligibilityMetadataModal = React.lazy(() => import("../../components/ConfirmEligibilityMetadataModal"));
 
 interface EligibilityModalProps {
   isOpen: boolean;
@@ -50,10 +52,19 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [updateStepStatus, { isLoading: isUpdatingEligibility }] = useUpdateStepStatusMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
+
+  // Eligibility metadata state
+  const [eligibilityIssuedDate, setEligibilityIssuedDate] = useState<Date | undefined>(undefined);
+  const [eligibilityValidDate, setEligibilityValidDate] = useState<Date | undefined>(undefined);
+  const [eligibilityDuration, setEligibilityDuration] = useState<string>("");
+  const [initialEligibilityIssuedDate, setInitialEligibilityIssuedDate] = useState<Date | undefined>(undefined);
+  const [initialEligibilityValidDate, setInitialEligibilityValidDate] = useState<Date | undefined>(undefined);
+  const [initialEligibilityDuration, setInitialEligibilityDuration] = useState<string>("");
 
   // Submission date state
   const [submissionDate, setSubmissionDate] = useState<Date | undefined>(undefined);
@@ -75,6 +86,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+  const [saveEligibilityConfirmOpen, setSaveEligibilityConfirmOpen] = useState(false);
 
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
@@ -184,8 +196,8 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
     let mime = pdoc?.mimeType || cdoc?.mimeType;
     const fileName = pdoc?.fileName || cdoc?.fileName || "Document";
 
-    const tryInferFromUrl = (u: string | undefined) => {
-      if (!u) return null;
+    const tryInferFromUrl = (u: unknown) => {
+      if (!u || typeof u !== 'string') return null;
       const clean = u.split('?')[0].toLowerCase();
       if (/\.pdf$/.test(clean)) return 'application/pdf';
       if (/\.(jpe?g|png|gif|bmp|webp|svg)$/.test(clean)) return 'image/*';
@@ -476,6 +488,86 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
 
+  const initialHasEligibilityCertificate = Boolean(
+    initialEligibilityIssuedDate ||
+    initialEligibilityValidDate ||
+    (initialEligibilityDuration && initialEligibilityDuration.trim() !== "")
+  );
+
+  const currentHasEligibilityCertificate = Boolean(
+    eligibilityIssuedDate ||
+    eligibilityValidDate ||
+    (eligibilityDuration && eligibilityDuration.trim() !== "")
+  );
+
+  const eligibilityChanged =
+    (eligibilityIssuedDate?.toISOString() || "") !== (initialEligibilityIssuedDate?.toISOString() || "") ||
+    (eligibilityValidDate?.toISOString() || "") !== (initialEligibilityValidDate?.toISOString() || "") ||
+    (eligibilityDuration.trim() || "") !== (initialEligibilityDuration.trim() || "");
+
+  const showCertificateButton = currentHasEligibilityCertificate && eligibilityChanged;
+  const certificateButtonLabel = initialHasEligibilityCertificate ? "Update Certificate Info" : "Save Certificate Info";
+
+  useEffect(() => {
+    if (!activeStep) return;
+    const issued = activeStep.eligibilityIssuedAt ? new Date(activeStep.eligibilityIssuedAt) : undefined;
+    const valid = activeStep.eligibilityValidAt ? new Date(activeStep.eligibilityValidAt) : undefined;
+    const duration = activeStep.eligibilityDuration || "";
+
+    setEligibilityIssuedDate(issued);
+    setEligibilityValidDate(valid);
+    setEligibilityDuration(duration);
+
+    setInitialEligibilityIssuedDate(issued);
+    setInitialEligibilityValidDate(valid);
+    setInitialEligibilityDuration(duration);
+  }, [activeStep]);
+
+  const saveEligibilityMetadata = async () => {
+    if (!activeStep?.id) {
+      toast.error("No active eligibility step found");
+      return;
+    }
+
+    const payload: any = {};
+    if (eligibilityIssuedDate) payload.eligibilityIssuedAt = eligibilityIssuedDate.toISOString();
+    if (eligibilityValidDate) payload.eligibilityValidAt = eligibilityValidDate.toISOString();
+    if (eligibilityDuration?.trim()) payload.eligibilityDuration = eligibilityDuration.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("No eligibility fields set to save. Please set at least one value");
+      setSaveEligibilityConfirmOpen(false);
+      return;
+    }
+
+    console.debug("Saving eligibility metadata", { stepId: activeStep.id, payload });
+
+    try {
+      await updateStepStatus({ stepId: activeStep.id, data: payload }).unwrap();
+
+      toast.success("Eligibility metadata saved successfully");
+      await refetch();
+    } catch (err: any) {
+      console.error("Saving eligibility metadata failed", err);
+      const message = err?.data?.message || err?.error || (err?.message ? err.message : "Failed to save eligibility metadata");
+      toast.error(message);
+    } finally {
+      setSaveEligibilityConfirmOpen(false);
+    }
+  };
+
+  const handleSaveEligibilityMetadata = () => {
+    if (!activeStep?.id) {
+      toast.error("No active eligibility step found");
+      return;
+    }
+    setSaveEligibilityConfirmOpen(true);
+  };
+
+  const handleConfirmSaveEligibility = async () => {
+    await saveEligibilityMetadata();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0">
@@ -621,6 +713,63 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                   </div>
                   {isEligibilityCompleted && (
                     <p className="text-xs text-slate-500 mt-2">Eligibility is completed. Submission date cannot be modified.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Eligibility Certificate Metadata */}
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-cyan-50">
+                <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-teal-700 flex items-center gap-2">
+                    <File className="h-3.5 w-3.5" /> Eligibility Certificate Details
+                  </h4>
+                </div>
+                <div className="p-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Issued Date</Label>
+                      <DatePicker
+                        value={eligibilityIssuedDate}
+                        onChange={setEligibilityIssuedDate}
+                        placeholder="Issued date"
+                        disabled={isEligibilityCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Valid Till</Label>
+                      <DatePicker
+                        value={eligibilityValidDate}
+                        onChange={setEligibilityValidDate}
+                        placeholder="Valid date"
+                        disabled={isEligibilityCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Duration</Label>
+                      <input
+                        type="text"
+                        value={eligibilityDuration}
+                        onChange={(e) => setEligibilityDuration(e.target.value)}
+                        placeholder="e.g., 12 months"
+                        disabled={isEligibilityCompleted || isStepCancelled}
+                        className="w-full text-sm rounded border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                      />
+                    </div>
+                  </div>
+
+                  {showCertificateButton && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveEligibilityMetadata}
+                        disabled={isUpdatingEligibility || isEligibilityCompleted || isStepCancelled}
+                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        {isUpdatingEligibility ? <Loader2 className="h-4 w-4 animate-spin" /> : certificateButtonLabel}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -923,6 +1072,19 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
             return ok;
           }}
           isSubmitting={isSubmittingDate}
+        />
+      </React.Suspense>
+
+      {/* Confirm Eligibility Metadata Modal */}
+      <React.Suspense fallback={null}>
+        <ConfirmEligibilityMetadataModal
+          isOpen={saveEligibilityConfirmOpen}
+          onClose={() => setSaveEligibilityConfirmOpen(false)}
+          onConfirm={handleConfirmSaveEligibility}
+          eligibilityIssuedDate={eligibilityIssuedDate}
+          eligibilityValidDate={eligibilityValidDate}
+          eligibilityDuration={eligibilityDuration}
+          isSubmitting={isUpdatingEligibility}
         />
       </React.Suspense>
 

@@ -9,7 +9,7 @@ async function run() {
     { key: 'hrd', label: 'HRD', order: 2, hasDocuments: true },
     { key: 'data_flow', label: 'Data Flow', order: 3, hasDocuments: true },
     { key: 'eligibility', label: 'Eligibility', order: 4, hasDocuments: false },
-    { key: 'prometric', label: 'Prometric', order: 5, hasDocuments: false },
+    { key: 'prometric', label: 'Licensing Exam', order: 5, hasDocuments: false },
     { key: 'council_registration', label: 'Council Registration', order: 6, hasDocuments: false },
     { key: 'document_attestation', label: 'Document Attestation', order: 7, hasDocuments: true },
     { key: 'medical', label: 'Medical', order: 8, hasDocuments: true },

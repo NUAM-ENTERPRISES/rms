@@ -2843,8 +2843,8 @@ export class ProcessingService {
   }
 
   async updateProcessingStep(stepId: string, data: any, userId: string) {
-    // Allowed updates: status, assignedTo, rejectionReason, dueDate
-    const { status, assignedTo, rejectionReason, dueDate } = data;
+    // Allowed updates: status, assignedTo, rejectionReason, dueDate, eligibility fields
+    const { status, assignedTo, rejectionReason, dueDate, eligibilityIssuedAt, eligibilityValidAt, eligibilityDuration } = data;
 
     const step = await this.prisma.processingStep.findUnique({
       where: { id: stepId },
@@ -2864,6 +2864,9 @@ export class ProcessingService {
     }
     if (assignedTo) updates.assignedTo = assignedTo;
     if (dueDate) updates.dueDate = new Date(dueDate);
+    if (eligibilityIssuedAt) updates.eligibilityIssuedAt = new Date(eligibilityIssuedAt);
+    if (eligibilityValidAt) updates.eligibilityValidAt = new Date(eligibilityValidAt);
+    if (eligibilityDuration) updates.eligibilityDuration = eligibilityDuration;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.processingStep.update({ where: { id: stepId }, data: updates });

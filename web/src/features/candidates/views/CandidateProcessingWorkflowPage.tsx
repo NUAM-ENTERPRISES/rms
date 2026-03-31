@@ -171,7 +171,7 @@ export default function CandidateProcessingWorkflowPage() {
               <SelectItem value="hrd">HRD</SelectItem>
               <SelectItem value="data_flow">Data Flow</SelectItem>
               <SelectItem value="eligibility">Eligibility</SelectItem>
-              <SelectItem value="prometric">Prometric</SelectItem>
+              <SelectItem value="prometric">Licensing Exam</SelectItem>
               <SelectItem value="council_registration">Council Registration</SelectItem>
               <SelectItem value="document_attestation">Document Attestation</SelectItem>
               <SelectItem value="medical">Medical</SelectItem>
