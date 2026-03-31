@@ -83,6 +83,9 @@ export default function CREDashboardPage() {
           <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
             Welcome back, {user?.name || "CRE"}! 👋
           </h1>
+          <p className="text-sm text-slate-500">
+            Role(s): {Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}
+          </p>
           <p className="text-lg text-slate-600">
             {statusFilter === undefined
               ? "Showing all assigned candidates"

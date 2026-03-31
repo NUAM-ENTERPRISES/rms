@@ -251,7 +251,7 @@ export default function LoginPage() {
           })
         );
 
-        toast.success("Welcome back!");
+        toast.success(`Welcome back, ${result.data.user?.name || 'User'}!`);
 
         // Handle deep link redirect
         const nextUrl = searchParams.get("next");

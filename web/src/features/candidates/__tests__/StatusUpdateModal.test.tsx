@@ -41,8 +41,8 @@ describe("StatusUpdateModal", () => {
   it("renders the modal when open", () => {
     render(<StatusUpdateModal {...defaultProps} />);
 
-    expect(screen.getByText("Update Candidate Status")).toBeInTheDocument();
-    expect(screen.getByText(/Update the status for/i)).toBeInTheDocument();
+    expect(screen.getByText("Update Status")).toBeInTheDocument();
+    expect(screen.getByText(/Changing status for/i)).toBeInTheDocument();
     expect(screen.getByText("John Doe")).toBeInTheDocument();
   });
 
@@ -108,5 +108,33 @@ describe("StatusUpdateModal", () => {
         },
       });
     });
+  });
+
+  it("hides Qualified and shows fields for On Hold/Future", async () => {
+    render(<StatusUpdateModal {...defaultProps} />);
+
+    const selectTrigger = screen.getByRole("combobox");
+    fireEvent.click(selectTrigger);
+
+    await waitFor(() => {
+      const options = screen.getAllByRole("option");
+      expect(options.some((o) => /Qualified/i.test(o.textContent || ""))).toBe(false);
+    });
+
+    // Select on hold status
+    fireEvent.click(screen.getAllByRole("option").find((o) => /On Hold/i.test(o.textContent || ""))!);
+
+    expect(screen.getByLabelText(/On Hold Duration \(Days\)/i)).toBeInTheDocument();
+
+    // Select future status
+    fireEvent.click(selectTrigger);
+    await waitFor(() => {
+      const options = screen.getAllByRole("option");
+      const futureOption = options.find((o) => /Future/i.test(o.textContent || ""));
+      expect(futureOption).toBeTruthy();
+      fireEvent.click(futureOption!);
+    });
+
+    expect(screen.getByLabelText(/Future Year/i)).toBeInTheDocument();
   });
 });

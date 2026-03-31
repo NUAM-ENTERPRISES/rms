@@ -45,7 +45,6 @@ import {
   Award,
   UserX,
   Target,
-  Edit,
   ArrowRight,
   Sparkles
 } from "lucide-react";
@@ -54,6 +53,8 @@ import { cn } from "@/lib/utils";
 const statusUpdateSchema = z.object({
   currentStatusId: z.string().min(1, "Please select a status"),
   reason: z.string().optional(),
+  onHoldDurationDays: z.string().optional(),
+  futureYear: z.string().optional(),
 });
 
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
@@ -210,6 +211,8 @@ export function StatusUpdateModal({
     defaultValues: {
       currentStatusId: "",
       reason: "",
+      onHoldDurationDays: undefined,
+      futureYear: undefined,
     },
   });
 
@@ -217,21 +220,50 @@ export function StatusUpdateModal({
   const CurrentIcon = currentConfig.icon;
 
   const handleSubmit = async (data: StatusUpdateFormData) => {
+    const selectedStatus = statuses.find(
+      (status) => String(status.id) === data.currentStatusId,
+    );
+    const selectedStatusName = (selectedStatus?.statusName || '').toLowerCase();
+
+    const onHoldDurationDays = data.onHoldDurationDays
+      ? Number(data.onHoldDurationDays)
+      : undefined;
+    const futureYear = data.futureYear ? Number(data.futureYear) : undefined;
+
+    if (selectedStatusName === 'on hold') {
+      if (!onHoldDurationDays || onHoldDurationDays <= 0) {
+        toast.error('Please enter a valid on-hold duration (days).');
+        return;
+      }
+    }
+
+    if (selectedStatusName === 'future') {
+      const currentYear = new Date().getFullYear();
+      if (!futureYear || futureYear < currentYear) {
+        toast.error(`Please enter a valid future year >= ${currentYear}.`);
+        return;
+      }
+    }
+
     try {
       await updateStatus({
         candidateId,
         status: {
           currentStatusId: parseInt(data.currentStatusId),
           reason: data.reason,
+          onHoldDurationDays:
+            selectedStatusName === 'on hold' ? onHoldDurationDays : undefined,
+          futureYear:
+            selectedStatusName === 'future' ? futureYear : undefined,
         },
       }).unwrap();
 
-      toast.success("Candidate status updated successfully");
+      toast.success('Candidate status updated successfully');
       onClose();
       form.reset();
     } catch (error) {
-      console.error("Failed to update candidate status:", error);
-      toast.error("Failed to update candidate status");
+      console.error('Failed to update candidate status:', error);
+      toast.error('Failed to update candidate status');
     }
   };
 
@@ -240,7 +272,16 @@ export function StatusUpdateModal({
     onClose();
   };
 
-  const statuses = statusesData?.data || [];
+  const rawStatuses = statusesData?.data || [];
+  const statuses = rawStatuses.filter(
+    (status) => (status.statusName || '').toLowerCase() !== 'qualified',
+  );
+
+  const selectedStatusId = form.watch('currentStatusId');
+  const selectedStatusName = (
+    statuses.find((status) => String(status.id) === selectedStatusId)?.statusName ||
+    ''
+  ).toLowerCase();
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -373,6 +414,54 @@ export function StatusUpdateModal({
                     </FormItem>
                 )}
                 />
+
+                {selectedStatusName === 'on hold' && (
+                  <FormField
+                    control={form.control}
+                    name="onHoldDurationDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          On Hold Duration (Days)
+                        </FormLabel>
+                        <FormControl>
+                          <input
+                            type="number"
+                            min={1}
+                            placeholder="Enter number of days on hold"
+                            className="w-full rounded-2xl border border-slate-200 p-3 text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {selectedStatusName === 'future' && (
+                  <FormField
+                    control={form.control}
+                    name="futureYear"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          Future Year
+                        </FormLabel>
+                        <FormControl>
+                          <input
+                            type="number"
+                            min={new Date().getFullYear()}
+                            placeholder="Enter target year (e.g., 2027)"
+                            className="w-full rounded-2xl border border-slate-200 p-3 text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
             </div>
 
             <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200/60">
@@ -395,7 +484,7 @@ export function StatusUpdateModal({
                 ) : (
                     <CheckCircle2 className="mr-2 h-5 w-5" />
                 )}
-                Update Pipeline
+                Update Status
               </Button>
             </DialogFooter>
           </form>

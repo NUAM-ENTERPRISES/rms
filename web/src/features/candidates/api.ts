@@ -472,6 +472,8 @@ export interface UpdateCandidateRequest {
 export interface UpdateCandidateStatusRequest {
   currentStatusId: number;
   reason?: string;
+  onHoldDurationDays?: number;
+  futureYear?: number;
 }
 
 export interface AssignRecruiterRequest {

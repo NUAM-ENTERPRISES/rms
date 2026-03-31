@@ -2350,6 +2350,33 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate status ${updateStatusDto.currentStatusId} not found`);
     }
 
+    // Status-specific validation
+    const normalizedStatus = status.statusName.toLowerCase();
+
+    if (normalizedStatus === 'on hold') {
+      if (
+        updateStatusDto.onHoldDurationDays === undefined ||
+        updateStatusDto.onHoldDurationDays === null ||
+        updateStatusDto.onHoldDurationDays <= 0
+      ) {
+        throw new BadRequestException(
+          'onHoldDurationDays is required and must be a positive integer when status is On Hold',
+        );
+      }
+    }
+
+    if (normalizedStatus === 'future') {
+      if (
+        updateStatusDto.futureYear === undefined ||
+        updateStatusDto.futureYear === null ||
+        updateStatusDto.futureYear < new Date().getFullYear()
+      ) {
+        throw new BadRequestException(
+          'futureYear is required and must be the current or a future year when status is Future',
+        );
+      }
+    }
+
     // Get the user (who’s changing the status) and enforce CRE read-only behavior
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -2388,17 +2415,21 @@ export class CandidatesService {
     });
 
     // update candidate status history
+    const statusHistoryPayload: any = {
+      candidateId: candidateId,
+      changedById: user?.id,
+      changedByName: user?.name ?? "System", // fallback if user null
+      statusId: status.id,
+      statusNameSnapshot: status.statusName, // snapshot for history
+      statusUpdatedAt: new Date(),
+      notificationCount: 0,
+      reason: updateStatusDto.reason, // Save reason for status change
+      onHoldDurationDays: updateStatusDto.onHoldDurationDays ?? null,
+      futureYear: updateStatusDto.futureYear ?? null,
+    };
+
     const statusHistory = await this.prisma.candidateStatusHistory.create({
-      data: {
-        candidateId: candidateId,
-        changedById: user?.id,
-        changedByName: user?.name ?? "System", // fallback if user null
-        statusId: status.id,
-        statusNameSnapshot: status.statusName, // snapshot for history
-        statusUpdatedAt: new Date(),
-        notificationCount: 0,
-        reason: updateStatusDto.reason, // Save reason for status change
-      },
+      data: statusHistoryPayload,
     });
 
     // Notify about status update for real-time UI

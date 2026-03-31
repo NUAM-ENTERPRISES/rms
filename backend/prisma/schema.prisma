@@ -1457,6 +1457,10 @@ model CandidateStatusHistory {
 
   reason String? @db.Text // Reason for status change (optional, supports long text)
 
+  // Custom metadata for special status updates
+  onHoldDurationDays Int?
+  futureYear         Int?
+
   notificationCount Int       @default(0)
   lastNotifiedAt    DateTime?
   statusUpdatedAt   DateTime  @default(now())
