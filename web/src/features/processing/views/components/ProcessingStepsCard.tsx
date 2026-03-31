@@ -291,6 +291,11 @@ export function ProcessingStepsCard({
   const totalSteps = mergedSteps.length;
   const progressPercent = Math.round((completedCount / totalSteps) * 100);
 
+  // Enable hiring even when full workflow is not completed if Visa and Ticket are done
+  const isVisaCompleted = mergedSteps.find((s) => s.key === "visa")?.status === "completed";
+  const isTicketCompleted = mergedSteps.find((s) => s.key === "ticket")?.status === "completed";
+  const canShowHireButton = !isHired && (completedCount === totalSteps || (isVisaCompleted && isTicketCompleted));
+
   // Find the current active step - prefer API currentStep, fallback to first non-completed
   const activeStepIndex = currentStepFromApi >= 0 
     ? currentStepFromApi 
@@ -303,6 +308,13 @@ export function ProcessingStepsCard({
     if (isHired) {
       return {
         message: "Candidate hired for this project",
+        type: "success" as const,
+      };
+    }
+
+    if (canShowHireButton) {
+      return {
+        message: "Visa and Ticket completed – ready to hire!",
         type: "success" as const,
       };
     }
@@ -522,7 +534,7 @@ export function ProcessingStepsCard({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ) : completedCount === totalSteps && (
+              ) : canShowHireButton && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
