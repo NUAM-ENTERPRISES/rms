@@ -113,53 +113,72 @@ export default function ProcessingDashboardPage() {
   const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, totalItems);
 
-  const statusTiles = [
+  const processingTiles: Array<any> = [
     {
+      type: "status",
       label: "Ready for Processing",
-      value: counts?.assigned || 0,
       status: "assigned",
       icon: UserCheck,
       color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
+      gradient: "from-blue-50 to-blue-100/50",
+      iconBg: "bg-blue-200/40",
+      value: counts?.assigned || 0,
     },
+    { type: "step", key: "verify_offer_letter", label: "Verify Offer Letter", gradient: "from-indigo-500 to-violet-500" },
+    { type: "step", key: "offer_letter", label: "Offer Letter", gradient: "from-blue-500 to-cyan-500" },
+    { type: "step", key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
+    { type: "step", key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
+    { type: "step", key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
+    { type: "step", key: "eligibility", label: "Eligibility", gradient: "from-emerald-500 to-green-500" },
+    { type: "step", key: "prometric", label: "Licensing Exam", gradient: "from-amber-400 to-orange-500" },
+    { type: "step", key: "council_registration", label: "Council Registration", gradient: "from-teal-500 to-cyan-500" },
+    { type: "step", key: "document_attestation", label: "Document Attestation", gradient: "from-indigo-500 to-blue-500" },
+    { type: "step", key: "medical", label: "Medical", gradient: "from-emerald-500 to-lime-500" },
+    { type: "step", key: "biometrics", label: "Biometrics", gradient: "from-cyan-500 to-sky-500" },
+    { type: "step", key: "visa", label: "Visa", gradient: "from-cyan-600 to-blue-600" },
+    { type: "step", key: "emigration", label: "Emigration", gradient: "from-rose-500 to-pink-500" },
+    { type: "step", key: "ticket", label: "Ticket", gradient: "from-lime-500 to-emerald-500" },
     {
+      type: "status",
       label: "Completed",
-      value: counts?.completed || 0,
       status: "completed",
       icon: CheckCircle2,
       color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
-      borderColor: "border-emerald-200",
+      gradient: "from-emerald-50 to-teal-100/50",
+      iconBg: "bg-emerald-200/40",
+      value: counts?.completed || 0,
     },
     {
+      type: "status",
       label: "Cancelled",
-      value: counts?.cancelled || 0,
       status: "cancelled",
       icon: XCircle,
       color: "text-rose-600",
-      bgColor: "bg-rose-50",
-      borderColor: "border-rose-200",
+      gradient: "from-rose-50 to-fuchsia-100/50",
+      iconBg: "bg-fuchsia-200/40",
+      value: counts?.cancelled || 0,
     },
   ];
 
-  const stepTiles = [
-    { key: "verify_offer_letter", label: "Verify Offer Letter", icon: ClipboardList, gradient: "from-indigo-500 to-violet-500" },
-    { key: "offer_letter", label: "Offer Letter", icon: ClipboardList, gradient: "from-blue-500 to-cyan-500" },
-    { key: "document_received", label: "Documents Received", icon: ClipboardList, gradient: "from-yellow-400 to-amber-500" },
-    { key: "hrd", label: "HRD", icon: Activity, gradient: "from-purple-500 to-violet-500" },
-    { key: "data_flow", label: "Data Flow", icon: Activity, gradient: "from-pink-500 to-rose-500" },
-    { key: "eligibility", label: "Eligibility", icon: CheckCircle2, gradient: "from-emerald-500 to-green-500" },
-    { key: "prometric", label: "Licensing Exam", icon: TrendingUp, gradient: "from-amber-400 to-orange-500" },
-    { key: "council_registration", label: "Council Registration", icon: Shield, gradient: "from-teal-500 to-cyan-500" },
-    { key: "document_attestation", label: "Document Attestation", icon: ClipboardList, gradient: "from-indigo-500 to-blue-500" },
-    { key: "medical", label: "Medical", icon: Stethoscope, gradient: "from-emerald-500 to-lime-500" },
-    { key: "biometrics", label: "Biometrics", icon: Globe, gradient: "from-cyan-500 to-sky-500" },
-    { key: "visa", label: "Visa", icon: Globe, gradient: "from-cyan-600 to-blue-600" },
-    { key: "emigration", label: "Emigration", icon: Plane, gradient: "from-rose-500 to-pink-500" },
-    { key: "ticket", label: "Ticket", icon: Ticket, gradient: "from-lime-500 to-emerald-500" },
-  ];
-
+// Color mapping for light backgrounds (same pattern as your example)
+const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> = {
+  'from-indigo-500 to-violet-500': { bg: 'from-indigo-50 to-violet-100/50', iconBg: 'bg-indigo-200/40', text: 'text-indigo-600' },
+  'from-blue-500 to-cyan-500': { bg: 'from-blue-50 to-cyan-100/50', iconBg: 'bg-blue-200/40', text: 'text-blue-600' },
+  'from-yellow-400 to-amber-500': { bg: 'from-yellow-50 to-amber-100/50', iconBg: 'bg-amber-200/40', text: 'text-amber-600' },
+  'from-purple-500 to-violet-500': { bg: 'from-purple-50 to-violet-100/50', iconBg: 'bg-purple-200/40', text: 'text-purple-600' },
+  'from-pink-500 to-rose-500': { bg: 'from-pink-50 to-rose-100/50', iconBg: 'bg-pink-200/40', text: 'text-pink-600' },
+  'from-emerald-500 to-green-500': { bg: 'from-emerald-50 to-green-100/50', iconBg: 'bg-emerald-200/40', text: 'text-emerald-600' },
+  'from-amber-400 to-orange-500': { bg: 'from-amber-50 to-orange-100/50', iconBg: 'bg-orange-200/40', text: 'text-orange-600' },
+  'from-teal-500 to-cyan-500': { bg: 'from-teal-50 to-cyan-100/50', iconBg: 'bg-teal-200/40', text: 'text-teal-600' },
+  'from-indigo-500 to-blue-500': { bg: 'from-indigo-50 to-blue-100/50', iconBg: 'bg-indigo-200/40', text: 'text-indigo-600' },
+  'from-emerald-500 to-lime-500': { bg: 'from-emerald-50 to-lime-100/50', iconBg: 'bg-lime-200/40', text: 'text-emerald-600' },
+  'from-cyan-500 to-sky-500': { bg: 'from-cyan-50 to-sky-100/50', iconBg: 'bg-cyan-200/40', text: 'text-cyan-600' },
+  'from-cyan-600 to-blue-600': { bg: 'from-cyan-50 to-blue-100/50', iconBg: 'bg-cyan-200/40', text: 'text-cyan-600' },
+  'from-rose-500 to-pink-500': { bg: 'from-rose-50 to-pink-100/50', iconBg: 'bg-rose-200/40', text: 'text-rose-600' },
+  'from-lime-500 to-emerald-500': { bg: 'from-lime-50 to-emerald-100/50', iconBg: 'bg-lime-200/40', text: 'text-lime-600' },
+  'from-emerald-500 to-teal-500': { bg: 'from-emerald-50 to-teal-100/50', iconBg: 'bg-emerald-200/40', text: 'text-emerald-600' },
+  'from-rose-500 to-fuchsia-500': { bg: 'from-rose-50 to-fuchsia-100/50', iconBg: 'bg-fuchsia-200/40', text: 'text-fuchsia-600' },
+};
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       "in_progress": "bg-blue-100 text-blue-700 border-blue-200",
@@ -232,73 +251,38 @@ export default function ProcessingDashboardPage() {
           )}
         </header>
 
-        {/* Status Tiles */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {statusTiles.map((stat) => {
-            const isActive = statusFilter === stat.status && !stepFilter;
-            return (
-              <Card
-                key={stat.label}
-                className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${
-                  isActive ? 'ring-2 ring-violet-500/20 border-violet-500' : stat.borderColor
-                }`}
-                onClick={() => {
-                  setStepFilter(null);
-                  setStatusFilter(statusFilter === stat.status ? null : (stat.status as any));
-                }}
-              >
-                <div className={`absolute inset-0 ${stat.bgColor} opacity-40 transition-opacity group-hover:opacity-60`} />
-                <CardHeader className="relative pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-700">
-                      {stat.label}
-                    </CardTitle>
-                    <div className={`rounded-xl ${stat.bgColor} p-2.5 shadow-md`}>
-                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="relative space-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-4xl font-black ${stat.color}`}>{stat.value}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 mt-4">
+          {processingTiles.map((tile) => {
+            const isStepTile = tile.type === "step";
+            const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
+            const value = isStepTile ? counts?.steps?.[tile.key] ?? 0 : tile.value;
+            const colors = isStepTile ? gradientMap[tile.gradient] : { bg: tile.gradient, iconBg: tile.iconBg, text: tile.color };
+            const Icon = isStepTile ? ClipboardList : tile.icon;
 
-        {/* Step Tiles */}
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 mt-4">
-          {stepTiles.map((tile) => {
-            const value = counts?.steps?.[tile.key] || 0;
-            const isActive = stepFilter === tile.key;
-            const Icon = tile.icon;
             return (
               <Card
-                key={tile.key}
-                className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${
-                  isActive ? 'ring-2 ring-violet-500/20 border-violet-500' : 'border-slate-200'
-                }`}
+                key={`${tile.type}-${tile.label}`}
                 onClick={() => {
-                  setStatusFilter(null);
-                  setStepFilter(stepFilter === tile.key ? null : tile.key);
+                  if (isStepTile) {
+                    setStatusFilter('all');
+                    setStepFilter(stepFilter === tile.key ? null : tile.key);
+                  } else {
+                    setStepFilter(null);
+                    setStatusFilter(statusFilter === tile.status ? null : tile.status);
+                  }
                 }}
+                className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-blue-400/60' : 'hover:-translate-y-[1px] hover:shadow-md'}`}
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${tile.gradient} opacity-20`} />
-                <CardHeader className="relative pb-3">
+                <CardContent className="pt-1 pb-1">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                      {tile.label}
-                    </CardTitle>
-                    <div className="rounded-xl p-2.5 shadow-md bg-white/80">
-                      <Icon className="h-4 w-4 text-slate-700" />
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-0.5">{tile.label}</p>
+                      <h3 className={`text-xl font-semibold ${colors.text}`}>{value}</h3>
+                      {'subtitle' in tile && <p className="text-xs text-slate-500 mt-0.5">{tile.subtitle}</p>}
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="relative space-y-1 pb-1">
-                  <div className="flex items-end gap-2">
-                    <span className="text-2xl font-black text-slate-800">{value}</span>
+                    <div className={`p-1 ${colors.iconBg} rounded-full`}>
+                      <Icon className={`h-4 w-4 ${colors.text}`} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
