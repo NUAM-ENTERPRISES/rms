@@ -62,6 +62,23 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
     expect(pc2.progressCount).toBe(25);
   });
 
+  it('filters candidates by step when step query is provided', async () => {
+    const query: any = { page: 1, limit: 10, step: 'hrd' };
+
+    jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.processingCandidate, 'count' as any).mockResolvedValue(0);
+    jest.spyOn(prisma.processingCandidate, 'groupBy' as any)
+      .mockImplementationOnce(async () => [])
+      .mockImplementationOnce(async () => [{ step: 'hrd', _count: { _all: 3 } }]);
+
+    const result = await service.getAllProcessingCandidates(query as any);
+
+    expect(prisma.processingCandidate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ step: 'hrd' }) }),
+    );
+    expect(result.counts.steps.hrd).toBe(3);
+  });
+
   it('filters candidates by assigned processing user when userId is provided', async () => {
     const query: any = { page: 1, limit: 10, status: 'assigned' };
 
@@ -158,6 +175,22 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
     const result = await service.getAllProcessingCandidatesAdmin(query as any);
 
     expect(result.counts.visa_stamped).toBe(5);
+  });
+
+  it('admin API returns step counts in counts.steps', async () => {
+    const query: any = { page: 1, limit: 10 };
+
+    jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.processingCandidate, 'count' as any)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
+    jest.spyOn(prisma.processingCandidate, 'groupBy' as any)
+      .mockImplementationOnce(async () => []) // processingStatus
+      .mockImplementationOnce(async () => [{ step: 'hrd', _count: { _all: 4 } }]);
+
+    const result = await service.getAllProcessingCandidatesAdmin(query as any);
+    expect(result.counts.steps.hrd).toBe(4);
   });
 
   it('counts.all remains stable regardless of filters (status=visa_stamped or filterType=total_processing)', async () => {

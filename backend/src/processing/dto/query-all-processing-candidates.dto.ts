@@ -37,6 +37,14 @@ export class QueryAllProcessingCandidatesDto {
   @IsOptional()
   status?: string = 'assigned';
 
+  @ApiProperty({
+    description: 'Filter by current processing step key (e.g., offer_letter, hrd, visa, completed)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  step?: string;
+
   @ApiPropertyOptional({
     description: "Optional admin-only filter: 'visa_stamped' or 'total_processing'",
     enum: ['visa_stamped', 'total_processing'],

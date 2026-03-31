@@ -29,6 +29,7 @@ export type ProcessingCandidatesQuery = {
   projectId?: string;
   roleCatalogId?: string;
   status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all" | "visa_stamped";
+  step?: string;
   page?: number;
   limit?: number;
 };
@@ -61,6 +62,7 @@ export const processingApi = baseApi.injectEndpoints({
           in_progress: number;
           completed: number;
           cancelled: number;
+          steps?: Record<string, number>;
         };
         pagination: {
           page: number;
@@ -91,6 +93,7 @@ export const processingApi = baseApi.injectEndpoints({
           completed: number;
           cancelled: number;
           visa_stamped?: number;
+          steps?: Record<string, number>;
         };
         pagination: {
           page: number;

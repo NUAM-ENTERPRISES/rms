@@ -3115,11 +3115,11 @@ export class ProcessingService {
           },
         });
 
-        // 5. Update ProcessingCandidate current step
+        // 5. Update ProcessingCandidate current step to last completed step (requested behavior)
         await tx.processingCandidate.update({
           where: { id: step.processingCandidateId },
           data: {
-            step: nextStep.template.key,
+            step: step.template.key,
             processingStatus: 'in_progress',
           },
         });
@@ -3148,7 +3148,7 @@ export class ProcessingService {
           where: { id: step.processingCandidateId },
           data: {
             processingStatus: 'completed',
-            step: 'completed',
+            step: step.template.key, // keep last completed step here (ticket/visa/etc.)
           },
         });
 
@@ -4078,9 +4078,10 @@ export class ProcessingService {
       projectId,
       roleCatalogId,
       status = 'assigned',
+      step,
       page = 1,
       limit = 10,
-    } = query;
+    } = query as any;
 
     const skip = (page - 1) * limit;
 
@@ -4096,8 +4097,11 @@ export class ProcessingService {
       where.projectId = projectId;
     }
 
-    // Filter by processing status
-    if (status && status !== 'all') {
+    // Status and step filtering
+    // If step is explicitly requested, prefer it and ignore status-specific filter.
+    if (step && step !== 'all') {
+      where.step = step;
+    } else if (status && status !== 'all') {
       where.processingStatus = status;
     }
 
@@ -4136,7 +4140,7 @@ export class ProcessingService {
       countsWhere.assignedProcessingTeamUserId = userId;
     }
 
-    const [candidates, total, statusCounts] = await Promise.all([
+    const [candidates, total, statusCounts, stepCountsRaw] = await Promise.all([
       this.prisma.processingCandidate.findMany({
         where,
         include: {
@@ -4200,25 +4204,46 @@ export class ProcessingService {
           _all: true,
         },
       }),
+      this.prisma.processingCandidate.groupBy({
+        by: ['step'],
+        where: countsWhere,
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
-    const counts = {
+    const counts: {
+      all: number;
+      assigned: number;
+      in_progress: number;
+      completed: number;
+      cancelled: number;
+      steps: Record<string, number>;
+    } = {
       all: 0,
       assigned: 0,
       in_progress: 0,
       completed: 0,
       cancelled: 0,
+      steps: {},
     };
 
     statusCounts.forEach((sc) => {
-      const status = sc.processingStatus as keyof typeof counts;
-      if (counts.hasOwnProperty(status)) {
+      const status = sc.processingStatus as 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'all';
+      if (['assigned', 'in_progress', 'completed', 'cancelled', 'all'].includes(status)) {
         counts[status] = sc._count._all;
       }
     });
 
-    counts.all = Object.values(counts).reduce((a, b) => a + b, 0) - counts.all;
-    // Recalculate total for 'all' correctly
+    // Normalize step counts for step-based tiles and filters.
+    stepCountsRaw.forEach((sc) => {
+      if (sc.step) {
+        counts.steps[sc.step] = sc._count._all;
+      }
+    });
+
+    // Recalculate total 'all' via countsWhere (stable across status/step filter)
     const allCount = await this.prisma.processingCandidate.count({
       where: countsWhere,
     });
@@ -4305,6 +4330,7 @@ export class ProcessingService {
       projectId,
       roleCatalogId,
       status = 'all',
+      step,
       filterType,
       page = 1,
       limit = 10,
@@ -4319,8 +4345,10 @@ export class ProcessingService {
       where.projectId = projectId;
     }
 
-    // Filter by processing status (unless 'all' or `total_processing` filter is requested)
-    if (filterType !== 'total_processing') {
+    // Filter by step or processing status (unless 'all' or `total_processing` filter is requested)
+    if (step && step !== 'all') {
+      where.step = step;
+    } else if (filterType !== 'total_processing') {
       if (status && status !== 'all' && status !== 'visa_stamped') {
         where.processingStatus = status;
       }
@@ -4379,7 +4407,7 @@ export class ProcessingService {
     // Provide a countsWhere alias (pointing to baseCountsWhere) so existing groupBy call uses the base set
     const countsWhere: any = baseCountsWhere;
 
-    const [candidates, total, statusCounts] = await Promise.all([
+    const [candidates, total, statusCounts, stepCountsRaw] = await Promise.all([
       this.prisma.processingCandidate.findMany({
         where,
         include: {
@@ -4443,15 +4471,31 @@ export class ProcessingService {
           _all: true,
         },
       }),
+      this.prisma.processingCandidate.groupBy({
+        by: ['step'],
+        where: countsWhere,
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
-    const counts = {
+    const counts: {
+      all: number;
+      assigned: number;
+      in_progress: number;
+      completed: number;
+      cancelled: number;
+      visa_stamped: number;
+      steps: Record<string, number>;
+    } = {
       all: 0,
       assigned: 0,
       in_progress: 0,
       completed: 0,
       cancelled: 0,
       visa_stamped: 0,
+      steps: {},
     };
 
     // Recompute status counts over the base set (project/role only) so counts are stable
@@ -4462,9 +4506,16 @@ export class ProcessingService {
     });
 
     stableStatusCounts.forEach((sc) => {
-      const statusKey = sc.processingStatus as keyof typeof counts;
-      if (counts.hasOwnProperty(statusKey)) {
+      const statusKey = sc.processingStatus as 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'all';
+      if (['assigned', 'in_progress', 'completed', 'cancelled', 'all'].includes(statusKey)) {
         counts[statusKey] = sc._count._all;
+      }
+    });
+
+    // Normalize step counts for step-based tiles and filters.
+    stepCountsRaw.forEach((sc) => {
+      if (sc.step) {
+        counts.steps[sc.step] = sc._count._all;
       }
     });
 

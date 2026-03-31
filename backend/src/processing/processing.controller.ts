@@ -82,6 +82,7 @@ export class ProcessingController {
     summary: 'Get all processing candidates with search, filter, and pagination',
     description: 'Retrieve a paginated list of all candidates currently in processing with various filters.',
   })
+  @ApiQuery({ name: 'step', required: false, description: 'Filter by current processing step key (e.g., offer_letter, hrd, visa, completed)' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Processing candidates retrieved successfully',
@@ -103,6 +104,7 @@ export class ProcessingController {
   })
   @ApiQuery({ name: 'filterType', required: false, description: "Optional special filters: 'visa_stamped' returns candidates whose visa step is completed; 'total_processing' is equivalent to 'all'" })
   @ApiQuery({ name: 'status', required: false, enum: ['assigned','in_progress','completed','cancelled','all','visa_stamped'], description: 'Filter by processing status or special visa_stamped', example: 'all' })
+  @ApiQuery({ name: 'step', required: false, description: 'Filter by current processing step key (e.g., offer_letter, hrd, visa, completed)' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Admin processing candidates retrieved successfully',

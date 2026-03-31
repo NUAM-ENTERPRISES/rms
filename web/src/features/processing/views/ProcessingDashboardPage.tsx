@@ -37,7 +37,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  UserCheck
+  UserCheck,
+  Shield,
+  Stethoscope,
+  Globe,
+  Plane,
+  Ticket
 } from "lucide-react";
 
 export default function ProcessingDashboardPage() {
@@ -53,6 +58,7 @@ export default function ProcessingDashboardPage() {
   // Pagination state
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+  const [stepFilter, setStepFilter] = useState<string | null>(null);
 
   // Fetch Projects for filter
   const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
@@ -63,9 +69,10 @@ export default function ProcessingDashboardPage() {
     search: debouncedSearch,
     projectId: projectFilter === "all" ? undefined : projectFilter,
     roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
-    status: (statusFilter === "all" ? undefined : statusFilter) as any,
+    status: stepFilter ? undefined : (statusFilter === "all" ? undefined : statusFilter) as any,
+    step: stepFilter || undefined,
     page,
-    limit: pageSize
+    limit: pageSize,
   });
 
   const candidates = apiResponse?.data?.candidates || [];
@@ -98,7 +105,7 @@ export default function ProcessingDashboardPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, projectFilter, roleFilter]);
+  }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter]);
 
   const totalItems = pagination?.total || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -106,7 +113,7 @@ export default function ProcessingDashboardPage() {
   const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, totalItems);
 
-  const stats = [
+  const statusTiles = [
     {
       label: "Ready for Processing",
       value: counts?.assigned || 0,
@@ -117,32 +124,40 @@ export default function ProcessingDashboardPage() {
       borderColor: "border-blue-200",
     },
     {
-      label: "Processing In Progress",
-      value: counts?.in_progress || 0,
-      status: "in_progress",
-      icon: Activity,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50",
-      borderColor: "border-amber-200"
-    },
-    {
-      label: "Processing Completed",
+      label: "Completed",
       value: counts?.completed || 0,
       status: "completed",
       icon: CheckCircle2,
       color: "text-emerald-600",
       bgColor: "bg-emerald-50",
-      borderColor: "border-emerald-200"
+      borderColor: "border-emerald-200",
     },
     {
-      label: "Processing Cancelled",
+      label: "Cancelled",
       value: counts?.cancelled || 0,
       status: "cancelled",
       icon: XCircle,
       color: "text-rose-600",
       bgColor: "bg-rose-50",
-      borderColor: "border-rose-200"
-    }
+      borderColor: "border-rose-200",
+    },
+  ];
+
+  const stepTiles = [
+    { key: "verify_offer_letter", label: "Verify Offer Letter", icon: ClipboardList, gradient: "from-indigo-500 to-violet-500" },
+    { key: "offer_letter", label: "Offer Letter", icon: ClipboardList, gradient: "from-blue-500 to-cyan-500" },
+    { key: "document_received", label: "Documents Received", icon: ClipboardList, gradient: "from-yellow-400 to-amber-500" },
+    { key: "hrd", label: "HRD", icon: Activity, gradient: "from-purple-500 to-violet-500" },
+    { key: "data_flow", label: "Data Flow", icon: Activity, gradient: "from-pink-500 to-rose-500" },
+    { key: "eligibility", label: "Eligibility", icon: CheckCircle2, gradient: "from-emerald-500 to-green-500" },
+    { key: "prometric", label: "Licensing Exam", icon: TrendingUp, gradient: "from-amber-400 to-orange-500" },
+    { key: "council_registration", label: "Council Registration", icon: Shield, gradient: "from-teal-500 to-cyan-500" },
+    { key: "document_attestation", label: "Document Attestation", icon: ClipboardList, gradient: "from-indigo-500 to-blue-500" },
+    { key: "medical", label: "Medical", icon: Stethoscope, gradient: "from-emerald-500 to-lime-500" },
+    { key: "biometrics", label: "Biometrics", icon: Globe, gradient: "from-cyan-500 to-sky-500" },
+    { key: "visa", label: "Visa", icon: Globe, gradient: "from-cyan-600 to-blue-600" },
+    { key: "emigration", label: "Emigration", icon: Plane, gradient: "from-rose-500 to-pink-500" },
+    { key: "ticket", label: "Ticket", icon: Ticket, gradient: "from-lime-500 to-emerald-500" },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -203,45 +218,92 @@ export default function ProcessingDashboardPage() {
             </div>
           </div>
           
-          {statusFilter && (
+          {(statusFilter || stepFilter) && (
             <Badge variant="outline" className="h-8 gap-2 bg-violet-50 text-violet-700 border-violet-200 self-start md:self-center">
-              Filtered by: {displayStatus(statusFilter)}
-              <X 
-                className="h-3 w-3 cursor-pointer hover:text-rose-500" 
-                onClick={() => setStatusFilter(null)} 
+              Filtered by: {stepFilter ? formatStep(stepFilter) : displayStatus(statusFilter || '')}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-rose-500"
+                onClick={() => {
+                  setStepFilter(null);
+                  setStatusFilter(null);
+                }}
               />
             </Badge>
           )}
         </header>
 
-        {/* Stats Cards */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <Card 
-              key={stat.label} 
-              className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${
-                statusFilter === stat.status ? 'border-violet-500 ring-2 ring-violet-500/20' : stat.borderColor
-              }`}
-              onClick={() => setStatusFilter(statusFilter === stat.status ? null : stat.status)}
-            >
-              <div className={`absolute inset-0 ${stat.bgColor} opacity-40 transition-opacity group-hover:opacity-60`} />
-              <CardHeader className="relative pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-700">
-                    {stat.label}
-                  </CardTitle>
-                  <div className={`rounded-xl ${stat.bgColor} p-2.5 shadow-md`}>
-                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+        {/* Status Tiles */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {statusTiles.map((stat) => {
+            const isActive = statusFilter === stat.status && !stepFilter;
+            return (
+              <Card
+                key={stat.label}
+                className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${
+                  isActive ? 'ring-2 ring-violet-500/20 border-violet-500' : stat.borderColor
+                }`}
+                onClick={() => {
+                  setStepFilter(null);
+                  setStatusFilter(statusFilter === stat.status ? null : (stat.status as any));
+                }}
+              >
+                <div className={`absolute inset-0 ${stat.bgColor} opacity-40 transition-opacity group-hover:opacity-60`} />
+                <CardHeader className="relative pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                      {stat.label}
+                    </CardTitle>
+                    <div className={`rounded-xl ${stat.bgColor} p-2.5 shadow-md`}>
+                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="relative space-y-2">
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-4xl font-black ${stat.color}`}>{stat.value}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="relative space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-4xl font-black ${stat.color}`}>{stat.value}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Step Tiles */}
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 mt-4">
+          {stepTiles.map((tile) => {
+            const value = counts?.steps?.[tile.key] || 0;
+            const isActive = stepFilter === tile.key;
+            const Icon = tile.icon;
+            return (
+              <Card
+                key={tile.key}
+                className={`group relative overflow-hidden border-2 transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${
+                  isActive ? 'ring-2 ring-violet-500/20 border-violet-500' : 'border-slate-200'
+                }`}
+                onClick={() => {
+                  setStatusFilter(null);
+                  setStepFilter(stepFilter === tile.key ? null : tile.key);
+                }}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${tile.gradient} opacity-20`} />
+                <CardHeader className="relative pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      {tile.label}
+                    </CardTitle>
+                    <div className="rounded-xl p-2.5 shadow-md bg-white/80">
+                      <Icon className="h-4 w-4 text-slate-700" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="relative space-y-1 pb-1">
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-black text-slate-800">{value}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Filters & Table */}
