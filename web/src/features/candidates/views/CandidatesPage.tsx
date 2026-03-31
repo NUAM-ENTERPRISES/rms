@@ -1503,7 +1503,14 @@ export default function CandidatesPage() {
                             <div className="text-xs">
                               {recruiter ? (
                                 <div className="space-y-0.5">
-                                  <div className="font-medium text-slate-900">{recruiter.name}</div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-900">{recruiter.name}</span>
+                                    {((candidate as any).recruiterAssignments || []).some((a: any) => a.assignmentType === 'cre_assigned') && (
+                                      <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200">
+                                        CRE Assigned
+                                      </Badge>
+                                    )}
+                                  </div>
                                   {recruiter.email && (
                                     <div className="flex items-center gap-1.5 text-slate-700">
                                       <Mail className="h-3 w-3 text-gray-400" />
