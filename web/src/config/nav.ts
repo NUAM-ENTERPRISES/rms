@@ -52,7 +52,7 @@ export const navigationConfig: NavItem[] = [
   },
   {
     id: "processing-dashboard",
-    label: "Processing",
+    label: "Dashboard",
     path: "/",
     icon: Home,
     roles: ["Processing Executive"],
@@ -292,7 +292,7 @@ export const navigationConfig: NavItem[] = [
   },
   {
     id: "processing",
-    label: "Processing",
+    label: "Dashboard",
     icon: ClipboardCheck,
     roles: ["CEO", "Director", "Manager", "System Admin"],
     children: [
