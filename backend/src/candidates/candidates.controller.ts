@@ -632,6 +632,74 @@ export class CandidatesController {
     };
   }
 
+  @Get('my-assigned/reassigned')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get CRE reassigned candidates',
+    description:
+      'Retrieve candidates transferred by CRE to recruiter; currently untouched for recruiter',
+  })
+  async getMyCREReassignedCandidates(
+    @Request() req,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+  ) {
+    const userId = req.user.id;
+    const result = await this.candidatesService.getCREReassignedCandidates(userId, {
+      page: Number(page),
+      limit: Number(limit),
+      search,
+    });
+
+    return {
+      success: true,
+      data: result,
+      message: 'CRE reassigned candidate list retrieved successfully',
+    };
+  }
+
+  @Post(':id/converted-response')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Mark candidate as converted response (CRE action)',
+    description: 'Mark assigned candidate as converted response from CRE dashboard',
+  })
+  async markAsConvertedResponse(@Param('id') id: string, @Request() req) {
+    const userId = req.user.id;
+    const candidate = await this.candidatesService.markAsConvertedResponse(
+      id,
+      userId,
+    );
+
+    return {
+      success: true,
+      data: candidate,
+      message: 'Candidate marked as converted response successfully',
+    };
+  }
+
+  @Post(':id/transfer-to-recruiter')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Transfer converted candidate to recruiter',
+    description:
+      'Transfer an interested candidate to a recruiter and set status to untouched',
+  })
+  async transferToRecruiter(@Param('id') id: string, @Request() req) {
+    const userId = req.user.id;
+    const candidate = await this.candidatesService.transferCREConvertedToRecruiter(
+      id,
+      userId,
+    );
+
+    return {
+      success: true,
+      data: candidate,
+      message: 'Candidate transferred to recruiter successfully',
+    };
+  }
+
   @Get('status-config')
   @Public()
   @ApiOperation({

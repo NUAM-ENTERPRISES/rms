@@ -17,4 +17,13 @@ export class AssignRecruiterDto {
   @IsOptional()
   @IsString()
   reason?: string;
+
+  @ApiProperty({
+    description: 'Type of assignment (manual, cre_assigned, etc)',
+    example: 'cre_assigned',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  assignmentType?: string;
 }
