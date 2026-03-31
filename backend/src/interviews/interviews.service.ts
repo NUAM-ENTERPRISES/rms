@@ -83,6 +83,20 @@ export class InterviewsService {
       schedulerName = scheduler?.name ?? null;
     }
 
+    // Convert air ticket bools into string value for DB (interview.airTicket)
+    const airTicketUp = createInterviewDto.airTicketUp ??
+      (createInterviewDto.airTicket === 'up-only' || createInterviewDto.airTicket === 'up-and-down');
+    const airTicketDown = createInterviewDto.airTicketDown ??
+      (createInterviewDto.airTicket === 'down-only' || createInterviewDto.airTicket === 'up-and-down');
+
+    let airTicketValue: string | null = createInterviewDto.airTicket ?? null;
+    if (!airTicketValue) {
+      if (airTicketUp && airTicketDown) airTicketValue = 'up-and-down';
+      else if (airTicketUp) airTicketValue = 'up-only';
+      else if (airTicketDown) airTicketValue = 'down-only';
+      else airTicketValue = null; // no default now, allow null
+    }
+
     // If this interview is tied to a candidateProjectMap we should update
     // the candidate's subStatus and also write history records. Do these
     // operations in a transaction so data stays consistent.
@@ -94,30 +108,38 @@ export class InterviewsService {
 
       const created = await tx.interview.create({
         data: {
-          ...createInterviewDto,
+          candidateProjectMapId: createInterviewDto.candidateProjectMapId,
+          scheduledTime: new Date(createInterviewDto.scheduledTime),
+          duration: createInterviewDto.duration ?? 60,
+          type: createInterviewDto.type ?? 'technical',
+          mode: createInterviewDto.mode ?? 'video',
+          location: createInterviewDto.location,
+          meetingLink: meetingLinkToUse,
+          notes: createInterviewDto.notes,
+          airTicket: airTicketValue,
+          accommodation: createInterviewDto.accommodation ?? false,
           outcome: 'scheduled',
           interviewer: scheduledBy,
-          meetingLink: meetingLinkToUse,
         },
         include: {
-        candidateProjectMap: {
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
               },
-            },
-            project: {
-              select: {
-                id: true,
-                title: true,
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                },
               },
             },
           },
-        },
         },
       });
 
@@ -139,7 +161,11 @@ export class InterviewsService {
           where: { name: CANDIDATE_PROJECT_STATUS.INTERVIEW_SCHEDULED },
         });
 
-        console.log('Scheduled sub-status:', scheduledSub);
+        if (!scheduledSub) {
+          throw new BadRequestException(
+            `Candidate project sub-status '${CANDIDATE_PROJECT_STATUS.INTERVIEW_SCHEDULED}' is not configured`,
+          );
+        }
 
         // update only the subStatus on the candidate project - do not change mainStatus
         await tx.candidateProjects.update({
@@ -1035,8 +1061,12 @@ export class InterviewsService {
         const latestScreening = Array.isArray(it.screenings) && it.screenings.length > 0 ? it.screenings[0] : null;
         const { screenings, ...rest } = it as any;
 
+        const notShortlistedReason =
+          it.projectStatusHistory?.[0]?.reason || it.projectStatusHistory?.[0]?.notes || null;
+
         return {
           ...rest,
+          notShortlistedReason,
           latestForward: latestForward
             ? { id: latestForward.id, sentAt: latestForward.sentAt, sender: latestForward.sender }
             : null,
@@ -1833,6 +1863,20 @@ export class InterviewsService {
     const dataToUpdate: any = { ...updateInterviewDto };
     if (updateInterviewDto.mode === 'video' && !updateInterviewDto.meetingLink && !interview.meetingLink) {
       dataToUpdate.meetingLink = generateMeetingLink();
+    }
+
+    if (updateInterviewDto.airTicket || updateInterviewDto.airTicketUp !== undefined || updateInterviewDto.airTicketDown !== undefined) {
+      const airTicketUp = updateInterviewDto.airTicketUp ??
+        (updateInterviewDto.airTicket === 'up-only' || updateInterviewDto.airTicket === 'up-and-down');
+      const airTicketDown = updateInterviewDto.airTicketDown ??
+        (updateInterviewDto.airTicket === 'down-only' || updateInterviewDto.airTicket === 'up-and-down');
+
+      if (!updateInterviewDto.airTicket) {
+        if (airTicketUp && airTicketDown) dataToUpdate.airTicket = 'up-and-down';
+        else if (airTicketUp) dataToUpdate.airTicket = 'up-only';
+        else if (airTicketDown) dataToUpdate.airTicket = 'down-only';
+      }
+      dataToUpdate.accommodation = updateInterviewDto.accommodation ?? dataToUpdate.accommodation;
     }
 
     const updatedInterview = await this.prisma.interview.update({

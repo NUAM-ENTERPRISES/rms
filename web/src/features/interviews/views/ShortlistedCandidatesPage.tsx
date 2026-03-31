@@ -12,7 +12,25 @@ import { Input } from "@/components/ui/input";
 import { ProjectRoleFilter } from "@/components/molecules/ProjectRoleFilter";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
-import { 
+
+const getApiErrorMessage = (error: any, defaultMessage: string) => {
+  if (!error) return defaultMessage;
+
+  if (error?.data?.message) return error.data.message;
+
+  if (error?.data?.details && Array.isArray(error.data.details)) {
+    const details = error.data.details
+      .map((item: any) => item.message || item.error || JSON.stringify(item))
+      .filter(Boolean);
+    if (details.length > 0) return details.join('; ');
+  }
+
+  if (error?.error) return error.error;
+  if (error?.message) return error.message;
+  if (typeof error === 'string') return error;
+
+  return defaultMessage;
+};import { 
   useGetShortlistedQuery, 
   useUpdateClientDecisionMutation, 
   useUpdateBulkClientDecisionMutation,
@@ -126,7 +144,7 @@ export default function ShortlistedCandidatesPage() {
       setSelectedBulkIds([]);
       refetch();
     } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to schedule bulk interviews");
+      toast.error(getApiErrorMessage(error, "Failed to schedule bulk interviews"));
     }
   }
 

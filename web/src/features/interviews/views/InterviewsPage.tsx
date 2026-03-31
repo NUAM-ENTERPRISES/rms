@@ -463,53 +463,63 @@ export default function InterviewsPage() {
     isScreeningRejectedError ||
     isScreeningOnHoldError;
 
+  const safeRefetch = (fn: () => void) => {
+    try {
+      fn();
+    } catch (err: any) {
+      if (!(err?.message?.includes("Cannot refetch a query that has not been started yet") || err?.message?.includes("started yet"))) {
+        console.error("Unexpected refetch error", err);
+      }
+    }
+  };
+
   const refetch = () => {
-    refetchInterviews();
-    refetchShortlistPending();
-    refetchShortlisted();
-    refetchNotShortlisted();
-    refetchAssignedScreenings();
-    refetchUpcomingScreenings();
-    refetchScreeningTraining();
-    refetchScreeningPassed();
-    refetchScreeningRejected();
-    refetchScreeningOnHold();
+    safeRefetch(refetchInterviews);
+    safeRefetch(refetchShortlistPending);
+    safeRefetch(refetchShortlisted);
+    safeRefetch(refetchNotShortlisted);
+    safeRefetch(refetchAssignedScreenings);
+    safeRefetch(refetchUpcomingScreenings);
+    safeRefetch(refetchScreeningTraining);
+    safeRefetch(refetchScreeningPassed);
+    safeRefetch(refetchScreeningRejected);
+    safeRefetch(refetchScreeningOnHold);
   };
 
   const refetchCurrent = () => {
     switch (activeFilter) {
       case "shortlistPending":
-        refetchShortlistPending();
+        safeRefetch(refetchShortlistPending);
         break;
       case "shortlisted":
-        refetchShortlisted();
+        safeRefetch(refetchShortlisted);
         break;
       case "shortlistRejected":
-        refetchNotShortlisted();
+        safeRefetch(refetchNotShortlisted);
         break;
       case "screeningAssigned":
-        refetchAssignedScreenings();
+        safeRefetch(refetchAssignedScreenings);
         break;
       case "screeningScheduled":
-        refetchUpcomingScreenings();
+        safeRefetch(refetchUpcomingScreenings);
         break;
       case "screeningTraining":
-        refetchScreeningTraining();
+        safeRefetch(refetchScreeningTraining);
         break;
       case "screeningPassed":
-        refetchScreeningPassed();
+        safeRefetch(refetchScreeningPassed);
         break;
       case "screeningRejected":
-        refetchScreeningRejected();
+        safeRefetch(refetchScreeningRejected);
         break;
       case "onHold":
-        refetchScreeningOnHold();
+        safeRefetch(refetchScreeningOnHold);
         break;
       case "interviewBackout":
-        refetchInterviews();
+        safeRefetch(refetchInterviews);
         break;
       default:
-        refetchInterviews();
+        safeRefetch(refetchInterviews);
     }
   };
 
@@ -737,7 +747,13 @@ export default function InterviewsPage() {
       refetch();
       refetchStats();
     } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to schedule bulk interviews");
+      const errorMessage =
+        err?.data?.message ||
+        err?.error ||
+        err?.message ||
+        (typeof err === "string" ? err : undefined) ||
+        "Failed to schedule bulk interviews";
+      toast.error(errorMessage);
     }
   };
 
@@ -1146,6 +1162,11 @@ export default function InterviewsPage() {
                             ? "Interview Backout"
                             : subStatus?.label || "Scheduled";
                         const candidate = candidateProjectMap?.candidate || item.candidate;
+                        const rejectionReason =
+                          candidateProjectMap?.notShortlistedReason ||
+                          candidateProjectMap?.projectStatusHistory?.[0]?.reason ||
+                          candidateProjectMap?.projectStatusHistory?.[0]?.notes ||
+                          '—';
 
                         return (
                           <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors border-b border-gray-100 last:border-0 group">
@@ -1315,7 +1336,7 @@ export default function InterviewsPage() {
                                     {activeFilter === "shortlistRejected" && (
                                       <TableCell className="px-4 py-3">
                                         <p className="text-[11px] text-slate-700 truncate">
-                                          {candidateProjectMap?.notShortlistedReason || '—'}
+                                          {rejectionReason}
                                         </p>
                                       </TableCell>
                                     )}
@@ -1427,7 +1448,7 @@ export default function InterviewsPage() {
                                       className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
                                       onClick={() => {
                                         if (item.id) {
-                                          navigate(`/interviews/${item.id}`);
+                                          navigate(`/interviews/detail/${item.id}`);
                                         }
                                       }}
                                       title="View Interview"
@@ -1455,7 +1476,7 @@ export default function InterviewsPage() {
                                       className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
                                       onClick={() => {
                                         if (item.id) {
-                                          navigate(`/interviews/${item.id}`);
+                                          navigate(`/interviews/detail/${item.id}`);
                                         }
                                       }}
                                       title="View Interview"

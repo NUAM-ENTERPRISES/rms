@@ -26,6 +26,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/molecules";
 import { MapPin, Video, PhoneCall, Plus, Users } from "lucide-react";
 import { useGetProjectsQuery } from "@/features/projects/api";
@@ -41,6 +42,8 @@ const scheduleInterviewSchema = z
     }),
     mode: z.enum(["video", "phone", "in-person"]),
     location: z.string().optional(),
+    airTicket: z.enum(["up-and-down", "up-only", "down-only"]).optional(),
+    accommodation: z.boolean().optional(),
     // meetingLink is optional; if provided, validate as URL, but allow empty string
     meetingLink: z.preprocess((v) => (v === "" || v === undefined ? undefined : v), z.string().url().optional()),
     notes: z.string().optional(),
@@ -99,6 +102,8 @@ export default function ScheduleInterviewDialog({
       scheduledTime: undefined,
       mode: "video",
       location: "",
+      airTicket: undefined,
+      accommodation: false,
       meetingLink: undefined,
       notes: "",
     },
@@ -122,6 +127,8 @@ export default function ScheduleInterviewDialog({
         scheduledTime: undefined,
         mode: "video",
         location: "",
+        airTicket: undefined,
+        accommodation: false,
         meetingLink: undefined,
         notes: "",
       });
@@ -134,6 +141,9 @@ export default function ScheduleInterviewDialog({
       return;
     }
 
+    const airTicketUp = data.airTicket === 'up-only' || data.airTicket === 'up-and-down';
+    const airTicketDown = data.airTicket === 'down-only' || data.airTicket === 'up-and-down';
+
     try {
       if (initialCandidateProjectMapIds && initialCandidateProjectMapIds.length > 0) {
         const bulkData = initialCandidateProjectMapIds.map((id) => ({
@@ -143,6 +153,10 @@ export default function ScheduleInterviewDialog({
           location: data.location,
           meetingLink: data.meetingLink,
           notes: data.notes,
+          airTicket: data.airTicket,
+          airTicketUp,
+          airTicketDown,
+          accommodation: data.accommodation,
         }));
         await createBulkInterviews(bulkData).unwrap();
         toast.success(`${bulkData.length} Interviews scheduled successfully`);
@@ -154,15 +168,25 @@ export default function ScheduleInterviewDialog({
           location: data.location,
           meetingLink: data.meetingLink,
           notes: data.notes,
+          airTicket: data.airTicket,
+          airTicketUp,
+          airTicketDown,
+          accommodation: data.accommodation,
         };
         await createInterview(interviewData as any).unwrap();
         toast.success("Interview scheduled successfully");
       }
       onOpenChange(false);
       form.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to schedule interview:", error);
-      toast.error("Failed to schedule interview");
+      const message =
+        error?.data?.message ||
+        error?.error ||
+        error?.message ||
+        (typeof error === "string" ? error : undefined) ||
+        "Failed to schedule interview";
+      toast.error(message);
     }
   };
 
@@ -343,7 +367,45 @@ export default function ScheduleInterviewDialog({
               />
             )}
 
+            {/* Air Ticket */}
+            <FormField
+              control={form.control}
+              name="airTicket"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Air ticket</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select air ticket type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="up-and-down">Up and Down</SelectItem>
+                        <SelectItem value="up-only">Up Only</SelectItem>
+                        <SelectItem value="down-only">Down Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            {/* Accommodation */}
+            <FormField
+              control={form.control}
+              name="accommodation"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <FormLabel className="m-0">Accommodation required</FormLabel>
+                </FormItem>
+              )}
+            />
 
             {/* Notes */}
             <FormField

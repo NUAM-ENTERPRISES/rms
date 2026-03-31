@@ -10,17 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
 import { cn } from "@/lib/utils";
 import { DatePicker } from "@/components/molecules";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -46,6 +41,8 @@ export interface InterviewSchedule {
   meetingLink?: string;
   location?: string;
   notes?: string;
+  airTicket?: "up-and-down" | "up-only" | "down-only";
+  accommodation?: boolean;
 }
 
 interface BulkScheduleInterviewModalProps {
@@ -72,6 +69,8 @@ export function BulkScheduleInterviewModal({
     meetingLink: "",
     location: "",
     notes: "",
+    airTicket: undefined,
+    accommodation: false,
   });
 
   // Individual schedules state for "Custom for each"
@@ -87,6 +86,8 @@ export function BulkScheduleInterviewModal({
           meetingLink: "",
           location: "",
           notes: "",
+          airTicket: undefined,
+          accommodation: false,
         };
       });
       setIndividualSchedules(initial);
@@ -121,9 +122,16 @@ export function BulkScheduleInterviewModal({
       if (!commonSchedule.scheduledTime) return;
       if (commonSchedule.mode === "in-person" && !commonSchedule.location?.trim()) return;
 
+      const airTicketUp = commonSchedule.airTicket === 'up-only' || commonSchedule.airTicket === 'up-and-down';
+      const airTicketDown = commonSchedule.airTicket === 'down-only' || commonSchedule.airTicket === 'up-and-down';
+
       finalSchedules = selectedCandidates.map(c => ({
         ...commonSchedule,
         candidateProjectMapId: c.id,
+        airTicket: commonSchedule.airTicket,
+        airTicketUp,
+        airTicketDown,
+        accommodation: commonSchedule.accommodation ?? false,
       } as InterviewSchedule));
     } else {
       const missingDates = selectedCandidates.some(c => !individualSchedules[c.id]?.scheduledTime);
@@ -135,10 +143,19 @@ export function BulkScheduleInterviewModal({
       });
       if (missingLocations) return;
 
-      finalSchedules = selectedCandidates.map(c => ({
-        ...individualSchedules[c.id],
-        candidateProjectMapId: c.id,
-      } as InterviewSchedule));
+      finalSchedules = selectedCandidates.map(c => {
+        const schedule = individualSchedules[c.id] || {};
+        const airTicketUp = schedule.airTicket === 'up-only' || schedule.airTicket === 'up-and-down';
+        const airTicketDown = schedule.airTicket === 'down-only' || schedule.airTicket === 'up-and-down';
+        return {
+          ...schedule,
+          candidateProjectMapId: c.id,
+          airTicket: schedule.airTicket,
+          airTicketUp,
+          airTicketDown,
+          accommodation: schedule.accommodation ?? false,
+        } as InterviewSchedule;
+      });
     }
 
     await onSubmit(finalSchedules);
@@ -239,13 +256,39 @@ export function BulkScheduleInterviewModal({
                 {commonSchedule.mode === "in-person" && (
                   <div className="space-y-2">
                     <Label>Location</Label>
-                    <Input
-                      placeholder="Enter interview location"
+                    <Input 
+                      placeholder="Location"
                       value={commonSchedule.location}
                       onChange={(e) => updateCommonSchedule("location", e.target.value)}
                     />
                   </div>
                 )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Air Ticket</Label>
+                    <Select
+                      value={commonSchedule.airTicket}
+                      onValueChange={(val) => updateCommonSchedule("airTicket", val as InterviewSchedule["airTicket"])}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select air ticket" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="up-and-down">Up and Down</SelectItem>
+                        <SelectItem value="up-only">Up Only</SelectItem>
+                        <SelectItem value="down-only">Down Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={commonSchedule.accommodation || false}
+                      onCheckedChange={(checked) => updateCommonSchedule("accommodation", Boolean(checked))}
+                    />
+                    <Label className="m-0">Accommodation required</Label>
+                  </div>
+                </div>
 
                 <div className="space-y-2">
                   <Label>Notes for Candidates</Label>
@@ -312,6 +355,32 @@ export function BulkScheduleInterviewModal({
                               <SelectItem value="in-person">In-Person</SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-[10px] uppercase text-muted-foreground">Air Ticket</Label>
+                          <Select
+                            value={schedule.airTicket || "up-and-down"}
+                            onValueChange={(val) => updateIndividualSchedule(c.id, "airTicket", val as InterviewSchedule["airTicket"])}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Air ticket" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="up-and-down">Up and Down</SelectItem>
+                              <SelectItem value="up-only">Up Only</SelectItem>
+                              <SelectItem value="down-only">Down Only</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2" style={{ marginTop: '20px' }}>
+                          <Checkbox
+                            checked={Boolean(schedule.accommodation)}
+                            onCheckedChange={(checked) => updateIndividualSchedule(c.id, "accommodation", Boolean(checked))}
+                          />
+                          <Label className="m-0 text-xs">Accommodation required</Label>
                         </div>
                       </div>
 

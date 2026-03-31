@@ -134,6 +134,10 @@ const PassedCandidatesPage = lazy(
   () => import("@/features/interviews/views/PassedCandidatesPage")
 );
 
+const InterviewDetailPage = lazy(
+  () => import("@/features/interviews/views/InterviewDetailPage")
+);
+
 // Mock Interview Coordination
 const ScreeningsDashboardPage = lazy(
   () =>
@@ -839,6 +843,19 @@ function App() {
                         <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <UpcomingInterviewsListPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/interviews/detail/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:interviews"]}>
+                          <AppLayout>
+                            <InterviewDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

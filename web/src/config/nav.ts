@@ -81,6 +81,7 @@ export const navigationConfig: NavItem[] = [
     icon: Calendar,
     roles: ["Interview Coordinator"],
     permissions: ["read:interviews"],
+    disabled: true, // temporary hide for Interview Coordinator panel as requested
   },
   {
     id: "candidates",

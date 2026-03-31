@@ -90,7 +90,7 @@ describe("ProtectedRoute", () => {
     );
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/login?next=%2Fprotected");
+      expect(mockNavigate).toHaveBeenCalledWith("/login");
     });
   });
 

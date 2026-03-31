@@ -11,6 +11,10 @@ export interface Interview {
   // Server includes a convenience flag when an interview is past due
   expired?: boolean;
   meetingLink?: string;
+  airTicket?: "up-and-down" | "up-only" | "down-only";
+  airTicketUp?: boolean;
+  airTicketDown?: boolean;
+  accommodation?: boolean;
   interviewer?: string;
   interviewerEmail?: string;
   outcome?: string;

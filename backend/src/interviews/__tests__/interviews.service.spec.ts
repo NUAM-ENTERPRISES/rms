@@ -19,6 +19,8 @@ describe('InterviewsService - client decision flows', () => {
     candidateProjects: {
       findUnique: jest.fn(),
       update: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
     },
     candidateProjectSubStatus: {
       findUnique: jest.fn(),
@@ -28,6 +30,9 @@ describe('InterviewsService - client decision flows', () => {
     },
     candidateProjectStatusHistory: {
       create: jest.fn(),
+    },
+    documentForwardHistory: {
+      findFirst: jest.fn(),
     },
     $transaction: jest.fn().mockImplementation(async (callback: any) => callback(mockPrisma)),
   } as any;
@@ -106,6 +111,32 @@ describe('InterviewsService - client decision flows', () => {
     );
 
     expect(res).toEqual(expect.objectContaining({ id: 'cpm-1' }));
+  });
+
+  it('getNotShortlisted includes notShortlistedReason from projectStatusHistory', async () => {
+    mockPrisma.candidateProjects.count.mockResolvedValue(1);
+    mockPrisma.candidateProjects.findMany.mockResolvedValue([
+      {
+        id: 'cpm-2',
+        candidate: { id: 'cand-2', firstName: 'Test', lastName: 'User' },
+        project: { id: 'proj-2', title: 'Test Project' },
+        roleNeeded: { id: 'role-2', designation: 'Test Role' },
+        recruiter: { id: 'rec-2', name: 'Recruiter 2', email: 'rec2@example.com' },
+        mainStatus: { id: 'main-2' },
+        subStatus: { id: 'sub-2', name: 'not_shortlisted', label: 'Not Shortlisted' },
+        updatedAt: new Date().toISOString(),
+        projectStatusHistory: [
+          { reason: 'Not a fit', notes: 'No match', statusChangedAt: new Date().toISOString() },
+        ],
+      },
+    ]);
+    mockPrisma.documentForwardHistory.findFirst.mockResolvedValue(null);
+
+    const result = await service.getNotShortlisted({ page: 1, limit: 10 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toHaveProperty('notShortlistedReason', 'Not a fit');
+    expect(result.pagination.total).toBe(1);
   });
 
   it('create interview sets outcome to scheduled', async () => {

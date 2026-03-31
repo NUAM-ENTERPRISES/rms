@@ -28,6 +28,7 @@ import {
   MapPin,
   Building2,
   MessageCircle,
+  Eye,
 } from "lucide-react";
 import { useGetInterviewsQuery, useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation, useGetInterviewHistoryQuery } from "../api";
 import { useGetProjectsQuery } from "@/services/projectsApi";
@@ -435,7 +436,7 @@ export default function MyInterviewsListPage() {
                               {project?.title || "Unknown Project"}
                             </p>
                           </div>
-                          <ChevronRight className={cn("h-4 w-4 text-muted-foreground", isSelected && "text-indigo-600")} />
+                          <div className="flex items-center gap-2"><button type="button" onClick={(e) => { e.stopPropagation(); navigate(`/interviews/detail/${it.id}`); }} className="rounded p-1 text-blue-500 hover:text-blue-700" title="Open interview detail"><Eye className="h-4 w-4" /></button><ChevronRight className={cn("h-4 w-4 text-muted-foreground", isSelected && "text-indigo-600")} /></div>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 mt-3">
