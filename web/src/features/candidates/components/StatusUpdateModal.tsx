@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useUpdateCandidateStatusMutation } from "../api";
@@ -53,8 +54,8 @@ import { cn } from "@/lib/utils";
 const statusUpdateSchema = z.object({
   currentStatusId: z.string().min(1, "Please select a status"),
   reason: z.string().optional(),
-  onHoldDurationDays: z.string().optional(),
-  futureYear: z.string().optional(),
+  onHoldUntil: z.string().optional(),
+  futureDate: z.string().optional(),
 });
 
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
@@ -211,8 +212,8 @@ export function StatusUpdateModal({
     defaultValues: {
       currentStatusId: "",
       reason: "",
-      onHoldDurationDays: undefined,
-      futureYear: undefined,
+      onHoldUntil: "",
+      futureDate: "",
     },
   });
 
@@ -223,26 +224,45 @@ export function StatusUpdateModal({
     const selectedStatus = statuses.find(
       (status) => String(status.id) === data.currentStatusId,
     );
-    const selectedStatusName = (selectedStatus?.statusName || '').toLowerCase();
+    const selectedStatusName = (selectedStatus?.statusName || "").toLowerCase();
 
-    const onHoldDurationDays = data.onHoldDurationDays
-      ? Number(data.onHoldDurationDays)
-      : undefined;
-    const futureYear = data.futureYear ? Number(data.futureYear) : undefined;
+    let onHoldDuration = undefined;
+    let onHoldUntilDate = undefined;
+    let futureDateValue = undefined;
 
-    if (selectedStatusName === 'on hold') {
-      if (!onHoldDurationDays || onHoldDurationDays <= 0) {
-        toast.error('Please enter a valid on-hold duration (days).');
+    if (selectedStatusName === "on hold" || selectedStatusName === "onhold") {
+      if (!data.onHoldUntil) {
+        toast.error("Please select an on-hold until date.");
         return;
       }
+
+      const untilDate = new Date(data.onHoldUntil);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const diffTime = untilDate.getTime() - today.getTime();
+      onHoldDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (onHoldDuration < 0) {
+        toast.error("On hold date cannot be in the past");
+        return;
+      }
+      onHoldUntilDate = data.onHoldUntil;
     }
 
-    if (selectedStatusName === 'future') {
-      const currentYear = new Date().getFullYear();
-      if (!futureYear || futureYear < currentYear) {
-        toast.error(`Please enter a valid future year >= ${currentYear}.`);
+    if (selectedStatusName === "future") {
+      if (!data.futureDate) {
+        toast.error("Please select a future date.");
         return;
       }
+      const fDate = new Date(data.futureDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (fDate < today) {
+        toast.error("Future date cannot be in the past.");
+        return;
+      }
+      futureDateValue = data.futureDate;
     }
 
     try {
@@ -251,19 +271,18 @@ export function StatusUpdateModal({
         status: {
           currentStatusId: parseInt(data.currentStatusId),
           reason: data.reason,
-          onHoldDurationDays:
-            selectedStatusName === 'on hold' ? onHoldDurationDays : undefined,
-          futureYear:
-            selectedStatusName === 'future' ? futureYear : undefined,
+          onHoldDurationDays: onHoldDuration,
+          onHoldUntil: onHoldUntilDate,
+          futureDate: futureDateValue,
         },
       }).unwrap();
 
-      toast.success('Candidate status updated successfully');
+      toast.success("Candidate status updated successfully");
       onClose();
       form.reset();
     } catch (error) {
-      console.error('Failed to update candidate status:', error);
-      toast.error('Failed to update candidate status');
+      console.error("Failed to update candidate status:", error);
+      toast.error("Failed to update candidate status");
     }
   };
 
@@ -415,21 +434,20 @@ export function StatusUpdateModal({
                 )}
                 />
 
-                {selectedStatusName === 'on hold' && (
+                {(selectedStatusName === "on hold" ||
+                  selectedStatusName === "onhold") && (
                   <FormField
                     control={form.control}
-                    name="onHoldDurationDays"
+                    name="onHoldUntil"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-                          On Hold Duration (Days)
+                          On Hold Until
                         </FormLabel>
                         <FormControl>
-                          <input
-                            type="number"
-                            min={1}
-                            placeholder="Enter number of days on hold"
-                            className="w-full rounded-2xl border border-slate-200 p-3 text-sm"
+                          <Input
+                            type="date"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
                             {...field}
                           />
                         </FormControl>
@@ -439,21 +457,19 @@ export function StatusUpdateModal({
                   />
                 )}
 
-                {selectedStatusName === 'future' && (
+                {selectedStatusName === "future" && (
                   <FormField
                     control={form.control}
-                    name="futureYear"
+                    name="futureDate"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-                          Future Year
+                          Available From Date
                         </FormLabel>
                         <FormControl>
-                          <input
-                            type="number"
-                            min={new Date().getFullYear()}
-                            placeholder="Enter target year (e.g., 2027)"
-                            className="w-full rounded-2xl border border-slate-200 p-3 text-sm"
+                          <Input
+                            type="date"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
                             {...field}
                           />
                         </FormControl>

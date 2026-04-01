@@ -21,6 +21,9 @@ import {
   Briefcase,
   FileText,
   TrendingUp,
+  Clock,
+  RefreshCw,
+  Calendar,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
 import { formatDate } from "@/lib/utils";
@@ -218,6 +221,21 @@ export default function CandidateDetailPage() {
     );
   }
 
+  // isOnHold: check candidate status directly (instant, no waiting on pipeline)
+  const isOnHold =
+    !!candidate?.currentStatus?.statusName?.toLowerCase().includes("hold");
+
+  const isFuture =
+    candidate?.currentStatus?.statusName?.toLowerCase() === "future";
+
+  // Derive on-hold pipeline step for duration / enteredAt (loaded separately)
+  const onHoldStep = pipelineData?.data?.pipeline?.find(
+    (step: any) =>
+      step.isCurrentStatus &&
+      (step.statusName?.toLowerCase().includes("hold") ||
+        step.statusName?.toLowerCase() === "onhold")
+  );
+
   const stats = [
     {
       label: "Projects Assigned",
@@ -292,18 +310,77 @@ export default function CandidateDetailPage() {
   {/* Status (RIGHT - Clickable) */}
   <div
     onClick={() => setIsStatusModalOpen(true)}
-    className="cursor-pointer flex items-center gap-2 group"
+    className="cursor-pointer group ml-4"
     title="Click to update status"
   >
-    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none ml-[15px]">
-       Status
-    </span>
-
-    <div className="group-hover:scale-105 transition-transform duration-200">
-      <StatusBadge
-        status={candidate.currentStatus?.statusName ?? "unknown"}
-      />
-    </div>
+    {isOnHold ? (
+      <div className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-4 py-2 bg-white/50 shadow-sm group-hover:shadow-md transition-all duration-200">
+        <div className="flex flex-col items-start gap-1">
+          <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Status</span>
+          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+        </div>
+        <div className="w-px h-8 bg-amber-200" />
+        <div className="flex flex-col gap-0.5">
+          {candidate.updatedAt && (
+            <div className="flex items-center gap-1.5 opacity-70">
+              <RefreshCw className="h-2.5 w-2.5 text-amber-500" />
+              <span className="text-[9px] font-medium text-amber-600">
+                Updated {formatDate(candidate.updatedAt)}
+              </span>
+            </div>
+          )}          {candidate.onHoldDuration != null && (
+            <div className="flex items-center gap-1.5 opacity-80">
+              <Clock className="h-2.5 w-2.5 text-amber-500" />
+              <span className="text-[9px] font-medium text-amber-600">
+                Duration: {candidate.onHoldDuration} day{candidate.onHoldDuration !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+          {candidate.onHoldUntil && (
+            <div className="flex items-center gap-1.5 opacity-80">
+              <Calendar className="h-2.5 w-2.5 text-amber-500" />
+              <span className="text-[9px] font-medium text-amber-600">
+                Until: {formatDate(candidate.onHoldUntil)}
+              </span>
+            </div>
+          )}        </div>
+      </div>
+    ) : isFuture ? (
+      <div className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl px-4 py-2 bg-white/50 shadow-sm group-hover:shadow-md transition-all duration-200">
+        <div className="flex flex-col items-start gap-1">
+          <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none">Status</span>
+          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+        </div>
+        <div className="w-px h-8 bg-indigo-200" />
+        <div className="flex flex-col gap-0.5">
+          {candidate.updatedAt && (
+            <div className="flex items-center gap-1.5 opacity-70">
+              <RefreshCw className="h-2.5 w-2.5 text-indigo-500" />
+              <span className="text-[9px] font-medium text-indigo-600">
+                Updated {formatDate(candidate.updatedAt)}
+              </span>
+            </div>
+          )}
+          {candidate.futureDate && (
+            <div className="flex items-center gap-1.5 opacity-80">
+              <Calendar className="h-2.5 w-2.5 text-indigo-500" />
+              <span className="text-[9px] font-medium text-indigo-600">
+                Available: {formatDate(candidate.futureDate)}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    ) : (
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none ml-[15px]">
+          Status
+        </span>
+        <div className="group-hover:scale-105 transition-transform duration-200">
+          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+        </div>
+      </div>
+    )}
   </div>
 
 </div>

@@ -243,6 +243,8 @@ export class CandidatesService {
         university: createCandidateDto.university,
         graduationYear: createCandidateDto.graduationYear,
         gpa: createCandidateDto.gpa,
+        onHoldDuration: createCandidateDto.onHoldDuration,
+        onHoldUntil: createCandidateDto.onHoldUntil ? new Date(createCandidateDto.onHoldUntil) : null,
         // Legacy fields for backward compatibility
         experience: totalExperience,
         skills: createCandidateDto.skills
@@ -1339,6 +1341,10 @@ export class CandidatesService {
       updateData.university = updateCandidateDto.university;
     if (updateCandidateDto.graduationYear !== undefined)
       updateData.graduationYear = updateCandidateDto.graduationYear;
+    if (updateCandidateDto.onHoldDuration !== undefined)
+      updateData.onHoldDuration = updateCandidateDto.onHoldDuration;
+    if (updateCandidateDto.onHoldUntil !== undefined)
+      updateData.onHoldUntil = updateCandidateDto.onHoldUntil ? new Date(updateCandidateDto.onHoldUntil) : null;
     if (updateCandidateDto.gpa !== undefined)
       updateData.gpa = updateCandidateDto.gpa;
     if (updateCandidateDto.skills)
@@ -2353,26 +2359,31 @@ export class CandidatesService {
     // Status-specific validation
     const normalizedStatus = status.statusName.toLowerCase();
 
-    if (normalizedStatus === 'on hold') {
+    if (normalizedStatus === 'on hold' || normalizedStatus === 'onhold') {
       if (
-        updateStatusDto.onHoldDurationDays === undefined ||
-        updateStatusDto.onHoldDurationDays === null ||
-        updateStatusDto.onHoldDurationDays <= 0
+        (updateStatusDto.onHoldDurationDays === undefined ||
+          updateStatusDto.onHoldDurationDays === null ||
+          updateStatusDto.onHoldDurationDays <= 0) &&
+        !updateStatusDto.onHoldUntil
       ) {
         throw new BadRequestException(
-          'onHoldDurationDays is required and must be a positive integer when status is On Hold',
+          'onHoldDurationDays or onHoldUntil is required when status is On Hold',
         );
       }
     }
 
     if (normalizedStatus === 'future') {
-      if (
-        updateStatusDto.futureYear === undefined ||
-        updateStatusDto.futureYear === null ||
-        updateStatusDto.futureYear < new Date().getFullYear()
-      ) {
+      if (!updateStatusDto.futureDate) {
         throw new BadRequestException(
-          'futureYear is required and must be the current or a future year when status is Future',
+          'futureDate is required when status is Future',
+        );
+      }
+      const futureDate = new Date(updateStatusDto.futureDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (futureDate < today) {
+        throw new BadRequestException(
+          'futureDate must be today or a future date when status is Future',
         );
       }
     }
@@ -2398,6 +2409,9 @@ export class CandidatesService {
       where: { id: candidateId },
       data: {
         currentStatusId: updateStatusDto.currentStatusId,
+        onHoldDuration: updateStatusDto.onHoldDurationDays ?? null,
+        onHoldUntil: updateStatusDto.onHoldUntil ? new Date(updateStatusDto.onHoldUntil) : null,
+        futureDate: updateStatusDto.futureDate ? new Date(updateStatusDto.futureDate) : null,
         updatedAt: new Date(),
       },
       include: {
