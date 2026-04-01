@@ -39,7 +39,7 @@ const personalInfoSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  dateOfBirth: z.string().optional().or(z.literal("")),
   referralCompanyName: z.string().optional(),
   referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
   referralCountryCode: z.string().optional(),
@@ -70,7 +70,7 @@ interface UpdatePersonalInfoModalProps {
     email?: string;
     source: string;
     gender?: string;
-    dateOfBirth: string;
+    dateOfBirth?: string | null;
     referralCompanyName?: string | null;
     referralEmail?: string | null;
     referralCountryCode?: string | null;
@@ -147,7 +147,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         mobileNumber: data.mobileNumber,
         source: data.source,
         gender: data.gender,
-        dateOfBirth: data.dateOfBirth,
+        dateOfBirth: data.dateOfBirth && data.dateOfBirth.trim() ? data.dateOfBirth : null,
       };
 
       // Add optional email if it has a value
@@ -352,7 +352,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             <div className="space-y-2">
               <Label htmlFor="dateOfBirth" className="text-slate-700 font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-slate-400" />
-                Date of Birth *
+                Date of Birth
               </Label>
               <Controller
                 name="dateOfBirth"

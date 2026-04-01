@@ -1571,6 +1571,7 @@ export class CandidatesService {
         throw new BadRequestException('Date of birth must be in the past');
       }
     }
+    // Allow explicitly clearing dateOfBirth to null
 
     // Prepare update data
     const updateData: any = {};
@@ -1598,8 +1599,10 @@ export class CandidatesService {
       updateData.referralPhone = updateCandidateDto.referralPhone;
     if (updateCandidateDto.referralDescription !== undefined)
       updateData.referralDescription = updateCandidateDto.referralDescription;
-    if (updateCandidateDto.dateOfBirth)
-      updateData.dateOfBirth = new Date(updateCandidateDto.dateOfBirth);
+    if (updateCandidateDto.dateOfBirth !== undefined)
+      updateData.dateOfBirth = updateCandidateDto.dateOfBirth
+        ? new Date(updateCandidateDto.dateOfBirth)
+        : null;
     if (updateCandidateDto.gender)
       updateData.gender = updateCandidateDto.gender;
     if (updateCandidateDto.currentStatusId !== undefined)
