@@ -163,11 +163,32 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: ["Candidate"],
     }),
     getCREAssignedSummary: builder.query<
-      { total: number; roleCounters: { assigned: number; rnr: number; onHold: number; untouched: number; other: number } },
+      { total: number; roleCounters: { assigned: number; converted: number; reassigned: number; rnr: number; onHold: number; untouched: number; other: number } },
       void
     >({
       query: () => "/candidates/my-assigned/summary",
       transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ["Candidate"],
+    }),
+    getCREReassignedCandidates: builder.query<
+      PaginatedCandidatesResponse,
+      GetMyAssignedCandidatesParams
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.search) queryParams.append("search", params.search);
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+
+        return `/candidates/my-assigned/reassigned?${queryParams.toString()}`;
+      },
+      transformResponse: (response: MyAssignedCandidatesApiResponse) => ({
+        data: response.data.candidates,
+        total: response.data.pagination.total,
+        page: response.data.pagination.page,
+        limit: response.data.pagination.limit,
+        totalPages: response.data.pagination.totalPages,
+      }),
       providesTags: ["Candidate"],
     }),
     getCandidateById: builder.query<Candidate, string>({
@@ -199,6 +220,27 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "DELETE",
       }),
       invalidatesTags: ["Candidate"],
+    }),
+
+    markCandidateConverted: builder.mutation<Candidate, string>({
+      query: (id) => ({
+        url: `/candidates/${id}/converted-response`,
+        method: "POST",
+      }),
+      invalidatesTags: (_, __, id) => [
+        { type: "Candidate", id },
+        "Candidate",
+      ],
+    }),
+    transferCandidateToRecruiter: builder.mutation<Candidate, string>({
+      query: (id) => ({
+        url: `/candidates/${id}/transfer-to-recruiter`,
+        method: "POST",
+      }),
+      invalidatesTags: (_, __, id) => [
+        { type: "Candidate", id },
+        "Candidate",
+      ],
     }),
     assignToProject: builder.mutation<
       { success: boolean; data: any; message: string },
@@ -338,10 +380,13 @@ export const {
   useGetCandidatesQuery,
   useGetMyAssignedCandidatesQuery,
   useGetCREAssignedSummaryQuery,
+  useGetCREReassignedCandidatesQuery,
   useGetCandidateByIdQuery,
   useCreateCandidateMutation,
   useUpdateCandidateMutation,
   useDeleteCandidateMutation,
+  useMarkCandidateConvertedMutation,
+  useTransferCandidateToRecruiterMutation,
   useAssignToProjectMutation,
   useNominateCandidateMutation,
   useApproveOrRejectCandidateMutation,

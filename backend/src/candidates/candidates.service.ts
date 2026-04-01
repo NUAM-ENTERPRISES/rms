@@ -999,9 +999,29 @@ export class CandidatesService {
       ];
     }
 
-    // Add status filter
-    if (currentStatus) {
-      where.currentStatusId = parseInt(currentStatus);
+    // Add status filter (supports numeric id or statusName string)
+    const normalizedStatusInput = currentStatus?.toLowerCase().trim();
+
+    const statusNameMap: Record<string, string> = {
+      interested: 'interested',
+      rnr: 'rnr',
+      'on_hold': 'on hold',
+      'on hold': 'on hold',
+      untouched: 'untouched',
+    };
+
+    if (normalizedStatusInput) {
+      const normalizedStatus = statusNameMap[normalizedStatusInput] ?? normalizedStatusInput;
+      const statusId = Number(normalizedStatusInput);
+
+      if (!Number.isNaN(statusId)) {
+        where.currentStatusId = statusId;
+      } else {
+        where.currentStatus = { statusName: { equals: normalizedStatus, mode: 'insensitive' } };
+      }
+    } else {
+      // Default CRE assigned listing should exclude already converted candidates
+      where.currentStatus = { statusName: { not: 'interested', mode: 'insensitive' } };
     }
 
     // Add gender filter
@@ -1036,10 +1056,6 @@ export class CandidatesService {
           },
         },
         recruiterAssignments: {
-          where: {
-            recruiterId: creUserId,
-            isActive: true,
-          },
           include: {
             recruiter: {
               select: {
@@ -1103,7 +1119,9 @@ export class CandidatesService {
     });
 
     const roleCounters = {
-      assigned: candidates.length,
+      assigned: 0,
+      converted: 0,
+      reassigned: 0,
       rnr: 0,
       onHold: 0,
       untouched: 0,
@@ -1112,15 +1130,300 @@ export class CandidatesService {
 
     candidates.forEach((candidate) => {
       const status = (candidate.currentStatus?.statusName || '').toLowerCase();
-      if (status === 'rnr') roleCounters.rnr += 1;
-      else if (status === 'on hold' || status === 'on_hold') roleCounters.onHold += 1;
-      else if (status === 'untouched') roleCounters.untouched += 1;
-      else roleCounters.other += 1;
+      if (status === 'interested') {
+        roleCounters.converted += 1;
+      } else if (status === 'rnr') {
+        roleCounters.rnr += 1;
+      } else if (status === 'on hold' || status === 'on_hold') {
+        roleCounters.onHold += 1;
+      } else if (status === 'untouched') {
+        roleCounters.untouched += 1;
+      } else {
+        roleCounters.other += 1;
+      }
+    });
+
+    roleCounters.assigned =
+      roleCounters.rnr +
+      roleCounters.onHold +
+      roleCounters.untouched +
+      roleCounters.other;
+
+    // Count reassigned candidates (CRE transferred to recruiter, now untouched)
+    roleCounters.reassigned = await this.prisma.candidate.count({
+      where: {
+        recruiterAssignments: {
+          some: {
+            assignedBy: creUserId,
+            assignmentType: 'cre_assigned',
+            isActive: true,
+          },
+        },
+        currentStatus: {
+          statusName: {
+            equals: CANDIDATE_STATUS.UNTOUCHED,
+            mode: 'insensitive',
+          },
+        },
+      },
     });
 
     return {
-      total: candidates.length,
+      total: roleCounters.assigned,
       roleCounters,
+    };
+  }
+
+  async markAsConvertedResponse(candidateId: string, userId: string): Promise<CandidateWithRelations> {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: {
+            recruiter: true,
+            assignedByUser: true,
+          },
+        },
+        currentStatus: true,
+      },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    const hasCREAssignment = candidate.recruiterAssignments?.some(
+      (a: any) => a.recruiterId === userId && a.isActive,
+    );
+
+    if (!hasCREAssignment) {
+      throw new ForbiddenException('CRE may only convert assigned candidates.');
+    }
+
+    const interestedStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: 'interested', mode: 'insensitive' } },
+    });
+
+    if (!interestedStatus) {
+      throw new NotFoundException('Interested candidate status not found');
+    }
+
+    const previousStatusId = candidate.currentStatusId;
+
+    const updatedCandidate = await this.prisma.candidate.update({
+      where: { id: candidateId },
+      data: {
+        currentStatusId: interestedStatus.id,
+        updatedAt: new Date(),
+      },
+      include: {
+        recruiterAssignments: {
+          include: {
+            recruiter: {
+              select: { id: true, name: true, email: true },
+            },
+            assignedByUser: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+        currentStatus: true,
+      },
+    });
+
+    await this.prisma.candidateStatusHistory.create({
+      data: {
+        candidateId,
+        changedById: userId,
+        changedByName: (await this.prisma.user.findUnique({ where: { id: userId } }))?.name || 'CRE',
+        statusId: interestedStatus.id,
+        statusNameSnapshot: interestedStatus.statusName,
+        statusUpdatedAt: new Date(),
+        notificationCount: 0,
+      },
+    });
+
+    // If we are moving from RNR to Interested, cancel RNR reminders
+    if (previousStatusId) {
+      const rnrStatus = await this.prisma.candidateStatus.findFirst({
+        where: { statusName: { equals: 'rnr', mode: 'insensitive' } },
+      });
+      if (rnrStatus && previousStatusId === rnrStatus.id) {
+        await this.rnrRemindersService.cancelRNRReminders(candidateId);
+      }
+    }
+
+    await this.outboxService.publishEvent('DataSync', {
+      type: 'Candidate',
+      candidateId,
+      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} marked as converted response by CRE`,
+    });
+
+    return updatedCandidate as any;
+  }
+
+  async transferCREConvertedToRecruiter(candidateId: string, creUserId: string) {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: { recruiter: true },
+        },
+        currentStatus: true,
+      },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    const activeCREAssignment = candidate.recruiterAssignments?.find(
+      (a: any) => a.recruiterId === creUserId && a.isActive,
+    );
+
+    if (!activeCREAssignment) {
+      throw new ForbiddenException(
+        'CRE can only transfer candidates assigned to them',
+      );
+    }
+
+    const currentStatus = (candidate.currentStatus?.statusName || '').toLowerCase();
+
+    if (currentStatus !== CANDIDATE_STATUS.INTERESTED) {
+      throw new BadRequestException(
+        'Only candidates marked as Interested can be transferred by CRE',
+      );
+    }
+
+    // Auto-assign a recruiter (load-balanced logic in recruiterAssignmentService)
+    const targetRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
+      candidateId,
+      creUserId,
+      'Transferred from CRE converted response',
+    );
+
+    // Mark the assignment as CRE-originated
+    await this.prisma.candidateRecruiterAssignment.updateMany({
+      where: {
+        candidateId,
+        recruiterId: targetRecruiter.id,
+        isActive: true,
+        assignedBy: creUserId,
+      },
+      data: {
+        assignmentType: 'cre_assigned',
+      },
+    });
+
+    const untouchedStatus = await this.prisma.candidateStatus.findFirst({
+      where: { statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' } },
+    });
+
+    if (!untouchedStatus) {
+      throw new NotFoundException('Untouched status not found');
+    }
+
+    const updatedCandidate = await this.prisma.candidate.update({
+      where: { id: candidateId },
+      data: { currentStatusId: untouchedStatus.id },
+      include: {
+        recruiterAssignments: {
+          include: {
+            recruiter: {
+              select: { id: true, name: true, email: true },
+            },
+            assignedByUser: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+        currentStatus: true,
+      },
+    });
+
+    await this.prisma.candidateStatusHistory.create({
+      data: {
+        candidateId,
+        changedById: creUserId,
+        changedByName:
+          (await this.prisma.user.findUnique({ where: { id: creUserId } }))
+            ?.name || 'CRE',
+        statusId: untouchedStatus.id,
+        statusNameSnapshot: untouchedStatus.statusName,
+        statusUpdatedAt: new Date(),
+        notificationCount: 0,
+      },
+    });
+
+    await this.outboxService.publishEvent('DataSync', {
+      type: 'Candidate',
+      candidateId,
+      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} transferred from CRE to recruiter ${targetRecruiter.name}`,
+    });
+
+    return updatedCandidate;
+  }
+
+  async getCREReassignedCandidates(
+    creUserId: string,
+    query: {
+      page?: number;
+      limit?: number;
+      search?: string;
+    },
+  ) {
+    const { page = 1, limit = 10, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      recruiterAssignments: {
+        some: {
+          assignedBy: creUserId,
+          assignmentType: 'cre_assigned',
+          isActive: true,
+        },
+      },
+      currentStatus: { statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' } },
+    };
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { mobileNumber: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const total = await this.prisma.candidate.count({ where });
+
+    const candidates = await this.prisma.candidate.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        currentStatus: { select: { id: true, statusName: true } },
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: {
+            recruiter: { select: { id: true, name: true, email: true } },
+            assignedByUser: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    return {
+      candidates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -2605,6 +2908,7 @@ export class CandidatesService {
         recruiterId: assignRecruiterDto.recruiterId,
         assignedBy: userId,
         reason: assignRecruiterDto.reason,
+        assignmentType: assignRecruiterDto.assignmentType || 'manual',
       },
       include: {
         recruiter: {
