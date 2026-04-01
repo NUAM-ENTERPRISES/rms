@@ -10,6 +10,11 @@ export class CandidateStatusService {
    */
   async findAll() {
     const statuses = await this.prisma.candidateStatus.findMany({
+      where: {
+        statusName: {
+          not: 'Qualified',
+        },
+      },
       orderBy: {
         id: 'asc',
       },

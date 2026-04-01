@@ -163,6 +163,9 @@ const RecruiterDashboard: React.FC = () => {
         <View>
           <Text style={styles.welcomeText}>Welcome back,</Text>
           <Text style={styles.userName}>{user?.name}</Text>
+          <Text style={styles.subText}>
+            Role(s): {Array.isArray(user?.roles) ? user.roles.join(', ') : 'N/A'}
+          </Text>
         </View>
         <TouchableOpacity 
           style={styles.notificationButton}
@@ -283,6 +286,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.dark,
+  },
+  subText: {
+    fontSize: 14,
+    color: COLORS.gray,
+    marginTop: 4,
   },
   notificationButton: {
     padding: 8,

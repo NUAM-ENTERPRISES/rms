@@ -310,6 +310,23 @@ export class CreateCandidateDto {
   eligibility?: boolean;
 
   @ApiPropertyOptional({
+    description: 'On hold duration in days',
+    example: 30,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  onHoldDuration?: number;
+
+  @ApiPropertyOptional({
+    description: 'On hold until date',
+    example: '2024-12-31',
+  })
+  @IsOptional()
+  @IsDateString()
+  onHoldUntil?: string;
+
+  @ApiPropertyOptional({
     description: 'List of preferred countries (country codes)',
     example: ['SA', 'AE', 'QA'],
   })

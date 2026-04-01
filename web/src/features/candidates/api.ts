@@ -150,6 +150,13 @@ export interface Candidate {
     };
   })[];
 
+  // On hold tracking fields
+  onHoldDuration?: number | null;
+  onHoldUntil?: string | null;
+
+  // Future status tracking
+  futureDate?: string | null;
+
   // Additional properties for detailed view
   assignedRecruiter?: {
     id: string;
@@ -472,6 +479,10 @@ export interface UpdateCandidateRequest {
 export interface UpdateCandidateStatusRequest {
   currentStatusId: number;
   reason?: string;
+  onHoldDurationDays?: number;
+  onHoldUntil?: string;
+  futureDate?: string;
+  futureYear?: number;
 }
 
 export interface AssignRecruiterRequest {

@@ -1,5 +1,5 @@
-import { IsString, IsEnum, IsOptional, IsInt } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsEnum, IsOptional, IsInt, IsDateString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 
 export class UpdateCandidateStatusDto {
@@ -19,4 +19,36 @@ export class UpdateCandidateStatusDto {
   @IsOptional()
   @IsString()
   reason?: string;
+
+  @ApiPropertyOptional({
+    description: 'On-hold duration in days for status "On Hold"',
+    example: 14,
+  })
+  @IsOptional()
+  @IsInt()
+  onHoldDurationDays?: number;
+
+  @ApiPropertyOptional({
+    description: 'On-hold until date for status "On Hold"',
+    example: '2026-04-15',
+  })
+  @IsOptional()
+  @IsDateString()
+  onHoldUntil?: string;
+
+  @ApiPropertyOptional({
+    description: 'Target year for status "Future" (e.g., 2027)',
+    example: 2027,
+  })
+  @IsOptional()
+  @IsInt()
+  futureYear?: number;
+
+  @ApiPropertyOptional({
+    description: 'Future date for status "Future"',
+    example: '2027-01-15',
+  })
+  @IsOptional()
+  @IsDateString()
+  futureDate?: string;
 }

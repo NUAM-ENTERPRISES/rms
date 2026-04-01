@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useUpdateCandidateStatusMutation } from "../api";
@@ -45,7 +46,6 @@ import {
   Award,
   UserX,
   Target,
-  Edit,
   ArrowRight,
   Sparkles
 } from "lucide-react";
@@ -54,6 +54,8 @@ import { cn } from "@/lib/utils";
 const statusUpdateSchema = z.object({
   currentStatusId: z.string().min(1, "Please select a status"),
   reason: z.string().optional(),
+  onHoldUntil: z.string().optional(),
+  futureDate: z.string().optional(),
 });
 
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
@@ -210,6 +212,8 @@ export function StatusUpdateModal({
     defaultValues: {
       currentStatusId: "",
       reason: "",
+      onHoldUntil: "",
+      futureDate: "",
     },
   });
 
@@ -217,12 +221,59 @@ export function StatusUpdateModal({
   const CurrentIcon = currentConfig.icon;
 
   const handleSubmit = async (data: StatusUpdateFormData) => {
+    const selectedStatus = statuses.find(
+      (status) => String(status.id) === data.currentStatusId,
+    );
+    const selectedStatusName = (selectedStatus?.statusName || "").toLowerCase();
+
+    let onHoldDuration = undefined;
+    let onHoldUntilDate = undefined;
+    let futureDateValue = undefined;
+
+    if (selectedStatusName === "on hold" || selectedStatusName === "onhold") {
+      if (!data.onHoldUntil) {
+        toast.error("Please select an on-hold until date.");
+        return;
+      }
+
+      const untilDate = new Date(data.onHoldUntil);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const diffTime = untilDate.getTime() - today.getTime();
+      onHoldDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (onHoldDuration < 0) {
+        toast.error("On hold date cannot be in the past");
+        return;
+      }
+      onHoldUntilDate = data.onHoldUntil;
+    }
+
+    if (selectedStatusName === "future") {
+      if (!data.futureDate) {
+        toast.error("Please select a future date.");
+        return;
+      }
+      const fDate = new Date(data.futureDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (fDate < today) {
+        toast.error("Future date cannot be in the past.");
+        return;
+      }
+      futureDateValue = data.futureDate;
+    }
+
     try {
       await updateStatus({
         candidateId,
         status: {
           currentStatusId: parseInt(data.currentStatusId),
           reason: data.reason,
+          onHoldDurationDays: onHoldDuration,
+          onHoldUntil: onHoldUntilDate,
+          futureDate: futureDateValue,
         },
       }).unwrap();
 
@@ -240,7 +291,16 @@ export function StatusUpdateModal({
     onClose();
   };
 
-  const statuses = statusesData?.data || [];
+  const rawStatuses = statusesData?.data || [];
+  const statuses = rawStatuses.filter(
+    (status) => (status.statusName || '').toLowerCase() !== 'qualified',
+  );
+
+  const selectedStatusId = form.watch('currentStatusId');
+  const selectedStatusName = (
+    statuses.find((status) => String(status.id) === selectedStatusId)?.statusName ||
+    ''
+  ).toLowerCase();
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -373,6 +433,51 @@ export function StatusUpdateModal({
                     </FormItem>
                 )}
                 />
+
+                {(selectedStatusName === "on hold" ||
+                  selectedStatusName === "onhold") && (
+                  <FormField
+                    control={form.control}
+                    name="onHoldUntil"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          On Hold Until
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {selectedStatusName === "future" && (
+                  <FormField
+                    control={form.control}
+                    name="futureDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          Available From Date
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
             </div>
 
             <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200/60">
@@ -395,7 +500,7 @@ export function StatusUpdateModal({
                 ) : (
                     <CheckCircle2 className="mr-2 h-5 w-5" />
                 )}
-                Update Pipeline
+                Update Status
               </Button>
             </DialogFooter>
           </form>

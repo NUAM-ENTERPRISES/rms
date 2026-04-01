@@ -244,6 +244,8 @@ export class CandidatesService {
         university: createCandidateDto.university,
         graduationYear: createCandidateDto.graduationYear,
         gpa: createCandidateDto.gpa,
+        onHoldDuration: createCandidateDto.onHoldDuration,
+        onHoldUntil: createCandidateDto.onHoldUntil ? new Date(createCandidateDto.onHoldUntil) : null,
         // Legacy fields for backward compatibility
         experience: totalExperience,
         skills: createCandidateDto.skills
@@ -1766,6 +1768,10 @@ export class CandidatesService {
       updateData.university = updateCandidateDto.university;
     if (updateCandidateDto.graduationYear !== undefined)
       updateData.graduationYear = updateCandidateDto.graduationYear;
+    if (updateCandidateDto.onHoldDuration !== undefined)
+      updateData.onHoldDuration = updateCandidateDto.onHoldDuration;
+    if (updateCandidateDto.onHoldUntil !== undefined)
+      updateData.onHoldUntil = updateCandidateDto.onHoldUntil ? new Date(updateCandidateDto.onHoldUntil) : null;
     if (updateCandidateDto.gpa !== undefined)
       updateData.gpa = updateCandidateDto.gpa;
     if (updateCandidateDto.skills)
@@ -2815,6 +2821,38 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate status ${updateStatusDto.currentStatusId} not found`);
     }
 
+    // Status-specific validation
+    const normalizedStatus = status.statusName.toLowerCase();
+
+    if (normalizedStatus === 'on hold' || normalizedStatus === 'onhold') {
+      if (
+        (updateStatusDto.onHoldDurationDays === undefined ||
+          updateStatusDto.onHoldDurationDays === null ||
+          updateStatusDto.onHoldDurationDays <= 0) &&
+        !updateStatusDto.onHoldUntil
+      ) {
+        throw new BadRequestException(
+          'onHoldDurationDays or onHoldUntil is required when status is On Hold',
+        );
+      }
+    }
+
+    if (normalizedStatus === 'future') {
+      if (!updateStatusDto.futureDate) {
+        throw new BadRequestException(
+          'futureDate is required when status is Future',
+        );
+      }
+      const futureDate = new Date(updateStatusDto.futureDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (futureDate < today) {
+        throw new BadRequestException(
+          'futureDate must be today or a future date when status is Future',
+        );
+      }
+    }
+
     // Get the user (who’s changing the status) and enforce CRE read-only behavior
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -2836,6 +2874,9 @@ export class CandidatesService {
       where: { id: candidateId },
       data: {
         currentStatusId: updateStatusDto.currentStatusId,
+        onHoldDuration: updateStatusDto.onHoldDurationDays ?? null,
+        onHoldUntil: updateStatusDto.onHoldUntil ? new Date(updateStatusDto.onHoldUntil) : null,
+        futureDate: updateStatusDto.futureDate ? new Date(updateStatusDto.futureDate) : null,
         updatedAt: new Date(),
       },
       include: {
@@ -2853,17 +2894,21 @@ export class CandidatesService {
     });
 
     // update candidate status history
+    const statusHistoryPayload: any = {
+      candidateId: candidateId,
+      changedById: user?.id,
+      changedByName: user?.name ?? "System", // fallback if user null
+      statusId: status.id,
+      statusNameSnapshot: status.statusName, // snapshot for history
+      statusUpdatedAt: new Date(),
+      notificationCount: 0,
+      reason: updateStatusDto.reason, // Save reason for status change
+      onHoldDurationDays: updateStatusDto.onHoldDurationDays ?? null,
+      futureYear: updateStatusDto.futureYear ?? null,
+    };
+
     const statusHistory = await this.prisma.candidateStatusHistory.create({
-      data: {
-        candidateId: candidateId,
-        changedById: user?.id,
-        changedByName: user?.name ?? "System", // fallback if user null
-        statusId: status.id,
-        statusNameSnapshot: status.statusName, // snapshot for history
-        statusUpdatedAt: new Date(),
-        notificationCount: 0,
-        reason: updateStatusDto.reason, // Save reason for status change
-      },
+      data: statusHistoryPayload,
     });
 
     // Notify about status update for real-time UI
