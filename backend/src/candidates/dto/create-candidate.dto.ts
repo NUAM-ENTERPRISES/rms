@@ -136,10 +136,10 @@ export class CreateCandidateDto {
     description: 'Date of birth',
     example: '1990-01-01T00:00:00.000Z',
   })
-  @Transform(({ value }) => (value === null || value === '' ? undefined : value))
+  @Transform(({ value }) => (value === undefined ? undefined : value === '' ? null : value))
   @IsOptional()
   @IsDateString()
-  dateOfBirth?: string;
+  dateOfBirth?: string | null;
 
   @ApiPropertyOptional({
     description: 'Gender of the candidate',
