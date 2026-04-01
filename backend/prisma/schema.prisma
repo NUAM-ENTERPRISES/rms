@@ -46,9 +46,10 @@ model User {
   userRoles                        UserRole[]
   userTeams                        UserTeam[]
   candidateProjectMaps             CandidateProjects[]
-  candidateRecruiterAssignments    CandidateRecruiterAssignment[]
-  assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
-  unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
+  candidateRecruiterAssignments           CandidateRecruiterAssignment[]
+  assignedByRecruiterAssignments         CandidateRecruiterAssignment[] @relation("AssignedByUser")
+  unassignedByRecruiterAssignments       CandidateRecruiterAssignment[] @relation("UnassignedByUser")
+  createdByRecruiterAssignments          CandidateRecruiterAssignment[] @relation("CreatedByUser")
   
   // user preference: should notification sounds be muted?
   notificationSoundMuted           Boolean                        @default(false)
@@ -1347,6 +1348,7 @@ model CandidateRecruiterAssignment {
   candidateId    String
   recruiterId    String
   assignedBy     String
+  createdBy      String?
   assignedAt     DateTime  @default(now())
   unassignedAt   DateTime?
   unassignedBy   String?
@@ -1356,13 +1358,15 @@ model CandidateRecruiterAssignment {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  recruiter        User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
-  assignedByUser   User      @relation("AssignedByUser", fields: [assignedBy], references: [id])
-  unassignedByUser User?     @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
+  candidate          Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter          User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  assignedByUser     User      @relation("AssignedByUser", fields: [assignedBy], references: [id])
+  unassignedByUser   User?     @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
+  createdByUser      User?     @relation("CreatedByUser", fields: [createdBy], references: [id])
 
   @@index([candidateId])
   @@index([recruiterId])
+  @@index([createdBy])
   @@index([isActive])
   @@index([assignmentType])
   @@map("candidate_recruiter_assignments")

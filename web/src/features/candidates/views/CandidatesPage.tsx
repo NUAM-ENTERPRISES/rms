@@ -1538,24 +1538,28 @@ export default function CandidatesPage() {
                             </div>
                           </TableCell>
 
-                          {/* Created By */}
-                          <TableCell className="px-4 py-3">
-                            <div className="text-xs">
-                              {(candidate as any).createdBy ? (
-                                <div className="space-y-0.5">
-                                  <div className="font-medium text-slate-900">{(candidate as any).createdBy.name}</div>
-                                  {(candidate as any).createdBy.email && (
-                                    <div className="flex items-center gap-1.5 text-slate-700">
-                                      <Mail className="h-3 w-3 text-gray-400" />
-                                      <span className="truncate max-w-[120px]">{(candidate as any).createdBy.email}</span>
-                                    </div>
-                                  )}
+                        {/* Created By */}
+                        <TableCell className="px-4 py-3">
+                          <div className="text-xs">
+                            {(candidate as any).createdBy || activeAssignment?.createdByUser ? (
+                              <div className="space-y-0.5">
+                                <div className="font-medium text-slate-900">
+                                  {((candidate as any).createdBy?.name || activeAssignment?.createdByUser?.name)}
                                 </div>
-                              ) : (
-                                <span className="text-slate-500 text-[10px]">System / Admin</span>
-                              )}
-                            </div>
-                          </TableCell>
+                                {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email) && (
+                                  <div className="flex items-center gap-1.5 text-slate-700">
+                                    <Mail className="h-3 w-3 text-gray-400" />
+                                    <span className="truncate max-w-[120px]">
+                                      {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-500 text-[10px]">System / Admin</span>
+                            )}
+                          </div>
+                        </TableCell>
 
                           {/* Created At */}
                           <TableCell className="px-4 py-3">

@@ -31,7 +31,7 @@ export class RecruiterAssignmentService {
   async getBestRecruiterForAssignment(
     candidateId: string,
     createdByUserId: string,
-  ): Promise<RecruiterInfo> {
+  ): Promise<RecruiterInfo & { isRoundRobin: boolean }> {
     // Get the user who created the candidate with their roles
     const creator = await this.prisma.user.findUnique({
       where: { id: createdByUserId },
@@ -67,6 +67,7 @@ export class RecruiterAssignmentService {
         email: creator.email,
         mobileNumber: creator.mobileNumber,
         countryCode: creator.countryCode,
+        isRoundRobin: false,
       };
     }
 
@@ -74,7 +75,11 @@ export class RecruiterAssignmentService {
     this.logger.log(
       `Creator ${creator.name} is NOT a Recruiter - using round-robin assignment based on least workload`,
     );
-    return await this.getRecruiterWithLeastWorkload();
+    const bestRecruiter = await this.getRecruiterWithLeastWorkload();
+    return {
+      ...bestRecruiter,
+      isRoundRobin: true,
+    };
   }
 
   /**
@@ -230,6 +235,7 @@ export class RecruiterAssignmentService {
         candidateId,
         recruiterId: recruiter.id,
         assignedBy: createdByUserId,
+        createdBy: createdByUserId,
         reason: reason || 'Automatic assignment on candidate creation',
       },
     });
@@ -241,6 +247,8 @@ export class RecruiterAssignmentService {
       createdByUserId,
       reason,
       currentAssignment?.recruiterId,
+      createdByUserId,
+      recruiter.isRoundRobin,
     );
 
     this.logger.log(
@@ -279,12 +287,18 @@ export class RecruiterAssignmentService {
       return cre;
     }
 
+    const createdByUserId =
+      assignedByUserId && assignedByUserId !== 'system'
+        ? assignedByUserId
+        : assignerUserId;
+
     // Create new CRE assignment WITHOUT deactivating others
     await this.prisma.candidateRecruiterAssignment.create({
       data: {
         candidateId,
         recruiterId: cre.id,
         assignedBy: assignerUserId,
+        createdBy: createdByUserId,
         reason: reason || 'Automatic CRE assignment for RNR status',
         assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
       },
@@ -300,12 +314,15 @@ export class RecruiterAssignmentService {
       select: { recruiterId: true }
     });
 
+    const createdByUser = assignedByUserId && assignedByUserId !== 'system' ? assignedByUserId : assignerUserId;
+
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       cre.id,
       assignerUserId,
       reason,
-      currentRecruiter?.recruiterId, 
+      currentRecruiter?.recruiterId,
+      createdByUserId,
     );
 
     this.logger.log(
@@ -715,6 +732,24 @@ export class RecruiterAssignmentService {
                 email: true,
               },
             },
+            assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                mobileNumber: true,
+                countryCode: true,
+              },
+            },
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                mobileNumber: true,
+                countryCode: true,
+              },
+            },
           },
         },
       },
@@ -754,6 +789,8 @@ export class RecruiterAssignmentService {
         // Match the legacy expected format where recruiterAssignments contains only the primary one
         // or just return the recruiter directly if the UI expects it
         recruiter: recruiterAssignment?.recruiter || null,
+        candidateCreatedBy:
+          recruiterAssignment?.createdByUser || recruiterAssignment?.assignedByUser || null,
       };
     });
 
