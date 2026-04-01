@@ -86,7 +86,10 @@ export class RecruiterAssignmentService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: {
+                equals: 'Recruiter',
+                mode: 'insensitive',
+              },
             },
           },
         },
@@ -139,7 +142,10 @@ export class RecruiterAssignmentService {
         userRoles: {
           some: {
             role: {
-              name: 'CRE',
+              name: {
+                equals: 'CRE',
+                mode: 'insensitive',
+              },
             },
           },
         },
