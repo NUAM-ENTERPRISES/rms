@@ -110,7 +110,7 @@ export default function CandidatesPage() {
     dateFrom: undefined as Date | undefined,
     dateTo: undefined as Date | undefined,
     page: 1,
-    limit: 20,
+    limit: 10,
   });
 
   // Fetch candidates - use different API for Recruiter users
