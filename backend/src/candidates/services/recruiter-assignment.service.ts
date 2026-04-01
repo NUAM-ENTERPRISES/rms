@@ -230,6 +230,7 @@ export class RecruiterAssignmentService {
         candidateId,
         recruiterId: recruiter.id,
         assignedBy: createdByUserId,
+        createdBy: createdByUserId,
         reason: reason || 'Automatic assignment on candidate creation',
       },
     });
@@ -241,6 +242,7 @@ export class RecruiterAssignmentService {
       createdByUserId,
       reason,
       currentAssignment?.recruiterId,
+      createdByUserId,
     );
 
     this.logger.log(
@@ -279,12 +281,18 @@ export class RecruiterAssignmentService {
       return cre;
     }
 
+    const createdByUserId =
+      assignedByUserId && assignedByUserId !== 'system'
+        ? assignedByUserId
+        : assignerUserId;
+
     // Create new CRE assignment WITHOUT deactivating others
     await this.prisma.candidateRecruiterAssignment.create({
       data: {
         candidateId,
         recruiterId: cre.id,
         assignedBy: assignerUserId,
+        createdBy: createdByUserId,
         reason: reason || 'Automatic CRE assignment for RNR status',
         assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
       },
@@ -300,12 +308,15 @@ export class RecruiterAssignmentService {
       select: { recruiterId: true }
     });
 
+    const createdByUser = assignedByUserId && assignedByUserId !== 'system' ? assignedByUserId : assignerUserId;
+
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       cre.id,
       assignerUserId,
       reason,
-      currentRecruiter?.recruiterId, 
+      currentRecruiter?.recruiterId,
+      createdByUserId,
     );
 
     this.logger.log(
@@ -715,6 +726,24 @@ export class RecruiterAssignmentService {
                 email: true,
               },
             },
+            assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                mobileNumber: true,
+                countryCode: true,
+              },
+            },
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                mobileNumber: true,
+                countryCode: true,
+              },
+            },
           },
         },
       },
@@ -754,6 +783,8 @@ export class RecruiterAssignmentService {
         // Match the legacy expected format where recruiterAssignments contains only the primary one
         // or just return the recruiter directly if the UI expects it
         recruiter: recruiterAssignment?.recruiter || null,
+        candidateCreatedBy:
+          recruiterAssignment?.createdByUser || recruiterAssignment?.assignedByUser || null,
       };
     });
 

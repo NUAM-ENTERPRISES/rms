@@ -220,6 +220,7 @@ export class OutboxService {
     assignedBy: string,
     reason?: string,
     previousRecruiterId?: string,
+    createdBy?: string,
     tx?: any,
   ): Promise<void> {
     await this.publishEvent(
@@ -228,6 +229,7 @@ export class OutboxService {
         candidateId,
         recruiterId,
         assignedBy,
+        createdBy,
         reason,
         previousRecruiterId,
       },

@@ -739,6 +739,13 @@ export class CandidatesService {
                 email: true,
               },
             },
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
           orderBy: {
             assignedAt: 'desc',
@@ -785,7 +792,7 @@ export class CandidatesService {
           assignedAt: creAssignment.assignedAt,
           assignmentType: creAssignment.assignmentType,
         } : null,
-        createdBy: activeAssignment?.assignedByUser || null,
+        createdBy: activeAssignment?.createdByUser || activeAssignment?.assignedByUser || null,
         recruiter: activeAssignment?.recruiter || null,
       };
     });
@@ -1576,8 +1583,23 @@ export class CandidatesService {
         },
         facilityPreferences: true,
         recruiterAssignments: {
+          where: { isActive: true },
           include: {
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
             assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            createdByUser: {
               select: {
                 id: true,
                 name: true,
@@ -1594,9 +1616,12 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    // Extract the creator from the first assignment
+    // Extract the creator from the first active assignment
     const firstAssignment = candidate.recruiterAssignments?.[0];
-    const createdBy = firstAssignment?.assignedByUser || null;
+    const createdBy =
+      firstAssignment?.createdByUser ||
+      firstAssignment?.assignedByUser ||
+      null;
 
     // Pipeline data removed from response to reduce payload
     return {
@@ -3066,6 +3091,7 @@ export class CandidatesService {
         candidateId,
         recruiterId: assignRecruiterDto.recruiterId,
         assignedBy: userId,
+        createdBy: userId,
         reason: assignRecruiterDto.reason,
         assignmentType: assignRecruiterDto.assignmentType || 'manual',
       },
@@ -3945,6 +3971,13 @@ export class CandidatesService {
                 email: true,
               },
             },
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -3965,7 +3998,7 @@ export class CandidatesService {
       return {
         ...candidateRest,
         recruiter: activeAssignment?.recruiter || null,
-        createdBy: firstAssignment?.assignedByUser || null,
+        createdBy: firstAssignment?.createdByUser || firstAssignment?.assignedByUser || null,
         projectDetails: latestProject
           ? {
               id: latestProject.id,

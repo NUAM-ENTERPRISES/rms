@@ -1541,13 +1541,13 @@ export default function CandidatesPage() {
                           {/* Created By */}
                           <TableCell className="px-4 py-3">
                             <div className="text-xs">
-                              {(candidate as any).createdBy ? (
+                              {(candidate as any).candidateCreatedBy ? (
                                 <div className="space-y-0.5">
-                                  <div className="font-medium text-slate-900">{(candidate as any).createdBy.name}</div>
-                                  {(candidate as any).createdBy.email && (
+                                  <div className="font-medium text-slate-900">{(candidate as any).candidateCreatedBy.name}</div>
+                                  {(candidate as any).candidateCreatedBy.email && (
                                     <div className="flex items-center gap-1.5 text-slate-700">
                                       <Mail className="h-3 w-3 text-gray-400" />
-                                      <span className="truncate max-w-[120px]">{(candidate as any).createdBy.email}</span>
+                                      <span className="truncate max-w-[120px]">{(candidate as any).candidateCreatedBy.email}</span>
                                     </div>
                                   )}
                                 </div>
