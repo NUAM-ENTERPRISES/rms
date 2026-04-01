@@ -221,6 +221,7 @@ export class OutboxService {
     reason?: string,
     previousRecruiterId?: string,
     createdBy?: string,
+    isRoundRobin: boolean = false,
     tx?: any,
   ): Promise<void> {
     await this.publishEvent(
@@ -232,6 +233,7 @@ export class OutboxService {
         createdBy,
         reason,
         previousRecruiterId,
+        isRoundRobin,
       },
       tx,
     );

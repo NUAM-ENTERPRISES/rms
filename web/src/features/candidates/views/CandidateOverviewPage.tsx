@@ -557,7 +557,7 @@ export default function CandidateOverviewPage() {
                         // Determine active recruiter assignment
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
-                      const createdBy = (candidate as any).createdBy || null;
+                      const createdBy = (candidate as any).createdBy || activeAssignment?.createdByUser || null;
 
                       return (
                         <TableRow key={candidate.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
@@ -625,7 +625,7 @@ export default function CandidateOverviewPage() {
                           {/* Created By */}
                           <TableCell className="px-4 py-3">
                             <div className="text-xs">
-                              {createdBy ? (
+                              {createdBy?.name ? (
                                 <div className="space-y-0.5">
                                   <div className="font-medium text-slate-900 truncate max-w-[120px]">{createdBy.name}</div>
                                   {createdBy.email && (

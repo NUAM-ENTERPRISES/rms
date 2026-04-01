@@ -31,7 +31,7 @@ export class RecruiterAssignmentService {
   async getBestRecruiterForAssignment(
     candidateId: string,
     createdByUserId: string,
-  ): Promise<RecruiterInfo> {
+  ): Promise<RecruiterInfo & { isRoundRobin: boolean }> {
     // Get the user who created the candidate with their roles
     const creator = await this.prisma.user.findUnique({
       where: { id: createdByUserId },
@@ -67,6 +67,7 @@ export class RecruiterAssignmentService {
         email: creator.email,
         mobileNumber: creator.mobileNumber,
         countryCode: creator.countryCode,
+        isRoundRobin: false,
       };
     }
 
@@ -74,7 +75,11 @@ export class RecruiterAssignmentService {
     this.logger.log(
       `Creator ${creator.name} is NOT a Recruiter - using round-robin assignment based on least workload`,
     );
-    return await this.getRecruiterWithLeastWorkload();
+    const bestRecruiter = await this.getRecruiterWithLeastWorkload();
+    return {
+      ...bestRecruiter,
+      isRoundRobin: true,
+    };
   }
 
   /**
@@ -243,6 +248,7 @@ export class RecruiterAssignmentService {
       reason,
       currentAssignment?.recruiterId,
       createdByUserId,
+      recruiter.isRoundRobin,
     );
 
     this.logger.log(
