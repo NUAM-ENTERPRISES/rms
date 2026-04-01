@@ -756,6 +756,24 @@ export const candidatesApi = baseApi.injectEndpoints({
         facilityPreferences?: string[];
         sources?: string[];
         source?: string;
+        minExperience?: number;
+        maxExperience?: number;
+        minSalary?: number;
+        maxSalary?: number;
+        visaType?: string;
+        qualification?: string;
+        heightMin?: number;
+        heightMax?: number;
+        weightMin?: number;
+        weightMax?: number;
+        skinTone?: string;
+        languageProficiency?: string;
+        smartness?: string;
+        licensingExam?: string;
+        dataFlow?: boolean;
+        eligibility?: boolean;
+        workExperienceCompany?: string;
+        workExperienceTitle?: string;
       }) => {
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append("page", params.page.toString());
@@ -786,6 +804,25 @@ export const candidatesApi = baseApi.injectEndpoints({
         } else if (params.source) {
           queryParams.append("source", params.source);
         }
+
+        if (params.minExperience !== undefined) queryParams.append("minExperience", params.minExperience.toString());
+        if (params.maxExperience !== undefined) queryParams.append("maxExperience", params.maxExperience.toString());
+        if (params.minSalary !== undefined) queryParams.append("minSalary", params.minSalary.toString());
+        if (params.maxSalary !== undefined) queryParams.append("maxSalary", params.maxSalary.toString());
+        if (params.visaType) queryParams.append("visaType", params.visaType);
+        if (params.qualification) queryParams.append("qualification", params.qualification);
+        if (params.heightMin !== undefined) queryParams.append("heightMin", params.heightMin.toString());
+        if (params.heightMax !== undefined) queryParams.append("heightMax", params.heightMax.toString());
+        if (params.weightMin !== undefined) queryParams.append("weightMin", params.weightMin.toString());
+        if (params.weightMax !== undefined) queryParams.append("weightMax", params.weightMax.toString());
+        if (params.skinTone) queryParams.append("skinTone", params.skinTone);
+        if (params.languageProficiency) queryParams.append("languageProficiency", params.languageProficiency);
+        if (params.smartness) queryParams.append("smartness", params.smartness);
+        if (params.licensingExam) queryParams.append("licensingExam", params.licensingExam);
+        if (params.dataFlow !== undefined) queryParams.append("dataFlow", String(params.dataFlow));
+        if (params.eligibility !== undefined) queryParams.append("eligibility", String(params.eligibility));
+        if (params.workExperienceCompany) queryParams.append("workExperienceCompany", params.workExperienceCompany);
+        if (params.workExperienceTitle) queryParams.append("workExperienceTitle", params.workExperienceTitle);
 
         return `/candidates/overview?${queryParams.toString()}`;
       },

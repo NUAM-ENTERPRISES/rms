@@ -108,15 +108,49 @@ export default function CandidateOverviewPage() {
     mainStatus: undefined as string | undefined,
     subStatus: undefined as string | undefined,
     processingStep: undefined as string | undefined,
+    minExperience: undefined as number | undefined,
+    maxExperience: undefined as number | undefined,
+    minSalary: undefined as number | undefined,
+    maxSalary: undefined as number | undefined,
+    visaType: undefined as string | undefined,
+    qualification: "",
+    heightMin: undefined as number | undefined,
+    heightMax: undefined as number | undefined,
+    weightMin: undefined as number | undefined,
+    weightMax: undefined as number | undefined,
+    skinTone: "",
+    languageProficiency: "",
+    smartness: "",
+    licensingExam: "",
+    dataFlow: undefined as boolean | undefined,
+    eligibility: undefined as boolean | undefined,
+    workExperienceCompany: "",
+    workExperienceTitle: "",
   });
 
   // Count active filters (calculated after filters state)
   const activeFilterCount = [
     filters.countryPreferences.length > 0,
     filters.sectorTypes.length > 0,
+    filters.facilityPreferences.length > 0,
     filters.sources.length > 0,
     filters.dateFilter !== "all",
     filters.recruiterId !== "all" && filters.recruiterId !== currentUser?.id,
+    filters.gender !== "all",
+    filters.minExperience !== undefined,
+    filters.maxExperience !== undefined,
+    filters.minSalary !== undefined,
+    filters.maxSalary !== undefined,
+    !!filters.visaType,
+    !!filters.qualification,
+    !!filters.workExperienceCompany,
+    !!filters.workExperienceTitle,
+    !!filters.skinTone,
+    !!filters.languageProficiency,
+    !!filters.smartness,
+    !!filters.licensingExam,
+    filters.dataFlow !== undefined,
+    filters.eligibility !== undefined,
     !!filters.mainStatus,
     !!filters.subStatus,
     !!filters.processingStep,
@@ -220,6 +254,24 @@ export default function CandidateOverviewPage() {
       mainStatus: undefined,
       subStatus: undefined,
       processingStep: undefined,
+      minExperience: undefined,
+      maxExperience: undefined,
+      minSalary: undefined,
+      maxSalary: undefined,
+      visaType: undefined,
+      qualification: "",
+      heightMin: undefined,
+      heightMax: undefined,
+      weightMin: undefined,
+      weightMax: undefined,
+      skinTone: "",
+      languageProficiency: "",
+      smartness: "",
+      licensingExam: "",
+      dataFlow: undefined,
+      eligibility: undefined,
+      workExperienceCompany: "",
+      workExperienceTitle: "",
     });
   };
 
@@ -557,7 +609,7 @@ export default function CandidateOverviewPage() {
                         // Determine active recruiter assignment
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
-                      const createdBy = (candidate as any).createdBy || null;
+                      const createdBy = (candidate as any).createdBy || activeAssignment?.createdByUser || null;
 
                       return (
                         <TableRow key={candidate.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
@@ -625,7 +677,7 @@ export default function CandidateOverviewPage() {
                           {/* Created By */}
                           <TableCell className="px-4 py-3">
                             <div className="text-xs">
-                              {createdBy ? (
+                              {createdBy?.name ? (
                                 <div className="space-y-0.5">
                                   <div className="font-medium text-slate-900 truncate max-w-[120px]">{createdBy.name}</div>
                                   {createdBy.email && (

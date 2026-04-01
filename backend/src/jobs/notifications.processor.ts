@@ -1019,12 +1019,14 @@ export class NotificationsProcessor extends WorkerHost {
     );
 
     try {
-      const { candidateId, recruiterId, assignedBy, reason, previousRecruiterId } = payload as {
+      const { candidateId, recruiterId, assignedBy, reason, previousRecruiterId, createdBy, isRoundRobin } = payload as {
         candidateId: string;
         recruiterId: string;
         assignedBy: string;
+        createdBy?: string;
         reason?: string;
         previousRecruiterId?: string;
+        isRoundRobin?: boolean;
       };
 
       // Load candidate and assigner details
@@ -1063,24 +1065,68 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
-      const assignerName = assignedBy === 'system' ? 'System' : (assigner?.name || 'A team member');
+      const creatingUserId = createdBy || assignedBy;
+      const creatingUser = creatingUserId === 'system' ? null : await this.prisma.user.findUnique({
+        where: { id: creatingUserId },
+        select: { name: true },
+      });
+      const assignerName = creatingUserId === 'system' ? 'System' : (creatingUser?.name || 'A team member');
       const isCreAssignment = newRecruiter?.userRoles.some(
         (ur) => ur.role.name.toUpperCase() === 'CRE',
       );
+      const isNewAssignment = !previousRecruiterId;
 
-      // 1. Notify the NEW recruiter (CRE or Primary Recruiter)
+      // 1. Notify the NEW recruiter (CRE or primary recruiter)
       const idemKeyNew = `${eventId}:${recruiterId}:candidate_transferred`;
+
+      let notificationTitle = isCreAssignment
+        ? 'New RNR Candidate Assigned'
+        : isNewAssignment
+          ? 'Candidate Created Successfully'
+          : 'Candidate Ready from CRE';
+
+      let notificationMessage = isCreAssignment
+        ? `Candidate ${candidate.firstName} ${candidate.lastName} has been assigned to you for RNR handling.`
+        : isNewAssignment
+          ? `Candidate ${candidate.firstName} ${candidate.lastName} has been created and assigned to you by ${assignerName}.`
+          : `${assignerName} processed candidate ${candidate.firstName} ${candidate.lastName} and it's now back in your list.${reason ? ` Notes: ${reason}` : ''}`;
+
+      // Custom requirement: Handle Round Robin vs Direct Assignment for new recruiters
+      if (isNewAssignment && !isCreAssignment) {
+        if (isRoundRobin) {
+          notificationTitle = 'A candidate is transferred to you';
+          notificationMessage = 'A candidate is transferred to you';
+        } else {
+          notificationTitle = 'Candidate Created Successfully';
+          notificationMessage = `Candidate ${candidate.firstName} ${candidate.lastName} created successfully and assigned to ${newRecruiter?.name || 'you'}.`;
+        }
+      }
+
       await this.notificationsService.createNotification({
         userId: recruiterId,
         type: 'candidate_transferred',
-        title: isCreAssignment ? 'New RNR Candidate Assigned' : 'Candidate Ready from CRE',
-        message: isCreAssignment 
-          ? `Candidate ${candidate.firstName} ${candidate.lastName} has been assigned to you for RNR handling.`
-          : `${assignerName} processed candidate ${candidate.firstName} ${candidate.lastName} and it's now back in your list.${reason ? ` Notes: ${reason}` : ''}`,
+        title: notificationTitle,
+        message: notificationMessage,
         link: `/candidates/${candidateId}`,
         meta: { candidateId, assignedBy, reason },
         idemKey: idemKeyNew,
       });
+
+      // 1.5 Notify the CREATOR if they are different from the recruiter
+      if (isNewAssignment && !isCreAssignment && creatingUserId !== recruiterId && creatingUserId !== 'system') {
+        const creatorId = creatingUserId;
+        const idemKeyCreator = `${eventId}:${creatorId}:candidate_created_success`;
+        
+        await this.notificationsService.createNotification({
+          userId: creatorId,
+          type: 'candidate_transferred', // Reusing type or using a generic one
+          title: 'Candidate Created Successfully',
+          message: `Candidate ${candidate.firstName} ${candidate.lastName} created successfully and assigned to ${newRecruiter?.name || 'recruiter'}.`,
+          link: `/candidates/${candidateId}`,
+          meta: { candidateId, assignedBy, recruiterId },
+          idemKey: idemKeyCreator,
+        });
+      }
 
       // 2. Notify the PREVIOUS recruiter or Handler
       // If moving TO CRE, notify primary with "In CRE Handling"

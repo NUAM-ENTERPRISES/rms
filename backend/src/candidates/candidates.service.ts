@@ -741,6 +741,13 @@ export class CandidatesService {
                 email: true,
               },
             },
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
           orderBy: {
             assignedAt: 'desc',
@@ -787,7 +794,7 @@ export class CandidatesService {
           assignedAt: creAssignment.assignedAt,
           assignmentType: creAssignment.assignmentType,
         } : null,
-        createdBy: activeAssignment?.assignedByUser || null,
+        createdBy: activeAssignment?.createdByUser || activeAssignment?.assignedByUser || null,
         recruiter: activeAssignment?.recruiter || null,
       };
     });
@@ -1578,8 +1585,23 @@ export class CandidatesService {
         },
         facilityPreferences: true,
         recruiterAssignments: {
+          where: { isActive: true },
           include: {
+            recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
             assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            createdByUser: {
               select: {
                 id: true,
                 name: true,
@@ -1596,9 +1618,12 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    // Extract the creator from the first assignment
+    // Extract the creator from the first active assignment
     const firstAssignment = candidate.recruiterAssignments?.[0];
-    const createdBy = firstAssignment?.assignedByUser || null;
+    const createdBy =
+      firstAssignment?.createdByUser ||
+      firstAssignment?.assignedByUser ||
+      null;
 
     // Pipeline data removed from response to reduce payload
     return {
@@ -3114,6 +3139,7 @@ export class CandidatesService {
         candidateId,
         recruiterId: assignRecruiterDto.recruiterId,
         assignedBy: userId,
+        createdBy: userId,
         reason: assignRecruiterDto.reason,
         assignmentType: assignRecruiterDto.assignmentType || 'manual',
       },
@@ -3541,6 +3567,86 @@ export class CandidatesService {
 
     if (query.facilityPreferences && query.facilityPreferences.length > 0) {
       where.facilityPreferences = { some: { facilityType: { in: query.facilityPreferences } } };
+    }
+
+    if (query.visaType) {
+      where.visaType = query.visaType;
+    }
+
+    if (query.qualification) {
+      where.qualifications = {
+        some: {
+          qualification: {
+            name: { contains: query.qualification, mode: 'insensitive' },
+          },
+        },
+      };
+    }
+
+    if (query.minExperience !== undefined || query.maxExperience !== undefined) {
+      where.experience = {};
+      if (query.minExperience !== undefined) where.experience.gte = query.minExperience;
+      if (query.maxExperience !== undefined) where.experience.lte = query.maxExperience;
+    }
+
+    if (query.minSalary !== undefined || query.maxSalary !== undefined) {
+      where.expectedMinSalary = {};
+      if (query.minSalary !== undefined) where.expectedMinSalary.gte = query.minSalary;
+      if (query.maxSalary !== undefined) where.expectedMinSalary.lte = query.maxSalary;
+    }
+
+    if (query.heightMin !== undefined || query.heightMax !== undefined) {
+      where.height = {};
+      if (query.heightMin !== undefined) where.height.gte = query.heightMin;
+      if (query.heightMax !== undefined) where.height.lte = query.heightMax;
+    }
+
+    if (query.weightMin !== undefined || query.weightMax !== undefined) {
+      where.weight = {};
+      if (query.weightMin !== undefined) where.weight.gte = query.weightMin;
+      if (query.weightMax !== undefined) where.weight.lte = query.weightMax;
+    }
+
+    if (query.skinTone) {
+      where.skinTone = query.skinTone;
+    }
+
+    if (query.languageProficiency) {
+      where.languageProficiency = { contains: query.languageProficiency, mode: 'insensitive' };
+    }
+
+    if (query.smartness) {
+      where.smartness = query.smartness;
+    }
+
+    if (query.licensingExam) {
+      where.licensingExam = query.licensingExam;
+    }
+
+    if (query.dataFlow !== undefined) {
+      where.dataFlow = query.dataFlow;
+    }
+
+    if (query.eligibility !== undefined) {
+      where.eligibility = query.eligibility;
+    }
+
+    if (query.dateOfBirthFrom || query.dateOfBirthTo) {
+      const dobRange: any = {};
+      if (query.dateOfBirthFrom) dobRange.gte = new Date(query.dateOfBirthFrom);
+      if (query.dateOfBirthTo) dobRange.lte = new Date(query.dateOfBirthTo);
+      where.dateOfBirth = dobRange;
+    }
+
+    if (query.workExperienceCompany || query.workExperienceTitle) {
+      const workExperienceCondition: any = {};
+      if (query.workExperienceCompany) {
+        workExperienceCondition.companyName = { contains: query.workExperienceCompany, mode: 'insensitive' };
+      }
+      if (query.workExperienceTitle) {
+        workExperienceCondition.jobTitle = { contains: query.workExperienceTitle, mode: 'insensitive' };
+      }
+      where.workExperiences = { some: workExperienceCondition };
     }
 
     // New: Main and Sub Status filtering
@@ -3993,6 +4099,13 @@ export class CandidatesService {
                 email: true,
               },
             },
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -4013,7 +4126,7 @@ export class CandidatesService {
       return {
         ...candidateRest,
         recruiter: activeAssignment?.recruiter || null,
-        createdBy: firstAssignment?.assignedByUser || null,
+        createdBy: firstAssignment?.createdByUser || firstAssignment?.assignedByUser || null,
         projectDetails: latestProject
           ? {
               id: latestProject.id,
