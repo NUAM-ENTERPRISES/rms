@@ -3524,6 +3524,86 @@ export class CandidatesService {
       where.facilityPreferences = { some: { facilityType: { in: query.facilityPreferences } } };
     }
 
+    if (query.visaType) {
+      where.visaType = query.visaType;
+    }
+
+    if (query.qualification) {
+      where.qualifications = {
+        some: {
+          qualification: {
+            name: { contains: query.qualification, mode: 'insensitive' },
+          },
+        },
+      };
+    }
+
+    if (query.minExperience !== undefined || query.maxExperience !== undefined) {
+      where.experience = {};
+      if (query.minExperience !== undefined) where.experience.gte = query.minExperience;
+      if (query.maxExperience !== undefined) where.experience.lte = query.maxExperience;
+    }
+
+    if (query.minSalary !== undefined || query.maxSalary !== undefined) {
+      where.expectedMinSalary = {};
+      if (query.minSalary !== undefined) where.expectedMinSalary.gte = query.minSalary;
+      if (query.maxSalary !== undefined) where.expectedMinSalary.lte = query.maxSalary;
+    }
+
+    if (query.heightMin !== undefined || query.heightMax !== undefined) {
+      where.height = {};
+      if (query.heightMin !== undefined) where.height.gte = query.heightMin;
+      if (query.heightMax !== undefined) where.height.lte = query.heightMax;
+    }
+
+    if (query.weightMin !== undefined || query.weightMax !== undefined) {
+      where.weight = {};
+      if (query.weightMin !== undefined) where.weight.gte = query.weightMin;
+      if (query.weightMax !== undefined) where.weight.lte = query.weightMax;
+    }
+
+    if (query.skinTone) {
+      where.skinTone = query.skinTone;
+    }
+
+    if (query.languageProficiency) {
+      where.languageProficiency = { contains: query.languageProficiency, mode: 'insensitive' };
+    }
+
+    if (query.smartness) {
+      where.smartness = query.smartness;
+    }
+
+    if (query.licensingExam) {
+      where.licensingExam = query.licensingExam;
+    }
+
+    if (query.dataFlow !== undefined) {
+      where.dataFlow = query.dataFlow;
+    }
+
+    if (query.eligibility !== undefined) {
+      where.eligibility = query.eligibility;
+    }
+
+    if (query.dateOfBirthFrom || query.dateOfBirthTo) {
+      const dobRange: any = {};
+      if (query.dateOfBirthFrom) dobRange.gte = new Date(query.dateOfBirthFrom);
+      if (query.dateOfBirthTo) dobRange.lte = new Date(query.dateOfBirthTo);
+      where.dateOfBirth = dobRange;
+    }
+
+    if (query.workExperienceCompany || query.workExperienceTitle) {
+      const workExperienceCondition: any = {};
+      if (query.workExperienceCompany) {
+        workExperienceCondition.companyName = { contains: query.workExperienceCompany, mode: 'insensitive' };
+      }
+      if (query.workExperienceTitle) {
+        workExperienceCondition.jobTitle = { contains: query.workExperienceTitle, mode: 'insensitive' };
+      }
+      where.workExperiences = { some: workExperienceCondition };
+    }
+
     // New: Main and Sub Status filtering
     if (query.mainStatus || query.subStatus) {
       if (!where.projects) {

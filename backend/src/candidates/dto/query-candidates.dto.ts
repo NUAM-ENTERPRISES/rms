@@ -6,6 +6,7 @@ import {
   Min,
   Max,
   IsDateString,
+  IsBoolean,
 } from 'class-validator';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { Type, Transform } from 'class-transformer';
@@ -105,14 +106,8 @@ export class QueryCandidatesDto {
   @Min(0)
   minSalary?: number;
 
-  @ApiPropertyOptional({    description: 'Filter by Role Catalog ID',
-    example: 'role_123',
-  })
-  @IsOptional()
-  @IsString()
-  roleCatalogId?: string;
-
-  @ApiPropertyOptional({    description: 'Filter by maximum expected salary',
+  @ApiPropertyOptional({
+    description: 'Filter by maximum expected salary',
     example: 80000,
     minimum: 0,
   })
@@ -121,6 +116,138 @@ export class QueryCandidatesDto {
   @IsInt()
   @Min(0)
   maxSalary?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by visa type',
+    example: 'employment',
+  })
+  @IsOptional()
+  @IsString()
+  visaType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by qualification name or code',
+    example: 'BSc Nursing',
+  })
+  @IsOptional()
+  @IsString()
+  qualification?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by work experience company name',
+    example: 'Aster',
+  })
+  @IsOptional()
+  @IsString()
+  workExperienceCompany?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by work experience job title',
+    example: 'Nurse',
+  })
+  @IsOptional()
+  @IsString()
+  workExperienceTitle?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by minimum height (cm)',
+    example: 150,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  heightMin?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by maximum height (cm)',
+    example: 200,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  heightMax?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by minimum weight (kg)',
+    example: 50,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  weightMin?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by maximum weight (kg)',
+    example: 100,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  weightMax?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by skin tone',
+    example: 'Fair',
+  })
+  @IsOptional()
+  @IsString()
+  skinTone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by language proficiency',
+    example: 'English',
+  })
+  @IsOptional()
+  @IsString()
+  languageProficiency?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by smartness',
+    example: 'Excellent',
+  })
+  @IsOptional()
+  @IsString()
+  smartness?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by licensing exam',
+    example: 'prometric',
+  })
+  @IsOptional()
+  @IsString()
+  licensingExam?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter for data flow cleared',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  dataFlow?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter for eligibility cleared',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  eligibility?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by Role Catalog ID',
+    example: 'role_123',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by date of birth (from date)',

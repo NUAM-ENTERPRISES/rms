@@ -9,6 +9,8 @@ import {
   SheetOverlay,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   SlidersHorizontal, 
   User, 
@@ -33,7 +35,7 @@ import {
 import { 
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { SECTOR_TYPES } from "@/constants/candidate-constants";
+import { SECTOR_TYPES, VISA_TYPES, SKIN_TONES, SMARTNESS_LEVELS, LICENSING_EXAMS } from "@/constants/candidate-constants";
 import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { WORKFLOW_STATUS_MAPPING } from "../constants";
 
@@ -213,6 +215,237 @@ export function AdvancedFiltersSheet({
               onValueChange={(val) => setLocalFilters(f => ({ ...f, sources: val, page: 1 }))}
               className="bg-white shadow-sm scale-95 origin-left"
             />
+          </div>
+
+          {/* Candidate Profile Filter */}
+          <div className="space-y-3 border-t border-gray-200 pt-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Candidate Profile</p>
+            <div className="grid grid-cols-1 gap-2">
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Gender</label>
+                <Select
+                  value={localFilters.gender}
+                  onValueChange={(val) => setLocalFilters(f => ({ ...f, gender: val, page: 1 }))}
+                  className="bg-white shadow-sm"
+                >
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="MALE">Male</SelectItem>
+                    <SelectItem value="FEMALE">Female</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Min Experience (yrs)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.minExperience ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, minExperience: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Max Experience (yrs)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.maxExperience ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, maxExperience: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Min Salary</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.minSalary ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, minSalary: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Max Salary</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.maxSalary ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, maxSalary: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Visa Type</label>
+                <Input
+                  value={localFilters.visaType ?? ''}
+                  onChange={(e) => setLocalFilters(f => ({ ...f, visaType: e.target.value || undefined, page: 1 }))}
+                  placeholder="Type a visa" 
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Qualification</label>
+                <Input
+                  value={localFilters.qualification ?? ''}
+                  onChange={(e) => setLocalFilters(f => ({ ...f, qualification: e.target.value, page: 1 }))}
+                  placeholder="e.g., BSc Nursing"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Experience Company</label>
+                  <Input
+                    value={localFilters.workExperienceCompany ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, workExperienceCompany: e.target.value, page: 1 }))}
+                    placeholder="Company"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Experience Title</label>
+                  <Input
+                    value={localFilters.workExperienceTitle ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, workExperienceTitle: e.target.value, page: 1 }))}
+                    placeholder="Job title"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Height Min (cm)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.heightMin ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, heightMin: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Height Max (cm)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.heightMax ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, heightMax: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Weight Min (kg)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.weightMin ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, weightMin: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Weight Max (kg)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localFilters.weightMax ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, weightMax: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Skin Tone</label>
+                <Select
+                  value={localFilters.skinTone || "any"}
+                  onValueChange={(val) => setLocalFilters(f => ({ ...f, skinTone: val === 'any' ? '' : val, page: 1 }))}
+                  className="bg-white shadow-sm"
+                >
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200">
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any</SelectItem>
+                    {Object.values(SKIN_TONES).map((tone) => (
+                      <SelectItem key={tone} value={tone}>{tone}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Language Proficiency</label>
+                <Input
+                  value={localFilters.languageProficiency ?? ''}
+                  onChange={(e) => setLocalFilters(f => ({ ...f, languageProficiency: e.target.value, page: 1 }))}
+                  placeholder="e.g., English"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Smartness</label>
+                <Select
+                  value={localFilters.smartness || "any"}
+                  onValueChange={(val) => setLocalFilters(f => ({ ...f, smartness: val === 'any' ? '' : val, page: 1 }))}
+                  className="bg-white shadow-sm"
+                >
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200">
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any</SelectItem>
+                    {Object.values(SMARTNESS_LEVELS).map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Licensing Exam</label>
+                <Input
+                  value={localFilters.licensingExam ?? ''}
+                  onChange={(e) => setLocalFilters(f => ({ ...f, licensingExam: e.target.value, page: 1 }))}
+                  placeholder="e.g., prometric"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={!!localFilters.dataFlow}
+                  onCheckedChange={(checked) => setLocalFilters(f => ({ ...f, dataFlow: checked === true ? true : undefined, page: 1 }))}
+                />
+                <span className="text-[10px] text-gray-600">Data Flow</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={!!localFilters.eligibility}
+                  onCheckedChange={(checked) => setLocalFilters(f => ({ ...f, eligibility: checked === true ? true : undefined, page: 1 }))}
+                />
+                <span className="text-[10px] text-gray-600">Eligibility</span>
+              </div>
+            </div>
           </div>
 
           {/* Date Range Filter */}
